@@ -47,7 +47,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   def list_live_for_meeting(meeting_id) do
     Participant
     |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
-    |> order_by([p], asc: p.inserted_at)
+    |> order_by([p], asc: p.inserted_at, asc: p.id)
     |> Repo.all()
   end
 
@@ -86,6 +86,52 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     :ok
   end
 
+  @doc """
+  Advances the calendar revision of every live seat on a meeting, for an
+  update to the entry each of them holds (the host moved the meeting).
+  """
+  @spec bump_ical_sequence_for_meeting(binary()) :: non_neg_integer()
+  def bump_ical_sequence_for_meeting(meeting_id) do
+    {count, _rows} =
+      Participant
+      |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
+      |> Repo.update_all(inc: [ical_sequence: 1])
+
+    count
+  end
+
+  @doc """
+  Records a change to the meeting's end on every live participant's seat.
+
+  Each seat is its own calendar entry, so the change is a new revision of
+  every live seat's entry too: its `ical_sequence` advances by one. A seat
+  with no end change pending keeps `previous_end`, the end it knew, as its
+  `notified_end_time`; one already pending keeps the end it was last told.
+  """
+  @spec record_end_change(String.t(), DateTime.t()) :: non_neg_integer()
+  def record_end_change(meeting_id, %DateTime{} = previous_end) do
+    {count, _rows} =
+      Participant
+      |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
+      |> update([p],
+        set: [notified_end_time: fragment("COALESCE(?, ?)", p.notified_end_time, ^previous_end)],
+        inc: [ical_sequence: 1]
+      )
+      |> Repo.update_all([])
+
+    count
+  end
+
+  @doc "Records that the participant has been told the meeting ends at `end_time`."
+  @spec put_notified_end(String.t(), DateTime.t()) :: :ok
+  def put_notified_end(participant_id, %DateTime{} = end_time) do
+    Participant
+    |> where([p], p.id == ^participant_id)
+    |> Repo.update_all(set: [notified_end_time: end_time])
+
+    :ok
+  end
+
   @doc "Counts the live (not cancelled) participants of a meeting."
   @spec count_live_for_meeting(binary()) :: non_neg_integer()
   def count_live_for_meeting(meeting_id) do
@@ -95,13 +141,16 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> Repo.one()
   end
 
-  @doc "Counts the seats taken on a meeting: live participants plus their guests."
+  @doc """
+  Counts the seats taken on a meeting: live participants plus their guests,
+  except guests who declined, whose seats are free again.
+  """
   @spec count_seats_taken(binary()) :: non_neg_integer()
   def count_seats_taken(meeting_id) do
     Repo.one(
       from(p in Participant,
         left_join: g in Guest,
-        on: g.participant_id == p.id,
+        on: g.participant_id == p.id and g.status != "declined",
         where: p.meeting_id == ^meeting_id and is_nil(p.cancelled_at),
         select: count(p.id, :distinct) + count(g.id)
       )
@@ -109,10 +158,35 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   end
 
   @doc """
+  Live participants and seats taken (`count_seats_taken/1`'s count) on each
+  of `meeting_ids`, in one grouped query. A meeting without live
+  participants does not appear in the result.
+  """
+  @spec counts_by_meeting([binary()]) :: %{
+          binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
+        }
+  def counts_by_meeting([]), do: %{}
+
+  def counts_by_meeting(meeting_ids) when is_list(meeting_ids) do
+    from(p in Participant,
+      left_join: g in Guest,
+      on: g.participant_id == p.id and g.status != "declined",
+      where: p.meeting_id in ^meeting_ids and is_nil(p.cancelled_at),
+      group_by: p.meeting_id,
+      select: {p.meeting_id, count(p.id, :distinct), count(p.id, :distinct) + count(g.id)}
+    )
+    |> Repo.all()
+    |> Map.new(fn {id, participants, seats} ->
+      {id, %{participants: participants, seats_taken: seats}}
+    end)
+  end
+
+  @doc """
   Seats taken per meeting start time for live meetings of a meeting type
-  whose `start_time` falls in `[from_utc, to_utc)`. One grouped query over
-  meetings, participants and guests; meetings without live participants do
-  not appear in the result.
+  whose `start_time` falls in `[from_utc, to_utc)`, counted as
+  `count_seats_taken/1` does. One grouped query over meetings, participants
+  and guests; meetings without live participants do not appear in the
+  result.
 
   Composed through `MeetingState.where_slot_live/1` — the same "live slot"
   definition `GroupMeetingQueries.list_live_for_type_in_range/3` uses — so a
@@ -128,7 +202,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> where([m], m.meeting_type_id == ^meeting_type_id)
     |> where([m], m.start_time >= ^from_utc and m.start_time < ^to_utc)
     |> join(:inner, [m], p in Participant, on: p.meeting_id == m.id and is_nil(p.cancelled_at))
-    |> join(:left, [m, p], g in Guest, on: g.participant_id == p.id)
+    |> join(:left, [m, p], g in Guest, on: g.participant_id == p.id and g.status != "declined")
     |> group_by([m], m.start_time)
     |> select([m, p, g], {m.start_time, count(p.id, :distinct) + count(g.id)})
     |> Repo.all()

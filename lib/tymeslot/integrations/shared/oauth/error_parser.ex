@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Common.OAuth.ErrorParser do
+defmodule Tymeslot.Integrations.Shared.OAuth.ErrorParser do
   @moduledoc """
   Shared OAuth error-message builder used by all provider OAuth helpers.
 

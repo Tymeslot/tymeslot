@@ -24,32 +24,6 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
         }
 
   @doc """
-  Logs successful account operations.
-
-  ## Parameters
-  - `operation`: The operation type (e.g., "authentication", "registration")
-  - `identifier`: User identifier (email, user_id, etc.)
-  - `context`: Additional context map (optional)
-
-  ## Examples
-      log_operation_success("authentication", "user@example.com", %{user_id: 123})
-  """
-  @spec log_operation_success(String.t(), String.t() | integer(), logging_context()) :: :ok
-  def log_operation_success(operation, identifier, context \\ %{}) do
-    Logger.info(
-      "Account operation successful",
-      build_metadata(
-        [
-          {:operation, operation},
-          {:identifier_masked, mask_identifier(identifier)},
-          {:event, "#{operation}_success"}
-        ],
-        context
-      )
-    )
-  end
-
-  @doc """
   Logs failed account operations.
 
   ## Parameters

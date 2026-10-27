@@ -2,6 +2,7 @@ defmodule Tymeslot.Auth.UserSchema do
   @moduledoc """
   Schema for user accounts in the Tymeslot system.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -45,6 +46,8 @@ defmodule Tymeslot.Auth.UserSchema do
           dashboard_setup_dismissed_at: DateTime.t() | nil,
           last_active_at: DateTime.t() | nil,
           is_admin: boolean(),
+          deletion_requested_at: DateTime.t() | nil,
+          deletion_scheduled_at: DateTime.t() | nil,
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integrations: [CalendarIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
           video_integrations: [VideoIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
@@ -84,6 +87,9 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:last_active_at, :utc_datetime)
     field(:is_admin, :boolean, default: false)
     field(:locale, :string)
+    # Set while the account waits to be deleted; see Tymeslot.Auth.AccountDeletion.
+    field(:deletion_requested_at, :utc_datetime)
+    field(:deletion_scheduled_at, :utc_datetime)
 
     has_one(:profile, Tymeslot.Profiles.ProfileSchema, foreign_key: :user_id)
 
@@ -100,28 +106,6 @@ defmodule Tymeslot.Auth.UserSchema do
     timestamps(type: :utc_datetime)
   end
 
-  @doc false
-  @spec changeset(t(), map()) :: Ecto.Changeset.t()
-  def changeset(user, attrs) do
-    user
-    |> cast(attrs, [
-      :email,
-      :password,
-      :password_confirmation,
-      :name,
-      :provider,
-      :provider_uid,
-      :provider_email,
-      :provider_meta
-    ])
-    |> validate_required([:email])
-    |> update_change(:email, &String.downcase/1)
-    |> validate_email()
-    |> validate_password()
-    |> unique_constraint(:email)
-    |> unique_constraint([:provider, :provider_uid])
-  end
-
   @doc """
   Changeset for the user's interface language preference. An empty string or
   `nil` clears the preference (fall back to browser/session detection); any
@@ -133,7 +117,7 @@ defmodule Tymeslot.Auth.UserSchema do
     |> cast(attrs, [:locale])
     |> update_change(:locale, fn locale -> if locale in ["", nil], do: nil, else: locale end)
     |> validate_inclusion(:locale, Locales.supported_codes(),
-      message: "is not a supported locale"
+      message: dgettext_noop("errors", "is not a supported locale")
     )
   end
 
@@ -251,8 +235,9 @@ defmodule Tymeslot.Auth.UserSchema do
     |> validate_required([:pending_email, :email_change_token_hash])
     |> update_change(:pending_email, &String.downcase/1)
     |> EmailChangeset.validate_email(:pending_email)
-    |> validate_different_email()
-    |> unsafe_validate_unique(:pending_email, Tymeslot.Repo, message: "is already registered")
+    |> unsafe_validate_unique(:pending_email, Tymeslot.Repo,
+      message: dgettext_noop("errors", "is already registered")
+    )
     |> unique_constraint(:pending_email)
     |> unique_constraint(:email_change_token_hash)
     |> put_change(:email_change_sent_at, DateTime.utc_now(:second))
@@ -272,20 +257,6 @@ defmodule Tymeslot.Auth.UserSchema do
     })
     |> revoke_credential_tokens()
     |> unique_constraint(:email)
-  end
-
-  defp validate_different_email(changeset) do
-    case get_field(changeset, :pending_email) do
-      nil ->
-        changeset
-
-      pending_email ->
-        if pending_email == changeset.data.email do
-          add_error(changeset, :pending_email, "must be different from current email")
-        else
-          changeset
-        end
-    end
   end
 
   defp validate_email(changeset) do

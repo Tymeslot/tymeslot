@@ -5,7 +5,7 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
   meeting's event, rather than waiting for the next inbound sync to notice.
   """
 
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Availability
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -39,7 +39,7 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
   def write_through_update(meeting, event_data) do
     with {:ok, cached_event} <- find_cached_event(meeting),
          {:ok, _updated} <- update_cached_event(cached_event, event_data) do
-      AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+      Availability.changed(meeting.organizer_user_id)
       SyncBroadcast.broadcast_cache_update(meeting.organizer_user_id, [cached_event.uid])
     else
       {:error, :not_found} ->
@@ -63,7 +63,7 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
   def forget(%{calendar_integration_id: integration_id} = meeting, event_id)
       when is_integer(integration_id) do
     ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [event_id])
-    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+    Availability.changed(meeting.organizer_user_id)
     SyncBroadcast.broadcast_cache_update(meeting.organizer_user_id, [])
     :ok
   end

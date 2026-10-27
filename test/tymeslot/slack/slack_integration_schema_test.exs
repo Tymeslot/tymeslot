@@ -39,13 +39,13 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
   describe "changeset/2 — OAuth mode" do
     test "valid attrs produce a valid changeset", %{user: user} do
       attrs = %{@valid_oauth_attrs | user_id: user.id}
-      cs = SlackIntegrationSchema.changeset(%SlackIntegrationSchema{}, attrs)
+      cs = SlackIntegrationSchema.create_changeset(attrs)
       assert cs.valid?
     end
 
     test "encrypts bot_token", %{user: user} do
       attrs = %{@valid_oauth_attrs | user_id: user.id}
-      cs = SlackIntegrationSchema.changeset(%SlackIntegrationSchema{}, attrs)
+      cs = SlackIntegrationSchema.create_changeset(attrs)
       assert {:ok, integration} = Repo.insert(cs)
       refute integration.bot_token_encrypted == "xoxb-fake-token"
       assert SlackIntegrationSchema.bot_token(integration) == "xoxb-fake-token"
@@ -53,7 +53,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
 
     test "requires bot_token and channel_id in oauth mode", %{user: user} do
       attrs = Map.drop(%{@valid_oauth_attrs | user_id: user.id}, [:bot_token, :channel_id])
-      cs = SlackIntegrationSchema.changeset(%SlackIntegrationSchema{}, attrs)
+      cs = SlackIntegrationSchema.create_changeset(attrs)
       refute cs.valid?
       errors = errors_on(cs)
       assert "can't be blank" in errors.bot_token
@@ -64,7 +64,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
   describe "changeset/2 — webhook_url mode" do
     test "valid attrs produce a valid changeset", %{user: user} do
       attrs = %{@valid_webhook_attrs | user_id: user.id}
-      cs = SlackIntegrationSchema.changeset(%SlackIntegrationSchema{}, attrs)
+      cs = SlackIntegrationSchema.create_changeset(attrs)
       assert cs.valid?
     end
 
@@ -72,8 +72,8 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
       attrs = %{@valid_webhook_attrs | user_id: user.id}
 
       {:ok, integration} =
-        %SlackIntegrationSchema{}
-        |> SlackIntegrationSchema.changeset(attrs)
+        attrs
+        |> SlackIntegrationSchema.create_changeset()
         |> Repo.insert()
 
       refute integration.webhook_url_encrypted == attrs.webhook_url
@@ -87,10 +87,38 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
           webhook_url: "http://example.com/foo"
       }
 
-      cs = SlackIntegrationSchema.changeset(%SlackIntegrationSchema{}, attrs)
+      cs = SlackIntegrationSchema.create_changeset(attrs)
       refute cs.valid?
       assert %{webhook_url: [msg]} = errors_on(cs)
       assert msg =~ "must be a Slack webhook URL"
+    end
+  end
+
+  describe "user_changeset/2" do
+    test "never reassigns the owner or writes delivery bookkeeping", %{user: user} do
+      integration = insert(:slack_integration, user: user)
+      other = insert(:user)
+
+      {:ok, updated} =
+        integration
+        |> SlackIntegrationSchema.user_changeset(%{
+          name: "Renamed",
+          user_id: other.id,
+          app_mode: "oauth",
+          is_active: false,
+          failure_count: 9,
+          disabled_at: DateTime.utc_now(),
+          disabled_reason: "forged"
+        })
+        |> Repo.update()
+
+      assert updated.name == "Renamed"
+      assert updated.user_id == user.id
+      assert updated.app_mode == integration.app_mode
+      assert updated.is_active
+      assert updated.failure_count == 0
+      assert is_nil(updated.disabled_at)
+      assert is_nil(updated.disabled_reason)
     end
   end
 
@@ -261,8 +289,8 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
   end
 
   defp build_struct(attrs) do
-    %SlackIntegrationSchema{}
-    |> SlackIntegrationSchema.changeset(attrs)
+    attrs
+    |> SlackIntegrationSchema.create_changeset()
     |> Changeset.apply_changes()
   end
 

@@ -5,7 +5,7 @@ defmodule Tymeslot.Bookings.ScheduleCheckTest do
   `ScheduleCheck.validate_slot_on_schedule/5` re-derives the organiser's slot
   list from the config and asks whether the submitted start is in it, so a
   booking can never drift from the list the booking page rendered. That makes
-  the config the gate's single source of truth: if `Policy.scheduling_config/2`
+  the config the gate's single source of truth: if `Schedules.booking_config/2`
   failed to carry `slot_interval_minutes`, the gate would regenerate a
   duration-locked grid and refuse *every* booking on an interval-based meeting
   type, while the rest of the bookings suite — which sets no interval — stayed
@@ -17,7 +17,7 @@ defmodule Tymeslot.Bookings.ScheduleCheckTest do
   @moduletag :bookings
   @moduletag :integration
 
-  alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.ScheduleCheck
 
   import Tymeslot.AvailabilityTestHelpers
@@ -26,7 +26,7 @@ defmodule Tymeslot.Bookings.ScheduleCheckTest do
   describe "validate_slot_on_schedule/5 under a slot interval" do
     test "accepts a start the interval offers but the duration grid would not" do
       %{user: user, meeting_type: meeting_type} = interval_meeting_type(duration: 30, interval: 5)
-      config = Policy.scheduling_config(user.id, meeting_type)
+      config = Schedules.booking_config(user.id, meeting_type)
 
       date = next_bookable_weekday(10)
       {:ok, start_dt} = DateTime.new(date, ~T[09:05:00], "Europe/London")
@@ -43,7 +43,7 @@ defmodule Tymeslot.Bookings.ScheduleCheckTest do
 
     test "still refuses a start no window offers" do
       %{user: user, meeting_type: meeting_type} = interval_meeting_type(duration: 30, interval: 5)
-      config = Policy.scheduling_config(user.id, meeting_type)
+      config = Schedules.booking_config(user.id, meeting_type)
 
       date = next_bookable_weekday(10)
       {:ok, start_dt} = DateTime.new(date, ~T[09:02:00], "Europe/London")

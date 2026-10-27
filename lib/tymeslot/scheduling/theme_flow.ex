@@ -5,10 +5,15 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   This module keeps domain logic in the core so LiveViews only orchestrate UI state.
   """
 
+  alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Bookings.RescheduleSeat
   alias Tymeslot.Demo
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Scheduling.RescheduleContext
+  alias Tymeslot.Scheduling.SeatMoveContext
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.FieldValidators.NameValidator
 
@@ -26,54 +31,85 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   end
 
   @doc """
-  The meeting type a reschedule is already committed to.
+  The booking a reschedule page is moving, loaded once, with what the page
+  starts from (`Tymeslot.Scheduling.RescheduleContext`).
 
-  Matching by duration is right while a visitor is still choosing what to book,
-  but a reschedule is not a choice: the rules enforced on submit come from the
-  original meeting's type, and two types sharing a duration may sit on
-  different availability schedules. Resolving by duration could therefore offer
-  slots from one schedule and reject the booking against another's.
+  The lookup is scoped to the organiser, so a uid cannot reveal another
+  organiser's attendee, and refuses a booking the rules no longer let move
+  with the reason `Tymeslot.Bookings.Orchestrator.get_meeting_for_reschedule/2`
+  gives.
 
-  Returns `nil` when this is not a reschedule, when the meeting is not the
-  organiser's, or when it predates meeting types; the caller then falls back to
-  the duration match.
+  The meeting type is the one the reschedule is already committed to.
+  Matching by duration is right while a visitor is still choosing what to
+  book, but a reschedule is not a choice: the rules enforced on submit come
+  from the original meeting's type, and two types sharing a duration may sit
+  on different availability schedules. Resolving by duration could therefore
+  offer slots from one schedule and reject the booking against another's. It
+  is `nil` when the meeting predates meeting types or its type has since been
+  deleted; the caller then falls back to the duration match.
   """
-  @spec resolve_meeting_type_for_reschedule(String.t() | nil, integer() | nil) :: map() | nil
-  def resolve_meeting_type_for_reschedule(meeting_uid, organizer_user_id)
+  @spec reschedule_context(String.t(), integer()) ::
+          {:ok, RescheduleContext.t()} | {:error, Errors.classified_error()}
+  def reschedule_context(meeting_uid, organizer_user_id)
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
-    with {:ok, %{meeting_type_id: id}} when is_integer(id) <-
-           Orchestrator.get_meeting_for_reschedule(meeting_uid, organizer_user_id),
-         %{} = meeting_type <- MeetingTypes.get_meeting_type(id, organizer_user_id) do
-      meeting_type
-    else
-      _not_resolvable -> nil
+    with {:ok, meeting} <-
+           Orchestrator.get_meeting_for_reschedule(meeting_uid, organizer_user_id) do
+      {:ok, RescheduleContext.new(meeting, meeting_type_of(meeting, organizer_user_id))}
     end
   end
 
-  def resolve_meeting_type_for_reschedule(_meeting_uid, _organizer_user_id), do: nil
+  defp meeting_type_of(%{meeting_type_id: id}, organizer_user_id) when is_integer(id),
+    do: MeetingTypes.get_meeting_type(id, organizer_user_id)
+
+  defp meeting_type_of(_meeting, _organizer_user_id), do: nil
 
   @doc """
-  The meeting type a group participant's seat move is committed to: the type
-  of the meeting their live seat is on, provided that meeting is this
-  organiser's.
+  The live group seat a seat-move page is moving, loaded once from its
+  management token, with what the page starts from
+  (`Tymeslot.Scheduling.SeatMoveContext`).
 
-  `nil` for a spent token, a seat on another organiser's meeting (a
-  hand-edited username), or a type that has since been deleted, the same
-  cases in which `resolve_meeting_type_for_reschedule/2` gives up on a uid.
+  The token rides in the picker URL as `reschedule_seat_token`, which browser
+  history keeps long after the seat has been moved or given up. A dead token
+  left on the page routes every later submission through the seat-move path,
+  where it can only fail, so a spent one is an error here, with the reason
+  `Tymeslot.Meetings.fetch_live_seat/1` gives, and the page forgets it.
+
+  The token alone scopes the lookup, so no other booker's details can be
+  prefilled. The meeting type, though, is the seat's only while its meeting is
+  `organizer_user_id`'s: a seat on another organiser's meeting (a hand-edited
+  username) has none. A seat of this organiser's whose type has since been
+  deleted, or no longer takes group bookings, cannot be moved at all, and is
+  `{:error, :seat_not_movable}`, the refusal the move itself would give.
   """
-  @spec resolve_meeting_type_for_seat(String.t() | nil, integer() | nil) :: map() | nil
-  def resolve_meeting_type_for_seat(seat_token, organizer_user_id)
-      when is_binary(seat_token) and is_integer(organizer_user_id) do
-    with {:ok, %{meeting: %{organizer_user_id: ^organizer_user_id, meeting_type_id: id}}}
-         when is_integer(id) <- Meetings.fetch_live_seat(seat_token),
-         %{} = meeting_type <- MeetingTypes.get_meeting_type(id, organizer_user_id) do
-      meeting_type
-    else
-      _not_resolvable -> nil
+  @spec seat_move_context(String.t() | nil, integer() | nil) ::
+          {:ok, SeatMoveContext.t()} | {:error, SeatLookup.dead_end() | :seat_not_movable}
+  def seat_move_context(seat_token, organizer_user_id) when is_binary(seat_token) do
+    with {:ok, seat} <- Meetings.fetch_live_seat(seat_token),
+         {:ok, meeting_type} <- seat_meeting_type(seat, organizer_user_id) do
+      {:ok, SeatMoveContext.new(seat_token, seat, meeting_type)}
     end
   end
 
-  def resolve_meeting_type_for_seat(_seat_token, _organizer_user_id), do: nil
+  def seat_move_context(_missing, _organizer_user_id), do: {:error, :not_found}
+
+  # On this organiser's page a seat whose type has been deleted, or no longer
+  # takes group bookings, cannot move at all (`RescheduleSeat.movable_type?/1`),
+  # so the page is told so up front rather than offering times the move would
+  # refuse. A seat on another organiser's meeting has no type here, and the
+  # submit refuses it as no seat of theirs.
+  defp seat_meeting_type(
+         %{meeting: %{organizer_user_id: organizer_user_id} = meeting},
+         organizer_user_id
+       )
+       when is_integer(organizer_user_id) do
+    meeting_type = meeting_type_of(meeting, organizer_user_id)
+
+    if RescheduleSeat.movable_type?(meeting_type),
+      do: {:ok, meeting_type},
+      else: {:error, :seat_not_movable}
+  end
+
+  defp seat_meeting_type(_seat, _organizer_user_id), do: {:ok, nil}
 
   @doc """
   The location the meeting being rescheduled was booked at, as the picker
@@ -83,38 +119,13 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   `address_to_arrange`), which a time-only reschedule keeps and the page
   states.
 
-  Returns `nil` when this is not a reschedule or the meeting is not the
-  organiser's, which leaves the picker opening on the host's first option.
+  `nil` when the page is not moving a booking, which leaves the picker
+  opening on the host's first option.
   """
-  @spec reschedule_location_choice(String.t() | nil, integer() | nil) ::
-          %{
-            option_id: String.t() | nil,
-            phone: String.t() | nil,
-            video_integration_id: integer() | nil,
-            venue_id: integer() | nil,
-            location: String.t() | nil,
-            address_to_arrange: boolean()
-          }
-          | nil
-  def reschedule_location_choice(meeting_uid, organizer_user_id)
-      when is_binary(meeting_uid) and is_integer(organizer_user_id) do
-    case Orchestrator.get_meeting_for_reschedule(meeting_uid, organizer_user_id) do
-      {:ok, meeting} ->
-        %{
-          option_id: meeting.location_option_id,
-          phone: meeting.attendee_phone,
-          video_integration_id: meeting.video_integration_id,
-          venue_id: meeting.venue_id,
-          location: meeting.location,
-          address_to_arrange: meeting.address_to_arrange == true
-        }
-
-      {:error, _reason} ->
-        nil
-    end
-  end
-
-  def reschedule_location_choice(_meeting_uid, _organizer_user_id), do: nil
+  @spec reschedule_location_choice(RescheduleContext.t() | nil) ::
+          RescheduleContext.location_choice() | nil
+  def reschedule_location_choice(%RescheduleContext{location_choice: choice}), do: choice
+  def reschedule_location_choice(nil), do: nil
 
   @doc """
   The attendee details a booking link carried in its URL fragment
@@ -147,38 +158,24 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   @doc """
   The booking form's starting values.
 
-  A reschedule starts from the details of the booking being moved, looked up
-  scoped to the organiser so a uid cannot reveal another organiser's attendee.
-  Any other booking starts blank, overlaid with `prefill` (see
-  `attendee_prefill/1`); a reschedule ignores it, since the attendee is
-  already known.
+  A reschedule starts from the details of the booking being moved, and a seat
+  move from the participant's own (the context's `form_data`). Any other
+  booking starts blank, overlaid with `prefill` (see `attendee_prefill/1`); a
+  reschedule ignores it, since the attendee is already known.
   """
-  @spec build_booking_form_data(String.t() | nil, integer() | nil, map()) :: map()
-  def build_booking_form_data(reschedule_uid, organizer_user_id, prefill \\ %{})
+  @spec build_booking_form_data(RescheduleContext.t() | SeatMoveContext.t() | nil, map()) ::
+          map()
+  def build_booking_form_data(context, prefill \\ %{})
 
-  def build_booking_form_data(nil, _organizer_user_id, prefill),
-    do: Map.merge(default_booking_form_data(), prefill)
+  def build_booking_form_data(%RescheduleContext{form_data: form_data}, _prefill), do: form_data
+  def build_booking_form_data(%SeatMoveContext{form_data: form_data}, _prefill), do: form_data
 
-  def build_booking_form_data(_reschedule_uid, nil, _prefill), do: default_booking_form_data()
-
-  def build_booking_form_data(reschedule_uid, organizer_user_id, _prefill)
-      when is_binary(reschedule_uid) and is_integer(organizer_user_id) do
-    case Orchestrator.get_meeting_for_reschedule(reschedule_uid, organizer_user_id) do
-      {:ok, meeting} ->
-        %{
-          "name" => meeting.attendee_name,
-          "email" => meeting.attendee_email,
-          "message" => meeting.attendee_message || ""
-        }
-
-      _error ->
-        default_booking_form_data()
-    end
-  end
+  def build_booking_form_data(nil, prefill), do: Map.merge(default_booking_form_data(), prefill)
 
   @doc """
   The custom field answers a reschedule carries over from the booking being
-  moved, for the definitions the meeting type offers *now*.
+  moved, for the definitions the meeting type offers *now*. Nothing when the
+  page is not moving a booking.
 
   The booking stores both the answers and `custom_fields_snapshot`, the
   definitions as the booker saw them. An answer is carried over only where the
@@ -188,7 +185,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   be put in the booker's mouth. Such a question is left blank, to be answered
   again.
 
-  A question's `position` is excluded from that comparison — reordering the
+  A question's `position` is excluded from that comparison: reordering the
   form does not change what any one question asks.
 
   Answers whose question has been removed are dropped, and questions added
@@ -196,30 +193,22 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   carried: it records that the booker actively confirmed the text, and the
   submit stamps the confirmation time afresh, so a pre-ticked card would
   record consent the booker never gave for the moved booking.
+
+  The definitions are passed in rather than read off the context's meeting
+  type: when that type has been deleted, the page books against the type it
+  fell back to, and those are the questions it asks.
   """
-  @spec reschedule_answers(String.t() | nil, integer() | nil, [map()]) :: %{
-          String.t() => any()
-        }
-  def reschedule_answers(reschedule_uid, organizer_user_id, definitions)
-
-  def reschedule_answers(_reschedule_uid, _organizer_user_id, []), do: %{}
-  def reschedule_answers(nil, _organizer_user_id, _definitions), do: %{}
-  def reschedule_answers(_reschedule_uid, nil, _definitions), do: %{}
-
-  def reschedule_answers(reschedule_uid, organizer_user_id, definitions)
-      when is_binary(reschedule_uid) and is_integer(organizer_user_id) and is_list(definitions) do
-    case Orchestrator.get_meeting_for_reschedule(reschedule_uid, organizer_user_id) do
-      {:ok, meeting} ->
-        carry_over_answers(
-          definitions,
-          meeting.custom_fields_snapshot || [],
-          meeting.custom_field_answers || %{}
-        )
-
-      _error ->
-        %{}
-    end
+  @spec reschedule_answers(RescheduleContext.t() | nil, [map()]) :: %{String.t() => any()}
+  def reschedule_answers(%RescheduleContext{meeting: meeting}, definitions)
+      when is_list(definitions) do
+    carry_over_answers(
+      definitions,
+      meeting.custom_fields_snapshot || [],
+      meeting.custom_field_answers || %{}
+    )
   end
+
+  def reschedule_answers(nil, _definitions), do: %{}
 
   defp carry_over_answers(definitions, booked_snapshot, booked_answers) do
     booked_by_id = Map.new(booked_snapshot, &{&1["id"], comparable(&1)})
@@ -237,46 +226,4 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   defp default_booking_form_data do
     %{"name" => "", "email" => "", "message" => ""}
   end
-
-  @doc """
-  Pre-fills the booking form for a seat reschedule from the participant's
-  own data. The token scopes the lookup, so no organizer id is needed and
-  no other booker's PII can be pre-filled.
-  """
-  @spec build_seat_booking_form_data(String.t() | nil) :: %{String.t() => String.t()}
-  def build_seat_booking_form_data(nil), do: default_booking_form_data()
-
-  def build_seat_booking_form_data(seat_token) when is_binary(seat_token) do
-    case Meetings.get_participant_by_token(seat_token) do
-      {:ok, %{cancelled_at: nil} = participant} ->
-        %{
-          "name" => participant.name,
-          "email" => participant.email,
-          "message" => participant.message || ""
-        }
-
-      _cancelled_or_missing ->
-        default_booking_form_data()
-    end
-  end
-
-  @doc """
-  The start of the live seat a seat-management token names: the time the
-  participant is moving their spot from. `nil` when the token is spent.
-
-  The token rides in the picker URL as `reschedule_seat_token`, which browser
-  history keeps long after the seat has been moved or given up. A dead token
-  left in the assigns routes every later submission through the seat-move
-  path, where it can only fail, so the booking page checks it once and
-  forgets it if it is spent, letting the visitor simply book afresh.
-  """
-  @spec seat_move_start(String.t() | nil) :: DateTime.t() | nil
-  def seat_move_start(seat_token) when is_binary(seat_token) do
-    case Meetings.fetch_live_seat(seat_token) do
-      {:ok, %{meeting: meeting}} -> meeting.start_time
-      {:error, _dead_end} -> nil
-    end
-  end
-
-  def seat_move_start(_missing), do: nil
 end

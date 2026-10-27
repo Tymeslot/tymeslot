@@ -171,7 +171,7 @@ msgstr "Період бронювання"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer between meetings"
-msgstr "Перерва між зустрічами"
+msgstr "Буферний час між зустрічами"
 
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
@@ -214,6 +214,7 @@ msgid "Connect Google, Outlook, or CalDAV calendars to prevent double-bookings a
 msgstr "Підключіть календарі Google, Outlook або CalDAV, щоб автоматично уникати накладок у розкладі."
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
@@ -322,7 +323,7 @@ msgstr "Налагодження: Початкове налаштування б
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex
 #, elixir-autogen, elixir-format
 msgid "Define buffer times, booking windows, and minimum notice to stay in control."
-msgstr "Налаштуйте час перерв, періоди бронювання та мінімальний час попередження, щоб усе контролювати."
+msgstr "Налаштуйте буферний час, періоди бронювання та мінімальний час попередження, щоб усе контролювати."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -374,11 +375,6 @@ msgstr "На скільки днів уперед клієнти можуть з
 msgid "I'll connect a calendar later"
 msgstr "Я підключу календар пізніше"
 
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone"
-msgstr "Некоректний часовий пояс"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Let's get you up and running in just a few steps."
@@ -417,7 +413,7 @@ msgstr "Nextcloud, Radicale або будь-який сервер CalDAV"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "No buffer"
-msgstr "Без перерви"
+msgstr "Без буферного часу"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -546,6 +542,7 @@ msgid "Share this link so people can book time with you. Choose something short 
 msgstr "Поділіться цим посиланням, щоб люди могли записатися до вас. Виберіть щось коротке, що легко запам'ятати."
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Share your booking page"
 msgstr "Поділіться сторінкою бронювання"
@@ -605,11 +602,6 @@ msgstr "Це ім'я користувача вже зайняте"
 msgid "This username is reserved"
 msgstr "Це ім'я користувача зарезервоване"
 
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone must be a string"
-msgstr "Часовий пояс має бути рядком"
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Tune durations and questions"
@@ -665,21 +657,6 @@ msgstr "Із часом попередження %{notice} ніхто не зм�
 #, elixir-autogen, elixir-format
 msgid "With no minimum notice, someone can book a slot that starts any time from now."
 msgstr "Без мінімального часу попередження зустріч можна забронювати на будь-який найближчий час."
-
-#: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Without a connected calendar you'll have to manage clashes yourself. You can still carry on and connect one later from your dashboard."
-msgstr "Без підключеного календаря вам доведеться самостійно стежити за накладками. Ви можете продовжити зараз і підключити його пізніше на панелі керування."
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "You're all set!"
-msgstr "Усе готово!"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Your account is ready. Head to your dashboard to start scheduling."
-msgstr "Ваш обліковий запис готовий. Перейдіть на панель керування, щоб почати планування."
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -815,42 +792,42 @@ msgstr "%{before_minutes} хв до, %{after_minutes} хв після"
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "%{before_minutes} min before, no buffer after"
-msgstr "%{before_minutes} хв до, без перерви після"
+msgstr "%{before_minutes} хв до, без буферного часу після"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "A breather around each meeting"
-msgstr "Перерва навколо кожної зустрічі"
+msgstr "Перепочинок навколо кожної зустрічі"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer after"
-msgstr "Перерва після зустрічі"
+msgstr "Буферний час після зустрічі"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer after must be between %{min} and %{max} minutes."
-msgstr "Перерва після зустрічі має бути від %{min} до %{max} хвилин."
+msgstr "Буферний час після зустрічі має бути від %{min} до %{max} хвилин."
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer before"
-msgstr "Перерва до зустрічі"
+msgstr "Буферний час перед зустріччю"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer before must be between %{min} and %{max} minutes."
-msgstr "Перерва до зустрічі має бути від %{min} до %{max} хвилин."
+msgstr "Буферний час перед зустріччю має бути від %{min} до %{max} хвилин."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "Custom buffer after, in minutes"
-msgstr "Власна перерва після зустрічі, у хвилинах"
+msgstr "Власний буферний час після зустрічі, у хвилинах"
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "Custom buffer before, in minutes"
-msgstr "Власна перерва до зустрічі, у хвилинах"
+msgstr "Власний буферний час перед зустріччю, у хвилинах"
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
@@ -860,17 +837,17 @@ msgstr "Якщо у вас зустріч з %{start_time} до %{end_time}, н�
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "No buffer around meetings"
-msgstr "Без перерв навколо зустрічей"
+msgstr "Без буферного часу навколо зустрічей"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "No buffer before, %{after_minutes} min after"
-msgstr "Без перерви до, %{after_minutes} хв після"
+msgstr "Без буферного часу до, %{after_minutes} хв після"
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With no buffers, a new booking can sit right next to an existing meeting."
-msgstr "Без перерв нове бронювання може йти одразу поруч із наявною зустріччю."
+msgstr "Без буферного часу нове бронювання може йти одразу поруч із наявною зустріччю."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
@@ -903,3 +880,53 @@ msgstr "Показати всі теми"
 #, elixir-autogen, elixir-format
 msgid "Which of these sounds like you?"
 msgstr "Який із цих описів про вас?"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Book a time with me"
+msgstr "Забронюйте зустріч зі мною"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "Електронна пошта"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Or send it straight away"
+msgstr "Або надішліть його одразу"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "You can book a time with me here: %{url}"
+msgstr "Забронювати зустріч зі мною можна тут: %{url}"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your page is live. Send the link to one person who might book with you now."
+msgstr "Ваша сторінка вже доступна. Надішліть посилання хоча б одній людині, яка могла б забронювати у вас час."
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Goes live once a calendar is connected"
+msgstr "Запрацює після підключення календаря"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one now, or later from Integrations on your dashboard."
+msgstr "Робочий календар не підключено, тож кожен, хто відкриє ваше посилання, побачить, що сторінка недоступна. Підключіть його зараз або пізніше в розділі «Інтеграції» на панелі керування."
+
+#: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Without a connected calendar your booking page stays offline, so nobody can book you yet. You can still carry on and connect one later from your dashboard."
+msgstr "Без підключеного календаря ваша сторінка бронювання залишається недоступною, тож поки що ніхто не зможе у вас забронювати. Ви можете продовжити зараз і підключити його пізніше на панелі керування."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page isn't live yet"
+msgstr "Ваша сторінка бронювання ще не доступна"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your link is ready, but the page only goes live once a calendar is connected."
+msgstr "Посилання готове, але сторінка запрацює лише після підключення календаря."

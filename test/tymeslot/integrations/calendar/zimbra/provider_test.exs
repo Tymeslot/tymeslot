@@ -74,40 +74,18 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       assert :ok = test_basic_validation(Provider, "https://mail.example.com")
     end
 
-    # `validate_config/1` is structural only — it never performs network I/O
-    # (the connectivity probe used to run here too, doubling the rate-limit
-    # charge across two buckets for a single form submission). HTTP is
-    # allowed for localhost/private/link-local hosts (dev/test environments),
-    # so URL validation passes here; the live check now runs separately,
-    # through `test_connection/1`.
-    test "allows HTTP for localhost URLs without touching the network" do
-      config = %{
-        base_url: "http://localhost:8080",
-        username: "user",
-        password: "pass"
-      }
+    # `validate_config/1` is structural only: it never performs network I/O.
+    # Private, loopback and link-local addresses are refused like every other
+    # CalDAV-family member's, unless the operator opts out
+    # (`ALLOW_PRIVATE_IPS_FOR_CALENDAR`, covered family-wide in
+    # `CalDAV.FamilyUrlValidationTest`).
+    for url <- ["http://localhost:8080", "http://10.0.0.1", "http://169.254.169.254"] do
+      test "refuses the private address #{url}" do
+        config = %{base_url: unquote(url), username: "user", password: "pass"}
 
-      assert :ok = Provider.validate_config(config)
-    end
-
-    test "allows HTTP for private IP addresses without touching the network" do
-      config = %{
-        base_url: "http://10.0.0.1",
-        username: "user",
-        password: "pass"
-      }
-
-      assert :ok = Provider.validate_config(config)
-    end
-
-    test "allows HTTP for the AWS metadata endpoint without touching the network" do
-      config = %{
-        base_url: "http://169.254.169.254",
-        username: "user",
-        password: "pass"
-      }
-
-      assert :ok = Provider.validate_config(config)
+        assert Provider.validate_config(config) ==
+                 {:error, "Private or local network addresses are not allowed"}
+      end
     end
 
     test "enforces HTTPS for public hosts" do
@@ -118,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       }
 
       assert Provider.validate_config(config) ==
-               {:error, "Use HTTPS for non-local Zimbra servers"}
+               {:error, "Use HTTPS for non-local calendar servers"}
     end
 
     test "accepts HTTPS for public hosts without touching the network" do
@@ -156,7 +134,6 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       assert client.username == "testuser@example.com"
       assert client.password == "testpass"
       assert client.provider == :zimbra
-      assert client.verify_ssl == true
     end
 
     test "normalizes Zimbra base URL" do
@@ -170,20 +147,6 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
       # Should normalize by removing trailing slash
       assert client.base_url == "https://mail.example.com"
-    end
-
-    test "builds Zimbra calendar paths correctly" do
-      config = %{
-        base_url: "https://mail.example.com",
-        username: "testuser@example.com",
-        password: "pass",
-        calendar_names: ["Calendar"]
-      }
-
-      client = Provider.new(config)
-
-      # Calendar names are turned into Zimbra's /dav/{username}/{name}/ paths
-      assert client.calendar_paths == ["/dav/testuser@example.com/Calendar/"]
     end
 
     test "sets empty calendar_paths when not provided" do
@@ -215,7 +178,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
   end
 
   describe "test_connection/2" do
-    test "returns a sanitised error message when the server cannot be reached" do
+    test "says a refused server address is a private one" do
       integration = %{
         base_url: "http://localhost:1",
         username: "invalid@example.com",
@@ -224,13 +187,12 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
         provider: :zimbra
       }
 
-      # The loopback URL never reaches a socket — `CalDAV.Discovery` refuses it
-      # up front — but Zimbra rewrites every failure into the same generic
-      # sentence, so neither the guard's wording nor a transport reason leaks
-      # to the user.
+      # The loopback URL never reaches a socket: `CalDAV.Discovery` refuses it
+      # up front. Zimbra rewrites its other failures into generic sentences,
+      # but this refusal keeps its meaning, so the owner looks at the address
+      # rather than at the URL's spelling.
       assert Provider.perform_connection_test(integration) ==
-               {:error,
-                "Unable to connect to the calendar service. Please check the URL and try again."}
+               {:error, "Private or local network addresses are not allowed"}
     end
 
     test "is pure I/O — takes only the integration, no caller options" do
@@ -284,7 +246,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       }
 
       assert Provider.discover_calendars(client) ==
-               {:error, "Private or local network addresses are not allowed"}
+               {:error, :private_address}
     end
   end
 

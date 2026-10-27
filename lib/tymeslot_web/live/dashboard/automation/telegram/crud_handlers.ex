@@ -6,12 +6,14 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
+  import Tymeslot.Features.AccessErrors, only: [is_access_error: 1]
 
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.InputValidation, as: TelegramInputValidation
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   @spec handle_create(map(), Phoenix.LiveView.Socket.t()) ::
@@ -50,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
                |> AutomationHelpers.maybe_load_telegram()}
 
             {:error, %Ecto.Changeset{} = changeset} ->
-              errors = AutomationHelpers.format_changeset_errors(changeset)
+              errors = FormErrors.first_per_field(changeset)
               Flash.error(dgettext("dashboard_automation_chat", "Failed to update integration"))
               {:noreply, assign(socket, :telegram_form_errors, errors)}
 
@@ -92,13 +94,17 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
 
   defp with_telegram_write(params, mode, socket, action) do
     user_id = socket.assigns.current_user.id
-    bot_mode = if Telegram.shared_bot_mode?(), do: "shared", else: "own"
+    bot_mode = Telegram.form_bot_mode(mode, socket.assigns.telegram_form_data)
 
     AutomationHelpers.with_rate_limit(
-      RateLimiter.check_webhook_write_rate_limit(user_id),
+      RateLimiter.check(:webhook_write, user_id),
       socket,
       fn ->
-        case TelegramInputValidation.validate_form(params, bot_mode: bot_mode, mode: mode) do
+        case TelegramInputValidation.validate_form(params,
+               bot_mode: bot_mode,
+               mode: mode,
+               stored_name: AutomationHelpers.stored_name(socket.assigns.telegram_form_data)
+             ) do
           {:ok, sanitized} -> action.(bot_mode, sanitized)
           {:error, errors} -> {:noreply, assign(socket, :telegram_form_errors, errors)}
         end
@@ -108,6 +114,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
 
   defp test_and_save_telegram(user_id, sanitized, socket) do
     test_integration = %TelegramIntegrationSchema{
+      user_id: user_id,
       bot_mode: "own",
       bot_token: sanitized[:bot_token],
       chat_id: sanitized[:chat_id]
@@ -117,9 +124,14 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
       :ok ->
         save_telegram(user_id, sanitized, socket)
 
+      {:error, reason} when is_access_error(reason) ->
+        {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
+
       {:error, reason} ->
         Flash.error(
-          dgettext("dashboard_automation_chat", "Test failed: %{reason}", reason: reason)
+          dgettext("dashboard_automation_chat", "Test failed: %{reason}",
+            reason: Telegram.translate_error(reason)
+          )
         )
 
         {:noreply, socket}
@@ -140,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
          |> AutomationHelpers.maybe_load_telegram()}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        errors = AutomationHelpers.format_changeset_errors(changeset)
+        errors = FormErrors.first_per_field(changeset)
         Flash.error(dgettext("dashboard_automation_chat", "Failed to create integration"))
         {:noreply, assign(socket, :telegram_form_errors, errors)}
 
@@ -180,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
              |> AutomationHelpers.maybe_load_telegram()}
 
           {:error, %Ecto.Changeset{} = changeset} ->
-            errors = AutomationHelpers.format_changeset_errors(changeset)
+            errors = FormErrors.first_per_field(changeset)
             Flash.error(dgettext("dashboard_automation_chat", "Failed to save integration"))
             {:noreply, assign(socket, :telegram_form_errors, errors)}
 

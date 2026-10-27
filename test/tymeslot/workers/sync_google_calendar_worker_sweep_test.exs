@@ -14,12 +14,22 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerSweepTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   setup :verify_on_exit!
+
+  # A series' rule is read from its recurring event, which these tests leave
+  # out.
+  setup do
+    stub(GoogleCalendarAPIMock, :get_series_master, fn _integration, _calendar, _master ->
+      {:error, :not_found, "Not found"}
+    end)
+
+    :ok
+  end
 
   @work "work@example.com"
 
@@ -457,8 +467,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerSweepTest do
     test "rows straddling either edge of the listed window, all-day and timed",
          %{integration: integration} do
       now = DateTime.utc_now()
-      past_edge = DateTime.add(now, -ProviderConfig.sync_window_past_days(), :day)
-      future_edge = DateTime.add(now, ProviderConfig.sync_window_future_days(), :day)
+      {past_edge, future_edge} = Sync.window(now)
 
       # An all-day event is listed by Google against its dates in the
       # calendar's zone, which may put a day on either edge inside the

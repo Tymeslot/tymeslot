@@ -18,20 +18,45 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   connection and its mock allowances, neither of which a separate process
   gets for free — which is why this path used to be bypassed under test,
   leaving the coalescing that ships exercised by almost nothing.
+
+  ## Invalidation
+
+  A computation reads the world as it was when it started, so one still in
+  flight when its key is invalidated holds a value that is already stale.
+  Invalidation, joining a computation and storing its result are therefore
+  all arbitrated by the cache GenServer: invalidating a key detaches its
+  in-flight computation, whose result then reaches only the callers that were
+  already waiting on it and is never stored, and the next caller to miss
+  leads a fresh computation instead of joining the superseded one.
   """
 
   require Logger
 
   @typedoc """
-  One in-flight computation: the monitor on the process leading it, and the
-  callers blocked on its result. The leader is not among the waiters — it
-  returns its own value directly rather than through a `GenServer` reply.
+  One in-flight computation: the token its leader was handed, the monitor on
+  the process leading it, and the callers blocked on its result. The leader
+  is not among the waiters: it returns its own value directly rather than
+  through a `GenServer` reply.
   """
   @type pending_entry :: %{
+          required(:token) => reference(),
           required(:waiters) => [GenServer.from()],
           required(:ref) => reference()
         }
-  @type state :: %{required(:pending) => %{term() => pending_entry()}}
+
+  @typedoc "What one invalidation drops: a key, a key pattern, or everything."
+  @type scope :: {:key, any()} | {:pattern, any()} | :all
+
+  @typedoc """
+  `pending` holds the current computation per key, the only ones whose result
+  may be stored. `superseded` holds, by token, computations whose key was
+  invalidated while they ran: their waiters still get the result, but
+  nothing is stored and no new caller joins them.
+  """
+  @type state :: %{
+          required(:pending) => %{term() => pending_entry()},
+          required(:superseded) => %{reference() => {term(), pending_entry()}}
+        }
 
   # A waiter stays blocked in `GenServer.call/3` for as long as the leader's
   # computation takes, so this bounds the slowest cached computation (a cold
@@ -77,24 +102,35 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       end
 
       @doc """
-      Invalidate a specific cache key.
+      Invalidate a specific cache key, including a computation for it that
+      is still in flight: its result is not stored.
       """
       def invalidate(key) do
-        :ets.delete(@table_name, key)
+        CacheStore.invalidate(__MODULE__, {:key, key})
       end
 
       @doc """
-      Invalidate all cache entries matching a pattern.
+      Invalidate all cache entries matching a pattern, and any in-flight
+      computation whose key matches it.
       """
       def invalidate_pattern(pattern) do
-        :ets.match_delete(@table_name, {pattern, :_, :_})
+        CacheStore.invalidate(__MODULE__, {:pattern, pattern})
       end
 
       @doc """
-      Clear all cache entries.
+      Clear all cache entries, and detach every in-flight computation.
       """
       def clear_all do
-        :ets.delete_all_objects(@table_name)
+        CacheStore.invalidate(__MODULE__, :all)
+      end
+
+      @doc """
+      Invalidate several keys or patterns as one step: no computation can
+      start between them, so none can read an entry that one scope drops
+      while another has already been dropped.
+      """
+      def invalidate_together(scopes) when is_list(scopes) do
+        CacheStore.invalidate(__MODULE__, scopes)
       end
 
       @doc """
@@ -118,9 +154,12 @@ defmodule Tymeslot.Infrastructure.CacheStore do
         CacheStore.handle_join_computation(@table_name, key, from, state)
       end
 
-      @impl GenServer
-      def handle_info({:computation_done, key, value}, state) do
-        CacheStore.handle_computation_done(key, value, state)
+      def handle_call({:computation_done, key, token, value, store}, _from, state) do
+        CacheStore.handle_computation_done(@table_name, key, token, value, store, state)
+      end
+
+      def handle_call({:invalidate, scope}, _from, state) do
+        CacheStore.handle_invalidate(@table_name, scope, state)
       end
 
       @impl GenServer
@@ -157,31 +196,38 @@ defmodule Tymeslot.Infrastructure.CacheStore do
     ])
 
     schedule_cleanup(cleanup_interval)
-    {:ok, %{pending: %{}}}
+    {:ok, %{pending: %{}, superseded: %{}}}
   end
 
   @doc false
   @spec compute_coalesced(module(), atom(), any(), (-> any()), integer(), keyword()) :: any()
   def compute_coalesced(server, table_name, key, fun, ttl, opts) do
     case GenServer.call(server, {:join_computation, key}, @compute_timeout) do
-      :lead -> lead_computation(server, table_name, key, fun, ttl, opts)
+      {:lead, token} -> lead_computation(server, table_name, key, token, fun, ttl, opts)
       {:value, value} -> value
     end
   end
 
-  # Runs in the leading caller, not in the cache. The result is stored before
-  # the cache is told about it, which keeps `get_or_compute/4`'s postcondition:
+  # Runs in the leading caller, not in the cache. The result is handed to the
+  # cache synchronously, which stores it (unless the key was invalidated
+  # meanwhile) before replying. That keeps `get_or_compute/4`'s postcondition:
   # once it returns, the value is already in ETS, so a call that immediately
   # follows is a hit rather than a second computation.
-  defp lead_computation(server, table_name, key, fun, ttl, opts) do
-    value = compute_and_store(table_name, key, fun, ttl, opts)
-    send(server, {:computation_done, key, value})
+  defp lead_computation(server, table_name, key, token, fun, ttl, opts) do
+    {value, store} =
+      case compute(table_name, key, fun) do
+        {:ok, value} -> {value, if(cacheable?(value, opts), do: {:store, ttl}, else: :skip)}
+        # A failed computation is never stored, whatever `cache_errors` says.
+        {:failed, value} -> {value, :skip}
+      end
+
+    :ok = GenServer.call(server, {:computation_done, key, token, value, store})
     value
   end
 
   @doc false
   @spec handle_join_computation(atom(), any(), GenServer.from(), state()) ::
-          {:reply, :lead | {:value, any()}, state()} | {:noreply, state()}
+          {:reply, {:lead, reference()} | {:value, any()}, state()} | {:noreply, state()}
   def handle_join_computation(table_name, key, from, state) do
     case lookup(table_name, key) do
       {:ok, value} ->
@@ -190,7 +236,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       :miss ->
         case Map.get(state.pending, key) do
           nil ->
-            {:reply, :lead, put_in(state.pending[key], %{waiters: [], ref: monitor_caller(from)})}
+            token = make_ref()
+            entry = %{token: token, waiters: [], ref: monitor_caller(from)}
+            {:reply, {:lead, token}, put_in(state.pending[key], entry)}
 
           %{waiters: waiters} ->
             {:noreply, put_in(state.pending[key].waiters, [from | waiters])}
@@ -199,46 +247,131 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_computation_done(any(), any(), state()) :: {:noreply, state()}
-  def handle_computation_done(key, value, state) do
-    case Map.pop(state.pending, key) do
-      {nil, _pending} ->
-        {:noreply, state}
+  @spec handle_computation_done(
+          atom(),
+          any(),
+          reference(),
+          any(),
+          {:store, integer()} | :skip,
+          state()
+        ) :: {:reply, :ok, state()}
+  def handle_computation_done(table_name, key, token, value, store, state) do
+    {entry, state} =
+      case state.pending do
+        %{^key => %{token: ^token} = entry} ->
+          maybe_store(table_name, key, value, store)
+          {entry, %{state | pending: Map.delete(state.pending, key)}}
 
-      {%{waiters: waiters, ref: ref}, pending} ->
-        Process.demonitor(ref, [:flush])
+        _current ->
+          # Superseded by an invalidation (or unknown, if the cache restarted
+          # meanwhile): the value predates the invalidation, so it only goes
+          # to the callers that asked before it.
+          case Map.pop(state.superseded, token) do
+            {{_key, entry}, superseded} -> {entry, %{state | superseded: superseded}}
+            {nil, _superseded} -> {nil, state}
+          end
+      end
 
-        Enum.each(waiters, fn waiter ->
-          GenServer.reply(waiter, {:value, value})
-        end)
+    reply_waiters(entry, value)
+    {:reply, :ok, state}
+  end
 
-        {:noreply, %{state | pending: pending}}
-    end
+  defp reply_waiters(nil, _value), do: :ok
+
+  defp reply_waiters(%{waiters: waiters, ref: ref}, value) do
+    Process.demonitor(ref, [:flush])
+    Enum.each(waiters, &GenServer.reply(&1, {:value, value}))
+  end
+
+  @doc false
+  # The table belongs to the cache process, so while the process is down (a
+  # restart in progress) there is nothing cached to invalidate. Callers
+  # invalidate after committing a change and must not crash for it.
+  @spec invalidate(GenServer.server(), scope() | [scope()]) :: true
+  def invalidate(server, scope) do
+    GenServer.call(server, {:invalidate, scope})
+  catch
+    :exit, {:noproc, _call} -> true
+  end
+
+  @doc false
+  @spec handle_invalidate(atom(), scope() | [scope()], state()) :: {:reply, true, state()}
+  def handle_invalidate(table_name, scopes, state) when is_list(scopes) do
+    state = Enum.reduce(scopes, state, &detach(table_name, &1, &2))
+    {:reply, true, state}
+  end
+
+  def handle_invalidate(table_name, scope, state) do
+    {:reply, true, detach(table_name, scope, state)}
+  end
+
+  defp detach(table_name, scope, state) do
+    # A table someone dropped from outside leaves nothing to delete; failing
+    # here would take the cache process down with it.
+    if :ets.whereis(table_name) != :undefined, do: delete_entries(table_name, scope)
+
+    {detached, pending} =
+      Map.split_with(state.pending, fn {key, _entry} -> in_scope?(scope, key) end)
+
+    superseded =
+      Enum.reduce(detached, state.superseded, fn {key, entry}, acc ->
+        Map.put(acc, entry.token, {key, entry})
+      end)
+
+    %{state | pending: pending, superseded: superseded}
+  end
+
+  defp delete_entries(table_name, {:key, key}), do: :ets.delete(table_name, key)
+
+  defp delete_entries(table_name, {:pattern, pattern}),
+    do: :ets.match_delete(table_name, {pattern, :_, :_})
+
+  defp delete_entries(table_name, :all), do: :ets.delete_all_objects(table_name)
+
+  defp in_scope?({:key, target}, key), do: key === target
+  defp in_scope?(:all, _key), do: true
+
+  defp in_scope?({:pattern, pattern}, key) do
+    match_spec = :ets.match_spec_compile([{{pattern}, [], [true]}])
+    :ets.match_spec_run([{key}], match_spec) == [true]
   end
 
   @doc false
   @spec handle_leader_down(state(), reference()) :: {:noreply, state()}
   def handle_leader_down(state, ref) do
-    case Enum.find(state.pending, fn {_key, entry} -> entry.ref == ref end) do
-      {key, %{waiters: []}} ->
-        {:noreply, %{state | pending: Map.delete(state.pending, key)}}
+    pending_hit = Enum.find(state.pending, fn {_key, entry} -> entry.ref == ref end)
+    superseded_hit = Enum.find(state.superseded, fn {_token, {_key, e}} -> e.ref == ref end)
 
-      {key, %{waiters: waiters}} ->
-        # The leader is a caller like any other, so it can go away for reasons
-        # that say nothing about the result — a visitor closing the booking
-        # page mid-fetch. Promote the longest-waiting caller rather than
-        # failing everyone who is still interested. A successor that is itself
-        # already dead brings its own `:DOWN` straight back here, so the
-        # promotion walks down the queue until someone alive takes it.
-        {successor, rest} = List.pop_at(waiters, -1)
-        GenServer.reply(successor, :lead)
-        entry = %{waiters: rest, ref: monitor_caller(successor)}
-        {:noreply, put_in(state.pending[key], entry)}
+    case {pending_hit, superseded_hit} do
+      {{key, entry}, _none} ->
+        {:noreply, %{state | pending: put_or_delete(state.pending, key, hand_over(entry))}}
 
-      nil ->
+      {nil, {token, {key, entry}}} ->
+        successor = with %{} = next <- hand_over(entry), do: {key, next}
+        {:noreply, %{state | superseded: put_or_delete(state.superseded, token, successor)}}
+
+      {nil, nil} ->
         {:noreply, state}
     end
   end
+
+  # The leader is a caller like any other, so it can go away for reasons that
+  # say nothing about the result: a visitor closing the booking page
+  # mid-fetch. Promote the longest-waiting caller rather than failing everyone
+  # who is still interested; it keeps the computation's token, so a
+  # superseded computation stays superseded. A successor that is itself
+  # already dead brings its own `:DOWN` straight back here, so the promotion
+  # walks down the queue until someone alive takes it.
+  defp hand_over(%{waiters: []}), do: nil
+
+  defp hand_over(%{token: token, waiters: waiters}) do
+    {successor, rest} = List.pop_at(waiters, -1)
+    GenServer.reply(successor, {:lead, token})
+    %{token: token, waiters: rest, ref: monitor_caller(successor)}
+  end
+
+  defp put_or_delete(map, key, nil), do: Map.delete(map, key)
+  defp put_or_delete(map, key, value), do: Map.put(map, key, value)
 
   defp monitor_caller({pid, _tag}), do: Process.monitor(pid)
 
@@ -268,8 +401,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   # them, and ErrorTracking would pull its queries and the Repo in with it.
   # For the same reason the key and reason are rendered by `render/1` below
   # rather than `LogFormat.reason/1`.
-  @spec compute_and_store(atom(), any(), (-> any()), integer(), keyword()) :: any()
-  def compute_and_store(table_name, key, fun, ttl, opts \\ []) do
+  @spec compute(atom(), any(), (-> any())) ::
+          {:ok, any()} | {:failed, {:error, :computation_failed}}
+  def compute(table_name, key, fun) do
     result =
       try do
         {:ok, fun.()}
@@ -283,8 +417,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
 
     case result do
       {:ok, value} ->
-        maybe_store(table_name, key, value, ttl, opts)
-        value
+        {:ok, value}
 
       {:raised, exception, stacktrace} ->
         Logger.warning("Cache computation raised an exception",
@@ -297,7 +430,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
           stacktrace: Exception.format_stacktrace(stacktrace)
         )
 
-        {:error, :computation_failed}
+        {:failed, {:error, :computation_failed}}
 
       {:caught, kind, reason, stacktrace} ->
         Logger.warning("Cache computation failed",
@@ -311,13 +444,13 @@ defmodule Tymeslot.Infrastructure.CacheStore do
           stacktrace: Exception.format_stacktrace(stacktrace)
         )
 
-        {:error, :computation_failed}
+        {:failed, {:error, :computation_failed}}
     end
   end
 
   # A bounded `inspect/2` standing in for `LogFormat.reason/1`, which would
   # put LogFormat and the redaction modules behind it on the compile-time
-  # graph of every cache (see `compute_and_store/5`). Cache keys are built from
+  # graph of every cache (see `compute/3`). Cache keys are built from
   # ids and dates, not credentials; a thrown or exited reason is the one term
   # here that is not, so the rendering is capped and then scrubbed of what
   # shows up in text (bearer headers, query-string tokens, quoted secrets).
@@ -347,16 +480,16 @@ defmodule Tymeslot.Infrastructure.CacheStore do
     Process.send_after(self(), :cleanup, interval)
   end
 
+  defp maybe_store(_table_name, _key, _value, :skip), do: :ok
+
+  defp maybe_store(table_name, key, value, {:store, ttl}) do
+    expiry = System.monotonic_time(:millisecond) + ttl
+    :ets.insert(table_name, {key, value, expiry})
+  end
+
   # `cache_errors: false` (see `get_or_compute/4`) skips the ETS insert for an
   # `{:error, _}` result so a transient failure is retried on the very next
   # call instead of being replayed for the rest of the TTL.
-  defp maybe_store(table_name, key, value, ttl, opts) do
-    if cacheable?(value, opts) do
-      expiry = System.monotonic_time(:millisecond) + ttl
-      :ets.insert(table_name, {key, value, expiry})
-    end
-  end
-
   defp cacheable?({:error, _reason}, opts), do: Keyword.get(opts, :cache_errors, true)
   defp cacheable?(_value, _opts), do: true
 end

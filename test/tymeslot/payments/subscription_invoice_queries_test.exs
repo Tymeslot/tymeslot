@@ -326,6 +326,40 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueriesTest do
     end
   end
 
+  describe "payments_for_user/1" do
+    test "lists paid invoices that took money, oldest first, with their subscription", %{
+      user: user
+    } do
+      other = TestFixtures.create_user_fixture()
+
+      for {id, owner, attrs} <- [
+            {"in_second", user, %{paid_at: ~U[2026-03-01 00:00:00Z], amount_cents: 900}},
+            {"in_first", user, %{paid_at: ~U[2026-02-01 00:00:00Z], amount_cents: 900}},
+            {"in_trial", user, %{paid_at: ~U[2026-01-25 00:00:00Z], amount_cents: 0}},
+            {"in_open", user, %{status: :open, amount_cents: 900}},
+            {"in_other", other, %{paid_at: ~U[2026-01-01 00:00:00Z], amount_cents: 900}}
+          ] do
+        {:ok, _invoice} =
+          SubscriptionInvoiceQueries.upsert(
+            Map.merge(
+              %{
+                stripe_invoice_id: id,
+                user_id: owner.id,
+                subscription_id: "sub_1",
+                status: :paid
+              },
+              attrs
+            )
+          )
+      end
+
+      assert SubscriptionInvoiceQueries.payments_for_user(user.id) == [
+               %{subscription_id: "sub_1", paid_at: ~U[2026-02-01 00:00:00Z]},
+               %{subscription_id: "sub_1", paid_at: ~U[2026-03-01 00:00:00Z]}
+             ]
+    end
+  end
+
   describe "anonymise_for_host/2" do
     test "nilifies user_id, stamps host_deleted_at, and retains the VAT document surface", %{
       user: user

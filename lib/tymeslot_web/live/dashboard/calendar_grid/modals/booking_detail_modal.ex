@@ -107,5 +107,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal do
   defp group?(%{participants: [_first | _rest], capacity: capacity}) when capacity > 1,
     do: true
 
+  # A planned session is a group meeting before anyone has booked it.
+  defp group?(%{planned: true, capacity: capacity}) when capacity > 1, do: true
+
   defp group?(_booking), do: false
 end

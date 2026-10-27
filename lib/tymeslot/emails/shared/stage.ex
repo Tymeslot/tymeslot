@@ -24,6 +24,26 @@ defmodule Tymeslot.Emails.Shared.Stage do
   @band_border_overlay "rgba(255, 255, 255, 0.14)"
 
   @doc """
+  The stage option `key` (`:intent` or `:eyebrow`) from `opts`, a keyword
+  list or a map. Raises `ArgumentError` naming the key when it is missing:
+  every email declares its stage at the call site, and nothing infers it from
+  a title or falls back to a default. The one check every layout and helper
+  that renders a stage band uses.
+  """
+  @spec fetch_required!(keyword() | map(), atom()) :: term()
+  def fetch_required!(opts, key) do
+    case Access.fetch(opts, key) do
+      {:ok, value} ->
+        value
+
+      :error ->
+        raise ArgumentError,
+              "missing required stage option `#{inspect(key)}`: every email must declare " <>
+                "`:intent` and `:eyebrow` at the call site."
+    end
+  end
+
+  @doc """
   Renders a stage band section.
 
   `intent` is an atom — see `Styles.intent/1`.

@@ -156,16 +156,6 @@ msgstr "Przesyłanie niedostępne"
 msgid "Video"
 msgstr "Wideo"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
-#, elixir-autogen, elixir-format
-msgid "You have a custom image. Selecting a preset will remove it."
-msgstr "Masz własny obraz. Wybranie obrazu z kolekcji go usunie."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
-#, elixir-autogen, elixir-format
-msgid "You have a custom video. Selecting a preset will remove it."
-msgstr "Masz własne wideo. Wybranie wideo z kolekcji je usunie."
-
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
@@ -317,11 +307,6 @@ msgstr "Przesyłanie nie powiodło się"
 #, elixir-autogen, elixir-format
 msgid "Video processing is unavailable on this server because ffmpeg is not installed. Install ffmpeg or use a background image instead."
 msgstr "Przetwarzanie wideo jest niedostępne na tym serwerze, ponieważ nie zainstalowano ffmpeg. Zainstaluj ffmpeg albo użyj zamiast tego obrazu tła."
-
-#: lib/tymeslot/theme_customizations/assets.ex
-#, elixir-autogen, elixir-format
-msgid "Your video was saved but could not be queued for processing. Please upload it again."
-msgstr "Zapisano wideo, ale nie udało się dodać go do kolejki przetwarzania. Prześlij je ponownie."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
 #, elixir-autogen, elixir-format
@@ -553,11 +538,6 @@ msgstr "Łagodne"
 msgid "Spacing"
 msgstr "Odstępy"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
-#, elixir-autogen, elixir-format
-msgid "JPG, PNG or WebP. Max %{size} MB."
-msgstr "JPG, PNG lub WebP. Maks. %{size} MB."
-
 #: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
 #, elixir-autogen, elixir-format
 msgid "Blush"
@@ -734,3 +714,73 @@ msgstr "Zachód słońca"
 #, elixir-autogen, elixir-format
 msgid "The colours of your booking page, shown here light and dark. Colour Mode decides which one visitors see."
 msgstr "Kolory Twojej strony rezerwacji, pokazane tu w jasnej i ciemnej wersji. Tryb kolorów decyduje, którą zobaczą odwiedzający."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "The upload failed and nothing was changed. Please try again."
+msgstr "Przesyłanie nie powiodło się i nic nie zostało zmienione. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Kept until you replace or remove it."
+msgstr "Plik pozostaje zapisany, dopóki go nie zastąpisz lub nie usuniesz."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Remove image"
+msgstr "Usuń obraz"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Remove video"
+msgstr "Usuń film"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Your upload"
+msgstr "Twój przesłany plik"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Your uploaded image"
+msgstr "Twój przesłany obraz"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Your uploaded video"
+msgstr "Twój przesłany film"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
+#, elixir-autogen, elixir-format
+msgid "JPG, PNG or WebP. Max %{size} MB and %{megapixels} megapixels (%{webp_megapixels} for WebP)."
+msgstr "JPG, PNG lub WebP. Maks. %{size} MB i %{megapixels} Mpx (%{webp_megapixels} dla WebP)."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "Please upload one file at a time."
+msgstr "Przesyłaj pliki pojedynczo."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "The upload failed. Please try again."
+msgstr "Przesyłanie nie powiodło się. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This file is too large. Please upload one of at most %{size} MB."
+msgstr "Ten plik jest za duży. Prześlij plik nie większy niż %{size} MB."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This file type is not supported. Please upload a JPG, PNG or WebP image."
+msgstr "Ten typ pliku nie jest obsługiwany. Prześlij obraz w formacie JPG, PNG lub WebP."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This file type is not supported. Please upload an MP4 or WebM video."
+msgstr "Ten typ pliku nie jest obsługiwany. Prześlij wideo w formacie MP4 lub WebM."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "You are customising %{theme}, but your booking page uses %{current}. These changes appear on your booking page once you choose %{theme} as your style."
+msgstr "Dostosowujesz motyw %{theme}, ale twoja strona rezerwacji używa motywu %{current}. Te zmiany pojawią się na stronie rezerwacji, gdy wybierzesz %{theme} jako swój styl."

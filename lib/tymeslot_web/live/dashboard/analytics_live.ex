@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Analytics
-  alias Tymeslot.Analytics.MetricsCache
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown
@@ -69,9 +68,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   # The assign is always set by FeatureAssignsHook, which every dashboard route
   # runs, so the fallback is only reached if that chain is bypassed. A missing
   # assign means the entitlement is unknown, and unknown must not read as
-  # allowed — this is the last check in front of the data, with no server-side
-  # gate behind it. Core's own default remains `true`, set in config, so a
-  # self-hosted deployment is unaffected.
+  # allowed. It only decides what to render: `Analytics.dashboard_metrics/3`
+  # checks the entitlement again before any data is read. Core's own default
+  # remains `true`, set in config, so a self-hosted deployment is unaffected.
   defp analytics_allowed?(socket), do: Map.get(socket.assigns, :analytics_allowed, false)
 
   @impl Phoenix.LiveView
@@ -90,8 +89,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   # explicit way to see fresh numbers without waiting out the TTL. The window end
   # is re-derived to *now* as well, so a visit made after the dashboard was opened
   # (it would otherwise fall past the mount-time `to`) is included.
-  def handle_event("refresh", _params, %{assigns: %{current_user: user, range: range}} = socket) do
-    MetricsCache.invalidate(user.id, range)
+  def handle_event("refresh", _params, %{assigns: %{range: range}} = socket) do
     # Data reloads immediately; the spin is held briefly so the refresh is
     # perceptible even when the recompute returns in a few milliseconds.
     Process.send_after(self(), :stop_refresh_spin, 600)
@@ -100,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
      socket
      |> assign(:refreshing?, true)
      |> assign_window_for(range)
-     |> load_data()}
+     |> load_data(&Analytics.refresh_dashboard_metrics/3)}
   end
 
   @impl Phoenix.LiveView
@@ -166,6 +164,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           )}
         </p>
 
+        <.info_box :if={@unavailable?} variant={:warning}>
+          {dgettext(
+            "dashboard_analytics",
+            "Analytics are temporarily unavailable. Please try refreshing in a moment."
+          )}
+        </.info_box>
+
         <.info_box :if={@partial_window?} variant={:info}>
           {dgettext(
             "dashboard_analytics",
@@ -223,6 +228,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       loaded?: false,
       refreshed_at: nil,
       refreshing?: false,
+      unavailable?: false,
       visits: 0,
       unique_visitors: 0,
       bookings: 0,
@@ -267,30 +273,31 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     end
   end
 
-  defp load_data(
-         %{assigns: %{current_user: user, range: range, from: from, to: to, time_zone: time_zone}} =
-           socket
-       ) do
-    # Collapse the ~7 aggregate queries into one cached bundle per
-    # {organizer, range}. MetricsCache keys on user.id, so one organizer can
-    # never be served another's metrics.
-    data =
-      MetricsCache.fetch(user.id, range, fn ->
-        %{
-          visits: Analytics.count_visits(user.id, from, to),
-          unique_visitors: Analytics.count_unique_visitors(user.id, from, to),
-          bookings: Analytics.count_bookings(user.id, from, to),
-          converting_visitors: Analytics.count_converting_visitors(user.id, from, to),
-          visits_by_day: Analytics.visits_by_day(user.id, from, to, time_zone),
-          sources: Analytics.attribution_table(user.id, from, to),
-          devices: Analytics.device_breakdown(user.id, from, to)
-        }
-      end)
+  # The context owns the entitlement check, the window and the metrics cache.
+  # A refusal (the plan changed since mount, or the assign was wrong) falls back
+  # to the upgrade placeholder rather than rendering empty metrics. A checker
+  # that failed says nothing about the plan, so it keeps the page and asks the
+  # organiser to retry instead of offering an upgrade they may already have.
+  defp load_data(socket, fetch \\ &Analytics.dashboard_metrics/3)
 
-    socket
-    |> assign(Map.to_list(data))
-    |> assign(:loaded?, true)
-    |> assign(:refreshed_at, DateTime.utc_now())
+  defp load_data(
+         %{assigns: %{current_user: user, range: range, time_zone: time_zone}} = socket,
+         fetch
+       ) do
+    case fetch.(user.id, Map.fetch!(@ranges, range), time_zone) do
+      {:ok, data} ->
+        socket
+        |> assign(Map.to_list(data))
+        |> assign(:loaded?, true)
+        |> assign(:unavailable?, false)
+        |> assign(:refreshed_at, DateTime.utc_now())
+
+      {:error, :feature_access_checker_failed} ->
+        assign(socket, :unavailable?, true)
+
+      {:error, _reason} ->
+        assign(socket, :analytics_allowed, false)
+    end
   end
 
   # The organiser's own clock, 12- or 24-hour, as on every other dashboard page.

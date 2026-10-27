@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour do
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Shared.OAuth.State
 
   @callback authorization_url(pos_integer(), String.t()) :: String.t()
   @callback authorization_url(pos_integer(), String.t(), list(atom() | String.t()) | keyword()) ::
@@ -20,12 +21,18 @@ defmodule Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour do
 
   # Optional because only the Google helper needs it: Outlook implements this
   # behaviour too but its authorisation URL takes no caller-supplied scopes.
-  @optional_callbacks authorization_url: 4
-  @type callback_error :: :calendar_scope_missing | String.t()
+  # The same goes for `refresh_access_token`, which only Google Meet's refresh
+  # calls (through the Google helper); the Outlook calendar refresh runs in
+  # `OutlookCalendarAPI.refresh_token/1`.
+  @optional_callbacks authorization_url: 4, refresh_access_token: 2, refresh_access_token: 3
+  @type callback_error :: :calendar_scope_missing | :duplicate_account | :not_found | String.t()
 
-  @callback handle_callback(String.t(), String.t(), String.t()) ::
+  # The code, the redirect URI, and the callback's state, already verified as
+  # issued to the user completing it, with its flow's `:code_verifier`.
+  @callback handle_callback(String.t(), String.t(), State.validated()) ::
               {:ok, CalendarIntegrationSchema.t()} | {:error, callback_error()}
-  @callback exchange_code_for_tokens(String.t(), String.t()) :: {:ok, map()} | {:error, term()}
+  @callback exchange_code_for_tokens(String.t(), String.t(), keyword()) ::
+              {:ok, map()} | {:error, term()}
   @callback refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, term()}
   # With options, used to carry a `:log_context` naming the integration behind
   # a refresh failure.

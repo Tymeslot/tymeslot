@@ -127,21 +127,29 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   # bookings made on days with no events at all, which are unverifiable (the
   # visitor may well have browsed the previous day and booked today — we simply
   # cannot confirm it either way; see moduledoc).
+  #
+  # "Same calendar day" is a half-open range from the meeting's midnight rather
+  # than `DATE(e.inserted_at) = DATE(m.inserted_at)`, so the `inserted_at`
+  # indexes on `analytics_events` can serve it. Both columns are `timestamp`
+  # (UTC, no zone), so `date_trunc` cuts the day in UTC whatever the session
+  # time zone, exactly as `DATE()` did.
   @spec count_untracked_converting_visitors(DateTime.t(), DateTime.t()) :: non_neg_integer()
   defp count_untracked_converting_visitors(%DateTime{} = from, %DateTime{} = to) do
     matching_event =
       from(e in EventSchema,
         where:
-          fragment("DATE(?)", e.inserted_at) ==
-            fragment("DATE(?)", parent_as(:meeting).inserted_at) and
+          e.inserted_at >= fragment("date_trunc('day', ?)", parent_as(:meeting).inserted_at) and
+            e.inserted_at <
+              fragment("date_trunc('day', ?) + interval '1 day'", parent_as(:meeting).inserted_at) and
             e.visitor_hash == parent_as(:meeting).visitor_hash
       )
 
     any_same_day_event =
       from(e in EventSchema,
         where:
-          fragment("DATE(?)", e.inserted_at) ==
-            fragment("DATE(?)", parent_as(:meeting).inserted_at)
+          e.inserted_at >= fragment("date_trunc('day', ?)", parent_as(:meeting).inserted_at) and
+            e.inserted_at <
+              fragment("date_trunc('day', ?) + interval '1 day'", parent_as(:meeting).inserted_at)
       )
 
     from(m in MeetingSchema, as: :meeting)

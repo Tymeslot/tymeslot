@@ -85,7 +85,7 @@ defmodule Tymeslot.Workers.SyncHealth do
   # Re-flagging is possible for an integration the probe keeps refusing while
   # its syncs succeed, and that is the intended reading: the owner really does
   # have a half-working calendar. Each re-flag is a false-to-true transition
-  # (`CalendarManagement.flag_and_notify/2`), so the reauth email is capped at
+  # (`ReauthHandling.flag_and_notify/3`), so the reauth email is capped at
   # one per integration per 30 days by the notification job's uniqueness
   # window, not sent per cycle.
   defp clear_reauth_flag(integration) do

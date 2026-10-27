@@ -36,10 +36,18 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
 
   setup :verify_on_exit!
+
+  # The provider read runs for real, behind the `:calendar_module` seam the
+  # domain reaches it through.
+  setup do
+    stub(Tymeslot.CalendarMock, :fetch_event, &Operations.fetch_event/2)
+    :ok
+  end
 
   @calendar_account "entra-oid-organiser"
   @graph "https://graph.microsoft.com/v1.0"

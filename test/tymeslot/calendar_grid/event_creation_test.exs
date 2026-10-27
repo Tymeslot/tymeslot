@@ -13,7 +13,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
   The full provider-call path is stubbed: the suite-wide `:calendar_module` seam
   points `Calendar.Events` at `Tymeslot.CalendarMock`, and the MiroTalk provider
   at `HTTPClientMock`. The one end-to-end case that must reach the real Google
-  client points the same seam back at `Calendar.Operations` for its own setup.
+  client points the same seam back at `Calendar.Runtime.Operations` for its own setup.
   """
 
   use Tymeslot.DataCase, async: false
@@ -514,7 +514,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       Application.put_env(
         :tymeslot,
         :calendar_module,
-        Tymeslot.Integrations.Calendar.Operations
+        Tymeslot.Integrations.Calendar.Runtime.Operations
       )
 
       on_exit(fn ->

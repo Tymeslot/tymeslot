@@ -41,7 +41,7 @@ defmodule Tymeslot.Auth.OAuth.Providers do
 
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Integrations.Google.Endpoints, as: GoogleEndpoints
+  alias Tymeslot.Integrations.Shared.GoogleConfig
 
   @type provider :: :github | :google | :oauth
 
@@ -179,9 +179,9 @@ defmodule Tymeslot.Auth.OAuth.Providers do
     %{
       client_id: System.get_env("GOOGLE_CLIENT_ID"),
       client_secret: System.get_env("GOOGLE_CLIENT_SECRET"),
-      authorize_url: GoogleEndpoints.authorize_url(),
-      token_url: GoogleEndpoints.token_url(),
-      userinfo_url: GoogleEndpoints.userinfo_url(),
+      authorize_url: GoogleConfig.authorize_url(),
+      token_url: GoogleConfig.token_url(),
+      userinfo_url: GoogleConfig.userinfo_url(),
       scope: "email profile"
     }
   end

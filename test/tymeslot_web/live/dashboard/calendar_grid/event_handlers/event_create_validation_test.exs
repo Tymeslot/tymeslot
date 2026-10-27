@@ -277,11 +277,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
       assert_received {:execute_create_event, payload}
 
       assert %{until: ~D[2026-05-30]} =
-               RRule.parse(payload.creating.recurrence_rule, timezone: "Europe/Tallinn")
+               RRule.options(payload.creating.recurrence_rule, timezone: "Europe/Tallinn")
 
       # Read in UTC — the way the pre-fix code wrote and read it — the same
       # instant still falls on 30 May, so no 31 May occurrence is generated.
-      assert %{until: ~D[2026-05-30]} = RRule.parse(payload.creating.recurrence_rule)
+      assert %{until: ~D[2026-05-30]} = RRule.options(payload.creating.recurrence_rule)
     end
   end
 

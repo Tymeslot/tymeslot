@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.WebhooksTest do
   alias Tymeslot.Integrations.Calendar.Webhooks
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimit
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.ReregisterOutlookSubscriptionWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
@@ -71,6 +72,29 @@ defmodule Tymeslot.Integrations.Calendar.WebhooksTest do
       assert [job] = all_enqueued(worker: SyncGoogleCalendarWorker)
       assert job.args == %{"calendar_integration_id" => integration.id}
       assert %DateTime{} = reload(integration).last_google_notification_at
+    end
+
+    # An id the limiter cannot count is refused as an exhausted limit would be.
+    test "refuses an integration whose id the limiter rejects, without syncing",
+         %{integration: integration} do
+      # Patched with :meck: an integration found by its channel is a stored
+      # row and always has an id the limiter can count.
+      # Unloaded when the test process exits.
+      :meck.new(RateLimiter, [:passthrough])
+
+      :meck.expect(RateLimiter, :check, fn
+        :calendar_webhook, _id -> {:error, :invalid_id}
+        name, key -> :meck.passthrough([name, key])
+      end)
+
+      assert {:error, :rate_limited} =
+               Webhooks.handle_google_notification(
+                 integration.google_channel_id,
+                 integration.google_channel_secret
+               )
+
+      assert all_enqueued(worker: SyncGoogleCalendarWorker) == []
+      assert reload(integration).last_google_notification_at == nil
     end
 
     test "ignores an unknown channel" do

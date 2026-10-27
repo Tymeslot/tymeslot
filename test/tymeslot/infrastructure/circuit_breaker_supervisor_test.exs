@@ -4,14 +4,14 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisorTest do
   @moduletag :infrastructure
 
   alias Tymeslot.Infrastructure.CircuitBreaker
-  alias Tymeslot.Infrastructure.CircuitBreakerHelpers
   alias Tymeslot.Infrastructure.CircuitBreakerRegistry
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Infrastructure.DynamicCircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.ProviderBreakers
   alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviderConfig
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
 
-  @static_breakers [:email_service_breaker, :oauth_github_breaker, :oauth_google_breaker]
+  @static_breakers [:email_service_breaker]
 
   describe "supervisor started" do
     test "supervises a breaker for every provider that has circuit breaking enabled" do
@@ -59,20 +59,34 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisorTest do
     end
   end
 
+  describe "a video provider switched off" do
+    setup do
+      prior = Application.fetch_env(:tymeslot, :video_providers)
+
+      on_exit(fn ->
+        case prior do
+          {:ok, value} -> Application.put_env(:tymeslot, :video_providers, value)
+          :error -> Application.delete_env(:tymeslot, :video_providers)
+        end
+      end)
+    end
+
+    # Its existing integrations keep making room calls, and without a breaker
+    # every one of them would fail with `:breaker_not_found`.
+    test "keeps its breaker when the application starts" do
+      Application.put_env(:tymeslot, :video_providers, %{zoom: %{enabled: false}})
+      refute :zoom in VideoProviderConfig.all_providers()
+
+      {:ok, {_flags, children}} = CircuitBreakerSupervisor.init([])
+
+      assert :video_breaker_zoom in Enum.map(children, & &1.id)
+    end
+  end
+
   describe "other breakers" do
     test "email service breaker is alive" do
       assert is_pid(Process.whereis(:email_service_breaker))
       assert %{status: :closed} = CircuitBreaker.status(:email_service_breaker)
-    end
-
-    test "OAuth GitHub breaker is alive" do
-      assert is_pid(Process.whereis(:oauth_github_breaker))
-      assert %{status: :closed} = CircuitBreaker.status(:oauth_github_breaker)
-    end
-
-    test "OAuth Google breaker is alive" do
-      assert is_pid(Process.whereis(:oauth_google_breaker))
-      assert %{status: :closed} = CircuitBreaker.status(:oauth_google_breaker)
     end
   end
 
@@ -80,7 +94,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisorTest do
     test "a host-keyed breaker starts under the dynamic supervisor and is found in the registry" do
       name = {:via, Registry, {CircuitBreakerRegistry, "circuit-breaker-supervisor-test.example"}}
 
-      refute CircuitBreakerHelpers.breaker_exists?(name)
+      refute ProviderBreakers.breaker_exists?(name)
 
       assert {:ok, pid} =
                DynamicSupervisor.start_child(
@@ -94,7 +108,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisorTest do
         end
       end)
 
-      assert CircuitBreakerHelpers.breaker_exists?(name)
+      assert ProviderBreakers.breaker_exists?(name)
       assert %{status: :closed} = CircuitBreaker.status(name)
     end
   end

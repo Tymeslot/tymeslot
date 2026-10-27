@@ -4,6 +4,8 @@ defmodule Tymeslot.Security.FieldValidators.SelectValidator do
   declared on the field definition (or its snapshot).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @spec validate(any(), map(), keyword()) :: :ok | {:error, String.t()}
   def validate(value, definition, opts \\ [])
 
@@ -14,14 +16,17 @@ defmodule Tymeslot.Security.FieldValidators.SelectValidator do
     if value in allowed_keys(definition) do
       :ok
     else
-      {:error, "Please choose one of the available options"}
+      {:error, dgettext("errors_input", "Please choose one of the available options")}
     end
   end
 
-  def validate(_value, _definition, _opts), do: {:error, "Selection must be a single option"}
+  def validate(_value, _definition, _opts),
+    do: {:error, dgettext("errors_input", "Selection must be a single option")}
 
   defp blank_result(opts) do
-    if Keyword.get(opts, :required, true), do: {:error, "Please choose an option"}, else: :ok
+    if Keyword.get(opts, :required, true),
+      do: {:error, dgettext("errors_input", "Please choose an option")},
+      else: :ok
   end
 
   defp allowed_keys(%{"options" => options}) when is_list(options) do

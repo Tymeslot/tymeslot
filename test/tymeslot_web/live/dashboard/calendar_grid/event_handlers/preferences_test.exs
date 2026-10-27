@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.PreferencesTest do
         current_user: user,
         profile: profile,
         preferences: preferences,
+        integrations: [],
         events: [],
         hidden_integration_ids: MapSet.new(),
         view: :week,

@@ -17,6 +17,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   attr :oauth_mode_available?, :boolean, required: true
   attr :myself, :any, required: true
 
+  attr :paused, :boolean,
+    default: false,
+    doc: "The owner's plan doesn't include automations: cards paused, nothing can be added"
+
   @spec slack_tab_content(map()) :: Phoenix.LiveView.Rendered.t()
   def slack_tab_content(assigns) do
     ~H"""
@@ -27,12 +31,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
           count={length(@integrations)}
         >
           <:actions>
-            <.action_link :if={@oauth_mode_available?} href={~p"/api/slack/oauth/start"}>
-              {dgettext("dashboard_automation_chat", "Add to Slack")}
-            </.action_link>
+            <.add_to_slack :if={@oauth_mode_available?} paused={@paused} />
             <.action_button
               variant={:secondary}
-              phx-click="slack_show_webhook_form"
+              disabled={@paused}
+              phx-click={!@paused && "slack_show_webhook_form"}
               phx-target={@myself}
             >
               {dgettext("dashboard_automation_chat", "Add via webhook URL")}
@@ -46,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
               time_format={@time_format}
               integration={integration}
               testing={@slack_testing == integration.id}
+              paused={@paused}
               target={@myself}
               on_edit={
                 JS.push("slack_show_edit_form", value: %{"id" => integration.id}, target: @myself)
@@ -94,25 +98,50 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
       >
         <:graphic><IconComponents.icon name={:slack} class="w-10 h-10" /></:graphic>
         <:action :if={@oauth_mode_available?}>
-          <.action_link href={~p"/api/slack/oauth/start"}>
-            <IconComponents.icon name={:slack} class="w-5 h-5" />
-            {dgettext("dashboard_automation_chat", "Add to Slack")}
-          </.action_link>
+          <.add_to_slack paused={@paused} icon />
           <.action_button
             variant={:secondary}
-            phx-click="slack_show_webhook_form"
+            disabled={@paused}
+            phx-click={!@paused && "slack_show_webhook_form"}
             phx-target={@myself}
           >
             {dgettext("dashboard_automation_chat", "Add via webhook URL")}
           </.action_button>
         </:action>
         <:action :if={!@oauth_mode_available?}>
-          <.action_button phx-click="slack_show_webhook_form" phx-target={@myself}>
+          <.action_button
+            disabled={@paused}
+            phx-click={!@paused && "slack_show_webhook_form"}
+            phx-target={@myself}
+          >
             {dgettext("dashboard_automation_chat", "Add Slack via Webhook URL")}
           </.action_button>
         </:action>
       </.empty_state>
     <% end %>
+    """
+  end
+
+  attr :paused, :boolean, required: true
+  attr :icon, :boolean, default: false
+
+  # Starting OAuth while paused would only be refused at the callback, so the
+  # link gives way to a disabled button carrying the same label.
+  defp add_to_slack(%{paused: true} = assigns) do
+    ~H"""
+    <.action_button disabled>
+      <IconComponents.icon :if={@icon} name={:slack} class="w-5 h-5" />
+      {dgettext("dashboard_automation_chat", "Add to Slack")}
+    </.action_button>
+    """
+  end
+
+  defp add_to_slack(assigns) do
+    ~H"""
+    <.action_link href={~p"/api/slack/oauth/start"}>
+      <IconComponents.icon :if={@icon} name={:slack} class="w-5 h-5" />
+      {dgettext("dashboard_automation_chat", "Add to Slack")}
+    </.action_link>
     """
   end
 end

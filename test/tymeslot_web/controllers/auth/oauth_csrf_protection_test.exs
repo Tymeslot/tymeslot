@@ -25,7 +25,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Common.OAuth.State
+  alias Tymeslot.Integrations.Shared.OAuth.State
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Test.LogCapture
 

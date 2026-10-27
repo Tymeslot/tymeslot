@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarAppearanceSchema do
   Deleting a row therefore restores inheritance rather than leaving a calendar
   in some third state.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
 
   import Ecto.Changeset
@@ -59,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarAppearanceSchema do
       if is_nil(value) or EventColour.valid_key?(value) do
         []
       else
-        [colour: "is not a palette colour"]
+        [colour: dgettext_noop("errors", "is not a palette colour")]
       end
     end)
   end

@@ -19,20 +19,40 @@ defmodule Tymeslot.Meetings.Guests do
   `subscribe_to_rsvp_updates/1`.
   """
 
+  alias Tymeslot.Auth
+  alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Clock
-  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.Seats
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
+  alias Tymeslot.Validation.Constraints
 
   @pubsub Tymeslot.PubSub
 
-  @max_guests 10
+  @max_guests Constraints.guests_per_booking_range().last
+
+  @typedoc """
+  A guest to insert: a bare address, or an address with the name its owner
+  gave, which their emails and the host's dashboard then use, and optionally
+  the guest's own `locale` and `timezone`, which their emails are then
+  written in rather than the attendee's.
+  """
+  @type entry ::
+          String.t()
+          | %{
+              required(:email) => String.t(),
+              required(:name) => String.t() | nil,
+              optional(:locale) => String.t() | nil,
+              optional(:timezone) => String.t() | nil
+            }
 
   @typedoc "Aggregate RSVP counts for a meeting's guest list."
   @type summary :: GuestSchema.summary()
@@ -42,14 +62,27 @@ defmodule Tymeslot.Meetings.Guests do
   def max_guests, do: @max_guests
 
   @doc """
+  How many guests one booking of `meeting_type` may bring: the host's own
+  limit for the type (`max_guests_per_booking`), or `max_guests/0` without
+  one. A group booking is further bounded by the seats left on its time.
+  """
+  @spec limit_for(map() | nil) :: pos_integer()
+  def limit_for(%{max_guests_per_booking: limit}) when is_integer(limit) and limit > 0,
+    do: min(limit, @max_guests)
+
+  def limit_for(_meeting_type), do: @max_guests
+
+  @doc """
   Sanitises a raw list of guest emails submitted with a booking.
 
   Trims and downcases each entry, drops blanks and anything that fails email
   validation, removes the primary attendee's own address, de-duplicates, and
   caps the result at `max_guests/0`. Always returns a list — never raises.
   """
-  @spec sanitize_emails([String.t()] | nil, String.t() | nil) :: [String.t()]
-  def sanitize_emails(emails, primary_email) when is_list(emails) do
+  @spec sanitize_emails([String.t()] | nil, String.t() | nil, pos_integer()) :: [String.t()]
+  def sanitize_emails(emails, primary_email, limit \\ @max_guests)
+
+  def sanitize_emails(emails, primary_email, limit) when is_list(emails) do
     primary = normalize(primary_email)
 
     emails
@@ -57,10 +90,10 @@ defmodule Tymeslot.Meetings.Guests do
     |> Enum.reject(&(&1 == "" or &1 == primary))
     |> Enum.filter(&valid_email?/1)
     |> Enum.uniq()
-    |> Enum.take(@max_guests)
+    |> Enum.take(limit)
   end
 
-  def sanitize_emails(_emails, _primary_email), do: []
+  def sanitize_emails(_emails, _primary_email, _limit), do: []
 
   @doc """
   Whether `email` is an address a guest can be invited at: the same rule
@@ -71,7 +104,8 @@ defmodule Tymeslot.Meetings.Guests do
   def valid_email?(email), do: EmailValidator.validate(email) == :ok
 
   @doc """
-  Inserts the given sanitised guest emails for a meeting.
+  Inserts the given sanitised guests for a meeting, each a bare address or an
+  address with a name (`t:entry/0`).
 
   `invited_by` records who is inviting them (`:booker` for the person booking
   on the public page, `:organizer` for the host), so their invitation names
@@ -81,7 +115,7 @@ defmodule Tymeslot.Meetings.Guests do
   failure rolls the whole booking back. Returns `{:ok, guests}` with the
   inserted rows, or `{:error, changeset}` on the first failure.
   """
-  @spec create_for_meeting(binary(), [String.t()], GuestSchema.inviter()) ::
+  @spec create_for_meeting(binary(), [entry()], GuestSchema.inviter()) ::
           {:ok, [GuestSchema.t()]} | {:error, Ecto.Changeset.t()}
   def create_for_meeting(meeting_id, emails, invited_by \\ :booker)
 
@@ -198,7 +232,7 @@ defmodule Tymeslot.Meetings.Guests do
   defp schedule_invitations(_meeting, []), do: :ok
 
   defp schedule_invitations(meeting, added),
-    do: MeetingScheduler.schedule_guest_invitations(meeting.id, Enum.map(added, & &1.id))
+    do: EmailScheduler.schedule_guest_invitations(meeting.id, Enum.map(added, & &1.id))
 
   @doc """
   Looks up the open invitation behind an RSVP token without mutating anything.
@@ -208,17 +242,26 @@ defmodule Tymeslot.Meetings.Guests do
   `{:error, :not_found}` for an unknown token, or for a guest whose group
   booking participant has cancelled their seat, and `{:error, :meeting_closed}`
   when the meeting no longer takes responses (see the module doc).
+  `{:error, :not_found}` also for a meeting whose host is pending deletion.
   """
   @spec get_open_invitation(String.t()) ::
           {:ok, GuestSchema.t()} | {:error, :not_found | :meeting_closed}
   def get_open_invitation(token) do
     with {:ok, guest} <- GuestQueries.get_by_token(token),
-         :ok <- ensure_participant_open(guest) do
-      guest = Repo.preload(guest, [:meeting, :participant])
-
+         :ok <- ensure_participant_open(guest),
+         guest = Repo.preload(guest, [:meeting, :participant]),
+         :ok <- ensure_host_active(guest.meeting) do
       if invitations_open?(guest.meeting), do: {:ok, guest}, else: {:error, :meeting_closed}
     end
   end
+
+  # The meetings of a host pending deletion are about to go; their RSVP links
+  # answer as unknown, like every other public page of that host.
+  defp ensure_host_active(%{organizer_user_id: user_id}) when is_integer(user_id) do
+    if Auth.deletion_pending?(user_id), do: {:error, :not_found}, else: :ok
+  end
+
+  defp ensure_host_active(_meeting), do: :ok
 
   @doc """
   Records a guest's RSVP from their token and notifies the organiser.
@@ -227,22 +270,78 @@ defmodule Tymeslot.Meetings.Guests do
   the current time and broadcasts `{:guest_rsvp_updated, meeting_id}` to the
   organiser's RSVP topic. Returns the updated guest with its `:meeting`
   preloaded, `{:error, :not_found}` for an unknown token,
-  `{:error, :meeting_closed}` when the meeting no longer takes responses, and
+  `{:error, :meeting_closed}` when the meeting no longer takes responses,
+  `{:error, :full}` when a guest of a group booking who had declined answers
+  yes while no seat is free (see `can_accept?/1`), and
   `{:error, :invalid_response}` for anything other than accept/decline.
+
+  A guest of a group booking holds a seat until they decline; their seat is
+  then free for others. An answer that frees or takes a seat refreshes what
+  the booking page offers at once.
   """
   @spec record_rsvp(String.t(), String.t()) ::
           {:ok, GuestSchema.t()}
-          | {:error, :not_found | :meeting_closed | :invalid_response | Ecto.Changeset.t()}
+          | {:error,
+             :not_found | :meeting_closed | :full | :invalid_response | Ecto.Changeset.t()}
   def record_rsvp(token, response) when response in ["accepted", "declined"] do
     with {:ok, guest} <- get_open_invitation(token),
-         {:ok, updated} <-
-           GuestQueries.update_rsvp(guest, %{status: response, responded_at: now()}) do
+         {:ok, updated} <- update_response(guest, response) do
       broadcast_rsvp_update(updated.meeting)
+      if seat_changed?(guest, updated), do: SeatEffects.broadcast_and_invalidate(updated.meeting)
       {:ok, updated}
     end
   end
 
   def record_rsvp(_token, _response), do: {:error, :invalid_response}
+
+  @doc """
+  Whether `guest` can answer yes now. Always, except for a guest of a group
+  booking who declined and so gave their seat back: they can only while a
+  seat is free. Read without a lock, for the page offering the answer;
+  `record_rsvp/2` decides under the slot's lock.
+  """
+  @spec can_accept?(GuestSchema.t()) :: boolean()
+  def can_accept?(%GuestSchema{status: "declined", participant_id: id, meeting: meeting})
+      when is_binary(id) and is_struct(meeting, MeetingSchema),
+      do: Seats.seats_left(meeting, meeting.capacity) > 0
+
+  def can_accept?(_guest), do: true
+
+  # A declined guest of a group booking answering yes takes a seat again, so
+  # the seat is checked under the slot's lock, as a booking's are
+  # (`GroupScheduling`): two such answers for the last seat cannot both win.
+  defp update_response(%{status: "declined", participant_id: id} = guest, "accepted")
+       when is_binary(id) do
+    Repo.transaction(fn ->
+      meeting = GroupMeetingQueries.lock_for_update(guest.meeting_id)
+
+      with true <- seat_for_yes?(guest, meeting) || {:error, :full},
+           {:ok, updated} <- GuestQueries.update_rsvp(guest, rsvp_attrs("accepted")) do
+        updated
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp update_response(guest, response), do: GuestQueries.update_rsvp(guest, rsvp_attrs(response))
+
+  # The status is re-read under the lock: a yes submitted twice finds the
+  # seat the first submit took already its own, rather than none left.
+  defp seat_for_yes?(guest, meeting),
+    do:
+      GuestQueries.get_status(guest) != "declined" or
+        Seats.seats_left(meeting, meeting.capacity) > 0
+
+  defp rsvp_attrs(response), do: %{status: response, responded_at: now()}
+
+  # Only a group booking's guests take seats; a decline gives one back and a
+  # yes after a decline takes one.
+  defp seat_changed?(%{participant_id: id, status: before}, %{status: now_status})
+       when is_binary(id),
+       do: before == "declined" != (now_status == "declined")
+
+  defp seat_changed?(_guest, _updated), do: false
 
   # A guest brought by a group-booking participant loses their invitation when
   # that participant cancels their seat, even though the meeting carries on.
@@ -281,10 +380,10 @@ defmodule Tymeslot.Meetings.Guests do
     end)
   end
 
-  defp insert_guests(base_attrs, emails) do
+  defp insert_guests(base_attrs, entries) do
     result =
-      Enum.reduce_while(emails, {:ok, []}, fn email, {:ok, acc} ->
-        case GuestQueries.insert_guest(Map.put(base_attrs, :email, email)) do
+      Enum.reduce_while(entries, {:ok, []}, fn entry, {:ok, acc} ->
+        case GuestQueries.insert_guest(Map.merge(base_attrs, guest_attrs(entry))) do
           {:ok, guest} -> {:cont, {:ok, [guest | acc]}}
           {:error, changeset} -> {:halt, {:error, changeset}}
         end
@@ -295,6 +394,11 @@ defmodule Tymeslot.Meetings.Guests do
       error -> error
     end
   end
+
+  defp guest_attrs(%{email: _email, name: _name} = entry),
+    do: Map.take(entry, [:email, :name, :locale, :timezone])
+
+  defp guest_attrs(email) when is_binary(email), do: %{email: email}
 
   defp broadcast_rsvp_update(%{organizer_user_id: user_id, id: meeting_id})
        when is_integer(user_id) do

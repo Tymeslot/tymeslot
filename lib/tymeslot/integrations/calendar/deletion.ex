@@ -4,11 +4,12 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
   calendar invariant (promote another or clear primary).
   """
 
-  alias Tymeslot.Integrations.Calendar.BookingEligibility
-  alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Google.PushChannel
+  alias Tymeslot.Integrations.Calendar.Management
+  alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
+  alias Tymeslot.Integrations.Calendar.PrimaryElection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
-  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
   @type user_id :: pos_integer()
@@ -29,9 +30,9 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
   def delete_with_primary_reassignment(user_id, integration_id)
       when is_integer(user_id) and is_integer(integration_id) do
     with {:ok, integration} <-
-           CalendarManagement.get_calendar_integration(integration_id, user_id),
-         promoted_result <- maybe_handle_primary(user_id, integration),
-         {:ok, _result} <- clear_references_and_delete(integration) do
+           Management.get_calendar_integration(integration_id, user_id),
+         :ok <- stop_push_notifications(integration),
+         {:ok, promoted_result} <- delete_and_reassign(integration) do
       case promoted_result do
         {:promoted, next_id} -> {:ok, {:deleted_promoted, next_id}}
         :cleared -> {:ok, {:deleted_cleared_primary}}
@@ -43,55 +44,53 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
     end
   end
 
-  defp maybe_handle_primary(user_id, integration) do
-    with {:ok, %{id: primary_id}} <- CalendarPrimary.get_primary_calendar_integration(user_id),
-         true <- primary_id == integration.id do
-      promote_next_or_clear(user_id, [integration.id])
-    else
-      _not_primary -> :unchanged
+  # Before the delete, while the row still holds the tokens a refresh would
+  # write back. Best-effort: a channel or subscription left running expires
+  # on its own.
+  defp stop_push_notifications(%{provider: "google"} = integration),
+    do: PushChannel.stop_push_channel(integration)
+
+  defp stop_push_notifications(%{provider: "outlook"} = integration),
+    do: GraphSubscription.unregister(integration)
+
+  defp stop_push_notifications(_integration), do: :ok
+
+  # The promotion and the delete commit together, under the lock a toggle or
+  # an automatic pause takes too, so a failed delete leaves the primary where
+  # it was and a concurrent change cannot elect from a list this one is
+  # changing. The integration cache lock comes first: the delete cascades
+  # into the cached events a sync may be writing.
+  defp delete_and_reassign(integration) do
+    PrimaryElection.under_lock(
+      integration.user_id,
+      fn ->
+        # A concurrent delete may have removed the row while this one waited on
+        # the lock; deleting the struct read before it would raise.
+        case CalendarIntegrationQueries.reload(integration) do
+          nil -> Repo.rollback(:not_found)
+          stored -> delete_stored(stored)
+        end
+      end,
+      cache_of: [integration.id]
+    )
+  end
+
+  defp delete_stored(integration) do
+    promoted_result = maybe_handle_primary(integration)
+    MeetingTypeQueries.clear_calendar_references(integration.id)
+
+    case CalendarIntegrationQueries.delete(integration) do
+      {:ok, _result} -> promoted_result
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
-  defp clear_references_and_delete(integration) do
-    Repo.transaction(fn ->
-      MeetingTypeQueries.clear_calendar_references(integration.id)
-
-      case CalendarManagement.delete_calendar_integration(integration) do
-        {:ok, result} -> result
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
-  end
-
-  # Promotes the first bookable integration not in `exclude_ids`, or clears
-  # the primary when none is left.
-  #
-  # A candidate can vanish between the listing and the profile update: two
-  # deletions running side by side each list the other's integration as the
-  # next primary, and one of them loses the race. That surfaces as an error
-  # from `set_primary_calendar_integration/2` (a not-found on the pre-check,
-  # or the profile's foreign-key constraint when the row went in between), and
-  # the answer is the same as if the candidate had never been listed: exclude
-  # it and look again. Every pass excludes one more id, so this terminates.
-  defp promote_next_or_clear(user_id, exclude_ids) do
-    others =
-      user_id
-      |> CalendarManagement.list_calendar_integrations()
-      |> Enum.reject(&(&1.id in exclude_ids))
-      |> BookingEligibility.filter_bookable()
-
-    case others do
-      [next | _rest] ->
-        case CalendarPrimary.set_primary_calendar_integration(user_id, next.id) do
-          {:ok, _integration} -> {:promoted, next.id}
-          {:error, _reason} -> promote_next_or_clear(user_id, [next.id | exclude_ids])
-        end
-
-      [] ->
-        case ProfileQueries.clear_primary_calendar_integration(user_id) do
-          {:ok, _profile} -> :cleared
-          _error -> :unchanged
-        end
+  # Decided on the stored primary id rather than a decrypted row, so an
+  # unreadable primary that is deleted still hands the role on.
+  defp maybe_handle_primary(%{id: id, user_id: user_id}) do
+    case PrimaryElection.stored_primary_id(user_id) do
+      ^id -> PrimaryElection.elect_next(user_id, [id])
+      _not_primary -> :unchanged
     end
   end
 end

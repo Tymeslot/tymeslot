@@ -26,7 +26,7 @@ defmodule Tymeslot.InviteeData do
   reminded about. Cancel them first, then erase.
 
   Booking payments keep their amounts for the statutory period
-  (`Tymeslot.MeetingPayments.DataRetention`); only the attendee's name and
+  (`Tymeslot.FinancialRetention`); only the attendee's name and
   email are cleared.
   """
 

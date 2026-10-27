@@ -16,7 +16,6 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CreatedEvent
-  alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
   alias Tymeslot.Integrations.Calendar.Exchange.Provider, as: ExchangeProvider
   alias Tymeslot.Integrations.Calendar.Exchange.Writes, as: ExchangeWrites
@@ -24,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
+  alias Tymeslot.Integrations.Calendar.Runtime.EventsRead
   alias Tymeslot.Security.Encryption
 
   @type integration :: CalendarIntegrationSchema.t()

@@ -1,63 +1,40 @@
 defmodule Tymeslot.Notifications.Recipients do
   @moduledoc """
-  Determines who should receive notifications and their context.
-  Pure functions for recipient determination and notification targeting.
+  Whether a meeting carries what its emails need (`validate/2`), and the
+  timezones its organiser and attendee read times in.
   """
 
-  alias Tymeslot.Meetings
-  alias Tymeslot.Profiles
+  require Logger
 
-  @typep participant :: %{
-           required(:email) => String.t() | nil,
-           required(:name) => String.t() | nil,
-           required(:timezone) => String.t()
-         }
+  alias Tymeslot.Emails.HostClock
+  alias Tymeslot.Meetings
 
   @doc """
-  Determines the recipients for a given notification type and meeting.
+  Whether `meeting` carries what its emails need, checked on the meeting's
+  own fields, with no lookups.
 
-  Routing depends on the meeting, not the notification type: every type routes
-  the same way today, and the type is accepted for a future channel that needs
-  to route differently. A group meeting routes to the organizer only — see
-  `recipients_for/2`.
+  `:recipients` (cancellation) needs the organiser's name and email and, for
+  a solo meeting, the attendee's. `:booking` (confirmation, reminders,
+  reschedule) also needs the calendar event's `calendar_uid` and the start
+  time. A group meeting's row carries no attendee of its own (its people are
+  its participants, emailed per seat), so its attendee fields are not asked
+  for. A field is missing when it is nil or false, as before.
   """
-  @spec determine_recipients(term(), atom()) ::
-          {:both | :organizer_only,
-           %{
-             required(:organizer) => participant(),
-             required(:attendee) => participant()
-           }}
-  def determine_recipients(meeting, _notification_type) do
-    recipients_for(meeting, base_recipients(meeting))
-  end
-
-  defp base_recipients(meeting) do
-    %{
-      organizer: %{
-        email: meeting.organizer_email,
-        name: meeting.organizer_name,
-        timezone: get_organizer_timezone(meeting)
-      },
-      attendee: %{
-        email: meeting.attendee_email,
-        name: meeting.attendee_name,
-        timezone: meeting.attendee_timezone || get_organizer_timezone(meeting)
-      }
-    }
-  end
-
-  # A group meeting's row carries no attendee of its own — `attendee_email`,
-  # `attendee_name` and `attendee_timezone` are nullable precisely because
-  # group attendees live on `meeting_participants`, not on the meeting row.
-  # The organizer is still a real recipient; the meeting-row "attendee" is
-  # not, so validation must not demand fields that cannot exist. Participants
-  # are resolved and emailed downstream via `Meetings.recipients/1`.
-  defp recipients_for(meeting, base_recipients) do
-    if Meetings.group?(meeting) do
-      {:organizer_only, base_recipients}
-    else
-      {:both, base_recipients}
+  @spec validate(map(), :booking | :recipients) :: :ok | {:error, String.t()}
+  def validate(meeting, scope \\ :booking) do
+    case Enum.reject(required_fields(meeting, scope), &Map.get(meeting, &1)) do
+      [] -> :ok
+      missing -> {:error, "Missing meeting fields: #{Enum.join(missing, ", ")}"}
     end
+  end
+
+  defp required_fields(meeting, :booking),
+    do: [:calendar_uid, :start_time | required_fields(meeting, :recipients)]
+
+  defp required_fields(meeting, :recipients) do
+    if Meetings.group?(meeting),
+      do: [:organizer_name, :organizer_email],
+      else: [:organizer_name, :organizer_email, :attendee_name, :attendee_email]
   end
 
   @doc """
@@ -65,21 +42,15 @@ defmodule Tymeslot.Notifications.Recipients do
   Requires the meeting to have organizer_user_id set.
   """
   @spec get_organizer_timezone(term()) :: String.t()
-  def get_organizer_timezone(meeting) do
-    case meeting.organizer_user_id do
-      nil ->
-        require Logger
+  def get_organizer_timezone(%{organizer_user_id: nil} = meeting) do
+    Logger.error("Missing organizer_user_id for meeting; using default timezone",
+      meeting_id: Map.get(meeting, :id)
+    )
 
-        Logger.error("Missing organizer_user_id for meeting; using default timezone",
-          meeting_uid: meeting.uid
-        )
-
-        Profiles.get_default_timezone()
-
-      user_id ->
-        Profiles.get_user_timezone(user_id)
-    end
+    HostClock.timezone(meeting)
   end
+
+  def get_organizer_timezone(meeting), do: HostClock.timezone(meeting)
 
   @doc """
   Gets the attendee's timezone from the meeting record.
@@ -101,51 +72,13 @@ defmodule Tymeslot.Notifications.Recipients do
 
         Logger.warning(
           "Missing attendee_timezone for meeting; using organizer timezone as emergency fallback",
-          meeting_uid: meeting.uid
+          meeting_id: Map.get(meeting, :id)
         )
 
         get_organizer_timezone(meeting)
 
       timezone ->
         timezone
-    end
-  end
-
-  @doc """
-  Validates that recipient information is complete.
-  """
-  @spec validate_recipients(term()) :: :ok | {:error, String.t()}
-  def validate_recipients(recipients) do
-    case recipients do
-      {:both, %{organizer: organizer, attendee: attendee}} ->
-        with :ok <- validate_recipient(organizer, :organizer) do
-          validate_recipient(attendee, :attendee)
-        end
-
-      {:organizer_only, %{organizer: organizer}} ->
-        validate_recipient(organizer, :organizer)
-
-      {:attendee_only, %{attendee: attendee}} ->
-        validate_recipient(attendee, :attendee)
-
-      _invalid_structure ->
-        {:error, "Invalid recipient structure"}
-    end
-  end
-
-  # Private functions
-
-  defp validate_recipient(recipient, type) do
-    required_fields = [:email, :name, :timezone]
-
-    missing_fields =
-      Enum.reject(required_fields, fn field ->
-        Map.has_key?(recipient, field) and recipient[field]
-      end)
-
-    case missing_fields do
-      [] -> :ok
-      fields -> {:error, "Missing #{type} fields: #{Enum.join(fields, ", ")}"}
     end
   end
 end

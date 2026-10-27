@@ -1,14 +1,18 @@
 defmodule Tymeslot.Availability.Audit do
   @moduledoc """
-  On-demand diagnostic that compares the calendar-grid boolean
-  (`Calculate.range_availability/6`) against the per-day time-picker
-  enumeration (`Calculate.available_slots/6`) for a profile, reporting any
-  divergence between what users see in the calendar grid and what the time
-  picker would actually offer.
+  On-demand diagnostic that compares the booking page's month view
+  (`Offer.days_in_range/4`) against its time picker (`Offer.slots_for_date/3`)
+  for a profile, reporting any day the month view marks bookable that offers
+  no time, or the other way round.
 
-  The two paths must agree by construction (both enumerate the same
-  discrete slot grid), so a non-empty `:disagreements` list indicates a
-  regression or a data-state edge case worth investigating.
+  It asks `Offer` exactly what a visitor's page asks, with the profile's own
+  timezone as the visitor's, so it checks what the page offers rather than a
+  copy of the engine's inputs: the host's calendars and their live bookings
+  both count. The two answers must agree, so a non-empty `:disagreements`
+  list indicates a regression or a data-state edge case worth investigating.
+
+  The host's cached availability is dropped first, so the audit reads the
+  calendars once, now, and both answers are folded from that one read.
 
   Intended for manual investigation in `bin/tymeslot remote` when a user
   reports unexpected availability:
@@ -19,16 +23,11 @@ defmodule Tymeslot.Availability.Audit do
   report to stdout by default. Pass `print: false` to suppress.
   """
 
-  alias Tymeslot.Availability.AvailabilityOverrideQueries
+  alias Tymeslot.Availability
   alias Tymeslot.Availability.AvailabilityScheduleQueries
-  alias Tymeslot.Availability.Calculate
-  alias Tymeslot.Availability.Reach
-  alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Availability.TimeOffPeriodQueries
-  alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Clock
-  alias Tymeslot.Integrations.Calendar.CalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
 
   @default_duration_minutes 30
@@ -39,8 +38,7 @@ defmodule Tymeslot.Availability.Audit do
           required(:day_of_week) => 1..7,
           required(:month_view_says_bookable) => boolean(),
           required(:per_day_has_slots) => boolean(),
-          required(:per_day_slot_count) => non_neg_integer(),
-          required(:per_day_event_count) => non_neg_integer()
+          required(:per_day_slot_count) => non_neg_integer()
         }
 
   @type result :: %{
@@ -54,8 +52,9 @@ defmodule Tymeslot.Availability.Audit do
         }
 
   @doc """
-  Audits a profile by username. Returns `{:ok, result}` on success or
-  `{:error, :not_found}` if no profile exists for that username.
+  Audits a profile by username. Returns `{:ok, result}` on success,
+  `{:error, :not_found}` if no profile exists for that username, and the
+  booking page's own error when the host's calendars cannot be read.
 
   Prints a human-readable summary to stdout unless `print: false`.
 
@@ -66,132 +65,92 @@ defmodule Tymeslot.Availability.Audit do
     * `:start_date` — first date to audit (default today UTC)
     * `:print` — set to `false` to suppress IO (default `true`)
   """
-  @spec run(String.t(), keyword()) :: {:ok, result()} | {:error, :not_found}
+  @spec run(String.t(), keyword()) :: {:ok, result()} | {:error, term()}
   def run(username, opts \\ []) do
-    case ProfileQueries.get_by_username_with_user(username) do
-      {:ok, profile} ->
-        result = audit(profile, opts)
-        if Keyword.get(opts, :print, true), do: print_report(result)
-        {:ok, result}
-
-      {:error, _reason} ->
-        {:error, :not_found}
+    with {:ok, profile} <- profile(username),
+         {:ok, result} <- audit(profile, opts) do
+      if Keyword.get(opts, :print, true), do: print_report(result)
+      {:ok, result}
     end
   end
 
   @doc """
-  Same as `run/2` but takes an already-loaded profile schema. Always
-  returns the result map; never prints.
+  Same as `run/2` but takes an already-loaded profile schema. Never prints.
   """
-  @spec audit(map(), keyword()) :: result()
+  @spec audit(map(), keyword()) :: {:ok, result()} | {:error, term()}
   def audit(profile, opts \\ []) do
     duration_minutes = Keyword.get(opts, :duration_minutes, @default_duration_minutes)
     horizon_days = Keyword.get(opts, :horizon_days, @default_horizon_days)
     start_date = Keyword.get(opts, :start_date, Clock.utc_today())
     end_date = Date.add(start_date, horizon_days)
-    timezone = profile.timezone
+    request = %{profile: profile, user_timezone: Profiles.timezone(profile)}
 
-    integration_ids =
-      profile.user_id
-      |> CalendarIntegrationQueries.list_active_for_user()
-      |> Enum.map(& &1.id)
+    Availability.changed(profile.user_id)
 
-    # The audit reads the profile's default schedule, which is the one the public
-    # booking page falls back to when a meeting type names no schedule of its own.
-    # Every profile owns one, but a database that has lost it must be reported
-    # on rather than crashed on: a nil schedule id is exactly what the engine
-    # already treats as "no schedule resolvable", so the audit then measures the
-    # fallback hours a visitor would actually be offered.
-    schedule = AvailabilityScheduleQueries.get_default(profile.id)
-    schedule_id = schedule && schedule.id
-
-    # Padded by the engine's reach: a date's slots read the hours, time off
-    # and events of the days around it (an overnight window from the day
-    # before, a meeting running on into the next), so a horizon read to its
-    # exact edges would judge its first and last days on partial data.
-    {read_from, read_to} = padded(start_date, end_date)
-
-    config =
-      schedule
-      |> Schedules.config(nil)
-      |> Map.merge(%{duration_minutes: duration_minutes, owner_timezone: timezone})
-      |> Map.merge(prefetched(schedule_id, read_from, read_to))
-
-    range_events = CalendarEventQueries.in_range(integration_ids, {read_from, read_to})
-
-    {:ok, month_view} =
-      Calculate.range_availability(start_date, end_date, timezone, timezone, range_events, config)
-
-    disagreements =
-      start_date
-      |> Date.range(end_date)
-      |> Enum.flat_map(&compare_one_date(&1, month_view, integration_ids, config, timezone))
-
-    %{
-      profile_id: profile.id,
-      schedule_id: schedule_id,
-      username: profile.username,
-      horizon: {start_date, end_date},
-      duration_minutes: duration_minutes,
-      checked_days: Date.diff(end_date, start_date) + 1,
-      disagreements: disagreements
-    }
+    with {:ok, month_view} <- Offer.days_in_range(request, start_date, end_date, duration_minutes),
+         {:ok, disagreements} <-
+           disagreements(request, month_view, Date.range(start_date, end_date), duration_minutes) do
+      {:ok,
+       %{
+         profile_id: profile.id,
+         schedule_id: default_schedule_id(profile),
+         username: profile.username,
+         horizon: {start_date, end_date},
+         duration_minutes: duration_minutes,
+         checked_days: Date.diff(end_date, start_date) + 1,
+         disagreements: disagreements
+       }}
+    end
   end
 
-  defp padded(start_date, end_date) do
-    reach = Reach.owner_days()
-    {Date.add(start_date, -reach), Date.add(end_date, reach)}
+  defp profile(username) do
+    case ProfileQueries.get_by_username_with_user(username) do
+      {:ok, profile} -> {:ok, profile}
+      {:error, _reason} -> {:error, :not_found}
+    end
   end
 
-  # Preloaded so the per-date walk below does not re-query. Left out entirely
-  # when there is no schedule: the engine reads these keys only after a non-nil
-  # schedule id, and seeding them empty would claim a closed week rather than
-  # let the fallback hours apply.
-  defp prefetched(nil, _start_date, _end_date), do: %{}
-
-  defp prefetched(schedule_id, start_date, end_date) do
-    %{
-      weekly_schedule: WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule_id),
-      overrides:
-        AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
-          schedule_id,
-          start_date,
-          end_date
-        ),
-      time_off: TimeOffPeriodQueries.list_for_schedule_in_range(schedule_id, start_date, end_date)
-    }
+  # The schedule a booking page with no meeting type chosen reads, reported so
+  # that a database which has lost it shows as `nil` rather than going unseen.
+  defp default_schedule_id(profile) do
+    case AvailabilityScheduleQueries.get_default(profile.id) do
+      %{id: id} -> id
+      nil -> nil
+    end
   end
 
-  defp compare_one_date(date, month_view, integration_ids, config, timezone) do
+  defp disagreements(request, month_view, dates, duration_minutes) do
+    found =
+      Enum.reduce_while(dates, {:ok, []}, fn date, {:ok, found} ->
+        case compare_one_date(request, date, month_view, duration_minutes) do
+          {:ok, disagreement} -> {:cont, {:ok, disagreement ++ found}}
+          {:error, _reason} = error -> {:halt, error}
+        end
+      end)
+
+    with {:ok, found} <- found, do: {:ok, Enum.reverse(found)}
+  end
+
+  defp compare_one_date(request, date, month_view, duration_minutes) do
     month_says = Map.get(month_view, Date.to_iso8601(date), false)
 
-    day_events = CalendarEventQueries.in_range(integration_ids, padded(date, date))
+    with {:ok, slots} <- Offer.slots_for_date(request, Date.to_iso8601(date), duration_minutes) do
+      per_day_says = slots != []
 
-    {:ok, slots} =
-      Calculate.available_slots(
-        date,
-        config.duration_minutes,
-        timezone,
-        timezone,
-        day_events,
-        config
-      )
-
-    per_day_says = slots != []
-
-    if month_says == per_day_says do
-      []
-    else
-      [
-        %{
-          date: date,
-          day_of_week: Date.day_of_week(date),
-          month_view_says_bookable: month_says,
-          per_day_has_slots: per_day_says,
-          per_day_slot_count: length(slots),
-          per_day_event_count: length(day_events)
-        }
-      ]
+      if month_says == per_day_says do
+        {:ok, []}
+      else
+        {:ok,
+         [
+           %{
+             date: date,
+             day_of_week: Date.day_of_week(date),
+             month_view_says_bookable: month_says,
+             per_day_has_slots: per_day_says,
+             per_day_slot_count: length(slots)
+           }
+         ]}
+      end
     end
   end
 
@@ -217,9 +176,7 @@ defmodule Tymeslot.Availability.Audit do
   defp print_disagreement(d) do
     direction = direction_label(d)
 
-    IO.puts(
-      "    #{d.date} (#{day_name(d.day_of_week)}): #{direction} (#{d.per_day_event_count} events)"
-    )
+    IO.puts("    #{d.date} (#{day_name(d.day_of_week)}): #{direction}")
   end
 
   defp direction_label(%{month_view_says_bookable: true, per_day_has_slots: false}) do

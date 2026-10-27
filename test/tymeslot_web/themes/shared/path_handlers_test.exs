@@ -3,10 +3,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
   @moduletag :utils
   @moduletag :themes
 
-  alias TymeslotWeb.Live.Scheduling.PreviewMode
-  alias TymeslotWeb.Themes.Core.Context
   alias TymeslotWeb.Themes.Shared.Journey
-  alias TymeslotWeb.Themes.Shared.Journey.Navigators.{Continuous, Paged, Transcript}
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.{Continuous, Transcript}
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
   describe "build_path_with_locale/2" do
@@ -160,23 +158,33 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
     # A paged journey's switcher shows on its first moment only, before any
     # choice; a choice left behind by going back to it is not carried.
-    test "carries no choice on a paged journey" do
-      for {navigator, live_action} <- [{Paged, :overview}, {Paged, :schedule}] do
-        socket = %Phoenix.LiveView.Socket{
-          assigns: %{
-            username_context: "johndoe",
-            live_action: live_action,
-            journey: %Journey{navigator: navigator, moments: [], outcomes: %{}},
-            duration: "30min",
-            selected_duration: "30min",
-            selected_date: "2027-03-12",
-            selected_time: "9:00 AM",
-            user_timezone: "America/New_York"
-          }
+    # A paged journey does not move on by itself, so the moment on screen
+    # rides along, and the page mounted from the URL resumes on it.
+    test "carries the choices and the moment on screen on a paged journey" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :overview,
+          journey: classic_journey(),
+          current_state: :booking,
+          selected_duration: "30min",
+          selected_date: "2027-03-12",
+          selected_time: "9:00 AM",
+          chosen_length_minutes: 45,
+          user_timezone: "America/New_York"
         }
+      }
 
-        assert URI.parse(PathHandlers.build_path_with_locale(socket, "de")).query == "locale=de"
-      end
+      assert URI.decode_query(URI.parse(PathHandlers.build_path_with_locale(socket, "de")).query) ==
+               %{
+                 "locale" => "de",
+                 "duration" => "30-minutes",
+                 "date" => "2027-03-12",
+                 "time" => "9:00 AM",
+                 "minutes" => "45",
+                 "visitor_timezone" => "America/New_York",
+                 "step" => "booking"
+               }
     end
 
     test "carries the choices on a page that opens its moments by itself" do
@@ -243,6 +251,99 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
     end
   end
 
+  describe "choices_query/1" do
+    # The page's own query (an embed's parameters, a tracking tag) stays; the
+    # choices it arrived with give way to the ones made since.
+    test "replaces the arrival's choices with the current ones and keeps the rest" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          live_action: :schedule,
+          journey: classic_journey(),
+          current_state: :schedule,
+          page_query_params: %{
+            "embed" => "1",
+            "utm_source" => "newsletter",
+            "date" => "2027-03-01",
+            "time" => "2:00 PM",
+            "step" => "booking"
+          },
+          selected_date: "2027-03-12",
+          selected_time: nil
+        }
+      }
+
+      assert PathHandlers.choices_query(socket) == %{
+               "embed" => "1",
+               "utm_source" => "newsletter",
+               "date" => "2027-03-12",
+               "step" => "schedule"
+             }
+    end
+
+    # A reload of the confirmation must not land on the details for the slot
+    # just booked.
+    test "carries no choice on an outcome" do
+      for outcome <- [:confirmation, :awaiting_payment] do
+        socket = %Phoenix.LiveView.Socket{
+          assigns: %{
+            live_action: :overview,
+            journey: classic_journey(),
+            current_state: outcome,
+            page_query_params: %{"embed" => "1", "step" => "booking", "minutes" => "45"},
+            selected_duration: "30min",
+            selected_date: "2027-03-12",
+            selected_time: "9:00 AM",
+            chosen_length_minutes: 45,
+            user_timezone: "America/New_York"
+          }
+        }
+
+        assert PathHandlers.choices_query(socket) == %{"embed" => "1"}, "on #{outcome}"
+      end
+    end
+  end
+
+  describe "restart_path/2" do
+    # A fresh booking keeps the meeting type, never the last booking's slot.
+    test "drops the slot the URL carried and keeps the page's own query" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          page_query_params: %{
+            "embed" => "1",
+            "duration" => "30-minutes",
+            "date" => "2027-03-12",
+            "time" => "9:00 AM",
+            "minutes" => "45",
+            "step" => "booking",
+            "reschedule_meeting_uid" => "abc"
+          }
+        }
+      }
+
+      path = PathHandlers.restart_path(socket)
+
+      assert URI.parse(path).path == "/johndoe"
+
+      assert URI.decode_query(URI.parse(path).query) == %{
+               "embed" => "1",
+               "duration" => "30-minutes"
+             }
+    end
+  end
+
+  defp classic_journey do
+    Journey.new(
+      Journey.classic(%{
+        overview: Overview,
+        schedule: Schedule,
+        questions: Questions,
+        booking: Booking,
+        confirmation: Confirmation
+      })
+    )
+  end
+
   describe "organizer_scheduling_path/1" do
     test "returns path with username when organizer profile has username" do
       assigns = %{organizer_profile: %{username: "janedoe"}}
@@ -273,142 +374,6 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
     test "falls back to root when organizer profile is missing from assigns" do
       assert PathHandlers.organizer_scheduling_path(%{}) == "/"
-    end
-  end
-
-  describe "build_path_with_locale/2 inside an owner preview" do
-    # A locale switch is a full external redirect, so the LiveView that comes
-    # back has no assigns and knows only what the URL carries. The preview
-    # session therefore has to be rebuilt in the query string as a set: the
-    # claim, the token, and the previewed theme. Dropping any one of them
-    # changes what a booking does.
-
-    test "carries the claim, the token and the previewed theme" do
-      socket = preview_socket(theme_preview: true, preview_token: "signed-token")
-
-      path = PathHandlers.build_path_with_locale(socket, "de")
-      params = query_params(path)
-
-      assert params["locale"] == "de"
-      assert params["preview"] == "true"
-      assert params["preview_token"] == "signed-token"
-      assert params["theme"] == "2"
-    end
-
-    test "keeps simulating rather than booking for real after the switch" do
-      # The load-bearing one. Without `preview` and `preview_token` in the
-      # redirect, the owner lands on a page that still looks like their preview
-      # but persists a real meeting they never see, which is precisely what the
-      # fail-closed branch exists to prevent.
-      socket = preview_socket(theme_preview: true, preview_token: "signed-token")
-
-      params = socket |> PathHandlers.build_path_with_locale("de") |> query_params()
-
-      assert params["preview"] == "true"
-      assert params["preview_token"] == "signed-token"
-    end
-
-    test "carries the claim even once the token has gone, so the booking still fails closed" do
-      # An expired token must not silently downgrade the page to a real
-      # booking. The claim survives on its own and the submission is blocked.
-      socket = preview_socket(theme_preview: true, preview_token: nil)
-
-      params = socket |> PathHandlers.build_path_with_locale("de") |> query_params()
-
-      assert params["preview"] == "true"
-      refute Map.has_key?(params, "preview_token")
-    end
-
-    test "a verified owner counts as a preview even when the URL claim was dropped" do
-      # `:owner_preview` is sticky across internal navigation while
-      # `:theme_preview` is re-read from the params, so mid-flow only the
-      # former may be set. Either is enough to mean "this is a preview".
-      socket = preview_socket(theme_preview: false, preview_token: "signed-token")
-      socket = put_in(socket.assigns[:owner_preview], true)
-
-      params = socket |> PathHandlers.build_path_with_locale("de") |> query_params()
-
-      assert params["preview"] == "true"
-      assert params["preview_token"] == "signed-token"
-    end
-  end
-
-  describe "build_path_with_locale/2 inside an embed" do
-    # The redirect is a full page load inside the iframe. Unless it is rebuilt
-    # as an embed URL, the page that comes back has no embed token (a paid
-    # booking tries to open Stripe Checkout inside the frame) and the embed's
-    # layout, accent colour and theme fall back to the organiser's defaults.
-
-    test "carries the embed flag, parent origin, theme, layout and colour" do
-      params =
-        embed_socket(embed_layout: :column, theme_overrides: %{primary_color: "#e11d48"})
-        |> PathHandlers.build_path_with_locale("de")
-        |> query_params()
-
-      assert params == %{
-               "locale" => "de",
-               "embed" => "1",
-               "parent-origin" => "https://embedder.test",
-               "theme" => "2",
-               "layout" => "column",
-               "primary-color" => "#e11d48"
-             }
-    end
-
-    test "leaves out a layout and a colour the page did not accept" do
-      # The theme context drops an invalid `primary-color` and any layout but
-      # `column`; the redirect reads the context, so nothing invalid is echoed.
-      params =
-        embed_socket(embed_layout: :default, theme_overrides: %{})
-        |> PathHandlers.build_path_with_locale("de")
-        |> query_params()
-
-      assert params == %{
-               "locale" => "de",
-               "embed" => "1",
-               "parent-origin" => "https://embedder.test",
-               "theme" => "2"
-             }
-    end
-
-    test "an invalid colour on the embed URL is not carried into the redirect" do
-      context = Context.from_params(%{"theme" => "2", "primary-color" => "red;}"})
-
-      params =
-        embed_socket([])
-        |> Map.update!(:assigns, &Map.merge(&1, Context.to_assigns(context)))
-        |> PathHandlers.build_path_with_locale("de")
-        |> query_params()
-
-      refute Map.has_key?(params, "primary-color")
-      assert params["embed"] == "1"
-      assert params["theme"] == "2"
-    end
-
-    test "does not turn an embedded visitor into a previewer" do
-      params =
-        embed_socket(theme_preview: false, owner_preview: false)
-        |> PathHandlers.build_path_with_locale("de")
-        |> query_params()
-
-      refute Map.has_key?(params, "preview")
-      refute Map.has_key?(params, "preview_token")
-      refute PreviewMode.claimed?(params)
-    end
-
-    test "a standalone page carries none of the embed parameters" do
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{
-          username_context: "johndoe",
-          live_action: :overview,
-          theme_id: "2",
-          embed_layout: :column,
-          theme_overrides: %{primary_color: "#e11d48"},
-          embed_parent_origin: "https://embedder.test"
-        }
-      }
-
-      assert PathHandlers.build_path_with_locale(socket, "de") == "/johndoe?locale=de"
     end
   end
 
@@ -512,37 +477,6 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       assert PathHandlers.facts_query(%{page_query_params: query, reschedule_meeting_uid: nil}) ==
                nil
     end
-  end
-
-  defp preview_socket(opts) do
-    %Phoenix.LiveView.Socket{
-      assigns: %{
-        username_context: "johndoe",
-        live_action: :overview,
-        theme_id: "2",
-        theme_preview: Keyword.fetch!(opts, :theme_preview),
-        owner_preview: false,
-        preview_token: Keyword.fetch!(opts, :preview_token)
-      }
-    }
-  end
-
-  defp embed_socket(overrides) do
-    assigns =
-      Map.merge(
-        %{
-          username_context: "johndoe",
-          live_action: :overview,
-          theme_id: "2",
-          embedded: true,
-          embed_parent_origin: "https://embedder.test",
-          embed_layout: :default,
-          theme_overrides: %{}
-        },
-        Map.new(overrides)
-      )
-
-    %Phoenix.LiveView.Socket{assigns: assigns}
   end
 
   defp query_params(path) do

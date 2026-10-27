@@ -58,12 +58,11 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Shared.IntegrationTypes
 
   @default_cutoff_days 14
   @default_hard_failure_count 168
@@ -168,8 +167,8 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
     end
   end
 
-  defp fetch_active_integration(:calendar, integration_id) do
-    case CalendarIntegrationQueries.get(integration_id) do
+  defp fetch_active_integration(type, integration_id) do
+    case IntegrationTypes.queries(type).get(integration_id) do
       {:ok, %{is_active: true} = integration} ->
         {:ok, integration}
 
@@ -187,29 +186,11 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
     end
   end
 
-  defp fetch_active_integration(:video, integration_id) do
-    case VideoIntegrationQueries.get(integration_id) do
-      {:ok, %{is_active: true} = integration} ->
-        {:ok, integration}
-
-      {:ok, _inactive} ->
-        :skip
-
-      {:error, :not_found} ->
-        :skip
-
-      {:error, :requires_reencryption, _stale} ->
-        :skip
-    end
-  end
-
-  defp deactivate(:calendar, integration) do
-    CalendarIntegrationQueries.toggle_active(integration)
-  end
-
-  defp deactivate(:video, integration) do
-    VideoIntegrationQueries.toggle_active(integration)
-  end
+  # Through the domain rather than the row: pausing the user's primary
+  # calendar must hand that role to another calendar, under the same lock as
+  # the user's own toggle.
+  defp deactivate(type, integration),
+    do: IntegrationTypes.domain(type).pause_integration(integration)
 
   defp schedule_email(type, integration, user_id, cutoff_days) do
     case UserQueries.get_user(user_id) do

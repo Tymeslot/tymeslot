@@ -21,8 +21,16 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       following occurrence of a series or of all of them, sent at once from
       the event as it was and as the edit left it, since such a write drops
       the cached rows the debounced job would read.
-    * `attendees_added/2` / `attendees_removed/2` — immediate send path for
-      membership-only changes (method `:request` or `:cancel` respectively).
+    * `attendees_added/3` / `attendees_removed/3` — immediate send path for
+      membership-only changes (method `:request` or `:cancel` respectively),
+      from the organiser the caller names: a cached provider event read for
+      the grid carries neither the organiser nor its integration. Sends
+      nothing, returning `{:ok, :not_organiser}`, for an event the user only
+      attends, and `{:error, reason}` when an email could not be scheduled.
+    * `membership_changed/3` — the same, worked out from the event before
+      and after a write that changed who attends: called once the calendar
+      has accepted that write or saved it to sync later, never before; a
+      saved write's emails wait for its replay.
     * `event_deleted/3` — returns `{:needs_confirmation, count}` so the caller
       knows to show a confirmation prompt; `{:ok, :no_attendees}` if there is
       nobody to notify, and `{:ok, :not_organiser}` for an event the user
@@ -32,15 +40,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       organises. Called once the event has actually been deleted, never
       before: see its docs.
     * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
-      debounced pipeline. Both take the event, not its id: `meetings` and
-      `provider_calendar_events` number their rows independently, so an id
-      alone does not name an event.
+      debounced pipeline for a provider calendar event. Both take the event,
+      not its id.
 
   The debounced update path is owned by `Dispatcher`. This module does
   not itself know anything about Oban.
   """
 
-  alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeDetector
@@ -48,7 +55,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.Dispatcher
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
 
   @type event :: map
   @type attendee ::
@@ -148,7 +155,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       series: scope
     }
 
-    case CalendarScheduler.schedule_event_update_notification(params) do
+    case EmailScheduler.schedule_event_update_notification(params) do
       :ok -> {:ok, :sent}
       {:error, reason} -> {:error, reason}
     end
@@ -169,26 +176,120 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     }
   end
 
-  @spec attendees_added(event, [attendee]) :: {:ok, :sent | :noop}
-  def attendees_added(_event, []), do: {:ok, :noop}
+  @type membership_result :: {:ok, :sent | :noop | :not_organiser} | {:error, term}
 
-  def attendees_added(event, new_attendees) when is_list(new_attendees) do
-    {method, sequence} =
-      IcalMethod.for(:attendees_added, current_sequence: current_sequence(event))
+  @spec attendees_added(event, [attendee], pos_integer()) :: membership_result
+  def attendees_added(_event, [], _owner_user_id), do: {:ok, :noop}
 
-    send_immediate(event, new_attendees, method, sequence)
-    {:ok, :sent}
+  def attendees_added(event, new_attendees, owner_user_id) when is_list(new_attendees),
+    do: notify_membership(event, new_attendees, owner_user_id, :attendees_added)
+
+  @spec attendees_removed(event, [attendee], pos_integer()) :: membership_result
+  def attendees_removed(_event, [], _owner_user_id), do: {:ok, :noop}
+
+  def attendees_removed(event, removed_attendees, owner_user_id)
+      when is_list(removed_attendees),
+      do: notify_membership(event, removed_attendees, owner_user_id, :attendees_removed)
+
+  # A guest may change their own copy of someone else's event, but inviting or
+  # cancelling for its attendees is the organiser's to do, as on delete.
+  defp notify_membership(event, attendees, owner_user_id, change) do
+    if Recipients.organised_by?(event, owner_user_id) do
+      {method, sequence} = IcalMethod.for(change, current_sequence: current_sequence(event))
+
+      case send_immediate(event, attendees, method, sequence, %{user_id: owner_user_id}) do
+        :ok -> {:ok, :sent}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:ok, :not_organiser}
+    end
   end
 
-  @spec attendees_removed(event, [attendee]) :: {:ok, :sent | :noop}
-  def attendees_removed(_event, []), do: {:ok, :noop}
+  @doc """
+  Tells the attendees a write added or removed: an invitation to every
+  address `updated_event` lists that `original_event` did not, and a
+  cancellation to every address `original_event` listed that
+  `updated_event` does not, both from the organiser `owner_user_id` (see
+  `attendees_added/3`). Addresses are compared trimmed and lower-cased.
 
-  def attendees_removed(event, removed_attendees) when is_list(removed_attendees) do
-    {method, sequence} =
-      IcalMethod.for(:attendees_removed, current_sequence: current_sequence(event))
+  Call it only once the calendar has accepted the write, or saved it to
+  sync later, with the event as the write found it and as it left it: an
+  invitation to an event the guest was never put on, or a cancellation
+  while they are still on it, cannot be taken back. Working the change out
+  from the two, rather than from the edit that was asked for, also tells a
+  guest added by an earlier edit whose own write failed, when a later write
+  carried them on.
 
-    send_immediate(event, removed_attendees, method, sequence)
-    {:ok, :sent}
+  While the event's cached row holds a change not yet replayed to the
+  calendar, the emails wait for that replay (`MembershipWorker`), and each
+  side that has anyone to tell answers `{:ok, :after_sync}`.
+  """
+  @spec membership_changed(event, event, pos_integer()) :: %{
+          added: membership_result | {:ok, :after_sync},
+          removed: membership_result | {:ok, :after_sync}
+        }
+  def membership_changed(original_event, updated_event, owner_user_id) do
+    before = attendee_list(original_event)
+    now = attendee_list(updated_event)
+    added = missing_from(now, before)
+    removed = missing_from(before, now)
+
+    cond do
+      added == [] and removed == [] ->
+        %{added: {:ok, :noop}, removed: {:ok, :noop}}
+
+      ReplayWait.awaiting_replay?(updated_event) ->
+        membership_after_replay(before, updated_event, owner_user_id, added, removed)
+
+      true ->
+        %{
+          added: attendees_added(updated_event, added, owner_user_id),
+          removed: attendees_removed(updated_event, removed, owner_user_id)
+        }
+    end
+  end
+
+  # Held back until the change saved to sync later reaches the calendar. Only
+  # the organiser's guests are owed anything, so nothing is held for anyone
+  # else's event.
+  defp membership_after_replay(before, event, owner_user_id, added, removed) do
+    result =
+      if Recipients.organised_by?(event, owner_user_id),
+        do: hold_membership(before, event, owner_user_id),
+        else: {:ok, :not_organiser}
+
+    %{added: unless_none(added, result), removed: unless_none(removed, result)}
+  end
+
+  defp hold_membership(before, event, owner_user_id) do
+    case Dispatcher.schedule_membership(
+           event.calendar_integration_id,
+           event.uid,
+           before,
+           owner_user_id
+         ) do
+      {:ok, :scheduled} -> {:ok, :after_sync}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp unless_none([], _result), do: {:ok, :noop}
+  defp unless_none(_attendees, result), do: result
+
+  defp attendee_list(event),
+    do: Enum.map(Map.get(event, :attendees) || [], &Attendee.normalise/1)
+
+  # The attendees of `list` whose address `other` does not carry, once each.
+  defp missing_from(list, other) do
+    present = MapSet.new(other, &Recipients.email/1)
+
+    list
+    |> Enum.reject(fn attendee ->
+      email = Recipients.email(attendee)
+      is_nil(email) or MapSet.member?(present, email)
+    end)
+    |> Enum.uniq_by(&Recipients.email/1)
   end
 
   @doc """
@@ -296,7 +397,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
     attendees
     |> Enum.map(fn attendee ->
-      CalendarScheduler.schedule_calendar_invitation(
+      EmailScheduler.schedule_calendar_invitation(
         timing
         |> Map.merge(%{
           user_id: user_id_for(event),
@@ -361,7 +462,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   defp event_id(%{id: id}) when is_integer(id), do: id
 
-  defp event_kind(%MeetingSchema{}), do: :meeting
   defp event_kind(%ProviderCalendarEventSchema{}), do: :provider_calendar_event
 
   defp user_id_for(%{organizer_user_id: id}) when is_integer(id), do: id

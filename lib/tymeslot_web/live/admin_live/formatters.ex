@@ -42,6 +42,76 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
   @doc """
+  Confirmation shown after an admin switches a boolean setting on or off.
+
+  Each key has its own whole sentence rather than a label slotted into an
+  "enabled"/"disabled" frame: a label such as "Registration enabled" reads
+  as nonsense inside that frame, and the participle cannot agree with the
+  label in languages that inflect. A boolean key without its own pair
+  raises, and the formatters test fails for it first.
+  """
+  @spec toggled(atom(), boolean()) :: String.t()
+  def toggled(:registration_enabled, true),
+    do: dgettext("dashboard_admin", "Registration turned on.")
+
+  def toggled(:registration_enabled, false),
+    do: dgettext("dashboard_admin", "Registration turned off.")
+
+  def toggled(:password_auth_enabled, true),
+    do: dgettext("dashboard_admin", "Password authentication turned on.")
+
+  def toggled(:password_auth_enabled, false),
+    do: dgettext("dashboard_admin", "Password authentication turned off.")
+
+  def toggled(:google_auth_enabled, true),
+    do: dgettext("dashboard_admin", "Google login turned on.")
+
+  def toggled(:google_auth_enabled, false),
+    do: dgettext("dashboard_admin", "Google login turned off.")
+
+  def toggled(:github_auth_enabled, true),
+    do: dgettext("dashboard_admin", "GitHub login turned on.")
+
+  def toggled(:github_auth_enabled, false),
+    do: dgettext("dashboard_admin", "GitHub login turned off.")
+
+  def toggled(:oauth_auth_enabled, true),
+    do: dgettext("dashboard_admin", "Generic OIDC login turned on.")
+
+  def toggled(:oauth_auth_enabled, false),
+    do: dgettext("dashboard_admin", "Generic OIDC login turned off.")
+
+  def toggled(:recaptcha_signup_enabled, true),
+    do: dgettext("dashboard_admin", "reCAPTCHA on signup turned on.")
+
+  def toggled(:recaptcha_signup_enabled, false),
+    do: dgettext("dashboard_admin", "reCAPTCHA on signup turned off.")
+
+  def toggled(:recaptcha_booking_enabled, true),
+    do: dgettext("dashboard_admin", "reCAPTCHA on booking turned on.")
+
+  def toggled(:recaptcha_booking_enabled, false),
+    do: dgettext("dashboard_admin", "reCAPTCHA on booking turned off.")
+
+  def toggled(:admin_alerts_enabled, true),
+    do: dgettext("dashboard_admin", "Admin alerts turned on.")
+
+  def toggled(:admin_alerts_enabled, false),
+    do: dgettext("dashboard_admin", "Admin alerts turned off.")
+
+  def toggled(:meeting_payments_enabled, true),
+    do: dgettext("dashboard_admin", "Meeting payments turned on.")
+
+  def toggled(:meeting_payments_enabled, false),
+    do: dgettext("dashboard_admin", "Meeting payments turned off.")
+
+  def toggled(:booking_analytics_enabled, true),
+    do: dgettext("dashboard_admin", "Booking analytics turned on.")
+
+  def toggled(:booking_analytics_enabled, false),
+    do: dgettext("dashboard_admin", "Booking analytics turned off.")
+
+  @doc """
   Short, human-readable description of what a setting controls. Shown
   beneath the setting name on the admin settings page.
 
@@ -122,7 +192,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def describe(:admin_alert_email) do
     dgettext(
       "dashboard_admin",
-      "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
+      "Email address that receives admin alerts when the toggle above is enabled. Leave blank to send no alert emails."
     )
   end
 
@@ -319,6 +389,19 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   end
 
   def lock_reason(_key, _state), do: nil
+
+  @doc """
+  Why a setting fixed by the environment variable `env_var` cannot be changed
+  from the admin page.
+  """
+  @spec pinned_reason(String.t()) :: String.t()
+  def pinned_reason(env_var) do
+    dgettext(
+      "dashboard_admin",
+      "Set by the %{variable} environment variable. To change it here, remove the variable and restart Tymeslot.",
+      variable: env_var
+    )
+  end
 
   defp sso_lock_reason do
     dgettext(

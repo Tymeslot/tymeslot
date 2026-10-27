@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Themes.ThemeTailwindSourcesTest do
   resource, that the list leaves out.
   """
 
-  use ExUnit.Case, async: true
+  # Synchronous so its file reads do not compete with the whole parallel suite,
+  # which pushed it past its timeout under the full gate.
+  use ExUnit.Case, async: false
 
   @moduletag :themes
   @moduletag :unit
@@ -57,7 +59,16 @@ defmodule TymeslotWeb.Themes.ThemeTailwindSourcesTest do
 
   defp reachable_sources do
     {:ok, modules} = :application.get_key(:tymeslot, :modules)
-    web = Map.new(for module <- modules, source = web_source(module), do: {module, source})
+
+    # Every module under lib/tymeslot_web is named TymeslotWeb.*, so the name
+    # rules out most of the app before any .beam file is read.
+    web =
+      Map.new(
+        for module <- modules,
+            String.starts_with?(Atom.to_string(module), "Elixir.TymeslotWeb."),
+            source = web_source(module),
+            do: {module, source}
+      )
 
     roots =
       for {module, source} <- web,
@@ -71,9 +82,13 @@ defmodule TymeslotWeb.Themes.ThemeTailwindSourcesTest do
   end
 
   # The .heex files a module compiles in (embed_templates, a colocated
-  # LiveView template): each is recorded as an external resource.
+  # LiveView template): each is recorded as an external resource. Read from
+  # the .beam file for the same reason as web_source/1.
   defp templates(module) do
-    for path <- Keyword.get_values(module.__info__(:attributes), :external_resource),
+    {:ok, {^module, [attributes: attributes]}} =
+      :beam_lib.chunks(beam(module), [:attributes])
+
+    for path <- Keyword.get_values(attributes, :external_resource),
         path = Path.expand(to_string(path)),
         String.ends_with?(path, ".heex"),
         do: path

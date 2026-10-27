@@ -21,6 +21,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   - **Open-Xchange**: Detected via a calendar collection segment in the path
     (see `open_xchange_path?/1`), which is how an Open-Xchange server other
     than mailbox.org is recognised
+  - **cPanel**: Detected via its `cpcalendars.` proxy subdomain or the
+    calendar server's own ports, 2079 and 2080 (exact match)
   - **Generic**: Fallback for unrecognized CalDAV servers
   """
 
@@ -35,6 +37,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
           | :mailbox_org
           | :open_xchange
           | :apple
+          | :cpanel
           | :generic
 
   @doc """
@@ -92,6 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
       String.contains?(url_lower, "zimbra") -> :zimbra
       String.contains?(url_lower, "mailbox.org") -> :mailbox_org
       String.contains?(url_lower, "icloud.com") -> :apple
+      String.contains?(url_lower, "cpcalendars.") -> :cpanel
       true -> nil
     end
   end
@@ -108,8 +112,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   def detect_by_path(url, url_lower) when is_binary(url) and is_binary(url_lower) do
     cond do
       # Radicale: port 5232 is highly specific (exact match only)
-      detect_port_5232(url) ->
+      port_in?(url, [5232]) ->
         :radicale
+
+      port_in?(url, [2079, 2080]) ->
+        :cpanel
 
       # PHP-based servers with specific path patterns
       php_server = detect_php_based_servers(url_lower) ->
@@ -166,12 +173,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   end
 
   # Helper to detect exact port 5232 (not substrings like :15232)
-  defp detect_port_5232(url) do
-    case URI.parse(url) do
-      %URI{port: 5232} -> true
-      _other -> false
-    end
-  end
+  defp port_in?(url, ports), do: URI.parse(url).port in ports
 
   # Detects PHP-based CalDAV servers (Nextcloud, ownCloud, Baikal, SabreDAV)
   defp detect_php_based_servers(url_lower) do

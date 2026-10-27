@@ -20,7 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
     events =
       raw_events
       |> Enum.reduce([], fn raw, acc ->
-        case build_calendar_event(raw, context) do
+        case raw |> strip_nul_bytes() |> build_calendar_event(context) do
           {:ok, event} ->
             [event | acc]
 
@@ -40,6 +40,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
 
     {:ok, events}
   end
+
+  # PostgreSQL refuses a NUL byte in text and in jsonb, though it is valid
+  # UTF-8 and Graph will hand one back in a subject or body. Left in, the one
+  # event fails the whole batch's cache write, and the delta link it came with
+  # is never stored, so every later sync fetches and fails on it again.
+  defp strip_nul_bytes(value) when is_binary(value), do: String.replace(value, "\x00", "")
+  defp strip_nul_bytes(list) when is_list(list), do: Enum.map(list, &strip_nul_bytes/1)
+
+  defp strip_nul_bytes(map) when is_map(map),
+    do: Map.new(map, fn {key, value} -> {key, strip_nul_bytes(value)} end)
+
+  defp strip_nul_bytes(other), do: other
 
   defp build_calendar_event(raw, context) do
     attrs =

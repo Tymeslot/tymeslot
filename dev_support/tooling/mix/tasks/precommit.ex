@@ -1,0 +1,160 @@
+defmodule Mix.Tasks.Precommit do
+  @shortdoc "Runs the whole verification gate and reports every failure"
+
+  @moduledoc """
+  Runs the Definition of Done in one command.
+
+      $ mix precommit
+      $ mix precommit --fail-fast
+      $ mix precommit --affected               # before a commit
+      $ mix precommit --affected --base main   # the whole branch
+
+  `--affected` runs only the steps the diff can reach, and narrows the suite
+  the way `mix test.affected` does; `Tymeslot.Precommit.Affected` has the
+  rules. It is the pre-commit check. The full gate, without it, is what runs
+  before a push or a release, because the narrowed suite misses cross-domain
+  coupling that only the whole suite catches.
+
+  Every step remains individually runnable (`mix credo --strict`, `mix test`,
+  and so on); this only removes the chance of applying the gate by halves.
+  Run `./mix.sh precommit` from the workspace root to cover both repositories.
+
+  ## Why every step runs
+
+  A `mix` alias is a task chain, so the first task to raise aborts the rest and
+  you learn about one failure per run. This task keeps going and prints a
+  summary, so a single run tells you everything that needs fixing.
+
+  The one exception is compilation. If `--warnings-as-errors` fails, credo, the
+  tests and dialyzer would only report noise, so the run stops there and says
+  so. This gate compiles twice, once per `MIX_ENV`: `:dev` first, then `:test`,
+  since `elixirc_paths(:test)` additionally compiles `test/support` and CI
+  compiles under a job-wide `MIX_ENV=test`. A warning confined to test-support
+  code would otherwise pass here and only fail in CI. Both compile steps are
+  barriers, for the same reason.
+
+  A hard compile error never reaches that check: Mix has to compile the project
+  to load this task at all, so it aborts first and prints the error on its own.
+  Same information, one step earlier.
+
+  ## Why the gate re-execs itself
+
+  The run's memory and CPU limits live in the workspace `mix.sh`, and a plain
+  `mix precommit` typed in a checkout reaches none of them. `Tymeslot.Precommit.Guard`
+  therefore puts the run inside them before any step starts, so the limits hold
+  however the gate was invoked. A run already wrapped, or one with no wrapper
+  above it, proceeds here unchanged.
+
+  ## Why dialyzer runs incrementally
+
+  The step runs `dialyzer.incremental`, not `dialyzer`. A classic PLT is
+  re-verified wholesale whenever dialyxir's `mix.lock`-and-applications hash
+  moves, and re-analysed wholesale on every run regardless; an incremental PLT
+  tracks per-module hashes and re-analyses only what changed. Measured here,
+  with nothing changed since the previous run: 78.7s against 4.5s in Core, and
+  451.8s against 12.0s in the repo that consumes Core as a path dependency,
+  where every Core commit invalidates the classic PLT.
+
+  The two modes were adopted on identical output: the same warnings, the same
+  skips, the same exit status, verified both on a clean tree and against a
+  deliberately broken `@spec`. `mix dialyzer` is unchanged and remains the
+  cross-check to run when a warning here looks wrong. `--list-unused-filters`
+  is passed explicitly because the incremental task takes it as an argument
+  rather than reading `:list_unused_filters` from the `dialyzer:` config.
+
+  ## Why the suite is partitioned
+
+  Most of the suite's wall clock is synchronous modules, which one `mix test`
+  runs one at a time. The suite is split into `mix test --partitions` runs
+  sized to the cores the run may use: on an idle 16-core host that took it from
+  126s to about 60s. `PRECOMMIT_TEST_PARTITIONS` forces the count.
+  See `Tymeslot.Precommit.CpuBudget` for the sizing and
+  `Tymeslot.Precommit.Runner` for how partitions get their own databases.
+
+  ## Why each step is a separate process
+
+  Mix resolves `MIX_ENV` once, from the invoked task. The suite has to run in
+  `:test` while dialyzer needs `:dev`, where dialyxir is declared and where the
+  PLT is cached, so no single environment covers the whole gate. Shelling out
+  gives each step the environment it needs and an honest exit code, at the cost
+  of about a second of Mix boot per step.
+  """
+
+  use Mix.Task
+
+  alias Tymeslot.Precommit.Affected
+  alias Tymeslot.Precommit.CpuBudget
+  alias Tymeslot.Precommit.Guard
+  alias Tymeslot.Precommit.Runner
+
+  @steps [
+    {"format", ~w[format --check-formatted], :dev},
+    {"deps.unlock", ~w[deps.unlock --check-unused], :dev},
+    {"compile", ~w[compile --warnings-as-errors], :dev},
+    {"compile (test)", ~w[compile --warnings-as-errors], :test},
+    # Catches user-facing copy that was written but never extracted. Nothing
+    # else does: `GettextCompletenessTest` compares the `.po` catalogues
+    # against the `.pot` templates, so a template that is itself stale looks
+    # complete to it, and a whole feature's strings can reach a release
+    # English-only in every other locale. It sits here because it is a compile
+    # (the extractor is a compiler pass), so it belongs behind the two compile
+    # barriers and in front of the steps that only read the build.
+    #
+    # `gettext.check` is `gettext.extract --check-up-to-date` with a digest of
+    # the inputs that can change its answer, so a diff that cannot carry a
+    # translatable string skips the recompile the extractor needs. CI runs the
+    # extract task directly.
+    {"gettext", ~w[gettext.check], :dev},
+    {"credo", ~w[credo --strict], :dev},
+    {"sobelow", ~w[sobelow], :dev},
+    {"deps.audit", ~w[deps.audit], :dev},
+    # mix_audit reads the advisory database frozen into its own release, so a
+    # newly published advisory stays invisible to it until mix_audit ships
+    # again. hex.audit asks the live Hex registry instead. Its answer changes
+    # without any file here changing, so `--affected` never runs it.
+    {"hex.audit", ~w[hex.audit], :dev},
+    {"migrations", ~w[excellent_migrations.check_safety], :dev},
+    {"workflows", ~w[actionlint], :dev},
+    # The booking-theme CSS rules, colour literals included. Nothing else
+    # checks them: the theme bundles are plain CSS the compiler never sees.
+    {"css tokens", ~w[css.check_tokens], :dev},
+    # A ratchet against compile coupling creeping in, not a ban on it. Raised
+    # from 25 to 27 for the two video-provider registries that are read at
+    # compile time on purpose: `Bookings.Activation` needs its provider list
+    # as a literal because it appears in a guard, and the video provider
+    # picker fails the build when a provider has no group, mirroring the
+    # calendar picker. Both exist because a newly registered provider was
+    # once missed. Lower it again if either goes away. Deriving each theme's
+    # module from its catalogue key took three files off the list; the
+    # registry, built from the catalogue while it compiles, and the
+    # onboarding preview's default theme are on it on purpose.
+    {"xref", ~w[xref graph --label compile-connected --fail-above 26], :dev},
+    {"test", ~w[test], :test},
+    # Vitest, over the hooks under assets/js. `mix test` never reaches it, so
+    # without this step a JavaScript change could pass the whole gate unrun.
+    {"js", ~w[test.js], :dev},
+    {"dialyzer", ~w[dialyzer.incremental --list-unused-filters], :dev}
+  ]
+
+  @impl Mix.Task
+  def run(argv) do
+    Guard.ensure_wrapped("--core", argv: argv)
+
+    {opts, _rest} =
+      OptionParser.parse!(argv, strict: [fail_fast: :boolean, affected: :boolean, base: :string])
+
+    fail_fast? = Keyword.get(opts, :fail_fast, false)
+
+    if opts[:affected] do
+      narrowed = Affected.narrow(@steps, base: opts[:base])
+
+      Runner.run(narrowed.steps, fail_fast?,
+        skipped: narrowed.skipped,
+        suite_plan: CpuBudget.planner(narrowed.suite)
+      )
+    else
+      if opts[:base], do: Mix.raise("--base only applies together with --affected")
+      Runner.run(@steps, fail_fast?, suite_plan: CpuBudget.planner(nil))
+    end
+  end
+end

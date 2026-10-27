@@ -18,6 +18,9 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   take a locale, gettext-backed helpers read the ambient one.**
   """
 
+  alias Tymeslot.MeetingPayments.Money
+  alias Tymeslot.MeetingTypes.Reminders
+  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
@@ -141,11 +144,15 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   @doc """
-  Formats a datetime as a short UTC timestamp for change-summary displays.
-  The clock is always 24-hour and the zone always UTC — these summaries compare
-  two instants, so a stable, unambiguous rendering matters more than local
-  convention. Only the month abbreviation is localised.
-  Example (en): "25 Jun 2026, 14:30 UTC", (de): "25 Jun 2026, 14:30 UTC"
+  Formats a datetime as a short timestamp for change-summary displays, in the
+  datetime's own zone, named by its abbreviation and, outside UTC, by its
+  IANA name as well: an abbreviation alone is ambiguous (IST is India,
+  Ireland or Israel; CST is the US or China). The clock is always 24-hour:
+  these summaries compare two instants, so a stable, unambiguous rendering
+  matters more than local convention. Only the month abbreviation is
+  localised.
+  Example (en): "25 Jun 2026, 14:30 UTC",
+  (de): "25 Jun 2026, 16:30 CEST (Europe/Berlin)"
   An all-day event's timing is a `Date.Range` of the days it covers and
   renders as a date range, since it has no clock time to show.
   Falls back to `to_string/1` for other values.
@@ -154,23 +161,25 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   def format_time_short(%DateTime{} = dt, locale) do
     month = LocaleFormat.format_month_name(dt.month, locale, :short)
     day = dt.day |> to_string() |> String.pad_leading(2, "0")
-    "#{day} #{month} #{dt.year}, #{Calendar.strftime(dt, "%H:%M")} UTC"
+    "#{day} #{month} #{dt.year}, #{Calendar.strftime(dt, "%H:%M %Z")}#{zone_name(dt)}"
   end
 
   def format_time_short(%Date.Range{} = days, locale), do: format_date_range(days, locale)
 
   def format_time_short(val, _locale), do: to_string(val)
 
-  @doc """
-  Formats the inclusive range of days an all-day event covers: one date for a
-  single day, otherwise the locale's range form.
-  Example (en): "September 22, 2026", "September 22 – 24, 2026"
-  """
+  defp zone_name(%DateTime{time_zone: "Etc/UTC"}), do: ""
+  defp zone_name(%DateTime{time_zone: zone, zone_abbr: zone}), do: ""
+  defp zone_name(%DateTime{time_zone: zone}), do: " (#{zone})"
+
+  # Formats the inclusive range of days an all-day event covers: one date for a
+  # single day, otherwise the locale's range form.
+  # Example (en): "September 22, 2026", "September 22 – 24, 2026"
   @spec format_date_range(Date.Range.t(), String.t()) :: String.t()
-  def format_date_range(%Date.Range{first: first, last: first}, locale),
+  defp format_date_range(%Date.Range{first: first, last: first}, locale),
     do: format_date(first, locale)
 
-  def format_date_range(%Date.Range{first: first, last: last}, locale),
+  defp format_date_range(%Date.Range{first: first, last: last}, locale),
     do: LocaleFormat.format_date_range(first, last, locale)
 
   @doc """
@@ -187,6 +196,79 @@ defmodule Tymeslot.Emails.Shared.Formatting do
       dgettext("emails", "All day, until %{date}", date: format_date(last, locale))
     end)
   end
+
+  @doc """
+  The time line of a meeting-details map, as both parts of an email state it:
+  the HTML card (`Tymeslot.Emails.Shared.Meeting.Hero`) and the plain-text body
+  (`Tymeslot.Emails.Shared.TextBodyHelper`) render this one line, so the two
+  cannot drift apart.
+
+  `:start_time` is already in the recipient's zone, and that zone's name
+  follows the time outside UTC, since an abbreviation alone is ambiguous. It
+  is read from the start time itself, so a label can never name a zone the
+  time was not shifted into;
+  `:time_format` is the organiser's chosen clock, nil for every other reader.
+  A meeting ending on a later day says when it ends, and an all-day event
+  (`all_day: true` with `:date` and an inclusive `:last_date`) has no clock
+  time at all. nil when the map carries no start time.
+
+  Example (en): "02:30 PM IST (Asia/Kolkata)"
+  """
+  @spec format_meeting_time(map(), String.t()) :: String.t() | nil
+  def format_meeting_time(
+        %{all_day: true, date: %Date{} = first, last_date: %Date{} = last},
+        locale
+      ),
+      do: format_all_day(first, last, locale)
+
+  def format_meeting_time(%{start_time: %DateTime{} = start_time} = details, locale) do
+    time_format = Map.get(details, :time_format)
+
+    line = format_time(start_time, locale, time_format) <> zone_name(start_time)
+
+    case format_next_day_end(start_time, Map.get(details, :duration), locale, time_format) do
+      nil -> line
+      note -> "#{line}, #{note}"
+    end
+  end
+
+  def format_meeting_time(_details, _locale), do: nil
+
+  @doc """
+  A meeting's date and start time as one phrase, the time worded exactly as
+  `format_meeting_time/2` words it (the recipient's clock, the zone named),
+  for a time stated outside the details card, such as the one a rescheduled
+  meeting moved from. Reads `:start_time` and `:time_format` only.
+
+  Example (en): "14 January 2026 at 01:30 PM IST (Asia/Kolkata)"
+  """
+  @spec format_meeting_datetime(map(), String.t()) :: String.t()
+  def format_meeting_datetime(%{start_time: %DateTime{} = start_time} = details, locale) do
+    time =
+      format_meeting_time(
+        %{start_time: start_time, time_format: Map.get(details, :time_format)},
+        locale
+      )
+
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      dgettext("emails", "%{date} at %{time}", date: format_date(start_time, locale), time: time)
+    end)
+  end
+
+  @doc """
+  The duration of a meeting-details map: minutes for a timed meeting, the
+  number of days an all-day event covers. Shared by the HTML card and the
+  plain-text body, as `format_meeting_time/2` is.
+  """
+  @spec format_meeting_duration(map(), String.t()) :: String.t()
+  def format_meeting_duration(
+        %{all_day: true, date: %Date{} = first, last_date: %Date{} = last},
+        locale
+      ),
+      do: format_day_count(first, last, locale)
+
+  def format_meeting_duration(details, locale),
+    do: format_duration(Map.get(details, :duration), locale)
 
   @doc """
   Formats how many days an all-day event covers, from its first and inclusive
@@ -211,6 +293,53 @@ defmodule Tymeslot.Emails.Shared.Formatting do
       dgettext("emails", "%{date} at %{time}",
         date: format_date(datetime, locale),
         time: format_time(datetime, locale)
+      )
+    end)
+  end
+
+  @doc """
+  Formats how long before a meeting a reminder goes out ("30 minutes",
+  "1 hour") in `locale`, from the payload's `reminder_raw`.
+
+  These carry the "time until" context because the label is always consumed
+  after a preposition ("in %{label}", "%{label} before the meeting"). Case
+  languages inflect it there: Ukrainian needs the accusative "за 1 годину",
+  where `format_duration/2`'s bare duration needs the nominative "1 година".
+  Same English words, different grammar, hence a separate msgctxt.
+
+  The shared payload is built in the attendee's locale, so an email to anyone
+  else formats the label here, in that recipient's locale, rather than
+  reusing the payload's ready-made string.
+  """
+  @spec format_reminder_label(%{value: term(), unit: term()}, String.t()) :: String.t()
+  def format_reminder_label(%{value: value, unit: unit}, locale) do
+    value = Reminders.parse_reminder_value(value)
+
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      unit_word =
+        case Reminders.normalize_reminder_unit(unit) do
+          "hours" -> dpngettext("emails", "time until", "hour", "hours", value)
+          "days" -> dpngettext("emails", "time until", "day", "days", value)
+          _minutes -> dpngettext("emails", "time until", "minute", "minutes", value)
+        end
+
+      "#{value} #{unit_word}"
+    end)
+  end
+
+  @doc """
+  Formats a complete datetime, letting an organiser's chosen clock override
+  the locale convention, as `format_time/3` does for a time alone. `nil`
+  behaves exactly like `format_datetime/2`.
+  """
+  @spec format_datetime(DateTime.t(), String.t(), String.t() | nil) :: String.t()
+  def format_datetime(%DateTime{} = datetime, locale, nil), do: format_datetime(datetime, locale)
+
+  def format_datetime(%DateTime{} = datetime, locale, time_format) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      dgettext("emails", "%{date} at %{time}",
+        date: format_date(datetime, locale),
+        time: format_time(datetime, locale, time_format)
       )
     end)
   end
@@ -303,45 +432,16 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   def without_location_note(details), do: details
 
   @doc """
-  Formats currency based on cents (or raw units for zero-decimal currencies) and currency code.
-  Falls back to prefixing with the ISO code for unrecognised currencies (e.g. "XYZ 12.34").
+  Formats an amount in minor units for an email, defaulting a missing currency
+  to euros. See `Tymeslot.MeetingPayments.Money.format/3` for the symbols and
+  the unrecognised-currency fallback (e.g. "HUF 175.00").
 
-  # TODO: locale-specific thousands/decimal separators are not yet implemented —
-  #       that requires threading a locale through all call sites and is a larger refactor.
+  Locale-specific thousands and decimal separators are not implemented; that
+  needs a locale threaded through every call site.
   """
   @spec format_currency(integer(), String.t() | nil) :: String.t()
-  def format_currency(cents, currency) do
-    normalised = String.downcase(currency || "eur")
-
-    symbol =
-      case normalised do
-        "usd" -> "$"
-        "gbp" -> "£"
-        "eur" -> "€"
-        "jpy" -> "¥"
-        "krw" -> "₩"
-        "cad" -> "CA$"
-        "aud" -> "A$"
-        "chf" -> "CHF "
-        other -> String.upcase(other) <> " "
-      end
-
-    if zero_decimal_currency?(normalised) do
-      "#{symbol}#{cents}"
-    else
-      sign = if cents < 0, do: "-", else: ""
-      abs_cents = abs(cents)
-      major = div(abs_cents, 100)
-      minor = rem(abs_cents, 100)
-      formatted = "#{sign}#{major}.#{String.pad_leading(Integer.to_string(minor), 2, "0")}"
-      "#{symbol}#{formatted}"
-    end
-  end
-
-  # ISO 4217 zero-decimal currencies — amounts are already in the major unit.
-  defp zero_decimal_currency?(currency) do
-    currency in ~w(jpy krw vnd bif clp djf gnf isk kmf mga pyg rwf ugx vuv xaf xof xpf)
-  end
+  def format_currency(cents, currency),
+    do: Money.format(cents, currency || "eur")
 
   @doc """
   Truncates text to a maximum length with ellipsis.
@@ -385,12 +485,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
 
   defp parse_duration_minutes(0), do: {:ok, 0}
 
-  defp parse_duration_minutes(str) when is_binary(str) do
-    case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, str) do
-      [_full, m] -> {:ok, String.to_integer(m)}
-      _no_match -> :error
-    end
-  end
+  defp parse_duration_minutes(str) when is_binary(str), do: Duration.parse_minutes(str)
 
   defp parse_duration_minutes(_other), do: :error
 
@@ -401,7 +496,6 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   defp format_localized_duration(60), do: "1 #{dngettext("emails", "hour", "hours", 1)}"
-  defp format_localized_duration(90), do: "1.5 #{dngettext("emails", "hour", "hours", 2)}"
 
   defp format_localized_duration(m) when rem(m, 60) == 0 do
     hours = div(m, 60)

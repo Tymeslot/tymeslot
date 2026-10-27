@@ -7,10 +7,13 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   import Phoenix.LiveView, only: [put_flash: 3, redirect: 2]
 
   require Logger
+  require Tymeslot.Bookings.Refusal
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.ClientIP
@@ -24,35 +27,28 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   ensuring that only the meeting belonging to the profile owner can be accessed.
   This prevents IDOR attacks on the cancel and reschedule routes.
 
-  The error is a translated, user-facing message, never the raw policy reason,
-  except for a group meeting, refused for both with `{:error, :group_meeting}`:
-  its uid names the shared slot, which `Tymeslot.Bookings.Cancel` and
-  `Tymeslot.Bookings.Reschedule` refuse to act on for a visitor, and the mount
-  sends the visitor on with `group_meeting_message/0`. Each participant
-  manages their own spot from the links in their emails.
+  A group meeting is refused for both with `{:error, :group_meeting}`: its
+  uid names the shared slot, which `Tymeslot.Bookings.Cancel` and
+  `Tymeslot.Bookings.Reschedule` refuse to act on for a visitor. Each
+  participant manages their own spot from the links in their emails.
+
+  `{:error, :not_found}` when the organiser has no meeting with that uid.
   """
   @spec validate_and_load_meeting(String.t(), atom(), integer()) ::
-          {:ok, map()} | {:error, String.t() | :group_meeting}
+          {:ok, map()}
+          | {:error,
+             Policy.cancel_refusal()
+             | Policy.reschedule_refusal()
+             | :group_meeting
+             | :managed_by_host
+             | :not_found}
   def validate_and_load_meeting(meeting_uid, action, organizer_user_id) do
     case Meetings.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id) do
       {:ok, meeting} ->
-        case validate_meeting_action(meeting, action) do
-          :ok ->
-            {:ok, meeting}
-
-          {:error, :group_meeting} = refused ->
-            refused
-
-          {:error, reason} ->
-            {:error,
-             BookingErrorMessage.message(
-               reason,
-               dgettext("booking_manage", "This meeting can no longer be changed.")
-             )}
-        end
+        with :ok <- validate_meeting_action(meeting, action), do: {:ok, meeting}
 
       {:error, :not_found} ->
-        {:error, BookingErrorMessage.message(:meeting_not_found)}
+        {:error, :not_found}
     end
   end
 
@@ -65,12 +61,32 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     )
   end
 
+  @doc """
+  What a visitor is told when they open the cancel or reschedule page of a
+  meeting the host manages, one confirmed from a poll.
+  """
+  @spec managed_by_host_message() :: String.t()
+  def managed_by_host_message do
+    dgettext(
+      "booking_manage",
+      "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+    )
+  end
+
   # Validates whether the given action is permitted for the meeting.
-  @spec validate_meeting_action(map(), atom()) :: :ok | {:error, String.t() | :group_meeting}
+  @spec validate_meeting_action(map(), atom()) ::
+          :ok
+          | {:error,
+             Policy.cancel_refusal()
+             | Policy.reschedule_refusal()
+             | :group_meeting
+             | :managed_by_host}
   defp validate_meeting_action(meeting, action) when action in [:cancel, :reschedule] do
-    if Meetings.group?(meeting),
-      do: {:error, :group_meeting},
-      else: permitted(meeting, action)
+    cond do
+      Meetings.group?(meeting) -> {:error, :group_meeting}
+      HostManaged.managed?(meeting) -> {:error, :managed_by_host}
+      true -> permitted(meeting, action)
+    end
   end
 
   defp validate_meeting_action(_unused_meeting, :cancel_confirmed) do
@@ -93,7 +109,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
       meeting = socket.assigns[:meeting]
       client_ip = ClientIP.get(socket)
 
-      case RateLimiter.check_meeting_cancel_rate_limit(client_ip) do
+      case RateLimiter.check(:meeting_cancel, client_ip) do
         :ok ->
           case Meetings.cancel_meeting(meeting) do
             {:ok, _result} ->
@@ -121,7 +137,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     if socket.assigns[:live_action] == :cancel do
       client_ip = ClientIP.get(socket)
 
-      case RateLimiter.check_meeting_keep_rate_limit(client_ip) do
+      case RateLimiter.check(:meeting_keep, client_ip) do
         :ok ->
           {:noreply, assign(socket, :meeting_kept, true)}
 
@@ -149,13 +165,19 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
 
   # A refusal reason is a code that must never reach the visitor as it stands.
   defp cancel_error_message(:group_meeting_not_cancellable), do: group_meeting_message()
+  defp cancel_error_message(:managed_by_host), do: managed_by_host_message()
 
-  defp cancel_error_message(reason),
-    do:
-      BookingErrorMessage.message(
-        reason,
-        dgettext("booking_manage", "Failed to cancel meeting. Please try again.")
-      )
+  # The page was loaded while the meeting was live, and someone else (the
+  # host, or this attendee in another tab) cancelled it since.
+  defp cancel_error_message(:already_cancelled),
+    do: dgettext("booking_manage", "This booking was already cancelled.")
+
+  # The meeting started, ended or expired after the page loaded.
+  defp cancel_error_message(reason) when Refusal.is_refusal(reason),
+    do: BookingErrorMessage.message(reason)
+
+  defp cancel_error_message(_reason),
+    do: dgettext("booking_manage", "The meeting could not be cancelled. Please try again.")
 
   # Builds the URL to redirect to after a meeting is cancelled.
   @spec build_cancel_confirmed_url(Phoenix.LiveView.Socket.t(), map()) :: String.t()

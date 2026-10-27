@@ -9,8 +9,8 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   1. **Logger**, always. `log_security_event/2` forwards a fixed, canonical
      allowlist of flat keys and nothing else: `event_type`, `user_id`,
-     `email_masked`, `ip_address`, `user_agent`, `session_id`, `provider`,
-     `lockout_type`, `limit_type`. This is the log line an operator reads, and
+     `email_masked`, `ip_address`, `user_agent`, `session_hash`, `provider`,
+     `lockout_type`, `limit_type`, `reason`. This is the log line an operator reads, and
      the allowlist is what keeps an event builder from widening it by accident.
   2. **An external monitoring webhook**, only when the operator opts in by
      setting `config :tymeslot, :security_monitoring_enabled, true` *and*
@@ -42,6 +42,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.Security.Token
 
   require Logger
 
@@ -56,7 +57,7 @@ defmodule Tymeslot.Security.SecurityLogger do
           optional(:user_id) => integer(),
           optional(:ip_address) => String.t(),
           optional(:user_agent) => String.t(),
-          optional(:session_id) => String.t(),
+          optional(:session_hash) => String.t(),
           optional(:additional_data) => map(),
           optional(atom()) => term()
         }
@@ -72,12 +73,12 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   ## Parameters
   - `field` - The form/input field that matched (atom or string — e.g. `:name`, `:email`, `:message`)
-  - `check` - Which detection rule fired (string — e.g. `"sql_injection"`, `"path_traversal"`, `"dangerous_protocol"`)
+  - `check` - Which detection rule fired (string — e.g. `"path_traversal"`, `"dangerous_protocol"`)
   - `metadata` - Additional context (map)
 
   ## Examples
 
-      SecurityLogger.log_blocked_input(:email, "sql_injection", %{ip: "192.168.1.1"})
+      SecurityLogger.log_blocked_input(:url, "path_traversal", %{ip: "192.168.1.1"})
       SecurityLogger.log_blocked_input(:message, "dangerous_protocol", %{user_id: 123})
 
   The `field` is the specific form field whose value tripped the detection,
@@ -146,27 +147,34 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   Both sinks are derived from the same canonical detail map, so a key
   visible in the Logger line (`user_id`, `email_masked`, `ip_address`,
-  `user_agent`, `session_id`, `provider`, `lockout_type`, `limit_type`) is
+  `user_agent`, `session_hash`, `provider`, `lockout_type`, `limit_type`) is
   never silently missing from the webhook payload. Raw identifiers are
   deliberately not among them — an event that needs to name an account puts
   it under `:email` so it is masked first. Anything an event builder
   assembles beyond the canonical set is carried to the webhook only, under
   `:additional_data`.
+
+  The Logger line is written at `level`, `:info` unless the caller says
+  otherwise. Each event chooses its level deliberately, so alerting keyed on
+  level sees what it should: a failed login or social sign-in, a lockout, a
+  rate-limit refusal and a CSRF failure are `:warning`; successes and routine
+  session events are `:info`.
   """
-  @spec log_security_event(String.t(), event_metadata()) :: :ok
-  def log_security_event(event_type, details) do
+  @spec log_security_event(String.t(), event_metadata(), Logger.level()) :: :ok
+  def log_security_event(event_type, details, level \\ :info) do
     canonical = %{
       user_id: details[:user_id],
       email_masked: mask_email(details[:email]),
       ip_address: details[:ip_address],
       user_agent: details[:user_agent],
-      session_id: details[:session_id],
+      session_hash: details[:session_hash],
       provider: sanitize_provider(details[:provider]),
       lockout_type: details[:lockout_type],
-      limit_type: details[:limit_type]
+      limit_type: details[:limit_type],
+      reason: details[:reason]
     }
 
-    Logger.info("Security event", [event_type: event_type] ++ Map.to_list(canonical))
+    Logger.log(level, "Security event", [event_type: event_type] ++ Map.to_list(canonical))
 
     # Operator opt-in, off in every shipped configuration: no config file sets
     # this key. While it is false, `additional_data` has no sink at all — by
@@ -228,6 +236,7 @@ defmodule Tymeslot.Security.SecurityLogger do
           :ok
   def log_authentication_attempt(email, success, reason, metadata) do
     event_details = %{
+      user_id: metadata[:user_id],
       email: email,
       success: success,
       reason: reason,
@@ -238,19 +247,27 @@ defmodule Tymeslot.Security.SecurityLogger do
       }
     }
 
-    event_type = if success, do: "authentication_success", else: "authentication_failure"
-    log_security_event(event_type, event_details)
+    # A failed login is logged at :warning so alerting keyed on level sees it.
+    {event_type, level} =
+      if success,
+        do: {"authentication_success", :info},
+        else: {"authentication_failure", :warning}
+
+    log_security_event(event_type, event_details, level)
   end
 
   @doc """
   Logs session-related events (creation, deletion, validation).
+
+  The session is named by `session_hash`, the first 16 hex characters of the
+  token's SHA-256, which is how `user_sessions` stores it: enough to find the
+  row, nothing that signs anyone in.
   """
-  @spec log_session_event(String.t(), integer(), String.t(), event_metadata()) :: :ok
-  def log_session_event(event_type, user_id, session_id, metadata) do
+  @spec log_session_event(String.t(), integer(), String.t() | nil, event_metadata()) :: :ok
+  def log_session_event(event_type, user_id, token, metadata) do
     event_details = %{
       user_id: user_id,
-      # Never log raw session tokens. Redact to last 8 chars.
-      session_id: redact_session_id(session_id),
+      session_hash: session_hash(token),
       ip_address: metadata[:ip_address],
       user_agent: metadata[:user_agent],
       additional_data: metadata[:additional_data] || %{}
@@ -259,18 +276,10 @@ defmodule Tymeslot.Security.SecurityLogger do
     log_security_event("session_#{event_type}", event_details)
   end
 
-  # Redact sensitive session identifiers before logging
-  defp redact_session_id(nil), do: nil
+  defp session_hash(token) when is_binary(token),
+    do: token |> Token.hash_token() |> binary_part(0, 16)
 
-  defp redact_session_id(session_id) when is_binary(session_id) do
-    if String.length(session_id) >= 8 do
-      "…" <> String.slice(session_id, -8, 8)
-    else
-      "…REDACTED"
-    end
-  end
-
-  defp redact_session_id(_invalid), do: nil
+  defp session_hash(_none), do: nil
 
   @doc """
   Logs rate limiting violations.
@@ -296,7 +305,7 @@ defmodule Tymeslot.Security.SecurityLogger do
 
     event_details = Map.merge(base_details, rate_limit_identifier_details(identifier))
 
-    log_security_event("rate_limit_violation", event_details)
+    log_security_event("rate_limit_violation", event_details, :warning)
   end
 
   # An email identifies the rejected attempt by account; a user id (e.g. the
@@ -330,7 +339,7 @@ defmodule Tymeslot.Security.SecurityLogger do
       }
     }
 
-    log_security_event("account_lockout", event_details)
+    log_security_event("account_lockout", event_details, :warning)
   end
 
   @doc """
@@ -349,7 +358,7 @@ defmodule Tymeslot.Security.SecurityLogger do
       }
     }
 
-    log_security_event("csrf_violation", event_details)
+    log_security_event("csrf_violation", event_details, :warning)
   end
 
   @doc """
@@ -374,7 +383,10 @@ defmodule Tymeslot.Security.SecurityLogger do
   """
   @spec log_social_auth_event(String.t(), boolean(), event_metadata()) :: :ok
   def log_social_auth_event(provider, success, details) do
-    event_type = if success, do: "social_auth_success", else: "social_auth_failure"
+    {event_type, level} =
+      if success,
+        do: {"social_auth_success", :info},
+        else: {"social_auth_failure", :warning}
 
     event_details = %{
       provider: provider,
@@ -388,7 +400,7 @@ defmodule Tymeslot.Security.SecurityLogger do
       }
     }
 
-    log_security_event(event_type, event_details)
+    log_security_event(event_type, event_details, level)
   end
 
   # Private helper functions for external monitoring

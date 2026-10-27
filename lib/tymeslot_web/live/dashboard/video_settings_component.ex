@@ -8,15 +8,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.HealthCheck
-  alias Tymeslot.Integrations.HealthCheck.Monitor
-  alias Tymeslot.Integrations.Providers.Directory
+  alias Tymeslot.Integrations.Shared.Providers.Directory
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Dashboard.VideoSettings.ComponentView
   alias TymeslotWeb.Dashboard.VideoSettings.FormInput
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
 
@@ -178,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_event("reconnect_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
       case FormInput.integration_id(id) do
         nil ->
           {:noreply, socket}
@@ -206,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
       case FormInput.integration_id(id) do
         nil ->
           {:noreply, socket}
@@ -356,7 +355,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, _provider, socket) do
     {:noreply,
      socket
-     |> assign(:form_errors, %{base: ChangesetUtils.get_first_error(changeset)})
+     |> assign(:form_errors, %{base: FormErrors.first(changeset, field_labels())})
      |> assign(:saving, false)}
   end
 
@@ -514,7 +513,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp add_validated_integration(provider, validated_params, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
       handle_create_result(
         Video.create_integration(user_id, provider, FormInput.to_atom_keys(validated_params)),
         provider,
@@ -578,11 +577,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
     integrations = Video.list_integrations(user_id)
 
-    health_states =
-      user_id
-      |> HealthCheck.list_unhealthy_for_user()
-      |> Enum.filter(&(&1.integration_type == "video"))
-      |> Map.new(fn s -> {s.integration_id, Monitor.from_db_record(s)} end)
+    health_states = HealthCheck.health_states_for_user(user_id).video
 
     socket
     |> assign(:integrations, integrations)
@@ -619,5 +614,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       nil -> ""
       integration -> integration.provider
     end
+  end
+
+  # Shown as one notice away from the fields, so a refused field is named.
+  defp field_labels do
+    %{
+      base_url: dgettext("dashboard_video", "Server URL"),
+      api_key: dgettext("dashboard_video", "API Key")
+    }
   end
 end

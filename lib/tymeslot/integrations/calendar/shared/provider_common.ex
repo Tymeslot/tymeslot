@@ -5,8 +5,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Family
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Integrations.Calendar.Selection
@@ -29,23 +31,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     case ReauthHandling.rejection_cause(message) do
       :expired_grant -> :token_expired
       :rejected_credentials -> :unauthorized
-    end
-  end
-
-  @doc """
-  Ensures all required fields are present in the config map.
-  """
-  @spec validate_required_fields(%{atom() => term()}, list(atom())) :: :ok | {:error, String.t()}
-  def validate_required_fields(config, required_fields) do
-    missing_fields = required_fields -- Map.keys(config)
-
-    if Enum.empty?(missing_fields) do
-      :ok
-    else
-      {:error,
-       dgettext("dashboard_calendar_providers", "Missing required fields: %{fields}",
-         fields: Enum.join(missing_fields, ", ")
-       )}
     end
   end
 
@@ -74,7 +59,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       Keyword.get(
         opts,
         :message,
-        dgettext("dashboard_calendar_providers", "Invalid URL format")
+        dgettext("integrations_calendar", "Invalid URL format")
       )
 
     allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private_for_calendar?())
@@ -86,14 +71,39 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       internal_names_local: allow_private,
       block_private_ips: not allow_private,
       https_error_message:
-        dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
+        dgettext("integrations_calendar", "Use HTTPS for non-local calendar servers"),
       private_ip_error_message:
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Private or local network addresses are not allowed"
         )
     )
   end
+
+  @doc """
+  Validates the server URL submitted for a CalDAV-family provider.
+
+  A provider with a fixed address in `CalDAV.Family` accepts that address
+  and nothing else, so the lock holds wherever a configuration is submitted,
+  not only in the form that renders the field greyed out. Every other member
+  goes through `validate_url/2`, with `invalid_message` as its wording.
+
+  Only submitted configurations are validated: a client built for a stored
+  integration skips validation, so a row saved before an address was fixed
+  keeps syncing until it is reconnected.
+  """
+  @spec validate_caldav_url(Family.member(), term(), String.t()) :: :ok | {:error, String.t()}
+  def validate_caldav_url(member, url, invalid_message) do
+    case Family.row!(member).fixed_url do
+      nil -> validate_url(url, message: invalid_message)
+      %{url: fixed} -> if same_url?(url, fixed), do: :ok, else: {:error, invalid_message}
+    end
+  end
+
+  defp same_url?(url, fixed) when is_binary(url),
+    do: url |> String.trim() |> String.trim_trailing("/") == fixed
+
+  defp same_url?(_url, _fixed), do: false
 
   @doc """
   Helper for providers to format calendars returned from their API.
@@ -227,17 +237,41 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
 
   @doc """
   Returns one CalDAV client config per selected calendar path on the
-  integration. Drives the multi-calendar sync/fetch path in `ClientManager`.
+  integration. Drives the multi-calendar fetch path in `ClientManager`,
+  availability included.
 
   Honors `integration.calendar_list` selection when present, falling back to
   `integration.calendar_paths` (the legacy path-only representation).
-  Read-only entries are skipped.
+  A read-only calendar the organiser selected gets a client too: it cannot
+  take a booking, but its events still block time, as Google's and a
+  subscribed feed's do. Every config carries only the writable paths as
+  `:writable_calendar_paths`, so a write never targets a read-only one.
   """
   @spec caldav_build_client_configs(map()) :: [map()]
   def caldav_build_client_configs(integration) do
     writable_paths = caldav_writable_paths(integration)
-    Enum.map(writable_paths, &caldav_path_config(integration, &1, writable_paths))
+
+    integration
+    |> caldav_selected_paths()
+    |> Enum.map(&caldav_path_config(integration, &1, writable_paths))
   end
+
+  @doc """
+  The selected collections of a CalDAV-family integration shared with the
+  account as busy times only (`CalendarEntry.free_busy_only`), which a read
+  reaches through the free-busy-query REPORT and a sync skips.
+  """
+  @spec caldav_free_busy_paths(map()) :: [String.t()]
+  def caldav_free_busy_paths(%{calendar_list: list}) when is_list(list) do
+    for entry <- Selection.selected_calendars(list),
+        entry.free_busy_only,
+        path = entry.path || entry.id,
+        is_binary(path),
+        do: path
+  end
+
+  # Predating calendar selection, nothing is known to be free/busy only.
+  def caldav_free_busy_paths(_integration), do: []
 
   @doc """
   Returns a single CalDAV client config for the booking flow, scoped to the
@@ -261,10 +295,18 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   predates calendar selection.
   """
   @spec caldav_writable_paths(map()) :: [String.t()]
-  def caldav_writable_paths(integration) do
+  def caldav_writable_paths(integration),
+    do: caldav_paths(integration, &Selection.writable_calendars/1)
+
+  # Every selected collection, read-only ones included, or the stored paths
+  # when the integration predates calendar selection.
+  defp caldav_selected_paths(integration),
+    do: caldav_paths(integration, &Selection.selected_calendars/1)
+
+  defp caldav_paths(integration, pick) do
     if integration.calendar_list && integration.calendar_list != [] do
       integration.calendar_list
-      |> Selection.writable_calendars()
+      |> pick.()
       |> Enum.map(&(&1.path || &1.id))
       |> Enum.reject(&is_nil/1)
     else
@@ -285,12 +327,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       calendar_path: path,
       calendar_paths: [path],
       writable_calendar_paths: writable_paths,
-      verify_ssl: true
+      free_busy_paths: Enum.filter(caldav_free_busy_paths(integration), &(&1 == path))
     }
   end
 
-  defp normalize_provider(provider) when is_atom(provider), do: provider
-
-  defp normalize_provider(provider) when is_binary(provider),
-    do: String.to_existing_atom(provider)
+  defp normalize_provider(provider) do
+    {:ok, provider} = ProviderConfig.parse_known(provider)
+    provider
+  end
 end

@@ -79,41 +79,33 @@ defmodule Tymeslot.Auth.AdminUserQueries do
 
   @doc """
   Counts admins, other than `excluded_user_id`, who can actually sign in
-  today: password-capable per `any_admin_uses_password_auth?/1`'s criteria,
-  or authenticated via one of `usable_sso_providers` (`:google`, `:github`,
-  `:oauth`).
+  today through one of `usable_paths`: `:password` (per
+  `any_admin_uses_password_auth?/1`'s criteria), `:google`, `:github` or
+  `:oauth`.
 
-  `usable_sso_providers` is data, not a config lookup: callers (see
-  `Tymeslot.Release.check_last_admin/2`) pass only the providers already
-  confirmed enabled *and* credential-configured system-wide, mirroring
-  `Tymeslot.AppSettings.LockoutPolicy`'s "usable auth path" definition. This
-  keeps the query module free of `AppSettings` reads while still refusing to
-  count an SSO identity nobody can currently use to log in.
+  `usable_paths` is data, not a config lookup: the caller
+  (`Tymeslot.Auth.AdminRoles.remaining_signin_capable_admins?/1`) passes
+  `Tymeslot.AppSettings.LockoutPolicy.usable_signin_paths/0`, the paths
+  switched on (and, for SSO, credential-configured) system-wide. This keeps
+  the query module free of `AppSettings` reads while still refusing to count
+  an identity nobody can currently use to log in.
 
-  Used to guard demoting the last admin: counting bare `is_admin` rows (as
-  `count_admins/1` does) would let an operator demote the only admin who can
-  actually authenticate, as long as some other `is_admin` row happens to
-  exist without a usable sign-in path.
+  An admin whose account is pending deletion does not count either: signing
+  in leads such an account to the restore page alone, and the account is
+  about to go.
+
+  Used to guard demoting or deleting the last admin: counting bare `is_admin`
+  rows (as `count_admins/1` does) would let an operator demote the only admin
+  who can actually authenticate, as long as some other `is_admin` row happens
+  to exist without a usable sign-in path.
   """
   @spec count_signin_capable_admins_excluding(integer(), [atom()], module()) :: non_neg_integer()
-  def count_signin_capable_admins_excluding(
-        excluded_user_id,
-        usable_sso_providers,
-        repo \\ Repo
-      ) do
-    password_capable =
-      dynamic(
-        [u],
-        not is_nil(u.password_hash) and not is_nil(u.verified_at) and
-          (is_nil(u.provider) or u.provider == "email")
-      )
-
-    sso_capable = sso_capable_condition(usable_sso_providers)
-
+  def count_signin_capable_admins_excluding(excluded_user_id, usable_paths, repo \\ Repo) do
     condition =
       dynamic(
         [u],
-        u.is_admin and u.id != ^excluded_user_id and (^password_capable or ^sso_capable)
+        u.is_admin and u.id != ^excluded_user_id and is_nil(u.deletion_scheduled_at) and
+          ^signin_capable_condition(usable_paths)
       )
 
     repo.aggregate(
@@ -123,12 +115,27 @@ defmodule Tymeslot.Auth.AdminUserQueries do
     )
   end
 
-  defp sso_capable_condition(usable_sso_providers) do
-    Enum.reduce(usable_sso_providers, dynamic(false), fn
-      :google, acc -> dynamic([u], ^acc or not is_nil(u.google_user_id))
-      :github, acc -> dynamic([u], ^acc or not is_nil(u.github_user_id))
-      :oauth, acc -> dynamic([u], ^acc or (u.provider == "oauth" and not is_nil(u.provider_uid)))
-      _other, acc -> acc
+  defp signin_capable_condition(usable_paths) do
+    Enum.reduce(usable_paths, dynamic(false), fn
+      :password, acc ->
+        dynamic(
+          [u],
+          ^acc or
+            (not is_nil(u.password_hash) and not is_nil(u.verified_at) and
+               (is_nil(u.provider) or u.provider == "email"))
+        )
+
+      :google, acc ->
+        dynamic([u], ^acc or not is_nil(u.google_user_id))
+
+      :github, acc ->
+        dynamic([u], ^acc or not is_nil(u.github_user_id))
+
+      :oauth, acc ->
+        dynamic([u], ^acc or (u.provider == "oauth" and not is_nil(u.provider_uid)))
+
+      _other, acc ->
+        acc
     end)
   end
 
@@ -165,12 +172,16 @@ defmodule Tymeslot.Auth.AdminUserQueries do
   @doc """
   Acquires a `FOR UPDATE` row lock on every admin user and returns them.
 
-  Must be called inside a transaction. Used by `AdminRoles` to prevent
-  concurrent demotions from racing past the last-admin invariant.
+  Must be called inside a transaction. Used by `AdminRoles` and account
+  deletion to prevent concurrent demotions and deletions from racing past the
+  last-admin invariant. The rows are locked in id order, so two callers always
+  take them in the same order and cannot deadlock on each other.
   """
   @spec lock_admins() :: [UserSchema.t()]
   def lock_admins do
-    Repo.all(from(u in UserSchema, where: u.is_admin == true, lock: "FOR UPDATE"))
+    Repo.all(
+      from(u in UserSchema, where: u.is_admin == true, order_by: [asc: u.id], lock: "FOR UPDATE")
+    )
   end
 
   @doc """

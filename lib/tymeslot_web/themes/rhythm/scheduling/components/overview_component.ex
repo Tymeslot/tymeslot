@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -39,6 +40,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     <div
       class="scheduling-box booker-card"
       data-locale={@locale}
+      data-testid="booker-card"
       id={assigns[:moment] && "#{assigns[:moment]}-step"}
       data-moment={assigns[:moment]}
       data-moment-state={assigns[:moment_state]}
@@ -84,7 +86,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               <div class="duration-grid">
                 <%= for meeting_type <- @meeting_types do %>
                   <% slug = MeetingTypes.effective_slug(meeting_type) %>
-                  <% price = BookingText.price_label(meeting_type, @host_currency, @locale) %>
                   <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
                     <button
                       phx-click="choose_duration"
@@ -105,10 +106,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                           <ApprovalNotice.pill :if={Approval.required?(meeting_type)} />
                         </div>
                         <div class="duration-time">
-                          {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
+                          {LocalizationHelpers.format_length_badge(meeting_type)}
                         </div>
-                        <div :if={price} class="duration-price">{price}</div>
                         <GroupSession.hint meeting_type={meeting_type} />
+                        <MeetingPrice.hint
+                          :if={!assigns[:is_rescheduling]}
+                          meeting_type={meeting_type}
+                          currency={@host_currency}
+                          locale={@locale}
+                        />
                         <div class="duration-description">
                           {meeting_type.description}
                         </div>
@@ -126,6 +132,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   end
 
   # Helpers
+  # Keyed to the type's *primary* duration on purpose. This is the card in the
+  # type list, rendered before any length has been picked and unchanged once
+  # one is: an icon that swapped itself out under the booker would read as the
+  # card having become a different meeting type. A type offering several
+  # lengths shows the icon of the one its organiser put first, and the span of
+  # lengths is stated on the card's badge instead.
   defp get_default_icon(meeting_type) do
     case meeting_type.duration_minutes do
       15 -> "hero-bolt"

@@ -10,12 +10,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     * `toggle_integration` full round-trip — the DB `is_active` flag
       flips and the view refreshes; pins the LiveComponent → Calendar
       context → Ecto-update seam that has no composition coverage today.
-    * `toggle_calendar_selection` happy path — clicking a calendar pill
-      flips its `selected` flag in the persisted `calendar_list`. Pins
-      the LiveComponent → `Calendar.toggle_calendar_selection/2` →
-      Ecto-update seam that `dashboard_integrations_test.exs` used to
-      cover with handle_event-only stubs.
-    * `toggle_calendar_selection` race with deletion — if the underlying
+    * `set_calendar_state` happy path — switching a calendar off in the
+      Manage calendars modal clears its `selected` flag in the persisted
+      `calendar_list`. Pins the LiveComponent →
+      `Calendar.set_calendar_state/4` → Ecto-update seam.
+    * `set_calendar_state` race with deletion — if the underlying
       integration row is removed between mount and the click, the handler
       re-fetches by id, surfaces the not-found arm as a user-visible
       flash, and reloads the list so the stale entry disappears. Without
@@ -76,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Calendar.Primary
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -370,9 +369,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     end
   end
 
-  describe "toggle_calendar_selection" do
+  describe "a calendar's use in the Manage calendars modal" do
     @tag :capture_log
-    test "flipping a calendar pill persists the new selected flag", %{conn: conn, user: user} do
+    test "switching a calendar off persists the new selected flag", %{conn: conn, user: user} do
       integration =
         insert(:calendar_integration,
           user: user,
@@ -391,18 +390,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
-      # The chip grid lives in the calendar-selection modal; open it via the
-      # Manage calendars action before clicking a calendar pill.
+      # The calendar rows live in the calendar-selection modal; open it via
+      # the Manage calendars action before choosing a calendar's use.
       view
       |> element("button[phx-click='manage_calendars'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       view
-      |> element(
-        "button[phx-click='toggle_calendar_selection']" <>
-          "[phx-value-integration_id='#{integration.id}']" <>
-          "[phx-value-calendar_id='cal-primary']"
-      )
+      |> element("#calendar-selection-calendar-0-state-off")
       |> render_click()
 
       [%CalendarEntry{id: "cal-primary", selected: selected}] =
@@ -412,7 +407,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     end
 
     @tag :capture_log
-    test "toggling a calendar after the integration was deleted flashes and refreshes the list",
+    test "switching a calendar off after the integration was deleted flashes and refreshes the list",
          %{conn: conn, user: user} do
       integration =
         insert(:calendar_integration,
@@ -434,7 +429,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
       assert html =~ "Soon-to-be-deleted"
 
-      # Open the calendar-selection modal so the calendar pill is in the DOM
+      # Open the calendar-selection modal so the calendar's row is in the DOM
       # before we simulate the deletion race.
       view
       |> element("button[phx-click='manage_calendars'][phx-value-id='#{integration.id}']")
@@ -448,11 +443,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       Repo.delete!(integration)
 
       view
-      |> element(
-        "button[phx-click='toggle_calendar_selection']" <>
-          "[phx-value-integration_id='#{integration.id}']" <>
-          "[phx-value-calendar_id='cal-primary']"
-      )
+      |> element("#calendar-selection-calendar-0-state-off")
       |> render_click()
 
       rendered = render(view)
@@ -483,7 +474,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           is_active: true
         )
 
-      {:ok, _profile} = CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+      {:ok, _profile} = Primary.set_primary_calendar_integration(user.id, primary.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
@@ -527,7 +518,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           is_active: true
         )
 
-      {:ok, _profile} = CalendarPrimary.set_primary_calendar_integration(user.id, integration.id)
+      {:ok, _profile} = Primary.set_primary_calendar_integration(user.id, integration.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 

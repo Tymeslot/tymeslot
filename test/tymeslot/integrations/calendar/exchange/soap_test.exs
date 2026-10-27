@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Integrations.Calendar.Utils.SafeXml
   alias Tymeslot.Test.LogCapture
 
   # Binds the EWS namespaces to prefixes no xpath in this codebase spells, so
@@ -60,8 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
       </SOAP:Envelope>
       """
 
-      assert {:ok, doc} = Soap.parse(body)
-      assert elem(doc, 0) == :xmlElement
+      assert {:ok, %SafeXml{name: "Envelope"}} = Soap.parse(body)
     end
 
     test "returns the fault string when the server answers a SOAP fault" do
@@ -103,15 +103,15 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
     end
 
     test "refuses to fetch the external DTD a DOCTYPE points at" do
-      # Without `dtd: :none` xmerl resolves the SYSTEM identifier and parses on;
-      # a mailbox server must not get to name a resource this host will fetch.
+      # A parser left to its defaults resolves the SYSTEM identifier and parses
+      # on; a mailbox server must not get to name a resource this host will fetch.
       body = ~s(<?xml version="1.0"?><!DOCTYPE r SYSTEM "http://127.0.0.1:1/e.dtd"><r>hi</r>)
 
       assert {:error, :malformed_xml} = Soap.parse(body)
     end
 
     test "keeps the parser's quotation of the body out of the log" do
-      # xmerl names the offending element in its own error reason, so inspecting
+      # The parser names the offending element in its own error reason, so inspecting
       # that reason lifts a fragment of the document into the log line. The
       # document is calendar data from the user's mailbox.
       LogCapture.attach()
@@ -123,9 +123,25 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
       refute LogCapture.dump(event) =~ "PrivateMeetingSubject"
     end
 
+    test "refuses a body nested past the depth limit as malformed, without quoting it" do
+      LogCapture.attach()
+      depth = 100
+
+      body =
+        String.duplicate("<PrivateMeetingSubject>", depth) <>
+          String.duplicate("</PrivateMeetingSubject>", depth)
+
+      assert {:error, :malformed_xml} = Soap.parse(body)
+
+      event = LogCapture.await_log("not parseable XML")
+
+      assert LogCapture.dump(event) =~ "nested too deeply"
+      refute LogCapture.dump(event) =~ "PrivateMeetingSubject"
+    end
+
     test "returns an error rather than raising when the parser itself blows up" do
-      # A malformed hexadecimal character reference raises out of xmerl instead
-      # of taking its own fatal-error exit, which is what the `rescue` covers.
+      # A malformed hexadecimal character reference once raised out of the
+      # parser instead of taking its own fatal-error exit.
       assert {:error, :malformed_xml} = Soap.parse(~s(<?xml version="1.0"?><r>&#xZZ;</r>))
     end
   end
@@ -274,8 +290,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
     test "binds the EWS prefixes so a t:-prefixed path resolves under any prefix" do
       {:ok, doc} = Soap.parse(@renamed_prefixes)
 
-      assert SweetXml.xpath(doc, Soap.bind(~x"//t:Subject/text()"s)) == "Standup"
-      assert SweetXml.xpath(doc, Soap.bind(~x"//m:ResponseCode/text()"s)) == "NoError"
+      assert SafeXml.xpath(doc, Soap.bind(~x"//t:Subject/text()"s)) == "Standup"
+      assert SafeXml.xpath(doc, Soap.bind(~x"//m:ResponseCode/text()"s)) == "NoError"
     end
   end
 

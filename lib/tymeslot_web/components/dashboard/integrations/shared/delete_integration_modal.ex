@@ -98,43 +98,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
               )
           end
 
-        case result do
-          {:ok, _result} ->
-            # Notify the parent LiveView (usually DashboardLive) to refresh lists
-            send(self(), {:integration_removed, type})
-
-            # Also trigger a reload of the parent settings component, addressed
-            # by the id the integrations hub renders it under (e.g.
-            # "calendar-settings", "video-settings").
-            parent_component_id = get_parent_component_id(type)
-            parent_component_module = get_parent_component_module(type)
-
-            send_update(parent_component_module, id: parent_component_id)
-
-            Flash.info(dgettext("dashboard_integrations", "Integration deleted successfully"))
-
-            {:noreply,
-             socket
-             |> assign(:show, false)
-             |> assign(:integration_id, nil)}
-
-          {:error, :not_found} ->
-            Flash.error(
-              dgettext(
-                "dashboard_integrations",
-                "Integration not found. It may have already been deleted."
-              )
-            )
-
-            {:noreply,
-             socket
-             |> assign(:show, false)
-             |> assign(:integration_id, nil)}
-
-          {:error, _reason} ->
-            Flash.error(dgettext("dashboard_integrations", "Failed to delete integration"))
-            {:noreply, socket}
-        end
+        handle_delete_result(result, type, socket)
 
       _other ->
         Flash.error(dgettext("dashboard_integrations", "Invalid integration ID"))
@@ -143,6 +107,50 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
          socket
          |> assign(:show, false)
          |> assign(:integration_id, nil)}
+    end
+  end
+
+  defp handle_delete_result(result, type, socket) do
+    case result do
+      {:ok, _result} ->
+        # Notify the parent LiveView (usually DashboardLive) to refresh lists
+        send(self(), {:integration_removed, type})
+
+        # Also trigger a reload of the parent settings component, addressed
+        # by the id the integrations hub renders it under (e.g.
+        # "calendar-settings", "video-settings").
+        parent_component_id = get_parent_component_id(type)
+        parent_component_module = get_parent_component_module(type)
+
+        send_update(parent_component_module, id: parent_component_id)
+
+        Flash.info(dgettext("dashboard_integrations", "Integration deleted successfully"))
+
+        {:noreply,
+         socket
+         |> assign(:show, false)
+         |> assign(:integration_id, nil)}
+
+      {:error, :not_found} ->
+        Flash.error(
+          dgettext(
+            "dashboard_integrations",
+            "Integration not found. It may have already been deleted."
+          )
+        )
+
+        {:noreply,
+         socket
+         |> assign(:show, false)
+         |> assign(:integration_id, nil)}
+
+      {:error, {:rate_limited, message}} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        Flash.error(dgettext("dashboard_integrations", "Failed to delete integration"))
+        {:noreply, socket}
     end
   end
 

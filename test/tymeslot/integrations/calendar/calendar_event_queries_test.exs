@@ -1,15 +1,50 @@
 defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
   use Tymeslot.DataCase, async: true
 
-  import Ecto.Query, only: [from: 2]
-
   @moduletag :integrations
   @moduletag :queries
 
+  alias Tymeslot.Integrations.Calendar.AvailabilityView
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
-  alias Tymeslot.Repo
+
+  describe "in_range/3 with blocking rules" do
+    setup do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          calendar_list: [
+            %{id: "work", selected: true},
+            %{id: "holidays", selected: true, blocks_availability: false}
+          ]
+        )
+
+      for calendar_id <- ["work", "holidays"] do
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider_calendar_id: calendar_id,
+          summary: calendar_id,
+          start_at: ~U[2026-06-15 10:00:00Z],
+          end_at: ~U[2026-06-15 11:00:00Z]
+        )
+      end
+
+      %{integration: integration, rules: AvailabilityView.rules([integration])}
+    end
+
+    test "keeps only blocking calendars' rows, for either range shape", %{
+      integration: integration,
+      rules: rules
+    } do
+      for range <- [
+            {~U[2026-06-01 00:00:00Z], ~U[2026-06-30 23:59:59Z]},
+            {~D[2026-06-01], ~D[2026-06-30]}
+          ] do
+        assert [%CalendarEvent{summary: "work"}] =
+                 CalendarEventQueries.in_range([integration.id], range, rules)
+      end
+    end
+  end
 
   describe "in_range/2 with DateTime range" do
     test "returns timed events overlapping the range" do
@@ -329,56 +364,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
     end
   end
 
-  describe "full_refresh_for_role/3" do
-    setup do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
-
-      %{integration: integration}
-    end
-
-    test "replaces only the rows of the role it is given", %{integration: integration} do
-      insert(:provider_calendar_event,
-        calendar_integration: integration,
-        uid: "kept-display-row",
-        role: "display_only",
-        start_at: ~U[2026-06-15 10:00:00Z],
-        end_at: ~U[2026-06-15 11:00:00Z]
-      )
-
-      insert(:provider_calendar_event,
-        calendar_integration: integration,
-        uid: "replaced-busy-row",
-        role: "busy_only",
-        start_at: ~U[2026-06-15 10:00:00Z],
-        end_at: ~U[2026-06-15 11:00:00Z]
-      )
-
-      {:ok, 1} =
-        CalendarEventQueries.full_refresh_for_role(integration.id, "busy_only", [
-          busy_event(integration, "fresh-busy-row")
-        ])
-
-      assert Enum.sort(all_uids(integration)) == ["fresh-busy-row", "kept-display-row"]
-    end
-
-    test "stamps the role it was given onto the rows it writes", %{integration: integration} do
-      {:ok, 1} =
-        CalendarEventQueries.full_refresh_for_role(integration.id, "busy_only", [
-          busy_event(integration, "written-row")
-        ])
-
-      assert [%{role: "busy_only"}] = all_rows(integration)
-    end
-
-    test "rejects a role the column's constraint would not admit", %{integration: integration} do
-      assert_raise FunctionClauseError, fn ->
-        CalendarEventQueries.full_refresh_for_role(integration.id, "everything", [])
-      end
-    end
-  end
-
-  describe "any_in_range_for_role?/4" do
+  describe "any_in_range?/4" do
     setup do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
@@ -395,7 +381,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
     end
 
     test "sees the role it is asked about", %{integration: integration} do
-      assert CalendarEventQueries.any_in_range_for_role?(
+      assert CalendarEventQueries.any_in_range?(
                integration.id,
                "busy_only",
                ~U[2026-06-01 00:00:00Z],
@@ -404,7 +390,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
     end
 
     test "does not let one role's rows answer for another's", %{integration: integration} do
-      refute CalendarEventQueries.any_in_range_for_role?(
+      refute CalendarEventQueries.any_in_range?(
                integration.id,
                "display_only",
                ~U[2026-06-01 00:00:00Z],
@@ -413,9 +399,25 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
     end
 
     test "is bounded by the window", %{integration: integration} do
-      refute CalendarEventQueries.any_in_range_for_role?(
+      refute CalendarEventQueries.any_in_range?(
                integration.id,
                "busy_only",
+               ~U[2026-07-01 00:00:00Z],
+               ~U[2026-07-31 23:59:59Z]
+             )
+    end
+
+    test "sees every role when asked about none", %{integration: integration} do
+      assert CalendarEventQueries.any_in_range?(
+               integration.id,
+               nil,
+               ~U[2026-06-01 00:00:00Z],
+               ~U[2026-06-30 23:59:59Z]
+             )
+
+      refute CalendarEventQueries.any_in_range?(
+               integration.id,
+               nil,
                ~U[2026-07-01 00:00:00Z],
                ~U[2026-07-31 23:59:59Z]
              )
@@ -427,26 +429,5 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
       [integration.id],
       {~U[2026-06-01 00:00:00Z], ~U[2026-06-30 23:59:59Z]}
     )
-  end
-
-  defp all_rows(integration) do
-    Repo.all(
-      from(e in ProviderCalendarEventSchema, where: e.calendar_integration_id == ^integration.id)
-    )
-  end
-
-  defp all_uids(integration), do: integration |> all_rows() |> Enum.map(& &1.uid)
-
-  defp busy_event(integration, uid) do
-    CalendarEvent.new!(%{
-      uid: uid,
-      calendar_integration_id: integration.id,
-      provider: :exchange,
-      provider_calendar_id: "mailbox",
-      synced_at: DateTime.utc_now(),
-      all_day: false,
-      start_at: ~U[2026-06-16 10:00:00Z],
-      end_at: ~U[2026-06-16 11:00:00Z]
-    })
   end
 end

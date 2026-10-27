@@ -12,12 +12,12 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
   alias Ecto.Changeset
   alias Oban.Job
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
-  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.ProviderHelpers
+  alias Tymeslot.Integrations.HealthCheck.Scheduler
   alias Tymeslot.Repo
 
   setup :verify_on_exit!
-  setup :start_health_check_server
+  setup :use_real_health_check
 
   describe "circuit breaker integration" do
     test "circuit breaker opens after repeated failures" do
@@ -83,8 +83,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
       assert initial_job_count == 1
 
       # Try to enqueue again - should skip because job already exists
-      HealthCheck.check_all_integrations()
-      sync_with_server()
+      Scheduler.schedule_all(force: true)
 
       final_job_count =
         Repo.one(
@@ -112,9 +111,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
       assert status.status == :open
 
       # Now try to check integrations - should skip enqueueing due to open circuit
-      HealthCheck.check_all_integrations()
-      # Sync with HealthCheck GenServer to ensure processing completes
-      sync_with_server()
+      Scheduler.schedule_all(force: true)
 
       # Verify no jobs were enqueued (circuit breaker prevented it)
       job_count =
@@ -141,8 +138,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
       assert status.status == :closed
 
       # Check integrations - should enqueue normally
-      HealthCheck.check_all_integrations()
-      sync_with_server()
+      Scheduler.schedule_all(force: true)
 
       # Verify job was enqueued
       job_count =
@@ -165,9 +161,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
         insert(:video_integration, user: user, is_active: true, provider: "nonexistent_provider")
 
       # Check integrations - should proceed with enqueue despite breaker not found
-      HealthCheck.check_all_integrations()
-      # Sync with HealthCheck GenServer to ensure processing completes
-      sync_with_server()
+      Scheduler.schedule_all(force: true)
 
       # Verify job was still enqueued (despite circuit breaker not being found)
       # This ensures the system doesn't fail completely if circuit breaker has issues
@@ -191,8 +185,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
       # In practice, this would catch process crashes, registry issues, etc.
       _captured_log =
         capture_log(fn ->
-          HealthCheck.check_all_integrations()
-          sync_with_server()
+          Scheduler.schedule_all(force: true)
         end)
 
       # Should not crash - verify job was enqueued
@@ -220,8 +213,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
 
       log =
         capture_log(fn ->
-          HealthCheck.check_all_integrations()
-          sync_with_server()
+          Scheduler.schedule_all(force: true)
         end)
 
       # :custom has no circuit breaker — scheduler should proceed silently

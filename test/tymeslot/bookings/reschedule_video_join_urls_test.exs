@@ -91,7 +91,7 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
       new_start = DateTime.add(meeting.start_time, 7, :day)
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, reschedule_params_for(new_start), %{}, user.id)
+               Reschedule.execute(meeting.uid, reschedule_params_for(new_start), user.id)
 
       assert DateTime.compare(updated.start_time, new_start) == :eq
 
@@ -124,7 +124,7 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
       new_start = DateTime.add(meeting.start_time, 7, :day)
 
       assert {:ok, _updated} =
-               Reschedule.execute(meeting.uid, reschedule_params_for(new_start), %{}, user.id)
+               Reschedule.execute(meeting.uid, reschedule_params_for(new_start), user.id)
 
       {:ok, stored} = MeetingQueries.get_meeting(meeting.id)
       refute stored.attendee_video_url == meeting.attendee_video_url
@@ -271,7 +271,7 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
       new_start = DateTime.add(attached.start_time, 7, :day)
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, reschedule_params_for(new_start), %{}, user.id)
+               Reschedule.execute(meeting.uid, reschedule_params_for(new_start), user.id)
 
       {:ok, stored} = MeetingQueries.get_meeting(meeting.id)
 
@@ -323,7 +323,7 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
     new_start = DateTime.add(meeting.start_time, 7, :day)
 
     assert {:ok, updated} =
-             Reschedule.execute(meeting.uid, reschedule_params_for(new_start), %{}, user.id)
+             Reschedule.execute(meeting.uid, reschedule_params_for(new_start), user.id)
 
     {:ok, stored} = MeetingQueries.get_meeting(meeting.id)
 
@@ -408,7 +408,9 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
     }
   end
 
+  # The notices go out from an email job, so the queue is run first.
   defp delivered_emails do
+    Oban.drain_queue(queue: :emails)
     assert_received {:email, first}
     assert_received {:email, second}
 

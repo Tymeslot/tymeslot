@@ -4,23 +4,14 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
   @moduletag :themes
   @moduletag :integration
 
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.ThemeCustomizations
-  alias Tymeslot.ThemeCustomizations.Storage
 
   @unavailable "This option is not available for this theme."
   @not_saved "Could not save your theme customisation. Please try again."
 
   setup do
-    upload_root =
-      Path.join(System.tmp_dir!(), "tymeslot_apply_option_#{System.unique_integer([:positive])}")
-
-    original_root = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :upload_directory, original_root)
-      File.rm_rf(upload_root)
-    end)
+    UploadRoot.isolate("tymeslot_apply_option")
 
     %{profile: insert(:profile)}
   end
@@ -34,7 +25,7 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
 
   defp stored_image(profile) do
     relative = "themes/#{profile.id}/1/images/old.png"
-    full = Storage.build_theme_file_path(relative)
+    full = UploadRoot.path(relative)
     File.mkdir_p!(Path.dirname(full))
     File.write!(full, "png")
     {relative, full}
@@ -42,7 +33,7 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
 
   defp stored_video(profile) do
     relative = "themes/#{profile.id}/1/videos/old.mp4"
-    full = Storage.build_theme_file_path(relative)
+    full = UploadRoot.path(relative)
     File.mkdir_p!(Path.dirname(full))
     File.write!(full, "mp4")
     {relative, full}
@@ -79,7 +70,7 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
   end
 
   describe "background" do
-    test "a gradient is saved, replacing an uploaded image and deleting its file",
+    test "a gradient is saved, keeping an uploaded image stored",
          %{profile: profile} do
       {relative, full} = stored_image(profile)
 
@@ -95,11 +86,11 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
       assert {saved.settings["background_type"], saved.settings["background_value"]} ==
                {"gradient", "gradient_4"}
 
-      assert saved.settings["background_image_path"] == nil
-      refute File.exists?(full)
+      assert saved.settings["background_image_path"] == relative
+      assert File.exists?(full)
     end
 
-    test "a preset video is saved, replacing an uploaded image and deleting its file",
+    test "a preset video is saved, keeping an uploaded image stored",
          %{profile: profile} do
       {relative, full} = stored_image(profile)
 
@@ -115,11 +106,11 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
       assert {saved.settings["background_type"], saved.settings["background_value"]} ==
                {"video", "preset:blue-wave"}
 
-      assert saved.settings["background_image_path"] == nil
-      refute File.exists?(full)
+      assert saved.settings["background_image_path"] == relative
+      assert File.exists?(full)
     end
 
-    test "a preset image is saved, replacing an uploaded video and clearing its path",
+    test "a preset image is saved, keeping an uploaded video stored",
          %{profile: profile} do
       {relative, full} = stored_video(profile)
 
@@ -135,8 +126,86 @@ defmodule Tymeslot.ThemeCustomizations.ApplyOptionTest do
       assert {saved.settings["background_type"], saved.settings["background_value"]} ==
                {"image", "preset:artistic-studio"}
 
-      assert saved.settings["background_video_path"] == nil
-      refute File.exists?(full)
+      assert saved.settings["background_video_path"] == relative
+      assert File.exists?(full)
+    end
+
+    test "switching back to an upload shows it again without a new upload",
+         %{profile: profile} do
+      {relative, full} = stored_image(profile)
+
+      {:ok, _existing} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "background_type" => "gradient",
+          "background_value" => "gradient_1",
+          "background_image_path" => relative
+        })
+
+      assert {:ok, saved} = apply(profile, :background, "image", "custom")
+
+      assert {saved.settings["background_type"], saved.settings["background_value"],
+              saved.settings["background_image_path"]} == {"image", "custom", relative}
+
+      assert File.exists?(full)
+    end
+
+    test "switching to an upload that is not stored is refused", %{profile: profile} do
+      {:ok, _existing} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{})
+
+      assert {:error, @not_saved} = apply(profile, :background, "video", "custom")
+
+      assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1").settings[
+               "background_type"
+             ] == "gradient"
+    end
+
+    test "removing the upload on show deletes it and shows the theme's default background",
+         %{profile: profile} do
+      {image, image_file} = stored_image(profile)
+      {video, video_file} = stored_video(profile)
+
+      {:ok, _existing} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "background_type" => "video",
+          "background_value" => "custom",
+          "background_image_path" => image,
+          "background_video_path" => video
+        })
+
+      assert {:ok, saved} = apply(profile, :background, "remove", "video")
+
+      assert Map.take(saved.settings, ~w(background_type background_value background_video_path
+                                          background_image_path)) == %{
+               "background_type" => "gradient",
+               "background_value" => "gradient_1",
+               "background_image_path" => image
+             }
+
+      refute File.exists?(video_file)
+      assert File.exists?(image_file)
+    end
+
+    test "removing an upload not on show deletes only it", %{profile: profile} do
+      {image, image_file} = stored_image(profile)
+
+      {:ok, _existing} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "background_type" => "gradient",
+          "background_value" => "gradient_4",
+          "background_image_path" => image
+        })
+
+      assert {:ok, saved} = apply(profile, :background, "remove", "image")
+
+      assert {saved.settings["background_type"], saved.settings["background_value"],
+              saved.settings["background_image_path"]} == {"gradient", "gradient_4", nil}
+
+      refute File.exists?(image_file)
+    end
+
+    test "removing an upload of a kind the theme does not offer is refused", %{profile: profile} do
+      assert {:error, @unavailable} = apply(profile, :background, "remove", "pattern")
     end
 
     test "a kind the theme does not declare is refused", %{profile: profile} do

@@ -24,10 +24,14 @@ defmodule Tymeslot.BookingPage.Publication do
   emits the `[:tymeslot, :booking_page, :published]` telemetry once on the
   transition. Safe to call from any path that might make a page live; it is a
   no-op when the live condition is not yet met or the page is already published.
+
+  A host with no profile has no username, so their page cannot be live, and
+  this never creates one: a meeting-type save that commits while the account
+  is being deleted calls it for a user who may already be gone.
   """
   @spec maybe_publish(integer()) :: :ok
   def maybe_publish(user_id) when is_integer(user_id) do
-    with {:ok, profile} <- Profiles.get_or_create_profile(user_id),
+    with {:ok, profile} <- Profiles.get_profile_by_user_id(user_id),
          nil <- profile.booking_page_published_at,
          true <- MeetingTypes.has_active_meeting_types?(user_id),
          {:ok, :published} <- Profiles.mark_booking_page_published(profile) do

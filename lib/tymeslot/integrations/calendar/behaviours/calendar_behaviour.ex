@@ -36,19 +36,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
               | MeetingSchema.t()
               | MeetingTypeSchema.t()
               | {pos_integer(), pos_integer()}
-              | nil
-            ) ::
-              :ok | {:error, any()}
-  @callback delete_event(
-              binary(),
-              pos_integer()
-              | MeetingSchema.t()
-              | MeetingTypeSchema.t()
-              | {pos_integer(), pos_integer()}
               | nil,
               keyword()
             ) ::
               :ok | {:ok, %{document: String.t() | nil}} | {:error, any()}
+  @callback fetch_event(map(), {pos_integer(), pos_integer()}) ::
+              {:ok, list()} | {:error, :not_found} | {:error, any()}
   @callback get_booking_integration_info(pos_integer() | MeetingTypeSchema.t()) ::
               {:ok,
                %{

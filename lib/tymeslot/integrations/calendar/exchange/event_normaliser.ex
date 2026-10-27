@@ -91,13 +91,57 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   own message disappears from the grid with only a log line to say so.
   Availability is unaffected either way: it comes from `GetUserAvailability`
   over the whole mailbox, never from these items.
+
+  Takes one response, or every response of a read that was split into several
+  requests. The verdict covers the read as a whole: one request in which every
+  message failed does not refuse a read whose other requests were answered.
   """
-  @spec require_readable_batch(Soap.document()) :: :ok | {:error, Soap.failure()}
-  def require_readable_batch(doc) do
-    case Soap.response_messages(doc, "GetItemResponseMessage") do
+  @spec require_readable_batch(Soap.document() | [Soap.document()]) ::
+          :ok | {:error, Soap.failure()}
+  def require_readable_batch(docs) when is_list(docs) do
+    case Enum.flat_map(docs, &Soap.response_messages(&1, "GetItemResponseMessage")) do
       [] -> {:error, :no_response_messages}
       messages -> classify_batch(messages, Enum.reject(messages, &Soap.succeeded?/1))
     end
+  end
+
+  def require_readable_batch(doc), do: require_readable_batch([doc])
+
+  @doc """
+  States whether the server answered the properties `Requests.get_item/1`
+  asked for at all.
+
+  The request names its properties one by one on top of `BaseShape=IdOnly`, so
+  a server that ignored `t:AdditionalProperties` would answer bare item ids
+  under `NoError`. Every one of those items fails `CalendarEvent.new/1` for
+  want of a start, and a read made of them would look like an empty calendar.
+  Start and end are the two properties every calendar item has, so a read in
+  which *every* item lacks one is refused: the cache keeps what it holds and
+  the failure is logged for operators.
+
+  A read in which only some items are bare is not that signature, and is
+  answered: each bare item is skipped and reported by `normalise_events/2`
+  like any other unusable item, for the reason `require_readable_batch/1`
+  gives for not failing a window over one item.
+  """
+  @spec require_requested_properties([Soap.document()], integer() | nil) ::
+          :ok | {:error, :item_properties_missing}
+  def require_requested_properties(items, calendar_integration_id) when is_list(items) do
+    if items != [] and Enum.all?(items, &bare?/1) do
+      Logger.error("Exchange GetItem answered no item with the requested properties",
+        provider: :exchange,
+        calendar_integration_id: calendar_integration_id,
+        item_count: length(items)
+      )
+
+      {:error, :item_properties_missing}
+    else
+      :ok
+    end
+  end
+
+  defp bare?(item) do
+    is_nil(Soap.text(item, ~x"./t:Start/text()")) or is_nil(Soap.text(item, ~x"./t:End/text()"))
   end
 
   defp classify_batch(_messages, []), do: :ok

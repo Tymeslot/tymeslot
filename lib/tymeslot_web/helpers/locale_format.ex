@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     },
     "fr" => %{
       full: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"],
-      short: ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"],
+      short: ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."],
       narrow: ["D", "L", "M", "M", "J", "V", "S"]
     },
     "it" => %{
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     },
     "pl" => %{
       full: ["niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota"],
-      short: ["niedz", "pon", "wt", "śr", "czw", "pt", "sob"],
+      short: ["niedz.", "pon.", "wt.", "śr.", "czw.", "pt.", "sob."],
       narrow: ["N", "P", "W", "Ś", "C", "P", "S"]
     },
     "pt" => %{
@@ -312,6 +312,23 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   @spec format_weekday_name(integer(), String.t(), :full | :short | :narrow) :: String.t()
   def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
 
+  # French, Italian and Portuguese write the first of a month as an ordinal.
+  @first_of_month %{"fr" => "1er", "it" => "1°", "pt" => "1º"}
+
+  @doc """
+  The day of the month as it is written in a date, without the month:
+  French, Italian and Portuguese write the first as an ordinal ("le 1er
+  octobre", "il 1° ottobre", "1º de outubro"), and every other day, and
+  every day in the other languages, is a plain number.
+  - en: 1, 2
+  - fr: 1er, 2
+  - it: 1°, 2
+  - pt: 1º, 2
+  """
+  @spec format_day_of_month(1..31, String.t()) :: String.t()
+  def format_day_of_month(1, locale), do: Map.get(@first_of_month, locale, "1")
+  def format_day_of_month(day, _locale) when day in 2..31, do: Integer.to_string(day)
+
   @doc """
   Formats a date led by its full weekday name, in the locale's order and
   punctuation. The weekday keeps the case the locale gives it, so French and
@@ -372,7 +389,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   `format_short_date/2` led by the abbreviated weekday.
   - en: Mon 5 Feb
   - de: Mo 5. Feb
-  - fr: lun 5 févr.
+  - fr: lun. 5 févr.
   """
   @spec format_short_weekday_date(Calendar.date(), String.t()) :: String.t()
   def format_short_weekday_date(date, locale) do

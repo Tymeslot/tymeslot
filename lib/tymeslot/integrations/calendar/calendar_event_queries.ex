@@ -4,13 +4,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
 
   Reads convert results via
   `ProviderCalendarEventSchema.to_calendar_event/1`, so callers work with
-  domain structs rather than database records; the one write here converts the
-  other way. `ProviderCalendarEventQueries` remains the row-level module for
-  the same table.
+  domain structs rather than database records. `ProviderCalendarEventQueries`
+  remains the row-level module for the same table, and
+  `IntegrationCacheQueries.replace_cached_rows/3` the replacement a provider
+  with more than one read path makes, one role at a time.
 
-  It is also where the `role` column is honoured on both sides: `in_range/2`
-  is the availability read and `full_refresh_for_role/3` the replacement a
-  provider with more than one read path needs.
+  It is also where the `role` column is honoured on the read side:
+  `in_range/2` is the availability read.
   `list_blocking_for_range/3` is `in_range/2`'s one departure from the
   canonical-struct rule, and exists so the role filter is written once rather
   than once per shape; see its own doc.
@@ -21,7 +21,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Repo
 
   # Bound at compile time from the module that owns the column's vocabulary, so
@@ -46,28 +48,43 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   Every provider but Exchange writes only `both` rows, so neither filter
   changes what they return.
 
-  The `DateTime` clause is `list_blocking_for_range/3` converted to structs, so
+  The `DateTime` clause is `list_blocking_for_range/4` converted to structs, so
   the role filter this read applies is defined once rather than once per shape.
+
+  `blocking_rules`, from `AvailabilityView.rules/1`, keeps only rows from
+  calendars the owner lets block availability; it also drops rows a sync left
+  behind for a calendar since deselected. Every availability read passes it;
+  `%{}` keeps every calendar's rows.
 
   Returns a list of `CalendarEvent` structs.
   """
-  @spec in_range([integer()], {DateTime.t(), DateTime.t()} | {Date.t(), Date.t()}) ::
-          [CalendarEvent.t()]
-  def in_range([], _range), do: []
+  @spec in_range(
+          [integer()],
+          {DateTime.t(), DateTime.t()} | {Date.t(), Date.t()},
+          %{integer() => Selection.visibility_rule()}
+        ) :: [CalendarEvent.t()]
+  def in_range(integration_ids, range, blocking_rules \\ %{})
 
-  def in_range(integration_ids, {%DateTime{} = range_start, %DateTime{} = range_end}) do
+  def in_range([], _range, _blocking_rules), do: []
+
+  def in_range(
+        integration_ids,
+        {%DateTime{} = range_start, %DateTime{} = range_end},
+        blocking_rules
+      ) do
     integration_ids
-    |> list_blocking_for_range(range_start, range_end)
+    |> list_blocking_for_range(range_start, range_end, blocking_rules)
     |> Enum.map(&ProviderCalendarEventSchema.to_calendar_event/1)
   end
 
-  def in_range(integration_ids, {%Date{} = range_start, %Date{} = range_end}) do
+  def in_range(integration_ids, {%Date{} = range_start, %Date{} = range_end}, blocking_rules) do
     range_start_dt = DateTime.new!(range_start, ~T[00:00:00], "Etc/UTC")
     range_end_dt = DateTime.new!(Date.add(range_end, 1), ~T[00:00:00], "Etc/UTC")
 
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
     |> where([e], e.role != ^@role_display_only)
+    |> where([e], ^Visibility.dynamic_for(blocking_rules))
     |> where(
       [e],
       (e.all_day == false and e.start_at < ^range_end_dt and e.end_at > ^range_start_dt) or
@@ -93,72 +110,47 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   block. Providers whose `list_events/2` reads the cache call this directly
   rather than `in_range/2`, because they must hand back the database's own
   string-valued `status`/`transparency`: that is the shape
-  `CalendarEvent.blocking?/1` matches on for plain maps, and the atoms a
   `CalendarEvent` carries would make every transparent or cancelled row block.
-  """
-  @spec list_blocking_for_range([integer()], DateTime.t(), DateTime.t()) :: [
-          ProviderCalendarEventSchema.t()
-        ]
-  def list_blocking_for_range([], _range_start, _range_end), do: []
 
-  def list_blocking_for_range(integration_ids, range_start, range_end) do
+  `blocking_rules` as for `in_range/3`.
+  """
+  @spec list_blocking_for_range(
+          [integer()],
+          DateTime.t(),
+          DateTime.t(),
+          %{integer() => Selection.visibility_rule()}
+        ) :: [ProviderCalendarEventSchema.t()]
+  def list_blocking_for_range(integration_ids, range_start, range_end, blocking_rules \\ %{})
+
+  def list_blocking_for_range([], _range_start, _range_end, _blocking_rules), do: []
+
+  def list_blocking_for_range(integration_ids, range_start, range_end, blocking_rules) do
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
     |> where([e], e.role != ^@role_display_only)
+    |> where([e], ^Visibility.dynamic_for(blocking_rules))
     |> ProviderCalendarEventQueries.where_overlapping_range(range_start, range_end)
     |> Repo.all()
   end
 
   @doc """
-  Replaces every cached row an integration holds under `role`, in one
-  transaction.
+  Says whether the integration already holds a row overlapping the window:
+  a row of `role`, or of any role when `role` is nil.
 
-  The scoped counterpart to
-  `ProviderCalendarEventQueries.full_refresh_for_integration/2`, and the only
-  refresh an integration with two read paths may use. Exchange has two:
-  `GetUserAvailability` writes the `busy_only` rows and the item path writes
-  the `display_only` ones, both under the same integration id, so the unscoped
-  refresh would have each half delete the other's rows on every cycle —
-  intermittently, and with nothing to say so. Takes the same advisory lock, on
-  the same key, so the two halves still serialise against each other.
-  """
-  @spec full_refresh_for_role(integer(), String.t(), [CalendarEvent.t()]) ::
-          {:ok, non_neg_integer()} | {:error, term()}
-  def full_refresh_for_role(calendar_integration_id, role, calendar_events)
-      when role in @roles and is_list(calendar_events) do
-    attrs =
-      Enum.map(calendar_events, fn event ->
-        event
-        |> ProviderCalendarEventSchema.from_calendar_event()
-        |> Map.put(:role, role)
-      end)
-
-    Repo.transaction(fn ->
-      Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [2, calendar_integration_id])
-
-      ProviderCalendarEventSchema
-      |> where([e], e.calendar_integration_id == ^calendar_integration_id and e.role == ^role)
-      |> Repo.delete_all()
-
-      {:ok, count} = ProviderCalendarEventQueries.upsert_batch(attrs)
-      count
-    end)
-  end
-
-  @doc """
-  Says whether the integration already holds a row of `role` overlapping the
-  window.
-
-  The role-scoped input to a sync worker's empty-response guard: a run that
-  read no busy intervals must be judged against the busy rows it is about to
+  The input to a sync's empty-response guard. Scoped to a role, a run that
+  read no busy intervals is judged against the busy rows it is about to
   replace, not against the item rows it is not touching.
   """
-  @spec any_in_range_for_role?(integer(), String.t(), DateTime.t(), DateTime.t()) :: boolean()
-  def any_in_range_for_role?(calendar_integration_id, role, range_start, range_end)
-      when role in @roles do
+  @spec any_in_range?(integer(), String.t() | nil, DateTime.t(), DateTime.t()) :: boolean()
+  def any_in_range?(calendar_integration_id, role, range_start, range_end)
+      when is_nil(role) or role in @roles do
     ProviderCalendarEventSchema
-    |> where([e], e.calendar_integration_id == ^calendar_integration_id and e.role == ^role)
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where_role(role)
     |> ProviderCalendarEventQueries.where_overlapping_range(range_start, range_end)
     |> Repo.exists?()
   end
+
+  defp where_role(query, nil), do: query
+  defp where_role(query, role), do: where(query, [e], e.role == ^role)
 end

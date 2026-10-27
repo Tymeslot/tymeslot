@@ -9,42 +9,34 @@ defmodule Tymeslot.Availability.CalculateTest do
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Integrations.Calendar.CalendarEvent
 
-  describe "validate_time_selection/3" do
+  describe "validate_time_selection/2" do
     test "returns error when date is nil" do
       assert {:error, :date_required} =
-               Calculate.validate_time_selection(nil, "10:00 AM", [])
+               Calculate.validate_time_selection(nil, "10:00 AM")
     end
 
     test "returns error when date is empty string" do
       assert {:error, :date_required} =
-               Calculate.validate_time_selection("", "10:00 AM", [])
+               Calculate.validate_time_selection("", "10:00 AM")
     end
 
     test "returns error when time is nil" do
       assert {:error, :time_required} =
-               Calculate.validate_time_selection("2025-06-15", nil, [])
+               Calculate.validate_time_selection("2025-06-15", nil)
     end
 
     test "returns error when time is empty string" do
       assert {:error, :time_required} =
-               Calculate.validate_time_selection("2025-06-15", "", [])
+               Calculate.validate_time_selection("2025-06-15", "")
     end
 
-    test "returns ok when both date and time are provided with valid slots" do
-      assert :ok = Calculate.validate_time_selection("2025-06-15", "10:00 AM", ["10:00 AM"])
-    end
-
-    test "returns ok with empty slots list when date and time are valid" do
-      assert :ok = Calculate.validate_time_selection("2025-06-15", "10:00 AM", [])
-    end
-
-    test "returns ok with non-list slots when date and time are valid binaries" do
-      assert :ok = Calculate.validate_time_selection("2025-06-15", "10:00 AM", :not_a_list)
+    test "returns ok when both date and time are binaries" do
+      assert :ok = Calculate.validate_time_selection("2025-06-15", "10:00 AM")
     end
 
     test "returns error with non-binary date" do
       assert {:error, :selection_required} =
-               Calculate.validate_time_selection(123, "10:00 AM", [])
+               Calculate.validate_time_selection(123, "10:00 AM")
     end
   end
 

@@ -113,7 +113,7 @@ defmodule TymeslotWeb.SeatController do
   # Private helpers
   # ---------------------------------------------------------------------------
 
-  defp rate_limit(conn), do: RateLimiter.check_seat_manage_rate_limit(ClientIP.get(conn))
+  defp rate_limit(conn), do: RateLimiter.check(:seat_manage, ClientIP.get(conn))
 
   # Only a supported locale is applied; a stored one the app has since
   # stopped offering leaves the request's own in place.
@@ -222,7 +222,8 @@ defmodule TymeslotWeb.SeatController do
   end
 
   defp render_error(conn, {:error, reason})
-       when reason in [:meeting_started, :meeting_past] or is_binary(reason) do
+       when reason in [:meeting_started, :meeting_past] or
+              (is_tuple(reason) and elem(reason, 0) == :not_cancellable) do
     conn
     |> put_status(:conflict)
     |> seat_page(dgettext("booking_manage", "Spot cannot be cancelled"))

@@ -108,6 +108,7 @@ msgstr "Měna byla změněna."
 msgid "Currency updated. Paid event-type prices have been reset."
 msgstr "Měna byla změněna. Ceny placených typů schůzek byly vynulovány."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Date"
@@ -387,11 +388,6 @@ msgstr "Změna měny vynuluje cenu u všech placených typů schůzek – stáv
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled"
-msgstr "Zrušeno"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
-#, elixir-autogen, elixir-format
 msgid "Outstanding"
 msgstr "K vrácení"
 
@@ -443,3 +439,53 @@ msgstr[2] "Stále dlužíte %{count} plateb k vrácení v celkové výši %{to
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected, so these refunds have to be issued from your Stripe dashboard. The money is still owed."
 msgstr "Váš účet Stripe není připojený, proto je nutné tyto platby vrátit v nástěnce Stripe. Peníze stále dlužíte."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled %{date}"
+msgstr "Zrušeno %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Vypršelo"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired, paid %{date}"
+msgstr "Vypršelo, zaplaceno %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired bookings were paid for but never confirmed, for example because the payment arrived after the slot was taken. Their refund is issued automatically; if one is still listed later, refund it here or in Stripe."
+msgstr "Vypršelé rezervace byly zaplaceny, ale nikdy nepotvrzeny, například proto, že platba dorazila až po obsazení termínu. Peníze se vracejí automaticky; pokud tu některá z nich bude uvedena i později, vraťte peníze zde nebo ve Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Declined %{date}"
+msgstr "Odmítnuto %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "You declined these bookings, but their automatic refund didn't go through. Refund them here or in Stripe."
+msgstr "Tyto rezervace jste odmítli, ale jejich automatické vrácení peněz se nezdařilo. Vraťte peníze zde nebo ve Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency, %{currency}, is not supported for meeting payments. Choose one of the currencies below to take payments again."
+msgstr "Měna vašeho účtu Stripe, %{currency}, není pro platby za schůzky podporovaná. Chcete-li znovu přijímat platby, vyberte jednu z měn níže."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Currency not supported"
+msgstr "Nepodporovaná měna"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Payments cannot be taken in your account's currency, %{currency}. Choose a supported currency below to take payments again."
+msgstr "V měně vašeho účtu, %{currency}, nelze přijímat platby. Chcete-li znovu přijímat platby, vyberte níže podporovanou měnu."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Bookings are still charged their current prices; choose one of the currencies below to change them."
+msgstr "V měně vašeho účtu Stripe, %{currency}, už nelze nastavovat ceny. Rezervace se stále účtují za současné ceny; chcete-li je změnit, vyberte jednu z měn níže."

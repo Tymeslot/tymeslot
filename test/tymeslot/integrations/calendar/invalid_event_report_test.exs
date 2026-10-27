@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.InvalidEventReportTest do
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser, as: GoogleNormaliser
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.EventNormaliser, as: OutlookNormaliser
 
@@ -138,6 +139,86 @@ defmodule Tymeslot.Integrations.Calendar.InvalidEventReportTest do
       end
 
       assert_received {:send_alert, :invalid_calendar_event, %{count: 1}}
+    end
+
+    test "counts an event kept with a default duration apart from the skips" do
+      {:ok, parsed} =
+        ICalParser.parse("""
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        BEGIN:VEVENT
+        UID:odd-duration
+        DTSTART:20300615T090000Z
+        DURATION:about an hour
+        SUMMARY:Odd
+        END:VEVENT
+        END:VCALENDAR
+        """)
+
+      {:ok, events} =
+        InvalidEventReport.collect(fn ->
+          normalise_ical(parsed ++ [ical_invalid("bad-1"), ical_invalid("bad-2")])
+        end)
+
+      assert [%{uid: "odd-duration"} = kept] = events
+      assert DateTime.diff(kept.end_at, kept.start_at) == 3600
+
+      assert_received {:send_alert, :invalid_calendar_event, payload}
+      refute_received {:send_alert, :invalid_calendar_event, _second}
+
+      assert payload.count == 2
+      assert payload.defaulted == 1
+
+      assert payload.sample_events =~
+               "odd-duration (unreadable DURATION, kept with the default length)"
+
+      assert payload.reasons =~ "unreadable DURATION, kept with the default length"
+
+      assert AlertTypes.format_message(:invalid_calendar_event, payload) =~
+               "2 invalid caldav calendar event(s) skipped, 1 kept with a default duration " <>
+                 "for integration 7"
+    end
+
+    test "a run with only an event kept with a default says so, with no skips" do
+      raw = Map.put(ical_valid("odd-duration"), :duration_defaulted, true)
+
+      {:ok, [_kept]} = InvalidEventReport.collect(fn -> normalise_ical([raw]) end)
+
+      assert_received {:send_alert, :invalid_calendar_event, payload}
+      assert payload.count == 0
+      assert payload.defaulted == 1
+      assert payload.summary == "1 caldav calendar event(s) kept with a default duration"
+    end
+
+    test "counts an event skipped for another reason as skipped, not also defaulted" do
+      raw = Map.put(ical_invalid("odd-and-bad"), :duration_defaulted, true)
+
+      {:ok, []} = InvalidEventReport.collect(fn -> normalise_ical([raw]) end)
+
+      assert_received {:send_alert, :invalid_calendar_event, payload}
+      assert payload.count == 1
+      assert payload.defaulted == 0
+      assert payload.summary == "1 invalid caldav calendar event(s) skipped"
+    end
+
+    test "counts a series kept with a default duration once, not once per occurrence" do
+      # Inside the sync window the series is expanded over.
+      start = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+      raw = %{
+        uid: "odd-series",
+        summary: "Odd series",
+        dtstart: start,
+        dtend: DateTime.add(start, 1, :hour),
+        rrule: "FREQ=DAILY;COUNT=3",
+        duration_defaulted: true
+      }
+
+      {:ok, events} = InvalidEventReport.collect(fn -> normalise_ical([raw]) end)
+      assert length(events) == 3
+
+      assert_received {:send_alert, :invalid_calendar_event, payload}
+      assert payload.defaulted == 1
     end
 
     test "returns the run's result and raises nothing for a clean run" do

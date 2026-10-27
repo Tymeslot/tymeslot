@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Security.Encryption
 
   @moduletag :calendar_integration
@@ -145,7 +144,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
 
     test "surfaces a Graph rejection of an inverted time range", %{integration: integration} do
       # Graph, not Tymeslot, validates the range: start after end comes back
-      # as a 400 that the API maps to a network error.
+      # as a 400 that the API maps to a refusal.
       invalid_start = DateTime.add(DateTime.utc_now(), 7, :day)
       invalid_end = DateTime.add(DateTime.utc_now(), -7, :day)
 
@@ -164,7 +163,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       end)
 
       assert CalendarAPI.list_primary_events(integration, invalid_start, invalid_end) ==
-               {:error, :network_error, "HTTP 400 (see logs for details)"}
+               {:error, :refused, "HTTP 400 (see logs for details)"}
     end
   end
 
@@ -195,12 +194,13 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       assert hd(integrations).provider == "outlook"
 
       # Toggle integration
-      {:ok, toggled} = Calendar.toggle_integration(integration.id, user.id)
+      {:ok, toggled} = Calendar.toggle_integration(user.id, integration.id)
       assert toggled.is_active == false
 
       # Delete integration
-      {:ok, to_delete} = CalendarManagement.get_calendar_integration(integration.id, user.id)
-      {:ok, _deleted} = CalendarManagement.delete_calendar_integration(to_delete)
+      {:ok, _deleted} =
+        Calendar.delete_with_primary_reassignment_and_invalidate(user.id, integration.id)
+
       assert Calendar.list_integrations(user.id) == []
     end
 
@@ -220,8 +220,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
         })
 
       # Other user cannot toggle
-      result = Calendar.toggle_integration(integration.id, other_user.id)
-      assert {:error, _error_reason} = result
+      assert {:error, :not_found} = Calendar.toggle_integration(other_user.id, integration.id)
     end
   end
 

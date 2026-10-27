@@ -24,6 +24,24 @@ defmodule Tymeslot.Test.ClockHelpers do
     :ok
   end
 
+  @doc """
+  Freezes the clock at noon UTC on the Wednesday of the current week, for a
+  test whose dates are built from "today" but are read in another zone.
+
+  At that instant every zone within eleven hours of UTC is on the same date,
+  and that date is mid-week, so an event placed on "today" is on the same day
+  and in the same week wherever it is viewed. The instant stays within a few
+  days of the real one, so nothing compared against the wall clock drifts far.
+  It is taken from `Tymeslot.Clock`, so a clock frozen earlier in the test
+  picks the week.
+  """
+  @spec freeze_clock_midweek() :: :ok
+  def freeze_clock_midweek do
+    today = Clock.utc_today()
+    wednesday = today |> Date.beginning_of_week(:monday) |> Date.add(2)
+    freeze_clock(DateTime.new!(wednesday, ~T[12:00:00], "Etc/UTC"))
+  end
+
   @doc "Removes any frozen clock for the current process."
   @spec unfreeze_clock() :: :ok
   def unfreeze_clock do

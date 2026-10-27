@@ -66,11 +66,19 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # Check if this is a meeting management action
     action = socket.assigns[:live_action]
 
-    if action in [:reschedule, :cancel, :cancel_confirmed, :poll_voting] do
+    cond do
       # Meeting management and poll voting have no scheduling params to delegate.
-      {:noreply, socket}
-    else
-      delegate_handle_params(params, url, socket)
+      action in [:reschedule, :cancel, :cancel_confirmed, :poll_voting] ->
+        {:noreply, socket}
+
+      # A page refused for setup (no calendar yet) was mounted without the
+      # theme's scheduling state, so the theme's params handling has nothing
+      # to work on; `render/1` shows the setup notice instead.
+      socket.assigns[:scheduling_error_message] ->
+        {:noreply, socket}
+
+      true ->
+        delegate_handle_params(params, url, socket)
     end
   end
 
@@ -107,6 +115,9 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   @impl Phoenix.LiveView
   def handle_info({:poll_updated, _poll_id} = msg, socket),
+    do: PollVoting.handle_poll_info(msg, socket)
+
+  def handle_info({:poll_deadline_reached, _poll_id} = msg, socket),
     do: PollVoting.handle_poll_info(msg, socket)
 
   def handle_info(msg, socket) do

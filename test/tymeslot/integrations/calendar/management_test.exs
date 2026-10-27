@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.CalendarManagementTest do
+defmodule Tymeslot.Integrations.Calendar.ManagementTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
@@ -7,8 +7,9 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Shared.DiscoveryCache
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Repo
@@ -23,7 +24,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       integration = insert(:calendar_integration, user: user, needs_reauth: false)
 
       assert {:discard, "calendar gone"} =
-               CalendarManagement.flag_for_reconnection(
+               Management.flag_for_reconnection(
                  integration,
                  "Pick a calendar.",
                  "calendar gone"
@@ -49,7 +50,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       integration = insert(:calendar_integration, needs_reauth: true, sync_error: "Old reason.")
 
       assert {:discard, _reason} =
-               CalendarManagement.flag_for_reconnection(integration, "New reason.", "still gone")
+               Management.flag_for_reconnection(integration, "New reason.", "still gone")
 
       assert Repo.reload!(integration).sync_error == "New reason."
       refute_enqueued(worker: EmailWorker)
@@ -61,7 +62,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, needs_reauth: false)
 
-      assert {:discard, _reason} = CalendarManagement.handle_reauth_required(integration)
+      assert {:discard, _reason} = Management.handle_reauth_required(integration)
 
       reloaded = Repo.reload!(integration)
       assert reloaded.needs_reauth
@@ -80,7 +81,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
     test "does not email again for an integration already flagged" do
       integration = insert(:calendar_integration, needs_reauth: true, sync_error: "Old reason.")
 
-      assert {:discard, _reason} = CalendarManagement.handle_reauth_required(integration)
+      assert {:discard, _reason} = Management.handle_reauth_required(integration)
 
       refute_enqueued(worker: EmailWorker)
     end
@@ -96,7 +97,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       _profile = insert(:profile, user: user)
       integration = insert(:calendar_integration, user: user, is_active: false)
 
-      assert {:ok, updated} = CalendarManagement.toggle_with_primary_rebalance(integration)
+      assert {:ok, updated} = Management.toggle_with_primary_rebalance(integration)
       assert updated.is_active
 
       assert_enqueued(
@@ -110,7 +111,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       _profile = insert(:profile, user: user)
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      assert {:ok, updated} = CalendarManagement.toggle_with_primary_rebalance(integration)
+      assert {:ok, updated} = Management.toggle_with_primary_rebalance(integration)
       refute updated.is_active
 
       refute_enqueued(
@@ -139,7 +140,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
         )
 
       assert {:error, :duplicate_account} =
-               CalendarManagement.toggle_with_primary_rebalance(dormant)
+               Management.toggle_with_primary_rebalance(dormant)
     end
   end
 
@@ -167,7 +168,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       |> Repo.insert!()
 
       assert {:ok, _updated} =
-               CalendarManagement.update_calendar_integration(integration, %{
+               Management.update_calendar_integration(integration, %{
                  password: "new-password"
                })
 
@@ -188,7 +189,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       integration = insert(:calendar_integration, user: user, name: "Before")
 
       assert {:ok, _updated} =
-               CalendarManagement.update_calendar_integration(integration, %{name: "After"})
+               Management.update_calendar_integration(integration, %{name: "After"})
 
       refute_enqueued(
         worker: IntegrationHealthWorker,
@@ -262,8 +263,52 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
 
       on_exit(fn -> :telemetry.detach("test-calendar-connected") end)
 
-      assert {:ok, _integration} = CalendarManagement.create_calendar_integration(attrs)
+      assert {:ok, _integration} = Management.create_calendar_integration(attrs)
       assert_received {:telemetry, %{count: 1}, %{provider: "caldav"}}
+    end
+
+    # The row stops decrypting between its insert and the write that makes
+    # its calendar the default booking calendar, as it would were the key
+    # rotated away meanwhile.
+    test "keeps the integration, without a default, when it stops decrypting before one is set" do
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}
+      end)
+
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      Repo.query!("""
+      CREATE FUNCTION pg_temp.garble_credentials() RETURNS trigger AS $$
+      BEGIN
+        UPDATE calendar_integrations
+        SET password_encrypted = decode(repeat('ab', 40), 'hex')
+        WHERE id = NEW.id;
+        RETURN NULL;
+      END
+      $$ LANGUAGE plpgsql
+      """)
+
+      Repo.query!("""
+      CREATE TRIGGER garble_credentials AFTER INSERT ON calendar_integrations
+      FOR EACH ROW EXECUTE FUNCTION pg_temp.garble_credentials()
+      """)
+
+      assert {:ok, integration} =
+               Management.create_calendar_integration(%{
+                 user_id: user.id,
+                 name: "My CalDAV",
+                 provider: "caldav",
+                 base_url: "https://caldav.example.com",
+                 username: "user",
+                 password: "pass",
+                 calendar_paths: [],
+                 provider_account_id: "https://caldav.example.com||user",
+                 is_active: true
+               })
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).default_booking_calendar_id ==
+               nil
     end
   end
 end

@@ -152,14 +152,6 @@
   color: var(--text-opacity-high);
 }
 
-/* A paid type's price, under its description. */
-.duration-card-price {
-  margin-top: var(--space-2xs);
-  color: var(--theme-text);
-  font-weight: var(--font-weight-semibold);
-  font-variant-numeric: tabular-nums;
-}
-
 /* duration-card-description: replaces text-xs sm:text-sm md:text-base */
 .duration-card-description {
   font-size: var(--theme-font-size-xs);
@@ -285,6 +277,30 @@
 
   .overview-description {
     font-size: var(--theme-font-size-xl);
+  }
+}
+
+/* ===== Duration step ===== */
+/* The lengths a meeting type offers, chosen after the type. The step keeps the
+   overview's single-type footprint (--container-lg, via .overview-content-area
+   above) at any number of lengths, so it is as wide as every other step; the
+   lengths tile two across once the card is wide enough. */
+.length-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xs);
+  align-content: start;
+}
+
+@container scheduling (min-width: 640px) {
+  .length-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container scheduling (min-width: 768px) {
+  .length-list {
+    gap: var(--space-md);
   }
 }
 

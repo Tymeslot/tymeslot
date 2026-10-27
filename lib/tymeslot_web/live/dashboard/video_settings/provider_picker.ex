@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPicker do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Integrations.Providers.Descriptor
+  alias Tymeslot.Integrations.Shared.Providers.Descriptor
   alias Tymeslot.Integrations.Video.ProviderConfig
 
   @groups [:hosted, :self_hosted, :other]

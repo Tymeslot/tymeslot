@@ -34,10 +34,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   # Time formatting
 
   defdelegate format_display_time_range(event, fmt, timezone), to: TimeFormatting
-  defdelegate tz_abbr(timezone), to: TimeFormatting
+  defdelegate tz_abbr(timezone, at), to: TimeFormatting
+  defdelegate days_tz_abbr(timezone, days), to: TimeFormatting
   defdelegate datetime_to_local_parts(dt, timezone), to: TimeFormatting
   defdelegate format_hour(hour, assigns), to: TimeFormatting
-  defdelegate user_tz_abbr(assigns), to: TimeFormatting
   defdelegate url?(str), to: TimeFormatting
   defdelegate linkify_text(text), to: TimeFormatting
 
@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate period_label(assigns), to: PreferenceHelpers
   defdelegate view_label(view), to: PreferenceHelpers
   defdelegate navigate_month(date, delta), to: PreferenceHelpers
+  defdelegate view_switch_anchor(assigns), to: PreferenceHelpers
   defdelegate month_cell_class(day, assigns), to: PreferenceHelpers
   defdelegate week_start_atom(assigns), to: PreferenceHelpers
   defdelegate show_week_numbers?(assigns), to: PreferenceHelpers
@@ -77,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     tz = assigns.user_timezone
 
     Enum.filter(visible_events(assigns), fn e ->
-      not e.all_day and event_spans_day?(e, date, tz)
+      not e.all_day and OverlapLayout.event_spans_day?(e, date, tz)
     end)
   end
 
@@ -90,14 +91,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
         Date.compare(event.start_date, date) != :gt and
         Date.compare(event.end_date, date) == :gt
     end)
-  end
-
-  # Private helpers
-
-  defp event_spans_day?(event, date, tz) do
-    {day_start, day_end} = OverlapLayout.day_boundary_utc(date, tz)
-
-    DateTime.compare(event.start_at, day_end) == :lt and
-      DateTime.compare(event.end_at, day_start) == :gt
   end
 end

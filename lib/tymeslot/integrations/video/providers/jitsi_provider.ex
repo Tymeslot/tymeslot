@@ -56,13 +56,10 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.Jitsi.Token
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
-  alias Tymeslot.Security.SsrfGuard
-  alias Tymeslot.Security.UrlValidation
 
   @behaviour ProviderBehaviour
 
@@ -75,16 +72,6 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   @min_secret_bytes 32
 
   @organizer_role "organizer"
-
-  @capabilities Capabilities.new!(
-                  waiting_room: false,
-                  recording: false,
-                  dial_in: false,
-                  max_participants: nil,
-                  breakout_rooms: false,
-                  screen_sharing: true,
-                  chat: true
-                )
 
   @impl ProviderBehaviour
   def create_meeting_room(config) do
@@ -142,20 +129,11 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   def extract_room_id(meeting_url), do: LinkRoom.slug_from_url(meeting_url)
 
   @impl ProviderBehaviour
-  def valid_meeting_url?(meeting_url), do: LinkRoom.room_url?(meeting_url)
-
-  @impl ProviderBehaviour
   def perform_connection_test(config) do
     with {:ok, base_url} <- fetch_base_url(config) do
       LinkRoom.connection_test(base_url)
     end
   end
-
-  @impl ProviderBehaviour
-  def provider_type, do: :jitsi
-
-  @impl ProviderBehaviour
-  def display_name, do: "Jitsi Meet"
 
   @impl ProviderBehaviour
   def connection_test_bucket, do: :jitsi
@@ -179,26 +157,9 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
 
   @impl ProviderBehaviour
   def validate_config(config) do
-    with {:ok, base_url} <- fetch_base_url(config),
-         :ok <-
-           validate_credentials(present(config[:client_id]), present(config[:client_secret])) do
-      require_https_for_tokens(base_url, credentials(config))
+    with :ok <- validate_base_url(Map.get(config, :base_url), credentials(config)) do
+      validate_credentials(present(config[:client_id]), present(config[:client_secret]))
     end
-  end
-
-  @impl ProviderBehaviour
-  def capabilities, do: @capabilities
-
-  @impl ProviderBehaviour
-  def handle_meeting_event(_event, _room_data, _additional_data), do: :ok
-
-  @impl ProviderBehaviour
-  def generate_meeting_metadata(room_data) do
-    %{
-      provider: "jitsi",
-      meeting_id: room_data.room_id,
-      join_url: room_data.meeting_url
-    }
   end
 
   @impl ProviderBehaviour
@@ -222,61 +183,62 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   # Checked at validation time as well as in `LinkRoom.build_room/2`, so a
   # server URL carrying a query string or fragment is refused when the
   # integration is set up rather than at the first booking.
-  defp fetch_base_url(config) do
-    with {:ok, base_url} <- fetch_http_base_url(Map.get(config, :base_url)),
-         :ok <- LinkRoom.validate_base_url(base_url) do
-      {:ok, base_url}
-    end
-  end
-
-  defp fetch_http_base_url(base_url) when base_url in [nil, ""],
-    do: {:error, dgettext("dashboard_video", "Base URL is required")}
-
-  defp fetch_http_base_url(base_url) do
-    if LinkRoom.http_url?(base_url) do
-      {:ok, base_url}
-    else
-      {:error,
-       dgettext(
-         "dashboard_video",
-         "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
-       )}
-    end
-  end
-
+  #
   # With credentials every join link carries a token signed with the App
   # secret, so a public server reached over plain http would hand those tokens
   # to anyone on the path. A server on localhost or a private network stays
   # allowed, as it is for CalDAV, and so does one on an internal name once the
   # operator allows private video addresses; without credentials the bare room
-  # link carries nothing to protect.
-  defp require_https_for_tokens(_base_url, nil), do: :ok
-
-  defp require_https_for_tokens(base_url, _credentials) do
-    UrlValidation.validate_http_url(String.trim(base_url),
-      enforce_https_for_public: true,
-      internal_names_local: SsrfGuard.allow_private_for_video?(),
+  # link carries nothing to protect. The private-address switch is left to the
+  # schema, which holds a saved address to it: this check also runs on the
+  # stored server before every room, and one saved while the switch was on
+  # keeps getting rooms.
+  defp validate_base_url(base_url, credentials) do
+    LinkRoom.validate_server_url(base_url,
+      private: :unchecked,
+      https: if(credentials, do: :for_public, else: :never),
+      invalid_message: invalid_url_message(),
+      disallowed_protocol_error: invalid_url_message(),
       https_error_message:
         dgettext(
-          "dashboard_video",
+          "integrations_video",
           "Use an https:// server URL when token authentication is configured, so the tokens in meeting links are not sent unencrypted."
         )
     )
   end
 
+  # Creating a room and probing the server check the address's shape only, as
+  # they always have: the https rule and the private-address switch are for a
+  # configuration being saved, so a stored one keeps working.
+  defp fetch_base_url(config) do
+    base_url = Map.get(config, :base_url)
+
+    cond do
+      base_url in [nil, ""] -> {:error, dgettext("integrations_video", "Base URL is required")}
+      not LinkRoom.http_url?(base_url) -> {:error, invalid_url_message()}
+      true -> with :ok <- LinkRoom.validate_base_url(base_url), do: {:ok, base_url}
+    end
+  end
+
+  defp invalid_url_message,
+    do:
+      dgettext("integrations_video", "Invalid URL format. Please provide a valid HTTP/HTTPS URL.")
+
   defp validate_credentials(nil, nil), do: :ok
 
   defp validate_credentials(_app_id, nil),
-    do: {:error, dgettext("dashboard_video", "Enter the App secret that belongs to this App ID")}
+    do:
+      {:error, dgettext("integrations_video", "Enter the App secret that belongs to this App ID")}
 
   defp validate_credentials(nil, _secret),
-    do: {:error, dgettext("dashboard_video", "Enter the App ID that belongs to this App secret")}
+    do:
+      {:error, dgettext("integrations_video", "Enter the App ID that belongs to this App secret")}
 
   defp validate_credentials(_app_id, secret) when byte_size(secret) < @min_secret_bytes,
     do:
       {:error,
        dgettext(
-         "dashboard_video",
+         "integrations_video",
          "The App secret must be at least %{bytes} bytes long. Every guest receives a token signed with it, so a short secret can be recovered from any booking link.",
          bytes: @min_secret_bytes
        )}

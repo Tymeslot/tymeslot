@@ -32,6 +32,14 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
   @font_files length(@families) * 2 + length(@cyrillic_families)
   @font_ids Map.keys(Fonts.all())
 
+  # `mix assets.deploy` digests alongside the sources (`name-<md5>.woff2`); those
+  # copies are build output, not shipped sources.
+  defp font_files do
+    "#{@fonts_dir}/*.woff2"
+    |> Path.wildcard()
+    |> Enum.reject(&(Path.basename(&1, ".woff2") =~ ~r/-[0-9a-f]{32}$/))
+  end
+
   defp font_urls do
     ~r/url\("([^"]+)"\)/
     |> Regex.scan(File.read!(@fonts_css), capture: :all_but_first)
@@ -72,8 +80,7 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
 
   test "every shipped font file is declared, so nothing ships unused" do
     shipped =
-      "#{@fonts_dir}/*.woff2"
-      |> Path.wildcard()
+      font_files()
       |> Enum.map(&("/fonts/" <> Path.basename(&1)))
       |> Enum.sort()
 
@@ -81,7 +88,7 @@ defmodule TymeslotWeb.Themes.SharedFontsTest do
   end
 
   test "every font file is a real woff2, of one subset's size" do
-    files = Path.wildcard("#{@fonts_dir}/*.woff2")
+    files = font_files()
     assert length(files) == @font_files
 
     assert Enum.reject(files, fn file ->

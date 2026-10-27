@@ -12,8 +12,8 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Selection
-  alias Tymeslot.Integrations.CalendarManagement
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -35,7 +35,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
     )
 
     Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-      case CalendarManagement.get_calendar_integration(integration_id, user_id) do
+      case Management.get_calendar_integration(integration_id, user_id) do
         {:ok, integration} ->
           case Discovery.discover_calendars_for_integration(integration) do
             {:ok, calendars} ->
@@ -44,15 +44,10 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
                 count: length(calendars)
               )
 
-              # Merge with existing selection so refreshing the list doesn't
-              # silently un-select calendars the user previously enabled.
-              merged =
-                calendars
-                |> Selection.unify_discovered_with_existing(integration.calendar_list)
-                |> keep_selection_if_emptied(integration.calendar_list)
-
-              case Selection.persist_calendar_list(integration, merged) do
-                {:ok, _integration} ->
+              # Merged with the selection as it stands once discovery is
+              # back, so refreshing never un-selects calendars the user enabled.
+              case Selection.persist_discovered(integration, calendars) do
+                {:ok, {_integration, merged}} ->
                   send(
                     parent,
                     {:calendar_list_refreshed, component_id, integration_id, merged}
@@ -106,17 +101,10 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
           {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()} | {:error, term()}
   def update_integration_with_discovery(integration) do
     with {:ok, refreshed_integration} <- reload_integration(integration),
-         {:ok, merged} <- Selection.discover_with_selection(refreshed_integration) do
-      final_calendar_list =
-        keep_selection_if_emptied(merged, refreshed_integration.calendar_list)
-
-      case Selection.persist_calendar_list(refreshed_integration, final_calendar_list) do
-        {:ok, updated} -> {:ok, updated}
-        error -> error
-      end
-    else
-      error ->
-        error
+         {:ok, calendars} <- Discovery.discover_calendars_for_integration(refreshed_integration),
+         {:ok, {updated, _merged}} <-
+           Selection.persist_discovered(refreshed_integration, calendars) do
+      {:ok, updated}
     end
   end
 
@@ -164,29 +152,11 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
 
   defp reload_integration(%{id: id, user_id: user_id} = _integration)
        when is_integer(id) and is_integer(user_id) do
-    case CalendarManagement.get_calendar_integration(id, user_id) do
+    case Management.get_calendar_integration(id, user_id) do
       {:ok, fresh} -> {:ok, fresh}
       {:error, :not_found} -> {:error, :not_found}
     end
   end
 
   defp reload_integration(integration), do: {:ok, integration}
-
-  # `calendar_paths` is derived from the `selected` flags on `calendar_list`, so
-  # a re-discovery that matches nothing — an empty result, or a server that
-  # changed the shape of the hrefs it returns — silently deselects everything
-  # and leaves the integration syncing no calendars at all. Discovery is
-  # triggered by opening a meeting-type form, so this can happen without the
-  # owner touching their calendar settings. Keep the stored list whenever the
-  # merge would empty a selection that was not empty before; deselecting every
-  # calendar deliberately still works, because that goes through
-  # `Selection.persist_calendar_list/2` directly rather than through discovery.
-  defp keep_selection_if_emptied(merged, existing) do
-    if Selection.derive_selected_paths(merged) == [] and
-         Selection.derive_selected_paths(existing) != [] do
-      existing
-    else
-      merged
-    end
-  end
 end

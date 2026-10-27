@@ -4,16 +4,22 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Integrations.Calendar, as: CalendarContext
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
 
@@ -102,6 +108,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
       {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
       assert reloaded.graph_delta_link =~ "deltatoken=seeded"
+
+      # The link's window starts now; its age is measured from here.
+      assert DateTime.diff(DateTime.utc_now(), reloaded.last_full_sync_at) < 60
     end
 
     test "does not send unsupported query parameters to /me/calendarView/delta",
@@ -205,9 +214,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
     test "returns an error tuple when Graph paginates past the page limit",
          %{integration: integration} do
-      # Every page carries a nextLink and never a deltaLink, so pagination runs
-      # into @max_delta_pages. `fetch_delta_page/5` reports that as a plain
-      # 2-tuple, which the breaker passes straight through.
+      # Every page carries a nextLink and never a deltaLink, so the read runs
+      # into `Outlook.Paging`'s page cap, the same answer every Graph read
+      # gives past it.
       on_exit(fn -> CalendarCircuitBreaker.reset(:outlook) end)
 
       stub(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
@@ -223,7 +232,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
          }}
       end)
 
-      assert {:error, :pagination_limit_exceeded} = GraphSubscription.bootstrap_sync(integration)
+      assert {:error, :too_many_pages, _message} = GraphSubscription.bootstrap_sync(integration)
     end
 
     test "does not require :webhook_base_url to be configured",
@@ -247,6 +256,154 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
       assert {:ok, updated} = GraphSubscription.bootstrap_sync(integration)
       assert updated.graph_delta_link =~ "deltatoken=empty"
+    end
+
+    # A re-bootstrap after a 410 or an obsolete delta link is the only pass
+    # that sees a move made while no link was tracking; the new link reports
+    # only later changes, so the snapshot has to reconcile it.
+    test "reconciles a meeting whose event was moved while no delta link was tracking",
+         %{integration: integration} do
+      TestMocks.setup_email_mocks()
+
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "graph-id-moved",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1800, :second)
+        )
+
+      moved_start = DateTime.add(start_time, 7200, :second)
+
+      moved = %{
+        "id" => "graph-id-moved",
+        "iCalUId" => "outlook-moved@example.com",
+        "subject" => "Booked meeting",
+        "showAs" => "busy",
+        "isAllDay" => false,
+        "isCancelled" => false,
+        "start" => %{"dateTime" => DateTime.to_iso8601(moved_start), "timeZone" => "UTC"},
+        "end" => %{
+          "dateTime" => moved_start |> DateTime.add(1800, :second) |> DateTime.to_iso8601(),
+          "timeZone" => "UTC"
+        }
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [moved],
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
+             })
+         }}
+      end)
+
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+               MeetingQueries.get_meeting(meeting.id)
+    end
+  end
+
+  # The weekly re-bootstrap reconciles every booking in its year-long window
+  # at once, so it must leave alone what is in step and what is already past.
+  describe "bootstrap_sync/1 reconciling the full snapshot" do
+    setup do
+      TestMocks.setup_email_mocks()
+      Application.put_env(:swoosh, :shared_test_process, self())
+      on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+      :ok
+    end
+
+    defp booking(integration, start_time, attrs \\ []) do
+      insert(
+        :meeting,
+        Keyword.merge(
+          [
+            calendar_integration_id: integration.id,
+            provider_event_id: "graph-id-booking",
+            start_time: start_time,
+            end_time: DateTime.add(start_time, 1800, :second)
+          ],
+          attrs
+        )
+      )
+    end
+
+    defp outlook_event(start_time) do
+      %{
+        "id" => "graph-id-booking",
+        "iCalUId" => "outlook-booking@example.com",
+        "subject" => "Booked meeting",
+        "showAs" => "busy",
+        "isAllDay" => false,
+        "isCancelled" => false,
+        "start" => %{"dateTime" => DateTime.to_iso8601(start_time), "timeZone" => "UTC"},
+        "end" => %{
+          "dateTime" => start_time |> DateTime.add(1800, :second) |> DateTime.to_iso8601(),
+          "timeZone" => "UTC"
+        }
+      }
+    end
+
+    defp expect_snapshot(events) do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => events,
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
+             })
+         }}
+      end)
+    end
+
+    test "leaves a booking in step with its event unflagged and tells nobody",
+         %{integration: integration} do
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+      meeting = booking(integration, start_time)
+
+      expect_snapshot([outlook_event(start_time)])
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
+      refute_received {:email, _email}
+    end
+
+    test "clears an earlier flag once the booking is back in step with its event",
+         %{integration: integration} do
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+      meeting = booking(integration, start_time, calendar_sync_status: "externally_modified")
+
+      expect_snapshot([outlook_event(start_time)])
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
+      refute_received {:email, _email}
+    end
+
+    # The first re-bootstrap after deploy reads a year of history at once;
+    # bookings already past are never touched, however far their events have
+    # drifted.
+    test "does not flag a past booking whose event diverges, nor tell anyone",
+         %{integration: integration} do
+      start_time = DateTime.add(DateTime.utc_now(:second), -3 * 86_400, :second)
+      meeting = booking(integration, start_time)
+
+      expect_snapshot([outlook_event(DateTime.add(start_time, 7200, :second))])
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
+      refute_received {:email, _email}
     end
   end
 
@@ -392,5 +549,100 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       })
 
     integration
+  end
+
+  describe "unregister/1" do
+    test "makes no request when no subscription is stored", %{integration: integration} do
+      # Mox fails the test on any unexpected HTTP call.
+      assert :ok = GraphSubscription.unregister(%{integration | graph_subscription_id: nil})
+    end
+
+    test "treats a subscription Graph no longer knows as gone", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      log =
+        capture_log([level: :warning], fn ->
+          assert :ok =
+                   GraphSubscription.unregister(%{integration | graph_subscription_id: "sub-1"})
+        end)
+
+      refute log =~ "Failed to delete Graph subscription"
+    end
+  end
+
+  # The disconnect journey through the calendar context, with only HTTP
+  # stubbed: removing an Outlook integration must stop Graph pushing to the
+  # webhook, and must never be blocked by Graph failing to answer.
+  describe "disconnecting an Outlook integration" do
+    @subscription_url "https://graph.microsoft.com/v1.0/subscriptions/sub-1"
+
+    setup %{integration: integration} do
+      CalendarCircuitBreaker.reset(:outlook)
+      on_exit(fn -> CalendarCircuitBreaker.reset(:outlook) end)
+
+      integration =
+        integration
+        |> Changeset.change(
+          graph_subscription_id: "sub-1",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(:second), 1, :day)
+        )
+        |> Repo.update!()
+
+      %{integration: integration}
+    end
+
+    defp disconnect(integration),
+      do:
+        CalendarContext.delete_with_primary_reassignment_and_invalidate(
+          integration.user_id,
+          integration.id
+        )
+
+    test "deletes its Graph subscription before the integration is removed", %{
+      integration: integration
+    } do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, opts ->
+        send(test_pid, {:deleted, url, Repo.get(CalendarIntegrationSchema, integration.id)})
+        send(test_pid, {:delete_options, opts})
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:ok, _result} = disconnect(integration)
+
+      assert_receive {:deleted, @subscription_url, %CalendarIntegrationSchema{}}
+
+      # Bounded: the disconnect click waits on this request.
+      assert_receive {:delete_options, opts}
+      assert opts[:request_timeout] == 5_000
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
+    end
+
+    test "still disconnects when Graph answers 500", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, @subscription_url, _b, _h, _o ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      log =
+        capture_log([level: :warning], fn -> assert {:ok, _result} = disconnect(integration) end)
+
+      assert log =~ "Failed to delete Graph subscription"
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
+    end
+
+    test "still disconnects when the request times out", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, @subscription_url, _b, _h, _o ->
+        {:error, %Req.TransportError{reason: :timeout}}
+      end)
+
+      log =
+        capture_log([level: :warning], fn -> assert {:ok, _result} = disconnect(integration) end)
+
+      assert log =~ "Failed to delete Graph subscription"
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
+    end
   end
 end

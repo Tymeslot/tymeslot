@@ -123,6 +123,7 @@ msgid "Day"
 msgstr "День"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Комбінації клавіш"
@@ -140,6 +141,7 @@ msgid "My Calendars"
 msgstr "Мої календарі"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Next period"
 msgstr "Наступний період"
@@ -170,6 +172,7 @@ msgid "Now"
 msgstr "Зараз"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Previous period"
 msgstr "Попередній період"
@@ -359,3 +362,68 @@ msgstr "%{count}/%{capacity} місць зайнято"
 #, elixir-autogen, elixir-format
 msgid "Participants"
 msgstr "Учасники"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Doesn't block"
+msgstr "Не блокує"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr "Дії"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Agenda view"
+msgstr "Подання «Розклад»"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close dialogs"
+msgstr "Закрити діалогові вікна"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Create event"
+msgstr "Створити подію"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Day view"
+msgstr "Денне подання"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Focus search"
+msgstr "Перейти до пошуку"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Jump to today"
+msgstr "Перейти до сьогоднішнього дня"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Month view"
+msgstr "Місячне подання"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Navigation"
+msgstr "Навігація"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle this help"
+msgstr "Показати/сховати цю довідку"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Views"
+msgstr "Подання"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Week view"
+msgstr "Тижневе подання"

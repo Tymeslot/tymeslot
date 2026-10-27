@@ -1,65 +1,28 @@
 defmodule Tymeslot.Payments.Behaviours.WebhookHandler do
   @moduledoc """
-  Behaviour for Stripe webhook event handlers.
+  The one contract for a Stripe webhook event handler, on both the platform
+  and the Connect endpoint (`Tymeslot.Payments.Webhooks.Ingress`).
 
-  Implement this behaviour for each type of webhook event that needs processing.
+  `handle/1` receives the verified event as the string-keyed map Stripe sent,
+  with the object under `event["data"]["object"]`, and answers with one of:
+
+    * `:ok` or `{:ok, term}`: the event is done; the ingress marks it
+      processed and acknowledges it.
+    * `{:error, :retry_later, reason}`: a failure a later delivery can get
+      past (a database or Stripe outage, a downstream hand-off that failed).
+      The reservation is released and Stripe redelivers.
+    * `{:error, :permanent, reason}`: an event no redelivery can fix, such as
+      a malformed object. It is marked processed and acknowledged, so Stripe
+      stops sending it.
+
+  Retrying is the default: a handler that raises, or returns any other shape,
+  is retried, because acknowledging a failure loses a payment event for good
+  while redelivering it costs only another attempt. A handler returns
+  `:permanent` only for an event it has positively recognised as unusable.
   """
 
-  @type event :: map()
-  @type object :: map()
-  @type result :: {:ok, atom()} | {:error, atom() | Exception.t(), String.t() | nil}
+  @type event :: %{optional(String.t()) => term()}
+  @type result :: :ok | {:ok, term()} | {:error, :retry_later | :permanent, term()}
 
-  @doc """
-  Processes a webhook event of a specific type.
-
-  Returns a standardized result tuple with a status atom indicating success or failure.
-  """
-  @callback process(event(), object()) :: result()
-
-  @doc """
-  Returns whether this handler can process the given event type.
-
-  Used by the registry to determine which handler to use.
-  """
-  @callback can_handle?(String.t()) :: boolean()
-
-  @doc """
-  Validates that the webhook object contains all required fields for processing.
-
-  Returns :ok if valid, or {:error, reason} if invalid.
-  """
-  @callback validate(object()) :: :ok | {:error, atom(), String.t()}
-
-  @doc """
-  Validates that the webhook object contains all required fields for processing.
-
-  Accepts the event type to allow conditional validation per event.
-  """
-  @callback validate(String.t(), object()) :: :ok | {:error, atom(), String.t()}
-
-  @optional_callbacks [validate: 1, validate: 2]
-
-  @doc """
-  Injects default `validate/1` and `validate/2` implementations.
-
-  The defaults return `:ok` for `validate/1` and delegate `validate/2`
-  to `validate/1`. Override `validate/1` for simple validation, or
-  `validate/2` when event-type-specific logic is needed.
-
-  If you override both, ensure the delegation direction is consistent
-  (see `InvoiceHandler` for an example that reverses the default direction).
-  """
-  defmacro __using__(_opts) do
-    quote do
-      @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
-
-      @impl Tymeslot.Payments.Behaviours.WebhookHandler
-      def validate(_object), do: :ok
-
-      @impl Tymeslot.Payments.Behaviours.WebhookHandler
-      def validate(_event_type, object), do: validate(object)
-
-      defoverridable validate: 1, validate: 2
-    end
-  end
+  @callback handle(event()) :: result()
 end

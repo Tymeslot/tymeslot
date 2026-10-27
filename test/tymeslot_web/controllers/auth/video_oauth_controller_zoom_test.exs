@@ -3,11 +3,12 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
   @moduletag :integrations
 
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
+  import Tymeslot.OAuthFlowHelpers
 
   alias Phoenix.Flash
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
-  alias Tymeslot.Integrations.Common.OAuth.State
+  alias Tymeslot.Integrations.Shared.OAuth.State
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
@@ -16,7 +17,7 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
   setup do
     RateLimiter.clear_all()
 
-    modules = [ZoomOAuthHelper, State, VideoIntegrationQueries]
+    modules = [ZoomOAuthHelper, VideoIntegrationQueries]
 
     for mod <- modules do
       try do
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
       user_id = 5001
       conn = authenticate_state_user(conn, user_id)
 
-      :meck.expect(ZoomOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
+      :meck.expect(ZoomOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, _opts ->
         {:ok,
          %{
            user_id: user_id,
@@ -115,7 +116,11 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
         {:ok, integration}
       end)
 
-      conn = get(conn, ~p"/auth/zoom/video/callback", %{"code" => "code", "state" => "state"})
+      conn =
+        get(conn, ~p"/auth/zoom/video/callback", %{
+          "code" => "code",
+          "state" => signed_state(user_id)
+        })
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :info) =~ "Zoom connected successfully"
@@ -136,9 +141,11 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
       user_id = 5002
       user = Factory.insert(:user, id: user_id)
       conn = log_in_user(conn, user)
-      :meck.expect(State, :validate, fn _state, _secret -> {:error, :tampered} end)
 
-      conn = get(conn, ~p"/auth/zoom/video/callback", %{"code" => "code", "state" => "bad"})
+      google_signed = State.generate(user_id, "test-google-state-secret")
+
+      conn =
+        get(conn, ~p"/auth/zoom/video/callback", %{"code" => "code", "state" => google_signed})
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
@@ -148,7 +155,7 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
       user_id = 5003
       conn = authenticate_state_user(conn, user_id)
 
-      :meck.expect(ZoomOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _state ->
+      :meck.expect(ZoomOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _opts ->
         {:ok,
          %{
            user_id: user_id,
@@ -160,10 +167,34 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
          }}
       end)
 
-      conn = get(conn, ~p"/auth/zoom/video/callback", %{"code" => "code", "state" => "state"})
+      conn =
+        get(conn, ~p"/auth/zoom/video/callback", %{
+          "code" => "code",
+          "state" => signed_state(user_id)
+        })
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Could not identify your Zoom account"
+    end
+
+    test "tells the owner Zoom is busy when it rate limits the connect", %{conn: conn} do
+      user_id = 5004
+      conn = authenticate_state_user(conn, user_id)
+
+      :meck.expect(ZoomOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _opts ->
+        {:error, :provider_rate_limited}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/zoom/video/callback", %{
+          "code" => "code",
+          "state" => signed_state(user_id)
+        })
+
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Zoom is busy right now. Please try again in a minute."
     end
 
     test "handles invalid callback params (no code, no error)", %{conn: conn} do
@@ -176,8 +207,8 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
 
   defp authenticate_state_user(conn, user_id) do
     user = Factory.insert(:user, id: user_id)
-    conn = log_in_user(conn, user)
-    :meck.expect(State, :validate, fn _state, _secret -> {:ok, %{user_id: user_id}} end)
-    conn
+    log_in_user(conn, user)
   end
+
+  defp signed_state(user_id), do: flow_state(user_id, :zoom, "test_zoom_state_secret")
 end

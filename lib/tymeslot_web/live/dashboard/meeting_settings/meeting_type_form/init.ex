@@ -8,13 +8,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
 
   @doc """
   Initialises the socket from the assigned meeting type on first render.
@@ -38,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> Component.assign(:allow_guests, get_allow_guests(type))
+    |> Component.assign(:guest_limit, Map.get(type || %{}, :max_guests_per_booking))
     |> Component.assign(:requires_approval, get_requires_approval(type))
     |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))
@@ -45,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:booking_limits, get_booking_limits(type))
     |> Component.assign(
       :week_start,
-      assigns |> Map.get(:current_user) |> user_id() |> CalendarManagement.get_week_start()
+      assigns |> Map.get(:current_user) |> user_id() |> Management.get_week_start()
     )
     |> Component.assign(
       :selected_availability_schedule_id,
@@ -53,6 +56,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     )
     |> assign_availability_schedules(Map.get(assigns, :current_user))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
+    |> SessionHandlers.assign_sessions()
     |> assign_calendar_state()
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
@@ -113,29 +117,36 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
           map() | nil
         ) :: Phoenix.LiveView.Socket.t()
   defp assign_payment_state(socket, type, current_user) do
+    user_id = user_id(current_user)
     feature_enabled? = payments_feature_enabled?(current_user)
-    charges_enabled? = feature_enabled? and charges_enabled?(current_user)
-    currency = current_user |> user_id() |> MeetingPayments.host_currency()
+    currency = MeetingPayments.host_currency(user_id)
+    account_currency = MeetingPayments.account_currency(user_id)
+    support = MeetingPayments.currency_support(account_currency)
+
+    # Prices are only set in a supported currency. A host whose account
+    # carries a legacy one is still charged the stored price at checkout,
+    # but edits nothing here until they switch; the domain refuses the same.
+    charges_enabled? = feature_enabled? and MeetingPayments.price_settable?(user_id)
 
     socket
     |> Component.assign(:payments_feature_enabled, feature_enabled?)
     |> Component.assign(:payments_charges_enabled, charges_enabled?)
     |> Component.assign(:payment_currency, currency)
+    |> Component.assign(:payment_currency_support, support)
+    |> Component.assign(:payment_account_currency, account_currency)
     |> Component.assign(
       :payment_currency_minimum_cents,
       MeetingPayments.currency_minimum_cents(currency)
     )
     |> Component.assign(:payment_required, get_payment_required(type))
-    |> Component.assign(:payment_price, get_payment_price(type))
+    |> Component.assign(:payment_price, get_payment_price(type, currency))
+    |> Component.assign(:payment_stored_price, get_stored_price(type, account_currency))
   end
 
   defp payments_feature_enabled?(%{id: user_id}),
     do: Features.meeting_payments_allowed?(user_id)
 
   defp payments_feature_enabled?(_user), do: false
-
-  defp charges_enabled?(%{id: user_id}), do: MeetingPayments.charges_enabled_for_user?(user_id)
-  defp charges_enabled?(_user), do: false
 
   defp user_id(%{id: user_id}), do: user_id
   defp user_id(_user), do: nil
@@ -144,12 +155,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   defp get_payment_required(%{payment_required: true}), do: true
   defp get_payment_required(_type), do: false
 
-  @spec get_payment_price(Ecto.Schema.t() | nil) :: String.t()
-  defp get_payment_price(%{price_cents: cents}) when is_integer(cents) do
-    :erlang.float_to_binary(cents / 100, decimals: 2)
-  end
+  @spec get_payment_price(Ecto.Schema.t() | nil, String.t()) :: String.t()
+  defp get_payment_price(%{price_cents: cents}, currency) when is_integer(cents),
+    do: Money.to_major_string(cents, currency)
 
-  defp get_payment_price(_type), do: ""
+  defp get_payment_price(_type, _currency), do: ""
+
+  # The stored price as the host reads it, in the currency it is charged in,
+  # for when the price input is hidden.
+  defp get_stored_price(%{price_cents: cents}, currency) when is_integer(cents),
+    do: Money.format(cents, currency)
+
+  defp get_stored_price(_type, currency), do: String.upcase(currency)
 
   # Pre-filled participant limit when the toggle is first switched on.
   @default_group_limit 10
@@ -180,6 +197,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
     socket
     |> Component.assign(:group_bookings_enabled, limit > 1)
+    |> Component.assign(:fixed_dates, limit > 1 and Map.get(type || %{}, :fixed_dates) == true)
     |> Component.assign(
       :max_participants,
       to_string(if limit > 1, do: limit, else: @default_group_limit)
@@ -202,6 +220,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     %{
       "name" => "",
       "duration" => "30",
+      "extra_lengths" => [],
       "slot_interval" => "",
       "description" => "",
       "icon" => "none"
@@ -212,6 +231,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     %{
       "name" => type.name || "",
       "duration" => to_string(type.duration_minutes || 30),
+      "extra_lengths" => Enum.map(Map.get(type, :extra_lengths_minutes) || [], &to_string/1),
       "slot_interval" => slot_interval_form_value(type.slot_interval_minutes),
       "description" => type.description || "",
       "icon" => type.icon || "none"
@@ -390,7 +410,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
   def get_reminders(%{reminder_config: reminders}) when is_list(reminders) do
     Enum.flat_map(reminders, fn r ->
-      case ReminderUtils.normalize_reminder(r) do
+      case Reminders.normalize_reminder(r) do
         {:ok, reminder} -> [reminder]
         _other -> []
       end

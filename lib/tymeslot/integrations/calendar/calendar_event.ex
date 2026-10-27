@@ -111,17 +111,28 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   @doc """
   Returns `true` if this event blocks availability.
 
-  An event blocks when it is opaque (not free/transparent) and has not been
-  cancelled or declined.
+  An event blocks when it is opaque (not free/transparent), has not been
+  cancelled or declined, and takes up time: a timed event that ends at the
+  instant it starts marks a moment, as RFC 5545 §3.6.1 reads a DATE-TIME
+  DTSTART with no DTEND, and leaves the time around it free.
   """
   @spec blocking?(t() | map()) :: boolean()
   def blocking?(%__MODULE__{status: status}) when status in [:cancelled, :declined], do: false
   def blocking?(%__MODULE__{transparency: :transparent}), do: false
+
+  def blocking?(%__MODULE__{all_day: false} = event),
+    do: not instant?(event.start_at, event.end_at)
+
   def blocking?(%__MODULE__{}), do: true
   # Plain maps from the OAuth fresh-fetch path (convert_events) carry string-valued fields.
   def blocking?(%{status: status}) when status in ["cancelled", "declined"], do: false
   def blocking?(%{transparency: "transparent"}), do: false
-  def blocking?(%{}), do: true
+  def blocking?(%{} = event), do: not instant?(event[:start_time], event[:end_time])
+
+  defp instant?(%DateTime{} = start, %DateTime{} = finish),
+    do: DateTime.compare(start, finish) == :eq
+
+  defp instant?(_start, _finish), do: false
 
   @doc """
   Returns the event marked busy whatever its feed said, as a subscription set

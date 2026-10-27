@@ -110,17 +110,24 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   instance's own sender, where the header would add nothing.
   """
   @spec put_reply_to(Swoosh.Email.t(), String.t() | nil, String.t() | nil) :: Swoosh.Email.t()
-  def put_reply_to(email, name, address) when is_binary(address) do
-    address = String.trim(address)
-
-    cond do
-      address == "" -> email
-      same_address?(address, fetch_from_email()) -> email
-      true -> reply_to(email, {Sanitise.sanitize_for_header(name), address})
-    end
+  def put_reply_to(email, name, address) do
+    if replies_reach?(address),
+      do: reply_to(email, {Sanitise.sanitize_for_header(name), String.trim(address)}),
+      else: email
   end
 
-  def put_reply_to(email, _name, _address), do: email
+  @doc """
+  Whether `put_reply_to/3` sets `Reply-To` for `address`, so that a reply
+  reaches that person. A template that tells the reader to reply asks this
+  first, since without the header a reply goes to the sending mailbox.
+  """
+  @spec replies_reach?(String.t() | nil) :: boolean()
+  def replies_reach?(address) when is_binary(address) do
+    address = String.trim(address)
+    address != "" and not same_address?(address, fetch_from_email())
+  end
+
+  def replies_reach?(_address), do: false
 
   defp same_address?(address, from),
     do: String.downcase(address) == String.downcase(String.trim(from))
@@ -194,8 +201,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   """
   @spec base_mjml_template(String.t(), organizer_details()) :: String.t()
   def base_mjml_template(content, organizer_details) when is_map(organizer_details) do
-    intent = fetch_required!(organizer_details, :intent)
-    stage_eyebrow = fetch_required!(organizer_details, :eyebrow)
+    intent = Stage.fetch_required!(organizer_details, :intent)
+    stage_eyebrow = Stage.fetch_required!(organizer_details, :eyebrow)
 
     raw_organizer_name = organizer_details[:name] || fetch_from_name()
     organizer_name = Sanitise.sanitize_for_email(raw_organizer_name)
@@ -252,19 +259,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
       </mj-column>
     </mj-section>
     """
-  end
-
-  @spec fetch_required!(map(), atom()) :: term()
-  defp fetch_required!(map, key) do
-    case Map.fetch(map, key) do
-      {:ok, value} ->
-        value
-
-      :error ->
-        raise ArgumentError,
-              "Tymeslot.Emails.Shared.MjmlEmail: missing required organiser detail `#{inspect(key)}`. " <>
-                "Transactional emails must declare `:intent` and `:eyebrow` at the call site."
-    end
   end
 
   defp organizer_strip(avatar, name, title) do

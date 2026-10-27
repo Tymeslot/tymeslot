@@ -51,5 +51,14 @@ defmodule Tymeslot.Integrations.Shared.ProviderConfigHelperTest do
       assert {:error, message} = ProviderConfigHelper.validate_required_fields(%{a: 1}, [:a, :b])
       assert message =~ "Missing required fields: b"
     end
+
+    # Video and OAuth calendar providers used to answer in English whatever
+    # the user's language; every provider family now shares this message.
+    test "answers in the user's language" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert {:error, "Fehlende Pflichtfelder: api_key"} =
+                 ProviderConfigHelper.validate_required_fields(%{}, [:api_key])
+      end)
+    end
   end
 end

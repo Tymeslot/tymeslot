@@ -2,10 +2,10 @@ defmodule Tymeslot.Meetings.MeetingAccess do
   @moduledoc """
   Authorized retrieval of meetings by ID or UID.
 
-  Every lookup here either scopes the query to the requesting user (as
-  organizer or attendee) or authorizes the caller before returning the
-  meeting, so callers never need to re-check ownership
-  themselves. Use `MeetingQueries` directly only for unscoped, internal
+  Every scoped lookup here matches the requesting user as the meeting's
+  organiser (`organizer_user_id`), so callers never need to re-check
+  ownership themselves. The organiser and attendee email columns are
+  snapshots taken at booking time and never decide access. Use `MeetingQueries` directly only for unscoped, internal
   reads (e.g. background jobs already holding a trusted meeting ID).
   """
 
@@ -18,23 +18,6 @@ defmodule Tymeslot.Meetings.MeetingAccess do
   def get_meeting(id) do
     case MeetingQueries.get_meeting(id) do
       {:ok, meeting} -> {:ok, meeting}
-      _other -> {:error, :not_found}
-    end
-  end
-
-  @doc """
-  Gets a single meeting by ID for a specific user.
-
-  Verifies that the meeting belongs to the specified user
-  (either as organizer or attendee) before returning it.
-  """
-  @spec get_meeting_for_user(String.t() | integer(), String.t()) ::
-          {:ok, MeetingSchema.t()} | {:error, :not_found}
-  def get_meeting_for_user(id, user_email) do
-    with {:ok, meeting} <- MeetingQueries.get_meeting(id),
-         true <- meeting.organizer_email == user_email or meeting.attendee_email == user_email do
-      {:ok, meeting}
-    else
       _other -> {:error, :not_found}
     end
   end

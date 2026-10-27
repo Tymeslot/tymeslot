@@ -125,6 +125,38 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
 
   def series_wide_success?(_write, _outcome), do: false
 
+  @doc """
+  What the driver must do about the event's attendees once `write`, made
+  onto `before`, has answered `outcome`: `{:notify, ...}` or
+  `{:membership_changed, ...}` (see `WriteQueue`), or nil for nothing. See
+  "Telling the attendees" in `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`.
+
+  An edit saved to sync later is told about as an accepted one is, from the
+  event as the replay will leave it; `AttendeeNotifications` holds the
+  emails until the replay has reached the calendar. A queued edit is never
+  of a series member, so its scope is the event alone, and the organiser
+  has already been told the change is saved and will sync.
+  """
+  @spec attendee_effect(WriteQueue.write(), map(), WriteQueue.outcome()) ::
+          WriteQueue.effect() | nil
+  def attendee_effect(
+        %{kind: :update, notify: %{} = notify, opts: opts},
+        _before,
+        {:ok, updated}
+      ),
+      do: {:notify, notify, updated, Keyword.get(opts, :recurrence_scope, :this_only)}
+
+  def attendee_effect(%{kind: :update, notify: :membership}, before, {:ok, updated}),
+    do: {:membership_changed, before, updated}
+
+  def attendee_effect(%{kind: :update, notify: %{} = notify} = write, before, :queued),
+    do: {:notify, %{notify | saved_message: nil}, applied(before, write), :this_only}
+
+  def attendee_effect(%{kind: :update, notify: :membership} = write, before, :queued),
+    do: {:membership_changed, before, applied(before, write)}
+
+  def attendee_effect(_write, _before, _outcome), do: nil
+
   @doc "`event` with the change `write` makes to it."
   @spec applied(map(), WriteQueue.write()) :: map()
   def applied(event, %{kind: :update, changes: changes}), do: Map.merge(event, changes)

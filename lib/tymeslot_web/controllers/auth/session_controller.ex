@@ -9,8 +9,10 @@ defmodule TymeslotWeb.SessionController do
   alias Tymeslot.Auth
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Security.RedirectPath
   alias TymeslotWeb.EmailLinkConfirmHTML
-  alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
+  alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Plugs.ReturnTo
   alias TymeslotWeb.UserAuth
 
   require Logger
@@ -40,8 +42,10 @@ defmodule TymeslotWeb.SessionController do
   defp handle_authenticated_user(conn, user, message, params) do
     case UserAuth.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
+        {kept, updated_conn} = ReturnTo.pop(updated_conn)
+
         redirect_path =
-          RedirectSanitizer.sanitize(params["redirect_to"], get_success_redirect_path())
+          RedirectPath.sanitize(params["redirect_to"], kept || get_success_redirect_path())
 
         updated_conn
         |> put_flash(:info, message)
@@ -128,13 +132,17 @@ defmodule TymeslotWeb.SessionController do
 
     case UserAuth.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
+        # Signed in on a later request than the one that brought the page the
+        # visitor asked for, so it comes from the session.
+        {kept, updated_conn} = ReturnTo.pop(updated_conn)
+
         updated_conn
         |> UserAuth.clear_unverified_user()
         |> put_flash(
           :success,
           dgettext("auth", "Your email has been successfully verified! You're now logged in.")
         )
-        |> redirect(to: get_success_redirect_path())
+        |> redirect(to: kept || get_success_redirect_path())
 
       {:error, _reason, details} ->
         Logger.error("Failed to create session after verification", details: details)

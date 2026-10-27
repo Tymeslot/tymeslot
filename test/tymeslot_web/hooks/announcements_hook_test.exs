@@ -56,8 +56,8 @@ defmodule TymeslotWeb.Hooks.AnnouncementsHookTest do
 
     test "assigns [] for a user who has seen everything" do
       user = insert(:user, inserted_at: ~N[2025-12-01 00:00:00])
-      Announcements.mark_seen!(user, "test_alpha")
-      Announcements.mark_seen!(user, "test_beta")
+      Announcements.mark_seen(user, "test_alpha")
+      Announcements.mark_seen(user, "test_beta")
 
       socket = %Socket{
         transport_pid: self(),

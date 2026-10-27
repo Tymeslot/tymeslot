@@ -10,8 +10,11 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.RenewWebhookChannelsWorker
 
   describe "perform/1 - no expiring integrations" do
@@ -378,6 +381,97 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth
       assert reloaded.sync_error =~ "no longer exists"
+    end
+  end
+
+  # The renewal run end to end through the real Google client, with only the
+  # HTTP boundary stubbed: Google cannot extend a channel, so each renewal
+  # opens a new one and must stop the one it replaces.
+  describe "perform/1 - Google renewal through the real client" do
+    setup :verify_on_exit!
+
+    setup do
+      CalendarCircuitBreaker.reset(:google)
+      on_exit(fn -> CalendarCircuitBreaker.reset(:google) end)
+
+      previous = Application.get_env(:tymeslot, :webhook_base_url)
+      Application.put_env(:tymeslot, :webhook_base_url, "https://tymeslot.example")
+
+      on_exit(fn ->
+        case previous do
+          nil -> Application.delete_env(:tymeslot, :webhook_base_url)
+          value -> Application.put_env(:tymeslot, :webhook_base_url, value)
+        end
+      end)
+
+      stub(GoogleCalendarAPIMock, :register_push_channel, &CalendarAPI.register_push_channel/1)
+
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          default_booking_calendar_id: "primary",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          google_channel_id: "expiring-channel",
+          google_channel_resource_id: "expiring-resource",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      %{integration: integration}
+    end
+
+    @watch_url "https://www.googleapis.com/calendar/v3/calendars/primary/events/watch"
+    @stop_url "https://www.googleapis.com/calendar/v3/channels/stop"
+
+    defp watch_response do
+      {:ok,
+       %Req.Response{
+         status: 200,
+         body: Jason.encode!(%{"id" => "ignored", "resourceId" => "renewed-resource"})
+       }}
+    end
+
+    test "stops the replaced channel after storing the new one", %{integration: integration} do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn
+        :post, @watch_url, _body, _headers, _opts ->
+          watch_response()
+
+        :post, @stop_url, body, _headers, _opts ->
+          stored = Repo.get!(CalendarIntegrationSchema, integration.id)
+          send(test_pid, {:stopped, Jason.decode!(body), stored.google_channel_resource_id})
+          {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "google"
+               })
+
+      assert_receive {:stopped, stop_body, "renewed-resource"}
+      assert stop_body == %{"id" => "expiring-channel", "resourceId" => "expiring-resource"}
+    end
+
+    test "renews even when stopping the replaced channel fails", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn
+        :post, @watch_url, _body, _headers, _opts ->
+          watch_response()
+
+        :post, @stop_url, _body, _headers, _opts ->
+          {:error, %Req.TransportError{reason: :timeout}}
+      end)
+
+      assert :ok =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "google"
+               })
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.google_channel_resource_id == "renewed-resource"
+      refute reloaded.google_channel_id == "expiring-channel"
     end
   end
 

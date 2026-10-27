@@ -16,7 +16,7 @@ defmodule Tymeslot.CursorPaginationTestCases do
 
                               defp fetch_cursor_page(user, opts \\ []) do
                                 opts = Keyword.put_new(opts, :per_page, 3)
-                                Listing.list_user_meetings_cursor_page(user.email, opts)
+                                Listing.list_organizer_meetings_cursor_page(user.id, opts)
                               end
 
                               test "returns first page of meetings" do

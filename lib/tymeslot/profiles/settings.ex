@@ -8,7 +8,6 @@ defmodule Tymeslot.Profiles.Settings do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
-  alias Tymeslot.Security.FieldValidators.UsernameValidator
 
   @policy_param_keys ~w(buffer_before_minutes buffer_after_minutes advance_booking_days min_advance_hours)
 
@@ -25,43 +24,35 @@ defmodule Tymeslot.Profiles.Settings do
         }
 
   @doc """
-  Updates basic profile settings (name, username, timezone) with input validation.
+  Updates basic profile settings (name, username, timezone), as the
+  onboarding form submits them.
+
+  The username goes through `Profiles.change_username/2`, so it is validated,
+  rate limited when it actually changes, and can publish the booking page,
+  exactly as it would from the profile settings page.
   """
   @spec update_basic_settings(ProfileSchema.t(), %{String.t() => term()}) ::
           {:ok, ProfileSchema.t()} | {:error, term()}
   def update_basic_settings(profile, params) do
-    # Extract the form fields, providing defaults if not present
     full_name = Map.get(params, "full_name", profile.full_name || "")
     username = Map.get(params, "username", profile.username || "")
-    timezone = Map.get(params, "timezone", profile.timezone || "UTC")
+    timezone = Map.get(params, "timezone", Profiles.timezone(profile))
 
-    # Skip update if this is just a timezone search event (contains "value" key)
-    if Map.has_key?(params, "value") do
-      {:ok, profile}
-    else
-      # Validate username format if it changed
-      with :ok <- validate_username_if_changed(profile, username) do
-        perform_basic_update(profile, full_name, username, timezone)
-      end
+    details = %{full_name: full_name, timezone: timezone}
+
+    # The name and time zone are checked before the username is written, so
+    # a refused name does not spend a username change.
+    with :ok <- valid_details(profile, details),
+         {:ok, profile} <- Profiles.change_username(profile, username) do
+      Profiles.update_basic_details(profile, details)
     end
   end
 
-  defp validate_username_if_changed(profile, new_username) do
-    if profile.username != new_username do
-      UsernameValidator.validate(new_username)
-    else
-      :ok
+  defp valid_details(profile, details) do
+    case ProfileSchema.basic_changeset(profile, details) do
+      %{valid?: true} -> :ok
+      changeset -> {:error, changeset}
     end
-  end
-
-  defp perform_basic_update(profile, full_name, username, timezone) do
-    attrs = %{
-      full_name: full_name,
-      username: username,
-      timezone: timezone
-    }
-
-    Profiles.update_profile(profile, attrs)
   end
 
   @doc """

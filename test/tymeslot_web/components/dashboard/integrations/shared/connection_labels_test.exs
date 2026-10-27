@@ -7,6 +7,49 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabelsT
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
 
+  describe "calendar_notice/2" do
+    @unhealthy %{status: :unhealthy}
+    @healthy %{status: :healthy}
+
+    test "shows the stored sync error while the connection is unhealthy" do
+      integration = %{
+        is_active: true,
+        needs_reauth: false,
+        sync_error: "The calendar server refused the request."
+      }
+
+      assert ConnectionLabels.calendar_notice(integration, @unhealthy) ==
+               "The calendar server refused the request."
+    end
+
+    test "keeps it to itself after a single failure, while the connection is healthy" do
+      integration = %{is_active: true, needs_reauth: false, sync_error: "Anything"}
+
+      assert ConnectionLabels.calendar_notice(integration, @healthy) == nil
+      assert ConnectionLabels.calendar_notice(integration, nil) == nil
+    end
+
+    test "gives the reconnection reason first, paused or not" do
+      flagged = %{is_active: false, needs_reauth: true, sync_error: "Please reconnect."}
+
+      assert ConnectionLabels.calendar_notice(flagged, @unhealthy) == "Please reconnect."
+    end
+
+    test "has nothing to say once a sync has cleared the error" do
+      cleared = %{is_active: true, needs_reauth: false, sync_error: nil}
+
+      assert ConnectionLabels.calendar_notice(cleared, @unhealthy) == nil
+    end
+  end
+
+  describe "reconnect_reason/1" do
+    # The video card's notice: unchanged by calendar cards showing failures.
+    test "keeps an unflagged connection's sync error to itself" do
+      assert ConnectionLabels.reconnect_reason(%{needs_reauth: false, sync_error: "Timed out"}) ==
+               nil
+    end
+  end
+
   describe "server_label/1" do
     # The defect this guards: two self-hosted instances behind one host (the
     # ordinary shape of a staging server or a reverse proxy) used to render as

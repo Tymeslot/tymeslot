@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Live.Scheduling.NoCalendarReadinessTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.MeetingTypes
   alias TymeslotWeb.ThemeTestMatrix
 
   # The card's own strings, from the `errors` gettext domain. The heading is
@@ -34,9 +35,10 @@ defmodule TymeslotWeb.Live.Scheduling.NoCalendarReadinessTest do
         timezone: "Etc/UTC"
       )
 
-    insert(:meeting_type, user: user, name: "Quick Chat", duration_minutes: 30, is_active: true)
+    meeting_type =
+      insert(:meeting_type, user: user, name: "Quick Chat", duration_minutes: 30, is_active: true)
 
-    %{user: user, profile: profile}
+    %{user: user, profile: profile, meeting_type: meeting_type}
   end
 
   defp occurrences(haystack, needle),
@@ -72,6 +74,20 @@ defmodule TymeslotWeb.Live.Scheduling.NoCalendarReadinessTest do
 
         refute has_element?(view, ".theme-error-title")
         refute has_element?(view, "#theme-error-retry-button")
+      end
+
+      # A meeting-type URL goes on to the schedule step, whose state the refused
+      # mount never built, so it used to raise there and show the crash card.
+      test "a meeting-type link shows the readiness card too", %{
+        conn: conn,
+        profile: profile,
+        meeting_type: meeting_type
+      } do
+        {:ok, view, _html} =
+          live(conn, "/#{profile.username}/#{MeetingTypes.effective_slug(meeting_type)}")
+
+        assert has_element?(view, "[data-testid='readiness-notice']")
+        refute has_element?(view, ".theme-error-title")
       end
 
       test "does not leak the internal reason code to the visitor", %{

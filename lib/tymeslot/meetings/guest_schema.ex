@@ -8,14 +8,17 @@ defmodule Tymeslot.Meetings.GuestSchema do
   on the organiser's dashboard.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
+  alias Tymeslot.Timezones
 
   @type t :: %__MODULE__{
           id: binary() | nil,
@@ -23,6 +26,8 @@ defmodule Tymeslot.Meetings.GuestSchema do
           participant_id: binary() | nil,
           email: String.t() | nil,
           name: String.t() | nil,
+          locale: String.t() | nil,
+          timezone: String.t() | nil,
           status: String.t(),
           rsvp_token: String.t() | nil,
           rsvp_token_hash: String.t() | nil,
@@ -30,6 +35,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
           confirmation_sent_at: DateTime.t() | nil,
           invited_by: inviter() | nil,
           reminders_sent: [map()] | nil,
+          notified_end_time: DateTime.t() | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -41,11 +47,16 @@ defmodule Tymeslot.Meetings.GuestSchema do
   schema "meeting_guests" do
     field(:email, :string)
     field(:name, :string)
+    # The guest's own language and timezone, which their emails are written
+    # in. Set only where the guest came with them (a poll participant the
+    # host confirmed a meeting for); nil reads as the meeting's attendee
+    # values (`Tymeslot.Meetings.Recipient.as_seen_by_guest/2`).
+    field(:locale, :string)
+    field(:timezone, :string)
     field(:status, :string, default: "pending")
     # Every email a guest is sent (confirmation, reminders, reschedules)
     # rebuilds their RSVP links from this token, so it is encrypted rather
-    # than only hashed, and looked up by `rsvp_token_hash`. The plain
-    # `rsvp_token` column predates this and is no longer read or written.
+    # than only hashed, and looked up by `rsvp_token_hash`.
     field(:rsvp_token, EncryptedString, source: :rsvp_token_encrypted, redact: true)
     field(:rsvp_token_hash, :string)
     field(:responded_at, :utc_datetime)
@@ -54,6 +65,10 @@ defmodule Tymeslot.Meetings.GuestSchema do
     # Who put this guest on the meeting. Nil on rows from before the column,
     # which read as the booker (see `inviter/1`).
     field(:invited_by, Ecto.Enum, values: [:booker, :organizer])
+    # The end this guest was last told by an end change notice, or held before
+    # a change not yet announced; nil when it knows the meeting as booked or
+    # last rescheduled. Written only by the end change and reschedule paths.
+    field(:notified_end_time, :utc_datetime)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
     belongs_to(:participant, ParticipantSchema, type: :binary_id)
@@ -75,15 +90,29 @@ defmodule Tymeslot.Meetings.GuestSchema do
 
   Normalises the email, validates its format, defaults the status to
   `"pending"`, and generates an unguessable `rsvp_token` when one is not
-  already present.
+  already present. A `locale` must be a supported one and a `timezone` a
+  known IANA zone, as for the meeting's attendee; both are optional.
   """
   @spec creation_changeset(t(), map()) :: Ecto.Changeset.t()
   def creation_changeset(guest, attrs) do
     guest
-    |> cast(attrs, [:email, :name, :meeting_id, :participant_id, :status, :invited_by])
+    |> cast(attrs, [
+      :email,
+      :name,
+      :locale,
+      :timezone,
+      :meeting_id,
+      :participant_id,
+      :status,
+      :invited_by
+    ])
     |> update_change(:email, &normalize_email/1)
     |> validate_required([:email, :meeting_id])
     |> EmailChangeset.validate_email(:email)
+    |> validate_inclusion(:locale, Locales.supported_codes(),
+      message: dgettext_noop("errors", "is not a supported locale")
+    )
+    |> validate_change(:timezone, &validate_timezone/2)
     |> ensure_status()
     |> validate_inclusion(:status, @valid_statuses)
     |> ensure_rsvp_token()
@@ -95,11 +124,11 @@ defmodule Tymeslot.Meetings.GuestSchema do
     # colleague is fine, and used to fail the second booking outright.
     |> unique_constraint([:meeting_id, :email],
       name: :meeting_guests_meeting_id_email_solo_index,
-      message: "has already been added"
+      message: dgettext_noop("errors", "has already been added")
     )
     |> unique_constraint([:meeting_id, :participant_id, :email],
       name: :meeting_guests_participant_id_email_index,
-      message: "has already been added"
+      message: dgettext_noop("errors", "has already been added")
     )
     |> foreign_key_constraint(:meeting_id)
     |> foreign_key_constraint(:participant_id)
@@ -165,13 +194,6 @@ defmodule Tymeslot.Meetings.GuestSchema do
   def status_key("declined"), do: :declined
   def status_key(_pending), do: :pending
 
-  # Generates an unguessable, URL-safe RSVP token.
-  defp generate_token do
-    @token_bytes
-    |> :crypto.strong_rand_bytes()
-    |> Base.url_encode64(padding: false)
-  end
-
   defp ensure_status(changeset) do
     case get_field(changeset, :status) do
       nil -> put_change(changeset, :status, "pending")
@@ -181,9 +203,15 @@ defmodule Tymeslot.Meetings.GuestSchema do
 
   defp ensure_rsvp_token(changeset) do
     case get_field(changeset, :rsvp_token) do
-      nil -> put_change(changeset, :rsvp_token, generate_token())
+      nil -> put_change(changeset, :rsvp_token, Token.generate(@token_bytes))
       _present -> changeset
     end
+  end
+
+  defp validate_timezone(field, timezone) do
+    if Timezones.valid?(timezone),
+      do: [],
+      else: [{field, dgettext_noop("errors", "is not a valid timezone")}]
   end
 
   defp normalize_email(nil), do: nil

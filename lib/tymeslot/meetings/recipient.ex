@@ -22,10 +22,12 @@ defmodule Tymeslot.Meetings.Recipient do
   It is a view, not a row, and is never written back.
   """
 
-  alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Utils.UrlBuilder
 
   @enforce_keys [:kind, :email]
   defstruct [
@@ -41,7 +43,8 @@ defmodule Tymeslot.Meetings.Recipient do
     :participant_id,
     :management_token,
     :calendar_uid,
-    :ical_sequence
+    :ical_sequence,
+    :notified_end_time
   ]
 
   @type t :: %__MODULE__{
@@ -57,7 +60,8 @@ defmodule Tymeslot.Meetings.Recipient do
           participant_id: binary() | nil,
           management_token: String.t() | nil,
           calendar_uid: String.t() | nil,
-          ical_sequence: non_neg_integer() | nil
+          ical_sequence: non_neg_integer() | nil,
+          notified_end_time: DateTime.t() | nil
         }
 
   @doc """
@@ -102,12 +106,13 @@ defmodule Tymeslot.Meetings.Recipient do
       company: participant.company,
       message: participant.message,
       timezone: participant.timezone,
-      locale: participant.locale || "en",
+      locale: Locales.acceptable(participant.locale) || Locales.booking_default_locale(),
       custom_field_answers: participant.custom_field_answers || %{},
       participant_id: participant.id,
       management_token: participant.management_token,
       calendar_uid: ParticipantSchema.calendar_uid(participant),
-      ical_sequence: ParticipantSchema.invitation_sequence(participant)
+      ical_sequence: ParticipantSchema.invitation_sequence(participant),
+      notified_end_time: participant.notified_end_time
     }
   end
 
@@ -145,6 +150,27 @@ defmodule Tymeslot.Meetings.Recipient do
   end
 
   @doc """
+  The meeting as one of its guests reads it: in the guest's own language and
+  timezone where they have one, and in the attendee's otherwise.
+
+  Only a guest who came with a language and timezone carries them (a poll
+  participant the host confirmed the meeting for); a guest added on an
+  ordinary booking has neither and reads the meeting exactly as its attendee
+  does. `meeting` may already be a participant's view (`as_seen_by/2`), for a
+  group-booking guest, whose fallback is then that participant's.
+
+  Every guest email is built from this view, so this is the one place a
+  guest's language and timezone are resolved.
+  """
+  @spec as_seen_by_guest(MeetingSchema.t(), GuestSchema.t()) :: MeetingSchema.t()
+  def as_seen_by_guest(%MeetingSchema{} = meeting, %GuestSchema{} = guest) do
+    struct!(meeting,
+      attendee_locale: guest.locale || meeting.attendee_locale,
+      attendee_timezone: guest.timezone || meeting.attendee_timezone
+    )
+  end
+
+  @doc """
   The public URL of a seat's own calendar file
   (`Tymeslot.Meetings.seat_calendar_export/1`), beside the seat-management
   links its participant's emails carry.
@@ -160,7 +186,7 @@ defmodule Tymeslot.Meetings.Recipient do
     }
   end
 
-  defp seat_url(token, action), do: Policy.app_url() <> "/seat/#{token}/#{action}"
+  defp seat_url(token, action), do: UrlBuilder.base_url() <> "/seat/#{token}/#{action}"
 
   defp attendee_recipients(%MeetingSchema{attendee_email: email}) when email in [nil, ""], do: []
 
@@ -175,7 +201,8 @@ defmodule Tymeslot.Meetings.Recipient do
         message: meeting.attendee_message,
         timezone: meeting.attendee_timezone,
         locale: meeting.attendee_locale,
-        custom_field_answers: meeting.custom_field_answers
+        custom_field_answers: meeting.custom_field_answers,
+        notified_end_time: meeting.notified_end_time
       }
     ]
   end

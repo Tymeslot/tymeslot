@@ -28,7 +28,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigator
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
+  alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
 
   @behaviour Navigator
 
@@ -85,6 +87,54 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
   end
 
   @doc """
+  Resumes on the moment `step` names, as far as the choices the URL carried
+  reach: the moment itself when every fact before it is known, else the
+  last one reached before it (the questions, whose answers no URL carries).
+  A moment before the route's own entry is shown only when it may be
+  revisited, as Back would, so a direct link never resumes on the overview.
+  The meeting type the URL names is resolved first: the moments it needs
+  (a length to choose, questions to answer) follow from it.
+  """
+  @impl Navigator
+  def resume(journey, socket, step, params) do
+    socket = resolve_meeting_type(socket)
+
+    case landing(journey, socket.assigns, step) do
+      nil -> socket
+      key when key == socket.assigns.current_state -> socket
+      key -> Runtime.transition_to(socket, key, params)
+    end
+  end
+
+  defp resolve_meeting_type(%{assigns: %{meeting_type: %{}}} = socket), do: socket
+
+  defp resolve_meeting_type(socket),
+    do: StepEntry.maybe_assign_meeting_type(socket, socket.assigns[:selected_duration])
+
+  # Nothing on a route that opens on an outcome (the confirmation's), nor
+  # for a `step` naming no moment.
+  defp landing(journey, assigns, step) do
+    keys = Enum.map(journey.moments, & &1.key)
+    entry_index = Enum.find_index(keys, &(&1 == entry(journey, assigns[:live_action], assigns)))
+
+    if is_integer(entry_index) and step in Enum.map(keys, &Atom.to_string/1) do
+      {before, rest} =
+        journey
+        |> Progress.reached(assigns)
+        |> Enum.map(fn {moment, _state} -> moment end)
+        |> Enum.split_while(&(Atom.to_string(&1.key) != step))
+
+      (before ++ Enum.take(rest, 1))
+      |> Enum.filter(fn moment ->
+        index = Enum.find_index(keys, &(&1 == moment.key))
+        index >= entry_index or Journey.revisitable?(moment, assigns)
+      end)
+      |> List.last()
+      |> then(&(&1 && &1.key))
+    end
+  end
+
+  @doc """
   Whether a click on the step indicator's `step` would move the booker
   (`go_to/3` moves exactly when this is true), so the indicator offers only
   the steps it would take: a number before the current one, whose moment
@@ -92,6 +142,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
   """
   @impl Navigator
   def can_go_to?(journey, assigns, step), do: target(journey, assigns, step) != nil
+
+  @doc """
+  The step number of each moment this booking needs, by moment key: the
+  numbers `go_to/3` takes. A moment the booking passes over has none.
+  """
+  @spec step_numbers(Journey.t(), map()) :: %{atom() => pos_integer()}
+  def step_numbers(journey, assigns), do: Map.new(numbered_moments(journey, assigns))
 
   # While a checkout is open only the payment webhook moves the booker on
   # (`:paid` to the confirmation, `:expired` to the booking form): a moment

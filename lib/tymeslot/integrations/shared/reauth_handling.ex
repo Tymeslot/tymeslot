@@ -12,21 +12,24 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
 
   Two distinct return shapes are available depending on context:
 
-  - `flag/2` — returns `:ok | {:error, changeset}`. Suitable for non-Oban
+  - `flag/3` — returns `:ok | {:error, reason}`. Suitable for non-Oban
     callers (fetch helpers, token refreshers) that just want the side-effect
     and a simple success/failure signal.
 
   - Oban workers that need `{:discard, _} | {:error, _}` build that shape
-    themselves on top of `flag/2`, typically via the
-    `CalendarManagement.handle_reauth_required/2` or
+    themselves on top of `flag/3`, typically via the
+    `Calendar.Management.handle_reauth_required/2` or
     `Video.handle_reauth_required/2` wrappers.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.ErrorTracking
-  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Shared.IntegrationTypes
+  alias Tymeslot.Repo
+  alias Tymeslot.Security.Encryption
 
   require Logger
 
@@ -51,6 +54,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   @default_cause :credentials_undecryptable
 
   @discard_reason "Credentials require reauthentication"
+
+  @key_missing_discard_reason "Credentials are encrypted under a key missing from the keyring"
 
   # One row per cause: the operator-facing log line and the message persisted
   # to the integration's `sync_error`, which the account owner reads. Keeping
@@ -115,6 +120,14 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   def discard_reason, do: @discard_reason
 
   @doc """
+  The reason an Oban job is discarded with when its integration's credentials
+  are under an encryption key missing from the keyring (see `flag/3`). Not an
+  expected end: only the operator can fix it, by adding the key back.
+  """
+  @spec key_missing_discard_reason() :: String.t()
+  def key_missing_discard_reason, do: @key_missing_discard_reason
+
+  @doc """
   Which `t:cause/0` a permanent credential failure describes.
 
   `invalid_grant` and `:token_expired` mean the grant itself is gone: expired,
@@ -141,58 +154,99 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   def rejection_cause(_reason), do: :rejected_credentials
 
   @doc """
-  Flags an integration for reauthentication.
+  Flags an integration of `kind` for reauthentication with the diagnosis of
+  `cause` (a `t:cause/0`, `:credentials_undecryptable` by default), through
+  `flag_and_notify/3`.
 
-  Options (keyword list):
+  Returns `{:error, :not_found}` when the integration's row is gone, and
+  `{:error, :notification_failed}` when nothing was flagged because the email
+  could not be queued.
 
-  - `:mark_needs_reauth` — a `(integration, message) -> {:ok, _} | {:error, changeset}`
-    function that persists the flag. **Required.**
-  - `:cause` — a `t:cause/0` selecting the diagnosis logged and persisted.
-    Defaults to `:credentials_undecryptable`.
-  - `:provider_label` — a function extracting the provider string from the
-    integration, e.g. `& &1.provider`. Defaults to `& &1.provider`.
-  - `:log_prefix` — a short label used in log messages, e.g. `"Calendar"` or
-    `"Video"`. Defaults to `"Integration"`.
-
-  Logs a warning, calls `mark_needs_reauth`, then:
-
-  - Returns `:ok` on `{:ok, _}`.
-  - Logs an error and returns `{:error, changeset}` on `{:error, changeset}`.
+  Credentials that do not decrypt because the key that wrote them is missing
+  from the keyring (`Encryption.absent_key_version/1`) are the operator's
+  mistake, and adding the key back recovers every one of them: the
+  integration is not flagged and its owner not emailed. The failure is
+  logged and reported to error tracking instead, and the answer is
+  `{:error, :encryption_key_missing}`.
   """
-  @spec flag(struct(), keyword()) :: :ok | {:error, Ecto.Changeset.t()}
-  def flag(integration, opts) do
-    mark_needs_reauth = Keyword.fetch!(opts, :mark_needs_reauth)
-    provider_label_fun = Keyword.get(opts, :provider_label, & &1.provider)
-    log_prefix = Keyword.get(opts, :log_prefix, "Integration")
-    cause_key = cause_key(Keyword.get(opts, :cause, @default_cause))
-    cause = fetch_cause(cause_key)
+  @spec flag(IntegrationTypes.kind(), struct(), cause()) ::
+          :ok | {:error, :not_found | :notification_failed | :encryption_key_missing}
+  def flag(kind, integration, cause \\ @default_cause) do
+    cause_key = cause_key(cause)
+    log_name = IntegrationTypes.log_name(kind)
 
-    provider = provider_label_fun.(integration)
+    with :credentials_undecryptable <- cause_key,
+         versions when versions != [] <- absent_key_versions(kind, integration) do
+      report_key_missing(integration, log_name, versions)
+      {:error, :encryption_key_missing}
+    else
+      _flaggable -> flag_cause(kind, integration, cause_key, log_name)
+    end
+  end
+
+  defp flag_cause(kind, integration, cause_key, log_name) do
+    %{log: log, message: message} = fetch_cause(cause_key)
 
     if cause_key == :credentials_undecryptable,
-      do: report_undecryptable(integration, provider, log_prefix)
+      do: report_undecryptable(integration, log_name)
 
-    Logger.warning(
-      cause.log,
-      integration_type: log_prefix,
-      provider: provider,
+    Logger.warning(log,
+      integration_type: log_name,
+      provider: integration.provider,
       integration_id: integration.id,
       user_id: integration.user_id
     )
 
-    case mark_needs_reauth.(integration, cause.message) do
-      {:ok, _integration} ->
-        :ok
+    with {:ok, _updated} <- flag_and_notify(kind, integration, message), do: :ok
+  end
 
-      {:error, changeset} ->
-        Logger.error(
-          "Failed to persist needs_reauth flag",
-          provider: provider,
-          integration_id: integration.id,
-          errors: LogFormat.reason(changeset.errors)
-        )
+  @doc """
+  Marks an integration of `kind` `needs_reauth` with `message` (an untranslated
+  msgid, see `t:cause/0`) as its sync error, and emails the owner when this
+  is a new flag.
 
-        {:error, changeset}
+  Only a false to true transition is news: re-flagging an integration the
+  owner has already been told about would email them again about a problem
+  they are already looking at. The transition is decided by the row, so of
+  two flaggers holding the same stale struct only one sends the email.
+
+  The flag and the email job commit together. Every later flag reads the row
+  as already flagged, so a flag that committed without its email would leave
+  the owner never told; if the job cannot be inserted, the flag is rolled
+  back and `{:error, :notification_failed}` returned, for the caller to retry.
+  """
+  @spec flag_and_notify(IntegrationTypes.kind(), struct(), String.t()) ::
+          {:ok, struct()} | {:error, :not_found | :notification_failed}
+  def flag_and_notify(kind, integration, message) do
+    result =
+      Repo.transaction(fn ->
+        case IntegrationTypes.queries(kind).flag_needs_reauth(integration, message) do
+          {:ok, updated, true} -> notify(kind, updated)
+          {:ok, updated, false} -> updated
+          {:error, :not_found} -> Repo.rollback(:not_found)
+        end
+      end)
+
+    if result == {:error, :not_found} do
+      Logger.warning("Integration to flag for reauth no longer exists",
+        integration_type: IntegrationTypes.log_name(kind),
+        integration_id: integration.id
+      )
+    end
+
+    result
+  end
+
+  # A uniqueness conflict is reported as :ok: an email for this flag is
+  # already queued.
+  defp notify(kind, updated) do
+    case EmailScheduler.schedule_integration_reauth_notification(
+           %{id: updated.user_id},
+           updated,
+           kind
+         ) do
+      :ok -> updated
+      {:error, _reason} -> Repo.rollback(:notification_failed)
     end
   end
 
@@ -207,10 +261,35 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   # only a reconnect recovers that integration, so the failure is recorded
   # here instead. One call site and one reason, so however many
   # integrations are affected it is one error, and one new-error alert.
-  defp report_undecryptable(integration, provider, log_prefix) do
+  defp absent_key_versions(kind, integration) do
+    IntegrationTypes.schema(kind).encrypted_credential_fields()
+    |> Enum.flat_map(fn field ->
+      case Encryption.absent_key_version(Map.get(integration, field)) do
+        {:ok, version} -> [version]
+        :error -> []
+      end
+    end)
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  # An error, not a flag: the key report run at boot names the same ids with
+  # their counts. Reported per integration from one call site, so however many
+  # are affected it is one error in error tracking.
+  defp report_key_missing(integration, log_name, versions) do
+    ErrorTracking.report_error(:encryption_key_missing, nil, %{
+      integration_type: log_name,
+      provider: integration.provider,
+      integration_id: integration.id,
+      user_id: integration.user_id,
+      missing_key_ids: versions
+    })
+  end
+
+  defp report_undecryptable(integration, log_name) do
     ErrorTracking.report_error(:credentials_undecryptable, nil, %{
-      integration_type: log_prefix,
-      provider: provider,
+      integration_type: log_name,
+      provider: integration.provider,
       integration_id: integration.id,
       user_id: integration.user_id
     })

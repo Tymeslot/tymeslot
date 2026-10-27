@@ -8,12 +8,14 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
   using `Tymeslot.Security.Encryption`. Plaintext access is exposed via the
   `bot_token/1` and `webhook_url/1` helpers.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Validation.Constraints
 
   @type status :: :pending_oauth | :active | :paused | :auto_disabled
 
@@ -78,43 +80,50 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @cast_fields [
-    :user_id,
-    :name,
-    :app_mode,
-    :bot_token,
-    :team_id,
-    :team_name,
-    :channel_id,
-    :channel_name,
-    :authed_user_id,
-    :scope,
-    :webhook_url,
-    :webhook_channel_hint,
-    :events,
-    :is_active,
-    :last_triggered_at,
-    :failure_count,
-    :disabled_at,
-    :disabled_reason
-  ]
+  # Changesets are split by who writes the row, as on Telegram:
+  #
+  #   * `create_changeset/1` takes the identity and credential fields the
+  #     context sets (`user_id`, `app_mode`, the OAuth workspace fields) and
+  #     then the organiser's own fields.
+  #   * `user_changeset/2` carries only what the organiser edits: the name,
+  #     the events, the webhook URL and hint, and the channel picked from the
+  #     bot's list. It never reassigns the owner or touches the bookkeeping.
+  #   * `state_transition_changeset/2` carries the delivery bookkeeping.
+  @context_fields [:user_id, :app_mode, :bot_token, :team_id, :team_name, :authed_user_id, :scope]
+  @user_fields [:name, :events, :webhook_url, :webhook_channel_hint, :channel_id, :channel_name]
 
-  @spec changeset(t(), map()) :: Ecto.Changeset.t()
-  def changeset(integration, attrs) do
-    integration
-    |> cast(attrs, @cast_fields)
-    |> validate_required([:user_id, :name, :app_mode, :events])
+  @doc """
+  Changeset for a new integration. `user_id`, `app_mode` and the OAuth
+  workspace fields are set by the context, never taken from the form.
+  """
+  @spec create_changeset(map()) :: Ecto.Changeset.t()
+  def create_changeset(attrs) do
+    %__MODULE__{}
+    |> cast(attrs, @context_fields)
+    |> validate_required([:user_id, :app_mode])
     |> validate_inclusion(:app_mode, @valid_modes)
-    |> validate_subset(:events, @valid_events)
-    |> validate_length(:name, min: 1, max: 80)
-    |> validate_by_mode()
     |> encrypt_bot_token()
-    |> encrypt_webhook_url()
+    |> user_changeset(attrs)
     |> foreign_key_constraint(:user_id)
     |> unique_constraint([:user_id, :team_id],
       name: :slack_integrations_user_team_unique_index,
-      message: "workspace already connected"
+      message: dgettext_noop("errors", "workspace already connected")
     )
+  end
+
+  @doc """
+  Changeset for the organiser's own edits. The owner, the mode, the
+  workspace credentials and the delivery bookkeeping are never changed here.
+  """
+  @spec user_changeset(t() | Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
+  def user_changeset(integration, attrs) do
+    integration
+    |> cast(attrs, @user_fields)
+    |> validate_required([:name, :events])
+    |> validate_subset(:events, @valid_events)
+    |> validate_length(:name, Constraints.integration_name_length_opts())
+    |> validate_by_mode()
+    |> encrypt_webhook_url()
   end
 
   @doc """
@@ -141,12 +150,12 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     |> validate_required([:user_id, :name, :app_mode, :bot_token, :team_id, :events])
     |> validate_inclusion(:app_mode, @valid_modes)
     |> validate_subset(:events, @valid_events)
-    |> validate_length(:name, min: 1, max: 80)
+    |> validate_length(:name, Constraints.integration_name_length_opts())
     |> encrypt_bot_token()
     |> foreign_key_constraint(:user_id)
     |> unique_constraint([:user_id, :team_id],
       name: :slack_integrations_user_team_unique_index,
-      message: "workspace already connected"
+      message: dgettext_noop("errors", "workspace already connected")
     )
   end
 
@@ -210,7 +219,11 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
         changeset
         |> validate_webhook_url_present()
         |> validate_format(:webhook_url, @webhook_url_regex,
-          message: "must be a Slack webhook URL (https://hooks.slack.com/services/...)"
+          message:
+            dgettext_noop(
+              "errors",
+              "must be a Slack webhook URL (https://hooks.slack.com/services/...)"
+            )
         )
 
       _mode ->
@@ -295,4 +308,8 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
 
   @spec valid_events() :: [String.t()]
   def valid_events, do: @valid_events
+
+  @doc "Whether `url` has the shape of a Slack Incoming Webhook URL."
+  @spec webhook_url_format?(String.t()) :: boolean()
+  def webhook_url_format?(url) when is_binary(url), do: Regex.match?(@webhook_url_regex, url)
 end

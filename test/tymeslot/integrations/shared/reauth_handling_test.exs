@@ -1,7 +1,7 @@
 defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
   @moduledoc """
-  Verifies the shared reauth-flagging policy: logging, calling the supplied
-  `mark_needs_reauth` function, and mapping its result.
+  Verifies the shared reauth-flagging policy: logging, persisting the flag,
+  and notifying the owner once per false to true transition.
   """
 
   use Tymeslot.DataCase, async: false
@@ -9,10 +9,10 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
   @moduletag :integrations
   @moduletag :security
 
+  use Oban.Testing, repo: Tymeslot.Repo
+
   import ExUnit.CaptureLog
 
-  alias Ecto.Changeset
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
@@ -24,10 +24,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
       log =
         capture_log(fn ->
           assert :ok =
-                   ReauthHandling.flag(integration,
-                     mark_needs_reauth: &CalendarIntegrationQueries.mark_needs_reauth/2,
-                     log_prefix: "Calendar"
-                   )
+                   ReauthHandling.flag(:calendar, integration)
         end)
 
       assert log =~ "credentials cannot be decrypted"
@@ -37,24 +34,16 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
       assert reloaded.sync_error =~ "could not be decrypted"
     end
 
-    test "returns {:error, changeset} and logs an error when persistence fails" do
+    test "reports a row that has gone instead of flagging it" do
       integration = insert(:calendar_integration, provider: "caldav")
-
-      failing_mark = fn _integration, _message ->
-        changeset = Changeset.add_error(Changeset.change(integration), :base, "nope")
-        {:error, %{changeset | action: :update}}
-      end
+      Repo.delete!(integration)
 
       log =
         capture_log(fn ->
-          assert {:error, %Changeset{}} =
-                   ReauthHandling.flag(integration,
-                     mark_needs_reauth: failing_mark,
-                     log_prefix: "Calendar"
-                   )
+          assert {:error, :not_found} = ReauthHandling.flag(:calendar, integration)
         end)
 
-      assert log =~ "Failed to persist needs_reauth flag"
+      assert log =~ "no longer exists"
     end
 
     # The decryption message above is the default because `flag/2` was built for
@@ -64,10 +53,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
       integration = insert(:calendar_integration, provider: "google")
 
       assert :ok =
-               ReauthHandling.flag(integration,
-                 mark_needs_reauth: &CalendarIntegrationQueries.mark_needs_reauth/2,
-                 cause: :expired_grant
-               )
+               ReauthHandling.flag(:calendar, integration, :expired_grant)
 
       reloaded = Repo.reload!(integration)
       assert reloaded.needs_reauth == true
@@ -85,10 +71,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
       on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
 
       assert :ok =
-               ReauthHandling.flag(integration,
-                 mark_needs_reauth: &CalendarIntegrationQueries.mark_needs_reauth/2,
-                 cause: :expired_grant
-               )
+               ReauthHandling.flag(:calendar, integration, :expired_grant)
 
       reloaded = Repo.reload!(integration)
 
@@ -114,15 +97,83 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
       end
     end
 
-    test "uses the default provider_label when no override is given" do
-      integration = insert(:calendar_integration, provider: "google")
+    test "flags a video integration through the video queries" do
+      integration = insert(:video_integration, provider: "zoom")
 
-      assert :ok =
-               ReauthHandling.flag(integration,
-                 mark_needs_reauth: &CalendarIntegrationQueries.mark_needs_reauth/2
-               )
+      assert :ok = ReauthHandling.flag(:video, integration, :rejected_credentials)
 
-      assert Repo.reload!(integration).needs_reauth == true
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth == true
+      assert reloaded.sync_error =~ "rejected the stored credentials"
     end
+  end
+
+  @factories %{calendar: :calendar_integration, video: :video_integration}
+
+  describe "flag_and_notify/3" do
+    # Each flagger decides from the struct it loaded, and two that loaded the
+    # row before either wrote both see `needs_reauth: false`. Only the row
+    # knows which write was the transition. (The email job's own uniqueness
+    # is no help here: it is the backstop, not the decision.)
+    test "a flagger holding a stale, unflagged struct does not email again" do
+      for kind <- [:calendar, :video] do
+        stale = insert(@factories[kind], needs_reauth: false)
+
+        assert {:ok, _flagged} = ReauthHandling.flag_and_notify(kind, stale, "Reconnect, please.")
+        assert [first] = reauth_emails(stale)
+        Repo.delete!(first)
+
+        assert {:ok, _flagged} = ReauthHandling.flag_and_notify(kind, stale, "Reconnect, please.")
+        assert reauth_emails(stale) == []
+      end
+    end
+
+    # Every later flag reads the row as already flagged, so a flag that
+    # committed without its email would leave the owner never told. The job
+    # insert is made to fail with a check named as one Oban's changeset
+    # declares, so it comes back as `{:error, changeset}` rather than raising;
+    # it is gone again with the test's transaction.
+    test "a flag whose email cannot be queued is rolled back, and the next flag emails" do
+      integration = insert(:calendar_integration, needs_reauth: false)
+
+      Repo.query!("""
+      ALTER TABLE oban_jobs ADD CONSTRAINT priority_range
+        CHECK (args->>'action' IS DISTINCT FROM 'send_integration_reauth_notification') NOT VALID
+      """)
+
+      capture_log(fn ->
+        assert {:error, :notification_failed} =
+                 ReauthHandling.flag_and_notify(:calendar, integration, "Reconnect, please.")
+      end)
+
+      refute Repo.reload!(integration).needs_reauth
+
+      Repo.query!("ALTER TABLE oban_jobs DROP CONSTRAINT priority_range")
+
+      assert {:ok, _flagged} =
+               ReauthHandling.flag_and_notify(:calendar, integration, "Reconnect, please.")
+
+      assert Repo.reload!(integration).needs_reauth
+      assert [_email] = reauth_emails(integration)
+    end
+
+    test "re-flagging updates the message and does not email again" do
+      integration = insert(:calendar_integration, needs_reauth: true, sync_error: "Old reason.")
+
+      assert {:ok, _flagged} =
+               ReauthHandling.flag_and_notify(:calendar, integration, "New reason.")
+
+      assert Repo.reload!(integration).sync_error == "New reason."
+      assert reauth_emails(integration) == []
+    end
+  end
+
+  defp reauth_emails(integration) do
+    [worker: Tymeslot.Workers.EmailWorker]
+    |> all_enqueued()
+    |> Enum.filter(
+      &(&1.args["action"] == "send_integration_reauth_notification" and
+          &1.args["integration_id"] == integration.id)
+    )
   end
 end

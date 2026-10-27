@@ -120,6 +120,25 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
     end
   end
 
+  describe "send_alert/2 with an unregistered type" do
+    # Nothing vets an unregistered type, so the warning must not hand the
+    # JSON log encoder a raw term (a tuple does not encode) or an address.
+    test "still sends, and logs the type formatted and masked" do
+      LogCapture.attach()
+      type = {:unregistered, "ops@example.com"}
+
+      assert :ok = AdminAlerts.send_alert(type, %{})
+      assert_received {:alert_sent, ^type, %{}}
+
+      event = LogCapture.await_log("not registered in AlertTypes")
+      alert_type = LogCapture.user_metadata(event).alert_type
+
+      # `=~` raises on anything but a string.
+      assert alert_type =~ "unregistered"
+      refute alert_type =~ "ops@example.com"
+    end
+  end
+
   describe "check_config/0" do
     for {label, recipient} <- [nil: nil, malformed: "not-an-email"] do
       test "logs one error naming the fix when enabled with a #{label} recipient" do
@@ -137,8 +156,48 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
       assert check_config_events() == []
     end
 
-    test "logs nothing when enabled with a valid recipient" do
-      with_config(:tymeslot, admin_alerts_enabled: true, admin_alert_email: "ops@example.com")
+    test "logs nothing when enabled with a recipient that has no other job" do
+      with_config(:tymeslot,
+        admin_alerts_enabled: true,
+        admin_alert_email: "ops@example.com",
+        email: [from_email: "hello@example.com", contact_recipient: "support@example.com"]
+      )
+
+      assert check_config_events() == []
+    end
+
+    for {label, email, roles} <- [
+          {"from address",
+           [from_email: "hello@example.com", contact_recipient: "support@example.com"],
+           ["email from address"]},
+          {"contact recipient",
+           [from_email: "noreply@example.com", contact_recipient: "hello@example.com"],
+           ["contact recipient"]},
+          {"from address and contact recipient",
+           [from_email: "hello@example.com", contact_recipient: "hello@example.com"],
+           ["email from address", "contact recipient"]}
+        ] do
+      test "warns when the recipient is also the #{label}" do
+        with_config(:tymeslot,
+          admin_alerts_enabled: true,
+          admin_alert_email: " Hello@Example.com ",
+          email: unquote(email)
+        )
+
+        assert [%{level: :warning, msg: msg}] = check_config_events()
+        text = LogCapture.message_text(msg)
+        assert text =~ "suppressing that address would also block the alert"
+        assert text =~ "ADMIN_ALERT_EMAIL"
+        for role <- unquote(roles), do: assert(text =~ role)
+      end
+    end
+
+    test "does not warn about a shared recipient when alerts are disabled" do
+      with_config(:tymeslot,
+        admin_alerts_enabled: false,
+        admin_alert_email: "hello@example.com",
+        email: [from_email: "hello@example.com", contact_recipient: "hello@example.com"]
+      )
 
       assert check_config_events() == []
     end

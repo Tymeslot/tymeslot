@@ -9,6 +9,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   `cancelled_at` so freed seats become bookable again.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -32,6 +33,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
           management_token: String.t() | nil,
           management_token_hash: String.t() | nil,
           ical_sequence: non_neg_integer(),
+          notified_end_time: DateTime.t() | nil,
           confirmation_sent_at: DateTime.t() | nil,
           organizer_notified_at: DateTime.t() | nil,
           cancelled_at: DateTime.t() | nil,
@@ -61,6 +63,10 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     # The seat's own calendar-file revision: each seat is its own event in
     # the participant's calendar.
     field(:ical_sequence, :integer, default: 0)
+    # The end this seat was last told by an end change notice, or held before
+    # a change not yet announced; nil when it knows the meeting as booked or
+    # last rescheduled. Written only by the end change and reschedule paths.
+    field(:notified_end_time, :utc_datetime)
     field(:confirmation_sent_at, :utc_datetime)
     field(:organizer_notified_at, :utc_datetime)
     field(:cancelled_at, :utc_datetime)
@@ -102,7 +108,9 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     |> update_change(:email, &normalize_email/1)
     |> validate_required([:meeting_id, :name, :email, :timezone, :locale])
     |> EmailChangeset.validate_email(:email)
-    |> validate_inclusion(:locale, supported_locale_codes(), message: "is not a supported locale")
+    |> validate_inclusion(:locale, supported_locale_codes(),
+      message: dgettext_noop("errors", "is not a supported locale")
+    )
     |> ensure_management_token()
     |> Token.put_hash(:management_token, :management_token_hash)
     |> unique_constraint(:management_token_hash)
@@ -111,7 +119,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     # tokens, so cancelling "the" booking only frees half of it.
     |> unique_constraint([:meeting_id, :email],
       name: :meeting_participants_live_email_index,
-      message: "already has a spot at this time"
+      message: dgettext_noop("errors", "already has a spot at this time")
     )
     |> foreign_key_constraint(:meeting_id)
   end
@@ -159,17 +167,9 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   def live?(%__MODULE__{cancelled_at: nil}), do: true
   def live?(%__MODULE__{}), do: false
 
-  @doc "Generates an unguessable, URL-safe management token."
-  @spec generate_token() :: String.t()
-  def generate_token do
-    @token_bytes
-    |> :crypto.strong_rand_bytes()
-    |> Base.url_encode64(padding: false)
-  end
-
   defp ensure_management_token(changeset) do
     case get_field(changeset, :management_token) do
-      nil -> put_change(changeset, :management_token, generate_token())
+      nil -> put_change(changeset, :management_token, Token.generate(@token_bytes))
       _present -> changeset
     end
   end

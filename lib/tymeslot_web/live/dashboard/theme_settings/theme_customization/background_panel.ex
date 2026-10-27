@@ -93,19 +93,29 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.BackgroundPanel
     """
   end
 
-  # The open tab follows the saved kind (on load, and after a save, which
-  # always saves the chosen kind), falling back to the group's first kind.
-  # The custom colour disclosure survives saves, so committing a colour does
-  # not close it.
+  # On load the open tab follows the saved kind, falling back to the group's
+  # first kind. After a save it stays where the organiser is: every choice is
+  # made from the open tab, and removing an upload that is not on show (or
+  # one that is, which falls back to the default) must not move them away
+  # from it. The custom colour disclosure survives saves, so committing a
+  # colour does not close it.
   @impl Panel
   def ui(group, customization, ui) do
     kinds = kind_names(group)
     saved = customization.settings["background_type"]
 
     %{
-      browsing_type: if(saved in kinds, do: saved, else: List.first(kinds)),
+      browsing_type: browsing_type(Map.get(ui, :browsing_type), saved, kinds),
       custom_picker_open: Map.get(ui, :custom_picker_open, false)
     }
+  end
+
+  defp browsing_type(open, saved, kinds) do
+    cond do
+      open in kinds -> open
+      saved in kinds -> saved
+      true -> List.first(kinds)
+    end
   end
 
   @impl Panel

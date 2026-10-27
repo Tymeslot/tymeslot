@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Money
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
@@ -168,9 +169,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             name="cancel_refund_amount"
             label={dgettext("dashboard_bookings", "Partial amount")}
             min="0.01"
-            max={@remaining / 100}
+            max={Money.to_major_string(@remaining, @booking_payment.currency)}
             step="0.01"
-            placeholder={"0.00 #{String.upcase(@booking_payment.currency || "")}"}
+            placeholder={"0.00 #{String.upcase(@booking_payment.currency)}"}
           />
         </div>
 

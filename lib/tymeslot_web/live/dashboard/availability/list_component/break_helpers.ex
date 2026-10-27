@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers do
 
   alias Tymeslot.Availability.Window
   alias TymeslotWeb.Components.Shared.TimeOptions
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   # Fields the add-break form renders an inline error under; everything else
   # has no home in the form and is surfaced as a flash instead.
@@ -42,6 +43,26 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers do
   @spec format_time(Time.t() | nil) :: String.t()
   def format_time(nil), do: ""
   def format_time(time), do: Calendar.strftime(time, "%H:%M")
+
+  @doc """
+  Why a copy stopped: a break saved before its day's hours were narrowed
+  falls outside them, so it cannot be copied anywhere with the same hours.
+  Names the day and the break so the host can move or delete it.
+  """
+  @spec stale_break_message(map(), map(), String.t() | nil) :: String.t()
+  def stale_break_message(day, break, time_format) do
+    dgettext(
+      "dashboard_availability",
+      "The %{break} break on %{day} falls outside that day's hours. Move or delete it, then try again.",
+      break: break_time_label(day, break, time_format),
+      day:
+        LocaleFormat.format_weekday_name(
+          day.day_of_week,
+          Gettext.get_locale(TymeslotWeb.Gettext),
+          :full
+        )
+    )
+  end
 
   @doc """
   A break's times for its chip, with "(+1)" on a time that falls on the day
@@ -84,11 +105,6 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers do
   `%{field => message}` map the add-break form renders inline, and
   `general_messages` holds the errors with no field on the form (`:base`,
   associations) for the caller to flash.
-
-  Breaks are checked against the day's work hours twice, in
-  `Tymeslot.Availability.Breaks` and again in the schema changeset, so a
-  single mistake arrives as two errors on one field. Both map to the same
-  message and collapse into one entry.
   """
   @spec break_error_messages(Ecto.Changeset.t()) :: {%{atom() => String.t()}, [String.t()]}
   def break_error_messages(%Ecto.Changeset{errors: errors}) do
@@ -100,13 +116,11 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers do
     {Map.new(field_errors), general_errors |> Enum.map(&elem(&1, 1)) |> Enum.uniq()}
   end
 
-  defp display_message(:start_time, message)
-       when message in ["cannot be before work hours", "must be within work hours"] do
+  defp display_message(:start_time, "must be within work hours") do
     dgettext("dashboard_availability", "Break must start within this day's working hours")
   end
 
-  defp display_message(:end_time, message)
-       when message in ["cannot be after work hours", "must be within work hours"] do
+  defp display_message(:end_time, "must be within work hours") do
     dgettext("dashboard_availability", "Break must end within this day's working hours")
   end
 

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.DashboardFormat
 
   @doc """
@@ -63,7 +64,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
 
   @spec can_reschedule?(Ecto.Schema.t()) :: boolean()
   def can_reschedule?(meeting) do
-    case Policy.can_reschedule_meeting?(meeting) do
+    case Policy.can_host_change_time?(meeting) do
       :ok -> true
       {:error, _reason} -> false
     end
@@ -71,13 +72,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
 
   # Timezone + formatting helpers
   @spec get_meeting_timezone(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil) :: String.t()
-  def get_meeting_timezone(nil, _profile), do: "UTC"
-  def get_meeting_timezone(_meeting, nil), do: "UTC"
-
-  def get_meeting_timezone(_meeting, profile) do
-    # Organizer's timezone for the dashboard view
-    (profile && profile.timezone) || "UTC"
-  end
+  # Organizer's timezone for the dashboard view
+  def get_meeting_timezone(_meeting, profile), do: Profiles.timezone(profile)
 
   @doc "The meeting's full date in the organiser's timezone. See `DashboardFormat.long_date/1`."
   @spec format_meeting_date(Ecto.Schema.t(), String.t()) :: String.t()
@@ -96,4 +92,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   @spec format_meeting_time(Ecto.Schema.t(), String.t(), String.t()) :: String.t()
   def format_meeting_time(meeting, timezone, time_format),
     do: DashboardFormat.time_range(meeting.start_time, meeting.end_time, timezone, time_format)
+
+  @doc """
+  A time (anything with `start_time` and `end_time`, such as a calendar-move
+  offer) as one short phrase, date then clock range, formatted exactly as the
+  meeting card formats a meeting's own time.
+  """
+  @spec format_move_time(
+          %{:start_time => DateTime.t(), :end_time => DateTime.t(), optional(atom()) => any()},
+          String.t(),
+          String.t()
+        ) ::
+          String.t()
+  def format_move_time(times, timezone, time_format) do
+    "#{format_meeting_date(times, timezone)}, #{format_meeting_time(times, timezone, time_format)}"
+  end
 end

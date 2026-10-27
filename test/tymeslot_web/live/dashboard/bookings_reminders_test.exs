@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.BookingsRemindersTest do
 
       # An incomplete recipient: the orchestrator refuses before enqueueing,
       # so no job will ever send this booking's reminder.
-      assert {:error, _reason} =
+      assert {:ok, :not_sendable} =
                Orchestrator.schedule_reminder_notifications(%{refused | attendee_name: nil})
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")

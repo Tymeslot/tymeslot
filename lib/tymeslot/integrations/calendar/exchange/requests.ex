@@ -71,6 +71,23 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
 
   alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
 
+  # What `get_item/1` asks for on top of the item id and change key: exactly the
+  # elements `Exchange.EventNormaliser` reads.
+  @item_properties ~w(
+    item:Subject
+    calendar:Start
+    calendar:End
+    calendar:IsAllDayEvent
+    calendar:Location
+    calendar:UID
+    calendar:CalendarItemType
+    calendar:LegacyFreeBusyStatus
+    calendar:IsCancelled
+    calendar:StartTimeZone
+  )
+
+  @item_properties_xml Enum.map_join(@item_properties, &~s(<t:FieldURI FieldURI="#{&1}"/>))
+
   @doc "Enumerates the mailbox's folders so calendars can be picked out."
   @spec find_folder() :: String.t()
   def find_folder do
@@ -110,15 +127,23 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   the operation when the window is empty, and the guard makes forgetting that
   fail here rather than a round trip later.
 
-  Two properties are asked for on top of `BaseShape=Default`, which returns
-  neither: `calendar:IsCancelled`, so a cancelled meeting stops blocking the
-  organiser's diary, and `calendar:StartTimeZone`, which is the only exact way
-  to recover an all-day event's own calendar day. Asking is free against a
-  server that does not implement them. Unsupported properties are dropped from
-  the response rather than faulted, which was confirmed against a live
-  grommunio server: it answers `NoError` and simply omits both elements, while
-  a real Exchange server answers them. The normaliser therefore treats both as
-  optional and gains correctness wherever they arrive.
+  The shape is `BaseShape=IdOnly` plus exactly the properties
+  `Exchange.EventNormaliser` reads. `Default` would also return `t:Body`, the
+  full HTML description of every event (often tens of kilobytes for a meeting
+  invitation), which nothing here reads.
+
+  A property missing from the list is not faulted but silently absent, so the
+  normaliser would read `nil` for it: a lost title, all-day flag or
+  cancellation with no error anywhere. The list is therefore pinned against
+  the normaliser's own xpaths by a test.
+
+  Unsupported properties are dropped from the response rather than faulted,
+  which was confirmed against a live grommunio server for
+  `calendar:IsCancelled` and `calendar:StartTimeZone`: it answers `NoError` and
+  simply omits both, while a real Exchange server answers them. The normaliser
+  treats both as optional and gains correctness wherever they arrive: the first
+  stops a cancelled meeting blocking the organiser's diary, the second is the
+  only exact way to recover an all-day event's own calendar day.
   """
   @spec get_item([{String.t(), String.t()}, ...]) :: String.t()
   def get_item([_pair | _rest] = ids) do
@@ -130,11 +155,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
     """
     <m:GetItem>
       <m:ItemShape>
-        <t:BaseShape>Default</t:BaseShape>
-        <t:AdditionalProperties>
-          <t:FieldURI FieldURI="calendar:IsCancelled"/>
-          <t:FieldURI FieldURI="calendar:StartTimeZone"/>
-        </t:AdditionalProperties>
+        <t:BaseShape>IdOnly</t:BaseShape>
+        <t:AdditionalProperties>#{@item_properties_xml}</t:AdditionalProperties>
       </m:ItemShape>
       <m:ItemIds>#{item_ids}</m:ItemIds>
     </m:GetItem>

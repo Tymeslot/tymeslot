@@ -296,7 +296,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmissionFlashTest do
   defp saturate_booking_recipient(email) do
     # `check_booking_recipient_limit/1` allows 5 bookings per hour per mailbox.
     Enum.each(1..5, fn _i ->
-      RateLimiter.check_booking_recipient_limit(email)
+      RateLimiter.check(:booking_recipient, email)
     end)
   end
 
@@ -305,7 +305,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmissionFlashTest do
     # Burn through the budget so the next call from the LiveView returns
     # `{:deny, _}`.
     Enum.each(1..10, fn _i ->
-      RateLimiter.check_booking_submission_limit(client_ip)
+      RateLimiter.check(:booking_submit, client_ip)
     end)
   end
 

@@ -25,7 +25,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     username: "user",
     password: "pass",
     calendar_paths: ["/cal/"],
-    verify_ssl: true,
     provider: :caldav
   }
 
@@ -80,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert is_nil(reloaded.sync_last_error)
     end
 
-    test "increments sync_attempts and stays queued on 502",
+    test "stays queued on 502 without counting the attempt",
          %{integration: integration} do
       row = insert_pending_row(integration, sync_state: "locally_modified")
 
@@ -92,7 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
-      assert reloaded.sync_attempts == 1
+      assert reloaded.sync_attempts == 0
 
       # `sync_last_error` is a human-readable field, not a dump of the internal
       # error term: an inspected atom such as `":server_error"` must never
@@ -163,9 +162,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     # gets a 404, falls back to `If-Match: *`, and reads the resulting 412 as
     # absence rather than conflict once a GET has confirmed it.
     #
-    # `QueueWiring.tag/3` also stamps `created_by_tymeslot: true` on every row
-    # it queues, so the flag is set throughout: what decides a recreate is the
-    # meeting behind the row, never the flag.
+    # The flag is set throughout, as `QueueWiring.tag/3` sets it on a queued
+    # booking: what decides a recreate is the meeting behind the row, never
+    # the flag.
     @future_start DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
     @future_end DateTime.add(@future_start, 1, :hour)
 
@@ -315,7 +314,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert :ok = OfflineQueue.flush(integration, @client)
 
       assert is_nil(Repo.reload(row))
-      assert QueueQueries.list_pending(integration.id) == []
+      assert QueueQueries.list_pending(integration.id, 100, 100) == []
       assert :counters.get(counter, 1) == 3
     end
 
@@ -332,7 +331,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
-      assert reloaded.sync_attempts == 1
+      assert reloaded.sync_attempts == 0
 
       assert reloaded.sync_last_error ==
                "The calendar server reported an error. Tymeslot will retry automatically."
@@ -397,36 +396,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.request_path == "/work/queue-event-uid.ics"
         Conn.send_resp(conn, 204, "")
-      end)
-
-      assert :ok = OfflineQueue.flush(integration, @client)
-    end
-  end
-
-  describe "flush/2 — how much of the event the replay sends" do
-    # The rebuilt payload used to carry a narrow subset of the row, so a
-    # replayed write of a recurring event replaced the whole series on the
-    # server with one non-recurring VEVENT carrying no attendees and no alarms.
-    # A create is the replay that still sends a series; an update of one is
-    # refused, see `OfflineQueueSeriesTest`.
-    test "a replayed create still carries the RRULE, attendees and alarms",
-         %{integration: integration} do
-      insert_pending_row(integration,
-        sync_state: "locally_created",
-        raw_ical: nil,
-        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
-        attendees: [%{"email" => "sam@example.com", "display_name" => "Sam"}],
-        reminders: [%{"method" => "popup", "minutes_before" => 15}]
-      )
-
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        {:ok, body, conn} = Conn.read_body(conn)
-
-        assert body =~ "RRULE:FREQ=WEEKLY;BYDAY=MO"
-        assert body =~ "sam@example.com"
-        assert body =~ "BEGIN:VALARM"
-
-        Conn.send_resp(conn, 201, "")
       end)
 
       assert :ok = OfflineQueue.flush(integration, @client)
@@ -557,7 +526,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       uids =
         integration.id
-        |> QueueQueries.list_pending()
+        |> QueueQueries.list_pending(100, 100)
         |> Enum.map(& &1.uid)
 
       assert uids == ["older", "newer"]

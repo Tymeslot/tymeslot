@@ -26,19 +26,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
   @moduletag :live
   @moduletag :integration
 
+  import TymeslotWeb.RepeatEditorHelpers
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock_midweek: 0]
   import Tymeslot.TestHelpers.Eventually
 
+  alias Ecto.Changeset
   alias Plug.Test
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+
+  # Events are built from "today" and read in the organiser's zone, which is
+  # not UTC: near midnight UTC on a Sunday, "today" is last week there.
+  setup do: freeze_clock_midweek()
 
   setup :set_mox_global
   setup :verify_on_exit!
@@ -63,15 +72,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
     swap_env(:outlook_calendar_api_module, OutlookAPI)
 
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
+    profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(user)
 
-    {:ok, conn: conn, user: user}
+    {:ok, conn: conn, user: user, profile: profile}
   end
 
   # The series started two weeks ago, so today's occurrence is not its first,
   # whose "this and following" would be "all events".
-  defp today, do: Date.utc_today()
+  defp today, do: Clock.utc_today()
   defp first_day, do: Date.add(today(), -14)
   defp at_today(hour), do: DateTime.new!(today(), Time.new!(hour, 0, 0), "Etc/UTC")
 
@@ -248,13 +257,66 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
     end
   end
 
+  describe "a repeat rule given to a one-off Google event" do
+    setup %{user: user, profile: profile} do
+      profile |> Changeset.change(timezone: "Europe/Berlin") |> Repo.update!()
+
+      integration =
+        oauth_integration(user, "google", "https://www.googleapis.com/auth/calendar")
+
+      start_at =
+        today() |> DateTime.new!(~T[09:00:00], "Europe/Berlin") |> DateTime.shift_zone!("Etc/UTC")
+
+      # As the sync caches a one-off Tymeslot wrote in UTC.
+      event =
+        oauth_occurrence(integration, %{
+          provider: "google",
+          uid: "planning@google.com",
+          provider_event_id: "planning1",
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 1, :hour)
+        })
+
+      serve(%{"id" => "planning1", "iCalUID" => "planning@google.com"})
+      %{event: event}
+    end
+
+    # Google refuses a recurring event whose start names no zone, and expands
+    # the rule in the zone it names.
+    test "writes the new series in the organiser's zone", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
+
+      lv
+      |> element("#calendar-grid")
+      |> render_repeat_save(%{
+        "freq" => "weekly",
+        "interval" => "1",
+        "end_type" => "never"
+      })
+
+      assert [{:put, url, body}] = await_requests(1)
+      assert url =~ "/events/planning1"
+
+      body = Jason.decode!(body)
+
+      assert %{"dateTime" => wall_clock, "timeZone" => "Europe/Berlin"} = body["start"]
+      assert String.starts_with?(wall_clock, "#{Date.to_iso8601(today())}T09:00:00")
+
+      assert [_rule] = body["recurrence"]
+    end
+  end
+
   defp oauth_integration(user, provider, scope) do
     insert(:calendar_integration,
       user: user,
       provider: provider,
       access_token_encrypted: Encryption.encrypt("valid_token"),
       refresh_token_encrypted: Encryption.encrypt("refresh_token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+      token_expires_at: DateTime.add(Clock.utc_now(), 3600),
       oauth_scope: scope
     )
   end
@@ -367,7 +429,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
 
     lv
     |> element("#calendar-grid")
-    |> render_hook("update_event_recurrence", %{
+    |> render_repeat_save(%{
       "freq" => "daily",
       "interval" => "1",
       "end_type" => "never"

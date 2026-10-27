@@ -17,6 +17,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
   attr :testing_connection, :any, required: true
   attr :myself, :any, required: true
 
+  attr :paused, :boolean,
+    default: false,
+    doc: "The owner's plan doesn't include automations: cards paused, nothing can be added"
+
   @spec webhook_tab_content(map()) :: Phoenix.LiveView.Rendered.t()
   def webhook_tab_content(assigns) do
     ~H"""
@@ -27,7 +31,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
           count={length(@webhooks)}
         >
           <:actions>
-            <.action_button phx-click="show_webhook_form" phx-target={@myself}>
+            <.action_button
+              disabled={@paused}
+              phx-click={!@paused && "show_webhook_form"}
+              phx-target={@myself}
+            >
               {dgettext("dashboard_automation", "Create Webhook")}
             </.action_button>
           </:actions>
@@ -39,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
               time_format={@time_format}
               webhook={webhook}
               testing={@testing_connection == webhook.id}
+              paused={@paused}
               target={@myself}
               on_edit={
                 JS.push("show_edit_webhook_form", value: %{"id" => webhook.id}, target: @myself)
@@ -68,7 +77,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
       >
         <:graphic><IconComponents.icon name={:webhook} class="w-10 h-10" /></:graphic>
         <:action>
-          <.action_button phx-click="show_webhook_form" phx-target={@myself}>
+          <.action_button
+            disabled={@paused}
+            phx-click={!@paused && "show_webhook_form"}
+            phx-target={@myself}
+          >
             {dgettext("dashboard_automation", "Create Your First Webhook")}
           </.action_button>
         </:action>

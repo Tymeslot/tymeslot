@@ -12,12 +12,14 @@ defmodule Tymeslot.Analytics do
   alias Tymeslot.Analytics.EventQueries
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Analytics.Fingerprint
+  alias Tymeslot.Analytics.MetricsCache
   alias Tymeslot.Analytics.SaltQueries
   alias Tymeslot.Analytics.Telemetry
   alias Tymeslot.Analytics.UtmExtractor
   alias Tymeslot.Clock
+  alias Tymeslot.Features
   alias Tymeslot.Meetings
-  alias Tymeslot.Security.RateLimiter.Analytics, as: AnalyticsLimiter
+  alias Tymeslot.Security.RateLimiter
 
   @type input :: %{
           required(:path) => String.t(),
@@ -81,11 +83,11 @@ defmodule Tymeslot.Analytics do
   defp insert_if_allowed(input, ua) do
     visitor_hash = Fingerprint.hash(input.ip, ua, input.session_id)
 
-    with {:allow, _count} <- check_ip_rate(input.ip),
-         {:allow, _count} <- AnalyticsLimiter.check(visitor_hash) do
+    with :ok <- check_ip_rate(input.ip),
+         :ok <- RateLimiter.check(:analytics_visitor, visitor_hash) do
       do_insert(input, visitor_hash)
     else
-      {:deny, _count} -> {:ok, :filtered_rate_limit}
+      {:error, :rate_limited, _message} -> {:ok, :filtered_rate_limit}
     end
   end
 
@@ -104,16 +106,10 @@ defmodule Tymeslot.Analytics do
   @spec launch_date() :: Date.t() | nil
   def launch_date, do: Application.get_env(:tymeslot, :booking_analytics_launch_date)
 
-  # Secondary per-IP gate: 300 events per minute regardless of fingerprint.
-  # Guards against clients that cycle user-agents to defeat fingerprinting.
-  @ip_rate_window_ms 60_000
-  @ip_rate_limit 300
-
-  defp check_ip_rate(nil), do: {:allow, 0}
-
-  defp check_ip_rate(ip) do
-    AnalyticsLimiter.check_ip("analytics:ip:" <> ip, @ip_rate_window_ms, @ip_rate_limit)
-  end
+  # Secondary per-IP gate, regardless of fingerprint: guards against clients
+  # that cycle user-agents to defeat fingerprinting.
+  defp check_ip_rate(nil), do: :ok
+  defp check_ip_rate(ip), do: RateLimiter.check(:analytics_ip, ip)
 
   @doc """
   Computes the conversion rate as a formatted percentage string.
@@ -167,6 +163,83 @@ defmodule Tymeslot.Analytics do
     params
     |> UtmExtractor.extract()
     |> Map.put(:referrer_host, UtmExtractor.referrer_host(referrer))
+  end
+
+  @type dashboard_metrics :: %{
+          from: DateTime.t(),
+          to: DateTime.t(),
+          visits: non_neg_integer(),
+          unique_visitors: non_neg_integer(),
+          bookings: non_neg_integer(),
+          converting_visitors: non_neg_integer(),
+          visits_by_day: [map()],
+          sources: [map()],
+          devices: [map()]
+        }
+
+  @type dashboard_error :: :disabled | Features.access_error()
+
+  @doc """
+  The organizer's dashboard metrics over the last `range_days` days, ending now.
+
+  This is the entry point for reading analytics: it refuses with
+  `{:error, :disabled}` when collection is off for the installation, and with
+  the `Tymeslot.Features.check_access/2` reason when the organizer's plan does
+  not include `:analytics_allowed`, so no caller can reach the data without
+  passing both checks.
+
+  The bundle is cached for a short TTL per organizer, range and time zone; the
+  zone is part of the key because `visits_by_day` is bucketed in it. The
+  returned `from` and `to` are the window the cached numbers were computed for.
+  """
+  @spec dashboard_metrics(integer(), pos_integer(), String.t()) ::
+          {:ok, dashboard_metrics()} | {:error, dashboard_error()}
+  def dashboard_metrics(user_id, range_days, time_zone)
+      when is_integer(user_id) and is_integer(range_days) and range_days > 0 and
+             is_binary(time_zone) do
+    with :ok <- authorise_dashboard(user_id) do
+      {:ok, fetch_dashboard_metrics(user_id, range_days, time_zone)}
+    end
+  end
+
+  @doc """
+  Like `dashboard_metrics/3`, but drops the cached bundle first, so the result
+  includes visits recorded since it was computed and the window ends now.
+  """
+  @spec refresh_dashboard_metrics(integer(), pos_integer(), String.t()) ::
+          {:ok, dashboard_metrics()} | {:error, dashboard_error()}
+  def refresh_dashboard_metrics(user_id, range_days, time_zone)
+      when is_integer(user_id) and is_integer(range_days) and range_days > 0 and
+             is_binary(time_zone) do
+    with :ok <- authorise_dashboard(user_id) do
+      MetricsCache.invalidate(user_id, range_days, time_zone)
+      {:ok, fetch_dashboard_metrics(user_id, range_days, time_zone)}
+    end
+  end
+
+  defp authorise_dashboard(user_id) do
+    if enabled?(),
+      do: Features.check_access(user_id, :analytics_allowed),
+      else: {:error, :disabled}
+  end
+
+  defp fetch_dashboard_metrics(user_id, range_days, time_zone) do
+    MetricsCache.fetch(user_id, range_days, time_zone, fn ->
+      to = Clock.utc_now()
+      from = DateTime.add(to, -range_days * 86_400, :second)
+
+      %{
+        from: from,
+        to: to,
+        visits: count_visits(user_id, from, to),
+        unique_visitors: count_unique_visitors(user_id, from, to),
+        bookings: count_bookings(user_id, from, to),
+        converting_visitors: count_converting_visitors(user_id, from, to),
+        visits_by_day: visits_by_day(user_id, from, to, time_zone),
+        sources: attribution_table(user_id, from, to),
+        devices: device_breakdown(user_id, from, to)
+      }
+    end)
   end
 
   @spec count_visits(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()

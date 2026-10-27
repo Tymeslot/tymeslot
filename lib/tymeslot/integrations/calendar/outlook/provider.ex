@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   to fetch calendar events for availability calculation.
   """
 
-  use Tymeslot.Integrations.Common.OAuthBase,
+  use Tymeslot.Integrations.Calendar.Providers.OAuthBase,
     provider_name: "outlook",
     display_name: "Outlook Calendar",
     base_url: "https://graph.microsoft.com/v1.0"
@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesExceptions
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesPatch
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesSplit
+  alias Tymeslot.Integrations.Calendar.Providers.OAuthProvider
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit, as: RecurrenceSplit
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
@@ -44,6 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   # Required callbacks for OAuth base
 
+  @impl OAuthProvider
   @spec validate_oauth_scope(map()) :: :ok | {:error, String.t()}
   def validate_oauth_scope(config) do
     required_scopes = [
@@ -76,6 +78,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   # --- Legacy conversion (used by OAuthBase get_events / create_event / update_event) ---
 
+  @impl Tymeslot.Integrations.Calendar.Provider
   @spec convert_events(list(map())) :: list(converted_event())
   def convert_events(raw_events) do
     raw_events
@@ -91,6 +94,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     status != "cancelled" and response_status != "declined"
   end
 
+  @impl OAuthProvider
   @spec convert_event(map()) :: converted_event()
   def convert_event(outlook_event) do
     start_time = event_time(outlook_event, :start)
@@ -113,9 +117,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     }
   end
 
+  @impl OAuthProvider
   @spec get_calendar_api_module() :: module()
   def get_calendar_api_module, do: api_module()
 
+  @impl OAuthProvider
   @spec call_list_events(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
           {:ok, list(map())} | {:error, Outcome.t()} | {:error, atom(), String.t()}
   def call_list_events(integration, start_time, end_time) do
@@ -127,6 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     )
   end
 
+  @impl OAuthProvider
   @spec call_create_event(CalendarIntegrationSchema.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()}
   def call_create_event(integration, event_attrs) do
@@ -164,6 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   this account, inviting them all afresh to a series this account now
   organises.
   """
+  @impl OAuthProvider
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
   def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit})
@@ -294,6 +302,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   defp normalise_fetched(error, _ref), do: error
 
+  @impl OAuthProvider
   @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           :ok | {:error, atom(), String.t()}
   def call_delete_event(integration, event_id, opts) do
@@ -347,15 +356,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
            DateTime.add(DateTime.utc_now(), 1, :day)
          ) do
       {:ok, _events} ->
-        {:ok,
-         dgettext("dashboard_calendar_providers", "Outlook Calendar connected successfully!")}
+        {:ok, dgettext("integrations_calendar", "Outlook Calendar connected successfully!")}
 
       {:error, :unauthorized, message} ->
         {:error, ProviderCommon.unauthorized_reason(message)}
 
       {:error, :rate_limited, _message} ->
-        {:error,
-         dgettext("dashboard_calendar_providers", "Rate limited - please try again later")}
+        {:error, dgettext("integrations_calendar", "Rate limited - please try again later")}
 
       {:error, _error_type, reason} ->
         message = ErrorHandler.sanitize_error_message(reason, :outlook)

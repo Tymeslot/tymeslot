@@ -7,6 +7,7 @@ defmodule Tymeslot.Workers.AnalyticsReconciliationWorkerTest do
   @moduletag :database
 
   alias Oban.Cron.Expression
+  alias Tymeslot.Infrastructure.ObanCron
   alias Tymeslot.Workers.AnalyticsReconciliationWorker
 
   test "perform/1 discards the {:ok, _} result and returns :ok regardless" do
@@ -32,22 +33,12 @@ defmodule Tymeslot.Workers.AnalyticsReconciliationWorkerTest do
     assert :ok = AnalyticsReconciliationWorker.perform(%Oban.Job{args: %{}})
   end
 
-  # The crontab is only assembled in runtime.exs (prod) and never loaded in
-  # test, so a typo in the schedule string or worker module would otherwise ship
-  # silently. Guard it by asserting the worker is registered in runtime.exs with
-  # a schedule Oban can actually parse.
-  test "is registered in the runtime crontab with a parseable schedule" do
-    runtime_exs =
-      [__DIR__, "..", "..", "..", "config", "runtime.exs"]
-      |> Path.join()
-      |> Path.expand()
-      |> File.read!()
-
-    pattern =
-      ~r/\{\s*"([^"]+)"\s*,\s*Tymeslot\.Workers\.AnalyticsReconciliationWorker\s*\}/
-
-    assert [_match, schedule] = Regex.run(pattern, runtime_exs),
-           "AnalyticsReconciliationWorker is not registered in the runtime.exs crontab"
+  # The cron service is off in test, so a typo in the schedule string or worker
+  # module would otherwise ship silently. Guard it by asserting the worker is
+  # in the shared crontab with a schedule Oban can actually parse.
+  test "is registered in the shared crontab with a parseable schedule" do
+    assert {schedule, AnalyticsReconciliationWorker} =
+             List.keyfind(ObanCron.base_crontab(), AnalyticsReconciliationWorker, 1)
 
     assert {:ok, _expression} = Expression.parse(schedule)
   end

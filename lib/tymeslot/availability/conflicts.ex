@@ -23,8 +23,11 @@ defmodule Tymeslot.Availability.Conflicts do
   booking rules: buffers, minimum notice, the booking window and booking
   limits.
 
-  Events must already be filtered to blocking-only and converted to the user's
-  timezone as maps with `start_time` / `end_time` (both `DateTime`).
+  The starts are one booker's date, in the booker's timezone, as
+  `SlotGrid.starts_for_date/5` lists them. Events must already be filtered to
+  blocking-only and converted to the same timezone as maps with `start_time` /
+  `end_time` (both `DateTime`); they are narrowed once to those within two
+  days of that date, as in `date_has_slots_with_events?/6`.
 
   `config[:ignore_event_uids]`, when present, is a `MapSet` of event uids that
   must not block *their own* slot — i.e. an event is only disregarded for the
@@ -41,8 +44,23 @@ defmodule Tymeslot.Availability.Conflicts do
           String.t(),
           Calculate.availability_config()
         ) :: [DateTime.t()]
-  def filter_available_starts(starts, events, duration_minutes, timezone, config) do
+  def filter_available_starts([], _events, _duration_minutes, _timezone, _config), do: []
+
+  def filter_available_starts(
+        [first | _rest] = starts,
+        events,
+        duration_minutes,
+        timezone,
+        config
+      ) do
     now = DateTimeUtils.now_in_timezone(timezone)
+
+    # The events arrive for the host's whole booking window; only those near
+    # this date can touch one of its slots, so narrow once rather than scan
+    # the window for every slot. The starts are one booker's date, in the
+    # booker's timezone, as the events are.
+    events = events_near_date(events, DateTime.to_date(first))
+
     Enum.filter(starts, &start_bookable?(&1, duration_minutes, now, events, config))
   end
 

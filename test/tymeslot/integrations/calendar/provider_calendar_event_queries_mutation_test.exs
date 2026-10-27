@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
   @moduletag :database
   @moduletag :queries
 
+  alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
 
@@ -473,7 +474,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
     end
   end
 
-  describe "full_refresh_for_integration/2" do
+  describe "IntegrationCacheQueries.replace_cached_rows/3 with :all" do
     test "replaces all events for an integration" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
@@ -484,10 +485,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
       new_attrs = build_event_attrs(integration, %{uid: "new-1", summary: "Fresh"})
 
       assert {:ok, 1} =
-               ProviderCalendarEventQueries.full_refresh_for_integration(
-                 integration.id,
-                 [new_attrs]
-               )
+               IntegrationCacheQueries.replace_cached_rows(integration.id, :all, [new_attrs])
 
       events =
         Repo.all(
@@ -508,10 +506,58 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
       insert(:provider_calendar_event, calendar_integration: int1, uid: "replace-me")
 
       new_attrs = build_event_attrs(int1, %{uid: "replacement"})
-      {:ok, 1} = ProviderCalendarEventQueries.full_refresh_for_integration(int1.id, [new_attrs])
+      {:ok, 1} = IntegrationCacheQueries.replace_cached_rows(int1.id, :all, [new_attrs])
 
       # int2's event is untouched
       assert Repo.get(ProviderCalendarEventSchema, kept.id)
+    end
+  end
+
+  describe "IntegrationCacheQueries.replace_cached_rows/3 with a role" do
+    # Exchange's two read paths each replace their own role's rows; a
+    # replacement that reached the other role would delete them every cycle.
+    test "replaces only the rows of that role" do
+      integration = insert(:calendar_integration, user: insert(:user))
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "kept-display-row",
+        role: "display_only"
+      )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "replaced-busy-row",
+        role: "busy_only"
+      )
+
+      fresh = build_event_attrs(integration, %{uid: "fresh-busy-row", role: "busy_only"})
+
+      assert {:ok, 1} =
+               IntegrationCacheQueries.replace_cached_rows(
+                 integration.id,
+                 {:role, "busy_only"},
+                 [fresh]
+               )
+
+      uids =
+        Repo.all(
+          from(e in ProviderCalendarEventSchema,
+            where: e.calendar_integration_id == ^integration.id,
+            order_by: e.uid,
+            select: {e.uid, e.role}
+          )
+        )
+
+      assert uids == [{"fresh-busy-row", "busy_only"}, {"kept-display-row", "display_only"}]
+    end
+
+    test "rejects a role the column's constraint would not admit" do
+      integration = insert(:calendar_integration, user: insert(:user))
+
+      assert_raise FunctionClauseError, fn ->
+        IntegrationCacheQueries.replace_cached_rows(integration.id, {:role, "everything"}, [])
+      end
     end
   end
 

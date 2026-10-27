@@ -11,10 +11,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -31,7 +33,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
       <div class="slide-container">
         <div class="slide slide--enter active">
           <div class="slide-content confirmation-slide">
@@ -100,7 +102,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                   <span class="ticket-badge">
                     {dgettext("booking", "%{minutes} min",
-                      minutes: Offer.duration_minutes(@meeting_type, @duration)
+                      minutes:
+                        Offer.duration_minutes(
+                          @meeting_type,
+                          @duration,
+                          ChosenLength.minutes(assigns)
+                        )
                     )}
                   </span>
                 </div>
@@ -163,6 +170,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       <LocationField.arranged_note :if={
                         BookingLocation.arranged_after_booking?(assigns)
                       } />
+                    </div>
+                  </div>
+
+                  <div
+                    :if={MeetingPrice.paid_price(assigns[:paid_payment], @locale)}
+                    class="ticket-row"
+                    data-testid="confirmation-paid"
+                  >
+                    <div class="ticket-icon">
+                      <.icon name="hero-credit-card" class="hero-icon hero-icon--md" />
+                    </div>
+                    <div class="ticket-info">
+                      <span class="ticket-value">{MeetingPrice.paid_price(@paid_payment, @locale)}</span>
+                      <span class="ticket-sublabel">{dgettext("booking", "Paid")}</span>
                     </div>
                   </div>
 

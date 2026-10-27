@@ -12,10 +12,12 @@ defmodule TymeslotWeb.OAuthController do
   alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Security.RedirectPath
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.EmailLinkConfirmHTML
-  alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
+  alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.OAuthFlow
+  alias TymeslotWeb.Plugs.ReturnTo
 
   @type provider :: Providers.provider()
 
@@ -271,9 +273,11 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp respond_to_completion({:ok, authed_conn, provider}) do
+    {kept, authed_conn} = ReturnTo.pop(authed_conn)
+
     authed_conn
     |> put_flash(:info, get_welcome_message(provider))
-    |> redirect(to: ~p"/dashboard")
+    |> redirect(to: kept || ~p"/dashboard")
   end
 
   defp respond_to_completion({:error, :session_failed, _provider, conn}) do
@@ -397,7 +401,11 @@ defmodule TymeslotWeb.OAuthController do
           OAuthFlow.flow_result(),
           keyword()
         ) :: Plug.Conn.t()
+  # The page the visitor asked for before signing in rides in the session
+  # across the provider's round trip (see `TymeslotWeb.Plugs.ReturnTo`).
   defp respond_to_oauth_result({:ok, authed_conn, provider}, paths) do
+    {kept, authed_conn} = ReturnTo.pop(authed_conn)
+
     authed_conn
     |> put_flash(
       :info,
@@ -405,7 +413,7 @@ defmodule TymeslotWeb.OAuthController do
         provider: provider_name(provider)
       )
     )
-    |> redirect(to: paths[:success_path])
+    |> redirect(to: kept || paths[:success_path])
   end
 
   defp respond_to_oauth_result({:verification_required, conn, _provider, delivery}, _paths) do
@@ -504,7 +512,7 @@ defmodule TymeslotWeb.OAuthController do
     configured_success_path = Config.success_redirect_path()
 
     success_path =
-      RedirectSanitizer.sanitize(conn.params["success_path"], configured_success_path)
+      RedirectPath.sanitize(conn.params["success_path"], configured_success_path)
 
     login_path = ~p"/?auth=login"
 
@@ -513,7 +521,7 @@ defmodule TymeslotWeb.OAuthController do
 
   @spec get_login_path(Plug.Conn.t()) :: String.t()
   defp get_login_path(conn) do
-    RedirectSanitizer.sanitize(conn.params["login_path"], ~p"/auth/login")
+    RedirectPath.sanitize(conn.params["login_path"], ~p"/auth/login")
   end
 
   defp validate_oauth_provider(provider) do

@@ -229,6 +229,17 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
         assert match?(%{"confirmed" => true}, note_answer)
       end
+
+      test "a required question left empty is refused in the guest's language",
+           %{conn: conn, profile: profile} do
+        view = navigate_to_booking_form(conn, profile, nil, locale: "de")
+
+        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+
+        html = render(view)
+        assert html =~ "Text ist erforderlich"
+        refute html =~ "Text is required"
+      end
     end
 
     describe "#{theme.name}: questions step – back-navigation preserves answers" do
@@ -436,6 +447,19 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
           live(conn, "/#{profile.username}/thank-you?timezone=#{profile.timezone}&locale=de")
 
         assert :sys.get_state(view.pid).socket.assigns.name == "Gast"
+      end
+
+      # The page holds no meeting type, so the schedule it would otherwise
+      # restart on could offer no day or time and refuse Back.
+      @tag :capture_log
+      test "schedule another starts again on the overview",
+           %{conn: conn, profile: profile} do
+        {:ok, view, _html} =
+          live(conn, "/#{profile.username}/thank-you?timezone=#{profile.timezone}")
+
+        view |> element("[phx-click='schedule_another']") |> render_click()
+
+        assert :sys.get_state(view.pid).socket.assigns.current_state == :overview
       end
     end
   end

@@ -6,11 +6,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
   timing the way the master's `DTSTART` does: an `EXDATE` and a
   `RECURRENCE-ID` only match a slot in that value type and zone (RFC 5545
   §3.8.5.1, §3.8.4.4), and an override's own `DTSTART` belongs in the same
-  form so the series reads the same in every client. `Properties.build_dtstart/1`
-  writes UTC, which is right for an event Tymeslot authors and wrong inside a
-  zoned series: a UTC override of a Berlin series is a different wall clock
-  on either side of a DST change for every client that shows it in the
-  series' zone.
+  form so the series reads the same in every client. `Properties.build_dtstart/2`
+  writes a one-off event in UTC, which is wrong inside a zoned series: a UTC
+  override of a Berlin series is a different wall clock on either side of a
+  DST change for every client that shows it in the series' zone.
 
   The reference line is the master's `DTSTART` as the server wrote it; its
   parameters are copied as written. Its form is one of:

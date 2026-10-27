@@ -35,6 +35,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
   END:VCALENDAR\r
   """
 
+  # The account owns the organiser's address.
+  @ox_mode {:organiser_attendee, ["login@mailbox.org", "host@example.com"]}
+
+  # The reporter's account: the organiser's custom domain is not among its
+  # addresses.
+  @custom_domain_mode {:organiser_attendee, ["login@mailbox.org"]}
+
   defp lines(ical), do: LineFolder.unfold_lines(ical)
 
   defp ox_attendee_lines(ical),
@@ -42,9 +49,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
 
   # Open-Xchange puts its calendar's owner back under their
   # primary address the moment no ATTENDEE names them, so in
-  # `:organiser_attendee` mode the organiser's line is never the one a
+  # `{:organiser_attendee, _}` mode the organiser's line is never the one a
   # rewrite drops, and Tymeslot's own block gains it when it lacks one.
-  describe "patch_event_properties/3 in :organiser_attendee mode" do
+  describe "patch_event_properties/3 in {:organiser_attendee, _} mode" do
     @organiser_line "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:host@example.com"
 
     @ox_event """
@@ -70,7 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
         ICalBuilder.patch_event_properties(
           @ox_event,
           %{attendees: [%{"email" => "ada@example.com"}]},
-          :organiser_attendee
+          @ox_mode
         )
 
       assert "ATTENDEE;CN=Host;PARTSTAT=ACCEPTED;ROLE=CHAIR;CUTYPE=INDIVIDUAL;RSVP=FALSE:mailto:host@example.com" in ox_attendee_lines(
@@ -80,7 +87,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
 
     test "removing every guest still leaves the organiser listed" do
       patched =
-        ICalBuilder.patch_event_properties(@ox_event, %{attendees: []}, :organiser_attendee)
+        ICalBuilder.patch_event_properties(@ox_event, %{attendees: []}, @ox_mode)
 
       assert [line] = ox_attendee_lines(patched)
       assert line =~ "mailto:host@example.com"
@@ -104,7 +111,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
         ICalBuilder.patch_event_properties(
           without_organiser,
           %{attendees: [%{"email" => "ada@example.com"}]},
-          :organiser_attendee
+          @ox_mode
         )
 
       assert @organiser_line in ox_attendee_lines(patched)
@@ -123,7 +130,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
         ICalBuilder.patch_event_properties(
           without_organiser,
           %{attendees: [%{"email" => "ada@example.com"}, %{"email" => "HOST@example.com"}]},
-          :organiser_attendee
+          @ox_mode
         )
 
       assert Enum.filter(ox_attendee_lines(patched), &(&1 =~ ~r/mailto:host@example\.com$/i)) ==
@@ -135,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
         ICalBuilder.patch_event_properties(
           @ox_event,
           %{attendees: [%{"email" => "ada@example.com"}, %{"email" => "cleo@example.com"}]},
-          :organiser_attendee
+          @ox_mode
         )
 
       assert "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:cleo@example.com" in ox_attendee_lines(
@@ -148,11 +155,72 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherOrganiserAttendeeTes
         ICalBuilder.patch_event_properties(
           @foreign_event,
           %{attendees: [%{"email" => "ada@example.com"}]},
-          :organiser_attendee
+          @ox_mode
         )
 
       assert "ORGANIZER;CN=Dana:mailto:dana@example.com" in lines(patched)
       refute Enum.any?(ox_attendee_lines(patched), &(&1 =~ "mailto:dana@example.com"))
+    end
+
+    test "an organiser the account does not own gains the owner's line under its address" do
+      without_organiser =
+        String.replace(
+          @ox_event,
+          "ATTENDEE;CN=Host;PARTSTAT=ACCEPTED;ROLE=CHAIR;CUTYPE=INDIVIDUAL;RSVP=FALSE:mailto:host@example.com\r\n",
+          ""
+        )
+
+      patched =
+        ICalBuilder.patch_event_properties(
+          without_organiser,
+          %{attendees: [%{"email" => "ada@example.com"}]},
+          @custom_domain_mode
+        )
+
+      assert Enum.map(ox_attendee_lines(patched), &String.replace(&1, ~r/^.*:mailto:/, "")) ==
+               ["ada@example.com", "login@mailbox.org"]
+    end
+
+    # What an earlier fix for #151 left behind: the organiser listed beside
+    # the owner the server added anyway.
+    test "an event listing the organiser beside the owner loses the organiser's line" do
+      duplicated =
+        String.replace(
+          @ox_event,
+          "ORGANIZER;",
+          "ATTENDEE;CN=Host;PARTSTAT=ACCEPTED;CUTYPE=INDIVIDUAL:mailto:login@mailbox.org\r\nORGANIZER;"
+        )
+
+      patched =
+        ICalBuilder.patch_event_properties(
+          duplicated,
+          %{attendees: [%{"email" => "ada@example.com"}]},
+          @custom_domain_mode
+        )
+
+      assert Enum.map(ox_attendee_lines(patched), &String.replace(&1, ~r/^.*:mailto:/, "")) ==
+               ["ada@example.com", "login@mailbox.org"]
+    end
+
+    # Only Tymeslot's own block drops the organiser's line for the owner's.
+    test "an event someone else organised keeps the line naming its organiser" do
+      listed =
+        String.replace(
+          @foreign_event,
+          "ATTENDEE;PARTSTAT=ACCEPTED;ROLE=REQ-PARTICIPANT;CN=Ada",
+          "ATTENDEE;PARTSTAT=ACCEPTED;ROLE=CHAIR;CN=Dana:mailto:dana@example.com\r\nATTENDEE;PARTSTAT=ACCEPTED;ROLE=REQ-PARTICIPANT;CN=Ada"
+        )
+
+      patched =
+        ICalBuilder.patch_event_properties(
+          listed,
+          %{attendees: [%{"email" => "ada@example.com"}]},
+          @custom_domain_mode
+        )
+
+      assert "ATTENDEE;PARTSTAT=ACCEPTED;ROLE=CHAIR;CN=Dana:mailto:dana@example.com" in ox_attendee_lines(
+               patched
+             )
     end
   end
 end

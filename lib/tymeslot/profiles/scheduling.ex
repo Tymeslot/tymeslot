@@ -7,6 +7,7 @@ defmodule Tymeslot.Profiles.Scheduling do
   `Tymeslot.Availability.Schedules.update_policy/2`.
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
@@ -26,10 +27,21 @@ defmodule Tymeslot.Profiles.Scheduling do
   def update_booking_limit(%ProfileSchema{} = profile, field, value)
       when field in @booking_limit_fields do
     case parse_booking_limit(value) do
-      {:ok, limit} -> ProfileQueries.update_profile(profile, %{field => limit})
-      :error -> {:error, :invalid_booking_limit}
+      {:ok, limit} ->
+        profile |> ProfileQueries.update_booking_limits(%{field => limit}) |> changed()
+
+      :error ->
+        {:error, :invalid_booking_limit}
     end
   end
+
+  # The booking page hides a slot whose day, week or month is at the cap.
+  defp changed({:ok, profile} = result) do
+    Availability.changed(profile)
+    result
+  end
+
+  defp changed(error), do: error
 
   defp parse_booking_limit(nil), do: {:ok, nil}
 

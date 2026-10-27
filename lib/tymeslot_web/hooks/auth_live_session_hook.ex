@@ -3,7 +3,9 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   LiveView `on_mount` hooks that resolve the signed-in user.
 
     * `:ensure_authenticated` assigns `:current_user` and halts with a redirect
-      to the login page when nobody is signed in.
+      to the login page when nobody is signed in, or to `/auth/restore` when
+      the account is pending deletion. Once connected it leaves for the login
+      page if the account's deletion is requested from another tab.
     * `:fetch_current_user` assigns `:current_user`, `nil` when nobody is
       signed in.
     * `{:redirect_if_authenticated, actions: actions, events: events}` sends a
@@ -28,11 +30,14 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
+  use TymeslotWeb, :verified_routes
 
   import Phoenix.LiveView
   import Phoenix.Component
 
+  alias Tymeslot.Auth
   alias Tymeslot.Infrastructure.Config
+  alias TymeslotWeb.Plugs.ReturnTo
   alias TymeslotWeb.UserAuth
 
   @type hook ::
@@ -50,10 +55,12 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
         {:halt,
          socket
          |> put_flash(:error, unauthenticated_message(session))
-         |> redirect(to: login_path())}
+         |> redirect(to: ReturnTo.login_path(requested_path(socket), login_path()))}
 
-      _user ->
-        {:cont, socket}
+      user ->
+        if Auth.deletion_pending?(user),
+          do: {:halt, redirect(socket, to: ~p"/auth/restore")},
+          else: {:cont, watch_account(socket, user)}
     end
   end
 
@@ -96,6 +103,25 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
     end
   end
 
+  # A deletion requested from another tab of this browser ends this session
+  # too. This tab hears of it here and leaves for the login page instead of
+  # going on showing the account's data until it next reconnects.
+  defp watch_account(socket, user) do
+    if connected?(socket) do
+      _subscribed = Auth.subscribe_to_account(user.id)
+
+      attach_hook(socket, :account_deletion_requested, :handle_info, fn
+        {:account_deletion_requested, _user_id}, socket ->
+          {:halt, redirect(socket, to: login_path())}
+
+        _message, socket ->
+          {:cont, socket}
+      end)
+    else
+      socket
+    end
+  end
+
   defp send_signed_in_user_on(socket) do
     socket
     |> put_flash(:info, dgettext("auth", "You are already logged in."))
@@ -109,6 +135,24 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
 
   defp email_verified?(%{verified_at: %DateTime{}}), do: true
   defp email_verified?(_user), do: false
+
+  # The page being mounted, so signing in can end there (see
+  # `TymeslotWeb.Plugs.ReturnTo`), on the dead render only. A dead render
+  # rarely gets this far without a user, the pipeline's plug having
+  # redirected it already. A connected mount (a live navigation, or the
+  # reconnect after a session lapsed) cannot name its page: `:uri` is then
+  # the websocket's own address, `/live/websocket` with its CSRF token in
+  # the query, and the mount has no other source for the page before
+  # `handle_params/3`, which a halted mount never reaches. It goes to the
+  # plain login page instead.
+  defp requested_path(socket) do
+    with false <- connected?(socket),
+         %URI{path: path} = uri when is_binary(path) <- get_connect_info(socket, :uri) do
+      if uri.query, do: path <> "?" <> uri.query, else: path
+    else
+      _connected_or_unknown -> nil
+    end
+  end
 
   # A token that no longer resolves is an expired or revoked session; no token
   # at all means the visitor never signed in.

@@ -5,6 +5,10 @@ defmodule Tymeslot.Bookings.CalendarCheckTest do
   before-buffer from the slot's start, forward by the after-buffer from its
   end. A range widened on the wrong side would miss a clash sitting just past
   midnight and wave the booking through.
+
+  On top of that the range is padded by one day each side, so an all-day event
+  on the host's local day is returned whichever UTC day that falls in; the
+  expected ranges below include that padding.
   """
 
   use Tymeslot.DataCase, async: false
@@ -37,7 +41,7 @@ defmodule Tymeslot.Bookings.CalendarCheckTest do
                buffer_after_minutes: 0
              })
 
-    assert_received {:fetched, ~D[2026-11-09], ~D[2026-11-10]}
+    assert_received {:fetched, ~D[2026-11-08], ~D[2026-11-11]}
   end
 
   test "an after-buffer of the same size at the same time does not", %{user: user} do
@@ -47,7 +51,7 @@ defmodule Tymeslot.Bookings.CalendarCheckTest do
                buffer_after_minutes: 15
              })
 
-    assert_received {:fetched, ~D[2026-11-10], ~D[2026-11-10]}
+    assert_received {:fetched, ~D[2026-11-09], ~D[2026-11-11]}
   end
 
   test "an after-buffer crossing midnight reaches forward into the next day", %{user: user} do
@@ -57,7 +61,7 @@ defmodule Tymeslot.Bookings.CalendarCheckTest do
                buffer_after_minutes: 15
              })
 
-    assert_received {:fetched, ~D[2026-11-10], ~D[2026-11-11]}
+    assert_received {:fetched, ~D[2026-11-09], ~D[2026-11-12]}
   end
 
   defp slot(user, start_datetime) do

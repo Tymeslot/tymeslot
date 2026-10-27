@@ -3,8 +3,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   Covers `format_meeting_datetime/2`, which renders a meeting's start time on
   the payment return pages in the attendee's own timezone rather than raw UTC,
   and its compact sibling used by lists that repeat the date on every row, plus
-  the month form a date takes versus a standalone month heading, and the label
-  a slot key gets on the visitor's clock.
+  the month form a date takes versus a standalone month heading, the label
+  a slot key gets on the visitor's clock, and the "ends the next day" note,
+  which a booking step works out for the length chosen.
   """
 
   use ExUnit.Case, async: true
@@ -12,6 +13,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   @moduletag :utils
   @moduletag :i18n
 
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   setup do
@@ -225,6 +227,24 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       assert {_afternoon, [%{time: "14:00", seats_left: 2, capacity: 10}]} = Enum.at(grouped, 2)
     end
 
+    test "puts each slot in the period its hour falls in, dropping an unparseable time" do
+      times = ["04:59", "05:00", "11:59", "12:00", "16:59", "17:00", "20:59", "21:00", "bogus"]
+
+      grouped =
+        times
+        |> Enum.map(&%{time: &1, seats_left: nil, capacity: nil})
+        |> LocalizationHelpers.group_slots_by_period()
+        |> Enum.map(fn {period, slots} -> {period, Enum.map(slots, & &1.time)} end)
+
+      assert grouped == [
+               {"Early Morning", ["04:59"]},
+               {"Morning", ["05:00", "11:59"]},
+               {"Afternoon", ["12:00", "16:59"]},
+               {"Evening", ["17:00", "20:59"]},
+               {"Late Night", ["21:00"]}
+             ]
+    end
+
     test "sorts slots chronologically inside a period" do
       slots = [
         %{time: "11:30", seats_left: nil, capacity: nil},
@@ -278,6 +298,31 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "de")
 
       assert LocalizationHelpers.format_advance_booking_days(14) == "2 Wochen im Voraus"
+    end
+  end
+
+  describe "format_duration/1" do
+    test "names a length in hours and minutes" do
+      assert LocalizationHelpers.format_duration(1) == "1 minute"
+      assert LocalizationHelpers.format_duration(30) == "30 minutes"
+      assert LocalizationHelpers.format_duration(60) == "1 hour"
+      assert LocalizationHelpers.format_duration(120) == "2 hours"
+      assert LocalizationHelpers.format_duration(61) == "1 hour 1 minute"
+      assert LocalizationHelpers.format_duration(150) == "2 hours 30 minutes"
+      assert LocalizationHelpers.format_duration("45min") == "45 minutes"
+    end
+
+    test "declines each part of a Czech length by the number it shows" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "cs")
+
+      assert LocalizationHelpers.format_duration(1) == "1 minuta"
+      assert LocalizationHelpers.format_duration(2) == "2 minuty"
+      assert LocalizationHelpers.format_duration(30) == "30 minut"
+      assert LocalizationHelpers.format_duration(60) == "1 hodina"
+      assert LocalizationHelpers.format_duration(180) == "3 hodiny"
+      assert LocalizationHelpers.format_duration(300) == "5 hodin"
+      assert LocalizationHelpers.format_duration(63) == "1 hodina 3 minuty"
+      assert LocalizationHelpers.format_duration(305) == "5 hodin 5 minut"
     end
   end
 
@@ -437,6 +482,39 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
                "1440min",
                "Europe/Berlin"
              ) == "Ends 01:00 AM on Monday 29 March"
+    end
+  end
+
+  # A booking step's assigns for the 11:00 PM slot on 14 June, London time,
+  # with `chosen` minutes picked on `meeting_type`.
+  defp late_slot(meeting_type, chosen) do
+    %{
+      meeting_type: meeting_type,
+      chosen_length_minutes: chosen,
+      selected_date: "2027-06-14",
+      selected_time: "11:00 PM",
+      user_timezone: "Europe/London"
+    }
+  end
+
+  describe "booking_next_day_end/1" do
+    test "names the next-day end of the length chosen, not the type's own" do
+      meeting_type = %MeetingTypeSchema{duration_minutes: 30, extra_lengths_minutes: [120]}
+
+      assert LocalizationHelpers.booking_next_day_end(late_slot(meeting_type, 120)) ==
+               "Ends 01:00 AM on Tuesday 15 June"
+    end
+
+    test "is nil when the length chosen ends that day, though the type's own would not" do
+      meeting_type = %MeetingTypeSchema{duration_minutes: 120, extra_lengths_minutes: [30]}
+
+      assert LocalizationHelpers.booking_next_day_end(late_slot(meeting_type, 30)) == nil
+    end
+
+    test "keeps to the type's own length when the length chosen is not offered" do
+      meeting_type = %MeetingTypeSchema{duration_minutes: 30, extra_lengths_minutes: [120]}
+
+      assert LocalizationHelpers.booking_next_day_end(late_slot(meeting_type, 90)) == nil
     end
   end
 end

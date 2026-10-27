@@ -37,7 +37,7 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   Strict, centralized validator for integration names with universal sanitization.
 
   This function is the preferred entrypoint for processors. It uses the
-  IntegrationNameValidator (min length 2, max 100) and universal sanitization
+  IntegrationNameValidator (`Constraints.integration_name_length_range/0`) and universal sanitization
   with HTML disallowed, and returns tagged tuples consistent with processors.
   """
   @spec validate_integration_name(any(), map()) ::

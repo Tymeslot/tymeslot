@@ -4,7 +4,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
 
   import Mox
   import Tymeslot.CrossProviderTestHelpers
-  alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.ProviderConfig
 
   setup :verify_on_exit!
 
@@ -18,22 +18,9 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
   # List of providers to test
   @production_providers [:mirotalk, :custom]
 
-  # Get production providers from registry
-  defp production_providers do
-    Enum.filter(ProviderRegistry.list_providers(), fn provider ->
-      provider in @production_providers
-    end)
-  end
-
-  describe "provider metadata consistency" do
-    test "all providers return provider_type" do
-      assert_providers_return_provider_type(ProviderRegistry, production_providers())
-    end
-  end
-
   describe "config schema consistency" do
     test "mirotalk provider has base_url field" do
-      {:ok, provider_module} = ProviderRegistry.get_provider(:mirotalk)
+      {:ok, provider_module} = ProviderConfig.get_provider(:mirotalk)
 
       schema = provider_module.config_schema()
 
@@ -44,7 +31,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
     end
 
     test "custom provider has custom_meeting_url field" do
-      {:ok, provider_module} = ProviderRegistry.get_provider(:custom)
+      {:ok, provider_module} = ProviderConfig.get_provider(:custom)
 
       schema = provider_module.config_schema()
 
@@ -57,7 +44,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
 
   describe "connection validation consistency" do
     test "custom provider perform_connection_test reports an unreachable URL" do
-      {:ok, custom} = ProviderRegistry.get_provider(:custom)
+      {:ok, custom} = ProviderConfig.get_provider(:custom)
 
       config = %{custom_meeting_url: "https://meet.example.com/room"}
 
@@ -75,7 +62,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
     end
 
     test "mirotalk perform_connection_test requires HTTP mock" do
-      {:ok, mirotalk} = ProviderRegistry.get_provider(:mirotalk)
+      {:ok, mirotalk} = ProviderConfig.get_provider(:mirotalk)
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
@@ -88,7 +75,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
 
   describe "provider behavior consistency" do
     test "custom provider returns consistent error format" do
-      {:ok, custom} = ProviderRegistry.get_provider(:custom)
+      {:ok, custom} = ProviderConfig.get_provider(:custom)
 
       config = %{custom_meeting_url: "invalid-url"}
 
@@ -99,14 +86,14 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
 
   describe "registry integration" do
     test "all production providers are registered correctly" do
-      assert_providers_registered_correctly(ProviderRegistry, @production_providers)
+      assert_providers_registered_correctly(ProviderConfig, @production_providers)
     end
   end
 
   describe "configuration validation" do
     test "providers validate required fields" do
       Enum.each(@production_providers, fn provider_type ->
-        {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
+        {:ok, provider_module} = ProviderConfig.get_provider(provider_type)
 
         # Empty config should fail validation
         result = provider_module.validate_config(%{})
@@ -116,7 +103,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
     end
 
     test "custom provider accepts valid configuration" do
-      {:ok, custom} = ProviderRegistry.get_provider(:custom)
+      {:ok, custom} = ProviderConfig.get_provider(:custom)
 
       custom_config = %{
         custom_meeting_url: "https://meet.example.com/room123"
@@ -129,7 +116,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
     # reaching the network is `perform_connection_test/1`'s job. MiroTalk is the one
     # provider with a network-capable config, so it is the one worth pinning.
     test "mirotalk provider validates configuration without network access" do
-      {:ok, mirotalk} = ProviderRegistry.get_provider(:mirotalk)
+      {:ok, mirotalk} = ProviderConfig.get_provider(:mirotalk)
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts ->

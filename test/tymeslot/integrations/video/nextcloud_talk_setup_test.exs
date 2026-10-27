@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
   alias Ecto.Changeset
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.RoomCreationErrorQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
@@ -206,7 +207,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
     test "a proven edit clears a recorded room creation refusal", %{user: user} do
       integration = insert_talk_integration(user)
-      VideoIntegrationQueries.record_room_creation_error(integration.id, :password_required)
+      RoomCreationErrorQueries.record(integration.id, :password_required)
       expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
 
       assert {:ok, updated} =
@@ -220,7 +221,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
     test "a rename keeps a recorded room creation refusal", %{user: user} do
       integration = insert_talk_integration(user)
-      VideoIntegrationQueries.record_room_creation_error(integration.id, :password_required)
+      RoomCreationErrorQueries.record(integration.id, :password_required)
 
       assert {:ok, _renamed} =
                Video.update_integration(user.id, integration.id, %{name: "Renamed"})

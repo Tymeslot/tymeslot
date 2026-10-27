@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
   import Tymeslot.DashboardTestHelpers
 
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.ThemeCustomizations
-  alias Tymeslot.ThemeCustomizations.Storage
 
   @theme_id "97"
 
@@ -29,16 +29,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
   setup :verify_on_exit!
 
   setup %{conn: conn} do
-    upload_root =
-      Path.join(System.tmp_dir!(), "tymeslot_logo_#{System.unique_integer([:positive])}")
-
-    original_root = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :upload_directory, original_root)
-      File.rm_rf(upload_root)
-    end)
+    UploadRoot.isolate("tymeslot_logo")
 
     {:ok, ctx} = setup_dashboard_user_with_theme(%{conn: conn}, @theme_id)
     Map.new(ctx)
@@ -63,11 +54,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
 
   defp saved(profile), do: ThemeCustomizations.get_by_profile_and_theme(profile.id, @theme_id)
 
-  defp stored?(path), do: File.exists?(Storage.build_theme_file_path(path))
+  defp served?(path), do: get(build_conn(), "/uploads/" <> path).status == 200
 
   defp stored_file(profile, name) do
     path = "themes/#{profile.id}/#{@theme_id}/images/#{name}"
-    absolute = Storage.build_theme_file_path(path)
+    absolute = UploadRoot.path(path)
     File.mkdir_p!(Path.dirname(absolute))
     File.write!(absolute, @png)
     path
@@ -99,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
 
     %{settings: settings} = saved(profile)
     assert settings["logo_path"] =~ ~r{^themes/#{profile.id}/97/images/}
-    assert stored?(settings["logo_path"])
+    assert served?(settings["logo_path"])
 
     assert settings["background_value"] ==
              ThemeCustomizations.get_defaults(@theme_id)["background_value"]
@@ -123,8 +114,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
     second = saved(profile).settings["logo_path"]
 
     assert first != second
-    refute stored?(first)
-    assert stored?(second)
+    refute served?(first)
+    assert served?(second)
   end
 
   test "removing the logo deletes its file and empties the panel",
@@ -136,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
     view |> element("[data-testid='remove-logo']") |> render_click()
 
     refute Map.has_key?(saved(profile).settings, "logo_path")
-    refute stored?(path)
+    refute served?(path)
     assert has_element?(view, "[data-testid='logo-panel']", "No logo uploaded yet.")
     refute has_element?(view, "[data-testid='logo-preview']")
   end
@@ -146,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
     background = stored_file(profile, "a-background.png")
 
     {:ok, before} =
-      ThemeCustomizations.create_theme_customization(profile.id, @theme_id, %{
+      ThemeCustomizations.upsert_theme_customization(profile.id, @theme_id, %{
         "color_scheme" => "neutral",
         "background_type" => "image",
         "background_value" => "custom",
@@ -158,30 +149,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
 
     after_upload = saved(profile)
     assert background_settings(after_upload) == background_settings(before)
-    assert stored?(background)
-    assert stored?(after_upload.settings["logo_path"])
-  end
-
-  test "deleting the customisation deletes the logo and the background image",
-       %{conn: conn, profile: profile} do
-    background = stored_file(profile, "a-background.png")
-
-    {:ok, _before} =
-      ThemeCustomizations.create_theme_customization(profile.id, @theme_id, %{
-        "color_scheme" => "neutral",
-        "background_type" => "image",
-        "background_value" => "custom",
-        "background_image_path" => background
-      })
-
-    {view, _html} = open(conn)
-    upload(view, "#theme-logo-form", :logo_path, "logo.png")
-    customization = saved(profile)
-    logo = customization.settings["logo_path"]
-
-    assert {:ok, _deleted} = ThemeCustomizations.delete_theme_customization(customization)
-
-    refute stored?(logo)
-    refute stored?(background)
+    assert served?(background)
+    assert served?(after_upload.settings["logo_path"])
   end
 end

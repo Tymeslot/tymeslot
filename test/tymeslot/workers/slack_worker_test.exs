@@ -5,11 +5,13 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
   @moduletag :slack
 
   use Oban.Testing, repo: Tymeslot.Repo
+  import Ecto.Query, only: [where: 2]
   import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
+  alias Oban.Job
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack.{SlackDeliverySchema, SlackIntegrationSchema}
   alias Tymeslot.Workers.{SlackWorker, TelegramWorker}
@@ -464,33 +466,6 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
       refute Map.has_key?(job.args, "token")
       refute Map.has_key?(job.args, "encrypted_token")
     end
-
-    test "discards and auto-disables when feature access is revoked" do
-      user = insert(:user)
-      integration = insert(:slack_integration, user: user)
-      meeting = insert(:meeting, organizer_user_id: user.id)
-
-      with_config(
-        :tymeslot,
-        :feature_access_checker,
-        Tymeslot.Workers.SlackWorkerTest.DenyAccessChecker
-      )
-
-      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts ->
-        flunk("HTTP client must not be called when access is revoked")
-      end)
-
-      assert {:discard, "Insufficient plan"} =
-               perform_job(SlackWorker, %{
-                 "integration_id" => integration.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-
-      updated = Repo.get(SlackIntegrationSchema, integration.id)
-      refute updated.is_active
-      assert updated.disabled_reason =~ "Plan no longer permits"
-    end
   end
 
   describe "schedule_delivery/3" do
@@ -505,6 +480,16 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
           "meeting_id" => "meeting-uuid"
         }
       )
+    end
+
+    # A second event of the same type (a second reschedule minutes after the
+    # first) is news of its own once the first message went out.
+    test "a later event is not swallowed by a delivery that already ran" do
+      assert :ok = SlackWorker.schedule_delivery(42, "meeting.rescheduled", "m-later")
+      complete_jobs(SlackWorker)
+      assert :ok = SlackWorker.schedule_delivery(42, "meeting.rescheduled", "m-later")
+
+      assert job_count(SlackWorker) == 2
     end
 
     test "deduplicates equivalent jobs within the unique window" do
@@ -528,11 +513,16 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
       assert [_slack] = all_enqueued(worker: SlackWorker)
     end
   end
-end
 
-defmodule Tymeslot.Workers.SlackWorkerTest.DenyAccessChecker do
-  @moduledoc false
+  # Marks every job of `worker` completed, as a delivery that already ran.
+  defp complete_jobs(worker) do
+    Repo.update_all(
+      where(Job, worker: ^inspect(worker)),
+      set: [state: "completed", completed_at: DateTime.utc_now()]
+    )
+  end
 
-  @spec check_access(any(), atom()) :: {:error, :insufficient_plan}
-  def check_access(_user_id, _feature), do: {:error, :insufficient_plan}
+  defp job_count(worker) do
+    Repo.aggregate(where(Job, worker: ^inspect(worker)), :count)
+  end
 end

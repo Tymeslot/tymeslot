@@ -1,9 +1,8 @@
 # shellcheck shell=bash
 #
-# The shell reader for a `.env` file, sourced by both container entrypoints:
-# `start.sh` (Cloudron) and `start-docker.sh` (Docker). Both apply
-# /app/data/.env before the release boots, and one copy of the reader is what
-# keeps them agreeing with each other and with the release's own reader,
+# The shell reader for a `.env` file, sourced by the Docker entrypoint,
+# `start-docker.sh`, which applies /app/data/.env before the release boots.
+# One reader is what keeps it agreeing with the release's own,
 # Tymeslot.Infrastructure.DotenvLoader, which DotenvLoaderTest compares against
 # this file byte for byte.
 #

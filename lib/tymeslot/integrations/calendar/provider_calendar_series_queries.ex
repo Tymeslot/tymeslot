@@ -116,4 +116,21 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
 
     if is_binary(series_uid), do: where(query, [e], e.uid != ^series_uid), else: query
   end
+
+  @doc """
+  Gives every cached occurrence of the Google or Outlook series `master_id`
+  the series' rule as last read, or none when it was found to be gone or not
+  a series. The master's own row is not an occurrence and keeps its rule.
+  Answers how many rows were updated.
+  """
+  @spec put_occurrence_rule(integer(), String.t(), String.t() | nil) :: non_neg_integer()
+  def put_occurrence_rule(calendar_integration_id, master_id, rule) do
+    {count, _rows} =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> where([e], e.recurring_event_id == ^master_id)
+      |> Repo.update_all(set: [recurrence_rule: rule])
+
+    count
+  end
 end

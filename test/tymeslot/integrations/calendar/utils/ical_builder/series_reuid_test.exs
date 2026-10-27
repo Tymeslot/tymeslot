@@ -74,6 +74,21 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesReuidTest do
     assert uids == ["moved@tymeslot.com", "alarm-1@example.com", "moved@tymeslot.com"]
   end
 
+  test "a copy of somebody else's series gets a uid that is not marked as Tymeslot's" do
+    uid = Series.successor_uid(@document)
+
+    refute uid =~ "@"
+    assert {:ok, _copy} = Series.reuid(@document, uid)
+  end
+
+  test "a copy of Tymeslot's own series gets a Tymeslot uid of its own" do
+    document = String.replace(@document, "UID:standup@example.com", "UID:standup@tymeslot.com")
+    uid = Series.successor_uid(document)
+
+    assert String.ends_with?(uid, "@tymeslot.com")
+    refute uid == "standup@tymeslot.com"
+  end
+
   test "a document holding no VEVENT is empty" do
     assert Series.reuid("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n", "x") == :empty
   end

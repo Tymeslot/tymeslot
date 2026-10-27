@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -30,14 +29,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     Autosave,
     AvailabilitySection,
     CustomQuestionsSection,
+    FixedDatesSection,
     GroupBookingsSection,
     GroupRules,
     GuestsSection,
+    LengthsField,
     LimitsSection,
     LocationEditorComponent,
     LocationsSection,
     PaymentsSection,
     QuestionEditorComponent,
+    SessionHandlers,
     ShowAsFreeSection,
     SlotIntervalField,
     VisibilitySection
@@ -48,8 +50,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   import ApprovalSection, only: [approval_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
+  import FixedDatesSection, only: [fixed_dates_section: 1]
   import GroupBookingsSection, only: [group_bookings_section: 1]
   import GuestsSection, only: [guests_section: 1]
+  import LengthsField, only: [lengths_field: 1]
   import LimitsSection, only: [limits_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import PaymentsSection, only: [payments_section: 1]
@@ -60,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   # Which form-error fields surface an indicator on which tab. Errors on
   # fields absent here (e.g. :base) render below the panels and need no dot.
   @tab_error_fields %{
-    "details" => [:name, :duration, :slot_interval, :description, :icon],
+    "details" => [:name, :duration, :extra_lengths, :slot_interval, :description, :icon],
     "location" => [:locations, :video_integration, :calendar_integration, :target_calendar],
     "booking" => [
       :payment_required,
@@ -142,38 +146,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               icon="hero-tag"
             />
 
-            <div>
-              <.input
-                type="number"
-                name="meeting_type[duration]"
-                label={dgettext("dashboard_meeting_form", "Duration (minutes)")}
-                value={
-                  Map.get(@form_data, "duration", if(@type, do: @type.duration_minutes, else: "30"))
-                }
-                min={Constraints.duration_minutes_opts()[:greater_than_or_equal_to]}
-                max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
-                required
-                placeholder="30"
-                phx-change="validate_meeting_type"
-                phx-debounce="500"
-                phx-target={@myself}
-                errors={
-                  FormValidationHelpers.field_errors(@form_errors, :duration)
-                  |> Enum.map(&Helpers.format_errors/1)
-                }
-                icon="hero-clock"
-              />
-              <p class="mt-1 text-token-sm text-tymeslot-600">
-                {dgettext(
-                  "dashboard_meeting_form",
-                  "Enter a duration between %{min} and %{max} minutes",
-                  min: Constraints.duration_minutes_opts()[:greater_than_or_equal_to],
-                  max: Constraints.duration_minutes_opts()[:less_than_or_equal_to]
-                )}
-              </p>
-            </div>
+            <.lengths_field
+              form_data={@form_data}
+              form_errors={@form_errors}
+              type={@type}
+              group_bookings_enabled={@group_bookings_enabled}
+              myself={@myself}
+            />
           </div>
 
+          <% extra_lengths = Map.get(@form_data, "extra_lengths", []) %>
           <% slot_interval_value =
             Map.get(
               @form_data,
@@ -228,7 +210,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               />
             </div>
             <p class="mt-1 text-token-sm text-tymeslot-600">
-              {SlotIntervalField.hint(slot_interval_value, Map.get(@form_data, "duration"))}
+              {SlotIntervalField.hint(
+                slot_interval_value,
+                Map.get(@form_data, "duration"),
+                extra_lengths
+              )}
             </p>
           </div>
 
@@ -310,6 +296,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             payment_required={@payment_required}
             payment_price={@payment_price}
             currency={@payment_currency}
+            currency_support={@payment_currency_support}
+            account_currency={@payment_account_currency}
+            stored_price={@payment_stored_price}
             currency_minimum_cents={@payment_currency_minimum_cents}
             form_errors={@form_errors}
             myself={@myself}
@@ -327,19 +316,42 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 payment_required: @payment_required,
                 payments_charges_enabled: @payments_charges_enabled,
                 requires_approval: @requires_approval,
+                extra_lengths: Map.get(@form_data, "extra_lengths", []),
                 locations: @locations
               })
             }
             allowed={@group_bookings_allowed}
+            dates_planned={
+              SessionHandlers.dates_planned?(%{
+                fixed_dates: @fixed_dates,
+                session_rows: @session_rows
+              })
+            }
             form_id={@id}
             current_user={@current_user}
             form_errors={@form_errors}
             myself={@myself}
           />
 
+          <.fixed_dates_section
+            :if={@group_bookings_enabled}
+            fixed_dates={@fixed_dates}
+            is_edit={@is_edit}
+            sessions={@session_rows}
+            timezone={@host_timezone}
+            new_session={@new_session}
+            session_error={@session_error}
+            confirming_session_id={@confirming_session_id}
+            editing_session={@editing_session}
+            form_id={@id}
+            myself={@myself}
+          />
+
           <.guests_section
             allow_guests={@allow_guests}
-            max_guests={Guests.max_guests()}
+            guest_limit={@guest_limit}
+            group_bookings_enabled={@group_bookings_enabled}
+            form_errors={@form_errors}
             myself={@myself}
           />
 

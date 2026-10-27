@@ -6,8 +6,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   `:tymeslot, :stripe_adapter` config.
 
   Every call is wrapped in `Tymeslot.MeetingPayments.Telemetry.span_stripe/3`
-  so dashboards can chart per-operation latency and error rate. Webhook
-  signature construction is excluded — it never makes a network call.
+  so dashboards can chart per-operation latency and error rate.
   """
 
   alias Tymeslot.MeetingPayments.Telemetry
@@ -29,12 +28,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   @callback expire_checkout_session(session_id :: String.t(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
   @callback create_refund(params :: map(), opts :: keyword()) ::
-              {:ok, map()} | {:error, term()}
-  @callback construct_webhook_event(
-              payload :: binary(),
-              signature :: String.t(),
-              secret :: String.t()
-            ) ::
               {:ok, map()} | {:error, term()}
 
   @spec create_account(map(), keyword()) :: {:ok, map()} | {:error, term()}
@@ -104,20 +97,15 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
     end)
   end
 
-  @spec construct_webhook_event(binary(), String.t(), String.t()) ::
-          {:ok, map()} | {:error, term()}
-  def construct_webhook_event(payload, signature, secret),
-    do: impl().construct_webhook_event(payload, signature, secret)
-
   # Normalise the success payload of a *read* response to a string-keyed map.
   #
   # Production stripity_stripe returns atom-keyed structs (`%Stripe.Account{}`,
   # `%Stripe.Checkout.Session{}`, …) from `retrieve_*`/`list_*`, whereas every
   # downstream consumer (workers, webhook handlers, `apply_account_event/2`)
-  # expects the same string-keyed shape that `construct_webhook_event/3`
-  # produces. Normalising here — at the single seam every read flows through —
-  # means the rest of the pipeline never has to care which adapter (real or
-  # Mox stub) produced the value. Normalisation is idempotent: a map that is
+  # expects the same string-keyed shape a webhook event arrives in.
+  # Normalising here, at the single seam every read flows through, means
+  # the rest of the pipeline never has to care which adapter (real or Mox
+  # stub) produced the value. Normalisation is idempotent: a map that is
   # already string-keyed passes through unchanged.
   defp normalise_read({:ok, value}), do: {:ok, normalise(value)}
   defp normalise_read({:error, _reason} = err), do: err
@@ -163,7 +151,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
   alias Stripe.Checkout.Session, as: CheckoutSession
   alias Stripe.PaymentIntent
   alias Stripe.Refund
-  alias Stripe.Webhook
   alias Tymeslot.MeetingPayments.StripeAdapter
 
   @impl StripeAdapter
@@ -194,15 +181,4 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
 
   @impl StripeAdapter
   def create_refund(params, opts), do: Refund.create(params, opts)
-
-  @impl StripeAdapter
-  def construct_webhook_event(payload, signature, secret) do
-    case Webhook.construct_event(payload, signature, secret) do
-      # Stripity returns a struct; normalise to a string-keyed map so the rest
-      # of the pipeline doesn't depend on stripity-internal layout. Shares the
-      # same recursive normaliser as the read responses.
-      {:ok, event} -> {:ok, StripeAdapter.normalise(event)}
-      {:error, _reason} = err -> err
-    end
-  end
 end

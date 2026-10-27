@@ -39,14 +39,15 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
     # Changing your own password revokes every session, so the user is signed out
     # and lands back on the login page.
     #
-    # We deliberately don't assert the flash wording here. The LiveView redirects
-    # with "Your password has been changed…", but the revocation's disconnect
-    # broadcast tears the socket down first, so the browser reconnects and the
-    # auth layer's own "Your session has expired…" notice is what actually wins.
-    # Which of the two lands is a race; being signed out is not.
+    # The flash proves the LiveView's own redirect got through. The revocation
+    # spares the socket that asked for it; were it disconnected too, the reply
+    # carrying the redirect would be lost, the form would sit frozen until the
+    # client's reload-with-jitter (5 to 10 seconds) and the user would land
+    # here with a "session expired" notice instead.
     session =
       session
       |> assert_has(css("#password-input"))
+      |> assert_has(css("#app-flash-group-info", text: "Your password has been changed"))
       |> wait_for_live()
 
     # The new password is the one that now works.

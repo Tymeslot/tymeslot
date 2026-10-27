@@ -17,6 +17,15 @@ defmodule Tymeslot.Repo.Migrations.EncryptIntegrationSecretsAtRestTest do
 
   @version 20_261_002_051_404
 
+  # `drop_plain_copies_of_encrypted_secrets` later drops the plain columns
+  # this migration works on, so each test first rolls that one back.
+  @contract_version 20_261_012_214_443
+
+  setup do
+    MigrationRunner.down!(@contract_version)
+    :ok
+  end
+
   test "encrypts each secret and keeps the plain value for a rollback" do
     webhook = insert(:webhook, url: "https://hooks.example.com/a")
 

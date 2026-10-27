@@ -3,7 +3,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
   Pulls the latest state of a connected Stripe account and reconciles the
   local `connect_accounts` row.
 
-  Triggered when the host returns from the Stripe Express onboarding flow
+  Triggered when the host returns from the Stripe onboarding flow
   (the `?return=1` and `?refresh=1` redirects on `/dashboard/payments`),
   so the dashboard reflects the new capability flags without having to
   wait for the next `account.updated` webhook.

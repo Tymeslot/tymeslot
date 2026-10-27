@@ -5,12 +5,15 @@ defmodule Tymeslot.Bookings.ActivationTest do
   request the host just approved, the Stripe checkout webhook, and an
   ad-hoc host booking.
 
-  Coverage here proves the branching `activate/2`'s moduledoc promises:
+  Coverage here proves the branching `activate_in_transaction/2`'s
+  moduledoc promises:
   a request still `awaiting_approval` takes the request fan-out rather than
   the confirmation one, a meeting with an API-created video provider hands
   off to `VideoRoomWorker` instead of scheduling the confirmation email
   itself (the room-then-email ordering the moduledoc calls load-bearing),
-  and everything else goes straight to the confirmation email.
+  and everything else goes straight to the confirmation email. An email
+  that cannot be enqueued is returned, so the caller's transaction rolls the
+  booking back with it.
   """
 
   # async: false already required by the module's own setup; the recovery
@@ -29,12 +32,23 @@ defmodule Tymeslot.Bookings.ActivationTest do
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
 
+  # Runs activation as every caller does, inside the transaction that made the
+  # booking, rolling back on an error as they do.
+  defp activate(meeting, opts \\ []) do
+    Repo.transaction(fn ->
+      case Activation.activate_in_transaction(meeting, opts) do
+        {:ok, pending} -> pending
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
   defp meeting_for(user, attrs) do
     defaults = %{organizer_user: user, organizer_user_id: user.id}
     insert(:meeting, Map.merge(defaults, attrs))
   end
 
-  describe "activate/2 — a request still awaiting approval" do
+  describe "activate_in_transaction/2 — a request still awaiting approval" do
     test "dispatches to the request fan-out, not the confirmation one" do
       user = insert(:user)
 
@@ -45,7 +59,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
         })
 
-      assert :ok = Activation.activate(meeting)
+      assert {:ok, _pending} = activate(meeting)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -61,7 +75,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
     end
   end
 
-  describe "activate/2 — with_video_room: true" do
+  describe "activate_in_transaction/2 — with_video_room: true" do
     test "enqueues the video-room job rather than scheduling the confirmation email itself" do
       user = insert(:user)
       video_integration = insert(:video_integration, user: user, provider: "mirotalk")
@@ -69,7 +83,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       meeting =
         meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
 
-      assert :ok = Activation.activate(meeting, with_video_room: true)
+      assert {:ok, _pending} = activate(meeting, with_video_room: true)
 
       assert_enqueued(
         worker: VideoRoomWorker,
@@ -89,7 +103,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       user = insert(:user)
       meeting = meeting_for(user, %{status: "confirmed", video_integration_id: nil})
 
-      assert :ok = Activation.activate(meeting, with_video_room: true)
+      assert {:ok, _pending} = activate(meeting, with_video_room: true)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -100,7 +114,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
     end
   end
 
-  describe "activate/2 — auto-detecting the provider" do
+  describe "activate_in_transaction/2 — auto-detecting the provider" do
     test "a Zoom meeting takes the room-creating path" do
       user = insert(:user)
       video_integration = insert(:video_integration, user: user, provider: "zoom")
@@ -108,7 +122,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       meeting =
         meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
 
-      assert :ok = Activation.activate(meeting)
+      assert {:ok, _pending} = activate(meeting)
 
       assert_enqueued(
         worker: VideoRoomWorker,
@@ -128,7 +142,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       meeting =
         meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
 
-      assert :ok = Activation.activate(meeting)
+      assert {:ok, _pending} = activate(meeting)
 
       assert_enqueued(
         worker: VideoRoomWorker,
@@ -148,7 +162,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       meeting =
         meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
 
-      assert :ok = Activation.activate(meeting)
+      assert {:ok, _pending} = activate(meeting)
 
       assert_enqueued(
         worker: VideoRoomWorker,
@@ -168,7 +182,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       meeting =
         meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
 
-      assert :ok = Activation.activate(meeting)
+      assert {:ok, _pending} = activate(meeting)
 
       assert_enqueued(
         worker: VideoRoomWorker,
@@ -185,7 +199,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       user = insert(:user)
       meeting = meeting_for(user, %{status: "confirmed", video_integration_id: nil})
 
-      assert :ok = Activation.activate(meeting)
+      assert {:ok, _pending} = activate(meeting)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -207,7 +221,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       meeting =
         meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
 
-      assert :ok = Activation.activate(meeting)
+      assert {:ok, _pending} = activate(meeting)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -218,8 +232,8 @@ defmodule Tymeslot.Bookings.ActivationTest do
     end
   end
 
-  describe "activate/2 — recovery branches" do
-    test "awaiting_approval: a failed request-email insert still returns :ok and leaves the nudge and expiry armed" do
+  describe "activate_in_transaction/2 — recovery branches" do
+    test "awaiting_approval: a failed request-email insert rolls the request back, nudge and expiry too" do
       user = insert(:user)
 
       meeting =
@@ -229,10 +243,9 @@ defmodule Tymeslot.Bookings.ActivationTest do
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
         })
 
-      # Only the request-email insert fails; the nudge and the expiry job the
-      # same call arms must still reach the queue, and the case clause that
-      # handles this error must not let it escape `activate/2` — without it
-      # this raises a `CaseClauseError` instead of returning `:ok`.
+      # Only the request-email insert fails. The host would never hear of the
+      # request, so it is returned, and the jobs the same call armed roll
+      # back with the booking.
       :meck.new(Oban, [:passthrough])
 
       :meck.expect(Oban, :insert, fn changeset ->
@@ -244,7 +257,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       end)
 
       try do
-        assert :ok = Activation.activate(meeting)
+        assert {:error, _reason} = activate(meeting)
       after
         :meck.unload(Oban)
       end
@@ -254,7 +267,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
         args: %{"action" => "send_booking_request_emails", "meeting_id" => meeting.id}
       )
 
-      assert_enqueued(
+      refute_enqueued(
         worker: EmailWorker,
         args: %{"action" => "send_booking_approval_nudge", "meeting_id" => meeting.id}
       )
@@ -281,7 +294,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       end)
 
       try do
-        assert :ok = Activation.activate(meeting, with_video_room: true)
+        assert {:ok, _pending} = activate(meeting, with_video_room: true)
       after
         :meck.unload(Oban)
       end
@@ -294,12 +307,10 @@ defmodule Tymeslot.Bookings.ActivationTest do
       )
     end
 
-    test "notify/1: a failed confirmation-email insert still returns :ok without escaping" do
+    test "notify/1: a failed confirmation-email insert is returned, so the booking rolls back" do
       # No video integration, so this goes straight to `notify/1`. Only the
-      # confirmation-email insert fails; the case clause that handles the
-      # resulting `{:error, _}` from `Events.meeting_created/1` must not let
-      # it escape `activate/2` — without it this raises a `CaseClauseError`
-      # instead of returning `:ok`.
+      # confirmation-email insert fails: the booking must not commit with its
+      # announcement claimed and no confirmation queued.
       user = insert(:user)
       meeting = meeting_for(user, %{status: "confirmed", video_integration_id: nil})
 
@@ -314,7 +325,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       end)
 
       try do
-        assert :ok = Activation.activate(meeting)
+        assert {:error, _reason} = activate(meeting)
       after
         :meck.unload(Oban)
       end
@@ -323,6 +334,8 @@ defmodule Tymeslot.Bookings.ActivationTest do
         worker: EmailWorker,
         args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
       )
+
+      assert %{announced_at: nil} = Repo.reload!(meeting)
     end
   end
 end

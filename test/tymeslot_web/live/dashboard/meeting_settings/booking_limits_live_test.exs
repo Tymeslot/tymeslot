@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingLimitsLiveTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
 
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingLimitsLiveTest do
 
     test "Sunday on both limit forms once the host chose it in Calendar Settings",
          %{conn: conn, user: user} do
-      {:ok, _prefs} = CalendarManagement.save_preferences(user.id, %{week_start_day: "sunday"})
+      {:ok, _prefs} = Management.save_preferences(user.id, %{week_start_day: "sunday"})
       meeting_type = insert(:meeting_type, user: user)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")

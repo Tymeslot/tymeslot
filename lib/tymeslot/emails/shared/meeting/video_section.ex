@@ -16,36 +16,25 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSection do
   A video meeting section — ticket-stub feel with a left colour rail and a
   prominent join button. The colour comes from the supplied intent.
 
-  Options: `:title`, `:button_text`, `:show_time_note`.
+  Options: `:title`, `:button_text`. Renders nothing unless `meeting_url` is
+  a web address (`Sanitise.safe_web_url?/1`).
   """
-  @spec video_meeting_section(Tokens.intent(), String.t(), keyword()) :: String.t()
+  @spec video_meeting_section(Tokens.intent(), String.t() | nil, keyword()) :: String.t()
   def video_meeting_section(intent, meeting_url, opts \\ []) when is_atom(intent) do
+    case Sanitise.sanitize_web_url(meeting_url) do
+      nil -> ""
+      safe_url -> join_section(intent, safe_url, opts)
+    end
+  end
+
+  defp join_section(intent, safe_url, opts) do
     title = Keyword.get(opts, :title, dgettext("emails", "Join Video Meeting"))
     button_text = Keyword.get(opts, :button_text, dgettext("emails", "Join Meeting"))
-    show_time_note = Keyword.get(opts, :show_time_note, false)
 
     safe_title = Sanitise.sanitize_for_email(title)
     safe_button_text = Sanitise.sanitize_for_email(button_text)
-    safe_url = Sanitise.sanitize_url(meeting_url)
 
     tokens = Styles.intent(intent)
-
-    time_note_block =
-      if show_time_note do
-        """
-        <mj-text
-          font-size="12px"
-          color="#{tokens.accent_ink}"
-          align="left"
-          padding="8px 0 0 0"
-          line-height="1.5"
-        >
-          #{dgettext("emails", "Meeting will start at the scheduled time")}
-        </mj-text>
-        """
-      else
-        ""
-      end
 
     Stack.spaced("""
     <mj-section
@@ -90,7 +79,6 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSection do
         >
           #{safe_button_text}
         </mj-button>
-        #{time_note_block}
       </mj-column>
     </mj-section>
     """)
@@ -100,19 +88,12 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSection do
   A prominent time alert pill — usually used inside reminder emails. The caller
   supplies the intent explicitly so the pill always matches the email's stage
   band.
-
-  Options: `:icon`.
   """
-  @spec time_alert_badge(Tokens.intent(), String.t(), keyword()) :: String.t()
-  def time_alert_badge(intent, time_text, opts \\ []) when is_atom(intent) do
-    icon = Keyword.get(opts, :icon, "")
-    safe_text = Sanitise.sanitize_for_email(time_text)
-    safe_icon = Sanitise.sanitize_for_email(icon)
+  @spec time_alert_badge(Tokens.intent(), String.t()) :: String.t()
+  def time_alert_badge(intent, time_text) when is_atom(intent) do
+    label = Sanitise.sanitize_for_email(time_text)
 
     tokens = Styles.intent(intent)
-
-    label =
-      if safe_icon == "", do: safe_text, else: "#{safe_icon} #{safe_text}"
 
     """
     <mj-section padding="0 0 10px 0">

@@ -18,6 +18,8 @@ defmodule Tymeslot.ThemeCustomizations.Options.Accent do
   over the stored accent and is fitted the same way.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
 
   alias Tymeslot.ThemeCustomizations.ContrastTokens
@@ -170,8 +172,15 @@ defmodule Tymeslot.ThemeCustomizations.Options.Accent do
 
       "#" <> _rest = hex ->
         case Colour.cast_hex(hex) do
-          {:ok, normalised} -> put_change(changeset, :accent, normalised)
-          :error -> add_error(changeset, :accent, "must be a valid hex colour")
+          {:ok, normalised} ->
+            put_change(changeset, :accent, normalised)
+
+          :error ->
+            add_error(
+              changeset,
+              :accent,
+              dgettext_noop("errors", "must be a hex colour such as #14b8a6")
+            )
         end
 
       _id ->

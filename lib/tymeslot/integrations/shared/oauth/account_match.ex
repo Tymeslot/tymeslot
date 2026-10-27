@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
+defmodule Tymeslot.Integrations.Shared.OAuth.AccountMatch do
   @moduledoc """
   Shared helpers for matching OAuth accounts to existing integrations
   and handling race conditions during creation.

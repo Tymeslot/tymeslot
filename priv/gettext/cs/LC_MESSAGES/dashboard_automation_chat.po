@@ -1,11 +1,11 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: cs\n"
@@ -833,6 +833,37 @@ msgstr "Chyba služby Slack: %{error}"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Smazat %{name}"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Telegram"
+msgstr "Ke službě Telegram se nepodařilo připojit."
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "No chat is linked to this integration yet"
+msgstr "K této integraci zatím není propojen žádný chat."
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "Telegram refused the message (%{status}): %{description}"
+msgstr "Telegram zprávu odmítl (%{status}): %{description}"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "The bot token is missing"
+msgstr "Chybí token bota."
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "The shared Telegram bot is not configured"
+msgstr "Sdílený bot Telegram není nastaven."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
+msgstr "Pozastaveno: váš tarif nezahrnuje automatizace. Po přechodu na vyšší tarif se integrace sama obnoví."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
 #, elixir-autogen, elixir-format

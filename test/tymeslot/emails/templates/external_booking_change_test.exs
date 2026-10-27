@@ -3,6 +3,9 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
 
   @moduletag :emails
 
+  alias Ecto.UUID
+  alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailService
   alias Tymeslot.Emails.Templates.ExternalBookingChange
   alias Tymeslot.Meetings.MeetingSchema
@@ -37,6 +40,26 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
       assert email.subject =~ "Aktion erforderlich"
     end
 
+    # The stored `view_url` named a public page that never existed. The
+    # host's link is built now, to their dashboard view of the booking, and
+    # by its id: the uid is the booker's capability.
+    test "links the host to the booking in their dashboard, not the stored link" do
+      id = UUID.generate()
+      uid = UUID.generate()
+      meeting = build_meeting(%{id: id, uid: uid})
+      link = MeetingLinks.host_view_url(id)
+
+      email = ExternalBookingChange.render(meeting, "john@example.com", :deleted, "UTC")
+
+      assert link =~ "/dashboard/meetings?meeting=#{id}"
+      assert email.text_body =~ link
+      assert email.html_body =~ "/dashboard/meetings?meeting=#{id}"
+      refute email.text_body =~ uid
+      refute email.html_body =~ uid
+      refute email.text_body =~ "tymeslot.example.com/meetings/abc"
+      refute email.html_body =~ "tymeslot.example.com/meetings/abc"
+    end
+
     test "builds email for deleted discrepancy" do
       meeting = build_meeting()
 
@@ -66,7 +89,61 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
 
       assert email.subject =~ "rescheduled"
       assert email.text_body =~ "rescheduled"
-      assert email.text_body =~ "please update or reschedule the booking in Tymeslot"
+      assert email.text_body =~ "Move booking"
+    end
+
+    test "a rescheduled one-to-one meeting names the dashboard's Move booking" do
+      meeting = build_meeting()
+
+      email =
+        ExternalBookingChange.render(meeting, "john@example.com", :modified, "Europe/London")
+
+      assert email.html_body =~ "Move booking"
+      assert email.text_body =~ "Move booking"
+      refute email.text_body =~ "<strong>"
+    end
+
+    # Not every flagged booking can follow its event (an all-day event, one
+    # moved into the past, one missing from the cache), so the copy must not
+    # leave the host looking for a button that is not there.
+    test "a rescheduled one-to-one meeting says what to do without Move booking" do
+      meeting = build_meeting()
+
+      email =
+        ExternalBookingChange.render(meeting, "john@example.com", :modified, "Europe/London")
+
+      assert email.html_body =~ "send the attendee a reschedule request"
+      assert email.text_body =~ "send the attendee a reschedule request"
+    end
+
+    test "the text body of a rescheduled one-to-one meeting keeps apostrophes unencoded" do
+      host = insert(:user, locale: "it")
+      meeting = build_meeting(%{organizer_user_id: host.id})
+
+      email = ExternalBookingChange.render(meeting, "john@example.com", :modified, "UTC")
+
+      assert email.text_body =~ "l'orario"
+      refute email.text_body =~ "&#"
+      refute email.text_body =~ "<strong>"
+    end
+
+    test "a rescheduled group meeting keeps its own wording" do
+      meeting = build_meeting(%{capacity: 5, attendee_name: nil, attendee_email: nil})
+
+      email =
+        ExternalBookingChange.render(meeting, "john@example.com", :modified, "Europe/London")
+
+      refute email.html_body =~ "Move booking"
+      refute email.text_body =~ "Move booking"
+    end
+
+    test "a deleted meeting is unchanged" do
+      meeting = build_meeting()
+
+      email = ExternalBookingChange.render(meeting, "john@example.com", :deleted, "Europe/London")
+
+      refute email.html_body =~ "Move booking"
+      refute email.text_body =~ "Move booking"
     end
 
     # A group meeting cannot be rescheduled as a whole, so the email must not
@@ -158,6 +235,7 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
           "Europe/London"
         )
 
+      email = Delivery.sanitise_headers(email)
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end
@@ -176,5 +254,46 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
                  :deleted
                )
     end
+  end
+
+  describe "ExternalBookingChange.render_end_followed/4 says who was told" do
+    # A retry or a rejected address can leave some participants untold, so
+    # the line counts those reached rather than claiming "all".
+    test "the participants reached, by count" do
+      meeting = build_meeting(%{capacity: 4, end_time: ~U[2026-04-01 11:00:00Z]})
+
+      body = end_followed(meeting, %{attendees: ["Ann", "Bo"], guests: 0})
+
+      assert body =~ "We emailed 2 participants the new end time"
+      refute body =~ "all 2"
+    end
+
+    test "a guest reached when no attendee was is named as the guest, not as theirs" do
+      meeting = build_meeting(%{end_time: ~U[2026-04-01 11:00:00Z]})
+
+      body = end_followed(meeting, %{attendees: [], guests: 1})
+
+      assert body =~ "We emailed the guest the new end time"
+      refute body =~ "Their"
+    end
+
+    # Ukrainian uses its singular form for 21, 31 and so on, so that form
+    # carries the number too.
+    test "21 guests are counted in Ukrainian" do
+      host = insert(:user, locale: "uk")
+
+      meeting =
+        build_meeting(%{organizer_user_id: host.id, end_time: ~U[2026-04-01 11:00:00Z]})
+
+      body = end_followed(meeting, %{attendees: ["Ann"], guests: 21})
+
+      assert body =~ "21 гостю також надіслано лист."
+    end
+  end
+
+  defp end_followed(meeting, told) do
+    notice = Map.put(told, :previous_end_time, ~U[2026-04-01 10:30:00Z])
+
+    ExternalBookingChange.render_end_followed(meeting, "john@example.com", notice, "Etc/UTC").text_body
   end
 end

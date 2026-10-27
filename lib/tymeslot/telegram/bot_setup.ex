@@ -8,6 +8,7 @@ defmodule Tymeslot.Telegram.BotSetup do
   require Logger
 
   alias Tymeslot.Telegram.API
+  alias Tymeslot.Utils.UrlBuilder
 
   @max_retries 4
   @initial_delay_ms 2_000
@@ -51,10 +52,7 @@ defmodule Tymeslot.Telegram.BotSetup do
   end
 
   defp do_register_with_config(bot_token, webhook_secret, attempt) do
-    endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)
-    host = System.get_env("PHX_HOST") || get_in(endpoint_config, [:url, :host])
-    scheme = get_in(endpoint_config, [:url, :scheme]) || "https"
-    webhook_url = "#{scheme}://#{host}/api/telegram/webhook"
+    webhook_url = UrlBuilder.build_url("/api/telegram/webhook")
 
     case API.set_webhook(bot_token, webhook_url, webhook_secret) do
       {:ok, status, _body} when status >= 200 and status < 300 ->

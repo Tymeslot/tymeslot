@@ -91,6 +91,7 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
           failed: non_neg_integer(),
           failed_titles: [String.t()],
           exclusions_dropped: non_neg_integer(),
+          rules_refused: non_neg_integer(),
           month_end_refused: non_neg_integer(),
           halted: atom() | nil
         }
@@ -173,10 +174,13 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   in which case it stops and names the reason under `:halted`. After
   #{@max_failures_in_a_row} failures in a row it stops as `:unavailable`.
 
-  A series Outlook would move onto months' last days is refused
-  (`Outlook.RecurrenceConverter`). It is failed, and also counted under
-  `:month_end_refused` so the organiser can be told why, but not towards the
-  failures in a row: the calendar answered nothing.
+  A series whose rule Outlook cannot hold is refused before anything is sent
+  (`Outlook.RecurrenceConverter`) and counted under `:rules_refused`, not as
+  a failure: retrying it would be refused the same way. One Outlook would
+  move onto months' last days is such a series too, and is also counted
+  under `:month_end_refused` (a part of `:rules_refused`) so the organiser
+  can be told why. Neither counts towards the failures in a row: the
+  calendar answered nothing.
 
   Options:
 
@@ -193,6 +197,7 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
       failed: 0,
       failed_titles: [],
       exclusions_dropped: 0,
+      rules_refused: 0,
       month_end_refused: 0,
       halted: nil,
       failed_in_a_row: 0
@@ -309,6 +314,9 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
         end_time: end_time(raw.start_time, raw.end_time, zone),
         all_day: all_day,
         timezone: if(all_day, do: zone, else: zone || @utc),
+        # The zone a CalDAV calendar writes a timed series in, so it keeps
+        # the file's local time across DST (`TimeZoneComponent.series_zone/1`).
+        series_timezone: zone,
         recurrence_rule: rule,
         recurrence_exceptions: exclusions,
         transparency: transparency(raw[:transparency])
@@ -329,8 +337,12 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   defp known_zone(_zone), do: nil
 
   # A DTEND must share its DTSTART's value type, but files in the wild mix
-  # them, and every provider's builder assumes they match. An end that is not
-  # after the start falls back to the length the parser gives a bare start.
+  # them, and every provider's builder assumes they match. An import writes a
+  # real event into the host's calendar, which cannot be zero length, so an
+  # end that is missing or not after the start falls back to a default
+  # length: a day for an all-day event, an hour for a timed one. The parser
+  # reads a timed DTSTART with no end as a moment (RFC 5545 §3.6.1), which a
+  # feed can show but a calendar write refuses.
   defp end_time(%Date{} = start, end_value, zone) do
     case end_value && to_date(end_value, zone) do
       %Date{} = end_date ->
@@ -343,8 +355,11 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
 
   defp end_time(%DateTime{} = start, end_value, zone) do
     case end_value && to_datetime(end_value, zone) do
-      %DateTime{} = end_at -> if DateTime.after?(end_at, start), do: end_at, else: start
-      nil -> start
+      %DateTime{} = end_at ->
+        if DateTime.after?(end_at, start), do: end_at, else: DateTime.add(start, 1, :hour)
+
+      nil ->
+        DateTime.add(start, 1, :hour)
     end
   end
 
@@ -395,12 +410,16 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
             exclusions_dropped: acc.exclusions_dropped + dropped_exclusions(event, integration)
         }
 
+      # The calendar answered, so it says nothing about whether the next
+      # event can be written.
+      {:error, :rule_not_supported_by_outlook} ->
+        %{acc | rules_refused: acc.rules_refused + 1}
+
       {:error, :day_missing_in_some_months} ->
         %{
           acc
-          | failed: acc.failed + 1,
-            month_end_refused: acc.month_end_refused + 1,
-            failed_titles: sample_title(acc.failed_titles, event.summary)
+          | rules_refused: acc.rules_refused + 1,
+            month_end_refused: acc.month_end_refused + 1
         }
 
       {:error, reason} ->

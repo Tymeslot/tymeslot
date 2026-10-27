@@ -62,11 +62,26 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpenedTest do
       assert email.text_body =~ "https://dashboard.stripe.com/disputes"
     end
 
-    test "is English-only — host emails do not localise" do
+    test "is written in English for a host who reads English" do
       email = ChargeDisputeOpened.render(build_context())
 
+      assert email.subject == "Stripe dispute opened: €50.00"
       assert email.text_body =~ "WHAT HAPPENS NEXT"
       assert email.html_body =~ "What happens next"
+    end
+
+    test "is written in the host's own language" do
+      host = insert(:user, locale: "de")
+      english = ChargeDisputeOpened.render(build_context())
+      email = ChargeDisputeOpened.render(build_context(%{host_user_id: host.id}))
+
+      assert email.subject =~ "€50.00"
+      refute email.subject == english.subject
+      assert email.text_body =~ "Hallo Bob Host,"
+      refute email.text_body =~ "WHAT HAPPENS NEXT"
+      refute email.text_body =~ "Stripe has opened a dispute"
+      refute email.html_body =~ "What happens next"
+      assert email.html_body =~ "Hallo Bob Host,"
     end
 
     test "omits attendee/meeting/reason lines when fields are nil" do
@@ -90,7 +105,7 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpenedTest do
     test "delivers to the bare email when host_name is nil (no placeholder name)" do
       email = ChargeDisputeOpened.render(build_context(%{host_name: nil}))
       assert email.to == [{"", "host@example.com"}]
-      assert email.html_body =~ "Hi there —"
+      assert email.html_body =~ "Hi there,"
     end
 
     test "omits attendee email line in both bodies when attendee_email is nil (anonymised payment)" do

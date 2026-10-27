@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormRateLimitTest do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm
 
-  # Matches the bucket in Tymeslot.Security.RateLimiter.Dashboard.
+  # Matches the bucket in Tymeslot.Security.RateLimiter.Limits.
   @writes_per_window 150
 
   setup do
@@ -139,11 +139,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormRateLimitTest do
 
   defp exhaust_theme_customization_bucket(user) do
     for _write <- 1..@writes_per_window do
-      assert :ok = RateLimiter.check_theme_customization_rate_limit(user.id)
+      assert :ok = RateLimiter.check(:theme_customization, user.id)
     end
 
     assert {:error, :rate_limited, _message} =
-             RateLimiter.check_theme_customization_rate_limit(user.id)
+             RateLimiter.check(:theme_customization, user.id)
   end
 
   # Delivers the message the component's own backoff timer will deliver. Waiting

@@ -1,10 +1,10 @@
 defmodule Tymeslot.Bookings.BuildParams do
   @moduledoc """
-  Typed parameters for `Tymeslot.Bookings.Policy.build_meeting_attributes/1`.
+  Typed parameters for `Tymeslot.Bookings.MeetingAttributes.build/1`.
 
   Carrying the booking inputs as a struct rather than a loose map lets the
   meeting-attribute builder narrow each field's type, so the precise
-  `Tymeslot.Bookings.Policy.meeting_attributes/0` contract can be verified by
+  `Tymeslot.Bookings.MeetingAttributes.meeting_attributes/0` contract can be verified by
   Dialyzer instead of collapsing to `term()`.
   """
 

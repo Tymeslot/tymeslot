@@ -1,20 +1,19 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels do
   @moduledoc """
   Content helpers for a calendar or video connection's `IntegrationCard`:
-  the reason a connection awaits reconnection, for the card's `notice`, and the
-  server behind a self-hosted one, for its `summary`. Both calendar and video
-  build their cards from these so the two hubs word them alike.
+  the reason a connection awaits reconnection, for the card's `notice` (a
+  calendar card also gives the last sync failure while its syncs keep
+  failing), and the server behind a self-hosted one, for its `summary`. Both
+  calendar and video build their cards from these so the two hubs word them
+  alike.
   """
 
-  # The flagging callers (Oban workers, `ReauthHandling`, the video providers)
-  # persist the reason as its untranslated English msgid, marked with
-  # `dgettext_noop/2` in one of these domains. Translating at write time would
-  # bake in the locale of whichever process raised the flag, which is not the
-  # owner's. Looking the msgid up here, in the viewer's locale, is the one place
-  # it is translated; a reason that isn't a known msgid in any of them (a raw
-  # diagnostic string, or a row flagged before reasons were stored this way)
-  # comes back unchanged.
-  @reason_domains ~w[dashboard_calendar_providers dashboard_integrations dashboard_video]
+  alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Integrations.Shared.StoredReason
+
+  @doc "The gettext domains a stored reason is looked up in, as a msgid."
+  @spec reason_domains() :: [String.t()]
+  defdelegate reason_domains, to: StoredReason, as: :domains
 
   @doc """
   The reason an integration awaiting reconnection was flagged, for the card's
@@ -24,14 +23,35 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels 
   the flag is set: a reconnection is the one state the owner has to act on.
   """
   @spec reconnect_reason(map()) :: String.t() | nil
-  def reconnect_reason(%{needs_reauth: true, sync_error: reason}) when is_binary(reason) do
+  def reconnect_reason(%{needs_reauth: true} = integration), do: stored_reason(integration)
+
+  def reconnect_reason(_integration), do: nil
+
+  @doc """
+  The card notice for a calendar connection: why it awaits reconnection, or,
+  while its syncs are failing, the last failure recorded on `sync_error`.
+  `nil` when there is nothing to tell the owner.
+
+  The failure is shown only once `HealthCheck.attention_status/2` calls the
+  connection `:unhealthy` (a streak of failed syncs), not after a single one,
+  and a successful sync clears it. Every calendar sync writer stores a fixed
+  msgid, so it is translated here like a reconnection reason.
+  """
+  @spec calendar_notice(map(), map() | nil) :: String.t() | nil
+  def calendar_notice(integration, health_state) do
+    reconnect_reason(integration) ||
+      if HealthCheck.attention_status(integration, health_state) == :unhealthy,
+        do: stored_reason(integration)
+  end
+
+  defp stored_reason(%{sync_error: reason}) when is_binary(reason) do
     case String.trim(reason) do
       "" -> nil
       trimmed -> translate_reason(trimmed)
     end
   end
 
-  def reconnect_reason(_integration), do: nil
+  defp stored_reason(_integration), do: nil
 
   @doc """
   The server behind a self-hosted integration, rendered for a card's `summary`
@@ -66,12 +86,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels 
     end
   end
 
-  defp translate_reason(reason) do
-    Enum.find_value(@reason_domains, reason, fn domain ->
-      case Gettext.dgettext(TymeslotWeb.Gettext, domain, reason) do
-        ^reason -> nil
-        translated -> translated
-      end
-    end)
-  end
+  @doc """
+  A reason stored as an English msgid, translated into the viewer's locale
+  (see `Tymeslot.Integrations.Shared.StoredReason`).
+  """
+  @spec translate_reason(String.t()) :: String.t()
+  defdelegate translate_reason(reason), to: StoredReason, as: :translate
 end

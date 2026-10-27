@@ -5,6 +5,8 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.BreakerOutcome
+  alias Tymeslot.Integrations.Calendar.Google.ApiStatus
+  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
 
   describe "classify/1" do
     test "classifies :ok as :success" do
@@ -112,6 +114,31 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
       assert BreakerOutcome.classify({:error, :server_error, "The server reported an error"}) ==
                :failure
     end
+
+    # Scored through the calendar clients' own response envelope, so the test
+    # follows the reason those clients actually return rather than a copy of it.
+    test "counts an undecodable success body as a transient :failure" do
+      result =
+        ApiResponse.handle({:ok, %Req.Response{status: 200, body: "<html>proxy</html>"}},
+          label: "Google Calendar"
+        )
+
+      assert {:error, :malformed_response, _message} = result
+      assert BreakerOutcome.classify(result) == :failure
+      assert BreakerOutcome.transient?(:malformed_response)
+    end
+
+    test "ignores a 403 whose body will not decode, as it does any other 4xx refusal" do
+      result =
+        ApiResponse.handle({:ok, %Req.Response{status: 403, body: "<html>denied</html>"}},
+          label: "Google Calendar",
+          custom: &ApiStatus.classify/1
+        )
+
+      assert {:error, :refused, _message} = result
+      assert BreakerOutcome.classify(result) == :ignore
+      refute BreakerOutcome.transient?(:refused)
+    end
   end
 
   describe "permanent_credential_error?/1" do
@@ -179,6 +206,22 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
       error = %Req.TransportError{reason: :nxdomain}
 
       assert BreakerOutcome.failure_summary({:error, error}) == "Req.TransportError (nxdomain)"
+    end
+
+    test "keeps the transport reason a calendar client folded into :network_error" do
+      result =
+        {:error, :network_error, "Network error: %Req.TransportError{reason: :nxdomain}"}
+
+      assert BreakerOutcome.failure_summary(result) == "network_error (nxdomain)"
+    end
+
+    test "copies nothing but a known transport reason out of the message" do
+      assert BreakerOutcome.failure_summary(
+               {:error, :network_error, "Network error: Bearer sk_live_abc rejected"}
+             ) == "network_error"
+
+      assert BreakerOutcome.failure_summary({:error, :timeout, "timeout after 8s"}) == "timeout"
+      assert BreakerOutcome.failure_summary({:error, :server_error, "HTTP 503"}) == "server_error"
     end
 
     test "tags an explicit provider error, but drops free text that may carry credentials" do

@@ -9,6 +9,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
   import Tymeslot.EmailTestHelpers
 
@@ -260,6 +261,39 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       assert email.text_body =~ "30 minutes"
     end
 
+    # "за 1 годину до початку": the lead time takes the form the sentence
+    # needs, not a duration's nominative "1 година", and a day stays a day.
+    test "the reminder line puts the lead time in the organiser's language and case" do
+      for {raw, expected} <- [
+            {%{value: 1, unit: "hours"}, "за 1 годину до початку"},
+            {%{value: 1, unit: "days"}, "за 1 день до початку"}
+          ] do
+        details =
+          build_appointment_details(%{
+            reminders_enabled: true,
+            reminder_raw: raw,
+            organizer_locale: "uk"
+          })
+
+        email = AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+        assert email.text_body =~ expected
+      end
+    end
+
+    test "without a recorded reminder the line still reads in the organiser's language" do
+      details =
+        build_appointment_details(%{
+          reminders_enabled: true,
+          reminder_raw: nil,
+          organizer_locale: "uk"
+        })
+
+      email = AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      assert email.text_body =~ "за 15 хвилин до початку"
+    end
+
     test "text body shows no reminders message when reminders_enabled is false" do
       details = build_appointment_details(%{reminders_enabled: false})
 
@@ -366,6 +400,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
+      email = Delivery.sanitise_headers(email)
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end

@@ -16,10 +16,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManagerTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Family
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Security.Encryption
 
   setup do
     user = insert(:user)
@@ -70,7 +72,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManagerTest do
     # Every CalDAV-family `new/1` rebuilds its config, and each used to drop
     # the writable paths on the way, so a grid write to any calendar but the
     # booking one landed in the booking one.
-    for provider <- ~w(caldav nextcloud radicale apple baikal mailbox_org zimbra) do
+    for provider <- Enum.map(Family.members(), &Atom.to_string/1) do
       test "gives the #{provider} booking client every writable calendar", %{user: user} do
         integration = insert_two_calendar_integration(user, unquote(provider))
 
@@ -84,7 +86,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManagerTest do
     # client of its own collection gets that collection visited twice.
     test "answers the same client as the read client of the booking calendar", %{user: user} do
       inserted = insert_two_calendar_integration(user, "caldav")
-      {:ok, integration} = CalendarManagement.fetch_integration_for_user(inserted.id, user.id)
+      {:ok, integration} = Management.fetch_integration_for_user(inserted.id, user.id)
 
       booking = ClientManager.booking_client({integration.id, user.id})
       reads = ClientManager.clients_for_integration(integration)
@@ -479,6 +481,71 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManagerTest do
       insert(:profile, user: user)
 
       assert %{provider_type: :caldav} = ClientManager.resolve_client({integration.id, user.id})
+    end
+
+    # A meeting whose integration was disconnected and reconnected has no
+    # integration id any more, and a cancel or reschedule then falls back to
+    # the user's calendars. A read-only one listed first must not be where it
+    # writes: the write fails and the booking's event is left behind.
+    test "falls back to a writable calendar, never a read-only one listed first",
+         %{user: user} do
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        is_active: true,
+        base_url: "https://cal.example.com",
+        calendar_paths: ["/cal/rota/", "/cal/bookings/"],
+        default_booking_calendar_id: "/cal/bookings/",
+        calendar_list: [
+          %{id: "/cal/rota/", path: "/cal/rota/", name: "Rota", selected: true, read_only: true},
+          %{id: "/cal/bookings/", path: "/cal/bookings/", name: "Bookings", selected: true}
+        ]
+      )
+
+      insert(:profile, user: user)
+
+      meeting = %MeetingSchema{organizer_user_id: user.id, calendar_integration_id: nil}
+
+      for context <- [meeting, user.id] do
+        assert %{client: %{calendar_paths: paths}} = ClientManager.resolve_client(context)
+        assert paths != []
+        refute Enum.any?(paths, &(&1 =~ "/cal/rota")), "wrote through the read-only calendar"
+      end
+    end
+
+    # With nothing a booking can be written to, there is no fallback; each
+    # case stands alone. A subscribed feed takes no writes, though its single
+    # calendar looks writable to the client.
+    test "falls back to no calendar rather than a subscribed feed", %{user: user} do
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        is_active: true,
+        base_url: "https://feeds.example.com",
+        username_encrypted: nil,
+        password_encrypted: nil,
+        subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/team.ics")
+      )
+
+      insert(:profile, user: user)
+
+      assert ClientManager.resolve_client(user.id) == nil
+    end
+
+    test "falls back to no calendar rather than one whose credentials were refused",
+         %{user: user} do
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        is_active: true,
+        needs_reauth: true,
+        base_url: "https://cal.example.com",
+        calendar_paths: ["/cal/bookings/"]
+      )
+
+      insert(:profile, user: user)
+
+      assert ClientManager.resolve_client(user.id) == nil
     end
 
     test "returns nil for an unrelated user that has no integrations", _ctx do

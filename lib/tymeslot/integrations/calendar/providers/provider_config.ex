@@ -24,13 +24,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Integrations.Providers.Families
+  alias Tymeslot.Integrations.Calendar.CalDAV.Family
+  alias Tymeslot.Integrations.Calendar.ProviderConfig.Metadata
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
-
-  # How far back and forward sync workers fetch events from providers.
-  # Shared across all providers so the dashboard calendar shows a consistent range.
-  @sync_window_past_days 365
-  @sync_window_future_days 365
+  alias Tymeslot.Integrations.Shared.Providers.Families
 
   @providers [
     :caldav,
@@ -72,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   # can pick, so they are filed under `:other` rather than left out.
   @provider_families %{
     oauth: [:google, :outlook],
-    caldav: [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal],
+    caldav: Family.members(),
     ews: [:exchange],
     subscription: [:ics_url],
     other: [:demo, :debug]
@@ -85,6 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   # Providers whose module refuses every write. See `read_only?/1`.
   @read_only_providers [:ics_url]
+  @read_only_provider_strings Enum.map(@read_only_providers, &Atom.to_string/1)
 
   @caldav_based_providers Families.members(@provider_families, :caldav)
   @caldav_based_provider_strings Families.member_strings(@provider_families, :caldav)
@@ -100,142 +98,19 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @provider_atoms Map.new(@providers ++ @dev_only_providers, &{Atom.to_string(&1), &1})
 
   # Providers whose CalDAV server URL is fixed and must never be edited by the
-  # user — both during initial connection and reconnection. A provider absent
+  # user, both during initial connection and reconnection. A provider absent
   # from this map allows the user to enter their own server URL.
-  @locked_url_providers %{
-    mailbox_org: %{
-      url: "https://dav.mailbox.org",
-      tooltip: "mailbox.org always uses this CalDAV server — the address cannot be changed"
-    },
-    apple: %{
-      url: "https://caldav.icloud.com",
-      tooltip: "Apple iCloud always uses this CalDAV server — the address cannot be changed"
-    }
-  }
+  @locked_url_providers Family.fixed_urls()
 
   @locked_url_providers_by_string Map.new(@locked_url_providers, fn {atom_key, value} ->
                                     {Atom.to_string(atom_key), value}
                                   end)
 
-  # Provider metadata - single source of truth for all provider information
-  @provider_metadata %{
-    caldav: %{
-      icon: "caldav",
-      description:
-        dgettext_noop("dashboard_calendar_providers", "Universal CalDAV server support"),
-      button_text: "Connect CalDAV",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    radicale: %{
-      icon: "radicale",
-      description:
-        dgettext_noop("dashboard_calendar_providers", "Lightweight self-hosted calendar server"),
-      button_text: "Connect Radicale",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    nextcloud: %{
-      icon: "nextcloud",
-      description:
-        dgettext_noop("dashboard_calendar_providers", "Self-hosted Nextcloud calendar sync"),
-      button_text: "Connect Nextcloud",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    zimbra: %{
-      icon: "zimbra",
-      description:
-        dgettext_noop("dashboard_calendar_providers", "Enterprise Zimbra calendar integration"),
-      button_text: "Connect Zimbra",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    mailbox_org: %{
-      icon: "mailbox_org",
-      description:
-        dgettext_noop(
-          "dashboard_calendar_providers",
-          "Sync calendars from your mailbox.org account"
-        ),
-      button_text: "Connect mailbox.org",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    apple: %{
-      icon: "apple",
-      description:
-        dgettext_noop(
-          "dashboard_calendar_providers",
-          "Sync calendars from your Apple iCloud account"
-        ),
-      button_text: "Connect Apple iCloud",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    baikal: %{
-      icon: "baikal",
-      description:
-        dgettext_noop(
-          "dashboard_calendar_providers",
-          "PHP-based CalDAV/CardDAV server integration"
-        ),
-      button_text: "Connect Baikal",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    ics_url: %{
-      icon: "ics_url",
-      description:
-        dgettext_noop(
-          "dashboard_calendar_providers",
-          "Subscribe to a published calendar feed, read-only"
-        ),
-      button_text: "Subscribe to a feed",
-      click_event: "connect_provider",
-      # A provider-global breaker is the wrong shape for arbitrary per-user
-      # feed hosts, and nothing in the ICS path calls CalendarCircuitBreaker
-      # today; a breaker process for it would only ever report :closed.
-      circuit_breaker_enabled: false
-    },
-    google: %{
-      icon: "google",
-      description:
-        dgettext_noop(
-          "dashboard_calendar_providers",
-          "Full OAuth integration with Google Meet support"
-        ),
-      button_text: "Connect Google",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    outlook: %{
-      icon: "outlook",
-      description:
-        dgettext_noop("dashboard_calendar_providers", "Microsoft 365 and Outlook.com integration"),
-      button_text: "Connect Outlook",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    exchange: %{
-      icon: "exchange",
-      description:
-        dgettext_noop(
-          "dashboard_calendar_providers",
-          "On-premises Microsoft Exchange Server, two-way sync"
-        ),
-      button_text: "Connect Exchange",
-      click_event: "connect_provider",
-      circuit_breaker_enabled: true
-    },
-    demo: %{
-      icon: "demo",
-      description: dgettext_noop("dashboard_calendar_providers", "Homepage demo provider"),
-      button_text: "Demo Enabled",
-      click_event: nil,
-      circuit_breaker_enabled: false
-    }
-  }
+  # Providers whose calls do not go through `CalendarCircuitBreaker`. A
+  # provider-global breaker is the wrong shape for arbitrary per-user feed
+  # hosts, and nothing in the ICS path calls it; a breaker process for it
+  # would only ever report :closed. The demo provider calls nothing at all.
+  @without_circuit_breaker [:ics_url, :demo]
 
   # Read provider settings from config
   @spec provider_settings() :: %{atom() => term()}
@@ -346,6 +221,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   end
 
   @doc """
+  The providers `read_only?/1` is true for, in the string form they are
+  stored in, for a query that must leave them out.
+  """
+  @spec read_only_provider_strings() :: [String.t()]
+  def read_only_provider_strings, do: @read_only_provider_strings
+
+  @doc """
   Returns EWS-based providers.
   """
   @spec ews_providers() :: list(atom())
@@ -365,27 +247,16 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def ews?(provider), do: in_family?(provider, :ews)
 
   # Order follows @providers — the canonical provider list — for deterministic results.
-  @providers_with_circuit_breakers for p <- @providers,
-                                       get_in(@provider_metadata, [p, :circuit_breaker_enabled]),
-                                       do: p
+  @providers_with_circuit_breakers for p <- @providers, p not in @without_circuit_breaker, do: p
 
   @doc """
   Returns providers that have circuit-breaker monitoring enabled.
 
   Ordered to match `@providers`. Spans every provider family — CalDAV-based,
-  OAuth and EWS; excludes providers whose metadata sets
-  `circuit_breaker_enabled: false`.
+  OAuth and EWS; excludes the subscription feed and the demo provider.
   """
   @spec providers_with_circuit_breakers() :: list(atom())
   def providers_with_circuit_breakers, do: @providers_with_circuit_breakers
-
-  @doc "Number of days in the past to fetch events during sync."
-  @spec sync_window_past_days() :: pos_integer()
-  def sync_window_past_days, do: @sync_window_past_days
-
-  @doc "Number of days in the future to fetch events during sync."
-  @spec sync_window_future_days() :: pos_integer()
-  def sync_window_future_days, do: @sync_window_future_days
 
   @doc """
   Checks if a provider is valid.
@@ -410,6 +281,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def caldav_based?(provider), do: in_family?(provider, :caldav)
 
   @doc """
+  Whether the calendar grid writes a repeat rule to the provider's events:
+  Google, Outlook and the CalDAV family. Exchange's writes carry none, so an
+  Exchange event is never given one from the grid.
+  """
+  @spec writes_repeat_rules?(atom() | String.t() | any()) :: boolean()
+  def writes_repeat_rules?(provider), do: oauth_provider?(provider) or caldav_based?(provider)
+
+  @doc """
   Returns the fixed CalDAV server URL for a provider, or `nil` if the user
   is free to choose their own.
 
@@ -420,70 +299,43 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @spec locked_url_for(atom() | String.t()) ::
           %{url: String.t(), tooltip: String.t()} | nil
   def locked_url_for(provider) when is_atom(provider),
-    do: Map.get(@locked_url_providers, provider)
+    do: @locked_url_providers |> Map.get(provider) |> translate_tooltip()
 
   def locked_url_for(provider) when is_binary(provider),
-    do: Map.get(@locked_url_providers_by_string, provider)
+    do: @locked_url_providers_by_string |> Map.get(provider) |> translate_tooltip()
 
   def locked_url_for(_provider), do: nil
 
-  @doc """
-  Gets full metadata for a provider.
+  # The table holds the tooltip as its msgid, so it is translated here, in the
+  # locale of the process rendering it.
+  defp translate_tooltip(nil), do: nil
 
-  Returns a map with icon, description, button_text, click_event, and circuit_breaker_enabled fields.
-  """
-  @spec metadata(atom()) :: %{
-          required(:icon) => String.t(),
-          required(:description) => String.t(),
-          required(:button_text) => String.t(),
-          required(:click_event) => String.t() | nil,
-          required(:circuit_breaker_enabled) => boolean()
-        }
-  def metadata(provider) when is_atom(provider) do
-    Map.get(@provider_metadata, provider, %{
-      icon: Atom.to_string(provider),
-      description: "",
-      button_text: "Connect",
-      click_event: nil,
-      circuit_breaker_enabled: false
-    })
-  end
+  defp translate_tooltip(%{tooltip: tooltip} = locked),
+    do: %{
+      locked
+      | tooltip: Gettext.dgettext(TymeslotWeb.Gettext, "integrations_calendar", tooltip)
+    }
 
-  @doc """
-  Gets icon identifier for a provider.
-  """
-  @spec icon(atom()) :: String.t()
-  def icon(provider), do: metadata(provider).icon
+  @doc "How `provider` is presented. See `ProviderConfig.Metadata`."
+  defdelegate metadata(provider), to: Metadata
 
-  @doc """
-  Gets description for a provider.
-  """
-  @spec description(atom()) :: String.t()
-  def description(provider) do
-    Gettext.dgettext(
-      TymeslotWeb.Gettext,
-      "dashboard_calendar_providers",
-      metadata(provider).description
-    )
-  end
+  @doc "The provider's icon identifier."
+  defdelegate icon(provider), to: Metadata
 
-  @doc """
-  Gets button text for a provider.
-  """
-  @spec button_text(atom()) :: String.t()
-  def button_text(provider), do: metadata(provider).button_text
+  @doc "The provider's description, translated."
+  defdelegate description(provider), to: Metadata
 
-  @doc """
-  Gets click event name for a provider.
-  """
-  @spec click_event(atom()) :: String.t() | nil
-  def click_event(provider), do: metadata(provider).click_event
+  @doc "The provider's button text."
+  defdelegate button_text(provider), to: Metadata
+
+  @doc "The event the provider's button sends."
+  defdelegate click_event(provider), to: Metadata
 
   @doc """
   Checks if provider requires circuit breaker monitoring.
   """
   @spec circuit_breaker_enabled?(atom()) :: boolean()
-  def circuit_breaker_enabled?(provider), do: metadata(provider).circuit_breaker_enabled
+  def circuit_breaker_enabled?(provider), do: provider in @providers_with_circuit_breakers
 
   @doc """
   Validates and normalizes a provider type.
@@ -571,13 +423,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   Gets the display name for a provider.
   """
   @spec display_name(atom()) :: String.t()
-  def display_name(:caldav), do: "CalDAV"
-  def display_name(:radicale), do: "Radicale"
-  def display_name(:nextcloud), do: "Nextcloud"
-  def display_name(:zimbra), do: "Zimbra"
-  def display_name(:mailbox_org), do: "mailbox.org"
-  def display_name(:apple), do: "Apple iCloud"
-  def display_name(:baikal), do: "Baikal"
+  def display_name(provider) when provider in @caldav_based_providers,
+    do: Family.display_name(provider)
+
   # The only descriptive name in this list rather than a brand, so it is the
   # only one that translates: "Nextcloud" reads the same in every locale, but
   # "Calendar subscription" is prose. Anything reaching the provider directory
@@ -585,7 +433,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   # prefers; this clause serves direct callers of this module. Both translate
   # the same msgid, so the two paths cannot disagree.
   def display_name(:ics_url),
-    do: dgettext("dashboard_calendar_providers", "Calendar subscription")
+    do: dgettext("integrations_calendar", "Calendar subscription")
 
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"

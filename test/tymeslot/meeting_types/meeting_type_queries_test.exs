@@ -294,112 +294,34 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
     end
   end
 
-  describe "bulk_insert_meeting_types/1" do
-    test "inserts multiple meeting types at once" do
+  describe "insert_defaults/2" do
+    test "inserts the given types and skips a name the user already holds" do
       user = insert(:user)
+      insert(:meeting_type, user: user, name: "15 Minutes")
       now = DateTime.utc_now(:second)
 
-      attrs_list = [
+      attrs = fn name, minutes ->
         %{
           user_id: user.id,
-          name: "15 Minutes",
-          description: "Quick chat",
-          duration_minutes: 15,
-          icon: "hero-bolt",
-          sort_order: 0,
+          name: name,
+          duration_minutes: minutes,
           is_active: true,
           allow_video: false,
-          calendar_integration_id: nil,
-          target_calendar_id: nil,
-          reminder_config: [%{value: 30, unit: "minutes"}],
-          inserted_at: now,
-          updated_at: now
-        },
-        %{
-          user_id: user.id,
-          name: "30 Minutes",
-          description: "In-depth discussion",
-          duration_minutes: 30,
-          icon: "hero-rocket-launch",
-          sort_order: 1,
-          is_active: true,
-          allow_video: false,
-          calendar_integration_id: nil,
-          target_calendar_id: nil,
-          reminder_config: [%{value: 30, unit: "minutes"}],
           inserted_at: now,
           updated_at: now
         }
-      ]
+      end
 
-      assert {:ok, meeting_types} = MeetingTypeQueries.bulk_insert_meeting_types(attrs_list)
-      assert length(meeting_types) == 2
+      assert MeetingTypeQueries.insert_defaults([
+               attrs.("15 Minutes", 15),
+               attrs.("30 Minutes", 30)
+             ]) == 1
 
-      names = Enum.map(meeting_types, & &1.name)
-      assert "15 Minutes" in names
-      assert "30 Minutes" in names
-    end
-
-    test "returns ok with empty list for empty input" do
-      assert {:ok, []} = MeetingTypeQueries.bulk_insert_meeting_types([])
-    end
-  end
-
-  describe "existing_names/1" do
-    test "returns names of existing meeting types as MapSet" do
-      user = insert(:user)
-      insert(:meeting_type, user: user, name: "Alpha")
-      insert(:meeting_type, user: user, name: "Beta")
-
-      names = MeetingTypeQueries.existing_names(user.id)
-      assert MapSet.member?(names, "Alpha")
-      assert MapSet.member?(names, "Beta")
-      refute MapSet.member?(names, "Gamma")
-    end
-
-    test "returns empty MapSet when user has no meeting types" do
-      user = insert(:user)
-      assert MeetingTypeQueries.existing_names(user.id) == MapSet.new()
-    end
-  end
-
-  describe "has_meeting_types?/1" do
-    test "returns true when user has meeting types" do
-      user = insert(:user)
-      insert(:meeting_type, user: user)
-
-      assert MeetingTypeQueries.has_meeting_types?(user.id) == true
-    end
-
-    test "returns true when user has inactive meeting types" do
-      user = insert(:user)
-      insert(:meeting_type, user: user, is_active: false)
-
-      assert MeetingTypeQueries.has_meeting_types?(user.id) == true
-    end
-
-    test "returns false when user has no meeting types" do
-      user = insert(:user)
-
-      assert MeetingTypeQueries.has_meeting_types?(user.id) == false
-    end
-
-    test "returns false for non-existent user" do
-      assert MeetingTypeQueries.has_meeting_types?(999_999) == false
-    end
-
-    test "returns false after deleting all meeting types" do
-      user = insert(:user)
-      meeting_type = insert(:meeting_type, user: user)
-
-      # Verify user has meeting types
-      assert MeetingTypeQueries.has_meeting_types?(user.id) == true
-
-      # Delete the meeting type
-      MeetingTypeQueries.delete_meeting_type(meeting_type)
-
-      # Verify user no longer has meeting types
-      assert MeetingTypeQueries.has_meeting_types?(user.id) == false
+      assert user.id
+             |> MeetingTypeQueries.list_all_meeting_types()
+             |> Enum.map(& &1.name)
+             |> Enum.sort() ==
+               ["15 Minutes", "30 Minutes"]
     end
   end
 

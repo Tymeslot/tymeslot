@@ -140,7 +140,9 @@ defmodule Tymeslot.Workers.EmailWorkerNotificationSchedulingTest do
       )
     end
 
-    test "schedules job approximately 2 minutes in the future" do
+    # Edits are debounced upstream by the attendee notification worker; this
+    # job announces a change already decided on, so it is sent at once.
+    test "schedules the job to run now" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
@@ -159,10 +161,7 @@ defmodule Tymeslot.Workers.EmailWorkerNotificationSchedulingTest do
       assert :ok = EmailScheduler.schedule_event_update_notification(params)
 
       job = List.first(all_enqueued(worker: EmailWorker))
-      delay_seconds = DateTime.diff(job.scheduled_at, DateTime.utc_now())
-      # Allow a small margin around the expected 120-second delay
-      assert delay_seconds >= 115
-      assert delay_seconds <= 125
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now()) <= 5
     end
 
     test "uses medium-high priority" do
@@ -187,7 +186,9 @@ defmodule Tymeslot.Workers.EmailWorkerNotificationSchedulingTest do
       assert job.priority == 1
     end
 
-    test "coalesces rapid edits via uniqueness on event_uid" do
+    # Coalescing is the attendee notification worker's debounce; each call
+    # here is a change it decided to announce, so none may be swallowed.
+    test "every call is its own job" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
@@ -212,7 +213,7 @@ defmodule Tymeslot.Workers.EmailWorkerNotificationSchedulingTest do
           args: %{"action" => "send_event_update_notification", "event_uid" => "uid-update-004"}
         )
 
-      assert length(jobs) == 1
+      assert length(jobs) == 2
     end
   end
 

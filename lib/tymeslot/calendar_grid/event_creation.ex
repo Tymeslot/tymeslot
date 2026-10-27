@@ -27,17 +27,18 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   require Logger
 
+  alias Tymeslot.Availability
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRooms
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
-  alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
+  alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
@@ -59,8 +60,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   @doc """
   Creates a calendar event from a resolved create-form payload.
 
-  The payload carries the `:creating` form map, the organiser `:user_id`, and
-  the parsed `:start_at`/`:end_at` datetimes. On success the returned map
+  The payload carries the `:creating` form map, the organiser `:user_id`, the
+  parsed `:start_at`/`:end_at` datetimes and, optionally, the organiser's
+  `:timezone`, the zone a repeating event is written in
+  (`ProviderPayload.put_series_zone/2`). On success the returned map
   carries everything the web layer needs to cache the event, notify the grid,
   and flash the user (including `:reauth_required` when the integration's
   credentials need re-encrypting).
@@ -70,14 +73,17 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   integration has an offline queue (the CalDAV family), and the failure reports
   `retry: :queued`; otherwise `retry: :not_queued`.
 
-  A repeat rule Outlook would write with other dates is refused first
-  (`:day_missing_in_some_months`, see `Outlook.RecurrenceConverter`), before
-  a video room is made for an event that is never written.
+  A repeat rule Outlook cannot write as asked is refused first
+  (`:rule_not_supported_by_outlook` or `:day_missing_in_some_months`, see
+  `Outlook.RecurrenceConverter`), before a video room is made for an event
+  that is never written. The check maps the event's timing exactly as the
+  write does, so it reads the series' start date and `UNTIL` in the
+  organiser's zone.
   """
   @spec run_create_event(map()) ::
           {:ok, map()} | {:error, %{reason: term(), retry: :queued | :not_queued}}
   def run_create_event(payload) do
-    case refused_rule(payload.creating, payload.start_at) do
+    case refused_rule(payload) do
       nil -> write_event(payload)
       reason -> {:error, %{reason: reason, retry: :not_queued}}
     end
@@ -111,6 +117,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     plan =
       MeetingProvisioning.plan(creating.integration_id, creating[:video_integration_id], user_id)
 
+    warn_unusable_video(plan, creating[:video_integration_id], user_id)
+
     # What recording a room made for this event needs: the event's identity in
     # the calendar and its timing (see `EventVideoRooms.record/2`).
     grid_event = %{
@@ -120,13 +128,14 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       all_day: Map.get(creating, :all_day, false),
       start: start_at,
       end: end_at,
-      recurrence_rule: Map.get(creating, :recurrence_rule)
+      recurrence_rule: Map.get(creating, :recurrence_rule),
+      timezone: payload[:timezone]
     }
 
     video_context = provision_video_room_for_plan(plan, event_details, grid_event)
 
     event_data =
-      build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan)
+      build_event_data(uid, payload, event_details, video_context, plan)
 
     result =
       CalendarEvents.create_event(
@@ -184,37 +193,50 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   # Private
 
-  # An all-day start is a `Date`, a timed one a `DateTime`; both name its day.
-  defp refused_rule(%{recurrence_rule: rule} = creating, %{year: y, month: m, day: d})
+  # Outlook's repeat pattern is built from the event's timing, so the check
+  # runs the Outlook mapping on that same timing (`timing_data/1`), read in the
+  # same zone, rather than a reading of its own that could drift from it.
+  defp refused_rule(%{creating: %{recurrence_rule: rule} = creating} = payload)
        when is_binary(rule) and rule != "" do
     with {:ok, %{provider: "outlook"}} <- CalendarIntegrationQueries.get(creating.integration_id),
-         {:error, reason} <- RecurrenceConverter.rrule_to_outlook(rule, Date.new!(y, m, d)) do
+         {:error, reason} <- EventMapper.format_event_data(timing_data(payload)) do
       reason
     else
       _writable -> nil
     end
   end
 
-  defp refused_rule(_creating, _start_at), do: nil
+  defp refused_rule(_payload), do: nil
 
-  defp build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan) do
+  # The event's timing and repeat rule as every provider write receives them.
+  # For all-day events `start_at`/`end_at` are `Date` structs and `all_day`
+  # is true: the provider mappers emit date-only values (Google `start.date`,
+  # Outlook `isAllDay`, CalDAV `DTSTART;VALUE=DATE`) from a `Date` start/end.
+  defp timing_data(%{creating: creating, start_at: start_at, end_at: end_at} = payload) do
+    ProviderPayload.put_series_zone(
+      %{
+        start_time: start_at,
+        end_time: end_at,
+        all_day: Map.get(creating, :all_day, false),
+        recurrence_rule: Map.get(creating, :recurrence_rule)
+      },
+      payload[:timezone]
+    )
+  end
+
+  defp build_event_data(uid, payload, event_details, video_context, plan) do
+    creating = payload.creating
     description = build_description(creating[:description], video_context)
 
-    # For all-day events `start_at`/`end_at` are `Date` structs and `all_day`
-    # is true — the provider mappers emit date-only values (Google `start.date`,
-    # Outlook `isAllDay`, CalDAV `DTSTART;VALUE=DATE`) from a `Date` start/end.
-    raw_base = %{
-      uid: uid,
-      summary: creating.title,
-      start_time: start_at,
-      end_time: end_at,
-      all_day: Map.get(creating, :all_day, false),
-      reminders: Map.get(creating, :reminders, []),
-      recurrence_rule: Map.get(creating, :recurrence_rule),
-      calendar_integration_id: creating.integration_id,
-      calendar_id: creating[:calendar_id],
-      description: description
-    }
+    raw_base =
+      Map.merge(timing_data(payload), %{
+        uid: uid,
+        summary: creating.title,
+        reminders: Map.get(creating, :reminders, []),
+        calendar_integration_id: creating.integration_id,
+        calendar_id: creating[:calendar_id],
+        description: description
+      })
 
     base_data = MeetingProvisioning.attach_conference_data(raw_base, plan)
 
@@ -307,12 +329,24 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   # An all-day create carries its dates in `start_at`/`end_at` (see
-  # `build_event_data/7`); the invitation reads an all-day event by the same
+  # `build_event_data/5`); the invitation reads an all-day event by the same
   # fields a cached one has, so they are renamed to match.
   defp notify_timing(%{all_day: true}, %Date{} = start_date, %Date{} = end_date),
     do: %{all_day: true, start_date: start_date, end_date: end_date}
 
   defp notify_timing(_creating, start_at, end_at), do: %{start_at: start_at, end_at: end_at}
+
+  # A video integration was asked for but is not one the user can use
+  # (another user's, switched off, disconnected): the event is written without
+  # a room, as before, and the refusal is still logged.
+  defp warn_unusable_video(:none, video_id, user_id) when is_integer(video_id) do
+    Logger.warning("Video integration not usable; event created without a video room",
+      user_id: user_id,
+      video_integration_id: video_id
+    )
+  end
+
+  defp warn_unusable_video(_plan, _video_id, _user_id), do: :ok
 
   defp provision_video_room_for_plan(:none, _event_details, _grid_event), do: %{}
 
@@ -406,7 +440,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     # unavailable, so it is the write path that most needs the drop. Both
     # `finalise_create_result/2` success clauses funnel through here, and the
     # failure clause does not, so a queued create is left alone.
-    AvailabilityCache.invalidate_for_user(user_id)
+    Availability.changed(user_id)
 
     {:ok, _status} = AttendeeNotifications.event_created(notify_event, attendees)
 
@@ -519,7 +553,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
         {integration.provider, integration.default_booking_calendar_id, false}
 
       {:error, :requires_reencryption, integration} ->
-        CalendarManagement.handle_reauth_required(integration)
+        Management.handle_reauth_required(integration)
         {nil, nil, true}
 
       {:error, _reason} ->

@@ -374,19 +374,19 @@ msgstr ""
 msgid "Total"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -539,17 +539,17 @@ msgstr ""
 msgid "Too many requests. Please slow down."
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Cancelled"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Created"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
 msgstr ""
@@ -609,37 +609,37 @@ msgstr ""
 msgid "Webhook returned status %{status}"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Declined"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Request Expired"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Requested"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when nobody answers a booking request before its deadline"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when someone requests a booking on a meeting type that needs your approval"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr ""
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr ""
@@ -692,4 +692,24 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/regenerate_token_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate token"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "For stronger protection, verify the signature. The header has the form t=TIMESTAMP,v1=SIGNATURE. Compute the HMAC-SHA256 of the timestamp, a full stop and the raw request body, keyed with your webhook token, and compare its hexadecimal form with the signature. Reject requests whose timestamp is more than five minutes old."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Request signature"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
 msgstr ""

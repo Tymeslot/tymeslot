@@ -27,14 +27,15 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
 
   alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.Bookings.RescheduleRequest
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Notifications.Email.GroupMeetingEmails
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
-  alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
 
   setup :verify_on_exit!
 
@@ -280,11 +281,15 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
       |> ParticipantQueries.list_live_for_meeting()
       |> Map.new(&{&1.id, &1.management_token})
 
-    assert :ok =
-             perform_job(EmailWorker, %{
-               "action" => "send_reschedule_request",
-               "meeting_id" => meeting.id
-             })
+    assert :ok = RescheduleRequest.send_reschedule_request(meeting)
+
+    [request_job] =
+      all_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_request", "meeting_id" => meeting.id}
+      )
+
+    assert :ok = perform_job(EmailWorker, request_job.args)
 
     assert_enqueued(
       worker: EmailWorker,

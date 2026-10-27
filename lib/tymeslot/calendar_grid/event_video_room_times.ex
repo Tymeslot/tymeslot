@@ -28,11 +28,17 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
   `5FR`) or with any part the grid's recurrence editor does not write is treated
   as having no end, and so is an occurrence row with no rule.
 
+  A `COUNT` is counted from the series' first start. A Google or Outlook
+  occurrence row carries its series' rule but starts where it falls in the
+  series, so the caller gives it the series' first start as `:series_start`
+  (`Tymeslot.Integrations.Calendar.SeriesRules.with_series_start/1`); without
+  one the event's own start is used, which can only put the end later.
+
   One occurrence says nothing about the whole series, so for a series a change
   only ever opens the lobby earlier and only ever moves the end later.
   """
 
-  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Video.LobbyOpening
 
   @typedoc "Whether the times follow the event exactly or only ever widen."
@@ -45,9 +51,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
   # The most days one repetition of each frequency can span, for the rules
   # whose repetitions never skip (see `skipping_rule?/2`).
   @period_days %{daily: 1, weekly: 7, monthly: 31, yearly: 366}
-
-  # The rule parts the grid's recurrence editor writes (`RRule.build/2`).
-  @bounded_rule_parts ~w(FREQ INTERVAL BYDAY COUNT UNTIL WKST)
 
   @doc """
   The times an event's timing gives its room.
@@ -62,7 +65,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
     rule = blank_to_nil(Map.get(event, :recurrence_rule))
 
     if recurring?(event) do
-      {:series, lobby(all_day, start), rule && series_end(rule, all_day, start, finish)}
+      {:series, lobby(all_day, start),
+       rule &&
+         rule
+         |> series_end(all_day, {start, finish}, series_start(event), series_zone(event, all_day))
+         |> later_than_own(one_off_end(all_day, finish))}
     else
       {:exact, lobby(all_day, start), one_off_end(all_day, finish)}
     end
@@ -127,12 +134,13 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
   defp one_off_end(false, %DateTime{} = finish), do: truncate(finish)
   defp one_off_end(_all_day, _finish), do: nil
 
-  defp series_end(rule, all_day, start, finish) do
-    with true <- bounded_rule?(rule),
+  defp series_end(rule, all_day, {start, finish}, series_start, zone) do
+    with {:ok, parsed} <- RRule.parse(rule),
+         true <- bounded_rule?(parsed),
          %DateTime{} = start_dt <- to_datetime(start),
          %DateTime{} = end_dt <- to_datetime(finish),
-         {:ok, parsed} <- RecurrenceExpander.parse_rrule(rule),
-         %DateTime{} = last_start <- last_start_bound(parsed, rule, start_dt, all_day) do
+         first_dt = to_datetime(series_start) || start_dt,
+         %DateTime{} = last_start <- last_start_bound(parsed, first_dt, all_day, zone) do
       duration = max(DateTime.diff(end_dt, start_dt, :second), 0)
 
       last_start
@@ -143,37 +151,28 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
     end
   end
 
-  defp bounded_rule?(rule) do
-    rule
-    |> rule_parts()
-    |> Enum.all?(fn {key, _value} -> key in @bounded_rule_parts end)
-  end
+  # Only the parts the grid's recurrence editor writes bound the last start
+  # below; anything else could put an occurrence later than they allow.
+  defp bounded_rule?(%RRule{other: [], by_month_day: nil, by_month: nil, by_set_pos: nil}),
+    do: true
 
-  defp rule_parts(rule) do
-    rule
-    |> String.replace_prefix("RRULE:", "")
-    |> String.split(";", trim: true)
-    |> Enum.map(fn part ->
-      case String.split(part, "=", parts: 2) do
-        [key, value] -> {String.upcase(key), value}
-        [key] -> {String.upcase(key), ""}
-      end
-    end)
-  end
+  defp bounded_rule?(%RRule{}), do: false
 
   # No occurrence can start after UNTIL, nor after COUNT repetitions of the
   # longest span one repetition can take. A weekday filter can push matching
   # days up to a week further apart per repetition.
-  defp last_start_bound(%{until: %DateTime{} = until}, _rule, _start, _all_day), do: until
+  defp last_start_bound(%RRule{until: until} = parsed, _start, _all_day, zone)
+       when is_binary(until),
+       do: RRule.until_instant(parsed, zone)
 
   defp last_start_bound(
-         %{count: count, freq: freq, interval: interval} = parsed,
-         rule,
+         %RRule{count: count, freq: freq, interval: interval} = parsed,
          start,
-         all_day
+         all_day,
+         _zone
        )
        when is_integer(count) and count > 0 do
-    if skipping_rule?(parsed, rule, start, all_day) do
+    if skipping_rule?(parsed, start, all_day) do
       nil
     else
       weekday_days = if parsed.by_day, do: 7 * interval, else: 0
@@ -182,19 +181,18 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
     end
   end
 
-  defp last_start_bound(_parsed, _rule, _start, _all_day), do: nil
+  defp last_start_bound(_parsed, _start, _all_day, _zone), do: nil
 
   # RFC 5545 skips a repetition that falls on a date the month or year does
   # not have, so COUNT repetitions can then span far more than COUNT periods.
   # A timed start is judged in UTC, which can be a day either side of the
   # event's own day, so the day before each boundary counts too.
-  defp skipping_rule?(parsed, rule, start, all_day) do
-    ordinal_weekday?(rule) or skipping_start?(parsed.freq, start, all_day)
+  defp skipping_rule?(parsed, start, all_day) do
+    ordinal_weekday?(parsed) or skipping_start?(parsed.freq, start, all_day)
   end
 
-  defp ordinal_weekday?(rule) do
-    Enum.any?(rule_parts(rule), fn {key, value} -> key == "BYDAY" and value =~ ~r/\d/ end)
-  end
+  defp ordinal_weekday?(%RRule{by_day: by_day}),
+    do: Enum.any?(by_day || [], fn {ordinal, _weekday} -> ordinal != nil end)
 
   defp skipping_start?(:monthly, start, all_day), do: start.day >= day_limit(28, all_day)
 
@@ -207,6 +205,26 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
 
   defp day_limit(day, true), do: day + 1
   defp day_limit(day, false), do: day
+
+  defp series_start(event), do: Map.get(event, :series_start)
+
+  # An occurrence moved on its own can end after the last start its series'
+  # rule allows, and its room is still needed until it ends. Nil (no known
+  # end) stays nil.
+  defp later_than_own(nil, _own_end), do: nil
+  defp later_than_own(rule_end, nil), do: rule_end
+  defp later_than_own(rule_end, own_end), do: later_end(rule_end, own_end)
+
+  # The zone the series' UNTIL is read in, as the expander reads it: the
+  # event's own for a timed series, UTC (the zone an all-day series is
+  # stepped in) for an all-day one or a row without a known zone.
+  defp series_zone(_event, true = _all_day), do: "Etc/UTC"
+
+  defp series_zone(event, _all_day) do
+    zone = Map.get(event, :timezone)
+
+    if is_binary(zone) and match?({:ok, _now}, DateTime.now(zone)), do: zone, else: "Etc/UTC"
+  end
 
   defp to_datetime(%DateTime{} = datetime), do: datetime
   defp to_datetime(%Date{} = date), do: midnight(date)

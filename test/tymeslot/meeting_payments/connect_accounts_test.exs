@@ -7,6 +7,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   @moduletag :database
   @moduletag :payments
 
+  import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.ConfigTestHelpers
 
@@ -14,6 +16,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.SendConnectAccountRestricted
 
   setup :verify_on_exit!
@@ -54,6 +59,22 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert account.status == "active"
       assert_received {:idempotency_key, key}
       assert key == "connect_account:#{account.id}"
+    end
+
+    test "refuses an account Stripe opened in an unsupported currency, keeping the placeholder" do
+      user = insert(:user)
+
+      expect(StripeAdapterMock, :create_account, fn _params, _opts ->
+        {:ok, %{id: "acct_TEST_JPY", default_currency: "jpy"}}
+      end)
+
+      capture_log(fn ->
+        assert {:error, :unsupported_currency} = ConnectAccounts.start_onboarding(user)
+      end)
+
+      account = ConnectAccountQueries.live_for_user(user.id)
+      assert account.status == "creating"
+      assert account.default_currency == nil
     end
 
     test "uses the operator-configured default country" do
@@ -247,6 +268,29 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert reloaded.status == "paid"
     end
 
+    # A row that no longer passes the full meeting validation (here a solo
+    # meeting with no attendee name, as older rows can carry) must still
+    # have its slot released.
+    test "expires a pending booking's meeting whose other fields no longer pass validation" do
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      meeting = insert(:meeting, status: "awaiting_payment", organizer_user_id: user.id)
+
+      Repo.update_all(from(m in Meeting, where: m.id == ^meeting.id), set: [attendee_name: nil])
+
+      insert(:booking_payment,
+        host_user_id: user.id,
+        meeting: meeting,
+        stripe_checkout_session_id: "cs_LEGACY",
+        status: "pending"
+      )
+
+      stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
+
+      assert {:ok, %{cancelled_count: 1}} = ConnectAccounts.disconnect(user)
+      assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+    end
+
     # Disconnecting neither settles nor cancels a refund the host already owes;
     # it only takes away their ability to issue it from Tymeslot. The count is
     # reported so the caller can say so, rather than let the obligation drop
@@ -304,6 +348,34 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert reloaded.charges_enabled == true
       assert reloaded.payouts_enabled == true
       assert reloaded.details_submitted == true
+    end
+
+    test "returns the rejected changeset and leaves the row unchanged when the update fails" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_REJECTED",
+          status: "active"
+        })
+
+      stripe_account = %{
+        "id" => "acct_REJECTED",
+        "charges_enabled" => "not-a-boolean",
+        "payouts_enabled" => true,
+        "details_submitted" => true,
+        "requirements" => %{"disabled_reason" => nil}
+      }
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
+
+      assert Keyword.has_key?(errors, :charges_enabled)
+
+      reloaded = ConnectAccountQueries.live_for_user(user.id)
+      refute reloaded.payouts_enabled
+      assert reloaded.last_account_event_at == nil
     end
 
     test "ignores events for unknown accounts" do

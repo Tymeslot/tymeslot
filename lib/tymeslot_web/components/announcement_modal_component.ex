@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
   defp maybe_mark_seen(%{assigns: %{preview?: true}}, _current), do: :ok
 
   defp maybe_mark_seen(socket, current) do
-    Announcements.mark_seen!(socket.assigns.current_user, current.key)
+    Announcements.mark_seen(socket.assigns.current_user, current.key)
   end
 
   # Dismissing the stack marks every announcement seen, not just the current
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
 
   defp mark_all_seen(socket) do
     Enum.each(socket.assigns.announcements, fn announcement ->
-      Announcements.mark_seen!(socket.assigns.current_user, announcement.key)
+      Announcements.mark_seen(socket.assigns.current_user, announcement.key)
     end)
   end
 end

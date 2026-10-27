@@ -9,7 +9,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
   exception gave it, and many messages quote the term that failed. This
   handler listens to `[:error_tracker, :occurrence, :new]`, emitted once both
   rows are written, and rewrites either reason whose masked form differs:
-  `PIIScrubber.mask_emails/1` for email addresses,
+  `EmailMasker.mask_emails/1` for email addresses,
   `Tymeslot.Infrastructure.Logging.Redactor` for tokens and secrets.
 
   Rewriting the reason is safe for grouping: an error's fingerprint is its
@@ -28,8 +28,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
 
   alias ErrorTracker.Error
   alias ErrorTracker.Occurrence
-  alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
   alias Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries
+  alias Tymeslot.Infrastructure.Logging.EmailMasker
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
   alias Tymeslot.Infrastructure.Logging.Redactor
@@ -42,7 +42,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
 
   # The version of what `scrub/1` masks. Bump it whenever that changes: a
   # pattern in `Tymeslot.Infrastructure.Logging.Redactor` or the email
-  # pattern in `PIIScrubber`. The next boot then masks every reason already
+  # pattern in `Tymeslot.Infrastructure.Logging.EmailMasker`. The next boot then masks every reason already
   # stored under the new rules, once (see
   # `Tymeslot.Workers.ErrorTrackerMaintenanceWorker.enqueue_full_remask/0`).
   @rules_version 1
@@ -66,7 +66,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
 
   @doc "Masks email addresses and credentials in `text`."
   @spec scrub(String.t()) :: String.t()
-  def scrub(text) when is_binary(text), do: text |> PIIScrubber.mask_emails() |> Redactor.redact()
+  def scrub(text) when is_binary(text), do: text |> EmailMasker.mask_emails() |> Redactor.redact()
 
   @doc """
   Returns `exception` ready for `ErrorTracker.report/3`: the values of its

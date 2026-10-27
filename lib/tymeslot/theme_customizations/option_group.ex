@@ -12,7 +12,10 @@ defmodule Tymeslot.ThemeCustomizations.OptionGroup do
     * `changeset/3`: casts and validates them, refusing anything the
       descriptor does not offer;
     * `changes/3`: the settings one dashboard or onboarding choice writes,
-      or `:error` for a field or value the group does not have;
+      or `:error` for a field or value the group does not have. A choice
+      whose changes depend on what is stored (removing the upload on show)
+      returns a function of the stored settings and the theme's defaults,
+      which the save calls on the row it has locked;
     * `asset_fields/1` (optional): the settings that hold uploaded files and
       the kind of each. A module without it has none.
     * `media/2` (optional): what the group resolves from the stored
@@ -54,12 +57,21 @@ defmodule Tymeslot.ThemeCustomizations.OptionGroup do
   """
   @callback changeset(Changeset.t(), map(), group()) :: Changeset.t()
 
+  @typedoc """
+  Changes that depend on the stored settings: called by the save with the
+  row's stored settings (empty before the row exists, with no defaults
+  filled in) and the theme's defaults, both string-keyed, once it holds the
+  row's lock.
+  """
+  @type stored_changes :: (Spec.settings(), Spec.settings() -> map())
+
   @doc """
   The settings one choice writes (`field` and `value` as the dashboard or
   onboarding send them), or `:error` for a field or value the group does not
   have.
   """
-  @callback changes(field :: String.t(), value :: String.t(), group()) :: {:ok, map()} | :error
+  @callback changes(field :: String.t(), value :: String.t(), group()) ::
+              {:ok, map() | stored_changes()} | :error
 
   @doc "The settings that hold uploaded files, and what each stores."
   @callback asset_fields(group()) :: [{atom(), Spec.asset_kind()}]

@@ -480,7 +480,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
       room = insert_room(user, source)
       serve(graph(%{create: {500, %{"error" => %{"code" => "ErrorInternalServerError"}}}}))
 
-      assert {:error, :network_error} =
+      assert {:error, :server_error} =
                move(user, occurrence, destination, @destination_calendar)
 
       assert [%{method: :get}, %{method: :post}] = requests()

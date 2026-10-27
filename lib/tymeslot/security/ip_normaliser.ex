@@ -47,7 +47,9 @@ defmodule Tymeslot.Security.IPNormaliser do
   `:error` for anything that is not an address, so the caller can decide
   what to put in its place rather than log the value as it came.
 
-  Only for logs: rate limiting and account lockout key on the full address.
+  Only for logs. Rate limiting and account lockout key on a different unit,
+  the one a client actually controls (an IPv6 address's /64, IPv4 as it
+  is): see `Tymeslot.Security.RateLimiter.source_key/1`.
   """
   @spec truncate_for_log(term()) :: {:ok, String.t()} | :error
   def truncate_for_log(ip) when is_binary(ip) do

@@ -5,15 +5,22 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidator do
   contract between the booking engine and the snapshot.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @spec validate(any(), map(), keyword()) :: :ok | {:error, String.t()}
   def validate(value, definition, opts \\ [])
 
   def validate(%{"confirmed" => true, "confirmed_at" => iso}, _definition, _opts)
       when is_binary(iso) do
     case DateTime.from_iso8601(iso) do
-      {:ok, _dt, 0} -> :ok
-      {:ok, _dt, _offset} -> {:error, "Confirmation timestamp must be UTC"}
-      _err -> {:error, "Confirmation timestamp is invalid"}
+      {:ok, _dt, 0} ->
+        :ok
+
+      {:ok, _dt, _offset} ->
+        {:error, dgettext("errors_input", "Confirmation timestamp must be UTC")}
+
+      _err ->
+        {:error, dgettext("errors_input", "Confirmation timestamp is invalid")}
     end
   end
 
@@ -23,11 +30,12 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidator do
   def validate(nil, _definition, opts), do: blank(opts)
   def validate("", _definition, opts), do: blank(opts)
 
-  def validate(_value, _definition, _opts), do: {:error, "Please acknowledge to continue"}
+  def validate(_value, _definition, _opts),
+    do: {:error, dgettext("errors_input", "Please acknowledge to continue")}
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true),
-      do: {:error, "Please acknowledge to continue"},
+      do: {:error, dgettext("errors_input", "Please acknowledge to continue")},
       else: :ok
   end
 end

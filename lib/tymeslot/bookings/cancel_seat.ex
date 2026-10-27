@@ -32,9 +32,9 @@ defmodule Tymeslot.Bookings.CancelSeat do
 
   require Logger
 
+  alias Tymeslot.Availability
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.SeatRelease
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
@@ -171,7 +171,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
   # leaver, the slot's availability itself. Neither is visible until the
   # cached availability for the organiser is dropped.
   defp publish_seat_change(meeting) do
-    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+    Availability.changed(meeting.organizer_user_id)
     SeatBroadcast.broadcast_seat_change(meeting.meeting_type_id)
     :ok
   end

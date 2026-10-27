@@ -35,6 +35,7 @@ defmodule Tymeslot.Bookings.CalendarUidJourneyTest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.TestMocks
 
   @timezone "Europe/London"
@@ -88,7 +89,11 @@ defmodule Tymeslot.Bookings.CalendarUidJourneyTest do
       # The guest cancels from that link; the organiser's event is deleted by
       # the calendar uid.
       assert link_uid(attendee_email.html_body) == meeting.uid
-      assert {:ok, _cancelled} = Cancel.execute(link_uid(attendee_email.html_body))
+
+      assert {:ok, _cancelled} =
+               Cancel.execute(
+                 Repo.get_by!(MeetingSchema, uid: link_uid(attendee_email.html_body))
+               )
 
       assert %{success: 1, failure: 0} = drain_calendar_jobs()
       assert_received {:calendar_delete, deleted_identifier}
@@ -182,7 +187,7 @@ defmodule Tymeslot.Bookings.CalendarUidJourneyTest do
       send(test, {:calendar_update, identifier, event_data})
       :ok
     end)
-    |> stub(:delete_event, fn identifier, _context ->
+    |> stub(:delete_event, fn identifier, _context, _opts ->
       send(test, {:calendar_delete, identifier})
       :ok
     end)

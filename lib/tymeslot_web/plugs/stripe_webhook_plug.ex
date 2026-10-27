@@ -27,11 +27,11 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
   def call(conn, _opts) do
     client_ip = ClientIP.get(conn)
 
-    case RateLimiter.check_stripe_webhook_rate_limit(client_ip) do
+    case RateLimiter.check(:stripe_webhook, client_ip) do
       :ok ->
         conn
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _message} ->
         Logger.warning("Stripe webhook rate limit exceeded",
           client_ip: client_ip,
           path: conn.request_path

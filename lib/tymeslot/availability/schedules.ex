@@ -11,12 +11,13 @@ defmodule Tymeslot.Availability.Schedules do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Availability.AvailabilityBreakQueries
+  alias Tymeslot.Availability
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.Breaks
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   alias Tymeslot.Validation.Constraints
@@ -166,7 +167,8 @@ defmodule Tymeslot.Availability.Schedules do
   Returns `{:error, :schedule_limit_reached}` once the profile owns
   `max_schedules/0` of them.
   """
-  @spec duplicate(schedule()) :: result()
+  @spec duplicate(schedule()) ::
+          result() | {:error, {:break_outside_hours, map(), map()}}
   def duplicate(%AvailabilityScheduleSchema{} = source) do
     copy =
       Repo.transaction(fn ->
@@ -311,6 +313,45 @@ defmodule Tymeslot.Availability.Schedules do
     }
   end
 
+  @typedoc "`config/0` for a booking, with the organiser's timezone."
+  @type booking_config :: %{
+          required(:schedule_id) => integer() | nil,
+          required(:buffer_before_minutes) => non_neg_integer(),
+          required(:buffer_after_minutes) => non_neg_integer(),
+          required(:min_advance_hours) => non_neg_integer(),
+          required(:max_advance_booking_days) => pos_integer(),
+          required(:slot_interval_minutes) => pos_integer() | nil,
+          required(:owner_timezone) => String.t()
+        }
+
+  @doc """
+  Scheduling policy for a booking: buffers, minimum notice, advance window and
+  the organiser's timezone.
+
+  The policy comes from the schedule the meeting type is booked against, so
+  server-side validation applies exactly the rules the offered slots were
+  computed from. A nil meeting type resolves the organiser's default schedule.
+  """
+  @spec booking_config(integer() | nil, map() | nil) :: booking_config()
+  def booking_config(nil, _meeting_type) do
+    nil
+    |> config(nil)
+    |> Map.put(:owner_timezone, Profiles.get_default_timezone())
+  end
+
+  def booking_config(organizer_user_id, meeting_type) do
+    # `Profiles.get_profile_settings/1` already resolves a profile with no
+    # timezone to `Profiles.get_default_timezone()`, the same fallback the
+    # booking page applies, so a nil profile timezone resolves to one zone on
+    # both sides.
+    settings = Profiles.get_profile_settings(organizer_user_id)
+
+    (meeting_type || %{user_id: organizer_user_id})
+    |> resolve_for_meeting_type()
+    |> config(meeting_type)
+    |> Map.put(:owner_timezone, settings.timezone)
+  end
+
   @doc """
   A meeting type's booking interval, in minutes.
 
@@ -372,39 +413,19 @@ defmodule Tymeslot.Availability.Schedules do
           ends_next_day: day.ends_next_day
         })
 
-      copy_breaks(day.breaks, copy.id)
+      with {:error, reason} <- Breaks.replace_breaks(copy, day.breaks || []),
+           do: Repo.rollback(reason)
     end)
   end
-
-  defp copy_breaks(breaks, weekly_availability_id) when is_list(breaks) do
-    Enum.each(breaks, fn break ->
-      AvailabilityBreakQueries.create_break(%{
-        weekly_availability_id: weekly_availability_id,
-        start_time: break.start_time,
-        end_time: break.end_time,
-        label: break.label,
-        sort_order: break.sort_order
-      })
-    end)
-  end
-
-  defp copy_breaks(_breaks, _weekly_availability_id), do: :ok
 
   # The UI submits string-keyed params while internal callers use atoms; the
   # merges above need one consistent key type.
-  # The slot engine reads these rows and the availability cache is keyed by
-  # user, so a mutation here walks profile -> user and clears it. Changing the
-  # default or deleting a schedule re-points every meeting type that follows the
-  # default, so leaving it to the two-minute TTL would keep offering the old
-  # hours to whoever is on the booking page meanwhile. A failed write, or a
-  # missing link in the walk, is a no-op: invalidation must never turn a
-  # successful edit into an error.
-  defp invalidate_cache({:ok, _result} = outcome, %{profile_id: profile_id}) do
-    case ProfileQueries.get_with_user(profile_id) do
-      %{user_id: user_id} -> AvailabilityCache.invalidate_for_user(user_id)
-      _no_profile -> :ok
-    end
-
+  # The slot engine reads these rows. Changing the default or deleting a
+  # schedule re-points every meeting type that follows the default, so leaving
+  # it to the cache's lifetime would keep offering the old hours to whoever is
+  # on the booking page meanwhile. A failed write changed nothing.
+  defp invalidate_cache({:ok, _result} = outcome, %AvailabilityScheduleSchema{} = schedule) do
+    Availability.changed(schedule)
     outcome
   end
 

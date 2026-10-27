@@ -6,8 +6,10 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Locales
-  alias Tymeslot.Payments.Subscriptions
+  alias Tymeslot.Payments
 
   @doc """
   Generates an ICS file content for a meeting/appointment.
@@ -140,36 +142,40 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   #
   # `SCHEDULE-AGENT=CLIENT` on ORGANIZER/ATTENDEE is defence-in-depth per
   # RFC 6638 §7.1 for the same reason.
+  #
+  # The document is built as content lines and written through
+  # `ContentLines.join/1`, as the CalDAV writer's is: CRLF line endings and
+  # folding to 75 octets (RFC 5545 §3.1).
   defp render_vcalendar(event, method, sequence) do
-    attendee_line = if event.attendee, do: "ATTENDEE;#{event.attendee}\n", else: ""
-    sequence_line = if is_integer(sequence), do: "SEQUENCE:#{sequence}\n", else: ""
-    method_line = if method == :none, do: "", else: "METHOD:PUBLISH\n"
-    status = status_for(method, event.status)
     lang = language_param()
-    conference_line = build_conference_line(event.conference)
+    summary_text = Format.escape_text(event.summary || dgettext("emails", "Meeting"))
+    description_text = Format.escape_text(event.description)
+    location_text = Format.escape_text(event.location)
 
-    summary_text = escape_ical_text(event.summary || dgettext("emails", "Meeting"))
-    description_text = escape_ical_text(event.description)
-    location_text = escape_ical_text(event.location)
-
-    fold_lines("""
-    BEGIN:VCALENDAR
-    VERSION:2.0
-    #{method_line}PRODID:-//Tymeslot//Tymeslot 1.0//EN
-    CALSCALE:GREGORIAN
-    BEGIN:VEVENT
-    UID:#{event.uid}
-    DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
-    DTSTART#{format_ical_time(event.dtstart)}
-    DTEND#{format_ical_time(event.dtend)}
-    #{sequence_line}SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}
-    DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}
-    LOCATION#{tag_language(location_text, lang)}:#{location_text}
-    #{conference_line}ORGANIZER;#{event.organizer}
-    #{attendee_line}STATUS:#{status}
-    END:VEVENT
-    END:VCALENDAR
-    """)
+    [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      if(method != :none, do: "METHOD:PUBLISH"),
+      "PRODID:-//Tymeslot//Tymeslot 1.0//EN",
+      "CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      "UID:#{event.uid}",
+      "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
+      "DTSTART#{format_ical_time(event.dtstart)}",
+      "DTEND#{format_ical_time(event.dtend)}",
+      if(is_integer(sequence), do: "SEQUENCE:#{sequence}"),
+      "SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}",
+      "DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}",
+      "LOCATION#{tag_language(location_text, lang)}:#{location_text}",
+      build_conference_line(event.conference),
+      "ORGANIZER;#{event.organizer}",
+      event.attendee && "ATTENDEE;#{event.attendee}",
+      "STATUS:#{status_for(method, event.status)}",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> ContentLines.join()
   end
 
   # RFC 7986 §5.11 — `CONFERENCE` advertises an online-meeting access URI so
@@ -177,12 +183,12 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   # description fallback too, for clients that predate RFC 7986. The value is a
   # URI (not text), so it is not text-escaped; we only strip CR/LF to prevent
   # property injection. `LABEL` is a quoted parameter value.
-  defp build_conference_line(nil), do: ""
+  defp build_conference_line(nil), do: nil
 
   defp build_conference_line(url) do
     label = dgettext("emails", "Join the video call")
 
-    ~s(CONFERENCE;VALUE=URI;FEATURE=VIDEO;LABEL="#{escape_param_value(label)}":#{sanitize_uri(url)}\n)
+    ~s(CONFERENCE;VALUE=URI;FEATURE=VIDEO;LABEL="#{escape_param_value(label)}":#{Format.sanitize_ical_value(url)})
   end
 
   defp escape_param_value(value) do
@@ -190,8 +196,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     |> String.replace(~r/[\r\n]/, " ")
     |> String.replace("\"", "'")
   end
-
-  defp sanitize_uri(url), do: String.replace(url, ~r/[\r\n]/, "")
 
   # RFC 5545 §3.2.10 — `LANGUAGE` carries the BCP-47 language tag of the
   # property's human-readable text. The configured locale codes ("en", "de",
@@ -209,68 +213,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp tag_language("", _lang), do: ""
   defp tag_language(_text, lang), do: lang
 
-  # RFC 5545 §3.1 — content lines must not exceed 75 octets (excluding line
-  # terminator). Fold by inserting CRLF + a single SPACE continuation marker.
-  # First segment may be up to 75 octets; each continuation segment up to 74
-  # octets (the leading SPACE occupies one octet of the 75-octet allowance).
-  # We split at UTF-8 character boundaries so multi-byte codepoints are never
-  # torn in half.
-  defp fold_lines(ical_string) do
-    ical_string
-    |> String.split("\n")
-    |> Enum.map_join("\n", &fold_line/1)
-  end
-
-  defp fold_line(line) do
-    fold_line_acc(line, _first = true, _acc = [])
-  end
-
-  defp fold_line_acc(<<>>, _first, acc), do: acc |> Enum.reverse() |> Enum.join("\r\n ")
-
-  defp fold_line_acc(rest, first, acc) do
-    limit = if first, do: 75, else: 74
-
-    {chunk, remaining} = take_octets(rest, limit)
-    fold_line_acc(remaining, false, [chunk | acc])
-  end
-
-  # Takes up to `max_bytes` octets from `binary`, never splitting a UTF-8
-  # multi-byte codepoint. Returns `{taken, rest}`.
-  defp take_octets(binary, max_bytes) when byte_size(binary) <= max_bytes do
-    {binary, ""}
-  end
-
-  defp take_octets(binary, max_bytes) do
-    # Walk forward from max_bytes to find a UTF-8 codepoint boundary.
-    split_at = safe_utf8_split(binary, max_bytes)
-    <<chunk::binary-size(^split_at), rest::binary>> = binary
-    {chunk, rest}
-  end
-
-  # Returns the largest byte offset ≤ `pos` at which `binary` can be split
-  # without tearing a UTF-8 multi-byte sequence. UTF-8 continuation bytes
-  # have the bit pattern 10xxxxxx (0x80–0xBF); back up past them to land on
-  # a leading byte.
-  defp safe_utf8_split(binary, pos) do
-    pos = min(pos, byte_size(binary))
-    retreat_to_boundary(binary, pos)
-  end
-
-  defp retreat_to_boundary(_binary, 0), do: 0
-
-  defp retreat_to_boundary(binary, pos) do
-    byte = :binary.at(binary, pos - 1)
-
-    if continuation_byte?(byte) do
-      retreat_to_boundary(binary, pos - 1)
-    else
-      pos
-    end
-  end
-
-  # UTF-8 continuation bytes: 10xxxxxx
-  defp continuation_byte?(byte), do: byte >= 0x80 and byte <= 0xBF
-
   defp status_for(:cancel, _status), do: "CANCELLED"
   defp status_for(_method, status), do: status
 
@@ -284,7 +226,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
         Application.get_env(:tymeslot, :email)[:from_email]
       )
 
-    "SCHEDULE-AGENT=CLIENT#{cn_param(organizer_name)}:mailto:#{organizer_email}"
+    "SCHEDULE-AGENT=CLIENT#{cn_param(organizer_name)}:mailto:" <>
+      Format.sanitize_ical_value(organizer_email)
   end
 
   defp format_attendees(meeting_details) do
@@ -293,7 +236,9 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     case attendee_email do
       email when is_binary(email) and email != "" ->
         attendee_name = Map.get(meeting_details, :attendee_name)
-        "SCHEDULE-AGENT=CLIENT#{cn_param(attendee_name)}:mailto:#{email}"
+
+        "SCHEDULE-AGENT=CLIENT#{cn_param(attendee_name)}:mailto:" <>
+          Format.sanitize_ical_value(email)
 
       _other ->
         nil
@@ -366,7 +311,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   # manager.
   defp build_branding_section(meeting_details) do
     with url when is_binary(url) <- Application.get_env(:tymeslot, :ics_branding_url),
-         true <- Subscriptions.show_branding?(Map.get(meeting_details, :organizer_user_id)) do
+         true <- Payments.show_branding?(Map.get(meeting_details, :organizer_user_id)) do
       dgettext("emails", "Scheduled with %{brand}: %{url}", brand: "Tymeslot", url: url)
     else
       _no_branding -> nil
@@ -406,24 +351,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     end
   end
 
-  defp escape_ical_text(text) when is_binary(text) do
-    text
-    |> String.replace("\\", "\\\\")
-    |> String.replace(";", "\\;")
-    |> String.replace(",", "\\,")
-    |> String.replace("\n", "\\n")
-    |> String.replace("\r", "")
-  end
-
-  defp escape_ical_text(nil), do: ""
-
   defp format_ical_time(%Date{} = date), do: ";VALUE=DATE:#{Calendar.strftime(date, "%Y%m%d")}"
-  defp format_ical_time(datetime), do: ":#{format_datetime_utc(datetime)}"
 
-  defp format_datetime_utc(datetime) do
-    datetime
-    |> DateTime.shift_zone!("Etc/UTC")
-    |> DateTime.truncate(:second)
-    |> Calendar.strftime("%Y%m%dT%H%M%SZ")
-  end
+  defp format_ical_time(datetime),
+    do: ":" <> Format.format_datetime(DateTime.shift_zone!(datetime, "Etc/UTC"))
 end

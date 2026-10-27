@@ -1,0 +1,567 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "After"
+msgstr "Po"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Daily"
+msgstr "Codziennie"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Does not repeat"
+msgstr "Nie powtarza się"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Every"
+msgstr "Co"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Monthly"
+msgstr "Co miesiąc"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Never ends"
+msgstr "Nigdy się nie kończy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "On date"
+msgstr "W dniu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat"
+msgstr "Powtarzanie"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats daily"
+msgstr "Powtarza się codziennie"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats every %{count} day"
+msgid_plural "Repeats every %{count} days"
+msgstr[0] "Powtarza się co %{count} dzień"
+msgstr[1] "Powtarza się co %{count} dni"
+msgstr[2] "Powtarza się co %{count} dni"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats every %{count} month"
+msgid_plural "Repeats every %{count} months"
+msgstr[0] "Powtarza się co %{count} miesiąc"
+msgstr[1] "Powtarza się co %{count} miesiące"
+msgstr[2] "Powtarza się co %{count} miesięcy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats every %{count} week"
+msgid_plural "Repeats every %{count} weeks"
+msgstr[0] "Powtarza się co %{count} tydzień"
+msgstr[1] "Powtarza się co %{count} tygodnie"
+msgstr[2] "Powtarza się co %{count} tygodni"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats every %{count} year"
+msgid_plural "Repeats every %{count} years"
+msgstr[0] "Powtarza się co %{count} rok"
+msgstr[1] "Powtarza się co %{count} lata"
+msgstr[2] "Powtarza się co %{count} lat"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats monthly"
+msgstr "Powtarza się co miesiąc"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats weekly"
+msgstr "Powtarza się co tydzień"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats yearly"
+msgstr "Powtarza się co rok"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Weekly"
+msgstr "Co tydzień"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Yearly"
+msgstr "Co rok"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "for %{count} occurrence"
+msgid_plural "for %{count} occurrences"
+msgstr[0] "łącznie %{count} raz"
+msgstr[1] "łącznie %{count} razy"
+msgstr[2] "łącznie %{count} razy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "occurrence"
+msgid_plural "occurrences"
+msgstr[0] "wystąpieniu"
+msgstr[1] "wystąpieniach"
+msgstr[2] "wystąpieniach"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{days}"
+msgstr "(%{days})"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "until %{date}"
+msgstr "do %{date}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats on"
+msgstr "Dzień powtarzania"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats on a custom pattern"
+msgstr "Powtarza się według niestandardowego wzorca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Replace repeat rule"
+msgstr "Zastąp regułę powtarzania"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "To repeat on another day, move the event to that day."
+msgstr "Aby wydarzenie powtarzało się w inny dzień, przenieś je na ten dzień."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of April"
+msgstr "kwietnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of August"
+msgstr "sierpnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of December"
+msgstr "grudnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of February"
+msgstr "lutego"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of January"
+msgstr "stycznia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of July"
+msgstr "lipca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of June"
+msgstr "czerwca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of March"
+msgstr "marca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of May"
+msgstr "maja"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of November"
+msgstr "listopada"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of October"
+msgstr "października"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "of September"
+msgstr "września"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} April"
+msgstr "%{day} kwietnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} August"
+msgstr "%{day} sierpnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} December"
+msgstr "%{day} grudnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} February"
+msgstr "%{day} lutego"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} January"
+msgstr "%{day} stycznia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} July"
+msgstr "%{day} lipca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} June"
+msgstr "%{day} czerwca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} March"
+msgstr "%{day} marca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} May"
+msgstr "%{day} maja"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} November"
+msgstr "%{day} listopada"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} October"
+msgstr "%{day} października"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on %{day} September"
+msgstr "%{day} września"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on day %{day}"
+msgstr "%{day}. dnia miesiąca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Friday"
+msgstr "w pierwszy piątek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Monday"
+msgstr "w pierwszy poniedziałek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Saturday"
+msgstr "w pierwszą sobotę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Sunday"
+msgstr "w pierwszą niedzielę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Thursday"
+msgstr "w pierwszy czwartek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Tuesday"
+msgstr "w pierwszy wtorek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Wednesday"
+msgstr "w pierwszą środę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first weekday"
+msgstr "w pierwszy dzień roboczy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the first weekend day"
+msgstr "w pierwszy dzień weekendowy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Friday"
+msgstr "w czwarty piątek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Monday"
+msgstr "w czwarty poniedziałek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Saturday"
+msgstr "w czwartą sobotę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Sunday"
+msgstr "w czwartą niedzielę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Thursday"
+msgstr "w czwarty czwartek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Tuesday"
+msgstr "w czwarty wtorek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Wednesday"
+msgstr "w czwartą środę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth weekday"
+msgstr "w czwarty dzień roboczy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth weekend day"
+msgstr "w czwarty dzień weekendowy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Friday"
+msgstr "w ostatni piątek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Monday"
+msgstr "w ostatni poniedziałek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Saturday"
+msgstr "w ostatnią sobotę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Sunday"
+msgstr "w ostatnią niedzielę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Thursday"
+msgstr "w ostatni czwartek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Tuesday"
+msgstr "w ostatni wtorek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Wednesday"
+msgstr "w ostatnią środę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last day"
+msgstr "w ostatni dzień"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last weekday"
+msgstr "w ostatni dzień roboczy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the last weekend day"
+msgstr "w ostatni dzień weekendowy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Friday"
+msgstr "w drugi piątek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Monday"
+msgstr "w drugi poniedziałek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Saturday"
+msgstr "w drugą sobotę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Sunday"
+msgstr "w drugą niedzielę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Thursday"
+msgstr "w drugi czwartek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Tuesday"
+msgstr "w drugi wtorek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Wednesday"
+msgstr "w drugą środę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second weekday"
+msgstr "w drugi dzień roboczy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the second weekend day"
+msgstr "w drugi dzień weekendowy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Friday"
+msgstr "w trzeci piątek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Monday"
+msgstr "w trzeci poniedziałek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Saturday"
+msgstr "w trzecią sobotę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Sunday"
+msgstr "w trzecią niedzielę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Thursday"
+msgstr "w trzeci czwartek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Tuesday"
+msgstr "w trzeci wtorek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Wednesday"
+msgstr "w trzecią środę"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third weekday"
+msgstr "w trzeci dzień roboczy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_summary.ex
+#, elixir-autogen, elixir-format
+msgid "on the third weekend day"
+msgstr "w trzeci dzień weekendowy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "days"
+msgstr[0] "dzień"
+msgstr[1] "dni"
+msgstr[2] "dni"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "month"
+msgid_plural "months"
+msgstr[0] "miesiąc"
+msgstr[1] "miesiące"
+msgstr[2] "miesięcy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "week"
+msgid_plural "weeks"
+msgstr[0] "tydzień"
+msgstr[1] "tygodnie"
+msgstr[2] "tygodni"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "year"
+msgid_plural "years"
+msgstr[0] "rok"
+msgstr[1] "lata"
+msgstr[2] "lat"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Discard changes"
+msgstr "Odrzuć zmiany"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Save repeat"
+msgstr "Zapisz powtarzanie"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/recurrence_edit.ex
+#, elixir-autogen, elixir-format
+msgid "Not available: the new end comes before this event, so there are no following events to change."
+msgstr "Niedostępne: nowy koniec przypada przed tym wydarzeniem, więc nie ma kolejnych wydarzeń do zmiany."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/recurrence_edit.ex
+#, elixir-autogen, elixir-format
+msgid "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
+msgstr "Pierwsze wydarzenie tej serii nie zostało jeszcze odczytane z twojego kalendarza, więc nie można policzyć pozostałych wydarzeń. Odśwież kalendarz i spróbuj ponownie."

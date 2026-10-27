@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRoomCreationErrorTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
@@ -38,6 +39,34 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRoomCreationErrorTest do
     TestMocks.setup_calendar_mocks()
     TestMocks.setup_email_mocks()
     :ok
+  end
+
+  # The refusal used to be logged as a failure by every layer it passed
+  # through, the room API, the booking's video rooms, the meetings context and
+  # the job, each line saying the same thing.
+  test "logs a refused room once, with its booking" do
+    %{integration: integration, server: server} = talk_integration("logged-once")
+    meeting = meeting(integration)
+
+    expect(HTTPClientMock, :request, 2, fn
+      :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: ocs([])}}
+
+      :post, ^server <> @room_api, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: @restricted}}
+    end)
+
+    errors =
+      LogCapture.with_capture([level: :error], fn ->
+        perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
+        LogCapture.drain()
+      end)
+
+    # The Talk client's own line for the request, then the job's.
+    assert Enum.map(errors, &{LogCapture.message_text(&1.msg), &1.meta[:meeting_id]}) == [
+             {"Host operation failed", nil},
+             {"Failed to create video room", meeting.id}
+           ]
   end
 
   test "two bookings refused at once record the refusal and queue one email" do

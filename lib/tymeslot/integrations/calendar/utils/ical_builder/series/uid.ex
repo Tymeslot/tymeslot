@@ -13,7 +13,34 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Uid do
   alone.
   """
 
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
+
+  @doc """
+  A new uid for a copy of `document`'s series, of the same origin as the
+  uid it replaces (`Format.uid_origin/1`). The CalDAV sync reads ownership
+  off the uid alone, so a copy of somebody else's series given a Tymeslot
+  uid would be taken for Tymeslot's.
+  """
+  @spec successor(String.t()) :: String.t()
+  def successor(document) do
+    document
+    |> Document.components()
+    |> Enum.find_value(&own_uid/1)
+    |> Format.uid_origin()
+    |> Format.generate_uid()
+  end
+
+  defp own_uid({:vevent, items}) do
+    case ContentLines.find("UID", Document.properties(items)) do
+      nil -> nil
+      line -> line |> ContentLines.split_value() |> elem(1) |> String.trim()
+    end
+  end
+
+  defp own_uid(_line), do: nil
 
   @doc """
   `document` with the `UID` of every `VEVENT` replaced by `uid`, or `:empty`

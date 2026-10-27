@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields
 
@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
 
     {:ok,
      assign_new(socket, :week_start, fn ->
-       CalendarManagement.get_week_start(socket.assigns.profile && socket.assigns.profile.user_id)
+       Management.get_week_start(socket.assigns.profile && socket.assigns.profile.user_id)
      end)}
   end
 

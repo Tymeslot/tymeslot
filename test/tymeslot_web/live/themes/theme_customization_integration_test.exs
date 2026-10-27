@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
       primary_color = scheme_def.colors.primary
 
       {:ok, _customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => color_scheme,
           "background_type" => "color",
           "background_value" => "#123456"
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
       gradient_val = Presets.get_gradient_presets()[gradient_id].value
 
       {:ok, _customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "2", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "2", %{
           "color_scheme" => "default",
           "background_type" => "gradient",
           "background_value" => gradient_id
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
 
       # Create customization with a video
       {:ok, _customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "2", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "2", %{
           "color_scheme" => "default",
           "background_type" => "video",
           "background_value" => "preset:rhythm-default"
@@ -142,6 +142,40 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
 
       assert html =~
                ~s(<source src="/uploads/themes/#{profile.id}/2/videos/clip.mp4" type="video/mp4")
+    end
+
+    test "a preset image chosen beside a kept upload is what the booking page shows",
+         %{conn: conn, profile: profile} do
+      Repo.update!(Changeset.change(profile, %{booking_theme: "1"}))
+
+      {:ok, _customization} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "background_type" => "image",
+          "background_value" => "preset:ocean-sunset",
+          "background_image_path" => "themes/#{profile.id}/1/images/kept.png"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
+
+      assert html =~ "url(&#39;/images/themes/backgrounds/ocean-sunset.webp&#39;)"
+      refute html =~ "/uploads/themes/#{profile.id}/1/images/kept.png"
+    end
+
+    test "a preset video chosen beside a kept upload is what the booking page plays",
+         %{conn: conn, profile: profile} do
+      Repo.update!(Changeset.change(profile, %{booking_theme: "2"}))
+
+      {:ok, _customization} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "2", %{
+          "background_type" => "video",
+          "background_value" => "preset:space",
+          "background_video_path" => "themes/#{profile.id}/2/videos/kept.mp4"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
+
+      assert html =~ ~s(src="/videos/backgrounds/)
+      refute html =~ "/uploads/themes/#{profile.id}/2/videos/kept"
     end
 
     test "custom palette seed flows through to booking page CSS variables",

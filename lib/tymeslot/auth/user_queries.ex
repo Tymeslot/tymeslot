@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.UserQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Repo
 
   @doc """
@@ -171,17 +172,24 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Lists up to `limit` accounts that are still unverified and were signed up
-  before `cutoff`, oldest first.
+  Lists up to `limit` abandoned sign-ups: password accounts still unverified
+  and signed up before `cutoff`, oldest first.
 
   An account sent a verification link since `cutoff` is left out, so a link
-  its owner asked for recently still works when it is followed.
+  its owner asked for recently still works when it is followed. So is any
+  account that is evidently in use: an admin, one that has had a session or
+  finished onboarding, and every social account. A social sign-in only
+  creates an account with a provider-vouched, already verified email, so an
+  unverified social account predates that rule and was signed in to.
   """
   @spec list_stale_unverified_users(DateTime.t(), pos_integer()) :: [UserSchema.t()]
   def list_stale_unverified_users(%DateTime{} = cutoff, limit) do
     UserSchema
     |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
     |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
+    |> where([u], is_nil(u.provider) or u.provider == "email")
+    |> where([u], not u.is_admin)
+    |> where([u], is_nil(u.last_active_at) and is_nil(u.onboarding_completed_at))
     |> order_by([u], asc: u.inserted_at, asc: u.id)
     |> limit(^limit)
     |> Repo.all()
@@ -219,22 +227,109 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Checks whether an email is free to become someone's pending email: no user
-  holds it as their address or as their own pending change.
-
-  This is a fast pre-check for a friendly error, not the guard. Two concurrent
-  requests can both pass it; the unique index on `pending_email` (and on
-  `lower(email)` at confirmation) is what settles the race.
+  Whether any account, the caller's own included, signs in with `email`.
   """
-  @spec check_email_availability(String.t()) :: {:ok, :available} | {:error, :taken}
-  def check_email_availability(email) when is_binary(email) do
-    email = String.downcase(email)
+  @spec email_registered?(String.t()) :: boolean()
+  def email_registered?(email) when is_binary(email) do
+    email = email |> String.trim() |> String.downcase()
 
-    taken? =
-      UserSchema
-      |> where([u], u.email == ^email or u.pending_email == ^email)
-      |> Repo.exists?()
+    UserSchema
+    |> where([u], u.email == ^email)
+    |> Repo.exists?()
+  end
 
-    if taken?, do: {:error, :taken}, else: {:ok, :available}
+  @doc """
+  Marks the account as pending deletion: asked for at `requested_at`, to be
+  deleted at `scheduled_at`. Both are truncated to the second the column
+  stores.
+  """
+  @spec mark_deletion_scheduled(UserSchema.t(), DateTime.t(), DateTime.t()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def mark_deletion_scheduled(%UserSchema{} = user, requested_at, scheduled_at) do
+    user
+    |> Changeset.change(
+      deletion_requested_at: DateTime.truncate(requested_at, :second),
+      deletion_scheduled_at: DateTime.truncate(scheduled_at, :second)
+    )
+    |> Repo.update()
+  end
+
+  @doc "Takes the account out of pending deletion."
+  @spec clear_deletion_schedule(UserSchema.t()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def clear_deletion_schedule(%UserSchema{} = user) do
+    user
+    |> Changeset.change(deletion_requested_at: nil, deletion_scheduled_at: nil)
+    |> Repo.update()
+  end
+
+  @doc """
+  Whether the account with this id is pending deletion. An unknown id is not.
+  """
+  @spec deletion_pending?(integer()) :: boolean()
+  def deletion_pending?(user_id) when is_integer(user_id) do
+    UserSchema
+    |> where([u], u.id == ^user_id and not is_nil(u.deletion_scheduled_at))
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Ids of up to `limit` accounts whose deletion was due at or before `now`,
+  the longest overdue first.
+
+  With `queued_worker` (an Oban worker module), accounts that already have an
+  incomplete job of that worker are left out. Without it, the oldest `limit`
+  accounts whose jobs are merely waiting or retrying would fill every call
+  and starve the overdue accounts behind them.
+  """
+  @spec list_due_deletion_ids(DateTime.t(), pos_integer(), module() | nil) :: [integer()]
+  def list_due_deletion_ids(%DateTime{} = now, limit, queued_worker \\ nil) do
+    from(u in UserSchema, as: :user_row)
+    |> where([u], u.deletion_scheduled_at <= ^now)
+    |> without_incomplete_job(queued_worker)
+    |> order_by([u], asc: u.deletion_scheduled_at, asc: u.id)
+    |> limit(^limit)
+    |> select([u], u.id)
+    |> Repo.all()
+  end
+
+  defp without_incomplete_job(query, nil), do: query
+
+  defp without_incomplete_job(query, worker),
+    do: ObanJobQueries.without_incomplete_user_job(query, worker, :user_row)
+
+  @doc """
+  Of `ids`, those that still have a `users` row. User ids come from a
+  sequence and are never reused, so an id missing here belonged to a deleted
+  account.
+  """
+  @spec existing_ids([integer()]) :: [integer()]
+  def existing_ids([]), do: []
+
+  def existing_ids(ids) when is_list(ids) do
+    UserSchema
+    |> where([u], u.id in ^ids)
+    |> select([u], u.id)
+    |> Repo.all()
+  end
+
+  @doc """
+  The ids of the accounts `compose` keeps. `compose` receives a query with
+  `users` as its first binding and returns it filtered.
+  """
+  @spec list_ids_where((Ecto.Query.t() -> Ecto.Query.t())) :: [integer()]
+  def list_ids_where(compose) when is_function(compose, 1) do
+    from(u in UserSchema)
+    |> compose.()
+    |> select([u], u.id)
+    |> Repo.all()
+  end
+
+  @doc "The number of accounts `compose` keeps, as for `list_ids_where/1`."
+  @spec count_where((Ecto.Query.t() -> Ecto.Query.t())) :: non_neg_integer()
+  def count_where(compose) when is_function(compose, 1) do
+    from(u in UserSchema)
+    |> compose.()
+    |> Repo.aggregate(:count, :id)
   end
 end

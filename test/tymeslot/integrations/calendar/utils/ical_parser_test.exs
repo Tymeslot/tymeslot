@@ -312,31 +312,65 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert duration_seconds == 3600
     end
 
-    test "defaults to 1 hour when neither DTEND nor DURATION provided" do
-      future_time = DateTime.add(DateTime.utc_now(), 86_400, :second)
-
-      future_start =
-        DateTime.to_iso8601(future_time)
-        |> String.replace(~r/[-:]/, "")
-        |> String.replace("Z", "Z")
-
+    # RFC 5545 §3.6.1: a DATE-TIME DTSTART with neither DTEND nor DURATION
+    # ends where it starts.
+    test "ends a timed event at its start when neither DTEND nor DURATION is given" do
       ical_content = """
       BEGIN:VCALENDAR
       VERSION:2.0
       BEGIN:VEVENT
       UID:test@example.com
-      DTSTART:#{future_start}
+      DTSTART:20300115T101500Z
       SUMMARY:Event Without End
       END:VEVENT
       END:VCALENDAR
       """
 
       assert {:ok, [event]} = ICalParser.parse(ical_content)
-      assert %DateTime{} = event.end_time
+      assert event.start_time == ~U[2030-01-15 10:15:00Z]
+      assert event.end_time == event.start_time
+    end
 
-      # Should default to 1 hour duration
-      duration_seconds = DateTime.diff(event.end_time, event.start_time)
-      assert duration_seconds == 3600
+    test "keeps an hour for an unreadable DURATION, and says it did" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:odd-duration@example.com
+      DTSTART:20300115T100000Z
+      DURATION:about an hour
+      END:VEVENT
+      BEGIN:VEVENT
+      UID:read-duration@example.com
+      DTSTART:20300115T100000Z
+      DURATION:PT30M
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [odd, read]} = ICalParser.parse(ical_content)
+      assert odd.end_time == ~U[2030-01-15 11:00:00Z]
+      assert odd.duration_defaulted
+      assert read.end_time == ~U[2030-01-15 10:30:00Z]
+      refute read.duration_defaulted
+    end
+
+    # The same section: a DATE DTSTART with neither takes up that day.
+    test "gives an all-day event one day when neither DTEND nor DURATION is given" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:allday-no-end@example.com
+      DTSTART;VALUE=DATE:20300115
+      SUMMARY:Day Without End
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.start_time == ~D[2030-01-15]
+      assert event.end_time == ~D[2030-01-16]
     end
 
     test "handles all-day events (DATE format)" do
@@ -389,27 +423,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert event.start_time == ~D[2026-04-07]
       assert event.end_time == ~D[2026-04-11]
       assert event.transparency == "transparent"
-    end
-
-    test "calculates end date from DURATION when DTEND missing on all-day event" do
-      ical_content = """
-      BEGIN:VCALENDAR
-      VERSION:2.0
-      BEGIN:VEVENT
-      UID:allday-duration@example.com
-      DTSTART;VALUE=DATE:20300115
-      DURATION:P3D
-      SUMMARY:Three Day Event
-      END:VEVENT
-      END:VCALENDAR
-      """
-
-      assert {:ok, [event]} = ICalParser.parse(ical_content)
-      assert event.summary == "Three Day Event"
-      assert %Date{} = event.start_time
-      assert %Date{} = event.end_time
-      assert event.start_time == ~D[2030-01-15]
-      assert event.end_time == ~D[2030-01-18]
     end
 
     test "sets transparency to nil when TRANSP property is absent" do

@@ -160,13 +160,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
   defp enforce_rate_limit(socket) do
     client_ip = ClientIP.get(socket)
 
-    case RateLimiter.check_booking_submission_limit(client_ip) do
-      {:allow, _count} ->
-        {:ok, socket}
-
-      {:deny, _limit} ->
-        Logger.warning("Booking rate limit exceeded", client_ip: client_ip)
-        {:error, too_many_attempts(socket)}
+    case RateLimiter.check(:booking_submit, client_ip) do
+      :ok -> {:ok, socket}
+      {:error, :rate_limited, _message} -> {:error, too_many_attempts(socket)}
     end
   end
 
@@ -182,7 +178,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
   defp check_recipient_rate_limit(socket, _params), do: {:ok, socket}
 
   defp enforce_recipient_rate_limit(socket, email) do
-    case RateLimiter.check_booking_recipient_limit(email) do
+    case RateLimiter.check(:booking_recipient, email) do
       :ok ->
         {:ok, socket}
 
@@ -216,7 +212,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
 
     token = Map.get(raw_params, "g-recaptcha-response", "")
 
-    case RecaptchaHelpers.maybe_verify_booking_token(token, metadata) do
+    case RecaptchaHelpers.verify(:booking, token, metadata) do
       :ok -> :ok
       {:error, reason} -> {:error, recaptcha_error(socket, reason)}
     end

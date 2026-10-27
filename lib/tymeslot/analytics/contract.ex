@@ -21,7 +21,9 @@ defmodule Tymeslot.Analytics.Contract do
   # somewhere, or the completeness check fails — keep this in lockstep with the
   # code that emits.
   @registry %{
-    "onboarding_step_completed" => [:step, :skipped]
+    "onboarding_step_completed" => [:step, :skipped],
+    "booking_link_shared" => [:channel],
+    "share_step_viewed" => [:page_live, :returned]
   }
 
   @pii_denylist ~w(user_id email username name token ip ip_address phone customer_id)a

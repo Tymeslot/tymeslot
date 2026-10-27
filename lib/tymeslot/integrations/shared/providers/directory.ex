@@ -1,12 +1,12 @@
-defmodule Tymeslot.Integrations.Providers.Directory do
+defmodule Tymeslot.Integrations.Shared.Providers.Directory do
   @moduledoc """
   Single source of truth for provider metadata and utilities across domains.
 
   UI and services should query this module to list providers, access their
-  config schemas, capabilities, and OAuth support.
+  config schemas, and OAuth support.
   """
 
-  alias Tymeslot.Integrations.Providers.Descriptor
+  alias Tymeslot.Integrations.Shared.Providers.Descriptor
 
   @type domain :: :calendar | :video
 
@@ -27,28 +27,6 @@ defmodule Tymeslot.Integrations.Providers.Directory do
       build_descriptor(domain, type)
     else
       {:error, :unknown_provider}
-    end
-  end
-
-  @doc """
-  Returns the configuration schema for a provider.
-  """
-  @spec config_schema(domain(), atom()) :: map() | {:error, :unknown_provider}
-  def config_schema(domain, type) do
-    case get(domain, type) do
-      %Descriptor{config_schema: schema} -> schema
-      _other -> {:error, :unknown_provider}
-    end
-  end
-
-  @doc """
-  Returns capabilities for a provider (may be empty map for calendar).
-  """
-  @spec capabilities(domain(), atom()) :: map() | {:error, :unknown_provider}
-  def capabilities(domain, type) do
-    case get(domain, type) do
-      %Descriptor{capabilities: caps} -> caps
-      _other -> {:error, :unknown_provider}
     end
   end
 
@@ -86,38 +64,6 @@ defmodule Tymeslot.Integrations.Providers.Directory do
         |> to_string()
         |> String.replace("_", " ")
         |> String.capitalize()
-    end
-  end
-
-  @doc """
-  Returns the default provider for a domain.
-  """
-  @spec default_provider(domain()) :: atom()
-  def default_provider(:video),
-    do: Tymeslot.Integrations.Video.Providers.ProviderRegistry.default_provider()
-
-  def default_provider(:calendar),
-    do: Tymeslot.Integrations.Calendar.Providers.ProviderRegistry.default_provider()
-
-  @doc """
-  Validates provider config via provider module.
-  """
-  @spec validate(domain(), atom(), map()) :: :ok | {:error, any()}
-  def validate(domain, type, config) do
-    case get(domain, type) do
-      %Descriptor{provider_module: mod} when is_atom(mod) and mod != nil ->
-        if callback_exported?(mod, :validate_config, 1) do
-          # credo:disable-for-next-line Credo.Check.Refactor.Apply
-          apply(mod, :validate_config, [config])
-        else
-          :ok
-        end
-
-      %Descriptor{provider_module: nil} ->
-        :ok
-
-      _other ->
-        {:error, :unknown_provider}
     end
   end
 
@@ -172,7 +118,6 @@ defmodule Tymeslot.Integrations.Providers.Directory do
       # the two cannot disagree.
       oauth: family == :oauth,
       family: family,
-      capabilities: capabilities_for(mod),
       config_schema: schema_for(mod),
       provider_module: mod,
       registry_module: registry_for(domain),
@@ -180,13 +125,9 @@ defmodule Tymeslot.Integrations.Providers.Directory do
     }
   end
 
-  defp display_name(:video, type, mod) do
-    if callback_exported?(mod, :display_name, 0) do
-      mod.display_name()
-    else
-      Tymeslot.Integrations.Video.ProviderConfig.display_name(type)
-    end
-  end
+  # Video providers' names live in their configuration table alone.
+  defp display_name(:video, type, _mod),
+    do: Tymeslot.Integrations.Video.ProviderConfig.display_name(type)
 
   defp display_name(:calendar, type, mod) do
     if callback_exported?(mod, :display_name, 0) do
@@ -204,14 +145,6 @@ defmodule Tymeslot.Integrations.Providers.Directory do
     end
   end
 
-  defp capabilities_for(mod) do
-    if callback_exported?(mod, :capabilities, 0) do
-      mod.capabilities()
-    else
-      %{}
-    end
-  end
-
   defp setup_component_for(mod) do
     if callback_exported?(mod, :setup_component, 0) do
       mod.setup_component()
@@ -220,7 +153,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
     end
   end
 
-  defp registry_for(:video), do: Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  defp registry_for(:video), do: Tymeslot.Integrations.Video.ProviderConfig
   defp registry_for(:calendar), do: Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
   defp domain_provider_config_module(:video), do: Tymeslot.Integrations.Video.ProviderConfig

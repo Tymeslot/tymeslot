@@ -70,6 +70,19 @@ defmodule Tymeslot.Emails.RecipientLocale do
   def organizer_locale(%{organizer_locale: locale}), do: locale_for(%{locale: locale})
   def organizer_locale(_details), do: Locales.admin_default_locale()
 
+  @doc """
+  The locale for the attendee's copy of a booking email: the meeting's or the
+  payload's `attendee_locale`, or, when that is missing or no longer
+  supported, the booking pages' fallback (`Locales.booking_default_locale/0`),
+  as a visitor whose language is unknown gets on the booking page.
+  """
+  @spec attendee_locale(map()) :: String.t()
+  def attendee_locale(%{attendee_locale: locale}) when is_binary(locale) do
+    if Locales.acceptable?(locale), do: locale, else: Locales.booking_default_locale()
+  end
+
+  def attendee_locale(_details), do: Locales.booking_default_locale()
+
   @doc "The locale to render for the user identified by `user_id`."
   @spec locale_for_user_id(term()) :: String.t()
   def locale_for_user_id(nil), do: Locales.admin_default_locale()

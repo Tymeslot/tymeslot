@@ -6,61 +6,37 @@ defmodule Tymeslot.Onboarding do
   alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
-  alias Tymeslot.Themes.Catalog
 
   @manual_dashboard_setup_items ~w(theme meeting_types share)
 
-  @spec create_dev_profile() :: map()
-  defp create_dev_profile do
-    %{
-      id: 1,
-      user_id: 1,
-      username: nil,
-      full_name: nil,
-      timezone: Profiles.get_default_timezone(),
-      avatar: nil,
-      booking_theme: Catalog.default_id()
-    }
-  end
-
   @doc """
-  Gets or creates a profile for the given user, handling both dev and production modes.
+  Gets or creates a profile for the given user.
   """
-  @spec get_or_create_profile(integer(), boolean()) ::
-          {:ok, Ecto.Schema.t() | map()} | {:error, any()}
-  def get_or_create_profile(user_id, dev_mode \\ false) do
-    if dev_mode do
-      {:ok, create_dev_profile()}
-    else
-      Profiles.get_or_create_profile(user_id)
-    end
-  end
+  @spec get_or_create_profile(integer()) :: {:ok, Ecto.Schema.t()} | {:error, any()}
+  def get_or_create_profile(user_id), do: Profiles.get_or_create_profile(user_id)
 
   @doc """
   Completes the onboarding process for a user.
   """
-  @spec complete_onboarding(Ecto.Schema.t() | map(), boolean()) ::
+  @spec complete_onboarding(Ecto.Schema.t() | map()) ::
           {:ok, Ecto.Schema.t() | map()} | {:error, any()}
-  def complete_onboarding(user, dev_mode \\ false) do
-    if dev_mode do
-      {:ok, user}
-    else
-      case mark_onboarding_complete(user) do
-        {:ok, _updated_user} = result ->
-          :telemetry.execute([:tymeslot, :onboarding, :completed], %{count: 1}, %{})
-          result
+  def complete_onboarding(user) do
+    case mark_onboarding_complete(user) do
+      {:ok, _updated_user} = result ->
+        :telemetry.execute([:tymeslot, :onboarding, :completed], %{count: 1}, %{})
+        result
 
-        error ->
-          error
-      end
+      error ->
+        error
     end
   end
 
   @doc """
-  Marks a user's onboarding as complete.
+  Marks a user's onboarding as complete. A user who has already completed it
+  keeps the original completion time.
   """
   @spec mark_onboarding_complete(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Ecto.Schema.t()} | {:error, :not_found}
   def mark_onboarding_complete(user) do
     OnboardingQueries.mark_onboarding_complete(user)
   end
@@ -136,16 +112,43 @@ defmodule Tymeslot.Onboarding do
   def dashboard_setup_dismissed?(_user), do: true
 
   @doc """
+  Candidate rows for an onboarding scan: one map per account whose signup or
+  verification falls after `window_start` (accounts pending deletion left
+  out), carrying `user_id`, `signup_at`, `verified_at`, `timezone` and
+  `page_published?`.
+
+  Options:
+
+    * `:compose` - a function given the row query, with `users` as its first
+      binding and a map select, that returns it extended (for example with a
+      `select_merge/3` of extra per-user facts). Defaults to the identity.
+  """
+  @spec list_candidates_since(DateTime.t(), keyword()) :: [map()]
+  def list_candidates_since(window_start, opts \\ []),
+    do: OnboardingQueries.list_candidates_since(window_start, compose(opts))
+
+  @doc """
+  The same candidate row as `list_candidates_since/2` for one account,
+  whatever its signup date, or `nil` when there is no such account. Takes the
+  same options.
+  """
+  @spec get_candidate(integer(), keyword()) :: map() | nil
+  def get_candidate(user_id, opts \\ []),
+    do: OnboardingQueries.get_candidate(user_id, compose(opts))
+
+  defp compose(opts), do: Keyword.get(opts, :compose, &Function.identity/1)
+
+  @doc """
   Seeds each booking theme with a video background so the onboarding preview —
   and the published page — shows motion out of the box.
 
   Picks a random preset for each theme in `theme_ids` from the videos that
   theme offers, sharing one preset between themes that offer it, and applies
-  it where no video background is set yet (as a choice of the theme's
-  background option, so an uploaded image it replaces is removed with its
-  file). Themes without video are skipped. Idempotent: a theme that already
-  has a video background (a returning user, or one who picked their own) is
-  left untouched, so the choice is never overwritten or re-randomised.
+  it where no video background is set yet (an uploaded image stays stored,
+  as with any background choice). Themes without video are skipped.
+  Idempotent: a theme that already has a video background (a returning
+  user, or one who picked their own) is left untouched, so the choice is
+  never overwritten or re-randomised.
   """
   @spec ensure_preview_video_backgrounds(map(), [String.t()]) :: :ok
   def ensure_preview_video_backgrounds(%{id: profile_id}, theme_ids)
@@ -160,18 +163,14 @@ defmodule Tymeslot.Onboarding do
 
   def ensure_preview_video_backgrounds(_profile, _theme_ids), do: :ok
 
-  # A choice of the background group, as the dashboard makes it: the save
-  # drops any upload the video replaces, and the update deletes its file.
+  # Decided on the row the save has locked, so a background the organiser
+  # sets meanwhile (an upload in another tab) is never replaced. A theme's
+  # default does not count as set: only what the row stores does.
   defp put_video_background_unless_set(profile_id, theme_id, preset) do
-    case ThemeCustomizations.get_by_profile_and_theme(profile_id, theme_id) do
-      %{settings: %{"background_type" => "video"}} ->
-        :ok
-
-      _other ->
-        ThemeCustomizations.apply_option(profile_id, theme_id, :background, %{
-          "field" => "video",
-          "value" => preset
-        })
-    end
+    ThemeCustomizations.upsert_theme_customization(profile_id, theme_id, fn stored, _defaults ->
+      if stored["background_type"] == "video",
+        do: %{},
+        else: %{"background_type" => "video", "background_value" => preset}
+    end)
   end
 end

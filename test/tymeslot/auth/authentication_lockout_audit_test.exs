@@ -10,7 +10,7 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   @moduletag :security
 
   alias Tymeslot.Auth.Authentication
-  alias Tymeslot.Security.{AccountLockout, Password, RateLimiter}
+  alias Tymeslot.Security.{Password, RateLimiter}
   alias Tymeslot.Test.LogCapture
 
   import Tymeslot.Factory
@@ -18,11 +18,11 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   @password "ValidPass123!"
   @opts [ip: "203.0.113.7", user_agent: "curl/8.0"]
 
-  # The lockout tracker lives in ETS and outlives the sandbox transaction, so
-  # each test clears its own account's attempts on the way out.
+  # The failed-login throttle lives in the rate limiter's ETS table and
+  # outlives the sandbox transaction, so each test clears it on the way out.
   setup do
     user = insert(:user, password_hash: Password.hash_password(@password))
-    on_exit(fn -> AccountLockout.clear_all() end)
+    on_exit(fn -> RateLimiter.clear_all() end)
     {:ok, user: user}
   end
 
@@ -79,6 +79,33 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
       types = logged_event_types()
       assert "authentication_success" in types
       refute "account_lockout" in types
+    end
+  end
+
+  describe "a login refused by the rate limit" do
+    test "is logged once, as a rate_limit_violation", %{user: user} do
+      for _i <- 1..10, do: RateLimiter.check_auth_rate_limit(user.email, @opts[:ip])
+
+      capture_at_info(fn ->
+        assert {:error, :rate_limited, _message} =
+                 Authentication.authenticate_user(user.email, @password, @opts)
+      end)
+
+      assert [line] = LogCapture.drain()
+      assert LogCapture.user_metadata(line)[:event_type] == "rate_limit_violation"
+    end
+  end
+
+  describe "a login for an address with no account" do
+    test "is logged once, as an authentication failure naming the reason" do
+      capture_at_info(fn ->
+        assert {:error, :not_found, _message} =
+                 Authentication.authenticate_user("nobody@example.com", @password, @opts)
+      end)
+
+      assert [line] = LogCapture.drain()
+      assert LogCapture.user_metadata(line)[:event_type] == "authentication_failure"
+      assert LogCapture.user_metadata(line)[:reason] == "user_not_found"
     end
   end
 

@@ -21,6 +21,8 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   * `current_step` - The current step atom
   * `steps` - Ordered list of step atoms
   * `show_skip_modal` - Whether the skip modal is visible
+  * `booking_page_live` - Whether the booking page accepts visitors, which
+    changes how the final step describes itself
 
   ## Slots
 
@@ -30,6 +32,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :steps, :list, required: true
   attr :show_skip_modal, :boolean, default: false
   attr :next_disabled, :boolean, default: false
+  attr :booking_page_live, :boolean, default: true
 
   slot :inner_block, required: true
   slot :preview
@@ -58,7 +61,9 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
           <%!-- Step header --%>
           <div class="onboarding-step-header">
             <h1 class="onboarding-step-title">{StepConfig.step_title(@current_step)}</h1>
-            <p class="onboarding-step-description">{StepConfig.step_description(@current_step)}</p>
+            <p class="onboarding-step-description">
+              {StepConfig.step_description(@current_step, @booking_page_live)}
+            </p>
           </div>
 
           <%!-- Step content --%>
@@ -80,7 +85,11 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
 
             <div class="onboarding-nav-spacer" />
 
-            <.action_button phx-click="next_step" disabled={@next_disabled}>
+            <.action_button
+              variant={StepConfig.next_button_variant(@current_step)}
+              phx-click="next_step"
+              disabled={@next_disabled}
+            >
               {StepConfig.next_button_text(@current_step)}
               <.icon name="hero-arrow-right-mini" class="w-5 h-5 shrink-0" />
             </.action_button>

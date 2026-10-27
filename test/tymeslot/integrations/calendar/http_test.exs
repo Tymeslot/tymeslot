@@ -8,6 +8,20 @@ defmodule Tymeslot.Integrations.Calendar.HTTPTest do
 
   setup :verify_on_exit!
 
+  describe "segment/1" do
+    test "encodes every reserved character, so the id stays one path segment" do
+      assert HTTP.segment("en.uk#holiday@group.v.calendar.google.com") ==
+               "en.uk%23holiday%40group.v.calendar.google.com"
+
+      assert HTTP.segment("a/b?c d") == "a%2Fb%3Fc%20d"
+    end
+
+    test "leaves an id of unreserved characters as it is" do
+      assert HTTP.segment("primary") == "primary"
+      assert HTTP.segment("AAMk-ab_c.d~e") == "AAMk-ab_c.d~e"
+    end
+  end
+
   describe "request/5 method normalization" do
     test "accepts known string methods" do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->

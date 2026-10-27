@@ -11,6 +11,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   import TymeslotWeb.Components.CoreComponents.Icons
   import TymeslotWeb.Components.FlagHelpers
   alias TymeslotWeb.AccountLive.Helpers
+  alias TymeslotWeb.Helpers.TimeAgo
 
   @doc """
   Renders the security header with icon and title.
@@ -304,9 +305,7 @@ defmodule TymeslotWeb.AccountLive.Components do
             </p>
             <%= if @email_change_sent_at do %>
               <p class="mt-1 text-xs text-amber-600">
-                {dgettext("account", "Sent %{time}",
-                  time: format_relative_time(@email_change_sent_at)
-                )}
+                {sent_ago(@email_change_sent_at)}
               </p>
             <% end %>
           </div>
@@ -325,27 +324,20 @@ defmodule TymeslotWeb.AccountLive.Components do
   end
 
   # Private helper functions
-  defp format_relative_time(datetime) do
-    diff = DateTime.diff(DateTime.utc_now(), datetime)
+  defp sent_ago(sent_at) do
+    case TimeAgo.since(sent_at) do
+      :just_now ->
+        dgettext("account", "Sent just now")
 
-    cond do
-      diff < 60 -> dgettext("account", "just now")
-      diff < 3600 -> minutes_ago(div(diff, 60))
-      diff < 86_400 -> hours_ago(div(diff, 3600))
-      true -> days_ago(div(diff, 86_400))
+      {:minutes, count} ->
+        dngettext("account", "Sent %{count} minute ago", "Sent %{count} minutes ago", count)
+
+      {:hours, count} ->
+        dngettext("account", "Sent %{count} hour ago", "Sent %{count} hours ago", count)
+
+      {:days, count} ->
+        dngettext("account", "Sent %{count} day ago", "Sent %{count} days ago", count)
     end
-  end
-
-  defp minutes_ago(count) do
-    dngettext("account", "%{count} minute ago", "%{count} minutes ago", count, count: count)
-  end
-
-  defp hours_ago(count) do
-    dngettext("account", "%{count} hour ago", "%{count} hours ago", count, count: count)
-  end
-
-  defp days_ago(count) do
-    dngettext("account", "%{count} day ago", "%{count} days ago", count, count: count)
   end
 
   defp card_classes(is_social) do

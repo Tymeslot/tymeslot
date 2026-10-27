@@ -18,14 +18,14 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
   import Tymeslot.AvailabilityTestHelpers
 
+  # Every booking reads the host's calendars before committing. Calendar busy
+  # time is not under test here (limits count Tymeslot bookings, never
+  # calendar events), so these hosts' calendars are empty.
   setup do
     TestMocks.setup_all_mocks()
+    TestMocks.stub_no_calendar_events()
     :ok
   end
-
-  # Calendar conflict checking is not under test here (limits count Tymeslot
-  # bookings, never calendar busy time), so every execute skips it.
-  @opts [skip_calendar_check: true]
 
   # ≥3 days out satisfies the default 3h minimum notice with margin; well
   # inside the 90-day advance window.
@@ -75,7 +75,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       existing_booking(user, target_date(), ~T[10:00:00], %{meeting_type_id: other_type.id})
 
       assert {:error, :booking_limit_reached} =
-               Create.execute(booking_params(user), form_data(), @opts)
+               Create.execute(booking_params(user), form_data())
     end
 
     test "a different day is unaffected by the daily cap" do
@@ -84,7 +84,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
       existing_booking(user, Date.add(target_date(), 1), ~T[10:00:00])
 
-      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data(), @opts)
+      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data())
     end
 
     test "weekly cap blocks any other day of the same Monday-week" do
@@ -101,15 +101,13 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       assert {:error, :booking_limit_reached} =
                Create.execute(
                  booking_params(user, %{date: Date.add(monday, 2)}),
-                 form_data(),
-                 @opts
+                 form_data()
                )
 
       assert {:ok, _meeting} =
                Create.execute(
                  booking_params(user, %{date: Date.add(monday, 7)}),
-                 form_data(),
-                 @opts
+                 form_data()
                )
     end
 
@@ -125,8 +123,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       assert {:error, :booking_limit_reached} =
                Create.execute(
                  booking_params(user, %{date: Date.add(next_month_first, 14)}),
-                 form_data(),
-                 @opts
+                 form_data()
                )
     end
   end
@@ -140,8 +137,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       assert {:error, :booking_limit_reached} =
                Create.execute(
                  booking_params(user, %{meeting_type_id: type.id}),
-                 form_data(),
-                 @opts
+                 form_data()
                )
     end
 
@@ -154,8 +150,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       assert {:ok, _meeting} =
                Create.execute(
                  booking_params(user, %{meeting_type_id: type.id}),
-                 form_data(),
-                 @opts
+                 form_data()
                )
     end
   end
@@ -171,14 +166,14 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
     test "cancelled bookings free their capacity", %{user: user} do
       existing_booking(user, target_date(), ~T[10:00:00], %{status: "cancelled"})
 
-      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data(), @opts)
+      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data())
     end
 
     test "awaiting_payment bookings hold their slot and count", %{user: user} do
       existing_booking(user, target_date(), ~T[10:00:00], %{status: "awaiting_payment"})
 
       assert {:error, :booking_limit_reached} =
-               Create.execute(booking_params(user), form_data(), @opts)
+               Create.execute(booking_params(user), form_data())
     end
 
     test "a booking under a pending reschedule request doesn't count", %{user: user} do
@@ -186,7 +181,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
         reschedule_requested_at: DateTime.utc_now(:second)
       })
 
-      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data(), @opts)
+      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data())
     end
   end
 
@@ -203,10 +198,10 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       existing_booking(user, target_date(), ~T[20:00:00])
 
       assert {:ok, _meeting} =
-               Create.execute(booking_params(user, %{time: "10:00 AM"}), form_data(), @opts)
+               Create.execute(booking_params(user, %{time: "10:00 AM"}), form_data())
 
       assert {:error, :booking_limit_reached} =
-               Create.execute(booking_params(user, %{time: "9:00 PM"}), form_data(), @opts)
+               Create.execute(booking_params(user, %{time: "9:00 PM"}), form_data())
     end
   end
 

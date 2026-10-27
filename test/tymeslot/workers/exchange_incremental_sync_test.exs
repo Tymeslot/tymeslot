@@ -29,6 +29,7 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
   alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
 
   @base_url "https://mail.example.com/EWS/Exchange.asmx"
 
@@ -204,6 +205,39 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
 
     # An advanced token after a failed run would acknowledge changes that
     # were never applied, and nothing would ever report them again.
+    assert %{exchange_sync_states: %{"calendar" => ^first_token}} = Repo.reload!(integration)
+  end
+
+  # A server that ignored AdditionalProperties answers the refetch with bare
+  # ids. Applying that change set would delete what the feed says was deleted
+  # while writing none of what it says was created, and the stored token
+  # would acknowledge both.
+  test "a refetch answered without any item's properties applies nothing", %{
+    integration: integration
+  } do
+    stub_full_sync()
+    assert :ok = run(integration)
+    assert [row] = grid_rows(integration)
+    assert %{exchange_sync_states: %{"calendar" => first_token}} = Repo.reload!(integration)
+
+    stub_full_sync(
+      sync_folder_items:
+        ExchangeFixtures.sync_folder_items_response(
+          [{:create, "item-new"}, {:delete, row.provider_event_id}],
+          sync_state: "sync-state-2"
+        ),
+      get_item: ExchangeFixtures.get_item_response(id: "item-new", id_only: true)
+    )
+
+    LogCapture.attach(level: :error)
+
+    assert {:error, :item_properties_missing} = run(integration)
+
+    assert %{meta: %{calendar_integration_id: integration_id}} =
+             LogCapture.await_log("answered no item with the requested properties")
+
+    assert integration_id == integration.id
+    assert [^row] = grid_rows(integration)
     assert %{exchange_sync_states: %{"calendar" => ^first_token}} = Repo.reload!(integration)
   end
 

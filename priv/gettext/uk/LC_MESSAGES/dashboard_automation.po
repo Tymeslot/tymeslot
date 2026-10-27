@@ -374,19 +374,19 @@ msgstr "Ця функція автоматизації доступна в та�
 msgid "Total"
 msgstr "Усього"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Спрацьовує, коли змінюється час бронювання"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Спрацьовує після успішного створення нового бронювання"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -540,17 +540,17 @@ msgstr "Історія відправлень - %{name}"
 msgid "Too many requests. Please slow down."
 msgstr "Забагато запитів. Будь ласка, зачекайте."
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Cancelled"
 msgstr "Зустріч скасовано"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Created"
 msgstr "Зустріч створено"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
 msgstr "Зустріч перенесено"
@@ -610,37 +610,37 @@ msgstr "URL-адреса вказує на приватну або обмеже�
 msgid "Webhook returned status %{status}"
 msgstr "Вебхук повернув статус %{status}"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Declined"
 msgstr "Бронювання відхилено"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Request Expired"
 msgstr "Термін запиту на бронювання минув"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Requested"
 msgstr "Бронювання запитано"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when nobody answers a booking request before its deadline"
 msgstr "Спрацьовує, коли на запит на бронювання ніхто не відповідає до завершення строку"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when someone requests a booking on a meeting type that needs your approval"
 msgstr "Спрацьовує, коли хтось надсилає запит на бронювання типу зустрічі, що потребує вашого підтвердження"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr "Спрацьовує, коли ви відхиляєте запит на бронювання"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr "Спрацьовує для цієї події"
@@ -694,3 +694,23 @@ msgstr "Видалити вебхук"
 #, elixir-autogen, elixir-format
 msgid "Regenerate token"
 msgstr "Згенерувати новий токен"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "For stronger protection, verify the signature. The header has the form t=TIMESTAMP,v1=SIGNATURE. Compute the HMAC-SHA256 of the timestamp, a full stop and the raw request body, keyed with your webhook token, and compare its hexadecimal form with the signature. Reject requests whose timestamp is more than five minutes old."
+msgstr "Для надійнішого захисту перевіряйте підпис. Заголовок має вигляд t=TIMESTAMP,v1=SIGNATURE. Обчисліть HMAC-SHA256 від позначки часу, крапки та необробленого тіла запиту з вашим токеном вебхука як ключем і порівняйте його шістнадцяткову форму з підписом. Відхиляйте запити, позначка часу яких старша за п'ять хвилин."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Request signature"
+msgstr "Підпис запиту"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Призупинено"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
+msgstr "Призупинено: ваш тариф не включає автоматизацію. Після переходу на вищий тариф вебхук відновиться автоматично."

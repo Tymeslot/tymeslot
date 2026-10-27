@@ -265,6 +265,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatchTest do
                {:ok, %{"recurrence" => ["RRULE:FREQ=DAILY;COUNT=5", @exdate, @rdate]}}
     end
 
+    # The editor ended 7 December in Los Angeles, 08:00 on the 8th in Berlin.
+    # Refitted in the master's zone the end would move to the 8th.
+    test "keeps a stated end on the day the edit's zone ends it" do
+      edit =
+        %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261208T075959Z"}
+        |> edit()
+        |> Map.put(:until_timezone, "America/Los_Angeles")
+
+      assert {:ok, %{"recurrence" => recurrence}} = SeriesPatch.build(@master, edit)
+      assert "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261208T075959Z" in recurrence
+    end
+
     test "with a move, is written as given while the exceptions move" do
       edit =
         edit(%{

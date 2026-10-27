@@ -92,16 +92,14 @@ defmodule Tymeslot.ProfilesContextTest do
       assert settings.max_bookings_per_month == 40
     end
 
-    test "update_profile updates multiple fields", %{profile: profile} do
-      attrs = %{
-        timezone: "Asia/Tokyo",
-        max_bookings_per_day: 5,
-        full_name: "Test User"
-      }
+    test "basic details and booking limits update together", %{profile: profile} do
+      attrs = %{timezone: "Asia/Tokyo", full_name: "Test User"}
+      assert {:ok, profile} = Profiles.update_basic_details(profile, attrs)
 
-      assert {:ok, updated} = Profiles.update_profile(profile, attrs)
-      assert updated.timezone == "Asia/Tokyo"
-      assert updated.max_bookings_per_day == 5
+      assert {:ok, updated} =
+               ProfileQueries.update_booking_limits(profile, %{max_bookings_per_day: 5})
+
+      assert {updated.timezone, updated.max_bookings_per_day} == {"Asia/Tokyo", 5}
       assert updated.full_name == "Test User"
     end
   end
@@ -124,7 +122,7 @@ defmodule Tymeslot.ProfilesContextTest do
       profile = insert(:profile, user: user)
       new_username = "newuser#{System.unique_integer([:positive])}"
 
-      assert {:ok, updated} = Profiles.update_username(profile, new_username, user.id)
+      assert {:ok, updated} = Profiles.change_username(profile, new_username)
       assert updated.username == new_username
     end
 
@@ -136,7 +134,7 @@ defmodule Tymeslot.ProfilesContextTest do
       # but that Profiles.update_username calls it.
       # In a real scenario, we might mock RateLimiter, but for now we just verify it works.
       new_username = "user#{System.unique_integer([:positive])}"
-      assert {:ok, _result} = Profiles.update_username(profile, new_username, user.id)
+      assert {:ok, _result} = Profiles.change_username(profile, new_username)
     end
 
     test "update_username does not use up a change on a username it rejects" do
@@ -145,11 +143,11 @@ defmodule Tymeslot.ProfilesContextTest do
 
       # Six refusals, the whole two-hour allowance, must leave it untouched.
       for _attempt <- 1..6 do
-        assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
+        assert {:error, reason} = Profiles.change_username(profile, "admin")
         assert reason =~ "reserved"
       end
 
-      assert {:ok, %{username: "sarah-r"}} = Profiles.update_username(profile, "sarah-r", user.id)
+      assert {:ok, %{username: "sarah-r"}} = Profiles.change_username(profile, "sarah-r")
     end
 
     test "username validation rejects invalid formats" do
@@ -175,7 +173,7 @@ defmodule Tymeslot.ProfilesContextTest do
       user = insert(:user)
       profile = insert(:profile, user: user)
 
-      assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
+      assert {:error, reason} = Profiles.change_username(profile, "admin")
       assert reason =~ "reserved"
     end
 
@@ -321,7 +319,11 @@ defmodule Tymeslot.ProfilesContextTest do
       }
 
       assert {:ok, updated_profile} = Avatars.update_avatar(profile, entry)
-      assert updated_profile.avatar =~ "_avatar_"
+      assert updated_profile.avatar =~ ~r/\A[0-9a-f-]{36}\.png\z/
+
+      assert File.exists?(
+               Path.join([upload_dir, "avatars", to_string(profile.id), updated_profile.avatar])
+             )
     end
 
     test "delete_avatar removes the avatar from the profile" do
@@ -601,43 +603,13 @@ defmodule Tymeslot.ProfilesContextTest do
     end
   end
 
-  describe "publishing the booking page on username set" do
-    test "update_username/3 publishes when the user already has an active meeting type" do
-      user = insert(:user)
-      profile = insert(:profile, user: user, username: nil)
-      insert(:meeting_type, user: user, is_active: true)
-
-      assert {:ok, _updated} = Profiles.update_username(profile, "newhost", user.id)
-
-      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
-      assert %DateTime{} = reloaded.booking_page_published_at
-    end
-
-    test "update_username/3 does not publish when the user has no active meeting type" do
-      user = insert(:user)
-      profile = insert(:profile, user: user, username: nil)
-
-      assert {:ok, _updated} = Profiles.update_username(profile, "newhost", user.id)
-
-      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
-      assert reloaded.booking_page_published_at == nil
-    end
-
-    test "assign_default_username/2 publishes when the user already has an active meeting type" do
-      user = insert(:user)
-      profile = insert(:profile, user: user, username: nil)
-      insert(:meeting_type, user: user, is_active: true)
-
-      assert {:ok, _updated} = Profiles.assign_default_username(profile, "autohost")
-
-      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
-      assert %DateTime{} = reloaded.booking_page_published_at
-    end
-  end
-
-  # Helper to update settings directly in DB for testing retrieval
   defp update_profile_settings(user_id, attrs) do
     {:ok, profile} = ProfileQueries.get_by_user_id(user_id)
-    ProfileQueries.update_profile(profile, attrs)
+
+    limit_keys = [:max_bookings_per_day, :max_bookings_per_week, :max_bookings_per_month]
+    {limits, basic} = Map.split(attrs, limit_keys)
+
+    with {:ok, profile} <- ProfileQueries.update_basic(profile, basic),
+         do: ProfileQueries.update_booking_limits(profile, limits)
   end
 end

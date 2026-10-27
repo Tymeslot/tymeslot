@@ -161,3 +161,8 @@ msgstr "Ancora nessun traffico in questo periodo"
 #, elixir-autogen, elixir-format
 msgid "Traffic sources"
 msgstr "Sorgenti di traffico"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Analytics are temporarily unavailable. Please try refreshing in a moment."
+msgstr "Le statistiche non sono temporaneamente disponibili. Riprova ad aggiornare tra un momento."

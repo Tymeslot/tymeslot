@@ -2,6 +2,7 @@ defmodule Tymeslot.Polls.PollTimeSlotSchema do
   @moduledoc "A candidate time slot proposed in a poll."
 
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Ecto.Changeset
 
@@ -38,7 +39,7 @@ defmodule Tymeslot.Polls.PollTimeSlotSchema do
     end_time = get_field(changeset, :end_time)
 
     if start_time && end_time && DateTime.compare(end_time, start_time) != :gt do
-      add_error(changeset, :end_time, "must be after the start time")
+      add_error(changeset, :end_time, dgettext_noop("errors", "must be after the start time"))
     else
       changeset
     end

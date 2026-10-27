@@ -65,7 +65,9 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         meeting_kept: assigns[:meeting_kept] || false,
         meeting_uid: assigns[:meeting_uid],
         organizer_profile: assigns[:organizer_profile],
-        participant: assigns[:participant]
+        participant: assigns[:participant],
+        link_request: assigns[:link_request],
+        invalid_link: assigns[:invalid_link] || false
       )
 
     ~H"""
@@ -102,13 +104,15 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       tallies={@tallies}
       voting_open={@voting_open}
       participant={@participant}
+      link_request={@link_request}
+      invalid_link={@invalid_link}
     />
     """
   end
 
   defp body(%{page: :payment_processing} = assigns) do
     outcome = PaymentReturn.outcome(assigns.loading, assigns.payment, assigns.meeting)
-    assigns = assign(assigns, :status, payment_status(outcome))
+    assigns = assign(assigns, :status, payment_status(PaymentReturn.progress(outcome)))
 
     ~H"""
     <MeetingPageBodies.status_icon icon={elem(@status, 0)} tone={elem(@status, 1)} />
@@ -128,14 +132,12 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
     """
   end
 
-  # The processing page's icon follows its outcome: a clock while the
-  # booking waits (on the payment, or on the organiser's approval), a tick
-  # once it is confirmed, a cross when it will not go ahead.
-  defp payment_status(outcome) when outcome in [:loading, :awaiting_approval],
-    do: {"hero-clock", "primary"}
-
+  # The processing page's icon follows its outcome (`PaymentReturn.progress/1`):
+  # a clock while the booking waits, a tick once it is confirmed, a cross when
+  # it will not go ahead.
+  defp payment_status(:waiting), do: {"hero-clock", "primary"}
   defp payment_status(:confirmed), do: {"hero-check-circle", "success"}
-  defp payment_status(_failed_or_ended), do: {"hero-x-circle", "danger"}
+  defp payment_status(:ended), do: {"hero-x-circle", "danger"}
 
   defp testid(theme_id, slug) when is_binary(theme_id) do
     case Catalog.id_to_key(theme_id) do

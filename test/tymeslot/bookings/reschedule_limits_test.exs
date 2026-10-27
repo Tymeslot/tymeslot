@@ -58,7 +58,6 @@ defmodule Tymeslot.Bookings.RescheduleLimitsTest do
              Reschedule.execute(
                meeting.uid,
                reschedule_params(target_date(), "10:00 AM"),
-               %{},
                user.id
              )
 
@@ -74,7 +73,6 @@ defmodule Tymeslot.Bookings.RescheduleLimitsTest do
              Reschedule.execute(
                meeting.uid,
                reschedule_params(Date.add(target_date(), 1), "2:00 PM"),
-               %{},
                user.id
              )
   end
@@ -89,7 +87,6 @@ defmodule Tymeslot.Bookings.RescheduleLimitsTest do
              Reschedule.execute(
                meeting.uid,
                reschedule_params(Date.add(target_date(), 1), "2:00 PM"),
-               %{},
                user.id
              )
   end

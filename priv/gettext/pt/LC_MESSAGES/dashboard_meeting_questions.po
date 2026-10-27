@@ -1,0 +1,277 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pt\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Add a question and bookers will be asked it when they book this meeting type."
+msgstr "Adicione uma pergunta e quem agendar este tipo de reunião vai respondê-la."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add option"
+msgstr "Adicionar opção"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add question"
+msgstr "Adicionar pergunta"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Ask bookers extra questions during the booking flow."
+msgstr "Faça perguntas extras a quem agenda durante o fluxo de agendamento."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Body text"
+msgstr "Texto do aviso"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
+msgstr "Mudar o tipo apaga a configuração que você definiu (opções, texto, mín./máx.). Os agendamentos antigos mantêm as respostas originais. Continuar?"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Controls how the booker enters their answer."
+msgstr "Controla como quem agenda digita a resposta."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Custom booking questions are not available on your current plan."
+msgstr "As perguntas personalizadas de agendamento não estão disponíveis no seu plano atual."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Custom questions"
+msgstr "Perguntas personalizadas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Data"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Excluir"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Each entry becomes a selectable choice for the booker."
+msgstr "Cada entrada vira uma opção que quem agenda pode escolher."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Earliest date the booker may choose."
+msgstr "Primeira data que quem agenda pode escolher."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Earliest time the booker may choose."
+msgstr "Primeiro horário que quem agenda pode escolher."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Editar"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Edit question"
+msgstr "Editar pergunta"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Help text (optional)"
+msgstr "Texto de ajuda (opcional)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Highest value the booker may enter."
+msgstr "Valor máximo que quem agenda pode digitar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Label"
+msgstr "Rótulo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Latest date the booker may choose."
+msgstr "Última data que quem agenda pode escolher."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Latest time the booker may choose."
+msgstr "Último horário que quem agenda pode escolher."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Lowest value the booker may enter."
+msgstr "Valor mínimo que quem agenda pode digitar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Max"
+msgstr "Máx."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Min"
+msgstr "Mín."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Multiple choice"
+msgstr "Múltipla escolha"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "No custom questions yet"
+msgstr "Nenhuma pergunta personalizada ainda"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Note"
+msgstr "Aviso"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Note for acknowledgement"
+msgstr "Aviso para confirmação"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Number"
+msgstr "Número"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Option %{number}"
+msgstr "Opção %{number}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Options"
+msgstr "Opções"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr "Telefone"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Remove option"
+msgstr "Remover opção"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Required"
+msgstr "Obrigatório"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save question"
+msgstr "Salvar pergunta"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Short text"
+msgstr "Texto curto"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown below the question - use it to clarify what you're asking or give an example."
+msgstr "Aparece abaixo da pergunta. Use-o para esclarecer o que você está perguntando ou dar um exemplo."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Single choice"
+msgstr "Escolha única"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Text that the booker must acknowledge before proceeding"
+msgstr "Texto que quem agenda precisa confirmar antes de seguir"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "The booker must answer this question before they can continue."
+msgstr "Quem agenda precisa responder esta pergunta antes de continuar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "The notice the booker must read and confirm before they can continue."
+msgstr "O aviso que quem agenda precisa ler e confirmar antes de continuar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "The question shown to the booker."
+msgstr "A pergunta mostrada a quem agenda."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Horário"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Type"
+msgstr "Tipo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "URL"
+msgstr "URL"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Yes / No"
+msgstr "Sim / Não"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, change type"
+msgstr "Sim, mudar o tipo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Company name"
+msgstr "ex.: Nome da empresa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Enter your company's registered name"
+msgstr "ex.: Digite a razão social da sua empresa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "required"
+msgstr "obrigatório"

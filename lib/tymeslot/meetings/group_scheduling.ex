@@ -9,19 +9,25 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     * an existing live meeting for `(meeting_type_id, start_time)` is locked
       `FOR UPDATE`, the seat count is re-checked under the lock, and the
       participant plus guests are inserted, or the transaction rolls back
-      with `{:error, :slot_full}`;
+      with `{:error, :slot_full}`; a planned session
+      (`Tymeslot.Meetings.PlannedSessions`) whose registration has closed
+      by then is refused the same way, so a booking validated just before
+      the close cannot commit after it;
     * with no live meeting, the meeting is created through the standard
-      buffered `FOR UPDATE NOWAIT` conflict-checked path together with the
-      first participant.
+      buffered conflict-checked path together with the first participant.
 
-  Two racing first bookers are resolved by the partial unique index on
-  `(organizer_user_id, start_time) where status = 'confirmed'`: the loser's
-  insert fails the constraint, the transaction rolls back, and one retry
-  runs down the join path against the winner's now-visible row. Should the
-  winner commit after the loser found no live meeting but before the
-  loser's conflict check ran, the loser sees the winner's row as a time
-  conflict instead; that is the same lost race, and gets the same retry
-  once the slot is seen to hold a live meeting.
+  Every attempt first takes the organiser's schedule lock
+  (`MeetingConflictQueries.lock_organizer_schedule/1`), before any meeting
+  row, so seat bookings and moves queue behind solo bookings of the same
+  organiser rather than deadlocking against them.
+
+  Two racing first bookers queue on that lock, and the second finds the
+  first's committed row and joins it. Every writer that can occupy a slot
+  must take the lock; that is the invariant this relies on. The partial
+  unique index on `(organizer_user_id, start_time)` is a last backstop for a
+  writer that breaks it: the loser's insert fails the constraint, the
+  transaction rolls back, and one retry runs down the join path against the
+  winner's now-visible row.
 
   Joining adds no meeting row, so only the creating branch is subject to the
   host's booking limits (enforced inside `Scheduling`'s transaction). A
@@ -34,14 +40,14 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.Seats
   alias Tymeslot.Repo
-
-  @unique_slot_constraint "unique_confirmed_meeting_per_organizer_at_time"
 
   @typedoc "One booker's request for seats at a slot."
   @type seat_request :: %{
@@ -73,6 +79,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       target slot's row, in id order, before either is read, so that two
       moves in opposite directions between the same two meetings queue
       behind each other instead of deadlocking.
+    * `:join_only`: when true, the seat only joins a live meeting and never
+      creates one: with nobody's slot to join it is refused as `:slot_full`.
+      A fixed-date type's sessions are planned by the host
+      (`Tymeslot.Meetings.PlannedSessions`), so a booking for one that was
+      cancelled in the meantime must not bring it back as an unplanned slot.
     * `:exclude_from_conflicts`: a function `(-> uid | nil)` run inside the
       transaction once the rows are locked, naming a meeting a newly
       created slot's conflict check and booking-limit count leave out. For
@@ -81,26 +92,35 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       the moment this seat commits.
 
   Returns `{:ok, booking}` or `{:error, :slot_full | :time_conflict |
-  Ecto.Changeset.t() | term}`.
+  :organizer_required | Ecto.Changeset.t() | term}`; a slot without an
+  organiser is refused with `:organizer_required`.
   """
   @spec book_seat(map(), seat_request(), keyword()) ::
-          {:ok, booking()} | {:error, :slot_full | :time_conflict | Changeset.t() | term()}
+          {:ok, booking()}
+          | {:error, :slot_full | :time_conflict | :organizer_required | Changeset.t() | term()}
   def book_seat(meeting_attrs, seat_request, opts \\ []) do
     seats_requested = 1 + length(seat_request.guest_emails)
 
     hooks = %{
       on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
       also_lock: Keyword.get(opts, :also_lock),
+      join_only: Keyword.get(opts, :join_only, false),
       exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end)
     }
 
-    # A limit of one means the type is no longer a group type: it takes no
-    # new seats at all, neither on an existing group meeting nor on a fresh
-    # slot (which would otherwise be a capacity-1 meeting with no attendee).
-    if seat_request.max_participants < 2 or seats_requested > seat_request.max_participants do
-      {:error, :slot_full}
-    else
-      attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, _retries_left = 1)
+    cond do
+      # The schedule lock is keyed on the organiser, as in `Scheduling`.
+      not is_integer(meeting_attrs.organizer_user_id) ->
+        {:error, :organizer_required}
+
+      # A limit of one means the type is no longer a group type: it takes no
+      # new seats at all, neither on an existing group meeting nor on a fresh
+      # slot (which would otherwise be a capacity-1 meeting with no attendee).
+      seat_request.max_participants < 2 or seats_requested > seat_request.max_participants ->
+        {:error, :slot_full}
+
+      true ->
+        attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, _retries_left = 1)
     end
   end
 
@@ -134,6 +154,10 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   defp attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries_left) do
     result =
       Repo.transaction(fn ->
+        # Before any meeting row: `Scheduling` takes the same lock when it
+        # creates the slot, and a solo booking holding it must never wait on
+        # a row this transaction already locked.
+        :ok = MeetingConflictQueries.lock_organizer_schedule(meeting_attrs.organizer_user_id)
         lock_in_order(hooks.also_lock, meeting_attrs)
 
         live_meeting =
@@ -144,6 +168,9 @@ defmodule Tymeslot.Meetings.GroupScheduling do
 
         booking =
           case live_meeting do
+            nil when hooks.join_only ->
+              Repo.rollback(:slot_full)
+
             nil ->
               create_meeting_with_first_seat(
                 meeting_attrs,
@@ -167,33 +194,13 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         {:ok, booking}
 
       {:error, {:validation_error, %Changeset{} = changeset}} ->
-        if lost_first_booker_race?(changeset) and retries_left > 0,
+        if Meeting.unique_slot_violation?(changeset) and retries_left > 0,
           do: retry.(),
           else: {:error, changeset}
-
-      {:error, :time_conflict} ->
-        if retries_left > 0 and slot_went_live?(meeting_attrs),
-          do: retry.(),
-          else: {:error, :time_conflict}
 
       {:error, reason} ->
         {:error, reason}
     end
-  end
-
-  # The other side of the first-booker race: a concurrent first booker
-  # committed the slot's meeting after this attempt found none but before
-  # its conflict check, which then counted that meeting as a clash. A live
-  # meeting at the exact slot is the meeting this booker would have joined,
-  # so the retry joins it (or finds it full). A genuine conflict, with a
-  # meeting at any other time, leaves no live meeting at the slot and is
-  # returned as it is; the retry budget bounds the rest. The read is
-  # unlocked, and only decides whether to retry: the retry re-reads the
-  # slot under its lock.
-  defp slot_went_live?(meeting_attrs) do
-    not is_nil(
-      GroupMeetingQueries.get_live_at(meeting_attrs.meeting_type_id, meeting_attrs.start_time)
-    )
   end
 
   defp create_meeting_with_first_seat(meeting_attrs, seat_request, exclude_uid) do
@@ -214,15 +221,20 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   # Gates on the meeting's own capacity, not the caller's
   # `seat_request.max_participants` (which is only the correct capacity for
   # a meeting not yet created, see `create_meeting_with_first_seat/2`); the
-  # type keeps a group meeting's capacity in step with its limit.
+  # type keeps a group meeting's capacity in step with its limit. A planned
+  # session's registration close is re-read here, on the locked row, for the
+  # same reason the seats are: the caller's pre-check read it unlocked.
   defp join_meeting(meeting, seat_request, seats_requested) do
-    if joinable?(meeting, seats_requested) do
+    if joinable?(meeting, seats_requested) and registration_open?(meeting) do
       participant = insert_participant_or_rollback(meeting, seat_request)
       %{meeting: meeting, participant: participant, created_meeting?: false}
     else
       Repo.rollback(:slot_full)
     end
   end
+
+  defp registration_open?(%Meeting{planned: true} = session), do: PlannedSessions.open?(session)
+  defp registration_open?(%Meeting{}), do: true
 
   # Without a second meeting to lock there is nothing to order: the target
   # row is locked by `get_live_for_update/2` as always. With one, both rows
@@ -259,22 +271,5 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       {:ok, result} -> Map.put(booking, :on_booked_result, result)
       {:error, reason} -> Repo.rollback(reason)
     end
-  end
-
-  @doc """
-  True when a changeset's error is the loser's side of the first-booker race
-  on `(organizer_user_id, start_time)` — the partial unique index this module
-  relies on to serialise two concurrent first bookings of the same slot.
-
-  Exposed so callers outside this module (the booking flow's error
-  classification) can recognise the same race without duplicating the
-  constraint name.
-  """
-  @spec lost_first_booker_race?(Changeset.t()) :: boolean()
-  def lost_first_booker_race?(%Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, error_opts}} ->
-      error_opts[:constraint] == :unique and
-        to_string(error_opts[:constraint_name] || "") == @unique_slot_constraint
-    end)
   end
 end

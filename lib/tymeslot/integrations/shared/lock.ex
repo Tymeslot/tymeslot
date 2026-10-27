@@ -2,6 +2,16 @@ defmodule Tymeslot.Integrations.Shared.Lock do
   @moduledoc """
   Provides a simple locking mechanism for integration operations.
   Uses a supervised GenServer to own a :protected ETS table and monitor holders.
+
+  A lock is held until its holder releases it or dies. There is no lease: a
+  holder that is slow (a token endpoint taking its time, retries inside the
+  HTTP client) keeps the lock, because handing it to the next caller while
+  the first is still working is exactly the overlap the lock exists to
+  prevent. Holders are monitored, so a crashed one frees its lock.
+
+  A holder that hangs without crashing therefore keeps its key for good, so
+  callers must bound their own work under the lock (`Media.ImageMetadata.strip/3`,
+  whose one global key every caller shares, is the sharpest case).
   """
 
   use GenServer
@@ -10,7 +20,6 @@ defmodule Tymeslot.Integrations.Shared.Lock do
   require Logger
 
   @table :integration_operation_locks
-  @default_lock_timeout_ms 90_000
   @retry_interval_ms 200
 
   # Client API
@@ -28,7 +37,8 @@ defmodule Tymeslot.Integrations.Shared.Lock do
 
   Options:
     - :mode - :non_blocking (default) or :blocking
-    - :timeout - max time to wait in :blocking mode (default 30_000ms)
+    - :timeout - max time to wait in :blocking mode (default 30_000ms); this
+      bounds the wait, never the holder
   """
   @spec with_lock(atom(), integer(), (-> any())) :: any()
   @spec with_lock(any(), (-> any()), keyword()) :: any()
@@ -102,20 +112,6 @@ defmodule Tymeslot.Integrations.Shared.Lock do
     GenServer.call(__MODULE__, {:test_put_lock, key, timestamp, pid})
   end
 
-  defp get_lock_timeout(key) do
-    config = Application.get_env(:tymeslot, :integration_locks, [])
-
-    # Check for specific provider timeout first
-    provider_timeout =
-      case key do
-        {provider, _id} when is_atom(provider) -> Keyword.get(config, provider)
-        provider when is_atom(provider) -> Keyword.get(config, provider)
-        _unknown_key -> nil
-      end
-
-    provider_timeout || Keyword.get(config, :default_timeout, @default_lock_timeout_ms)
-  end
-
   # Server Callbacks
 
   @impl GenServer
@@ -128,33 +124,14 @@ defmodule Tymeslot.Integrations.Shared.Lock do
   def handle_call({:acquire, key}, {from_pid, _tag}, state) do
     ensure_table_exists()
     now = System.monotonic_time(:millisecond)
-    lock_timeout_ms = get_lock_timeout(key)
 
     case :ets.lookup(@table, key) do
-      [{^key, timestamp, _holder_pid}] when now - timestamp <= lock_timeout_ms ->
-        :telemetry.execute([:tymeslot, :lock, :acquire, :timeout], %{duration: 0}, %{
-          key: key,
-          reason: :refresh_in_progress
-        })
-
-        {:reply, {:error, :refresh_in_progress}, state}
-
-      [{^key, _timestamp, old_pid}] ->
-        state = cleanup_monitor(state, key, old_pid)
-        ref = Process.monitor(from_pid)
-        :ets.insert(@table, {key, now, from_pid})
-
-        new_state =
-          state
-          |> put_in([:monitors, ref], {key, from_pid})
-          |> put_in([:refs, {key, from_pid}], ref)
-
-        :telemetry.execute([:tymeslot, :lock, :acquire, :success], %{duration: 0}, %{
-          key: key,
-          preempted: true
-        })
-
-        {:reply, :ok, new_state}
+      [{^key, _timestamp, holder_pid}] ->
+        if Process.alive?(holder_pid) do
+          refuse(key, state)
+        else
+          take_over(state, key, holder_pid, from_pid, now)
+        end
 
       _no_existing_lock ->
         ref = Process.monitor(from_pid)
@@ -228,6 +205,35 @@ defmodule Tymeslot.Integrations.Shared.Lock do
       {nil, _next_monitors} ->
         {:noreply, state}
     end
+  end
+
+  defp refuse(key, state) do
+    :telemetry.execute([:tymeslot, :lock, :acquire, :timeout], %{duration: 0}, %{
+      key: key,
+      reason: :refresh_in_progress
+    })
+
+    {:reply, {:error, :refresh_in_progress}, state}
+  end
+
+  # The recorded holder is gone and its :DOWN is still queued behind this
+  # call, so the entry no longer protects anything.
+  defp take_over(state, key, old_pid, from_pid, now) do
+    state = cleanup_monitor(state, key, old_pid)
+    ref = Process.monitor(from_pid)
+    :ets.insert(@table, {key, now, from_pid})
+
+    new_state =
+      state
+      |> put_in([:monitors, ref], {key, from_pid})
+      |> put_in([:refs, {key, from_pid}], ref)
+
+    :telemetry.execute([:tymeslot, :lock, :acquire, :success], %{duration: 0}, %{
+      key: key,
+      preempted: true
+    })
+
+    {:reply, :ok, new_state}
   end
 
   defp ensure_table_exists do

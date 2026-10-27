@@ -128,7 +128,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       )
 
     assert {:ok, _updated} =
-             Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+             Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
     # Read back, so every assertion is about what was persisted.
     Repo.get!(MeetingSchema, meeting.id)
@@ -404,9 +404,13 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
          %{user: user, mirotalk: mirotalk} do
       test_pid = self()
 
-      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+      stub(EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, _details ->
+        {:ok, :sent}
+      end)
+
+      stub(EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
         send(test_pid, {:reschedule_emails, details})
-        {{:ok, :sent}, {:ok, :sent}}
+        {:ok, :sent}
       end)
 
       meeting =
@@ -415,6 +419,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       updated = reschedule(meeting, %{location_option_id: "loc-miro"})
 
       # Sent now, the email would have no room to link to.
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
 
       [job] = all_enqueued(worker: VideoRoomWorker)
@@ -422,10 +427,12 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       assert :ok = perform_job(VideoRoomWorker, job.args)
 
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, details}
       assert details.attendee_video_url =~ "https://test.mirotalk.com/join/test-room-123"
       assert details.original_start_time == meeting.start_time
       assert details.start_time == updated.start_time
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
     end
 
@@ -437,9 +444,13 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
          %{user: user, mirotalk: mirotalk} do
       test_pid = self()
 
-      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+      stub(EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, _details ->
+        {:ok, :sent}
+      end)
+
+      stub(EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
         send(test_pid, {:reschedule_emails, details})
-        {{:ok, :sent}, {:ok, :sent}}
+        {:ok, :sent}
       end)
 
       meeting =
@@ -453,6 +464,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
           location_option_id: "loc-miro"
         })
 
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
 
       [first_job, second_job] = Enum.sort_by(all_enqueued(worker: VideoRoomWorker), & &1.id)
@@ -461,9 +473,11 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       assert :ok = perform_job(VideoRoomWorker, second_job.args)
       assert :ok = perform_job(VideoRoomWorker, first_job.args)
 
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, details}
       assert details.attendee_video_url =~ "https://test.mirotalk.com/join/test-room-123"
       assert details.start_time == later.start_time
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
     end
 
@@ -471,9 +485,13 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
          %{user: user, zoom: zoom} do
       test_pid = self()
 
-      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+      stub(EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, _details ->
+        {:ok, :sent}
+      end)
+
+      stub(EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
         send(test_pid, {:reschedule_emails, details})
-        {{:ok, :sent}, {:ok, :sent}}
+        {:ok, :sent}
       end)
 
       meeting =
@@ -485,6 +503,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       reschedule(meeting, %{location_option_id: "loc-zoom-long"})
 
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, %{attendee_video_url: url}}
       assert url =~ "https://zoom.us/j/123456789"
     end

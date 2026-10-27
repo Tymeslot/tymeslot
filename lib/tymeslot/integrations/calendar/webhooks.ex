@@ -281,13 +281,18 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   end
 
   defp check_rate_limit(integration, message) do
-    case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
+    case RateLimiter.check(:calendar_webhook, integration.id) do
       :ok ->
         :ok
 
-      {:error, :rate_limited} = error ->
+      {:error, :rate_limited, _message} ->
         Logger.warning(message, integration_id: integration.id)
-        error
+        {:error, :rate_limited}
+
+      # An integration without a stored id cannot be counted, so it is
+      # refused as an exhausted one would be.
+      {:error, :invalid_id} ->
+        {:error, :rate_limited}
     end
   end
 

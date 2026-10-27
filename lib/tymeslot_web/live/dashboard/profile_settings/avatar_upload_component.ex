@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Utils.ChangesetUtils
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Helpers.ImageUploadErrors
   alias TymeslotWeb.Helpers.UploadHandler
 
@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   end
 
   defp rate_limit_and_consume(socket) do
-    case RateLimiter.check_avatar_upload_rate_limit(socket.assigns.current_user.id) do
+    case RateLimiter.check(:avatar_upload, socket.assigns.current_user.id) do
       {:error, :rate_limited, message} ->
         Flash.error(message)
         {:noreply, socket}
@@ -95,12 +95,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
       [] ->
         socket
 
-      [error_message] when is_binary(error_message) ->
-        Flash.error(error_message)
-        socket
-
-      error_messages when is_list(error_messages) ->
-        Flash.error(List.first(error_messages) || dgettext("dashboard_profile", "Upload failed"))
+      _several ->
+        Flash.error(dgettext("dashboard_profile", "Upload failed"))
         socket
     end
   end
@@ -113,14 +109,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   end
 
   defp handle_avatar_upload_error({:error, %Ecto.Changeset{} = changeset}, socket) do
-    Flash.error(ChangesetUtils.get_first_error(changeset))
+    Flash.error(FormErrors.first(changeset))
     socket
   end
 
   defp handle_avatar_upload_error({:error, reason}, socket) do
     Flash.error(
-      ImageUploadErrors.message(reason) ||
-        dgettext("dashboard_profile", "Upload failed: %{reason}", reason: inspect(reason))
+      ImageUploadErrors.message(reason) || dgettext("dashboard_profile", "Upload failed")
     )
 
     socket

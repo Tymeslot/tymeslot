@@ -10,7 +10,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -33,6 +35,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
     <div
       class="scheduling-box booker-card"
       data-locale={@locale}
+      data-testid="booker-card"
       id={assigns[:moment] && "#{assigns[:moment]}-step"}
       data-moment={assigns[:moment]}
       data-moment-state={assigns[:moment_state]}
@@ -47,8 +50,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
+                length_minutes={ChosenLength.minutes(assigns)}
                 meeting_type={@meeting_type}
                 selected_duration={@selected_duration}
+                host_currency={@host_currency}
+                show_price={!@is_rescheduling}
+                locale={@locale}
               />
               <div class="timezone-selector-container">
                 <%!-- Visual label only: it names no control (the trigger below carries
@@ -74,7 +81,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               </div>
             </div>
 
-            <div class="schedule-grid">
+            <SessionList.session_list
+              sessions={assigns[:planned_sessions]}
+              selected_date={@selected_date}
+              timezone={@user_timezone}
+              target={@myself}
+            />
+
+            <div :if={SessionList.show_calendar?(assigns[:planned_sessions])} class="schedule-grid">
               <div class="calendar-section calendar-section-wrapper">
                 <div class="calendar-header">
                   <button
@@ -126,7 +140,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
 
                 <div class="calendar-grid">
-                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type) do %>
+                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
                     <button
                       class={[
                         "calendar-day",
@@ -169,7 +183,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
 
             <div class="slide-actions horizontal" data-testid="schedule-actions">
               <button
-                :if={@entered_via_overview}
+                :if={@entered_via_overview or ChosenLength.choose?(assigns)}
                 class="prev-button"
                 phx-click="back_step"
                 phx-target={@myself}

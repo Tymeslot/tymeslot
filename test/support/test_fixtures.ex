@@ -217,7 +217,7 @@ defmodule Tymeslot.TestFixtures do
   """
   @spec create_session_fixture(term()) :: {term(), binary()}
   def create_session_fixture(user) do
-    token = Token.generate_session_token()
+    token = Token.generate()
     expires_at = DateTime.add(DateTime.utc_now(), 72, :hour)
 
     {:ok, session} = UserSessionQueries.create_session(user.id, token, expires_at)

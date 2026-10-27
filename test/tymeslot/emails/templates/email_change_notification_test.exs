@@ -12,7 +12,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       new_email = "eve.new@example.com"
       request_time = ~U[2025-01-15 10:30:00Z]
 
-      html = EmailChangeNotification.render(user, new_email, request_time)
+      html = EmailChangeNotification.render(user, new_email, request_time).html_body
 
       assert html =~ "<html"
       assert html =~ "</html>"
@@ -24,7 +24,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       new_email = "frank.new@example.com"
       request_time = ~U[2025-01-15 10:30:00Z]
 
-      html = EmailChangeNotification.render(user, new_email, request_time)
+      html = EmailChangeNotification.render(user, new_email, request_time).html_body
 
       assert html =~ "Frank Miller"
     end
@@ -34,7 +34,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       new_email = "requested-email@example.com"
       request_time = ~U[2025-01-15 10:30:00Z]
 
-      html = EmailChangeNotification.render(user, new_email, request_time)
+      html = EmailChangeNotification.render(user, new_email, request_time).html_body
 
       assert html =~ new_email
     end
@@ -44,7 +44,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       new_email = "new@example.com"
       request_time = ~U[2025-01-15 10:30:00Z]
 
-      html = EmailChangeNotification.render(user, new_email, request_time)
+      html = EmailChangeNotification.render(user, new_email, request_time).html_body
 
       assert html =~ "current@example.com"
     end
@@ -54,19 +54,21 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       new_email = "new@example.com"
       request_time = nil
 
-      html = EmailChangeNotification.render(user, new_email, request_time)
+      html = EmailChangeNotification.render(user, new_email, request_time).html_body
 
       assert html =~ "Just now"
     end
 
-    test "formats request_time when provided" do
-      user = build_user_data()
-      new_email = "new@example.com"
+    test "states the request time on the user's own clock" do
+      profile = insert(:profile, timezone: "Europe/Berlin")
+      user = build_user_data(%{id: profile.user_id})
       request_time = ~U[2025-01-15 10:30:00Z]
 
-      html = EmailChangeNotification.render(user, new_email, request_time)
+      html = EmailChangeNotification.render(user, "new@example.com", request_time).html_body
+      text = EmailChangeNotification.render(user, "new@example.com", request_time).text_body
 
-      assert html =~ "15 January 2025 at 10:30 AM UTC"
+      assert html =~ "15 January 2025 at 11:30 AM CET"
+      assert text =~ "15 January 2025 at 11:30 AM CET"
     end
 
     test "includes security warning about unauthorized access" do
@@ -74,7 +76,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       new_email = "new@example.com"
       request_time = ~U[2025-01-15 10:30:00Z]
 
-      html = EmailChangeNotification.render(user, new_email, request_time)
+      html = EmailChangeNotification.render(user, new_email, request_time).html_body
 
       assert html =~ "If you did not request this change"
       assert html =~ "your account may be compromised"
@@ -87,7 +89,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       new_email = "eve.new@example.com"
       request_time = ~U[2025-01-15 10:30:00Z]
 
-      text = EmailChangeNotification.render_text(user, new_email, request_time)
+      text = EmailChangeNotification.render(user, new_email, request_time).text_body
 
       assert text =~ "Eve Davis"
       assert text =~ new_email
@@ -97,7 +99,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
 
     test "handles nil request_time" do
       user = build_user_data()
-      text = EmailChangeNotification.render_text(user, "new@example.com", nil)
+      text = EmailChangeNotification.render(user, "new@example.com", nil).text_body
 
       assert text =~ "Just now"
     end
@@ -111,7 +113,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
 
     test "EmailChangeNotification.render_text returns a valid binary with malicious user name" do
       user = build_user_data(%{name: "<script>steal()</script>", email: "test@example.com"})
-      text = EmailChangeNotification.render_text(user, "new@example.com", nil)
+      text = EmailChangeNotification.render(user, "new@example.com", nil).text_body
 
       assert text =~ "Hi <script>steal()</script>,"
       assert text =~ "new@example.com"

@@ -129,6 +129,38 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerMultiCalendarTest do
       assert %{selected: true} = primary_entry
     end
 
+    # The owner deletes the integration while a secondary calendar is being
+    # read: there is nothing left to deselect, and nothing to retry.
+    test "is discarded when the integration is deleted while a missing calendar is read" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token",
+          default_booking_calendar_id: "primary",
+          calendar_list: [
+            %{"id" => "primary", "selected" => true, "name" => "Primary"},
+            %{"id" => "deleted@example.com", "selected" => true, "name" => "Deleted"}
+          ]
+        )
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: [], next_sync_token: "new-token"}}
+      end)
+
+      expect(GoogleCalendarAPIMock, :list_events, fn _integration,
+                                                     "deleted@example.com",
+                                                     _s,
+                                                     _e ->
+        Repo.delete!(integration)
+        {:error, :not_found, "Calendar not found"}
+      end)
+
+      assert {:discard, "Integration not found"} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+    end
+
     test "de-selects every missing calendar when several 404 in the same run" do
       integration =
         insert(:calendar_integration,

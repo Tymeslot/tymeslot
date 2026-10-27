@@ -6,7 +6,6 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
   use ExUnitProperties
 
   alias Tymeslot.Utils.DateTimeUtils
-  alias Tymeslot.Utils.DateTimeUtils.Display
   alias Tymeslot.Utils.DateTimeUtils.Duration
 
   describe "parse_duration/1" do
@@ -29,6 +28,14 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
 
       assert {:error, "Unsupported or invalid duration format"} ==
                Duration.parse("P")
+    end
+
+    test "parse_nominal/1 keeps nominal days apart from the exact time part" do
+      assert {:ok, {1, 7200}} == Duration.parse_nominal("P1DT2H")
+      assert {:ok, {8, 0}} == Duration.parse_nominal("P1W1D")
+      assert {:ok, {0, 5400}} == Duration.parse_nominal("PT1H30M")
+      assert {:error, "Negative duration"} == Duration.parse_nominal("-P1D")
+      assert {:error, "Invalid duration format"} == Duration.parse_nominal("P1Y")
     end
 
     property "never crashes and returns either ok or error for random strings" do
@@ -61,10 +68,68 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       end
     end
 
+    test "reads a day part combined with a time part" do
+      assert Duration.parse("P1DT2H") == {:ok, 93_600}
+      assert Duration.parse("P1W2DT3H4M5S") == {:ok, 604_800 + 2 * 86_400 + 3 * 3600 + 4 * 60 + 5}
+    end
+
+    test "reads any letter case and a leading plus" do
+      assert Duration.parse("p1w") == {:ok, 604_800}
+      assert Duration.parse("pt1h30m") == {:ok, 5400}
+      assert Duration.parse("+PT15M") == {:ok, 900}
+    end
+
+    test "refuses a negative duration, which is no length" do
+      assert {:error, _reason} = Duration.parse("-PT1H")
+      assert {:error, _reason} = Duration.parse("-P1D")
+    end
+
+    test "refuses a time marker with no time after it" do
+      assert {:error, _reason} = Duration.parse("PT")
+      assert {:error, _reason} = Duration.parse("P1DT")
+      assert {:error, _reason} = Duration.parse("PT5")
+    end
+
     test "handles unsupported P components gracefully (e.g. months)" do
       # Now returns error for unsupported components because of regex anchors
       assert {:error, _reason} = Duration.parse("P1M")
       assert {:error, _reason} = Duration.parse("P1Y")
+    end
+  end
+
+  describe "Duration.parse_signed/1" do
+    test "reads a negative duration as negative seconds" do
+      assert Duration.parse_signed("-P1D") == {:ok, -86_400}
+      assert Duration.parse_signed("-PT1H30M") == {:ok, -5400}
+      assert Duration.parse_signed("-P1W") == {:ok, -604_800}
+    end
+
+    test "reads an unsigned or plus-signed duration as positive seconds" do
+      assert Duration.parse_signed("PT15M") == {:ok, 900}
+      assert Duration.parse_signed("+PT15M") == {:ok, 900}
+    end
+
+    test "refuses what is not a duration" do
+      assert {:error, _reason} = Duration.parse_signed("-P")
+      assert {:error, _reason} = Duration.parse_signed("--PT1H")
+      assert {:error, _reason} = Duration.parse_signed("-P1M")
+    end
+  end
+
+  describe "Duration.parse_minutes/1" do
+    test "reads the lengths booking links and forms write" do
+      assert Duration.parse_minutes("30min") == {:ok, 30}
+      assert Duration.parse_minutes(" 45 minutes ") == {:ok, 45}
+      assert Duration.parse_minutes("90-Min") == {:ok, 90}
+      assert Duration.parse_minutes("60") == {:ok, 60}
+      assert Duration.parse_minutes(Duration.format_for_url(15)) == {:ok, 15}
+    end
+
+    test "refuses anything that is not a length in minutes" do
+      assert Duration.parse_minutes("soon") == :error
+      assert Duration.parse_minutes("1h") == :error
+      assert Duration.parse_minutes("-30min") == :error
+      assert Duration.parse_minutes("") == :error
     end
   end
 
@@ -195,59 +260,6 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     end
   end
 
-  describe "group_slots_by_period/1" do
-    test "sorts slots within a period chronologically, not lexicographically" do
-      # "7:30 AM" lexicographically sorts after "11:30 AM" because "7" > "1",
-      # but chronologically it must come first.
-      slots = ["11:30 AM", "7:30 AM", "9:00 AM", "8:00 AM"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Morning"] == ["7:30 AM", "8:00 AM", "9:00 AM", "11:30 AM"]
-    end
-
-    test "sorts within each period independently" do
-      slots = ["3:00 PM", "1:00 PM", "8:00 PM", "6:00 PM", "10:00 AM", "7:00 AM"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Morning"] == ["7:00 AM", "10:00 AM"]
-      assert result["Afternoon"] == ["1:00 PM", "3:00 PM"]
-      assert result["Evening"] == ["6:00 PM", "8:00 PM"]
-    end
-
-    test "handles 24h format times correctly" do
-      slots = ["14:00", "07:30", "09:00", "13:00"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Morning"] == ["07:30", "09:00"]
-      assert result["Afternoon"] == ["13:00", "14:00"]
-    end
-
-    test "slots before 5am are grouped as Early Morning" do
-      slots = ["02:00", "03:30", "04:45"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Early Morning"] == ["02:00", "03:30", "04:45"]
-      refute Map.has_key?(result, "Night")
-    end
-
-    test "slots from 21:00 onwards are grouped as Late Night" do
-      slots = ["21:00", "22:30", "23:45"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Late Night"] == ["21:00", "22:30", "23:45"]
-      refute Map.has_key?(result, "Night")
-    end
-
-    test "early morning and late night slots are in separate groups" do
-      slots = ["03:00", "22:00"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Early Morning"] == ["03:00"]
-      assert result["Late Night"] == ["22:00"]
-    end
-
-    test "5:00 AM boundary falls into Morning, not Early Morning" do
-      slots = ["05:00"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Morning"] == ["05:00"]
-      refute Map.has_key?(result, "Early Morning")
-    end
-  end
-
   describe "convert_to_utc/2" do
     test "converts naive datetime with valid IANA timezone to UTC" do
       # Europe/Brussels is UTC+2 in summer (CEST)
@@ -309,22 +321,6 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       # just_after is 02:00 BST = 01:00 UTC
       assert utc.hour == 1
       assert utc.minute == 0
-    end
-  end
-
-  describe "to_datetime/1" do
-    test "passes DateTime through unchanged" do
-      dt = ~U[2026-04-07 14:30:00Z]
-      assert DateTimeUtils.to_datetime(dt) == dt
-    end
-
-    test "converts Date to midnight UTC" do
-      date = ~D[2026-04-07]
-      assert DateTimeUtils.to_datetime(date) == ~U[2026-04-07 00:00:00Z]
-    end
-
-    test "returns nil for nil" do
-      assert DateTimeUtils.to_datetime(nil) == nil
     end
   end
 end

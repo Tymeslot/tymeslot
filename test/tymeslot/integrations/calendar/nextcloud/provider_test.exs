@@ -86,12 +86,19 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       assert :ok = Provider.validate_config(config)
     end
 
-    test "accepts standard Nextcloud URL without touching the network" do
+    test "refuses a private address, as the rest of the CalDAV family does" do
       config = %{
         base_url: "http://localhost:1",
         username: "user",
         password: "pass"
       }
+
+      assert Provider.validate_config(config) ==
+               {:error, "Private or local network addresses are not allowed"}
+    end
+
+    test "accepts an address typed without a scheme" do
+      config = %{base_url: "cloud.example.com", username: "user", password: "pass"}
 
       assert :ok = Provider.validate_config(config)
     end
@@ -112,7 +119,6 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       assert client.password == "testpass"
       # Nextcloud speaks CalDAV under the hood but keeps its own provider tag.
       assert client.provider == :nextcloud
-      assert client.verify_ssl == true
     end
 
     test "normalizes Nextcloud base URL to include CalDAV path" do
@@ -245,7 +251,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       }
 
       assert Provider.perform_connection_test(integration) ==
-               {:error, "Private or local network addresses are not allowed"}
+               {:error, :private_address}
     end
 
     test "returns Nextcloud-specific :not_found message when server returns 404" do
@@ -334,7 +340,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         # guard. A bare `{:error, _}` also holds with the guard removed —
         # the request then fails against the stubbed transport instead.
         assert Provider.discover_calendars(client) ==
-                 {:error, "Private or local network addresses are not allowed"}
+                 {:error, :private_address}
       end
     end
   end

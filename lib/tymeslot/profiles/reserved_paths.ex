@@ -10,9 +10,13 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   @doc """
   Whether `username` is reserved, so no organiser may choose it.
 
-  A username is reserved when it is on `list/0`, or when the configured demo
-  provider serves it: a real profile under such a username would have its
-  booking page replaced by demo content.
+  A username is reserved when it is on `list/0`, or when it lies in the
+  namespace the configured demo provider reserves for its demo pages
+  (`Tymeslot.Demo.demo_username?/1`).
+
+  Only new choices are refused: a profile's current username is never
+  re-checked (`Tymeslot.Profiles.username_status/2`), so a handle chosen
+  before its word was reserved keeps working.
   """
   @spec reserved?(String.t()) :: boolean()
   def reserved?(username) when is_binary(username),

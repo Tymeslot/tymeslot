@@ -16,8 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   time limit instead of being killed there with its last write in flight.
   """
 
-  alias Tymeslot.Infrastructure.RetryLogic
-  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, ConflictResolution, Http}
+  alias Tymeslot.Infrastructure.Retry
+  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, ConflictResolution, Http, Scheduling}
 
   require Logger
 
@@ -88,7 +88,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
           :ok | {:error, Base.error_reason()}
   def put(client, url, ical_data, etag, policy, opts) do
     base_put_opts =
-      if etag, do: [operation: :update, if_match: etag], else: [operation: :update]
+      if(etag, do: [operation: :update, if_match: etag], else: [operation: :update]) ++
+        Scheduling.write_opts(client)
 
     # The time left is read on every attempt, so a retry gets only what the
     # first attempt left of the deadline.
@@ -104,8 +105,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
     # duplicate-creation risk only applies to If-None-Match: * creates, which
     # go through put_ical/5, not this function. So we always apply retry here,
     # regardless of whether we have a specific ETag or fell back to If-Match: *.
-    retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
-    raw_result = RetryLogic.with_retry(put_fun, retry_opts)
+    retry_opts = Base.retry_opts(opts)
+    raw_result = Retry.with_backoff(put_fun, retry_opts)
 
     case raw_result do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
@@ -195,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   defp force_put(client, url, ical_data, opts) do
     result =
       within_deadline(opts, Keyword.get(opts, :timeout, @write_timeout_ms), fn timeout ->
-        put_opts = [operation: :force_update, timeout: timeout]
+        put_opts = [operation: :force_update, timeout: timeout] ++ Scheduling.write_opts(client)
         Http.put_event(url, client.username, client.password, ical_data, put_opts)
       end)
 

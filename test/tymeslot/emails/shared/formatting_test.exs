@@ -45,6 +45,14 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     test "falls back to to_string/1 for non-DateTime values" do
       assert Formatting.format_time_short(nil, "de") == ""
     end
+
+    # IST is India, Ireland or Israel; the zone's own name settles which.
+    test "names the zone alongside an ambiguous abbreviation" do
+      kolkata = DateTime.shift_zone!(~U[2026-03-05 09:00:00Z], "Asia/Kolkata")
+
+      assert Formatting.format_time_short(kolkata, "en") ==
+               "05 Mar 2026, 14:30 IST (Asia/Kolkata)"
+    end
   end
 
   describe "truncate/2" do
@@ -175,7 +183,7 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_duration(1, "en") == "1 minute"
       assert Formatting.format_duration(30, "en") == "30 minutes"
       assert Formatting.format_duration(60, "en") == "1 hour"
-      assert Formatting.format_duration(90, "en") == "1.5 hours"
+      assert Formatting.format_duration(90, "en") == "1 hour 30 minutes"
       assert Formatting.format_duration(120, "en") == "2 hours"
     end
 
@@ -183,6 +191,8 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_duration(1, "de") == "1 Minute"
       assert Formatting.format_duration(30, "de") == "30 Minuten"
       assert Formatting.format_duration(60, "de") == "1 Stunde"
+      # Never a decimal: "1.5" would be wrong in every locale that writes 1,5.
+      assert Formatting.format_duration(90, "de") == "1 Stunde 30 Minuten"
       assert Formatting.format_duration(120, "de") == "2 Stunden"
     end
 
@@ -364,8 +374,8 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "handles negative amounts (refunds)" do
-      assert Formatting.format_currency(-1000, "eur") == "€-10.00"
-      assert Formatting.format_currency(-500, "jpy") == "¥-500"
+      assert Formatting.format_currency(-1000, "eur") == "-€10.00"
+      assert Formatting.format_currency(-500, "jpy") == "-¥500"
     end
 
     test "falls back to upper-cased ISO code for unknown currencies" do
@@ -393,7 +403,7 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "-50 cents (partial refund display) formats with leading sign" do
-      assert Formatting.format_currency(-50, "eur") == "€-0.50"
+      assert Formatting.format_currency(-50, "eur") == "-€0.50"
     end
   end
 

@@ -59,14 +59,28 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
     """
   end
 
+  # `video: false` is for a page served by a plain controller, where no hook
+  # mounts: the video would download and never play, and the motion toggle
+  # would do nothing. It gets the static fallback gradient instead.
   @spec auth_card_layout(map()) :: Phoenix.LiveView.Rendered.t()
   def auth_card_layout(assigns) do
-    assigns = assign_new(assigns, :subtitle, fn -> nil end)
+    assigns =
+      assigns
+      |> assign_new(:subtitle, fn -> nil end)
+      |> assign_new(:video, fn -> true end)
 
     ~H"""
     <main class="min-h-screen relative overflow-hidden flex items-center justify-center p-4 sm:p-6">
       <%!-- Video Background --%>
-      <div class="video-background-container" id="auth-video-container" phx-hook="AuthVideo">
+      <div :if={!@video} class="video-background-container fallback">
+        <div class="absolute inset-0 bg-linear-to-br from-turquoise-600 to-blue-600 opacity-20"></div>
+      </div>
+      <div
+        :if={@video}
+        class="video-background-container"
+        id="auth-video-container"
+        phx-hook="AuthVideo"
+      >
         <div class="absolute inset-0 bg-linear-to-br from-turquoise-600 to-blue-600 opacity-20"></div>
         <%= for {video_id, index} <- Enum.with_index(AuthVideoConfig.auth_video_ids(), 1) do %>
           <video
@@ -89,7 +103,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
           </video>
         <% end %>
       </div>
-      <.background_motion_toggle />
+      <.background_motion_toggle :if={@video} />
 
       <.auth_back_link />
 

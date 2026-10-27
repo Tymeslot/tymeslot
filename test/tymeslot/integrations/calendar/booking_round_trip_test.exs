@@ -72,6 +72,34 @@ defmodule Tymeslot.Integrations.Calendar.BookingRoundTripTest do
     end
   end
 
+  describe "a booking the host turned into a weekly series" do
+    # The series row keeps the booking's time; a later occurrence the host
+    # moved carries the same UID. Whatever order they arrive in, the booking
+    # is described by the series row alone and is not flagged.
+    for order <- [:series_first, :occurrence_first] do
+      test "is not flagged by a moved occurrence elsewhere in the series (#{order})" do
+        %{integration: integration, meeting: meeting} = booking()
+        series = %{round_trip(meeting, integration) | recurrence_rule: "FREQ=WEEKLY"}
+
+        occurrence =
+          %{
+            shift_start(series, 8 * 86_400)
+            | recurrence_rule: nil,
+              recurrence_id:
+                Calendar.strftime(DateTime.add(meeting.start_time, 7, :day), "%Y%m%dT%H%M%SZ")
+          }
+
+        events =
+          if unquote(order) == :series_first, do: [series, occurrence], else: [occurrence, series]
+
+        assert :ok = Sync.post_commit_reconciliation(integration, events)
+
+        {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+        assert updated.calendar_sync_status == nil
+      end
+    end
+  end
+
   # A CalDAV booking as the write path leaves it: no provider event id on the
   # meeting, because the server addresses the event by href and only the uid
   # (the meeting's calendar_uid) links the two sides.

@@ -12,6 +12,8 @@ defmodule Tymeslot.Auth.AccountTokens do
     * `fetch/3` resolves a raw token to its user, rejecting unknown, consumed
       and expired tokens
     * `consume/3` spends it
+    * `release_expired_email_changes/1` frees the addresses held by expired
+      email changes
   """
 
   alias Tymeslot.Auth.{UserSchema, UserTokenQueries}
@@ -50,7 +52,7 @@ defmodule Tymeslot.Auth.AccountTokens do
   @spec issue(purpose(), UserSchema.t(), map()) ::
           {:ok, UserSchema.t(), String.t()} | {:error, Ecto.Changeset.t()}
   def issue(purpose, %UserSchema{} = user, attrs \\ %{}) do
-    token = Token.generate_token()
+    token = Token.generate()
 
     case persist(purpose, user, token, attrs) do
       {:ok, updated_user} -> {:ok, updated_user, token}
@@ -104,6 +106,24 @@ defmodule Tymeslot.Auth.AccountTokens do
         expires_at = DateTime.add(issued_at, ttl_seconds(purpose), :second)
         DateTime.compare(Clock.utc_now(), expires_at) != :lt
     end
+  end
+
+  @doc """
+  Releases every email change whose link has expired, clearing its pending
+  address so it no longer holds that address against other accounts.
+
+  `filter` narrows the sweep to one address (`pending_email: address`) or one
+  account (`user_id: id`). A change requested since its link expired carries
+  a fresh stamp and is left alone. Returns how many accounts were cleared.
+  """
+  @spec release_expired_email_changes(keyword()) :: non_neg_integer()
+  def release_expired_email_changes(filter \\ []) do
+    issued_before =
+      Clock.utc_now()
+      |> DateTime.add(-ttl_seconds(:email_change), :second)
+      |> DateTime.truncate(:second)
+
+    UserTokenQueries.clear_email_changes_issued_before(issued_before, filter)
   end
 
   @doc """

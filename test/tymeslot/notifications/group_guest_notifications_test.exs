@@ -21,8 +21,8 @@ defmodule Tymeslot.Notifications.GroupGuestNotificationsTest do
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Notifications.Email.GuestEmails
   alias Tymeslot.Notifications.GuestNotifications
-  alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
 
   setup :verify_on_exit!
 

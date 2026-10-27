@@ -13,9 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck
-  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Profiles
-  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.CalendarSettings.ComponentView
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
@@ -32,9 +30,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     {:ok,
      socket
      |> assign(:integrations, [])
+     |> assign(:booking_calendar_ids, %{})
      |> assign(:selected_provider, nil)
      |> assign(:is_refreshing, false)
      |> assign(:health_states, %{})
+     |> assign(:stuck_changes, %{})
      |> assign(:show_picker, false)
      |> assign(:managing_calendar_id, nil)
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
@@ -54,16 +54,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   # The integrations hub already loads the calendar list and health states
   # for its active tab child (one query per hub render instead of two) and
-  # passes them down as the `integrations`/`health_states` props. Reuse them
+  # passes them down as the `integrations`/`health_states`/`stuck_changes`
+  # props. Reuse them
   # when present; fall back to loading independently otherwise — e.g. when
   # mounted standalone via the `:calendar_integration` dashboard action, or
   # when a `send_update/2` targets us with a partial assign (those always
   # want a fresh reload, matching prior behaviour).
   defp maybe_load_integrations(socket, %{
          integrations: _integrations,
-         health_states: _health_states
+         health_states: _health_states,
+         stuck_changes: _stuck_changes
        }),
-       do: socket
+       do: assign_booking_calendars(socket)
 
   defp maybe_load_integrations(socket, _assigns), do: load_integrations(socket)
 
@@ -138,16 +140,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   def handle_event("toggle_all_events_busy", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with :ok <- RateLimiter.check_integration_write_rate_limit(user_id),
-         {:ok, int_id} <- parse_int(id),
+    with {:ok, int_id} <- parse_int(id),
          %{} = integration <- Enum.find(socket.assigns.integrations, &(&1.id == int_id)),
          {:ok, updated} <-
-           Calendar.set_all_events_busy(int_id, user_id, not integration.all_events_busy) do
+           Calendar.set_all_events_busy(user_id, int_id, not integration.all_events_busy) do
       Flash.info(all_events_busy_message(updated.all_events_busy))
       send(self(), {:integration_updated, :calendar})
       {:noreply, load_integrations(socket)}
     else
-      {:error, :rate_limited, message} ->
+      {:error, {:rate_limited, message}} ->
         Flash.error(message)
         {:noreply, socket}
 
@@ -157,18 +158,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
-    user_id = socket.assigns.current_user.id
-
-    with :ok <- RateLimiter.check_integration_write_rate_limit(user_id),
-         {:ok, int_id} <- parse_int(id),
-         {:ok, _result} <- Calendar.toggle_integration(int_id, user_id) do
-      Flash.info(dgettext("dashboard_calendar_settings", "Calendar status updated"))
-      send(self(), {:integration_updated, :calendar})
-      {:noreply, load_integrations(socket)}
-    else
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
+    with_owned_integration(socket, id, &Calendar.toggle_integration/2, fn
+      {:ok, _result} ->
+        Flash.info(dgettext("dashboard_calendar_settings", "Calendar status updated"))
+        send(self(), {:integration_updated, :calendar})
+        {:noreply, load_integrations(socket)}
 
       {:error, :duplicate_account} ->
         Flash.error(
@@ -188,24 +182,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         )
 
         {:noreply, socket}
-
-      :error ->
-        Flash.error(dgettext("dashboard_calendar_settings", "Invalid calendar ID"))
-        {:noreply, socket}
-    end
+    end)
   end
 
-  def handle_event("connect_provider", %{"provider" => "google"}, socket) do
-    case Calendar.initiate_google_oauth(socket.assigns.current_user.id) do
-      {:ok, url} -> send(self(), {:external_redirect, url})
-      {:error, msg} -> Flash.error(msg)
-    end
-
-    {:noreply, socket}
-  end
-
-  def handle_event("connect_provider", %{"provider" => "outlook"}, socket) do
-    case Calendar.initiate_outlook_oauth(socket.assigns.current_user.id) do
+  def handle_event("connect_provider", %{"provider" => provider}, socket)
+      when provider in ["google", "outlook"] do
+    case Calendar.initiate_oauth(
+           String.to_existing_atom(provider),
+           socket.assigns.current_user.id
+         ) do
       {:ok, url} -> send(self(), {:external_redirect, url})
       {:error, msg} -> Flash.error(msg)
     end
@@ -230,61 +215,105 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     else
       user_id = socket.assigns.current_user.id
 
-      case RateLimiter.check_calendar_refresh_rate_limit(user_id) do
-        {:error, :rate_limited, message} ->
-          Flash.error(message)
-          {:noreply, socket}
-
-        :ok ->
-          active = Enum.filter(socket.assigns.integrations, & &1.is_active)
-
-          if active == [] do
-            {:noreply, assign(socket, :is_refreshing, false)}
-          else
-            {:noreply,
-             socket
-             |> assign(:is_refreshing, true)
-             |> start_async(
-               :refresh_calendars,
-               Tasks.with_context(fn ->
-                 Tymeslot.TaskSupervisor
-                 |> Tasks.async_stream_nolink(
-                   active,
-                   fn integration ->
-                     {integration.name, Calendar.refresh_integration(integration)}
-                   end,
-                   max_concurrency: 5,
-                   timeout: 30_000,
-                   on_timeout: :kill_task
-                 )
-                 |> Enum.to_list()
-               end)
-             )}
-          end
-      end
+      {:noreply,
+       socket
+       |> assign(:is_refreshing, true)
+       |> start_async(
+         :refresh_calendars,
+         Tasks.with_context(fn -> Calendar.refresh_all_integrations(user_id) end)
+       )}
     end
   end
 
-  def handle_event(
-        "toggle_calendar_selection",
-        %{"integration_id" => id, "calendar_id" => cal_id},
-        socket
-      ) do
-    with_owned_integration(socket, id, :write, fn integration ->
-      case Calendar.toggle_calendar_selection(integration, cal_id) do
-        {:ok, _result} ->
-          {:noreply, load_integrations(socket)}
+  # The ids are those the card rendered, so a calendar recorded since stays.
+  def handle_event("dismiss_removed_calendars", %{"id" => id} = params, socket) do
+    shown_ids = shown_ids(params)
+    dismiss = &Calendar.dismiss_removed_calendars(&1, &2, shown_ids)
 
-        _error ->
-          Flash.error(dgettext("dashboard_calendar_settings", "Failed to update selection"))
-          {:noreply, socket}
-      end
+    with_owned_integration(socket, id, dismiss, fn
+      {:ok, _cleared} ->
+        # The hub's banner lists the same calendars, from the parent's copy.
+        send(self(), {:integration_updated, :calendar})
+        {:noreply, load_integrations(socket)}
     end)
   end
 
+  def handle_event("retry_stuck_changes", %{"id" => id}, socket) do
+    with_owned_integration(socket, id, &Calendar.retry_stuck_changes/2, fn
+      {:ok, _retried} ->
+        Flash.info(
+          dgettext(
+            "dashboard_calendar_settings",
+            "Sending the changes again. This calendar will update shortly."
+          )
+        )
+
+        {:noreply, load_integrations(socket)}
+
+      {:error, _reason} ->
+        Flash.error(
+          dgettext(
+            "dashboard_calendar_settings",
+            "Could not retry the changes. Please try again."
+          )
+        )
+
+        {:noreply, socket}
+    end)
+  end
+
+  @calendar_states %{"off" => :off, "show" => :show, "block" => :block}
+
+  def handle_event(
+        "set_calendar_state",
+        %{"integration_id" => id, "calendar_id" => cal_id, "state" => state},
+        socket
+      )
+      when is_map_key(@calendar_states, state) do
+    with_owned_integration(
+      socket,
+      id,
+      &Calendar.set_calendar_state(&1, &2, cal_id, Map.fetch!(@calendar_states, state)),
+      &calendar_choice_result(socket, &1)
+    )
+  end
+
+  def handle_event(
+        "set_calendar_blocking",
+        %{"integration_id" => id, "calendar_id" => cal_id, "blocks" => blocks},
+        socket
+      )
+      when blocks in ["true", "false"] do
+    with_owned_integration(
+      socket,
+      id,
+      &Calendar.set_calendar_blocking(&1, &2, cal_id, blocks == "true"),
+      &calendar_choice_result(socket, &1)
+    )
+  end
+
+  def handle_event(
+        "set_calendar_shown",
+        %{"integration_id" => id, "calendar_id" => cal_id, "shown" => shown},
+        socket
+      )
+      when shown in ["true", "false"] do
+    with_owned_integration(
+      socket,
+      id,
+      &Calendar.set_calendar_shown(&1, &2, cal_id, shown == "true"),
+      &calendar_choice_result(socket, &1)
+    )
+  end
+
   def handle_event("rename_integration", %{"integration_id" => id, "name" => name}, socket) do
-    with_owned_integration(socket, id, :appearance, fn integration ->
-      case Calendar.rename_integration(integration, name, socket.assigns.security_metadata) do
+    metadata = socket.assigns.security_metadata
+
+    with_owned_integration(
+      socket,
+      id,
+      &Calendar.rename_integration(&1, &2, name, metadata),
+      fn
         {:ok, _updated} ->
           Flash.info(dgettext("dashboard_calendar_settings", "Calendar renamed"))
           send(self(), {:integration_updated, :calendar})
@@ -298,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
           Flash.error(dgettext("dashboard_calendar_settings", "Failed to rename calendar"))
           {:noreply, socket}
       end
-    end)
+    )
   end
 
   def handle_event(
@@ -311,8 +340,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     if already_coloured?(socket, id, colour) do
       {:noreply, socket}
     else
-      with_owned_integration(socket, id, :appearance, fn integration ->
-        case Calendar.update_integration(integration, %{colour: colour}) do
+      with_owned_integration(
+        socket,
+        id,
+        &Calendar.set_integration_colour(&1, &2, colour),
+        fn
           {:ok, _updated} ->
             send(self(), {:integration_updated, :calendar})
             {:noreply, load_integrations(socket)}
@@ -321,7 +353,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
             Flash.error(dgettext("dashboard_calendar_settings", "Failed to update colour"))
             {:noreply, socket}
         end
-      end)
+      )
     end
   end
 
@@ -393,17 +425,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   # --- Async Handlers ---
 
   @impl Phoenix.LiveComponent
-  def handle_async(:refresh_calendars, {:ok, results}, socket) do
-    {successes, failed_names} =
-      Enum.reduce(results, {0, []}, fn
-        {:ok, {_name, {:ok, _result}}}, {s, f} -> {s + 1, f}
-        {:ok, {name, _error}}, {s, f} -> {s, [name | f]}
-        # A result shape we cannot read a calendar name out of; it still has to
-        # be named in the "… failed: %{detail}" list, so it gets a placeholder
-        # that reads as a name rather than a bare adjective.
-        _other, {s, f} -> {s, [dgettext("dashboard_calendar_settings", "unknown calendar") | f]}
-      end)
+  def handle_async(:refresh_calendars, {:ok, {:error, {:rate_limited, message}}}, socket) do
+    Flash.error(message)
+    {:noreply, assign(socket, :is_refreshing, false)}
+  end
 
+  def handle_async(:refresh_calendars, {:ok, {:ok, []}}, socket) do
+    {:noreply, assign(socket, :is_refreshing, false)}
+  end
+
+  def handle_async(:refresh_calendars, {:ok, {:ok, results}}, socket) do
+    failed_names = for {name, {:error, _reason}} <- results, do: name
+    successes = length(results) - length(failed_names)
     failures = length(failed_names)
 
     cond do
@@ -413,7 +446,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         )
 
       successes > 0 ->
-        detail = format_refresh_failures(Enum.reverse(failed_names))
+        detail = format_refresh_failures(failed_names)
 
         Flash.error(
           dgettext(
@@ -444,16 +477,48 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     user_id = socket.assigns.current_user.id
     integrations = Calendar.list_integrations(user_id)
 
-    health_states =
-      user_id
-      |> HealthCheck.list_unhealthy_for_user()
-      |> Enum.filter(&(&1.integration_type == "calendar"))
-      |> Map.new(fn s -> {s.integration_id, Monitor.from_db_record(s)} end)
+    health_states = HealthCheck.health_states_for_user(user_id).calendar
 
     socket
     |> assign(:integrations, integrations)
+    |> assign_booking_calendars()
     |> assign(:health_states, health_states)
+    |> load_stuck_changes()
   end
+
+  # The calendars bookings go to, which the Manage calendars modal keeps
+  # showing and blocking.
+  defp assign_booking_calendars(socket) do
+    assign(
+      socket,
+      :booking_calendar_ids,
+      Calendar.booking_calendar_ids_by_integration(
+        socket.assigns.current_user.id,
+        socket.assigns.integrations
+      )
+    )
+  end
+
+  defp calendar_choice_result(socket, {:ok, _updated}), do: {:noreply, load_integrations(socket)}
+
+  defp calendar_choice_result(socket, {:error, :booking_calendar}) do
+    Flash.error(
+      dgettext(
+        "dashboard_calendar_settings",
+        "Your booking calendar always blocks your availability."
+      )
+    )
+
+    {:noreply, load_integrations(socket)}
+  end
+
+  defp calendar_choice_result(socket, _error) do
+    Flash.error(dgettext("dashboard_calendar_settings", "Failed to update selection"))
+    {:noreply, socket}
+  end
+
+  defp load_stuck_changes(socket),
+    do: assign(socket, :stuck_changes, Calendar.stuck_changes(socket.assigns.current_user.id))
 
   defp format_refresh_failures(names) when length(names) <= 3 do
     Enum.join(names, ", ")
@@ -473,53 +538,38 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     )
   end
 
-  # Every write to one integration goes through here: rate limit, parse the id
-  # off the DOM, then re-fetch the row scoped to the current user before
-  # handing it to `fun`. Re-fetching is not belt-and-braces — the struct in
-  # socket assigns can be stale if the row was deleted between mount and this
-  # click, and `CalendarIntegrationSchema` has no `optimistic_lock`, so
-  # `Repo.update` on a stale struct returns `{:ok, stale_struct}` (0 rows
-  # affected, no exception) and the user sees a silent no-op. Keeping the
-  # preamble in one place is also what stops a new action from shipping with
-  # the rate limit or the ownership check quietly missing.
-  #
-  # `bucket` says which budget the write draws on. `:write` is the shared
-  # integration budget; `:appearance` is the looser one for changes that only
-  # affect how a connection is presented. Naming it at the call site is what
-  # keeps the choice a visible decision per action rather than a default.
-  defp with_owned_integration(socket, id, bucket, fun) do
-    user_id = socket.assigns.current_user.id
+  # Every write to one integration goes through here: parse the id off the
+  # DOM, then call the context with the current user and that id. The context
+  # charges the budget and loads the row scoped to the user, so a forged or
+  # stale id answers `:not_found`; this maps the refusals every such write
+  # shares to a flash and hands any other result to `on_result`.
+  defp with_owned_integration(socket, id, write, on_result) do
+    case parse_int(id) do
+      {:ok, int_id} ->
+        case write.(socket.assigns.current_user.id, int_id) do
+          {:error, {:rate_limited, message}} ->
+            Flash.error(message)
+            {:noreply, socket}
 
-    with :ok <- check_write_rate_limit(bucket, user_id),
-         {:ok, int_id} <- parse_int(id),
-         {:ok, integration} <- Calendar.get_integration(int_id, user_id) do
-      fun.(integration)
-    else
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
+          {:error, :not_found} ->
+            Flash.error(
+              dgettext(
+                "dashboard_calendar_settings",
+                "This calendar integration is no longer available."
+              )
+            )
 
-      {:error, :not_found} ->
-        Flash.error(
-          dgettext(
-            "dashboard_calendar_settings",
-            "This calendar integration is no longer available."
-          )
-        )
+            {:noreply, load_integrations(socket)}
 
-        {:noreply, load_integrations(socket)}
+          result ->
+            on_result.(result)
+        end
 
       :error ->
         Flash.error(dgettext("dashboard_calendar_settings", "Invalid calendar ID"))
         {:noreply, socket}
     end
   end
-
-  defp check_write_rate_limit(:write, user_id),
-    do: RateLimiter.check_integration_write_rate_limit(user_id)
-
-  defp check_write_rate_limit(:appearance, user_id),
-    do: RateLimiter.check_integration_appearance_rate_limit(user_id)
 
   # Clicking the swatch that is already ringed is what someone does while
   # comparing colours, and it asks for nothing. Answering it from the rendered
@@ -537,6 +587,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   # detail of the picker rather than something the schema has to know about.
   defp palette_key("default"), do: nil
   defp palette_key(colour), do: colour
+
+  # A tampered or missing list dismisses nothing.
+  defp shown_ids(%{"shown" => shown}) when is_binary(shown) do
+    case Jason.decode(shown) do
+      {:ok, ids} when is_list(ids) -> Enum.filter(ids, &is_binary/1)
+      _invalid -> []
+    end
+  end
+
+  defp shown_ids(_params), do: []
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
 

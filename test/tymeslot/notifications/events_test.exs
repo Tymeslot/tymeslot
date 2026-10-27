@@ -16,6 +16,13 @@ defmodule Tymeslot.Notifications.EventsTest do
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.{SlackWorker, TelegramWorker}
 
+  @doc false
+  @spec forward_occurrence([atom()], map(), map(), pid()) :: :ok
+  def forward_occurrence(_event, _measurements, _metadata, test_pid) do
+    send(test_pid, :occurrence_recorded)
+    :ok
+  end
+
   setup :verify_on_exit!
 
   # Stands in for an email pipeline that raises rather than returning
@@ -26,6 +33,30 @@ defmodule Tymeslot.Notifications.EventsTest do
 
     @spec schedule_cancellation_emails(term()) :: no_return()
     def schedule_cancellation_emails(_meeting_id), do: raise("email pipeline down")
+
+    @spec schedule_seat_confirmation_emails(term(), term()) :: no_return()
+    def schedule_seat_confirmation_emails(_meeting_id, _participant_id),
+      do: raise("email pipeline down")
+
+    @spec schedule_reschedule_emails(term(), term(), keyword()) :: no_return()
+    def schedule_reschedule_emails(_meeting, _original, _opts), do: raise("email pipeline down")
+
+    @spec cancel_reminder_emails(term()) :: :ok
+    def cancel_reminder_emails(_meeting_id), do: :ok
+
+    @spec schedule_reminder_emails(term(), term(), term(), term()) :: :ok
+    def schedule_reminder_emails(_meeting_id, _value, _unit, _schedule_at), do: :ok
+  end
+
+  # Stands in for an email step whose database write fails.
+  defmodule DatabaseDownWorker do
+    @spec schedule_confirmation_emails(term()) :: no_return()
+    def schedule_confirmation_emails(_meeting_id),
+      do: raise(DBConnection.ConnectionError, "connection refused")
+
+    @spec schedule_seat_confirmation_emails(term(), term()) :: no_return()
+    def schedule_seat_confirmation_emails(_meeting_id, _participant_id),
+      do: raise(DBConnection.ConnectionError, "connection refused")
 
     @spec cancel_reminder_emails(term()) :: :ok
     def cancel_reminder_emails(_meeting_id), do: :ok
@@ -280,8 +311,9 @@ defmodule Tymeslot.Notifications.EventsTest do
     end
   end
 
-  # Issue #76: the email step renders templates in-process, so a payload the
-  # templates don't fit raises instead of returning `{:error, _}`. That
+  # Issue #76: the email step can raise instead of returning `{:error, _}`
+  # (it used to render templates in-process, where a payload they did not fit
+  # raised). That
   # exception used to escape before the webhook, Telegram and Slack dispatches
   # sequenced after it, silently costing a reschedule every downstream channel.
   describe "a raising email step" do
@@ -321,11 +353,7 @@ defmodule Tymeslot.Notifications.EventsTest do
       meeting: meeting,
       telegram_integration: telegram_integration
     } do
-      stub(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn _details ->
-        raise KeyError, key: :reminders_summary, term: %{}
-      end)
-
-      assert {:error, {:notifications_failed, %KeyError{}}} =
+      assert {:error, {:notifications_failed, %RuntimeError{}}} =
                Events.meeting_rescheduled(meeting, meeting)
 
       assert_enqueued(
@@ -338,20 +366,52 @@ defmodule Tymeslot.Notifications.EventsTest do
       )
     end
 
-    test "meeting_created/1 still dispatches Telegram and reports the failure", %{
+    # A fault composing the emails fails the same way on every retry, so the
+    # booking is announced without them rather than refused for good.
+    test "meeting_created/1 announces a booking whose emails could not be composed", %{
       meeting: meeting,
       telegram_integration: telegram_integration
     } do
-      assert {:error, {:notifications_failed, %RuntimeError{}}} = Events.meeting_created(meeting)
+      assert {:ok, :not_sendable} = Events.meeting_created(meeting)
 
       assert_enqueued(
         worker: TelegramWorker,
-        args: %{
-          "integration_id" => telegram_integration.id,
-          "event_type" => "meeting.created",
-          "meeting_id" => meeting.id
-        }
+        args: %{"integration_id" => telegram_integration.id, "event_type" => "meeting.created"}
       )
+
+      assert %{announced_at: %DateTime{}} = Repo.reload!(meeting)
+    end
+
+    # The booking's emails and its announcement commit together, and the
+    # integrations hear of it only once they have: a database that fails the
+    # email step leaves the claim free for the caller's retry.
+    test "meeting_created/1 tells no integration when the database fails its emails, and leaves the claim for a retry",
+         %{meeting: meeting} do
+      Application.put_env(:tymeslot, :email_worker_module, DatabaseDownWorker)
+
+      assert {:error, {:notifications_failed, %DBConnection.ConnectionError{}}} =
+               Events.meeting_created(meeting)
+
+      refute_enqueued(worker: TelegramWorker)
+      assert %{announced_at: nil} = Repo.reload!(meeting)
+    end
+
+    # A group seat follows the solo rule: a fault composing its confirmation
+    # books the seat without it; only a storage failure refuses the seat.
+    test "seat_booked_deferred/3 books a seat whose confirmation could not be composed", %{
+      meeting: meeting
+    } do
+      assert {{:ok, :not_sendable}, [_fan_out]} =
+               Events.seat_booked_deferred(meeting, %{id: 1})
+    end
+
+    test "seat_booked_deferred/3 refuses a seat when the database fails its confirmation", %{
+      meeting: meeting
+    } do
+      Application.put_env(:tymeslot, :email_worker_module, DatabaseDownWorker)
+
+      assert {{:error, {:notifications_failed, %DBConnection.ConnectionError{}}}, _pending} =
+               Events.seat_booked_deferred(meeting, %{id: 1})
     end
 
     test "meeting_cancelled/1 still dispatches Telegram and reports the failure", %{
@@ -371,10 +431,25 @@ defmodule Tymeslot.Notifications.EventsTest do
       )
     end
 
+    # The email step runs inside the announcement's transaction, so the report
+    # is written from a task of its own, whatever becomes of the transaction.
     test "meeting_created/1 records the email failure with the meeting", %{meeting: meeting} do
       with_config(:error_tracker, enabled: true)
+      test_pid = self()
+      handler = "events-test-occurrence-#{System.unique_integer([:positive])}"
 
-      assert {:error, {:notifications_failed, _exception}} = Events.meeting_created(meeting)
+      :ok =
+        :telemetry.attach(
+          handler,
+          [:error_tracker, :occurrence, :new],
+          &__MODULE__.forward_occurrence/4,
+          test_pid
+        )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      assert {:ok, :not_sendable} = Events.meeting_created(meeting)
+      assert_receive :occurrence_recorded, 5_000
 
       assert [%Error{kind: "Elixir.RuntimeError", reason: "email pipeline down"} = error] =
                Error |> Repo.all() |> Repo.preload(:occurrences)

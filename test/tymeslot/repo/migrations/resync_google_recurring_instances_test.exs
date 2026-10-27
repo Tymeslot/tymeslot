@@ -154,6 +154,12 @@ defmodule Tymeslot.Repo.Migrations.ResyncGoogleRecurringInstancesTest do
       {:ok, %{events: events, next_sync_token: "fresh"}}
     end)
 
+    # Each series' rule is read from its recurring event, which this test
+    # leaves out.
+    stub(GoogleCalendarAPIMock, :get_series_master, fn _integration, _calendar, _master ->
+      {:error, :not_found, "Not found"}
+    end)
+
     assert :ok =
              perform_job(SyncGoogleCalendarWorker, %{"calendar_integration_id" => integration.id})
 

@@ -33,6 +33,15 @@ defmodule Tymeslot.Migrations.LegacyThemeRowsRenderAsBeforeTest do
   alias Tymeslot.Test.MigrationRunner
   alias Tymeslot.ThemeCustomizations
 
+  # `20261020161429_drop_retired_theme_customization_columns` drops the
+  # columns these migrations read and write, so it comes off first, as it
+  # does in a real rollback, leaving the schema they were written against.
+  @drop_version 20_261_020_161_429
+
+  setup do
+    MigrationRunner.down!(@drop_version)
+  end
+
   @settings_version 20_260_929_081_519
   @sync_version 20_261_014_084_423
 

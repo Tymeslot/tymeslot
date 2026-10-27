@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsRateLimitingTest do
     } do
       # Exhaust the avatar upload bucket for this user (limit: 20 per hour)
       for _i <- 1..20 do
-        RateLimiter.check_avatar_upload_rate_limit(user.id)
+        RateLimiter.check(:avatar_upload, user.id)
       end
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsRateLimitingTest do
     } do
       # Exhaust the username change bucket for this user (limit: 6 per 2 hours)
       for _i <- 1..6 do
-        RateLimiter.check_username_change_rate_limit("user:#{user.id}")
+        RateLimiter.check(:username_change, "user:#{user.id}")
       end
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsRateLimitingTest do
     } do
       # Exhaust the username check bucket for this user (limit: 60 per 2 minutes)
       for _i <- 1..60 do
-        RateLimiter.check_username_check_rate_limit("user:#{user.id}")
+        RateLimiter.check(:username_check, "user:#{user.id}")
       end
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")

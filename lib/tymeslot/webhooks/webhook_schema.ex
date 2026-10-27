@@ -6,6 +6,7 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
   when specific booking events occur (created, cancelled, rescheduled, etc.).
   Enables integration with automation tools like n8n, Zapier, Make.com.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -13,7 +14,6 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
-  alias Tymeslot.Security.LegacyPlainColumn
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Webhooks.SsrfValidator
 
@@ -39,11 +39,8 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
   schema "webhooks" do
     field(:name, :string)
     # Zapier, n8n and Make hook URLs are themselves the credential: anyone
-    # holding one can post into the host's automation. The plain `url` column
-    # predates this and is no longer read; it is only emptied when the URL
-    # changes (see `Tymeslot.Security.LegacyPlainColumn`).
+    # holding one can post into the host's automation.
     field(:url, EncryptedString, source: :url_encrypted, redact: true)
-    field(:legacy_url, :string, source: :url, load_in_query: false, redact: true)
     field(:webhook_token_encrypted, :binary)
     field(:events, {:array, :string}, default: [])
     field(:is_active, :boolean, default: true)
@@ -65,10 +62,16 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
   # published by the dispatchers while remaining unselectable here.
   @valid_events EventTypes.all()
 
-  @required_fields [:name, :url, :user_id]
-  @optional_fields [
-    :webhook_token,
-    :events,
+  # Changesets are split by who writes the row:
+  #
+  #   * `create_changeset/1` takes the owner, set by the context, and then
+  #     the organiser's own fields.
+  #   * `update_changeset/2` carries only what the organiser edits: the name,
+  #     the URL, the events, and the token (blank regenerates it).
+  #   * `state_transition_changeset/2` carries the delivery bookkeeping,
+  #     written by the context and the delivery worker.
+  @user_fields [:name, :url, :events, :webhook_token]
+  @state_fields [
     :is_active,
     :last_triggered_at,
     :last_status,
@@ -77,33 +80,48 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
     :disabled_reason
   ]
 
-  @doc false
-  @spec changeset(t(), map()) :: Ecto.Changeset.t()
-  def changeset(webhook, attrs) do
-    # Ensure attrs is a map
-    attrs = attrs || %{}
+  @doc "Changeset for a new webhook. `user_id` is set by the context, never taken from the form."
+  @spec create_changeset(map()) :: Ecto.Changeset.t()
+  def create_changeset(attrs) do
+    %__MODULE__{}
+    |> cast(attrs, [:user_id])
+    |> validate_required([:user_id])
+    |> foreign_key_constraint(:user_id)
+    |> update_changeset(attrs)
+  end
 
+  @doc """
+  Changeset for the organiser's own edits. The owner and the delivery
+  bookkeeping are never changed here.
+  """
+  @spec update_changeset(t() | Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
+  def update_changeset(webhook, attrs) do
     # If webhook_token is explicitly set to nil in attrs, ensure it stays nil after cast
     # so generate_token can detect it.
-    changeset =
-      webhook
-      |> cast(attrs, @required_fields ++ @optional_fields)
-      |> validate_required(@required_fields)
-      |> validate_length(:name, Constraints.webhook_name_length_opts())
-      |> validate_length(:url, min: 1, max: Constraints.url_max_length())
-      |> URLValidator.validate_url(:url,
-        block_private_ips: not SsrfValidator.allow_private?(),
-        enforce_https: not SsrfValidator.allow_private?()
-      )
-      |> validate_events()
-      |> foreign_key_constraint(:user_id)
+    attrs = attrs || %{}
 
-    changeset
+    webhook
+    |> cast(attrs, @user_fields)
+    |> validate_required([:name, :url])
+    |> validate_length(:name, Constraints.integration_name_length_opts())
+    |> validate_length(:url, min: 1, max: Constraints.url_max_length())
+    |> URLValidator.validate_url(:url,
+      block_private_ips: not SsrfValidator.allow_private?(),
+      enforce_https: not SsrfValidator.allow_private?()
+    )
+    |> validate_events()
     |> maybe_seed_webhook_token(attrs)
     |> generate_token()
     |> encrypt_token()
-    |> LegacyPlainColumn.clear_on_change(url: :legacy_url)
   end
+
+  @doc """
+  Changeset for the delivery bookkeeping: active state, failure count,
+  disable reason and the last delivery's outcome. No validation, so a row in
+  any state can be switched off or re-enabled.
+  """
+  @spec state_transition_changeset(t(), map()) :: Ecto.Changeset.t()
+  def state_transition_changeset(webhook, attrs), do: cast(webhook, attrs, @state_fields)
 
   defp maybe_seed_webhook_token(changeset, attrs) do
     if blank_token_supplied?(attrs) do
@@ -180,27 +198,28 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
       events ->
         case validate_events_list(events) do
           :ok -> changeset
-          {:error, msg} -> add_error(changeset, :events, msg)
+          {:error, {message, opts}} -> add_error(changeset, :events, message, opts)
         end
     end
   end
 
   @doc """
-  Validates a list of event types.
-  Returns :ok or {:error, message}
+  Validates a list of event types. A refusal is a changeset error,
+  `{msgid, opts}`, translated where it is shown like any other.
   """
-  @spec validate_events_list([String.t()]) :: :ok | {:error, String.t()}
-  def validate_events_list([]) do
-    {:error, "must select at least one event"}
-  end
+  @spec validate_events_list([String.t()]) :: :ok | {:error, {String.t(), keyword()}}
+  def validate_events_list([]),
+    do: {:error, {dgettext_noop("errors", "Must select at least one event"), []}}
 
   def validate_events_list(events) when is_list(events) do
-    invalid_events = Enum.reject(events, &(&1 in @valid_events))
+    case Enum.reject(events, &(&1 in @valid_events)) do
+      [] ->
+        :ok
 
-    if Enum.empty?(invalid_events) do
-      :ok
-    else
-      {:error, "contains invalid events: #{Enum.join(invalid_events, ", ")}"}
+      invalid_events ->
+        {:error,
+         {dgettext_noop("errors", "Contains invalid events: %{events}"),
+          [events: Enum.join(invalid_events, ", ")]}}
     end
   end
 

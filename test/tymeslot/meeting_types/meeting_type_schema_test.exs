@@ -121,7 +121,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
             payment_required: true,
             price_cents: 5000
           },
-          host_charges_enabled: true
+          host_charges_enabled: true,
+          price_settable: true
         )
 
       assert "group bookings cannot require payment" in errors_on(changeset).max_participants
@@ -141,7 +142,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
             payment_required: true,
             price_cents: 5000
           },
-          host_charges_enabled: true
+          host_charges_enabled: true,
+          price_settable: true
         )
 
       assert changeset.valid?
@@ -238,17 +240,26 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       assert "You already have a meeting type with this name" in errors_on(changeset).name
     end
 
-    test "schema allows non-divisible-by-5 durations (form layer enforces this)" do
+    test "refuses a duration that is not a multiple of five minutes" do
       user = insert(:user)
-
-      attrs = %{
-        name: "Odd Duration",
-        duration_minutes: 7,
-        user_id: user.id
-      }
+      attrs = %{name: "Odd Duration", duration_minutes: 7, user_id: user.id}
 
       changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
-      assert changeset.valid?
+
+      assert errors_on(changeset).duration_minutes == ["must be a multiple of 5 minutes"]
+    end
+
+    # A type saved before the rule keeps saving its other fields; the rule
+    # applies once its duration is edited.
+    test "lets a legacy odd duration stand until the duration is edited" do
+      legacy = insert(:meeting_type, duration_minutes: 7)
+
+      assert MeetingTypeSchema.changeset(legacy, %{name: "Renamed"}).valid?
+
+      assert errors_on(MeetingTypeSchema.changeset(legacy, %{duration_minutes: 8})).duration_minutes ==
+               ["must be a multiple of 5 minutes"]
+
+      assert MeetingTypeSchema.changeset(legacy, %{duration_minutes: 10}).valid?
     end
 
     test "prevents more than three reminders" do
@@ -343,7 +354,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
           currency: "eur",
-          host_charges_enabled: true
+          host_charges_enabled: true,
+          price_settable: true
         )
 
       refute changeset.valid?
@@ -364,11 +376,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
           currency: "eur",
-          host_charges_enabled: true
+          host_charges_enabled: true,
+          price_settable: true
         )
 
       refute changeset.valid?
-      assert "must be at least EUR 0.50" in errors_on(changeset).price_cents
+      assert "must be at least €0.50" in errors_on(changeset).price_cents
     end
 
     test "accepts price at or above currency minimum" do
@@ -385,7 +398,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
           currency: "eur",
-          host_charges_enabled: true
+          host_charges_enabled: true,
+          price_settable: true
         )
 
       refute Map.has_key?(errors_on(changeset), :price_cents)
@@ -446,10 +460,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       }
 
       changeset =
-        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs, host_charges_enabled: true)
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
+          host_charges_enabled: true,
+          price_settable: true
+        )
 
       refute changeset.valid?
-      assert "must be at least USD 0.50" in errors_on(changeset).price_cents
+      assert "must be at least $0.50" in errors_on(changeset).price_cents
     end
   end
 

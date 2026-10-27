@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.OperationsBookingTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Calendar.Operations
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
 
   import Tymeslot.Factory
 

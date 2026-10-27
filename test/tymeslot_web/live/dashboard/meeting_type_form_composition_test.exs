@@ -105,8 +105,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
 
       # Organiser turns off the provider from another tab between the
       # click above and the change below.
-      {:ok, _deactivated} =
-        Video.update_integration(user.id, video.id, %{is_active: false})
+      {:ok, %{is_active: false}} = Video.toggle_integration(user.id, video.id)
 
       view
       |> element(~s|input[name="meeting_type[name]"]|)

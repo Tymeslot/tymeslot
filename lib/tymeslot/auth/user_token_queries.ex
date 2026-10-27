@@ -218,4 +218,44 @@ defmodule Tymeslot.Auth.UserTokenQueries do
     })
     |> Repo.update()
   end
+
+  @doc """
+  Clears every pending email change issued at or before `issued_before`, or
+  never stamped, so its address stops holding the unique `pending_email`
+  slot. Whether that moment means expired is decided by
+  `Tymeslot.Auth.AccountTokens`.
+
+  `filter` narrows the sweep to one address (`pending_email: address`) or one
+  account (`user_id: id`). Returns how many accounts were cleared.
+  """
+  @spec clear_email_changes_issued_before(DateTime.t(), keyword()) :: non_neg_integer()
+  def clear_email_changes_issued_before(%DateTime{} = issued_before, filter \\ []) do
+    {count, _rows} =
+      UserSchema
+      |> where([u], not is_nil(u.pending_email))
+      |> where(
+        [u],
+        is_nil(u.email_change_sent_at) or u.email_change_sent_at <= ^issued_before
+      )
+      |> filter_email_changes(filter)
+      |> Repo.update_all(
+        set: [pending_email: nil, email_change_token_hash: nil, email_change_sent_at: nil]
+      )
+
+    count
+  end
+
+  defp filter_email_changes(query, []), do: query
+
+  defp filter_email_changes(query, [{:pending_email, email} | rest]) do
+    query
+    |> where([u], u.pending_email == ^String.downcase(email))
+    |> filter_email_changes(rest)
+  end
+
+  defp filter_email_changes(query, [{:user_id, user_id} | rest]) do
+    query
+    |> where([u], u.id == ^user_id)
+    |> filter_email_changes(rest)
+  end
 end

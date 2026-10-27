@@ -354,7 +354,7 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
       enable_recaptcha()
 
       result =
-        RecaptchaHelpers.maybe_verify_booking_token("", %{ip: "127.0.0.1", user_agent: "test"})
+        RecaptchaHelpers.verify(:booking, "", %{ip: "127.0.0.1", user_agent: "test"})
 
       assert result == {:error, :recaptcha_failed}
     end
@@ -363,7 +363,7 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
       enable_recaptcha()
 
       result =
-        RecaptchaHelpers.maybe_verify_booking_token(nil, %{ip: "127.0.0.1", user_agent: "test"})
+        RecaptchaHelpers.verify(:booking, nil, %{ip: "127.0.0.1", user_agent: "test"})
 
       assert result == {:error, :recaptcha_failed}
     end

@@ -5,8 +5,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   import Phoenix.LiveView, only: [connected?: 1]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Clock
   alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -131,7 +133,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
         e.uid == new_uid and e.calendar_integration_id == new_integration_id
       end)
 
-    {:ok, assign(socket, :selected_event, new_event)}
+    {:ok,
+     socket
+     |> assign(:selected_event, new_event)
+     |> assign(:recurrence_edit, Shared.recurrence_edit(new_event))}
   end
 
   @doc """
@@ -356,7 +361,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     prefs = socket.assigns[:preferences]
 
     if (connected?(socket) and prefs) && prefs.desktop_reminders_enabled do
-      now = socket.assigns[:current_time] || DateTime.utc_now()
+      now = socket.assigns[:current_time] || Clock.utc_now()
       timezone = socket.assigns[:user_timezone] || "Etc/UTC"
       time_format = Helpers.time_format(socket.assigns)
 
@@ -387,7 +392,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     if socket.assigns.stale_integrations != [] do
       user_id = socket.assigns.current_user.id
 
-      result = CalendarGrid.refresh_events(user_id)
+      result = CalendarGrid.refresh_events(user_id, :opened)
 
       case result do
         {:ok, %{enqueued: 0}} ->

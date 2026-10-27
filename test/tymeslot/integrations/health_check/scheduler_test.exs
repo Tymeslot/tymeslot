@@ -6,49 +6,9 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
   import Tymeslot.Factory
   import Tymeslot.Test.ClockHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.HealthCheck.Scheduler
   alias Tymeslot.Workers.IntegrationHealthWorker
-
-  describe "due_for_check?/2" do
-    test "returns true for integrations never checked" do
-      health_state = %{last_check_at: nil, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == true
-    end
-
-    test "returns true when backoff period has elapsed" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -6, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == true
-    end
-
-    test "returns false when backoff period has not elapsed" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -3, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == false
-    end
-
-    test "returns true when exactly at backoff boundary" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -5, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == true
-    end
-
-    test "handles longer backoff periods correctly" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -45, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.hours(1)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == false
-    end
-  end
 
   # Reading "now" through the clock is what makes the window exact: measured
   # against a separate `DateTime.utc_now()` in the test, whatever elapsed
@@ -80,6 +40,45 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
 
       # Should have at least some variation (not all the same)
       assert results |> Enum.uniq() |> length() > 1
+    end
+  end
+
+  # A leaving owner may already have revoked what Tymeslot holds; probing it
+  # would flag the integration and email them about an account they are
+  # leaving. A restore puts the integrations back on the next sweep.
+  describe "schedule_all/1 with an account pending deletion" do
+    test "checks no integration of that account until it is restored" do
+      leaving =
+        insert(:user, deletion_scheduled_at: DateTime.add(DateTime.utc_now(:second), 86_400))
+
+      calendar = insert(:calendar_integration, user: leaving, provider: "caldav", is_active: true)
+      video = insert(:video_integration, user: leaving, is_active: true)
+      staying = insert(:calendar_integration, provider: "caldav", is_active: true)
+
+      assert :ok = Scheduler.schedule_all(force: true)
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => staying.id}
+      )
+
+      refute_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => calendar.id}
+      )
+
+      refute_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "video", "integration_id" => video.id}
+      )
+
+      Repo.update!(Changeset.change(leaving, deletion_scheduled_at: nil))
+      assert :ok = Scheduler.schedule_all(force: true)
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => calendar.id}
+      )
     end
   end
 

@@ -10,6 +10,7 @@ defmodule Tymeslot.Mocks.Calendar do
   import Mox
 
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
 
   @spec setup(keyword()) :: term()
   def setup(opts \\ []) do
@@ -57,6 +58,20 @@ defmodule Tymeslot.Mocks.Calendar do
                                                                 _end_date ->
       {:ok, []}
     end)
+  end
+
+  @doc """
+  Answers which calendar a booking is written to with the real resolver,
+  which reads only the database, so a test sees the calendar the host's
+  integrations and meeting type would really choose.
+  """
+  @spec resolve_booking_calendars() :: term()
+  def resolve_booking_calendars do
+    stub(
+      Tymeslot.CalendarMock,
+      :get_booking_integration_info,
+      &Operations.get_booking_integration_info/1
+    )
   end
 
   @spec event(keyword()) :: map()

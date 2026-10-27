@@ -4,6 +4,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   @moduletag :workers
 
   use Oban.Testing, repo: Tymeslot.Repo
+  import Ecto.Query, only: [where: 2]
   import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
@@ -11,7 +12,9 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Oban.Job
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Test.ProcessAccessChecker
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
@@ -365,6 +368,29 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                  "event_type" => "meeting.created",
                  "meeting_id" => meeting.id
                })
+
+      # Like the chat channels, the webhook is left on, to resume with the plan.
+      assert %{is_active: true, disabled_at: nil, disabled_reason: nil} =
+               Repo.get!(WebhookSchema, webhook.id)
+    end
+
+    test "discards the job when automations are switched off for the instance" do
+      meeting = insert(:meeting)
+      webhook = insert(:webhook)
+
+      with_config(:tymeslot, :feature_access_checker, ProcessAccessChecker)
+      ProcessAccessChecker.answer({:error, :feature_disabled})
+
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :unused end)
+
+      assert {:discard, "Automations are switched off"} =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      assert Repo.get!(WebhookSchema, webhook.id).is_active
     end
   end
 
@@ -420,92 +446,6 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
     end
   end
 
-  # A subscriber's endpoint that is gone or rejects our credentials returns the
-  # same status on every attempt. Retrying it burns the job's five tries, each
-  # recorded by error tracking as an `Oban.PerformError` that can alert an
-  # operator about a subscriber's own misconfiguration. Only `{:discard, _}`
-  # avoids that, because an intentional discard emits `job:stop` rather than
-  # the `job:exception` error tracking records.
-  describe "perform/1 - retryability of HTTP failures" do
-    setup do
-      %{meeting: insert(:meeting), webhook: insert(:webhook, failure_count: 0)}
-    end
-
-    defp respond_with(status) do
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %{status: status, body: "irrelevant"}}
-      end)
-    end
-
-    defp deliver(webhook, meeting) do
-      perform_job(WebhookWorker, %{
-        "webhook_id" => webhook.id,
-        "event_type" => "meeting.cancelled",
-        "meeting_id" => meeting.id
-      })
-    end
-
-    test "discards rather than retries a 404", %{meeting: meeting, webhook: webhook} do
-      respond_with(404)
-
-      assert {:discard, "HTTP 404"} = deliver(webhook, meeting)
-    end
-
-    test "discards rather than retries a 401", %{meeting: meeting, webhook: webhook} do
-      respond_with(401)
-
-      assert {:discard, "HTTP 401"} = deliver(webhook, meeting)
-    end
-
-    test "discards rather than retries a 403", %{meeting: meeting, webhook: webhook} do
-      respond_with(403)
-
-      assert {:discard, "HTTP 403"} = deliver(webhook, meeting)
-    end
-
-    test "still records the failure when discarding", %{meeting: meeting, webhook: webhook} do
-      # No retry follows, so this is the only chance to advance the circuit
-      # breaker towards auto-disabling a permanently broken endpoint.
-      respond_with(404)
-
-      assert {:discard, _reason} = deliver(webhook, meeting)
-
-      updated = Repo.get(WebhookSchema, webhook.id)
-      assert updated.failure_count == 1
-      assert updated.last_status =~ "failed"
-    end
-
-    test "still logs the delivery attempt when discarding", %{
-      meeting: meeting,
-      webhook: webhook
-    } do
-      respond_with(404)
-
-      assert {:discard, _reason} = deliver(webhook, meeting)
-
-      delivery = Repo.one(WebhookDeliverySchema)
-      assert delivery.response_status == 404
-    end
-
-    test "keeps retrying a 429, which a later attempt may clear", %{
-      meeting: meeting,
-      webhook: webhook
-    } do
-      respond_with(429)
-
-      assert {:error, {:http_error, 429}} = deliver(webhook, meeting)
-    end
-
-    test "keeps retrying a 503, which a later attempt may clear", %{
-      meeting: meeting,
-      webhook: webhook
-    } do
-      respond_with(503)
-
-      assert {:error, {:http_error, 503}} = deliver(webhook, meeting)
-    end
-  end
-
   describe "snapshot/1" do
     test "captures the event-defining fields as JSON-safe values" do
       meeting =
@@ -541,6 +481,52 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
           "snapshot" => snapshot
         }
       )
+    end
+
+    test "a later event is not swallowed by a delivery that already ran" do
+      meeting_id = UUID.generate()
+      snapshot = %{"status" => "confirmed"}
+
+      assert :ok =
+               WebhookWorker.schedule_delivery(123, "meeting.rescheduled", meeting_id, snapshot)
+
+      complete_jobs(WebhookWorker)
+
+      assert :ok =
+               WebhookWorker.schedule_delivery(123, "meeting.rescheduled", meeting_id, snapshot)
+
+      assert job_count(WebhookWorker) == 2
+    end
+
+    # The snapshot is replayed at delivery, so a waiting delivery cannot
+    # stand in for an event that asserts a different state.
+    test "a waiting delivery with another snapshot does not absorb a new event" do
+      meeting_id = UUID.generate()
+
+      assert :ok =
+               WebhookWorker.schedule_delivery(123, "meeting.rescheduled", meeting_id, %{
+                 "status" => "awaiting_approval"
+               })
+
+      assert :ok =
+               WebhookWorker.schedule_delivery(123, "meeting.rescheduled", meeting_id, %{
+                 "status" => "confirmed"
+               })
+
+      assert job_count(WebhookWorker) == 2
+    end
+
+    test "a waiting delivery with the same snapshot absorbs a duplicate" do
+      meeting_id = UUID.generate()
+      snapshot = %{"status" => "confirmed"}
+
+      assert :ok =
+               WebhookWorker.schedule_delivery(123, "meeting.rescheduled", meeting_id, snapshot)
+
+      assert :ok =
+               WebhookWorker.schedule_delivery(123, "meeting.rescheduled", meeting_id, snapshot)
+
+      assert job_count(WebhookWorker) == 1
     end
 
     test "omits the snapshot key entirely when none is given, same as schedule_delivery/3" do
@@ -605,6 +591,18 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                  "meeting_id" => meeting.id
                })
     end
+  end
+
+  # Marks every job of `worker` completed, as a delivery that already ran.
+  defp complete_jobs(worker) do
+    Repo.update_all(
+      where(Job, worker: ^inspect(worker)),
+      set: [state: "completed", completed_at: DateTime.utc_now()]
+    )
+  end
+
+  defp job_count(worker) do
+    Repo.aggregate(where(Job, worker: ^inspect(worker)), :count)
   end
 end
 

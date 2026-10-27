@@ -13,6 +13,7 @@ defmodule Tymeslot.Slack.API do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Retry
 
   @base_url "https://slack.com/api"
   @timeout_ms 10_000
@@ -102,6 +103,33 @@ defmodule Tymeslot.Slack.API do
     |> parse_web_api_response()
   end
 
+  # Slack's answers for a token that no longer works: nothing left to revoke.
+  @dead_token_errors ~w(token_revoked invalid_auth account_inactive token_expired)
+
+  @doc """
+  Revokes a bot token (`auth.revoke`), as used when the account that
+  connected the workspace is deleted. A token Slack already treats as dead
+  counts as revoked.
+  """
+  @spec revoke_token(String.t()) :: :ok | {:error, term()}
+  def revoke_token(bot_token) when is_binary(bot_token) do
+    headers = [
+      {"authorization", "Bearer #{bot_token}"},
+      {"content-type", "application/x-www-form-urlencoded"}
+    ]
+
+    response =
+      "#{@base_url}/auth.revoke"
+      |> http_post("", headers)
+      |> parse_web_api_response()
+
+    case response do
+      {:ok, _body} -> :ok
+      {:error, {:slack_error, code, _body}} when code in @dead_token_errors -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   # ============================================================================
   # Private helpers
   # ============================================================================
@@ -122,7 +150,7 @@ defmodule Tymeslot.Slack.API do
   # header — not a 200/`ok:false` body. Route it to the snooze path so the
   # worker waits the requested interval instead of fast-retrying.
   defp parse_web_api_response({:ok, %{status: 429} = response}),
-    do: {:error, {:rate_limited, extract_retry_after(response)}}
+    do: {:error, {:rate_limited, Retry.retry_after_seconds(response)}}
 
   # Slack Web API: 200 with `{"ok": true, ...}` or `{"ok": false, "error": "..."}`.
   defp parse_web_api_response({:ok, %{status: 200, body: body} = response}) do
@@ -131,7 +159,7 @@ defmodule Tymeslot.Slack.API do
         {:ok, decoded}
 
       {:ok, %{"ok" => false, "error" => "ratelimited"} = decoded} ->
-        retry_after = extract_retry_after(response)
+        retry_after = Retry.retry_after_seconds(response)
         {:error, {:slack_error, "ratelimited", decoded, retry_after}}
 
       {:ok, %{"ok" => false, "error" => err} = decoded} ->
@@ -157,7 +185,7 @@ defmodule Tymeslot.Slack.API do
   # hooks.slack.com rate-limits with HTTP 429 + `Retry-After`, exactly like the
   # Web API. Route it to the snooze path rather than treating it as a 4xx error.
   defp parse_webhook_response({:ok, %{status: 429} = response}),
-    do: {:error, {:rate_limited, extract_retry_after(response)}}
+    do: {:error, {:rate_limited, Retry.retry_after_seconds(response)}}
 
   defp parse_webhook_response({:ok, %{status: status, body: body}}) when status in 400..499,
     do: {:error, {:webhook_error, status, to_string(body)}}
@@ -166,27 +194,6 @@ defmodule Tymeslot.Slack.API do
     do: {:error, {:http_error, status, body}}
 
   defp parse_webhook_response({:error, reason}), do: {:error, {:transport_error, reason}}
-
-  # Extracts the `Retry-After` seconds from an HTTP response.
-  # Slack's Web API sets this header on 429-equivalent ratelimited responses.
-  # Returns nil when the header is absent or unparseable.
-  defp extract_retry_after(response) do
-    response
-    |> Map.get(:headers, %{})
-    |> Map.get("retry-after", [])
-    |> List.first()
-    |> parse_retry_after_value()
-  end
-
-  defp parse_retry_after_value(nil), do: nil
-  defp parse_retry_after_value(value) when is_binary(value), do: parse_integer(value)
-
-  defp parse_integer(str) do
-    case Integer.parse(str) do
-      {n, _rest} when n >= 0 -> n
-      _other -> nil
-    end
-  end
 
   defp decode_body(body) when is_binary(body), do: Jason.decode(body)
   defp decode_body(body) when is_map(body), do: {:ok, body}

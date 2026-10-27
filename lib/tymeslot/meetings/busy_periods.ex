@@ -9,7 +9,7 @@ defmodule Tymeslot.Meetings.BusyPeriods do
   connected, not yet during the sync window, and not at all while a paid
   booking sits in `awaiting_payment` (whose calendar side effects are deferred
   until Stripe confirms). The submit has always refused from the meetings table
-  itself, through `MeetingConflictQueries.count_locked_conflicts/4`, so the grid
+  itself, through `MeetingConflictQueries.count_conflicts/4`, so the grid
   offered times the submit then rejected and the booker was told the slot had
   gone only after filling in the form. Merging the two sources here is what
   makes the display path and the submit answer from the same facts, and

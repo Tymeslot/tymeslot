@@ -16,7 +16,8 @@ defmodule CredoChecks.RateLimiterBoundary do
   Only `check_connection_test_rate_limit/2,3` is flagged, not every
   `Tymeslot.Security.RateLimiter.*` function. The web layer has legitimate,
   non-connection-test rate limiting of its own (e.g.
-  `check_integration_write_rate_limit/1` in dashboard LiveComponents), and
+  `RateLimiter.check(:integration_write, user_id)` in dashboard
+  LiveComponents), and
   flagging the whole module would either produce false positives on those or
   force a broad allowlist that swallows real violations alongside them.
   Scoping to the one function this boundary is actually about — the

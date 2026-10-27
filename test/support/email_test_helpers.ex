@@ -28,8 +28,8 @@ defmodule Tymeslot.EmailTestHelpers do
     * `:end_time` - End datetime UTC (default: 2026-01-15 15:00:00Z)
     * `:start_time_owner_tz` - Start datetime in organizer TZ (default: same as start_time)
     * `:end_time_owner_tz` - End datetime in organizer TZ (default: same as end_time)
-    * `:start_time_attendee_tz` - Start datetime in attendee TZ (default: same as start_time)
-    * `:end_time_attendee_tz` - End datetime in attendee TZ (default: same as end_time)
+    * `:start_time_attendee_tz` - Start datetime in attendee TZ (default: start_time in America/New_York)
+    * `:end_time_attendee_tz` - End datetime in attendee TZ (default: end_time in America/New_York)
     * `:duration` - Duration in minutes (default: 60)
     * `:location` - Location (default: "Virtual Meeting")
     * `:meeting_type` - Meeting type (default: "Discovery Call")
@@ -79,8 +79,9 @@ defmodule Tymeslot.EmailTestHelpers do
       end_time: ~U[2026-01-15 15:00:00Z],
       start_time_owner_tz: ~U[2026-01-15 14:00:00Z],
       end_time_owner_tz: ~U[2026-01-15 15:00:00Z],
-      start_time_attendee_tz: ~U[2026-01-15 14:00:00Z],
-      end_time_attendee_tz: ~U[2026-01-15 15:00:00Z],
+      # The booker's times in the booker's zone: 14:00 UTC is 09:00 EST.
+      start_time_attendee_tz: DateTime.shift_zone!(~U[2026-01-15 14:00:00Z], "America/New_York"),
+      end_time_attendee_tz: DateTime.shift_zone!(~U[2026-01-15 15:00:00Z], "America/New_York"),
       attendee_timezone: "America/New_York",
       duration: 60,
       location: "Virtual Meeting",

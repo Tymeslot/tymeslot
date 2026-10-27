@@ -260,6 +260,23 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
       assert row.base_url == "https://meet.example.com"
     end
 
+    # The flag says the stored credentials were refused; once they are gone
+    # nothing is left to refuse, and a kept flag would have every booking
+    # refused a room for good.
+    test "removing token authentication clears needs_reauth", %{
+      user: user,
+      integration: integration
+    } do
+      flag_for_reauth(integration)
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 remove_token_authentication: true
+               })
+
+      refute Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+    end
+
     # Removal wins over credentials typed in the same submission, which would
     # otherwise be stored and keep token authentication switched on.
     test "removing token authentication ignores credentials submitted with it", %{

@@ -16,13 +16,25 @@ defmodule Tymeslot.Payments.Config do
   end
 
   @doc """
-  Get Core repository.
+  The Stripe platform API key, or `nil` when none is configured.
 
-  Defaults to `Tymeslot.Repo` if not configured.
+  Read from `:tymeslot, :stripe_secret_key`, falling back to
+  `:stripity_stripe, :api_key` (which `STRIPE_SECRET_KEY` sets at runtime).
+  A blank value counts as unset. Every caller that needs the key resolves it
+  here, so the order of the two settings cannot drift between them.
   """
-  @spec repo() :: module()
-  def repo do
-    Application.get_env(:tymeslot, :repo, Tymeslot.Repo)
+  @spec stripe_api_key() :: String.t() | nil
+  def stripe_api_key do
+    Enum.find_value(
+      [
+        Application.get_env(:tymeslot, :stripe_secret_key),
+        Application.get_env(:stripity_stripe, :api_key)
+      ],
+      fn
+        key when is_binary(key) and key != "" -> key
+        _unset -> nil
+      end
+    )
   end
 
   @doc """
@@ -34,15 +46,5 @@ defmodule Tymeslot.Payments.Config do
   @spec subscription_manager() :: module() | nil
   def subscription_manager do
     Application.get_env(:tymeslot, :subscription_manager)
-  end
-
-  @doc """
-  Get subscription schema (if configured).
-
-  Returns `nil` if no subscription schema is configured (Core standalone mode).
-  """
-  @spec subscription_schema() :: module() | nil
-  def subscription_schema do
-    Application.get_env(:tymeslot, :subscription_schema)
   end
 end

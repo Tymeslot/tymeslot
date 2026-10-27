@@ -11,23 +11,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.PrimarySelection
-  alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.CalendarPrimary
-  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
-  alias Tymeslot.Integrations.Common.OAuth.ErrorParser
-  alias Tymeslot.Integrations.Common.OAuth.IdToken
-  alias Tymeslot.Integrations.Common.OAuth.State
-  alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Integrations.Calendar.CallbackPersistence
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
+  alias Tymeslot.Integrations.Shared.OAuth.IdToken
+  alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
+  alias Tymeslot.Integrations.Shared.OAuth.State
+  alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
-
-  @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
-  @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
-  @token_url "#{@oauth_base_url}/token"
 
   @doc """
   Generates the OAuth authorization URL for Microsoft/Outlook Calendar.
@@ -41,36 +33,51 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
     state =
       State.generate(user_id, MicrosoftConfig.state_secret(), integration_id,
-        return_to: return_to
+        return_to: return_to,
+        nonce: PendingFlow.nonce(options)
       )
 
-    params = %{
-      client_id: outlook_client_id(),
-      redirect_uri: redirect_uri,
-      response_type: "code",
-      scope: @calendar_scope,
-      state: state,
-      response_mode: "query",
-      prompt: "select_account"
-    }
+    params =
+      Map.merge(
+        %{
+          client_id: MicrosoftConfig.client_id!(),
+          redirect_uri: redirect_uri,
+          response_type: "code",
+          scope: MicrosoftConfig.scope(),
+          state: state,
+          response_mode: "query",
+          prompt: "select_account"
+        },
+        PendingFlow.challenge_params(options)
+      )
 
-    ProviderHelpers.build_authorization_url("#{@oauth_base_url}/authorize", params, login_hint)
+    ProviderHelpers.build_authorization_url(MicrosoftConfig.authorize_url(), params, login_hint)
   end
 
   @doc """
-  Handles the OAuth callback and creates a calendar integration.
+  Handles the OAuth callback for the user `state` (already verified) names,
+  and creates or updates their calendar integration.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
-  @spec handle_callback(String.t(), String.t(), String.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, String.t()}
-  def handle_callback(code, state, redirect_uri) do
-    with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
-         {:ok, tokens} <- exchange_code_for_tokens(code, redirect_uri),
-         {:ok, integration} <- create_calendar_integration(user_id, tokens, integration_id) do
+  @spec handle_callback(String.t(), String.t(), State.validated()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour.callback_error()}
+  def handle_callback(
+        code,
+        redirect_uri,
+        %{user_id: user_id, integration_id: integration_id} = flow
+      ) do
+    with {:ok, tokens} <-
+           exchange_code_for_tokens(code, redirect_uri, code_verifier: flow[:code_verifier]),
+         {:ok, integration} <-
+           CallbackPersistence.upsert(
+             "outlook",
+             user_id,
+             integration_id,
+             with_account(tokens, user_id)
+           ) do
       enqueue_initial_sync(integration)
       {:ok, integration}
-    else
-      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -102,68 +109,36 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   Exchanges authorization code for access and refresh tokens.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
-  @spec exchange_code_for_tokens(String.t(), String.t()) :: {:ok, map()} | {:error, String.t()}
-  def exchange_code_for_tokens(code, redirect_uri) do
-    TokenExchange.exchange_code_for_tokens(
-      code,
-      redirect_uri,
-      @token_url,
-      outlook_client_id(),
-      outlook_client_secret(),
-      @calendar_scope
-    )
-  end
-
-  @doc """
-  Refreshes an access token using a refresh token.
-
-  Kept to satisfy `OAuthHelperBehaviour` and the mock built from it; nothing in
-  `lib/` calls it. The live Outlook calendar refresh is
-  `OutlookCalendarAPI.refresh_token/1`, which holds the integration and is
-  instrumented through `TokenFlow`.
-
-  `opts` takes a `:log_context`, forwarded to
-  `TokenExchange.refresh_access_token/3`.
-  """
-  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
-  @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
+  @spec exchange_code_for_tokens(String.t(), String.t(), keyword()) ::
           {:ok, map()} | {:error, String.t()}
-  def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
-    body = %{
-      refresh_token: refresh_token,
-      client_id: outlook_client_id(),
-      client_secret: outlook_client_secret(),
-      grant_type: "refresh_token",
-      scope: current_scope || @calendar_scope
-    }
+  def exchange_code_for_tokens(code, redirect_uri, opts \\ []) do
+    with {:ok, client_id} <- MicrosoftConfig.fetch_client_id(),
+         {:ok, client_secret} <- MicrosoftConfig.fetch_client_secret() do
+      body =
+        PendingFlow.verifier_param(opts, %{
+          code: code,
+          client_id: client_id,
+          client_secret: client_secret,
+          redirect_uri: redirect_uri,
+          grant_type: "authorization_code",
+          scope: MicrosoftConfig.scope()
+        })
 
-    # No second log line here: `TokenExchange` already logs the status and the
-    # redacted body, and now names the provider too.
-    case TokenExchange.refresh_access_token(@token_url, body,
-           fallback_refresh_token: refresh_token,
-           fallback_scope: current_scope || @calendar_scope,
-           log_context: Keyword.merge(Keyword.get(opts, :log_context, []), provider: :outlook)
-         ) do
-      {:ok, tokens} ->
-        {:ok, tokens}
-
-      {:error, {:http_error, status, resp_body}} ->
-        {:error, ErrorParser.build_message("Token refresh failed", status, resp_body)}
-
-      {:error, {:network_error, reason}} ->
-        {:error, "Network error during token refresh: #{inspect(reason)}"}
+      case TokenEndpoint.exchange_code(MicrosoftConfig.token_url(), body,
+             fallback_scope: MicrosoftConfig.scope(),
+             log_context: [provider: :outlook]
+           ) do
+        {:ok, tokens} -> {:ok, tokens}
+        {:error, error} -> {:error, TokenEndpoint.error_message(:exchange, error)}
+      end
     end
   end
 
   # Private functions
 
-  defp verify_state(state) when is_binary(state) do
-    State.validate(state, MicrosoftConfig.state_secret())
-  end
-
-  defp verify_state(_invalid), do: {:error, "Invalid state parameter"}
-
-  defp create_calendar_integration(user_id, tokens, integration_id) do
+  # The provider account the tokens belong to, from the id token's object id,
+  # so a reconnect finds the integration already connected to that account.
+  defp with_account(tokens, user_id) do
     {provider_account_id, provider_account_email} =
       case IdToken.decode(tokens[:id_token]) do
         {:ok, claims} ->
@@ -181,130 +156,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
           {nil, nil}
       end
 
-    token_attrs = %{
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      token_expires_at: tokens.expires_at,
-      oauth_scope: tokens.scope,
-      is_active: true,
+    Map.merge(tokens, %{
       provider_account_id: provider_account_id,
       provider_account_email: provider_account_email
-    }
-
-    cond do
-      # Re-authorization of specific integration
-      integration_id ->
-        case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
-          {:ok, existing} ->
-            AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-              update_existing_integration(existing, token_attrs)
-            end)
-
-          {:error, :not_found} ->
-            {:error, "Integration not found"}
-        end
-
-      # New connection with known account
-      is_binary(provider_account_id) ->
-        case CalendarIntegrationQueries.get_by_account_for_user(
-               user_id,
-               "outlook",
-               provider_account_id
-             ) do
-          {:ok, existing} ->
-            update_existing_integration(existing, token_attrs)
-
-          {:error, :not_found} ->
-            create_new_outlook_integration(user_id, provider_account_id, token_attrs)
-        end
-
-      # Fallback — no account ID available
-      true ->
-        case CalendarIntegrationQueries.get_by_user_and_provider(user_id, "outlook") do
-          {:ok, _existing} ->
-            # User already has Outlook integration(s) but we can't identify which account
-            # this callback belongs to. Reject to avoid silently overwriting.
-            {:error,
-             "Could not identify your Outlook account. Please try again. If the problem persists, remove and re-add the integration."}
-
-          {:error, :not_found} ->
-            create_new_outlook_integration(user_id, nil, token_attrs)
-        end
-    end
-  end
-
-  defp update_existing_integration(existing, token_attrs) do
-    with {:ok, updated} <- CalendarIntegrationQueries.update_credentials(existing, token_attrs) do
-      if updated.calendar_list == [] do
-        discover_and_configure_calendars(updated)
-      else
-        {:ok, updated}
-      end
-    end
-  end
-
-  defp create_new_outlook_integration(user_id, provider_account_id, token_attrs) do
-    attrs =
-      Map.merge(token_attrs, %{
-        user_id: user_id,
-        name: "Outlook Calendar",
-        provider: "outlook",
-        base_url: "https://graph.microsoft.com/v1.0"
-      })
-
-    create_fn = fn -> PrimarySelection.create_with_auto_primary(attrs) end
-
-    result =
-      if is_binary(provider_account_id) do
-        reactivation_attrs = Map.put(token_attrs, :is_active, true)
-
-        AccountMatch.find_or_create_with_reactivation(
-          fn ->
-            CalendarIntegrationQueries.get_any_by_account_for_user(
-              user_id,
-              "outlook",
-              provider_account_id
-            )
-          end,
-          fn existing ->
-            update_existing_integration(existing, reactivation_attrs)
-          end,
-          fn ->
-            AccountMatch.create_with_race_protection(
-              create_fn,
-              fn ->
-                CalendarIntegrationQueries.get_by_account_for_user(
-                  user_id,
-                  "outlook",
-                  provider_account_id
-                )
-              end,
-              fn existing -> update_existing_integration(existing, token_attrs) end
-            )
-          end
-        )
-      else
-        create_fn.()
-      end
-
-    with {:ok, integration} <- result do
-      discover_and_configure_calendars(integration)
-    end
-  end
-
-  defp discover_and_configure_calendars(integration) do
-    CalendarPrimary.discover_and_configure_calendars(integration)
-  end
-
-  defp outlook_client_id do
-    Application.get_env(:tymeslot, :outlook_oauth)[:client_id] ||
-      System.get_env("OUTLOOK_CLIENT_ID") ||
-      raise "Outlook Client ID not configured — set :outlook_oauth :client_id or OUTLOOK_CLIENT_ID"
-  end
-
-  defp outlook_client_secret do
-    Application.get_env(:tymeslot, :outlook_oauth)[:client_secret] ||
-      System.get_env("OUTLOOK_CLIENT_SECRET") ||
-      raise "Outlook Client Secret not configured — set :outlook_oauth :client_secret or OUTLOOK_CLIENT_SECRET"
+    })
   end
 end

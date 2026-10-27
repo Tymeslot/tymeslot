@@ -1,3 +1,4 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: tymeslot\n"
@@ -431,6 +432,37 @@ msgstr "Przewodnik konfiguracji"
 #, elixir-autogen, elixir-format
 msgid "Delete %{type} integration"
 msgstr "Usuń integrację typu %{type}"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency is not supported. Choose another to take payments."
+msgstr "Waluta twojego konta Stripe nie jest obsługiwana. Wybierz inną, aby przyjmować płatności."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: 1 change made here was not saved to the calendar."
+msgid_plural "%{name}: %{count} changes made here were not saved to the calendar."
+msgstr[0] "%{name}: %{count} zmiana wprowadzona tutaj nie została zapisana w kalendarzu."
+msgstr[1] "%{name}: %{count} zmiany wprowadzone tutaj nie zostały zapisane w kalendarzu."
+msgstr[2] "%{name}: %{count} zmian wprowadzonych tutaj nie zostało zapisanych w kalendarzu."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: %{count} calendar is no longer on your calendar server, so Tymeslot has stopped using it."
+msgid_plural "%{name}: %{count} calendars are no longer on your calendar server, so Tymeslot has stopped using them."
+msgstr[0] "%{name}: %{count} kalendarz zniknął z serwera kalendarza, więc Tymeslot już z niego nie korzysta."
+msgstr[1] "%{name}: %{count} kalendarze zniknęły z serwera kalendarza, więc Tymeslot już z nich nie korzysta."
+msgstr[2] "%{name}: %{count} kalendarzy zniknęło z serwera kalendarza, więc Tymeslot już z nich nie korzysta."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: “%{calendar}” is no longer on your calendar server, so Tymeslot has stopped using it."
+msgstr "%{name}: kalendarz „%{calendar}” zniknął z serwera kalendarza, więc Tymeslot już z niego nie korzysta."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "%{service} is busy right now. Please try again in a minute."
+msgstr "Usługa %{service} jest teraz przeciążona. Spróbuj ponownie za minutę."
 
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format

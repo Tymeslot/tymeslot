@@ -132,28 +132,5 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
       refute html =~ "Add to Slack"
       assert html =~ "Add Slack via Webhook URL"
     end
-
-    test "feature placeholder takes over when automations_allowed is false",
-         %{conn: conn} do
-      ConfigTestHelpers.setup_config(:tymeslot,
-        feature_access_checker:
-          TymeslotWeb.Dashboard.Automation.SlackCompositionTest.DeniedPlanChecker
-      )
-
-      {:ok, _view, html} = live(conn, "/dashboard/automation")
-
-      # When the access checker denies automations, the dashboard renders its
-      # feature placeholder instead of the Slack section. The Slack-specific
-      # copy must not leak through.
-      refute html =~ "No Slack Integrations"
-    end
   end
-end
-
-defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest.DeniedPlanChecker do
-  @moduledoc false
-
-  @spec check_access(any(), atom()) :: :ok | {:error, :insufficient_plan}
-  def check_access(_user_id, :automations_allowed), do: {:error, :insufficient_plan}
-  def check_access(_user_id, _feature), do: :ok
 end

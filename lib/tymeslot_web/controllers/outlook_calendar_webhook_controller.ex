@@ -25,7 +25,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
 
   Both endpoints share the calendar push bucket per source address, sized so
   that provider traffic never reaches it (see
-  `Tymeslot.Security.RateLimiter.Calendar.check_push_endpoint/1`). A source
+  `:calendar_push` in `Tymeslot.Security.RateLimiter.Limits`). A source
   that floods them gets 429, which Graph retries.
   """
 
@@ -50,9 +50,9 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
     do: handle(conn, params, &CalendarWebhooks.handle_outlook_lifecycle_notifications/1)
 
   defp handle(conn, params, handle_notifications) do
-    case RateLimiter.check_calendar_push_rate_limit(ClientIP.get(conn)) do
+    case RateLimiter.check(:calendar_push, ClientIP.get(conn)) do
       :ok -> respond(conn, params, handle_notifications)
-      {:error, :rate_limited} -> conn |> send_resp(429, "") |> halt()
+      {:error, :rate_limited, _message} -> conn |> send_resp(429, "") |> halt()
     end
   end
 

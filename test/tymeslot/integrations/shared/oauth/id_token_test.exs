@@ -1,8 +1,8 @@
-defmodule Tymeslot.Integrations.Common.OAuth.IdTokenTest do
+defmodule Tymeslot.Integrations.Shared.OAuth.IdTokenTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Common.OAuth.IdToken
+  alias Tymeslot.Integrations.Shared.OAuth.IdToken
 
   # Helper to build a fake JWT with given claims
   defp build_jwt(claims) do

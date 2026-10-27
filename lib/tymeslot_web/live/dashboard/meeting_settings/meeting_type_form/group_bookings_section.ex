@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   those stands in the way (`GroupRules.enable_blocker/1`, the `blocker`
   attr), the toggle renders disabled with a hint saying what to change; the
   parent guards the event server-side and the changeset enforces the rules.
-  Turning group bookings off is never blocked. The payment rule does not
+  Turning group bookings off is blocked only while a fixed-date type has
+  upcoming planned dates (`dates_planned`), which would otherwise be left
+  on the calendar with nothing to manage them from. The payment rule does not
   block a host who has since lost charge capability: the payments toggle is
   unreachable in that state, so the parent clears `payment_required` as part
   of enabling group bookings instead.
@@ -38,10 +40,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules
+  alias TymeslotWeb.Helpers.ContextErrors
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   attr :group_bookings_enabled, :boolean, required: true
@@ -51,6 +53,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   attr :payment_required, :boolean, required: true
   attr :blocker, :any, default: nil, doc: "`GroupRules.enable_blocker/1`'s answer"
   attr :allowed, :boolean, default: true
+
+  attr :dates_planned, :boolean,
+    default: false,
+    doc: "`SessionHandlers.dates_planned?/1`'s answer"
+
   attr :form_id, :string, required: true
   attr :current_user, :any, default: nil
   attr :form_errors, :map, required: true
@@ -74,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
               so a misconfiguration is noticed. --%>
         <.card class="text-center">
           <p class="text-token-sm text-tymeslot-500">
-            {FormHelpers.group_bookings_not_allowed_message()}
+            {ContextErrors.group_bookings_not_allowed_message()}
           </p>
         </.card>
       <% end %>
@@ -87,7 +94,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
       assign(
         assigns,
         :toggle_disabled,
-        not assigns.group_bookings_enabled and assigns.blocker != nil
+        (not assigns.group_bookings_enabled and assigns.blocker != nil) or
+          (assigns.group_bookings_enabled and assigns.dates_planned)
       )
 
     ~H"""
@@ -111,7 +119,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
         on_change="toggle_group_bookings"
         target={@myself}
       >
-        <:disabled_reason>{blocker_message(@blocker)}</:disabled_reason>
+        <:disabled_reason>
+          {if @group_bookings_enabled,
+            do:
+              dgettext(
+                "dashboard_meeting_form",
+                "Cancel the planned dates to turn group bookings off."
+              ),
+            else: blocker_message(@blocker)}
+        </:disabled_reason>
       </.setting_row>
 
       <div :if={@group_bookings_enabled and not @payment_required} class="max-w-xs">
@@ -218,13 +234,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
     """
   end
 
-  defp blocker_message(:plan), do: FormHelpers.group_bookings_not_allowed_message()
+  defp blocker_message(:plan), do: ContextErrors.group_bookings_not_allowed_message()
 
   defp blocker_message(:payment),
     do: dgettext("dashboard_meeting_form", "Turn off payments to enable group bookings.")
 
   defp blocker_message(:approval),
     do: dgettext("dashboard_meeting_form", "Turn off approval to enable group bookings.")
+
+  defp blocker_message(:lengths),
+    do:
+      dgettext(
+        "dashboard_meeting_lengths",
+        "Remove the additional durations to enable group bookings."
+      )
 
   defp blocker_message({:location, reason}), do: GroupRules.location_message(reason)
 

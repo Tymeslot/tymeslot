@@ -41,8 +41,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       assert html =~ "New Meeting"
       assert html =~ ~s(id="create-meeting-guest-name")
       assert html =~ ~s(id="create-meeting-guest-email")
-      # No mode toggle: an event has nowhere to be written.
-      refute html =~ ~s(data-testid="create-mode-meeting")
+      # No event mode: an event has nowhere to be written.
+      refute html =~ ~s(phx-value-mode="event")
     end
 
     test "puts Cancel before Create, as the confirmation dialogs do", %{conn: conn} do
@@ -234,7 +234,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       html = open_create_form(lv)
 
       assert html =~ "New Meeting"
-      refute html =~ ~s(data-testid="create-mode-meeting")
+      refute html =~ ~s(phx-value-mode="event")
     end
 
     test "the subscription is not offered as somewhere to put the meeting", %{conn: conn} do
@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_create_form(lv)
 
-      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, "Attendee email is required"}})
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :attendee_email_required}})
       html = render(lv)
 
       assert html =~ ~s(id="create-event-modal")
@@ -330,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :queue_unavailable}})
       html = render(lv)
 
-      assert html =~ "Failed to create appointment. Please try again."
+      assert html =~ "Failed to create meeting. Please try again."
       refute html =~ "queue_unavailable"
     end
   end

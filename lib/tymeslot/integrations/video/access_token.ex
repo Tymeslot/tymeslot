@@ -38,6 +38,10 @@ defmodule Tymeslot.Integrations.Video.AccessToken do
          {:ok, module} <- token_provider(integration.provider),
          {:ok, config} <- refresh(module, integration) do
       token(config)
+    else
+      # Credentials that no longer decrypt cannot mint a token.
+      {:error, :requires_reencryption, _integration} -> {:error, :requires_reencryption}
+      {:error, _reason} = error -> error
     end
   end
 

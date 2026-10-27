@@ -84,12 +84,17 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
     end
 
     test "adding an attendee delivers an invitation that shows its days", %{
+      user: user,
       integration: integration
     } do
       event = insert_all_day_event(integration, summary: "Team offsite")
 
       assert {:ok, :sent} =
-               AttendeeNotifications.attendees_added(event, [%{email: "new@example.com"}])
+               AttendeeNotifications.attendees_added(
+                 event,
+                 [%{email: "new@example.com"}],
+                 user.id
+               )
 
       assert [job] = enqueued_jobs("send_calendar_invitation")
       assert :ok = perform_job(EmailWorker, job.args)
@@ -119,7 +124,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
       email = run_update_to_delivery(event, fn job -> assert job.args["first_notification"] end)
 
       assert email.text_body =~ "Current Details"
-      assert email.text_body =~ "Time: 03 Nov 2026, 09:30 UTC"
+      # Stated in the organiser's timezone: with no profile, the platform
+      # default (Europe/Tallinn).
+      assert email.text_body =~ "Time: 03 Nov 2026, 11:30 EET"
       assert email.text_body =~ "Title: Standup"
       refute email.text_body =~ "What Changed"
       refute email.text_body =~ "→"
@@ -143,7 +150,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
 
       email = run_update_to_delivery(event)
 
-      assert email.text_body =~ "Time: 04 Nov 2026, 14:00 UTC"
+      assert email.text_body =~ "Time: 04 Nov 2026, 16:00 EET"
       refute email.text_body =~ "Title:"
     end
 
@@ -240,7 +247,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
         assert email.subject == "Cancelled - Standup on 3 Nov"
         assert email.text_body =~ "Event Cancelled"
         assert email.text_body =~ "Olive Organiser has cancelled an event you were invited to."
-        assert email.text_body =~ "Date: 3 November 2026\nTime: 09:30 AM UTC"
+        assert email.text_body =~ "Date: 3 November 2026\nTime: 11:30 AM EET"
         refute email.text_body =~ "invited you"
 
         ics = calendar_attachment(email)
@@ -283,7 +290,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
   end
 
   describe "a removed attendee" do
-    test "receives a cancellation, not an invitation", %{integration: integration} do
+    test "receives a cancellation, not an invitation", %{user: user, integration: integration} do
       event =
         insert_timed_event(integration,
           summary: "Standup",
@@ -292,12 +299,63 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
         )
 
       assert {:ok, :sent} =
-               AttendeeNotifications.attendees_removed(event, [%{email: "gone@example.com"}])
+               AttendeeNotifications.attendees_removed(
+                 event,
+                 [%{email: "gone@example.com"}],
+                 user.id
+               )
 
       assert [email] = deliver_all("send_calendar_invitation")
       assert email.to == [{"", "gone@example.com"}]
       assert email.subject == "Cancelled - Standup on 3 Nov"
       refute email.text_body =~ "You're Invited"
+      assert calendar_attachment(email).data =~ "STATUS:CANCELLED"
+    end
+  end
+
+  # The grid reads cached events without their integration, so the event
+  # names no organiser: the one the caller passes is all the job has.
+  describe "an event read as the calendar grid lists it" do
+    setup %{integration: integration} do
+      event =
+        integration
+        |> insert_timed_event(
+          summary: "Standup",
+          start_at: ~U[2026-11-03 09:30:00.000000Z],
+          end_at: ~U[2026-11-03 09:45:00.000000Z]
+        )
+        |> Repo.reload!()
+
+      refute Ecto.assoc_loaded?(event.calendar_integration)
+      %{event: event}
+    end
+
+    test "adding an attendee delivers an invitation from the organiser", %{
+      user: user,
+      event: event
+    } do
+      assert {:ok, :sent} =
+               AttendeeNotifications.attendees_added(
+                 event,
+                 [%{email: "new@example.com"}],
+                 user.id
+               )
+
+      assert [email] = deliver_all("send_calendar_invitation")
+      assert email.to == [{"", "new@example.com"}]
+      assert email.text_body =~ "Olive Organiser"
+    end
+
+    test "removing an attendee delivers a cancellation", %{user: user, event: event} do
+      assert {:ok, :sent} =
+               AttendeeNotifications.attendees_removed(
+                 event,
+                 [%{email: "gone@example.com"}],
+                 user.id
+               )
+
+      assert [email] = deliver_all("send_calendar_invitation")
+      assert email.to == [{"", "gone@example.com"}]
       assert calendar_attachment(email).data =~ "STATUS:CANCELLED"
     end
   end

@@ -21,6 +21,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.ProviderBreakers
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueQueries
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -63,8 +64,8 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
 
   setup do
     for base <- [@source_base, @destination_base] do
-      CalendarCircuitBreaker.reset_for_url(:caldav, base)
-      CalendarCircuitBreaker.reset_for_url(:radicale, base)
+      CalendarCircuitBreaker.reset(:caldav, ProviderBreakers.host_from_base_url(base))
+      CalendarCircuitBreaker.reset(:radicale, ProviderBreakers.host_from_base_url(base))
     end
 
     user = insert(:user)
@@ -457,7 +458,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
 
       # Nothing queues the delete for a later replay, which would delete the
       # whole resource; the source's sync brings the original back instead.
-      assert QueueQueries.list_pending(source.id) == []
+      assert QueueQueries.list_pending(source.id, 100, 100) == []
       assert_enqueued(sync_job(source))
     end
 

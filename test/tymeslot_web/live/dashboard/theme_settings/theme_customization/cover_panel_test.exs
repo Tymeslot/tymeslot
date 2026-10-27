@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
   import Tymeslot.DashboardTestHelpers
 
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.ThemeCustomizations
-  alias Tymeslot.ThemeCustomizations.Storage
 
   @theme_id "97"
   @covers ~w(elegant-still-life artistic-studio ocean-sunset rustic-farmhouse)
@@ -30,16 +30,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
   setup :verify_on_exit!
 
   setup %{conn: conn} do
-    upload_root =
-      Path.join(System.tmp_dir!(), "tymeslot_cover_#{System.unique_integer([:positive])}")
-
-    original_root = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :upload_directory, original_root)
-      File.rm_rf(upload_root)
-    end)
+    UploadRoot.isolate("tymeslot_cover")
 
     {:ok, ctx} = setup_dashboard_user_with_theme(%{conn: conn}, @theme_id)
     Map.new(ctx)
@@ -72,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
 
   defp saved(profile), do: ThemeCustomizations.get_by_profile_and_theme(profile.id, @theme_id)
 
-  defp stored?(path), do: File.exists?(Storage.build_theme_file_path(path))
+  defp served?(path), do: get(build_conn(), "/uploads/" <> path).status == 200
 
   test "offers the theme's covers, the default chosen until another is", %{conn: conn} do
     view = open(conn)
@@ -102,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
     %{settings: settings} = saved(profile)
     assert settings["cover_value"] == "custom"
     assert settings["cover_path"] =~ ~r{^themes/#{profile.id}/97/images/}
-    assert stored?(settings["cover_path"])
+    assert served?(settings["cover_path"])
 
     assert has_element?(
              view,
@@ -124,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
     %{settings: settings} = saved(profile)
     assert settings["cover_value"] == "artistic-studio"
     refute Map.has_key?(settings, "cover_path")
-    refute stored?(uploaded)
+    refute served?(uploaded)
     refute has_element?(view, "[data-testid='custom-cover']")
   end
 
@@ -140,48 +131,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
     second_cover = saved(profile).settings["cover_path"]
 
     assert saved(profile).settings["logo_path"] == logo
-    assert stored?(logo)
-    refute stored?(first_cover)
-    assert stored?(second_cover)
+    assert served?(logo)
+    refute served?(first_cover)
+    assert served?(second_cover)
 
     upload_logo(view, "new-logo.png")
 
     assert saved(profile).settings["cover_path"] == second_cover
     assert saved(profile).settings["cover_value"] == "custom"
-    assert stored?(second_cover)
-    refute stored?(logo)
-  end
-
-  test "deleting the customisation deletes the logo, the cover and the background image",
-       %{conn: conn, profile: profile} do
-    background = "themes/#{profile.id}/#{@theme_id}/images/a-background.png"
-    absolute = Storage.build_theme_file_path(background)
-    File.mkdir_p!(Path.dirname(absolute))
-    File.write!(absolute, @png)
-
-    {:ok, _row} =
-      ThemeCustomizations.create_theme_customization(profile.id, @theme_id, %{
-        "color_scheme" => "neutral",
-        "background_type" => "image",
-        "background_value" => "custom",
-        "background_image_path" => background
-      })
-
-    view = open(conn)
-    upload_logo(view, "logo.png")
-    upload_cover(view, "cover.png")
-    customization = saved(profile)
-
-    files = [
-      background,
-      customization.settings["logo_path"],
-      customization.settings["cover_path"]
-    ]
-
-    assert Enum.all?(files, &stored?/1)
-
-    assert {:ok, _deleted} = ThemeCustomizations.delete_theme_customization(customization)
-
-    assert Enum.filter(files, &stored?/1) == []
+    assert served?(second_cover)
+    refute served?(logo)
   end
 end

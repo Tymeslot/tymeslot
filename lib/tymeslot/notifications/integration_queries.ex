@@ -14,7 +14,10 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
   by the schema module, so each provider's queries module can delegate the
   genuinely identical parts here and keep its own quirks local. It is **not**
   a generic technical layer: it is the data-access boundary for the
-  Notifications domain, which Slack and Telegram both implement.
+  Notifications domain, which Slack, Telegram and webhooks implement.
+
+  The delivery-log functions also take the delivery row's foreign key,
+  `:integration_id` for the chat channels and `:webhook_id` for webhooks.
 
   Provider-specific quirks (e.g. `SlackQueries.delete_pending_stubs/1`'s
   OAuth-pending-stub cleanup, `TelegramQueries.find_by_link_token/2`'s
@@ -24,6 +27,7 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Repo
 
   @doc """
@@ -111,38 +115,41 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
   end
 
   @doc """
-  Toggles the integration's `is_active` flag via `schema.changeset/2`.
+  Toggles the integration's `is_active` flag via `schema.state_transition_changeset/2`.
   """
   @spec toggle_active(module(), Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def toggle_active(schema, integration) do
     integration
-    |> schema.changeset(%{is_active: !integration.is_active})
+    |> schema.state_transition_changeset(%{is_active: !integration.is_active})
     |> Repo.update()
   end
 
   @doc """
   Stamps the integration as successfully fired right now and resets the
-  failure counter. Applied via `schema.changeset/2`.
+  failure counter. Applied via `schema.state_transition_changeset/2`.
   """
   @spec record_success(module(), Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def record_success(schema, integration) do
     integration
-    |> schema.changeset(%{last_triggered_at: DateTime.utc_now(), failure_count: 0})
+    |> schema.state_transition_changeset(%{
+      last_triggered_at: DateTime.utc_now(),
+      failure_count: 0
+    })
     |> Repo.update()
   end
 
   @doc """
   Re-enables an auto-disabled integration: clears `disabled_at` /
   `disabled_reason`, resets `failure_count`, and sets `is_active` to true.
-  Applied via `schema.changeset/2`.
+  Applied via `schema.state_transition_changeset/2`.
   """
   @spec enable(module(), Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def enable(schema, integration) do
     integration
-    |> schema.changeset(%{
+    |> schema.state_transition_changeset(%{
       is_active: true,
       disabled_at: nil,
       disabled_reason: nil,
@@ -171,10 +178,53 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
     |> Repo.all()
   end
 
+  # ============================================================================
+  # Delivery logs
+  # ============================================================================
+
+  @doc """
+  Lists the delivery rows of one integration, newest first. Options:
+  `:limit` (default 50) and `:offset` (default 0).
+  """
+  @spec list_deliveries(module(), atom(), integer(), keyword()) :: [Ecto.Schema.t()]
+  def list_deliveries(delivery_schema, foreign_key, integration_id, opts) do
+    delivery_schema
+    |> where([d], field(d, ^foreign_key) == ^integration_id)
+    |> order_by([d], desc: d.inserted_at)
+    |> limit(^Keyword.get(opts, :limit, 50))
+    |> offset(^Keyword.get(opts, :offset, 0))
+    |> Repo.all()
+  end
+
+  @doc "Inserts a delivery row through `delivery_schema.changeset/2`."
+  @spec create_delivery(module(), map()) :: {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def create_delivery(delivery_schema, attrs) do
+    delivery_schema
+    |> struct()
+    |> delivery_schema.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Deletes delivery rows older than `days`, in bounded batches (see
+  `BatchDeleteQueries`) so a large backlog cannot outlast the database
+  timeout in one transaction. One row is written per attempt, so these
+  tables grow without bound unless pruned. A zero, negative or non-integer
+  retention is a no-op, so a misconfigured value can never wipe a table.
+  """
+  @spec cleanup_old_deliveries(module(), integer()) :: {non_neg_integer(), nil}
+  def cleanup_old_deliveries(delivery_schema, days) when is_integer(days) and days > 0 do
+    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
+    BatchDeleteQueries.delete_older_than(delivery_schema, :inserted_at, cutoff)
+  end
+
+  def cleanup_old_deliveries(_delivery_schema, _days), do: {0, nil}
+
   @doc """
   Computes delivery success/failure statistics for an integration's delivery
-  rows over the last `days_ago` days. The `delivery_schema` is the
-  provider-specific delivery schema module (e.g. `SlackDeliverySchema`).
+  rows over the last `days_ago` days, in one query. The `delivery_schema` is
+  the provider-specific delivery schema module (e.g. `SlackDeliverySchema`),
+  and `foreign_key` the column naming the integration.
 
   All notification provider deliveries share the same outcome shape — a
   `response_status` and an `error_message` — so this aggregate is provider-
@@ -183,20 +233,20 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
   Returns a map with `:total`, `:successful`, `:failed`, `:success_rate`
   (rounded to one decimal place), and `:period_days`.
   """
-  @spec delivery_stats(module(), integer(), pos_integer()) :: %{
+  @spec delivery_stats(module(), atom(), integer(), pos_integer()) :: %{
           total: non_neg_integer(),
           successful: non_neg_integer(),
           failed: non_neg_integer(),
           success_rate: float(),
           period_days: pos_integer()
         }
-  def delivery_stats(delivery_schema, integration_id, days_ago) do
+  def delivery_stats(delivery_schema, foreign_key, integration_id, days_ago) do
     since = DateTime.add(DateTime.utc_now(), -days_ago, :day)
 
     %{total: total, successful: successful, failed: failed} =
       Repo.one(
         from d in delivery_schema,
-          where: d.integration_id == ^integration_id and d.inserted_at >= ^since,
+          where: field(d, ^foreign_key) == ^integration_id and d.inserted_at >= ^since,
           select: %{
             total: count(d.id),
             successful: filter(count(d.id), d.response_status >= 200 and d.response_status < 300),

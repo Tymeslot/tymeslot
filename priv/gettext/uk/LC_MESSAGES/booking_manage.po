@@ -258,6 +258,7 @@ msgid "Not set"
 msgstr "Не вказано"
 
 #: lib/tymeslot_web/components/shared/token_page.ex
+#: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Зачекайте мить і спробуйте ще раз."
@@ -601,12 +602,32 @@ msgstr "Це групова зустріч, тому її не можна змі
 msgid "%{minutes} min"
 msgstr "%{minutes} хв"
 
-#: lib/tymeslot_web/themes/core/meeting_management.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to cancel meeting. Please try again."
-msgstr "Не вдалося скасувати зустріч. Спробуйте ще раз."
-
-#: lib/tymeslot_web/themes/core/meeting_management.ex
+#: lib/tymeslot_web/themes/core/mount_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting can no longer be changed."
 msgstr "Цю зустріч більше не можна змінити."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This booking was already cancelled."
+msgstr "Це бронювання вже скасовано."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting could not be cancelled. Please try again."
+msgstr "Не вдалося скасувати зустріч. Спробуйте ще раз."
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting is now fully booked"
+msgstr "На цю зустріч уже немає вільних місць"
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
+msgstr "Після вашої відмови ваше місце віддали іншій людині. Ваша відповідь залишається без змін; зверніться до того, хто вас запросив, або до організатора."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Цю зустріч призначено за опитуванням, тому лише організатор може перенести або скасувати її. Якщо ви не можете прийти, скористайтеся «Не зможу прийти» у запрошенні або дайте відповідь на нього."

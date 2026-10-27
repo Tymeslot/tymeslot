@@ -74,10 +74,19 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
     %{shared_data: %{agenda: assigns[:agenda] || %Day{}}}
   end
 
-  def props_for_action(%{live_action: action} = assigns)
-      when action in [:settings, :availability] do
+  # The settings form suggests the browser's zone to a host who has none.
+  def props_for_action(%{live_action: :settings} = assigns) do
     %{profile: Profiles.prefill_timezone(assigns.profile, assigns[:detected_timezone])}
   end
+
+  # The availability page shows the hours and time off on the clock the
+  # booking engine reads them on (`Profiles.timezone/1`), never the browser's.
+  def props_for_action(%{live_action: :availability, profile: %{} = profile}) do
+    %{profile: %{profile | timezone: Profiles.timezone(profile)}}
+  end
+
+  def props_for_action(%{live_action: :availability} = assigns),
+    do: %{profile: assigns.profile}
 
   def props_for_action(_assigns), do: %{}
 
@@ -99,10 +108,20 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   attr :current_user, :any, required: true
   attr :feature_placeholder_components, :map, required: true
 
+  attr :variant, :atom,
+    default: :page,
+    values: [:page, :banner],
+    doc:
+      "`:page` when the placeholder stands in for the whole section, `:banner` when it sits above the section's own page"
+
   @doc """
   Renders the placeholder shown when a feature is gated off. Delegates to
   a registered placeholder component when one is configured, otherwise
   falls back to a generic message.
+
+  The configured component receives `variant`: `:page` when it replaces the
+  section, `:banner` when the section still renders below it under its own
+  page heading, so the component should leave its page shell out.
   """
   @spec feature_placeholder(map()) :: Phoenix.LiveView.Rendered.t()
   def feature_placeholder(assigns) do
@@ -118,6 +137,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
         id={"#{@section}_placeholder"}
         current_user={@current_user}
         feature={@section}
+        variant={@variant}
       />
     <% else %>
       <%!-- Core fallback: just show a simple message --%>

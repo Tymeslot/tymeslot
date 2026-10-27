@@ -147,29 +147,23 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), scheduled_at) == :eq
     end
 
-    test "reschedules reminder by replacing existing job" do
+    # Moving a meeting's reminder is the reschedule's job: it clears the
+    # pending reminders and pins the new ones together
+    # (`Orchestrator.schedule_reminder_notifications/2` with `replace: true`).
+    # Scheduling the same reminder again on its own only finds the one queued.
+    test "scheduling the same reminder again keeps the one already queued" do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
       scheduled_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 30, :minute), :second)
-      new_scheduled_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 45, :minute), :second)
+      later = DateTime.truncate(DateTime.add(DateTime.utc_now(), 45, :minute), :second)
 
       assert :ok =
                EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
 
-      # The scheduler deletes the existing reminder job before inserting the new
-      # one, so the replacement must carry the new time — not the original.
-      assert :ok =
-               EmailScheduler.schedule_reminder_emails(
-                 meeting.id,
-                 30,
-                 "minutes",
-                 new_scheduled_at
-               )
+      assert :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", later)
 
       assert [job] = all_enqueued(worker: EmailWorker)
-
-      assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), new_scheduled_at) ==
-               :eq
+      assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), scheduled_at) == :eq
     end
   end
 
@@ -277,7 +271,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
   describe "token staleness guard" do
     test "delivers a verification email whose token hash still matches the stored token" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, token)
 
       # The worker hands the mailer the decrypted link, not the ciphertext.
@@ -303,8 +297,8 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
     test "discards a verification email whose token has since been rotated" do
       user = insert(:unverified_user)
-      _old_token = Token.generate_token()
-      new_token = Token.generate_token()
+      _old_token = Token.generate()
+      new_token = Token.generate()
       # The user row now holds the newer token; the job was queued with the old one.
       {:ok, _user} = UserTokenQueries.set_verification_token(user, new_token)
 
@@ -326,7 +320,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
     test "delivers a password reset email whose token hash still matches the stored token" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_reset_token(user, token)
 
       expect(Tymeslot.EmailServiceMock, :send_password_reset, fn _user,
@@ -351,7 +345,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
     test "discards a password reset email whose token has since been rotated" do
       user = insert(:user)
-      new_token = Token.generate_token()
+      new_token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_reset_token(user, new_token)
 
       assert {:discard, _reason} =
@@ -371,40 +365,48 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
     test "delivers a legacy verification job that carries no token hash" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, token)
 
       expect(Tymeslot.EmailServiceMock, :send_email_verification, fn _user, _url ->
         {:ok, :sent}
       end)
 
-      # No "token_hash" key — a job enqueued before hash tracking existed must still deliver.
+      # No "token_hash" key, and the link in plain text: a job enqueued before
+      # either existed must still deliver. It is run as the queued job it is,
+      # since `EmailWorker.new/2` would no longer build it.
       assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_email_verification",
-                 "user_id" => user.id,
-                 "verification_url" => "https://example.com/verify"
+               EmailWorker.perform(%Oban.Job{
+                 attempt: 1,
+                 args: %{
+                   "action" => "send_email_verification",
+                   "user_id" => user.id,
+                   "verification_url" => "https://example.com/verify"
+                 }
                })
     end
 
     test "delivers a legacy password reset job that carries no token hash" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_reset_token(user, token)
 
       expect(Tymeslot.EmailServiceMock, :send_password_reset, fn _user, _url -> {:ok, :sent} end)
 
       assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_password_reset",
-                 "user_id" => user.id,
-                 "reset_url" => "https://example.com/reset"
+               EmailWorker.perform(%Oban.Job{
+                 attempt: 1,
+                 args: %{
+                   "action" => "send_password_reset",
+                   "user_id" => user.id,
+                   "reset_url" => "https://example.com/reset"
+                 }
                })
     end
 
     test "discards a job whose encrypted link cannot be read back" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_reset_token(user, token)
 
       # No send expectation: an unreadable link can never become readable on a retry.
@@ -419,7 +421,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
     test "delivers an email change verification whose token is still pending" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.request_email_change(user, "pending@example.com", token)
 
       expect(Tymeslot.EmailServiceMock, :send_email_change_verification, fn _user,
@@ -433,7 +435,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
     test "discards an email change verification once a password reset revoked the token" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, user} = UserTokenQueries.request_email_change(user, "pending@example.com", token)
 
       {:ok, _user} =

@@ -359,4 +359,55 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
                Recaptcha.validate_expected_hostname(nil, ["example.com"])
     end
   end
+
+  describe "RecaptchaHelpers.verify/3 with protection on but no keys" do
+    setup do
+      old_cfg = Application.get_env(:tymeslot, :recaptcha)
+      old_site_key = System.get_env("RECAPTCHA_SITE_KEY")
+      Application.put_env(:tymeslot, :recaptcha, signup_enabled: true)
+      System.delete_env("RECAPTCHA_SITE_KEY")
+      throttle = {RecaptchaHelpers, :missing_keys_logged_at, :signup}
+      :persistent_term.erase(throttle)
+
+      on_exit(fn ->
+        :persistent_term.erase(throttle)
+
+        if old_cfg,
+          do: Application.put_env(:tymeslot, :recaptcha, old_cfg),
+          else: Application.delete_env(:tymeslot, :recaptcha)
+
+        if old_site_key, do: System.put_env("RECAPTCHA_SITE_KEY", old_site_key)
+      end)
+
+      %{throttle: throttle}
+    end
+
+    test "lets the form through and warns at most once a minute", %{throttle: throttle} do
+      LogCapture.with_capture([logger_level: :warning], fn ->
+        assert :ok = RecaptchaHelpers.verify(:signup, nil, %{ip: "203.0.113.7"})
+        assert :ok = RecaptchaHelpers.verify(:signup, nil, %{ip: "203.0.113.7"})
+      end)
+
+      assert [line] = missing_keys_warnings()
+      assert LogCapture.user_metadata(line)[:event] == "signup_recaptcha_disabled_missing_keys"
+
+      # A minute on, the next submission warns again.
+      :atomics.sub(:persistent_term.get(throttle), 1, 61)
+
+      LogCapture.with_capture([logger_level: :warning], fn ->
+        assert :ok = RecaptchaHelpers.verify(:signup, nil, %{})
+      end)
+
+      assert [_line] = missing_keys_warnings()
+    end
+
+    defp missing_keys_warnings do
+      Enum.filter(LogCapture.drain(), fn line ->
+        LogCapture.user_metadata(line)[:event] in [
+          "signup_recaptcha_disabled_missing_keys",
+          "booking_recaptcha_disabled_missing_keys"
+        ]
+      end)
+    end
+  end
 end

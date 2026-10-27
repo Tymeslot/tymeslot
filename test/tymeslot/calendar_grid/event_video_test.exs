@@ -96,7 +96,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       assert_received {:provider_update, uid, payload}
       assert uid == event.uid
       assert payload.description == "Agenda\n\nJoin video call: #{@new_url}"
-      assert payload.recurrence_rule == @rrule
+      # One occurrence of the series is written, which carries no rule.
+      refute Map.has_key?(payload, :recurrence_rule)
       assert reload(event).description == payload.description
     end
 
@@ -238,6 +239,33 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       row = reload(event)
       assert row.video_link == nil
       assert row.video_integration_id == nil
+    end
+
+    # A form opened before the integration was disconnected or switched off
+    # still offers it. No HTTP expectation: no room is created.
+    test "refuses a video integration disconnected or switched off since the form opened", %{
+      user: user,
+      integration: integration
+    } do
+      disconnected =
+        insert(:video_integration,
+          user: user,
+          provider: "mirotalk",
+          deleted_at: DateTime.utc_now()
+        )
+
+      switched_off =
+        insert(:video_integration, user: user, provider: "mirotalk", is_active: false)
+
+      event = insert_event(integration)
+
+      assert {:error, :not_found} =
+               CalendarGrid.change_event_video(user.id, event, disconnected.id)
+
+      assert {:error, :video_integration_inactive} =
+               CalendarGrid.change_event_video(user.id, event, switched_off.id)
+
+      assert reload(event).video_link == nil
     end
 
     test "reports the choice as unchanged when the event already has a link from it", %{

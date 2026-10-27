@@ -25,6 +25,11 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.SummaryBar do
 
   attr :journey, :any, required: true, doc: "the page's `%Journey{}`"
   attr :meeting_type, :any, default: nil
+
+  attr :length_minutes, :integer,
+    default: nil,
+    doc: "the length chosen for a type offering several (`ChosenLength.minutes/1`)"
+
   attr :selected_date, :string, default: nil
   attr :selected_time, :string, default: nil
   attr :user_timezone, :string, required: true
@@ -51,7 +56,10 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.SummaryBar do
           <a class="summary-bar__link" href={@type_href} data-testid="summary-bar-meeting-type">
             <span class="summary-bar__value">{@meeting_type.name}</span>
             <span class="summary-bar__label">
-              {BookingText.duration_label(%{meeting_type: @meeting_type})}
+              {BookingText.duration_label(%{
+                meeting_type: @meeting_type,
+                chosen_length_minutes: @length_minutes
+              })}
             </span>
           </a>
         </li>

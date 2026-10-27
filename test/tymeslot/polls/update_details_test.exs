@@ -6,6 +6,7 @@ defmodule Tymeslot.Polls.UpdateDetailsTest do
   use Tymeslot.DataCase, async: false
 
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
 
   alias Ecto.Changeset
   alias Tymeslot.Polls
@@ -23,6 +24,29 @@ defmodule Tymeslot.Polls.UpdateDetailsTest do
   end
 
   describe "update_details/3" do
+    test "turning updates on starts them from now", %{user: user, poll: poll} do
+      freeze_clock(~U[2026-10-21 09:30:15.700000Z])
+
+      assert {:ok, updated} = Polls.update_details(poll.id, user.id, %{notify_on_vote: true})
+
+      assert updated.notify_on_vote
+      assert updated.vote_digest_sent_at == ~U[2026-10-21 09:30:15Z]
+    end
+
+    test "leaves the last update alone while updates stay on", %{user: user, poll: poll} do
+      Repo.update!(
+        Changeset.change(poll,
+          notify_on_vote: true,
+          vote_digest_sent_at: ~U[2026-10-01 08:00:00Z]
+        )
+      )
+
+      assert {:ok, updated} =
+               Polls.update_details(poll.id, user.id, %{notify_on_vote: true, title: "Team sync"})
+
+      assert updated.vote_digest_sent_at == ~U[2026-10-01 08:00:00Z]
+    end
+
     test "rewrites the title and description", %{user: user, poll: poll} do
       assert {:ok, updated} =
                Polls.update_details(poll.id, user.id, %{

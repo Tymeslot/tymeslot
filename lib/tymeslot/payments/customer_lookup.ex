@@ -4,11 +4,9 @@ defmodule Tymeslot.Payments.CustomerLookup do
 
   Provides functions to parse and validate user IDs from various sources.
 
-  Note: Subscription-related lookups are delegated to SaaS layer when configured
-  to maintain proper Core/SaaS separation.
+  Subscription lookups go through the configured subscription manager, so
+  Core never reads another application's tables.
   """
-
-  require Logger
 
   alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.PaymentQueries
@@ -46,80 +44,39 @@ defmodule Tymeslot.Payments.CustomerLookup do
   def parse_user_id(_invalid), do: nil
 
   @doc """
-  Gets the full subscription record by Stripe customer ID.
+  Gets the subscription recorded for a Stripe customer, from the configured
+  subscription manager (`c:Tymeslot.Payments.Behaviours.SubscriptionManager.get_subscription_by_customer_id/1`).
 
-  This function is used by Core webhook handlers but delegates to SaaS-configured
-  subscription schema when available. Returns `nil` if no subscription schema is
-  configured (Core standalone mode) or no subscription is found.
-
-  Note: In SaaS deployments, the SaaS layer provides direct access to subscription
-  schema without configuration indirection.
-
-  ## Parameters
-    * `stripe_customer_id` - The Stripe customer ID to look up
-
-  ## Returns
-    * Subscription struct if found
-    * `nil` if no subscription found or no subscription schema configured
+  Returns `nil` when no subscription is found, when no subscription manager
+  is configured (Core standalone, which tracks subscriptions on
+  `payment_transactions` instead), or when the manager does not implement
+  this optional callback.
   """
-  @spec get_subscription_by_customer_id(String.t() | nil) :: struct() | nil
+  @spec get_subscription_by_customer_id(String.t() | nil) :: map() | nil
   def get_subscription_by_customer_id(nil), do: nil
 
-  def get_subscription_by_customer_id(stripe_customer_id) when is_binary(stripe_customer_id) do
-    repo = Config.repo()
-    subscription_schema = Config.subscription_schema()
-
-    if subscription_schema && Code.ensure_loaded?(subscription_schema) do
-      case repo.get_by(subscription_schema, stripe_customer_id: stripe_customer_id) do
-        nil ->
-          Logger.debug("No subscription found for Stripe customer",
-            stripe_customer_id: stripe_customer_id
-          )
-
-          nil
-
-        subscription ->
-          Logger.debug("Found subscription for Stripe customer",
-            stripe_customer_id: stripe_customer_id
-          )
-
-          subscription
-      end
-    else
-      Logger.debug("Subscription schema not configured - subscription lookup skipped",
-        stripe_customer_id: stripe_customer_id
-      )
-
-      nil
-    end
-  end
+  def get_subscription_by_customer_id(stripe_customer_id) when is_binary(stripe_customer_id),
+    do: from_manager(:get_subscription_by_customer_id, stripe_customer_id)
 
   @doc """
-  Gets the full subscription record by Stripe subscription ID.
-
-  Same shape and caveats as `get_subscription_by_customer_id/1`, keyed on
-  the subscription id instead.
-
-  ## Parameters
-    * `stripe_subscription_id` - The Stripe subscription ID to look up
-
-  ## Returns
-    * Subscription struct if found
-    * `nil` if no subscription found or no subscription schema configured
+  Gets the subscription recorded for a Stripe subscription id; as
+  `get_subscription_by_customer_id/1`.
   """
-  @spec get_subscription_by_subscription_id(String.t() | nil) :: struct() | nil
+  @spec get_subscription_by_subscription_id(String.t() | nil) :: map() | nil
   def get_subscription_by_subscription_id(nil), do: nil
 
   def get_subscription_by_subscription_id(stripe_subscription_id)
-      when is_binary(stripe_subscription_id) do
-    repo = Config.repo()
-    subscription_schema = Config.subscription_schema()
+      when is_binary(stripe_subscription_id),
+      do: from_manager(:get_subscription_by_subscription_id, stripe_subscription_id)
 
-    if subscription_schema && Code.ensure_loaded?(subscription_schema) do
-      repo.get_by(subscription_schema, stripe_subscription_id: stripe_subscription_id)
-    else
-      nil
-    end
+  # The lookups are optional callbacks: a manager without them answers as no
+  # manager at all.
+  defp from_manager(lookup, id) do
+    manager = Config.subscription_manager()
+
+    if manager && Code.ensure_loaded?(manager) && function_exported?(manager, lookup, 1),
+      do: apply(manager, lookup, [id]),
+      else: nil
   end
 
   @doc """
@@ -133,12 +90,12 @@ defmodule Tymeslot.Payments.CustomerLookup do
        exist locally yet, so it is the only signal available during the
        race between `checkout.session.completed` and the invoice webhooks
        for a subscription's very first invoice.
-    2. `subscription_schema` by `stripe_subscription_id`, then by
-       `stripe_customer_id` — SaaS's canonical customer/subscription -> user
-       mapping (`Config.subscription_schema/0`), which is exact by
+    2. The subscription manager's record by `stripe_subscription_id`, then by
+       `stripe_customer_id` — the canonical customer/subscription -> user
+       mapping when a subscription manager is configured, which is exact by
        construction.
     3. Only when none of the above resolves — normally because no
-       `subscription_schema` is configured (Core standalone, which tracks
+       subscription manager is configured (Core standalone, which tracks
        subscriptions on `payment_transactions` directly) — falls back to
        `payment_transactions`, matched the same way (subscription id, then
        customer id) and restricted to `completed` rows: a `pending` or

@@ -18,8 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   `DTSTART`, ...). A key the payload does not carry leaves its property alone;
   a key it carries with an empty value deletes the property, so clearing a
   field in the grid clears it on the server too. Reminders are the one
-  subcomponent: supplying `:reminders` replaces the event's `VALARM` blocks,
-  omitting the key keeps them.
+  subcomponent; see *Reminders* below.
 
   ## What is left alone
 
@@ -54,10 +53,39 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     * An `ATTENDEE` whose address is not a `mailto:` URI (a room, a group, a
       `urn:uuid:` principal) cannot be named by the payload's list, which the
       sync builds from `mailto:` addresses only, and is kept.
-    * In `:organiser_attendee` mode the `ATTENDEE` naming the event's
-      `ORGANIZER` is kept whatever the list says, and in Tymeslot's own block
-      is added when missing: that server adds its calendar's owner back
-      under their primary address the moment the line goes (issue #151).
+    * In `{:organiser_attendee, _}` mode the `ATTENDEE` naming the account's
+      owner (`Scheduling.owner_attendee_address/2`, read from the stored
+      `ORGANIZER`) is kept whatever the list says, and in Tymeslot's own
+      block is added when missing: that server adds its calendar's owner
+      back under their primary address the moment the line goes (issue
+      #151). In Tymeslot's own block an `ATTENDEE` naming the organiser is
+      dropped when the owner line carries another address, which is how an
+      event written by the first fix for #151, listing the organiser beside
+      the owner the server added, loses the duplicate. An event someone else
+      organised keeps the line naming its organiser.
+
+  ## Reminders
+
+  A payload that carries `:reminders` states the complete new list, and like
+  the attendee list it is merged into the stored `VALARM` blocks rather than
+  written over them. A reminder holds only a method and a lead time before
+  the start, so an alarm rebuilt from one would lose whatever else it says
+  (an email alarm's recipients, an `AUDIO` attachment, `ACKNOWLEDGED`, `X-`
+  properties). Each stored alarm is read the way the sync reads it
+  (`ICalNormaliser.alarm_reminder/1`):
+
+    * An alarm a reminder cannot express (a `RELATED=END` or absolute
+      trigger, one after the start) is never in the list, so it cannot have
+      been removed from it, and is kept verbatim.
+    * An alarm whose reading is still in the list keeps its stored block
+      verbatim, each reminder in the list claiming one alarm. Because the
+      reading is the sync's own, an alarm it reads approximately (an `AUDIO`
+      alarm read as a pop-up, a lead time in seconds rounded to minutes)
+      still matches the reminder the sync made of it.
+    * An alarm whose reading is gone from the list is removed.
+    * A reminder no stored alarm claims is appended as a new alarm.
+
+  A payload without the key keeps every alarm.
 
   Tymeslot's own block, told apart by the `X-TYMESLOT-ATTENDEES` marker
   `build_simple_event/3` emits beside it or by the absence of any `ATTENDEE`
@@ -75,6 +103,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @doc """
   Applies the property changes `event_data` describes to `raw_ical`.
@@ -82,15 +113,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   Returns the patched document, folded per RFC 5545 §3.1. A document with no
   `VEVENT` comes back unchanged; callers that need a document in that case
   build one with `ICalBuilder.build_simple_event/3` instead.
+
+  A payload that writes a timed series in its zone
+  (`TimeZoneComponent.series_zone/1`), as when a rule is added to a single
+  event, writes `DTSTART`, `DTEND` and `EXDATE` as wall clocks in that zone,
+  as `ICalBuilder.build_simple_event/3` does, and adds the zone's
+  `VTIMEZONE` unless the document already has one for it.
   """
   @spec patch(String.t(), map(), Scheduling.mode()) :: String.t()
   def patch(raw_ical, event_data, mode \\ :contact)
       when is_binary(raw_ical) and is_map(event_data) do
-    patch_set = build_patch_set(event_data, mode)
+    zone = TimeZoneComponent.series_zone(event_data)
+    patch_set = build_patch_set(event_data, mode, zone)
 
     raw_ical
     |> ContentLines.split()
     |> patch_components(patch_set)
+    |> with_time_zone(event_data, zone)
     |> ContentLines.join()
   end
 
@@ -110,26 +149,36 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   @spec patch_vevent([String.t()], map(), Scheduling.mode()) :: [String.t()]
   def patch_vevent(body, event_data, mode \\ :contact)
       when is_list(body) and is_map(event_data),
-      do: apply_patch_set(body, build_patch_set(event_data, mode))
+      do: apply_patch_set(body, build_patch_set(event_data, mode, nil))
 
   # A patch set is the list of {properties it replaces, replacement lines} the
   # payload asks for, plus the reminders decision, computed once for the whole
   # document.
-  defp build_patch_set(event_data, mode) do
+  defp build_patch_set(event_data, mode, zone) do
     entries =
       Enum.reject(
         [
           {["DTSTAMP"], "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}"},
-          timing_entry(event_data, :start_time, ["DTSTART"], &Properties.build_dtstart/1),
+          timing_entry(event_data, :start_time, ["DTSTART"], &Properties.build_dtstart(&1, zone)),
           # RFC 5545 §3.6.1 allows DTEND or DURATION, never both, so a stored
           # DURATION has to go when DTEND arrives.
-          timing_entry(event_data, :end_time, ["DTEND", "DURATION"], &Properties.build_dtend/1),
+          timing_entry(
+            event_data,
+            :end_time,
+            ["DTEND", "DURATION"],
+            &Properties.build_dtend(&1, zone)
+          ),
           text_entry(event_data, :summary, "SUMMARY"),
           text_entry(event_data, :description, "DESCRIPTION"),
           text_entry(event_data, :location, "LOCATION"),
           entry(event_data, :colour, ["COLOR"], &Properties.build_colour_line/1),
           entry(event_data, :recurrence_rule, ["RRULE"], &Properties.build_rrule_line/1),
-          entry(event_data, :recurrence_exceptions, ["EXDATE"], &Properties.build_exdate/1),
+          entry(
+            event_data,
+            :recurrence_exceptions,
+            ["EXDATE"],
+            &Properties.build_exdate(&1, zone)
+          ),
           entry(event_data, :transparency, ["TRANSP"], &Properties.build_transp/1),
           entry(event_data, :status, ["STATUS"], &Properties.build_status/1),
           entry(event_data, :visibility, ["CLASS"], &Properties.build_class/1),
@@ -159,6 +208,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     case Map.fetch(event_data, key) do
       {:ok, value} -> {[property], "#{property}:#{Format.escape_text(value || "")}"}
       :error -> nil
+    end
+  end
+
+  # The zone's VTIMEZONE goes before the first VEVENT, where RFC 5545 readers
+  # expect a component a TZID refers to, unless the document already defines
+  # that TZID (another client's VTIMEZONE for it is kept as it is).
+  defp with_time_zone(lines, _event_data, nil), do: lines
+
+  defp with_time_zone(lines, event_data, zone) do
+    if "TZID:#{zone}" in lines do
+      lines
+    else
+      {head, tail} = Enum.split_while(lines, &(&1 != "BEGIN:VEVENT"))
+      head ++ (TimeZoneComponent.for_series(event_data, zone) || []) ++ tail
     end
   end
 
@@ -193,7 +256,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     kept = Enum.reject(properties, &MapSet.member?(replaced, ContentLines.property_name(&1)))
     added = Enum.flat_map(entries, fn {_names, lines} -> content_lines(lines) end)
 
-    kept ++ added ++ patched_alarms(alarms, patch_set.event_data)
+    kept ++ added ++ patched_alarms(alarms, properties, patch_set.event_data)
   end
 
   # Both spellings are always replaced in a block of Tymeslot's own, never just
@@ -222,7 +285,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
 
   defp attendee_entry(properties, attendees, _event_data, mode, ours) do
     organiser = organiser_address(properties, mode)
-    wanted = MapSet.new([organiser | Enum.map(attendees, &attendee_address/1)])
+    owner = owner_address(organiser, mode)
+    hosts = Enum.uniq([owner | kept_organiser(organiser, ours)])
+    wanted = MapSet.new(hosts ++ Enum.map(attendees, &attendee_address/1))
 
     kept =
       Enum.filter(properties, fn line ->
@@ -234,11 +299,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     added =
       attendees
       |> Enum.reject(
-        &(attendee_address(&1) in [nil, organiser] or attendee_address(&1) in present)
+        &(attendee_address(&1) in [nil, organiser, owner] or attendee_address(&1) in present)
       )
       |> Enum.uniq_by(&attendee_address/1)
 
-    lines = kept ++ added_lines(added, missing_organiser(organiser, present, ours), mode, ours)
+    lines = kept ++ added_lines(added, missing_owner(organiser, owner, present, ours), mode, ours)
 
     {replaced_attendee_properties(ours), join_lines(lines ++ marker(lines, mode, ours))}
   end
@@ -253,7 +318,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   # Read from the document rather than the payload, which names the organiser
   # only when it rebuilds the event: `ORGANIZER` is never patched, so the
   # stored one is the event's.
-  defp organiser_address(properties, :organiser_attendee) do
+  defp organiser_address(properties, {:organiser_attendee, _addresses}) do
     Enum.find_value(properties, fn line ->
       if ContentLines.property_name(line) == "ORGANIZER", do: line_address(line)
     end)
@@ -261,13 +326,25 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
 
   defp organiser_address(_properties, _mode), do: nil
 
-  # Only Tymeslot's own block gains the organiser's line. An event someone
-  # else organised, synced into the grid, is theirs to describe.
-  defp missing_organiser(nil, _present, _ours), do: nil
-  defp missing_organiser(_organiser, _present, false = _ours), do: nil
+  defp owner_address(organiser, {:organiser_attendee, addresses}),
+    do: Scheduling.owner_attendee_address(organiser, addresses)
 
-  defp missing_organiser(organiser, present, true = _ours),
-    do: if(organiser in present, do: nil, else: organiser)
+  defp owner_address(_organiser, _mode), do: nil
+
+  # See the moduledoc: Tymeslot's own block keeps the organiser only as the
+  # owner line, an event someone else organised keeps its organiser's line.
+  defp kept_organiser(_organiser, true = _ours), do: []
+  defp kept_organiser(organiser, false = _ours), do: [organiser]
+
+  # Only Tymeslot's own block gains the owner's line. An event someone else
+  # organised, synced into the grid, is theirs to describe. Answers the
+  # organiser the line is rendered from: `Properties.build_attendee_lines/2`
+  # picks the owner's address from it the same way.
+  defp missing_owner(nil, _owner, _present, _ours), do: nil
+  defp missing_owner(_organiser, _owner, _present, false = _ours), do: nil
+
+  defp missing_owner(organiser, owner, present, true = _ours),
+    do: if(owner in present, do: nil, else: organiser)
 
   # See the moduledoc: a `CONTACT` is only ever added where this module owns
   # the `CONTACT` lines, so a later removal can take it away again.
@@ -322,13 +399,73 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   defp marked_ours?(properties),
     do: Enum.any?(properties, &(ContentLines.property_name(&1) == "X-TYMESLOT-ATTENDEES"))
 
-  defp patched_alarms(alarms, event_data) do
-    if Map.has_key?(event_data, :reminders) do
-      event_data |> Alarms.build_reminders() |> content_lines()
-    else
-      Enum.concat(alarms)
+  defp patched_alarms(alarms, properties, event_data) do
+    case Map.fetch(event_data, :reminders) do
+      {:ok, reminders} ->
+        wanted = Enum.map(List.wrap(reminders), &{reminder_key(&1), &1})
+        {kept, unclaimed} = Enum.flat_map_reduce(alarms, wanted, &claim_alarm/2)
+
+        added =
+          Alarms.build_reminders(
+            %{reminders: Enum.map(unclaimed, &elem(&1, 1))},
+            alarm_email(alarms, properties, event_data)
+          )
+
+        Enum.concat(kept) ++ content_lines(added)
+
+      :error ->
+        Enum.concat(alarms)
     end
   end
+
+  # See the moduledoc's *Reminders*. A reminder is compared by the `ACTION`
+  # it is written with, so an SMS reminder, written as a DISPLAY alarm, is
+  # the pop-up the sync reads back.
+  defp claim_alarm(alarm, wanted) do
+    case ICalNormaliser.alarm_reminder(alarm) do
+      nil ->
+        {[alarm], wanted}
+
+      reminder ->
+        case List.keytake(wanted, reminder_key(reminder), 0) do
+          {_claimed, unclaimed} -> {[alarm], unclaimed}
+          nil -> {[], wanted}
+        end
+    end
+  end
+
+  defp reminder_key(reminder),
+    do: {Reminder.ical_action(Reminder.method(reminder)), Reminder.minutes_before(reminder)}
+
+  # An EMAIL alarm must name its recipient and subject, which a reminder does
+  # not hold, so they come from the stored document: the recipient of an
+  # email alarm it already carries (the address the user chose in their
+  # client), else the organiser, and the event's title. The stored `SUMMARY`
+  # is still escaped, as the alarm's must be.
+  defp alarm_email(alarms, properties, event_data) do
+    %{
+      recipient:
+        Enum.find_value(alarms, &email_alarm_recipient/1) ||
+          Map.get(event_data, :organizer_email) ||
+          stored_address(ContentLines.find("ORGANIZER", properties)),
+      summary:
+        if(Map.has_key?(event_data, :summary),
+          do: Format.escape_text(event_data.summary),
+          else: stored_value(ContentLines.find("SUMMARY", properties))
+        )
+    }
+  end
+
+  defp email_alarm_recipient(alarm) do
+    if String.upcase(stored_value(ContentLines.find("ACTION", alarm))) == "EMAIL",
+      do: stored_address(ContentLines.find("ATTENDEE", alarm))
+  end
+
+  defp stored_address(nil), do: nil
+  defp stored_address(line), do: line_address(line)
+
+  defp stored_value(nil), do: ""
+  defp stored_value(line), do: line |> ContentLines.split_value() |> elem(1)
 
   # VALARM is the only subcomponent a VEVENT may contain. Its own DESCRIPTION,
   # SUMMARY and DURATION lines must never be read as the event's, so the blocks

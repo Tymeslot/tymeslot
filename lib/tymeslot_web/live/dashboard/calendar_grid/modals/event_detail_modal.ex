@@ -5,10 +5,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.CalendarGrid
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Attendee
-  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
@@ -36,6 +38,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   attr :pending_attendees, :list, default: []
   attr :video_integrations, :list, default: []
   attr :pending_notification, :boolean, default: false
+
+  attr :recurrence_edit, :map,
+    default: nil,
+    doc: "the repeat editor's series start and staged pattern (`Shared.recurrence_edit/1`)"
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
@@ -203,7 +209,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <span class="text-token-xs font-normal text-tymeslot-400 ml-1">{Helpers.tz_abbr(
-            @user_timezone
+            @user_timezone,
+            event_start(@selected_event)
           )}</span>
         </form>
         <div :if={!@editable or @time_locked}>
@@ -213,7 +220,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               :if={!@selected_event.all_day}
               class="text-token-xs font-normal text-tymeslot-400 ml-1"
             >
-              {Helpers.tz_abbr(@user_timezone)}
+              {Helpers.tz_abbr(@user_timezone, event_start(@selected_event))}
             </span>
           </p>
           <p class="text-token-xs text-tymeslot-400 mt-0.5">
@@ -314,26 +321,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         />
       </.detail_line>
 
-      <%!-- Repeat --%>
-      <div :if={@editable and not @time_locked} class="mb-3">
+      <%!-- Repeat: a rule is edited only where the grid can write one. --%>
+      <div :if={@editable and not @time_locked and repeatable?(@selected_event)} class="mb-3">
         <RecurrenceEditor.recurrence_editor
-          recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
-          timezone={Shared.recurrence_timezone(@selected_event, @user_timezone)}
+          {RecurrenceEdit.editor(@selected_event, @recurrence_edit, @user_timezone)}
           myself={@myself}
           change_event="update_event_recurrence"
+          save_event="save_event_recurrence"
+          discard_event="discard_event_recurrence"
         />
       </div>
       <.detail_line
         :if={
-          (!@editable or @time_locked) and
-            recurrence_summary(@selected_event, @user_timezone) != nil
+          (!@editable or @time_locked or not repeatable?(@selected_event)) and
+            recurrence_summary(@selected_event, @recurrence_edit, @user_timezone) != nil
         }
         variant={:compact}
         icon="hero-arrow-path"
         class="mb-3"
       >
         <p class="text-token-sm text-tymeslot-600 leading-snug">
-          {recurrence_summary(@selected_event, @user_timezone)}
+          {recurrence_summary(@selected_event, @recurrence_edit, @user_timezone)}
         </p>
       </.detail_line>
 
@@ -414,17 +422,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   # Read-only human-readable summary of an event's recurrence rule, or nil when
   # the event does not repeat. The rule's UNTIL is an instant written in UTC, so
   # it is read back in the zone it was written against, the event's own.
-  defp recurrence_summary(event, user_timezone) do
+  defp recurrence_summary(event, recurrence_edit, user_timezone) do
     case Map.get(event, :recurrence_rule) do
       rule when is_binary(rule) and rule != "" ->
-        rule
-        |> RRule.parse(timezone: Shared.recurrence_timezone(event, user_timezone))
-        |> RecurrenceEditor.summary()
+        {start, _known?} = Shared.series_anchor(event, recurrence_edit, user_timezone)
+        RecurrenceEditor.summary(rule, start)
 
       _none ->
         nil
     end
   end
+
+  defp repeatable?(event), do: CalendarGrid.repeatable_provider?(Map.get(event, :provider))
 
   # Cached attendees come back from JSONB string-keyed, while one the organiser
   # has just added is still atom-keyed in memory, so the editor reads them all
@@ -435,4 +444,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
     |> List.wrap()
     |> Enum.map(&Attendee.normalise/1)
   end
+
+  # The instant the zone label describes, so it names the offset in effect on
+  # the event's day rather than today's.
+  defp event_start(event),
+    do: Map.get(event, :display_start_at) || event.start_at || Clock.utc_now()
 end

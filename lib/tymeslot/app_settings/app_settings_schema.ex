@@ -9,6 +9,7 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
   a `CHECK (id = 1)` constraint defined in the migration.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -193,7 +194,11 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
       {:ok, value} ->
         case Colour.normalise_hex(value) do
           nil ->
-            add_error(changeset, :email_brand_accent, "must be a hex colour such as #14b8a6")
+            add_error(
+              changeset,
+              :email_brand_accent,
+              dgettext_noop("errors", "must be a hex colour such as #14b8a6")
+            )
 
           hex ->
             put_change(changeset, :email_brand_accent, hex)
@@ -238,7 +243,7 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
   defp validate_locales(changeset) do
     Enum.reduce(@locale_fields, changeset, fn field, acc ->
       validate_inclusion(acc, field, Locales.supported_codes(),
-        message: "is not a supported language"
+        message: dgettext_noop("errors", "is not a supported language")
       )
     end)
   end

@@ -95,7 +95,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       %{meeting: meeting, params: params} = gated_booking(true)
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert rescheduled.status == "awaiting_approval"
       assert reload(meeting).status == "awaiting_approval"
@@ -104,7 +104,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     test "gives the new request its own window rather than the old one" do
       %{meeting: meeting, params: params} = gated_booking(true)
 
-      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert rescheduled.approval_requested_at
       assert rescheduled.approval_deadline_at
@@ -121,7 +121,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
           decline_reason: "an earlier no"
         })
 
-      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # A stale resolved-at would make the new request look answered; a stale
       # nudge timestamp would suppress the nudge for a window never nudged.
@@ -133,7 +133,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     test "tells the invitee a request was made, not that their meeting moved" do
       %{meeting: meeting, params: params} = gated_booking(true)
 
-      Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+      Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -149,7 +149,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     test "starts a fresh expiry clock for the new time" do
       %{meeting: meeting, params: params} = gated_booking(true)
 
-      Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+      Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
     end
@@ -161,7 +161,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes")
 
       assert {:ok, _rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # The booking is back in the gate — nobody has agreed to the new time
       # yet, so nothing should remind the attendee about it.
@@ -180,7 +180,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         gated_booking(true, %{announced_at: DateTime.utc_now(:second)})
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert rescheduled.status == "awaiting_approval"
       # The claim must be free again so the second approval's announcement
@@ -206,7 +206,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert meeting.ical_sequence == 0
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # The request email carries no calendar attachment, so this revision is
       # reserved rather than announced: the reschedule notice the host's
@@ -225,7 +225,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       %{meeting: meeting, params: params} =
         gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
 
-      Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+      Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -247,15 +247,21 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       %{meeting: meeting, params: params} =
         gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
 
-      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
-      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn details ->
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_organizer, fn _email,
+                                                                                _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
         send(test_pid, {:reschedule_emails, details})
-        {{:ok, :sent}, {:ok, :sent}}
+        {:ok, :sent}
       end)
 
       assert {:ok, _confirmed} = Approval.approve(reload(meeting))
 
+      run_reschedule_emails()
       assert_received {:reschedule_emails, details}
       assert details.is_rescheduled
       assert DateTime.compare(details.start_time, rescheduled.start_time) == :eq
@@ -269,11 +275,14 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
         })
 
-      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, 0, fn _details ->
-        {{:ok, :sent}, {:ok, :sent}}
-      end)
-
       assert {:ok, _confirmed} = Approval.approve(reload(meeting))
+
+      # The notice would go out from an email job, so its absence is checked
+      # there: a mail mock expecting no call is never reached either way.
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_emails", "meeting_id" => meeting.id}
+      )
     end
 
     test "tells the host when the request to move a confirmed booking lapses" do
@@ -285,7 +294,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
 
       {:ok, _rescheduled} =
-        Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+        Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert {:ok, _expired} = Approval.expire(reload(meeting))
 
@@ -318,7 +327,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
 
       {:ok, _rescheduled} =
-        Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+        Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert {:ok, _declined} = Approval.decline(reload(meeting))
 
@@ -340,7 +349,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert is_nil(rescheduled.announced_at)
       assert rescheduled.first_announced_at == announced_at
@@ -385,7 +394,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       }
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(ad_hoc.uid, params, %{}, ad_hoc.organizer_user_id)
+               Reschedule.execute(ad_hoc.uid, params, ad_hoc.organizer_user_id)
 
       assert rescheduled.status == "confirmed"
       assert is_nil(rescheduled.approval_requested_at)
@@ -403,7 +412,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         })
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert rescheduled.status == "awaiting_approval"
       assert reload(meeting).status == "awaiting_approval"
@@ -418,7 +427,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       %{meeting: meeting, params: params} = gated_booking(true, %{status: "awaiting_payment"})
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # A booking that never paid must not be revived into a state the host
       # can approve — that would confirm a meeting nobody paid for.
@@ -439,8 +448,8 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       # refuses the reschedule before the gate is consulted at all, which is
       # a stronger guarantee than leaving the status untouched: there is no
       # new time for the invitee to be told about either.
-      assert {:error, "Cannot reschedule an expired meeting"} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+      assert {:error, {:not_reschedulable, :expired}} =
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       refute_enqueued(worker: ApprovalExpiryWorker)
     end
@@ -451,7 +460,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       %{meeting: meeting, params: params} = gated_booking(false)
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert rescheduled.status == "confirmed"
       refute_enqueued(worker: ApprovalExpiryWorker)
@@ -472,7 +481,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         })
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       assert rescheduled.status == "confirmed"
       assert %DateTime{} = rescheduled.approval_resolved_at
@@ -487,7 +496,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       %{meeting: meeting, params: params} = stranded_request()
 
       assert {:ok, _rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # This booking was held from the moment it was created: the invitee has
       # only ever had the "we have passed this to the host" email. Confirming
@@ -520,7 +529,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         |> Repo.update!()
 
       assert {:ok, _rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # `announce: true` is what makes the worker send the confirmation itself
       # once the room exists, so the join link is in the invitee's first email
@@ -538,7 +547,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
 
       assert {:ok, _rescheduled} =
-               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # A sweep that still fires would release the slot of a booking the
       # invitee has just been sent a confirmation for.
@@ -565,5 +574,12 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       # decide something that no longer exists.
       refute_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => held.id})
     end
+  end
+
+  # Runs the reschedule notice jobs alone: the queue also holds jobs whose
+  # emails this test does not stub.
+  defp run_reschedule_emails do
+    for job <- all_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"}),
+        do: perform_job(EmailWorker, job.args)
   end
 end

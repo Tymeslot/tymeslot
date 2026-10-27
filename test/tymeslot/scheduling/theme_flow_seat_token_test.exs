@@ -14,8 +14,10 @@ defmodule Tymeslot.Scheduling.ThemeFlowSeatTokenTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Scheduling.SeatMoveContext
   alias Tymeslot.Scheduling.ThemeFlow
 
   setup do
@@ -34,39 +36,64 @@ defmodule Tymeslot.Scheduling.ThemeFlowSeatTokenTest do
     participant =
       insert(:participant, meeting: meeting, name: "Mover", email: "mover@example.com")
 
-    %{participant: participant}
+    %{user: user, meeting_type: meeting_type, meeting: meeting, participant: participant}
   end
 
-  describe "seat_move_start/1" do
-    test "the start of a seat still held", %{participant: participant} do
-      %{start_time: start_time} = Repo.preload(participant, :meeting).meeting
+  describe "seat_move_context/2" do
+    test "loads a seat still held, with its start, its type and the participant's details",
+         %{user: user, meeting_type: meeting_type, meeting: meeting, participant: participant} do
+      token = participant.management_token
 
-      assert ThemeFlow.seat_move_start(participant.management_token) == start_time
+      assert {:ok, %SeatMoveContext{} = context} = ThemeFlow.seat_move_context(token, user.id)
+
+      assert context.token == token
+      assert context.seat.participant.id == participant.id
+      assert context.start == meeting.start_time
+      assert context.meeting_type.id == meeting_type.id
+      assert %{"name" => "Mover", "email" => "mover@example.com"} = context.form_data
     end
 
-    test "nil once the seat has been given up", %{participant: participant} do
+    test "has no type for a seat on another organiser's meeting", %{participant: participant} do
+      assert {:ok, %SeatMoveContext{meeting_type: nil}} =
+               ThemeFlow.seat_move_context(participant.management_token, insert(:user).id)
+    end
+
+    test "is spent once the seat has been given up", %{user: user, participant: participant} do
       {:ok, _cancelled} = ParticipantQueries.cancel(participant)
 
-      assert ThemeFlow.seat_move_start(participant.management_token) == nil
+      assert ThemeFlow.seat_move_context(participant.management_token, user.id) ==
+               {:error, :already_cancelled}
     end
 
-    test "nil for an unknown or missing token" do
-      assert ThemeFlow.seat_move_start("not-a-token") == nil
-      assert ThemeFlow.seat_move_start(nil) == nil
+    test "cannot move a seat whose type has since been deleted",
+         %{user: user, meeting_type: meeting_type, participant: participant} do
+      Repo.delete!(meeting_type)
+
+      assert ThemeFlow.seat_move_context(participant.management_token, user.id) ==
+               {:error, :seat_not_movable}
+    end
+
+    test "cannot move a seat whose type no longer takes group bookings",
+         %{user: user, meeting_type: meeting_type, participant: participant} do
+      meeting_type |> Changeset.change(%{max_participants: 1}) |> Repo.update!()
+
+      assert ThemeFlow.seat_move_context(participant.management_token, user.id) ==
+               {:error, :seat_not_movable}
+    end
+
+    test "is not found for an unknown or missing token", %{user: user} do
+      assert ThemeFlow.seat_move_context("not-a-token", user.id) == {:error, :not_found}
+      assert ThemeFlow.seat_move_context(nil, user.id) == {:error, :not_found}
     end
   end
 
-  describe "build_seat_booking_form_data/1" do
-    test "pre-fills the participant's own details", %{participant: participant} do
+  describe "build_booking_form_data/2 for a seat move" do
+    test "pre-fills the participant's own details, never the link's prefill",
+         %{user: user, participant: participant} do
+      {:ok, context} = ThemeFlow.seat_move_context(participant.management_token, user.id)
+
       assert %{"name" => "Mover", "email" => "mover@example.com"} =
-               ThemeFlow.build_seat_booking_form_data(participant.management_token)
-    end
-
-    test "gives a blank form for a spent token", %{participant: participant} do
-      {:ok, _cancelled} = ParticipantQueries.cancel(participant)
-
-      assert %{"name" => "", "email" => ""} =
-               ThemeFlow.build_seat_booking_form_data(participant.management_token)
+               ThemeFlow.build_booking_form_data(context, %{"name" => "Someone Else"})
     end
   end
 end

@@ -131,4 +131,78 @@ defmodule Tymeslot.Analytics.ReconciliationQueriesTest do
     assert totals.converting_visitors == 1
     assert totals.untracked_converting_visitors == 0
   end
+
+  describe "same-day matching at the UTC day boundaries" do
+    # The booking day under test, and the window that covers it.
+    @day ~D[2026-03-10]
+    @day_start DateTime.new!(@day, ~T[00:00:00], "Etc/UTC")
+    @day_end DateTime.new!(@day, ~T[23:59:59], "Etc/UTC")
+
+    defp at(date, time), do: DateTime.new!(date, time, "Etc/UTC")
+
+    defp insert_event_at(visitor_hash, inserted_at) do
+      {:ok, _event} =
+        %EventSchema{}
+        |> EventSchema.changeset(%{
+          event_type: "booking_page_view",
+          path: "/alice/intro",
+          visitor_hash: visitor_hash
+        })
+        |> Changeset.put_change(:inserted_at, inserted_at)
+        |> Repo.insert()
+    end
+
+    defp insert_booking_at(user, visitor_hash, inserted_at) do
+      # A distinct start time per booking keeps the organiser's one-meeting-per-
+      # slot constraint satisfied; only `inserted_at` matters here.
+      start_time = DateTime.add(@day_start, System.unique_integer([:positive]), :hour)
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute),
+        visitor_hash: visitor_hash,
+        inserted_at: inserted_at
+      )
+    end
+
+    test "events at the first and last instant of the booking day count as same-day",
+         %{user: user} do
+      # Bookings mid-day and at both ends of the day, each matched by an event
+      # at the opposite extreme of that same UTC day.
+      insert_booking_at(user, "first", at(@day, ~T[12:00:00]))
+      insert_event_at("first", at(@day, ~T[00:00:00.000000]))
+
+      insert_booking_at(user, "last", at(@day, ~T[12:00:00]))
+      insert_event_at("last", at(@day, ~T[23:59:59.999999]))
+
+      insert_booking_at(user, "late_booking", at(@day, ~T[23:59:59]))
+      insert_event_at("late_booking", at(@day, ~T[00:00:00.000000]))
+
+      insert_booking_at(user, "early_booking", at(@day, ~T[00:00:00]))
+      insert_event_at("early_booking", at(@day, ~T[23:59:59.999999]))
+
+      totals = ReconciliationQueries.instance_totals(@day_start, @day_end)
+
+      assert totals.converting_visitors == 4
+      assert totals.untracked_converting_visitors == 0
+    end
+
+    test "events at the neighbouring midnights do not count as same-day", %{user: user} do
+      # An unrelated event mid-day proves tracking was active on the booking day,
+      # so a booking without a same-day match is counted as untracked.
+      insert_event_at("other", at(@day, ~T[12:00:00.000000]))
+
+      insert_booking_at(user, "next_midnight", at(@day, ~T[23:59:59]))
+      insert_event_at("next_midnight", at(Date.add(@day, 1), ~T[00:00:00.000000]))
+
+      insert_booking_at(user, "previous_instant", at(@day, ~T[00:00:00]))
+      insert_event_at("previous_instant", at(Date.add(@day, -1), ~T[23:59:59.999999]))
+
+      totals = ReconciliationQueries.instance_totals(@day_start, @day_end)
+
+      assert totals.converting_visitors == 2
+      assert totals.untracked_converting_visitors == 2
+    end
+  end
 end

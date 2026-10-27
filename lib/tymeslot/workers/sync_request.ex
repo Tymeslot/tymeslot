@@ -67,15 +67,32 @@ defmodule Tymeslot.Workers.SyncRequest do
     stamped_args = Map.put(args, "requested_at", DateTime.to_iso8601(now))
     unique = Keyword.put(worker.__opts__()[:unique], :period, :infinity)
 
-    stamped_args
-    |> worker.new(state: "available", scheduled_at: now, unique: unique, replace: @replace)
-    |> Oban.insert()
-    |> retry_past_orphaned_executing(worker, stamped_args, now)
+    insert_unique(worker, stamped_args,
+      state: "available",
+      scheduled_at: now,
+      unique: unique,
+      replace: @replace
+    )
   end
 
-  # A conflict folded into an `:executing` row too old to still be running:
-  # insert again without matching `:executing`, so the request gets a job of
-  # its own instead of waiting for the Lifeline to rescue that row.
+  @doc """
+  Inserts a job of `worker` with `args` and the `Oban.Worker.new/2` options
+  `opts`, for a worker unique over `:executing` that replaces the args of the
+  job it conflicts with.
+
+  A conflict with an `:executing` row too old to still be running (see the
+  moduledoc) is inserted again without matching `:executing`, so the new
+  args get a job of their own instead of waiting for the Lifeline to rescue
+  that row, and being lost with it if the rescue finds its attempts spent.
+  """
+  @spec insert_unique(module(), map(), keyword()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def insert_unique(worker, args, opts) do
+    args
+    |> worker.new(opts)
+    |> Oban.insert()
+    |> retry_past_orphaned_executing(worker, args, opts, DateTime.utc_now())
+  end
+
   defp retry_past_orphaned_executing(
          {:ok,
           %Oban.Job{
@@ -84,24 +101,25 @@ defmodule Tymeslot.Workers.SyncRequest do
             attempted_at: %DateTime{} = attempted_at
           }} = result,
          worker,
-         stamped_args,
+         args,
+         opts,
          now
        ) do
     if DateTime.diff(now, attempted_at, :second) > @orphaned_executing_after_seconds do
       unique =
-        worker.__opts__()[:unique]
-        |> Keyword.put(:period, :infinity)
+        opts
+        |> Keyword.get(:unique, worker.__opts__()[:unique])
         |> Keyword.update!(:states, &List.delete(&1, :executing))
 
-      stamped_args
-      |> worker.new(state: "available", scheduled_at: now, unique: unique, replace: @replace)
+      args
+      |> worker.new(Keyword.put(opts, :unique, unique))
       |> Oban.insert()
     else
       result
     end
   end
 
-  defp retry_past_orphaned_executing(result, _worker, _stamped_args, _now), do: result
+  defp retry_past_orphaned_executing(result, _worker, _args, _opts, _now), do: result
 
   @doc """
   Turns a run's successful `result` into a snooze when a request rewrote the

@@ -6,7 +6,13 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   by `schedule_id` rather than by profile.
   """
   import Ecto.Query, warn: false
-  alias Tymeslot.Availability.{AvailabilityBreakSchema, WeeklyAvailabilitySchema}
+
+  alias Tymeslot.Availability.{
+    AvailabilityBreakSchema,
+    AvailabilityScheduleSchema,
+    WeeklyAvailabilitySchema
+  }
+
   alias Tymeslot.Clock
   alias Tymeslot.Repo
 
@@ -31,6 +37,18 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   """
   @spec get_weekly_availability(integer()) :: WeeklyAvailabilitySchema.t() | nil
   def get_weekly_availability(id), do: Repo.get(WeeklyAvailabilitySchema, id)
+
+  @doc """
+  Fetches a day by id, scoped to the profile that owns its schedule, so a
+  caller cannot reach another account's day by guessing an id.
+  """
+  @spec get_for_profile(integer(), integer()) :: WeeklyAvailabilitySchema.t() | nil
+  def get_for_profile(id, profile_id) do
+    WeeklyAvailabilitySchema
+    |> join(:inner, [d], s in AvailabilityScheduleSchema, on: s.id == d.schedule_id)
+    |> where([d, s], d.id == ^id and s.profile_id == ^profile_id)
+    |> Repo.one()
+  end
 
   @doc """
   Creates a weekly availability.
@@ -132,49 +150,6 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
       {count, _value} when count == 7 -> {:ok, count}
       {_count, _value} -> {:error, :failed_to_create_schedule}
     end
-  end
-
-  @doc """
-  Deletes all breaks for a weekly availability and creates new ones.
-  """
-  @type break_input :: %{
-          required(:start_time) => Time.t(),
-          required(:end_time) => Time.t(),
-          required(:label) => String.t() | nil,
-          required(:sort_order) => integer()
-        }
-  @spec replace_breaks(integer(), [break_input()]) :: :ok
-  def replace_breaks(target_weekly_availability_id, breaks) do
-    # Delete existing breaks for the target day
-    Repo.delete_all(
-      where(
-        AvailabilityBreakSchema,
-        [b],
-        b.weekly_availability_id == ^target_weekly_availability_id
-      )
-    )
-
-    # Bulk insert new breaks
-    unless Enum.empty?(breaks) do
-      now = DateTime.truncate(Clock.utc_now(), :second)
-
-      entries =
-        Enum.map(breaks, fn break ->
-          %{
-            weekly_availability_id: target_weekly_availability_id,
-            start_time: break.start_time,
-            end_time: break.end_time,
-            label: break.label,
-            sort_order: break.sort_order,
-            inserted_at: now,
-            updated_at: now
-          }
-        end)
-
-      Repo.insert_all(AvailabilityBreakSchema, entries)
-    end
-
-    :ok
   end
 
   @doc """

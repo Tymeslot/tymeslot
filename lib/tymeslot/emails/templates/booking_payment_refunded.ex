@@ -81,7 +81,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       has_name? = is_binary(context.attendee_name) and context.attendee_name != ""
-      host_name = context.host_name || dgettext("emails_booking", "your host")
+      host_name = context.host_name || dgettext("emails_booking_changes", "your host")
 
       refunded_amount =
         Formatting.format_currency(context.refunded_amount_cents, context.currency)
@@ -95,8 +95,8 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
       #{refund_details_card(context, refunded_amount, original_amount)}
 
-      #{Text.system_footer_note(dgettext("emails_booking", "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."))}
-      #{Text.system_footer_note(dgettext("emails_booking", "If you have any questions, please reply to this email and %{name} will be happy to help.", name: host_name))}
+      #{Text.system_footer_note(dgettext("emails_booking_changes", "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."))}
+      #{Text.system_footer_note(dgettext("emails_booking_changes", "If you have any questions, please reply to this email and %{name} will be happy to help.", name: host_name))}
       """
 
       organizer_details =
@@ -108,11 +108,11 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
             organizer_avatar_url: nil
           },
           intent: @intent,
-          eyebrow: dgettext("emails_booking", "Refunded"),
+          eyebrow: dgettext("emails_booking_changes", "Refunded"),
           stage_title:
             if(context.is_full_refund?,
-              do: dgettext("emails_booking", "Your payment was refunded."),
-              else: dgettext("emails_booking", "A partial refund was issued.")
+              do: dgettext("emails_booking_changes", "Your payment was refunded."),
+              else: dgettext("emails_booking_changes", "A partial refund was issued.")
             ),
           stage_subtitle: refund_subtitle(context, refunded_amount)
         )
@@ -128,9 +128,11 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
       |> MjmlEmail.put_reply_to(context.host_name, context.host_email)
       |> subject(
         if context.is_full_refund? do
-          dgettext("emails_booking", "Refund Issued - %{amount}", amount: refunded_amount)
+          dgettext("emails_booking_changes", "Refund Issued - %{amount}", amount: refunded_amount)
         else
-          dgettext("emails_booking", "Partial Refund Issued - %{amount}", amount: refunded_amount)
+          dgettext("emails_booking_changes", "Partial Refund Issued - %{amount}",
+            amount: refunded_amount
+          )
         end
       )
       |> html_body(html_body)
@@ -141,14 +143,14 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
   defp html_intro(context, true = _has_name?, refunded_amount, original_amount) do
     if context.is_full_refund? do
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi %{name} - your payment of %{amount} has been refunded in full.",
         name: context.attendee_name,
         amount: refunded_amount
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi %{name} - %{amount} of your %{original} payment has been refunded.",
         name: context.attendee_name,
         amount: refunded_amount,
@@ -160,13 +162,13 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
   defp html_intro(context, false = _has_name?, refunded_amount, original_amount) do
     if context.is_full_refund? do
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi - your payment of %{amount} has been refunded in full.",
         amount: refunded_amount
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi - %{amount} of your %{original} payment has been refunded.",
         amount: refunded_amount,
         original: original_amount
@@ -176,33 +178,33 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
   defp refund_subtitle(%RefundContext{meeting_title: title}, refunded_amount)
        when is_binary(title) and title != "" do
-    dgettext("emails_booking", "%{amount} returned for “%{title}”",
+    dgettext("emails_booking_changes", "%{amount} returned for “%{title}”",
       amount: refunded_amount,
       title: title
     )
   end
 
   defp refund_subtitle(_context, refunded_amount) do
-    dgettext("emails_booking", "%{amount} returned to your card", amount: refunded_amount)
+    dgettext("emails_booking_changes", "%{amount} returned to your card", amount: refunded_amount)
   end
 
   defp refund_details_card(context, refunded_amount, original_amount) do
-    label = Sanitise.sanitize_for_email(dgettext("emails_booking", "Refund details"))
+    label = Sanitise.sanitize_for_email(dgettext("emails_booking_changes", "Refund details"))
 
     refund_line =
       Sanitise.sanitize_for_email(
-        dgettext("emails_booking", "Refunded amount: %{amount}", amount: refunded_amount)
+        dgettext("emails_booking_changes", "Refunded amount: %{amount}", amount: refunded_amount)
       )
 
     original_line =
       Sanitise.sanitize_for_email(
-        dgettext("emails_booking", "Original payment: %{amount}", amount: original_amount)
+        dgettext("emails_booking_changes", "Original payment: %{amount}", amount: original_amount)
       )
 
     meeting_line =
       if context.meeting_title do
         Sanitise.sanitize_for_email(
-          dgettext("emails_booking", "Meeting: %{title}", title: context.meeting_title)
+          dgettext("emails_booking_changes", "Meeting: %{title}", title: context.meeting_title)
         )
       end
 
@@ -240,25 +242,25 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
     title_line =
       if context.meeting_title,
-        do: dgettext("emails_booking", "Meeting: %{title}", title: context.meeting_title)
+        do: dgettext("emails_booking_changes", "Meeting: %{title}", title: context.meeting_title)
 
     [
-      dgettext("emails_booking", "REFUND ISSUED"),
+      dgettext("emails_booking_changes", "REFUND ISSUED"),
       "",
       intro,
       "",
-      dgettext("emails_booking", "REFUND DETAILS:"),
-      dgettext("emails_booking", "Refunded amount: %{amount}", amount: refunded_amount),
-      dgettext("emails_booking", "Original payment: %{amount}", amount: original_amount),
+      dgettext("emails_booking_changes", "REFUND DETAILS:"),
+      dgettext("emails_booking_changes", "Refunded amount: %{amount}", amount: refunded_amount),
+      dgettext("emails_booking_changes", "Original payment: %{amount}", amount: original_amount),
       title_line,
       "",
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."
       ),
       "",
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "If you have any questions, please reply to this email and %{name} will be happy to help.",
         name: host_name
       )
@@ -270,14 +272,14 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
   defp text_intro(context, true = _has_name?, refunded_amount, original_amount) do
     if context.is_full_refund? do
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi %{name}, your payment of %{amount} has been refunded in full.",
         name: context.attendee_name,
         amount: refunded_amount
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi %{name}, %{amount} of your %{original} payment has been refunded.",
         name: context.attendee_name,
         amount: refunded_amount,
@@ -289,13 +291,13 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
   defp text_intro(context, false = _has_name?, refunded_amount, original_amount) do
     if context.is_full_refund? do
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi, your payment of %{amount} has been refunded in full.",
         amount: refunded_amount
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Hi, %{amount} of your %{original} payment has been refunded.",
         amount: refunded_amount,
         original: original_amount

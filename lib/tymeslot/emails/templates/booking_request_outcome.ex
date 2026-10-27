@@ -27,6 +27,8 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   alias Tymeslot.Bookings.BookingTitle
 
+  alias Tymeslot.Emails.RecipientLocale
+
   alias Tymeslot.Emails.Shared.{
     Buttons,
     Formatting,
@@ -51,7 +53,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   @spec render(variant(), Meeting.t()) :: Swoosh.Email.t()
   def render(variant, %Meeting{} = meeting) when variant in [:declined, :expired] do
-    locale = meeting.attendee_locale || "en"
+    locale = RecipientLocale.attendee_locale(meeting)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       # The stored title is in the organiser's language; the booker reads it in
@@ -93,12 +95,10 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
       |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(meeting.organizer_name, meeting.organizer_email)
       |> subject(
-        Sanitise.sanitize_for_header(
-          subject_line(
-            {variant, kind},
-            meeting,
-            Formatting.format_date_short(attendee_time, locale)
-          )
+        subject_line(
+          {variant, kind},
+          meeting,
+          Formatting.format_date_short(attendee_time, locale)
         )
       )
       |> html_body(html_body)
@@ -255,8 +255,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
       duration: meeting.duration,
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
-      meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-      timezone: meeting.attendee_timezone || "UTC"
+      meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting")
     }
   end
 
@@ -269,11 +268,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     #{explanation(outcome, meeting)}
 
     #{dgettext("emails_booking_requests", "REQUESTED TIME:")}
-    #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
-    #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
-    #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
-    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
+    #{TextBodyHelper.format_meeting_details(details, locale)}
     #{text_reason(outcome, meeting)}
     #{dgettext("emails_booking_requests", "This time slot is available for booking again.")}
 

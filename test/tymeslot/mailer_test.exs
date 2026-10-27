@@ -64,6 +64,19 @@ defmodule Tymeslot.MailerTest do
       assert decoded["MessageStream"] == "broadcast"
     end
 
+    test "a lifecycle email reaches the provider without open tracking" do
+      email = Mailer.put_tracking(build_email(), :lifecycle)
+
+      assert {:ok, _result} = Mailer.deliver(email)
+
+      assert_receive {:mailer_test_posted_body, body}
+      decoded = Jason.decode!(body)
+
+      assert decoded["TrackOpens"] == false
+      assert decoded["TrackLinks"] == "None"
+      assert decoded["MessageStream"] == "outbound"
+    end
+
     test "an email without the private key carries no tracking options" do
       email = build_email()
 

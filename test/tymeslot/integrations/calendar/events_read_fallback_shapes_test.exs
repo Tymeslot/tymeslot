@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadFallbackShapesTest do
   @moduletag :calendar
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Calendar.EventsRead
+  alias Tymeslot.Integrations.Calendar.Runtime.EventsRead
 
   @base_time ~U[2024-01-01 12:00:00Z]
 
@@ -48,6 +48,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadFallbackShapesTest do
         {:error, :forced_failure}
       end
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Mirrors Google/Outlook: `list_events/2` answers with the raw string-keyed
@@ -97,6 +101,25 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadFallbackShapesTest do
 
       assert {:ok, events, "/cal/all-day"} =
                EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
+
+      assert Enum.map(events, & &1.uid) == ["all-day-in-range"]
+    end
+
+    test "keeps an all-day event whose day has begun in a timezone ahead of UTC" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: AllDayCalDavProvider,
+        client: %{calendar_path: "/cal/all-day"}
+      }
+
+      # 1 January, 01:00 to 07:00 in Sydney: still 31 December in UTC, but
+      # inside the host's all-day event if the host is in Sydney.
+      assert {:ok, events, _path} =
+               EventsRead.fetch_events_with_fallback(
+                 adapter_client,
+                 ~U[2023-12-31 14:00:00Z],
+                 ~U[2023-12-31 20:00:00Z]
+               )
 
       assert Enum.map(events, & &1.uid) == ["all-day-in-range"]
     end

@@ -19,6 +19,12 @@ defmodule Tymeslot.AppSettings.Env do
   It is captured once per BEAM lifetime in `:persistent_term` (purpose-built
   for read-heavy, write-rare configuration data) so a cleared override can
   restore the original config value.
+
+  ## Pinned settings
+
+  A setting whose environment variable the operator set is *pinned*:
+  `config/runtime.exs` lists it in `:env_pinned_settings`, and every write
+  here skips it, so its config value stands whatever the DB holds.
   """
 
   alias Tymeslot.AppSettings.AppSettingsSchema
@@ -77,6 +83,23 @@ defmodule Tymeslot.AppSettings.Env do
   end
 
   @doc """
+  The environment variable that fixes `key`, or `nil` when the admin settings
+  page may change it.
+  """
+  @spec pinned_var(atom()) :: String.t() | nil
+  def pinned_var(key) do
+    :tymeslot
+    |> Application.get_env(:env_pinned_settings, %{})
+    |> Map.get(key)
+  end
+
+  @doc """
+  Whether an environment variable fixes `key`.
+  """
+  @spec pinned?(atom()) :: boolean()
+  def pinned?(key), do: pinned_var(key) != nil
+
+  @doc """
   Returns the captured baseline for `key` as `{:ok, value}` (a config value was
   snapshotted), `:error` (no config value existed at snapshot time), or
   `:not_captured` (no snapshot has been taken yet).
@@ -102,7 +125,8 @@ defmodule Tymeslot.AppSettings.Env do
   @doc """
   Applies the DB overrides in `settings` over the baseline: a non-nil value is
   written to the Application env, a nil clears the override and restores the
-  snapshotted baseline. Used at boot by `AppSettings.load!/0`.
+  snapshotted baseline. Pinned keys are left untouched. Used at boot by
+  `AppSettings.load!/0`.
   """
   @spec apply_overrides(map()) :: :ok
   def apply_overrides(settings) do
@@ -115,7 +139,7 @@ defmodule Tymeslot.AppSettings.Env do
   keyword list (e.g. :social_auth, :recaptcha) are merged together before
   being written, so each parent key receives exactly one `Application.put_env`
   call rather than a sequence of read-modify-write operations that concurrent
-  updates could interleave.
+  updates could interleave. Pinned keys are left untouched.
   """
   @spec flush_overrides(map()) :: :ok
   def flush_overrides(settings) do
@@ -139,8 +163,13 @@ defmodule Tymeslot.AppSettings.Env do
     end
   end
 
-  defp apply_override(key, nil), do: restore_baseline(key)
-  defp apply_override(key, value), do: write(key, value)
+  defp apply_override(key, value) do
+    cond do
+      pinned?(key) -> :ok
+      is_nil(value) -> restore_baseline(key)
+      true -> write(key, value)
+    end
+  end
 
   defp restore_baseline(key) do
     case baseline_value(key) do
@@ -168,9 +197,10 @@ defmodule Tymeslot.AppSettings.Env do
   defp merge_nested_child(kw, key, settings) do
     [_parent, child] = config_path(key)
 
-    case Map.get(settings, key) do
-      nil -> restore_nested_child_baseline(kw, key, child)
-      value -> Keyword.put(kw, child, value)
+    cond do
+      pinned?(key) -> kw
+      is_nil(Map.get(settings, key)) -> restore_nested_child_baseline(kw, key, child)
+      true -> Keyword.put(kw, child, Map.fetch!(settings, key))
     end
   end
 

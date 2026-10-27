@@ -16,6 +16,9 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
 
     * `show` - Boolean to show/hide the modal (required)
     * `meeting_type` - The meeting type to be deleted (required when show is true)
+    * `sign_ups` - `{dates, people}`: the fixed-date type's upcoming dates the
+      delete cancels and the people booked on them
+      (`Tymeslot.MeetingTypes.upcoming_sign_ups/1`)
     * `myself` - The LiveComponent target for event handling (required)
 
   ## Examples
@@ -28,6 +31,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
   """
   attr :show, :boolean, required: true
   attr :meeting_type, :map, default: nil
+  attr :sign_ups, :any, default: {0, 0}
   attr :myself, :any, required: true
 
   @spec delete_meeting_type_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -48,6 +52,22 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
             "Are you sure you want to delete the meeting type \"%{name}\"?",
             name: @meeting_type.name
           )}
+        </p>
+        <p :if={elem(@sign_ups, 0) > 0} data-testid="delete-cancels-dates">
+          {dngettext(
+            "dashboard_meeting_types",
+            "Its upcoming date is cancelled.",
+            "Its %{count} upcoming dates are cancelled.",
+            elem(@sign_ups, 0)
+          )}
+          <span :if={elem(@sign_ups, 1) > 0}>
+            {dngettext(
+              "dashboard_meeting_types",
+              "The %{count} person who signed up is told by email.",
+              "The %{count} people who signed up are told by email.",
+              elem(@sign_ups, 1)
+            )}
+          </span>
         </p>
         <p class="text-tymeslot-500">
           {dgettext(

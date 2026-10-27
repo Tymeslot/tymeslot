@@ -12,10 +12,9 @@ defmodule Tymeslot.Auth.PasswordUpdate do
 
   alias Ecto.Changeset
 
-  alias Tymeslot.Auth.{RateLimit, Session, UserQueries, Validation}
+  alias Tymeslot.Auth.{ErrorFormatter, RateLimit, Session, UserQueries, Validation}
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger}
-  alias Tymeslot.Utils.ChangesetUtils
 
   @type error_field :: :current_password | :new_password | :new_password_confirmation
 
@@ -30,6 +29,13 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   materially weaker, so callers that have them should pass them. Over the
   limit the result is `{:error, :rate_limited, message}` and nothing is
   checked.
+
+  A successful change revokes every session of the account.
+  `:current_session_token` names the session making the change: its row goes
+  with the rest, but its live socket is left connected so the caller can
+  still deliver its own reply (the LiveView's redirect to the login page).
+  Disconnecting it would drop that reply, leaving the form frozen until the
+  client gives up and reloads the page.
 
   A failure is `{:error, %{field => message}}`, keyed by the form field each
   message belongs to. Malformed input is reported for every field at once;
@@ -88,7 +94,10 @@ defmodule Tymeslot.Auth.PasswordUpdate do
              new_password,
              new_password_confirmation
            ),
-         :ok <- Session.revoke_all_sessions(updated_user.id) do
+         :ok <-
+           Session.revoke_all_sessions(updated_user.id,
+             leave_connected: opts[:current_session_token]
+           ) do
       SecurityLogger.log_password_change(updated_user.id, %{
         ip_address: opts[:ip],
         user_agent: opts[:user_agent],
@@ -115,7 +124,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
       # The input was validated up front, so what the changeset can still
       # refuse is the password policy itself.
       {:error, %Changeset{} = changeset} ->
-        {:error, %{new_password: ChangesetUtils.get_first_error(changeset)}}
+        {:error, %{new_password: ErrorFormatter.first_error(changeset)}}
     end
   end
 

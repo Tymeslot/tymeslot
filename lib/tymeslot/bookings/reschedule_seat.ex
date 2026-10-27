@@ -14,7 +14,8 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   is unique and the cancelled row keeps the old one); the confirmation email
   delivers the new links.
 
-  On `{:error, :slot_full}` (or a lost race, `:time_conflict`) the
+  On `{:error, :slot_full}` (or `:time_conflict`, the target clashing with
+  another of the organiser's meetings) the
   transaction rolls back, the old seat stands, and `{:error, :slot_taken}`
   is returned so the booking UI's existing bounce-back UX fires unchanged.
 
@@ -51,10 +52,13 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   require Logger
 
+  alias Tymeslot.Auth
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Bookings.CalendarCheck
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Bookings.MeetingAttributes
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
@@ -65,8 +69,12 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events
   alias UUID
@@ -90,14 +98,13 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
          :ok <- ensure_same_organizer(old_meeting, organizer_user_id),
          :ok <- Policy.can_reschedule_meeting?(old_meeting) do
       meeting_type = resolve_meeting_type(old_meeting)
-      config = Policy.scheduling_config(old_meeting.organizer_user_id, meeting_type)
+      config = Schedules.booking_config(old_meeting.organizer_user_id, meeting_type)
       guest_emails = guest_emails(participant)
 
       with :ok <- ensure_group_type(meeting_type),
-           {:ok, new_times} <-
-             Validation.prepare_new_times(new_params, old_meeting, meeting_type, config),
+           {:ok, new_times} <- new_times(new_params, old_meeting, meeting_type, config),
            :ok <- ensure_time_changes(old_meeting, new_times),
-           :ok <- verify_calendar_free(old_meeting, participant, new_times, config, guest_emails) do
+           :ok <- check_target(old_meeting, participant, new_times, meeting_type, config) do
         move_seat(old_meeting, participant, new_times, meeting_type, guest_emails)
       end
     else
@@ -117,13 +124,24 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   can take: a lone participant sees their own hour as free, while a seat
   sharing its meeting with others sees it busy. An unlocked read, for
   display only; the submit decides again under the old meeting's row lock.
+
+  Takes the token, or the live seat a page has already loaded for it
+  (`Tymeslot.Meetings.fetch_live_seat/1`), whose liveness and count are
+  then read again here.
   """
-  @spec vacated_meeting(String.t() | nil, integer() | nil) :: struct() | nil
+  @spec vacated_meeting(String.t() | SeatLookup.seat() | nil, integer() | nil) ::
+          struct() | nil
   def vacated_meeting(management_token, organizer_user_id)
       when is_binary(management_token) and is_integer(organizer_user_id) do
-    with {:ok, %{participant: participant, meeting: meeting}} <-
-           Meetings.fetch_live_seat(management_token),
-         :ok <- ensure_same_organizer(meeting, organizer_user_id),
+    case Meetings.fetch_live_seat(management_token) do
+      {:ok, seat} -> vacated_meeting(seat, organizer_user_id)
+      {:error, _dead_end} -> nil
+    end
+  end
+
+  def vacated_meeting(%{participant: participant, meeting: meeting}, organizer_user_id)
+      when is_integer(organizer_user_id) do
+    with :ok <- ensure_same_organizer(meeting, organizer_user_id),
          true <- last_live_seat?(meeting, participant) do
       meeting
     else
@@ -131,7 +149,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     end
   end
 
-  def vacated_meeting(_management_token, _organizer_user_id), do: nil
+  def vacated_meeting(_seat, _organizer_user_id), do: nil
 
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
@@ -141,8 +159,16 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # another organiser's page (a hand-edited URL) would be checked against
   # that organiser's schedule while landing on this one's, so it is refused
   # as if the seat did not exist there.
-  defp ensure_same_organizer(%{organizer_user_id: id}, id) when is_integer(id), do: :ok
+  defp ensure_same_organizer(%{organizer_user_id: id}, id) when is_integer(id),
+    do: ensure_host_active(id)
+
   defp ensure_same_organizer(_old_meeting, _organizer_user_id), do: {:error, :meeting_not_found}
+
+  # A booking page opened before its host asked to delete their account can
+  # still submit; the host's meetings are about to go, so the seat is unknown.
+  defp ensure_host_active(user_id) do
+    if Auth.deletion_pending?(user_id), do: {:error, :meeting_not_found}, else: :ok
+  end
 
   defp guest_emails(participant) do
     participant.id
@@ -150,17 +176,25 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     |> Enum.map(& &1.email)
   end
 
-  # A type that is no longer a group type (its limit turned back to one)
-  # takes no seat moves: its existing group meetings keep their seats but
-  # accept nobody new, and a fresh slot would be a one-seat meeting with no
-  # attendee. A deleted type (`nil`) takes none either: a slot created by the
-  # move would be a group meeting belonging to no type, which no booking page
-  # offers and no type update keeps in step.
-  defp ensure_group_type(nil), do: {:error, :seat_not_movable}
-
   defp ensure_group_type(meeting_type) do
-    if MeetingTypeSchema.group?(meeting_type), do: :ok, else: {:error, :seat_not_movable}
+    if movable_type?(meeting_type), do: :ok, else: {:error, :seat_not_movable}
   end
+
+  @doc """
+  Whether a seat on a meeting of `meeting_type` (resolved as the move
+  resolves it, `nil` for a deleted type) can be moved at all.
+
+  A type that is no longer a group type (its limit turned back to one)
+  takes no seat moves: its existing group meetings keep their seats but
+  accept nobody new, and a fresh slot would be a one-seat meeting with no
+  attendee. A deleted type (`nil`) takes none either: a slot created by the
+  move would be a group meeting belonging to no type, which no booking page
+  offers and no type update keeps in step. The seat-move page asks this up
+  front, so it can say so instead of offering times the move would refuse.
+  """
+  @spec movable_type?(map() | nil) :: boolean()
+  def movable_type?(nil), do: false
+  def movable_type?(meeting_type), do: MeetingTypeSchema.group?(meeting_type)
 
   # The participant's own slot is offered on the page like any other with a
   # spot free, and picking it moves nothing: their seat would only collide
@@ -189,8 +223,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # (see the module doc); with other seats on it, it keeps its time whatever
   # this seat does. That read is unlocked: should someone join the old
   # meeting meanwhile, the conflict check inside the seat transaction
-  # re-decides under the lock and counts the old meeting after all. Both
-  # refusals collapse to `:slot_taken`.
+  # re-decides under the lock and counts the old meeting after all. A clash
+  # collapses to `:slot_taken`; an unreadable busy set stays
+  # `:availability_unverifiable`.
   defp verify_calendar_free(old_meeting, participant, new_times, config, guest_emails) do
     slot = %{
       organizer_user_id: old_meeting.organizer_user_id,
@@ -209,7 +244,55 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
     case CalendarCheck.enforce(slot, config, exclude: [join_target, vacated]) do
       :ok -> :ok
+      {:error, :availability_unverifiable} = unverifiable -> unverifiable
       {:error, _reason} -> {:error, :slot_taken}
+    end
+  end
+
+  # A fixed-date type's seat moves only onto another of its planned sessions
+  # (`Tymeslot.Meetings.PlannedSessions`), so the new time is not checked
+  # against the schedule: it is only parsed here, keeping the seat's length,
+  # and `check_target/5` decides whether a session is there to take it.
+  defp new_times(params, old_meeting, meeting_type, config) do
+    if FixedDates.enabled?(meeting_type) do
+      with {:ok, {start_time, end_time}} <-
+             Validation.parse_meeting_times(
+               params.date,
+               params.time,
+               old_meeting.duration,
+               params.user_timezone
+             ) do
+        {:ok,
+         %{start_time: start_time, end_time: end_time, duration_minutes: old_meeting.duration}}
+      end
+    else
+      Validation.prepare_new_times(params, old_meeting, meeting_type, config)
+    end
+  end
+
+  # The target of a fixed-date move is one of the type's planned sessions,
+  # open for registration with room for the seat and its guests. The host's
+  # calendar plays no part: the session is already the host's own. The
+  # registration close is read unlocked here and again under the row lock
+  # by `GroupScheduling.book_seat/3`, which refuses a session that closed in
+  # between as `:slot_full`, bounced as `:slot_taken`.
+  defp check_target(old_meeting, participant, new_times, meeting_type, config) do
+    guest_emails = guest_emails(participant)
+
+    if FixedDates.enabled?(meeting_type) do
+      case GroupScheduling.join_target(
+             old_meeting.meeting_type_id,
+             new_times.start_time,
+             1 + length(guest_emails)
+           ) do
+        %{planned: true} = session ->
+          if PlannedSessions.open?(session), do: :ok, else: {:error, :slot_taken}
+
+        _no_open_session ->
+          {:error, :slot_taken}
+      end
+    else
+      verify_calendar_free(old_meeting, participant, new_times, config, guest_emails)
     end
   end
 
@@ -228,7 +311,8 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       exclude_from_conflicts: fn ->
         if last_live_seat?(old_meeting, participant), do: old_meeting.uid
       end,
-      on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end
+      on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end,
+      join_only: FixedDates.enabled?(meeting_type)
     )
     |> handle_move(old_meeting, participant)
   end
@@ -238,6 +322,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # the old meeting's row lock (`:also_lock`), where nobody can join or leave
   # the old meeting before the move commits, so the old meeting is left out
   # of the conflict check only when `vacate_old_seat/2` does cancel it.
+  # A planned session is never vacated: it stays when its last participant
+  # moves away (`SeatRelease.cancel_if_emptied/1`).
+  defp last_live_seat?(%{planned: true}, _participant), do: false
+
   defp last_live_seat?(old_meeting, participant) do
     ParticipantQueries.count_live_for_meeting(old_meeting.id) == 1 and
       match?({:ok, %{cancelled_at: nil}}, ParticipantQueries.get(participant.id))
@@ -293,7 +381,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       # The first-booker race exhausted book_seat/3's retry: the target slot
       # was created by someone else in the meantime, which is the same story
       # for the mover as a full slot.
-      GroupScheduling.lost_first_booker_race?(changeset) ->
+      MeetingSchema.unique_slot_violation?(changeset) ->
         log_and_bounce(old_meeting, participant, changeset, :slot_taken)
 
       # The mover already holds a live seat at the target slot (most likely a
@@ -329,7 +417,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   # Builds the meeting-creation attrs `book_seat/3` passes to `Scheduling`
   # when no live group meeting exists at the target slot yet, routed through
-  # the same `Policy.build_meeting_attributes/1` builder `CreateGroup` uses
+  # the same `MeetingAttributes.build/1` builder `CreateGroup` uses
   # rather than a second hand-built map — so a slot created by a seat move
   # carries the same video integration, description, location, locale,
   # attachments and reminder configuration a fresh booking would give it.
@@ -354,7 +442,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       attendee_locale: participant.locale,
       custom_field_answers: participant.custom_field_answers
     }
-    |> Policy.build_meeting_attributes()
+    |> MeetingAttributes.build()
     |> SeatEffects.slot_attrs(old_meeting.title)
   end
 

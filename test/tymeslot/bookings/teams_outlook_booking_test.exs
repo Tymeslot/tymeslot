@@ -27,8 +27,8 @@ defmodule Tymeslot.Bookings.TeamsOutlookBookingTest do
   import Tymeslot.AvailabilityTestHelpers
 
   alias Tymeslot.Bookings.Orchestrator
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption

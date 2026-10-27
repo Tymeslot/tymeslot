@@ -153,12 +153,6 @@
   margin-bottom: var(--space-3xs);
 }
 
-.duration-price {
-  color: var(--theme-text);
-  font-weight: var(--font-weight-semibold);
-  font-variant-numeric: tabular-nums;
-}
-
 .duration-description {
   color: var(--theme-text-secondary);
   opacity: 0.9;

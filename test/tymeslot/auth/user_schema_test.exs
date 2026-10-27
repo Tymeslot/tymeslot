@@ -19,7 +19,11 @@ defmodule Tymeslot.Auth.UserSchemaTest do
 
       for {password, expected_error} <- test_cases do
         changeset =
-          UserSchema.changeset(%UserSchema{}, %{email: "test@example.com", password: password})
+          UserSchema.registration_changeset(%UserSchema{}, %{
+            email: "test@example.com",
+            password: password,
+            password_confirmation: password
+          })
 
         refute changeset.valid?
         assert expected_error in errors_on(changeset).password

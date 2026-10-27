@@ -7,6 +7,8 @@ defmodule Tymeslot.Security.FieldValidators.UrlValidator do
   with the other FieldValidators.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.UrlValidation
 
   @spec validate(any(), keyword()) :: :ok | {:error, String.t()}
@@ -19,9 +21,11 @@ defmodule Tymeslot.Security.FieldValidators.UrlValidator do
     UrlValidation.validate_http_url(String.trim(value))
   end
 
-  def validate(_value, _opts), do: {:error, "URL must be text"}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "URL must be text")}
 
   defp blank(opts) do
-    if Keyword.get(opts, :required, true), do: {:error, "URL is required"}, else: :ok
+    if Keyword.get(opts, :required, true),
+      do: {:error, dgettext("errors_input", "URL is required")},
+      else: :ok
   end
 end

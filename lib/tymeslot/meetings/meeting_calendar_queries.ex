@@ -10,8 +10,13 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   import Ecto.Query, warn: false
 
   alias Tymeslot.Meetings.CalendarEventLink
+  alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
 
   @externally_deleted "externally_deleted"
@@ -39,6 +44,39 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
     case result do
       nil -> {:error, :not_found}
       meeting -> {:ok, meeting}
+    end
+  end
+
+  @doc """
+  Returns the subset of `identifiers` that belong to one of the meetings
+  `organizer_user_id` organises, whatever the meeting's status and whichever
+  integration it was written through.
+
+  For a caller that only needs to know whether an event is one of the
+  organiser's own bookings: the identifiers are distinct enough across
+  namespaces (see `Tymeslot.Meetings.CalendarEventLink`) that no integration
+  scope is needed, and dropping it keeps a booking written through an
+  integration that was since reconnected recognisable. Blank identifiers are
+  dropped.
+  """
+  @spec organizer_calendar_identifiers(integer(), [String.t() | nil]) :: MapSet.t(String.t())
+  def organizer_calendar_identifiers(organizer_user_id, identifiers) when is_list(identifiers) do
+    case Enum.reject(identifiers, &CalendarEventLink.blank_identifier?/1) do
+      [] ->
+        MapSet.new()
+
+      ids ->
+        Meeting
+        |> where(
+          [m],
+          m.organizer_user_id == ^organizer_user_id and
+            (m.provider_event_id in ^ids or m.calendar_uid in ^ids)
+        )
+        |> select([m], [m.provider_event_id, m.calendar_uid])
+        |> Repo.all()
+        |> List.flatten()
+        |> Enum.reject(&CalendarEventLink.blank_identifier?/1)
+        |> MapSet.new()
     end
   end
 
@@ -155,6 +193,108 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
         updated_at: DateTime.utc_now(:second)
       ]
     )
+
+    :ok
+  end
+
+  @doc """
+  Moves a meeting's end to `end_time`, with its duration, while its start is
+  still the one the provider event was compared against and it still expects
+  a provider event (`MeetingState.where_expects_calendar_event/1`). A meeting
+  rescheduled, cancelled or sent a reschedule request in the meantime is left
+  alone: the end was read against what it was before.
+
+  The new end is the one the host's calendar shows, so it becomes the
+  meeting's `seen_calendar_end_time` too.
+
+  The new end is a new revision of every calendar entry that carries the
+  meeting, so the meeting's `ical_sequence` advances, and so does each live
+  group seat's, which is a calendar entry of its own: an update sent at an
+  unchanged sequence is ignored by calendar clients.
+
+  Every seat that will be told (the booker, each live participant, each live
+  guest) keeps the end it knew as its `notified_end_time`, unless an earlier
+  change is still unannounced, in which case it keeps the end it was last
+  told. The row is locked first, so the end it knew is the one replaced here.
+
+  Returns `{:ok, meeting}`, or `{:error, :not_found}` if no row matched.
+  """
+  @spec update_end_time(Meeting.t(), DateTime.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
+  def update_end_time(%Meeting{id: id, start_time: start_time}, %DateTime{} = end_time) do
+    Repo.transaction(fn ->
+      previous_end =
+        Meeting
+        |> where([m], m.id == ^id and m.start_time == ^start_time)
+        |> MeetingState.where_expects_calendar_event()
+        |> lock("FOR UPDATE")
+        |> select([m], m.end_time)
+        |> Repo.one()
+
+      if is_nil(previous_end), do: Repo.rollback(:not_found)
+
+      Meeting
+      |> where([m], m.id == ^id)
+      |> update([m],
+        set: [
+          end_time: ^end_time,
+          duration: ^DateTime.diff(end_time, start_time, :minute),
+          notified_end_time: fragment("COALESCE(?, ?)", m.notified_end_time, ^previous_end),
+          seen_calendar_end_time: ^end_time,
+          updated_at: ^DateTime.utc_now(:second)
+        ],
+        inc: [ical_sequence: 1]
+      )
+      |> Repo.update_all([])
+
+      ParticipantQueries.record_end_change(id, previous_end)
+      GuestQueries.record_end_change(id, previous_end)
+
+      case MeetingQueries.get_meeting(id) do
+        {:ok, meeting} -> meeting
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Records `end_time` as the end the host's calendar event showed for the
+  meeting at this sync (`seen_calendar_end_time`).
+  """
+  @spec put_seen_calendar_end(String.t(), DateTime.t()) :: :ok
+  def put_seen_calendar_end(meeting_id, %DateTime{} = end_time) do
+    Meeting
+    |> where([m], m.id == ^meeting_id)
+    |> Repo.update_all(set: [seen_calendar_end_time: end_time])
+
+    :ok
+  end
+
+  @doc """
+  Forgets every seat's `notified_end_time` (the booker's, each participant's,
+  each guest's): the meeting's new times were just announced to all of them,
+  so none has an end change left to hear about.
+  """
+  @spec clear_notified_ends(String.t()) :: :ok
+  def clear_notified_ends(meeting_id) do
+    for schema <- [Participant, Guest] do
+      schema
+      |> where([s], s.meeting_id == ^meeting_id and not is_nil(s.notified_end_time))
+      |> Repo.update_all(set: [notified_end_time: nil])
+    end
+
+    Meeting
+    |> where([m], m.id == ^meeting_id and not is_nil(m.notified_end_time))
+    |> Repo.update_all(set: [notified_end_time: nil])
+
+    :ok
+  end
+
+  @doc "Records that the booker has been told the meeting ends at `end_time`."
+  @spec put_notified_end(String.t(), DateTime.t()) :: :ok
+  def put_notified_end(meeting_id, %DateTime{} = end_time) do
+    Meeting
+    |> where([m], m.id == ^meeting_id)
+    |> Repo.update_all(set: [notified_end_time: end_time])
 
     :ok
   end

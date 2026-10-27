@@ -5,14 +5,16 @@ defmodule Tymeslot.Auth.RegistrationTest do
 
   import Tymeslot.Test.AdminBootstrapHelpers, only: [reopen_admin_bootstrap: 1]
 
-  alias Tymeslot.Auth.{Registration, UserSchema}
+  alias Ecto.Changeset
+  alias Tymeslot.Auth.{Registration, UserSchema, UserTokenQueries}
   alias Tymeslot.Repo
-  alias TymeslotWeb.Helpers.ClientIP
+  alias Tymeslot.Security.Token
+  import Tymeslot.AuthTestHelpers, only: [isolated_request_opts: 0]
   import Tymeslot.Factory
 
   describe "registration security" do
     test "enforces strong password requirements" do
-      conn = ClientIP.request_opts(%Plug.Conn{})
+      conn = isolated_request_opts()
 
       weak_passwords = [
         # Too short
@@ -38,7 +40,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     end
 
     test "prevents duplicate accounts (case-insensitive)" do
-      conn = ClientIP.request_opts(%Plug.Conn{})
+      conn = isolated_request_opts()
       insert(:user, email: "existing@example.com")
 
       params = %{
@@ -55,7 +57,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     end
 
     test "new accounts require email verification" do
-      conn = ClientIP.request_opts(%Plug.Conn{})
+      conn = isolated_request_opts()
 
       params = %{
         "email" => "new@example.com",
@@ -83,7 +85,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
       }
 
       assert {:existing_account, _message} =
-               Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
+               Registration.register_user(params, isolated_request_opts())
 
       assert Repo.aggregate(UserSchema, :count, :id) == 1
     end
@@ -105,10 +107,103 @@ defmodule Tymeslot.Auth.RegistrationTest do
       }
 
       {:ok, user, _session} =
-        Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
+        Registration.register_user(params, isolated_request_opts())
 
       assert user.email == "safe@example.com"
       assert is_nil(user.name)
+    end
+  end
+
+  describe "the account is created under the address as typed" do
+    # Strict sanitisation would strip the `0x<hex>` run and everything from
+    # `--` onwards, registering the account (and mailing its verification
+    # link) under a stranger's address.
+    for address <- ["crypto0xabc@example.com", "jean--paul@example.com"] do
+      test "#{address} is stored verbatim" do
+        address = unquote(address)
+
+        params = %{
+          "email" => address,
+          "password" => "ValidPassword123!",
+          "password_confirmation" => "ValidPassword123!",
+          "terms_accepted" => "true"
+        }
+
+        assert {:ok, user, _session} =
+                 Registration.register_user(params, isolated_request_opts())
+
+        assert user.email == address
+        assert Repo.get!(UserSchema, user.id).email == address
+      end
+    end
+
+    test "a near-identical existing account is not mistaken for the new one" do
+      stranger = insert(:user, email: "crypto@example.com")
+
+      params = %{
+        "email" => "crypto0xabc@example.com",
+        "password" => "ValidPassword123!",
+        "password_confirmation" => "ValidPassword123!",
+        "terms_accepted" => "true"
+      }
+
+      assert {:ok, user, _session} =
+               Registration.register_user(params, isolated_request_opts())
+
+      refute user.id == stranger.id
+      assert user.email == "crypto0xabc@example.com"
+    end
+  end
+
+  describe "an address outside the email grammar" do
+    # Kept verbatim since sanitisation stopped rewriting addresses, so the
+    # validator is the only thing standing between a header-shaped value and
+    # the account it would be created under.
+    for address <- ["attacker<victim@example.com", "\"quoted\"@example.com"] do
+      test "#{address} is refused and no account is created" do
+        params = %{
+          "email" => unquote(address),
+          "password" => "ValidPassword123!",
+          "password_confirmation" => "ValidPassword123!",
+          "terms_accepted" => "true"
+        }
+
+        assert {:error, :input, _errors} =
+                 Registration.register_user(params, isolated_request_opts())
+
+        assert Repo.aggregate(UserSchema, :count) == 0
+      end
+    end
+  end
+
+  describe "an expired pending email change elsewhere" do
+    test "does not stop the address being registered" do
+      squatter = insert(:user)
+
+      {:ok, squatter} =
+        UserTokenQueries.request_email_change(
+          squatter,
+          "parked@example.com",
+          Token.generate()
+        )
+
+      squatter
+      |> Changeset.change(
+        email_change_sent_at: DateTime.add(DateTime.utc_now(:second), -(24 * 3600 + 60))
+      )
+      |> Repo.update!()
+
+      params = %{
+        "email" => "parked@example.com",
+        "password" => "ValidPassword123!",
+        "password_confirmation" => "ValidPassword123!",
+        "terms_accepted" => "true"
+      }
+
+      assert {:ok, user, _session} =
+               Registration.register_user(params, isolated_request_opts())
+
+      assert user.email == "parked@example.com"
     end
   end
 
@@ -116,7 +211,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     setup :reopen_admin_bootstrap
 
     test "the first registered user is promoted to admin" do
-      conn = ClientIP.request_opts(%Plug.Conn{})
+      conn = isolated_request_opts()
 
       params = %{
         "email" => "first@example.com",
@@ -131,7 +226,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     end
 
     test "a second registered user is not promoted to admin" do
-      conn = ClientIP.request_opts(%Plug.Conn{})
+      conn = isolated_request_opts()
 
       first_params = %{
         "email" => "first2@example.com",
@@ -169,7 +264,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
       }
 
       {:ok, user, _session} =
-        Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
+        Registration.register_user(params, isolated_request_opts())
 
       # Never store plaintext
       refute user.password_hash == plain

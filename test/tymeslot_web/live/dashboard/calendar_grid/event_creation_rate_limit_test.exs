@@ -31,12 +31,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventCreationRateLimitTest do
   test "rate limiter rejects event edits after bucket is exhausted", %{user: user} do
     # Exhaust the per-user edit limit (30 per 5 minutes)
     for _i <- 1..30 do
-      assert :ok = RateLimiter.check_calendar_event_edit_rate_limit(user.id)
+      assert :ok = RateLimiter.check(:calendar_event_edit, user.id)
     end
 
     # The next call must be rejected
     assert {:error, :rate_limited, message} =
-             RateLimiter.check_calendar_event_edit_rate_limit(user.id)
+             RateLimiter.check(:calendar_event_edit, user.id)
 
     assert message =~ "reached the limit"
   end
@@ -74,16 +74,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventCreationRateLimitTest do
     end
 
     test "does not share a budget with inviting guests to a booking", %{user: user} do
-      for _i <- 1..20, do: RateLimiter.check_dashboard_add_guests_rate_limit(user.id)
+      for _i <- 1..20, do: RateLimiter.check(:dashboard_add_guests, user.id)
 
-      assert :ok = RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user.id)
+      assert :ok = RateLimiter.check(:dashboard_quick_add_meeting, user.id)
     end
   end
 
   describe "quick add of a plain event" do
     test "a save past the edit limit is refused", %{conn: conn, user: user} do
       insert(:calendar_integration, user: user, is_active: true)
-      for _i <- 1..30, do: RateLimiter.check_calendar_event_edit_rate_limit(user.id)
+      for _i <- 1..30, do: RateLimiter.check(:calendar_event_edit, user.id)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventCreationRateLimitTest do
 
   defp spend_quick_add_meetings(user_id, count) do
     for _i <- 1..count do
-      assert :ok = RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user_id)
+      assert :ok = RateLimiter.check(:dashboard_quick_add_meeting, user_id)
     end
   end
 

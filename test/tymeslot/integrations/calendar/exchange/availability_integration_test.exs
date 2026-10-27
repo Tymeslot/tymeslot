@@ -23,7 +23,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Ecto.Changeset
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
@@ -137,7 +139,42 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
     end
   end
 
+  describe "the owner's blocking choice for the mailbox" do
+    # Exchange answers busy time for the mailbox from its main calendar, so
+    # that calendar's choice decides, whether or not it is shown; the other
+    # folders' choices decide nothing.
+    for {label, main, expect_busy?} <- [
+          {"blocks with only another folder shown, as before the choice existed",
+           %{selected: false}, true},
+          {"blocks while the main calendar is hidden but set to block",
+           %{selected: false, blocks_availability: true}, true},
+          {"does not block once the main calendar is set not to",
+           %{selected: true, blocks_availability: false}, false}
+        ] do
+      test "#{label}", %{profile: profile, integration: integration} do
+        set_folders(integration, unquote(Macro.escape(main)))
+        busy_date = next_bookable_weekday(10)
+        cache_row(integration, EventRole.busy_only(), busy_date, "exchange-busy-choice")
+
+        assert {:ok, slots} = slots_for(busy_date, profile)
+        assert slots == [] == unquote(expect_busy?)
+        refute_received :live_http_call
+      end
+    end
+  end
+
   # --- Helpers ---
+
+  defp set_folders(integration, main) do
+    integration
+    |> Changeset.change(
+      calendar_list: [
+        struct!(%CalendarEntry{id: "main", name: "Calendar", primary: true}, main),
+        %CalendarEntry{id: "team", name: "Team", selected: true, blocks_availability: false}
+      ]
+    )
+    |> Repo.update!()
+  end
 
   # The whole business day the bookable profile offers (11:00–17:00 Etc/UTC),
   # so a row covering it leaves no slot behind for a rounding difference to

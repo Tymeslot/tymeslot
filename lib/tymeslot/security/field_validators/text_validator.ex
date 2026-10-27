@@ -6,6 +6,8 @@ defmodule Tymeslot.Security.FieldValidators.TextValidator do
   short text content with configurable length limits.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @text_min_length 1
   @text_max_length 500
 
@@ -42,7 +44,7 @@ defmodule Tymeslot.Security.FieldValidators.TextValidator do
 
   def validate(nil, opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, "Text is required"}
+      {:error, dgettext("errors_input", "Text is required")}
     else
       :ok
     end
@@ -50,7 +52,7 @@ defmodule Tymeslot.Security.FieldValidators.TextValidator do
 
   def validate("", opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, "Text is required"}
+      {:error, dgettext("errors_input", "Text is required")}
     else
       :ok
     end
@@ -64,13 +66,19 @@ defmodule Tymeslot.Security.FieldValidators.TextValidator do
 
     cond do
       Keyword.get(opts, :required, true) and trimmed_text == "" ->
-        {:error, "Text cannot be blank"}
+        {:error, dgettext("errors_input", "Text cannot be blank")}
 
       String.length(trimmed_text) < min_length and trimmed_text != "" ->
-        {:error, "Text is too short (minimum #{min_length} characters)"}
+        {:error,
+         dgettext("errors_input", "Text is too short (minimum %{min_length} characters)",
+           min_length: min_length
+         )}
 
       String.length(trimmed_text) > max_length ->
-        {:error, "Text is too long (maximum #{max_length} characters)"}
+        {:error,
+         dgettext("errors_input", "Text is too long (maximum %{max_length} characters)",
+           max_length: max_length
+         )}
 
       true ->
         :ok
@@ -78,6 +86,6 @@ defmodule Tymeslot.Security.FieldValidators.TextValidator do
   end
 
   def validate(_text, _opts) do
-    {:error, "Text must be a text value"}
+    {:error, dgettext("errors_input", "Text must be a text value")}
   end
 end

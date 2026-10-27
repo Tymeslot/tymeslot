@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
+  import Tymeslot.Features.AccessErrors, only: [is_access_error: 1]
 
   alias Tymeslot.Telegram
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
@@ -48,10 +49,19 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
       id,
       :telegram_testing,
       &AutomationHelpers.get_telegram_for_user(&1, id),
-      &Telegram.test_integration/1,
+      &test_integration/1,
       {dgettext("dashboard_automation_chat", "Test message sent! Check Telegram."),
        dgettext("dashboard_automation_chat", "Integration not found")}
     )
+  end
+
+  # A plan refusal stays an atom, for the shared access-error flash.
+  defp test_integration(integration) do
+    case Telegram.test_integration(integration) do
+      {:error, reason} when is_access_error(reason) -> {:error, reason}
+      {:error, reason} -> {:error, Telegram.translate_error(reason)}
+      :ok -> :ok
+    end
   end
 
   @spec handle_reenable(map(), Phoenix.LiveView.Socket.t()) ::

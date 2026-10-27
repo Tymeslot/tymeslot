@@ -17,10 +17,10 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
 
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   # 1x1 transparent PNG — a real image so the avatar magic-byte validation passes.
@@ -38,7 +38,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   end
 
   defp host do
-    String.replace(Policy.app_url(), ~r{^https?://}, "")
+    String.replace(UrlBuilder.base_url(), ~r{^https?://}, "")
   end
 
   describe "live preview reflects in-progress profile data" do

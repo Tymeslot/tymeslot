@@ -8,6 +8,7 @@ defmodule TymeslotWeb.AccountLive.Helpers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Auth
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Provider constants
@@ -25,6 +26,15 @@ defmodule TymeslotWeb.AccountLive.Helpers do
     |> assign(:show_password_form, false)
     |> assign(:saving_email, false)
     |> assign(:saving_password, false)
+    |> assign(:show_delete_modal, false)
+    |> assign(:delete_errors, %{})
+    |> assign(:deletion_date, "")
+    |> assign(:deletion_grace_days, Auth.account_deletion_grace_days())
+    |> assign(
+      :deletion_confirmation,
+      Auth.deletion_confirmation_method(socket.assigns.current_user)
+    )
+    |> assign(:deletion_feedback_options, deletion_feedback_options())
     |> assign(:is_social_user, social_user?(socket.assigns.current_user))
   end
 
@@ -78,6 +88,25 @@ defmodule TymeslotWeb.AccountLive.Helpers do
       dgettext("account", "Never")
     end
   end
+
+  @doc "The reason picker's options, or `[]` when feedback is not collected."
+  @spec deletion_feedback_options() :: [{String.t(), String.t()}]
+  def deletion_feedback_options do
+    if Auth.collect_deletion_feedback?(),
+      do: Enum.map(Auth.deletion_feedback_reasons(), &{feedback_label(&1), &1}),
+      else: []
+  end
+
+  defp feedback_label("too_expensive"), do: dgettext("account", "It costs too much")
+
+  defp feedback_label("missing_features"),
+    do: dgettext("account", "It is missing something I need")
+
+  defp feedback_label("hard_to_use"), do: dgettext("account", "It is hard to use")
+  defp feedback_label("switched_tool"), do: dgettext("account", "I switched to another tool")
+  defp feedback_label("no_longer_needed"), do: dgettext("account", "I no longer need it")
+  defp feedback_label("technical_problems"), do: dgettext("account", "Something kept going wrong")
+  defp feedback_label("other"), do: dgettext("account", "Another reason")
 
   @spec social_user?(Ecto.Schema.t() | nil) :: boolean()
   defp social_user?(nil), do: false

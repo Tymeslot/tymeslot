@@ -19,7 +19,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
-  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
@@ -42,7 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
           {:ok, halves()} | :first_occurrence | {:error, term()}
   def split(document, key, changes, timezone, mode) do
     components = Document.components(document)
-    uid = Format.generate_uid()
+    uid = Uid.successor(document)
 
     with {:ok, plan} <- plan(components, key, timezone),
          :ok <- ensure_countable(plan),
@@ -136,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
   # before the first occurrence is, since a count that cannot be trusted
   # cannot say which occurrence is the first either.
   defp countable?(rule),
-    do: not Map.has_key?(RRule.parse(rule), :count) or RecurrenceExpander.countable?(rule)
+    do: not Map.has_key?(RRule.options(rule), :count) or RecurrenceExpander.countable?(rule)
 
   defp ensure_countable(%{countable?: true}), do: :ok
   defp ensure_countable(_plan), do: {:error, :unsupported_rule}

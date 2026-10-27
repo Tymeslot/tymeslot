@@ -9,6 +9,8 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
   - Doesn't send emails
   - Doesn't create calendar events
   - Doesn't create video rooms
+  - Gives the meeting no reschedule or cancel link, since there is no stored
+    meeting for one to open
 
   ## Mock status contract
 
@@ -20,9 +22,12 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
   matches the type actually being previewed.
   """
 
+  @behaviour Tymeslot.Bookings.Submitter
+
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.UUID
+  alias Tymeslot.Bookings.Submitter
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Clock
   alias Tymeslot.Demo
@@ -50,6 +55,7 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
 
   Returns a mock meeting struct that looks real but isn't persisted.
   """
+  @impl Submitter
   @spec submit_booking(booking_submission_params(), keyword()) ::
           {:ok, meeting()} | {:error, term()}
   def submit_booking(params, opts \\ []) do
@@ -264,8 +270,8 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
       attendee_company: validated_data["company"],
       attendee_message: validated_data["message"],
       location: "Online Meeting",
-      reschedule_url: build_demo_meeting_url(uid, "/reschedule", organizer),
-      cancel_url: build_demo_meeting_url(uid, "/cancel", organizer)
+      reschedule_url: nil,
+      cancel_url: nil
     }
   end
 
@@ -274,16 +280,6 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
       user.profile.full_name || user.email
     else
       user.email
-    end
-  end
-
-  defp build_demo_meeting_url(uid, path, organizer) do
-    username = if organizer.profile, do: organizer.profile.username, else: nil
-
-    if username do
-      "/#{username}/meeting/#{uid}#{path}"
-    else
-      "/meeting/#{uid}#{path}"
     end
   end
 end

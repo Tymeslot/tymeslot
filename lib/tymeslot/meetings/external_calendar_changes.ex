@@ -17,16 +17,24 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
 
   require Logger
 
+  alias Tymeslot.Availability
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.EmailService
+  alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Validation.Constraints
+  alias Tymeslot.Workers.CalendarEventWorker
+  alias Tymeslot.Workers.VideoSyncWorker
 
   @type signal :: :deleted | :modified
 
   @externally_deleted "externally_deleted"
   @externally_modified "externally_modified"
+
+  @max_duration_minutes Constraints.duration_minutes_range().last
 
   @doc """
   Applies an external calendar change signal to the linked meeting, if any.
@@ -36,15 +44,22 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   - `uid` — the iCal UID of the event (may be `nil` for Outlook deleted events)
   - `signal` — `:deleted` or `:modified`
 
+  Options:
+
+  - `snapshot_at:` when the read that saw the change began. A `:modified`
+    signal is dropped when Tymeslot's own write to the event completed at or
+    after that instant, since the event read may predate it. Without it, only
+    a write still pending holds the signal back.
+
   Returns `:ok` when no action was needed (no linked meeting, already
   up-to-date) or when the status change and its side effects succeeded.
   """
-  @spec apply_change(integer(), String.t() | nil, String.t() | nil, signal()) ::
+  @spec apply_change(integer(), String.t() | nil, String.t() | nil, signal(), keyword()) ::
           :ok | {:error, term()}
-  def apply_change(calendar_integration_id, provider_event_id, uid, signal) do
+  def apply_change(calendar_integration_id, provider_event_id, uid, signal, opts \\ []) do
     case find_linked_meeting(calendar_integration_id, provider_event_id, uid) do
       {:ok, meeting} ->
-        apply_change_to_meeting(meeting, signal)
+        apply_status_change(meeting, status_for(signal), signal, opts[:snapshot_at])
 
       {:error, :not_found} ->
         :ok
@@ -62,7 +77,124 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   """
   @spec apply_change_to_meeting(Meeting.t(), signal()) :: :ok | {:error, term()}
   def apply_change_to_meeting(%Meeting{} = meeting, signal) do
-    apply_status_change(meeting, status_for(signal), signal)
+    apply_status_change(meeting, status_for(signal), signal, nil)
+  end
+
+  @doc """
+  Follows the host's calendar when they lengthened or shortened a meeting
+  there without moving its start: the meeting takes the new end.
+
+  The host made the change, so the new end is accepted even where it now
+  overlaps another booking. Availability follows at once, and so does the
+  meeting's video room; reminders are timed from the start and render the
+  meeting as it stands when they are sent, so they follow without a reschedule.
+  The booker, or every participant, and every guest are emailed the new end
+  with an updated calendar entry, and the host is told who was
+  (`Tymeslot.Notifications.Email.EndChangeEmails`).
+
+  An end at or before the start is no length a meeting can have, and one
+  that makes it longer than any meeting type may last
+  (`Tymeslot.Validation.Constraints.duration_minutes_range/0`) is more likely
+  a slip of the host's mouse than a booking to announce; either event is
+  treated as an external modification for the host to look at.
+  """
+  @spec apply_end_change(Meeting.t(), DateTime.t()) :: :ok | {:error, term()}
+  def apply_end_change(%Meeting{} = meeting, %DateTime{} = end_time) do
+    cond do
+      not MeetingState.expects_calendar_event?(meeting) ->
+        ignore(meeting, :end_moved, "meeting has no expected calendar event")
+
+      slot_elapsed?(meeting) ->
+        ignore(meeting, :end_moved, "meeting slot has already elapsed")
+
+      not DateTime.after?(end_time, meeting.start_time) ->
+        apply_change_to_meeting(meeting, :modified)
+
+      DateTime.diff(end_time, meeting.start_time, :minute) > @max_duration_minutes ->
+        apply_change_to_meeting(meeting, :modified)
+
+      true ->
+        write_end(meeting, end_time)
+    end
+  end
+
+  defp write_end(meeting, end_time) do
+    case MeetingCalendarQueries.update_end_time(meeting, end_time) do
+      {:ok, updated} ->
+        Logger.info("Meeting end follows the external calendar",
+          meeting_id: meeting.id,
+          previous_end_time: meeting.end_time,
+          end_time: updated.end_time
+        )
+
+        resolve_modification(updated)
+        Availability.changed(updated.organizer_user_id)
+        sync_video_room(updated)
+        announce_end(updated)
+
+      # Rescheduled, cancelled, voided or deleted since the event was read:
+      # the end was compared against a meeting that no longer stands, so
+      # nothing is written and nothing follows from it.
+      {:error, :not_found} ->
+        Logger.info("External end change dropped: the meeting changed since it was read",
+          meeting_id: meeting.id
+        )
+
+        :ok
+    end
+  end
+
+  # Only from a write that landed, so a change that lost its race announces
+  # nothing. The notices wait a little and coalesce (see
+  # `EmailScheduler.schedule_end_change_emails/1`); chat channels and webhooks
+  # are not told, since the booking did not move.
+  defp announce_end(meeting) do
+    case EmailScheduler.schedule_end_change_emails(meeting) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to schedule the notices of an external end change",
+          meeting_id: meeting.id,
+          reason: reason
+        )
+
+        :ok
+    end
+  end
+
+  defp sync_video_room(%{video_room_id: nil}), do: :ok
+  defp sync_video_room(%{organizer_user_id: nil}), do: :ok
+
+  defp sync_video_room(meeting) do
+    case VideoSyncWorker.enqueue(meeting.id, "update") do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue video room update after an external end change",
+          meeting_id: meeting.id,
+          reason: reason
+        )
+
+        :ok
+    end
+  end
+
+  @doc """
+  Records the end the host's calendar event shows for a meeting at a sync
+  that found it in step, as the end a later end change is measured against
+  (see `Tymeslot.Integrations.Calendar.TimingChange`). Writes only when it
+  differs from the one already recorded; nil (an event with no hours) records
+  nothing.
+  """
+  @spec record_seen_calendar_end(Meeting.t(), DateTime.t() | nil) :: :ok
+  def record_seen_calendar_end(_meeting, nil), do: :ok
+
+  def record_seen_calendar_end(%Meeting{seen_calendar_end_time: seen} = meeting, end_time) do
+    if seen && DateTime.compare(seen, end_time) == :eq,
+      do: :ok,
+      else: MeetingCalendarQueries.put_seen_calendar_end(meeting.id, end_time)
   end
 
   @doc """
@@ -145,8 +277,9 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   # external change.
   #
   # An elapsed slot cannot be acted on at all: see `slot_elapsed?/1`.
-  @spec apply_status_change(Meeting.t(), String.t(), signal()) :: :ok | {:error, term()}
-  defp apply_status_change(meeting, new_status, signal) do
+  @spec apply_status_change(Meeting.t(), String.t(), signal(), DateTime.t() | nil) ::
+          :ok | {:error, term()}
+  defp apply_status_change(meeting, new_status, signal, snapshot_at) do
     cond do
       not MeetingState.expects_calendar_event?(meeting) ->
         ignore(meeting, signal, "meeting has no expected calendar event")
@@ -154,10 +287,41 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
       slot_elapsed?(meeting) ->
         ignore(meeting, signal, "meeting slot has already elapsed")
 
+      # Deletions stay unguarded: a removed event is gone whatever is queued.
+      signal == :modified and own_write_unseen?(meeting, snapshot_at) ->
+        ignore(meeting, signal, "the event read may predate a Tymeslot calendar write")
+
       true ->
         update_calendar_sync_status(meeting, new_status, signal)
     end
   end
+
+  # Whether the event this signal was derived from may not show Tymeslot's own
+  # latest write to it yet, so that comparing it with the meeting would flag
+  # Tymeslot's change as the host's. An attendee reschedule moves the booking
+  # at once and a CalendarEventWorker job updates the calendar a few seconds
+  # later; until then the event still shows the old time, and flagging it
+  # would offer the host a move back to that old time, an undo of the
+  # attendee's reschedule.
+  #
+  # A job still pending is the obvious case. The other is a job that finished
+  # while the event was being read and processed: a sync reads the event, then
+  # pages, refreshes series and writes the cache before it reconciles, and a
+  # job completing in that window is no longer pending when asked, yet its
+  # write may have landed after the read. So a job that completed at or after
+  # the read began counts too. Its write is itself a change the provider
+  # reports, so the next pass compares the event afresh; nothing that diverges
+  # for real is lost.
+  #
+  # The read's start is the only safe anchor. The meeting's `updated_at` moves
+  # on unrelated changes, and comparing the event's last-modified time against
+  # it would hold back a genuine host move for good once anything else touched
+  # the meeting; no column records Tymeslot's last calendar-relevant change.
+  defp own_write_unseen?(meeting, nil),
+    do: Jobs.pending_meeting_job?(CalendarEventWorker, meeting.id)
+
+  defp own_write_unseen?(meeting, %DateTime{} = snapshot_at),
+    do: Jobs.meeting_job_since?(CalendarEventWorker, meeting.id, snapshot_at)
 
   # A meeting whose slot has already elapsed cannot usefully be updated or
   # cancelled, so neither consequence of an external signal has anywhere to
@@ -176,7 +340,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
 
   defp slot_elapsed?(_meeting), do: false
 
-  @spec ignore(Meeting.t(), signal(), String.t()) :: :ok
+  @spec ignore(Meeting.t(), signal() | :end_moved, String.t()) :: :ok
   defp ignore(meeting, signal, reason) do
     Logger.info("Ignoring external calendar signal",
       meeting_id: meeting.id,
@@ -229,6 +393,11 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   defp auto_cancel(meeting, updated_meeting) do
     case Cancel.execute_external(updated_meeting) do
       {:ok, _cancelled} ->
+        :ok
+
+      # Cancelled through some other path while this deletion was being
+      # handled; that path already told everyone, so there is nothing to retry.
+      {:error, :already_cancelled} ->
         :ok
 
       {:error, reason} ->

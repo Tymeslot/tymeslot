@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
   import Mox
 
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingQueries
@@ -565,5 +566,61 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       assert updated.calendar_sync_status == "externally_deleted"
       assert updated.status == "cancelled"
     end
+  end
+
+  describe "refuse_empty_over_populated/4" do
+    setup do
+      integration = insert(:calendar_integration)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        role: "busy_only",
+        start_at: ~U[2026-06-15 10:00:00Z],
+        end_at: ~U[2026-06-15 11:00:00Z]
+      )
+
+      %{integration: integration, june: {~U[2026-06-01 00:00:00Z], ~U[2026-06-30 23:59:59Z]}}
+    end
+
+    test "refuses an empty read over rows the window holds", %{integration: i, june: june} do
+      assert {:error, :empty_feed_with_populated_cache} =
+               Sync.refuse_empty_over_populated(i, nil, [], june)
+
+      assert {:error, :empty_feed_with_populated_cache} =
+               Sync.refuse_empty_over_populated(i, "busy_only", [], june)
+    end
+
+    test "lets an empty read through where nothing would be lost", %{integration: i, june: june} do
+      assert :ok = Sync.refuse_empty_over_populated(i, "display_only", [], june)
+
+      assert :ok =
+               Sync.refuse_empty_over_populated(
+                 i,
+                 nil,
+                 [],
+                 {~U[2026-07-01 00:00:00Z], ~U[2026-07-31 23:59:59Z]}
+               )
+    end
+
+    test "lets any non-empty read through", %{integration: i, june: june} do
+      event = %CalendarEvent{
+        uid: "kept",
+        calendar_integration_id: i.id,
+        provider: "caldav",
+        provider_calendar_id: "default",
+        all_day: false,
+        synced_at: DateTime.utc_now()
+      }
+
+      assert :ok = Sync.refuse_empty_over_populated(i, nil, [event], june)
+    end
+  end
+
+  test "window/1 reads the same span back and forward around now" do
+    now = ~U[2026-10-09 12:00:00Z]
+    {from, to} = Sync.window(now)
+
+    assert DateTime.diff(now, from, :day) == Sync.window_past_days()
+    assert DateTime.diff(to, now, :day) == Sync.window_past_days()
   end
 end

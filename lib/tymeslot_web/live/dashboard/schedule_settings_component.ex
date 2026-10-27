@@ -15,22 +15,25 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   alias Tymeslot.Availability.{
     AvailabilityActions,
+    PolicyValidation,
     Schedules,
     WeeklySchedule
   }
 
-  alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
-  alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.Dashboard.Availability.{DeleteScheduleModal, ScheduleFormModal}
   alias TymeslotWeb.CustomInputModeHelper
 
   alias TymeslotWeb.Dashboard.Availability.{
+    ExtraAvailabilityCard,
     ListComponent,
     PolicyCard,
     ScheduleSwitcher,
     TimeOffCard
   }
+
+  alias TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers
+  alias TymeslotWeb.Helpers.FormErrors
 
   # The policy settings differ only in which schedule field they write, so the
   # handlers below route through one pair of helpers driven by these tables.
@@ -143,6 +146,10 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
           Flash.info(duplicate_message(schedule))
           {:noreply, select_and_reload(socket, copy.id)}
 
+        {:error, {:break_outside_hours, day, break}} ->
+          Flash.error(BreakHelpers.stale_break_message(day, break, socket.assigns.time_format))
+          {:noreply, socket}
+
         {:error, reason} ->
           Flash.error(failure_message(reason))
           {:noreply, socket}
@@ -215,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     |> assign(:selected_schedule, selected)
     |> assign(:selected_schedule_id, selected && selected.id)
     |> assign(:meeting_type_names, meeting_type_names_for(selected))
-    |> assign(:weekly_schedule, weekly_schedule_for(selected))
+    |> assign(:weekly_schedule, weekly_schedule_for(socket.assigns.profile.id, selected))
     |> assign(:saving, false)
   end
 
@@ -249,12 +256,11 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   defp pick_selected([first | _rest] = schedules, id),
     do: Enum.find(schedules, first, &(&1.id == id))
 
-  defp weekly_schedule_for(nil), do: []
+  defp weekly_schedule_for(_profile_id, nil), do: []
 
-  defp weekly_schedule_for(schedule) do
-    schedule.id
-    |> WeeklySchedule.get_weekly_schedule()
-    |> AvailabilityActions.ensure_complete_schedule(schedule.id)
+  defp weekly_schedule_for(profile_id, schedule) do
+    weekly_schedule = WeeklySchedule.get_weekly_schedule(schedule.id)
+    AvailabilityActions.ensure_complete_schedule(profile_id, weekly_schedule, schedule.id)
   end
 
   defp close_menu(socket), do: assign(socket, :schedule_menu_open, false)
@@ -330,14 +336,15 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     end
   end
 
-  # A copy carries the hours, breaks and rules but not the date overrides, which
-  # name specific calendar days. Said only when the source actually had some, so
-  # the ordinary duplicate stays a one-word confirmation.
+  # A copy carries the hours, breaks and rules but not what names specific
+  # calendar days: the extra available times and any other date overrides.
+  # Said only when the source actually had some, so the ordinary duplicate
+  # stays a one-word confirmation.
   defp duplicate_message(source) do
     if Schedules.has_overrides?(source.id) do
       dgettext(
         "dashboard_availability",
-        "Schedule duplicated. Its date overrides were not copied."
+        "Schedule duplicated. Its extra available times for specific dates were not copied."
       )
     else
       dgettext("dashboard_availability", "Schedule duplicated")
@@ -363,7 +370,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
     metadata = DashboardHelpers.get_security_metadata(socket)
 
-    with {:ok, value} <- validate_policy(field, submitted, metadata: metadata),
+    with {:ok, value} <- PolicyValidation.validate(field, submitted, metadata: metadata),
          {:ok, schedule} <-
            Schedules.update_policy(socket.assigns.selected_schedule, %{field => value}) do
       Flash.info(policy_flash(field, Map.fetch!(schedule, field)))
@@ -427,18 +434,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     Constraints.scheduling_policy_defaults() |> Map.fetch!(field) |> to_string()
   end
 
-  defp validate_policy(:buffer_before_minutes, value, opts),
-    do: MeetingSettingsInputValidation.validate_buffer_before_minutes(value, opts)
-
-  defp validate_policy(:buffer_after_minutes, value, opts),
-    do: MeetingSettingsInputValidation.validate_buffer_after_minutes(value, opts)
-
-  defp validate_policy(:advance_booking_days, value, opts),
-    do: MeetingSettingsInputValidation.validate_advance_booking_days(value, opts)
-
-  defp validate_policy(:min_advance_hours, value, opts),
-    do: MeetingSettingsInputValidation.validate_min_advance_hours(value, opts)
-
   defp policy_flash(:buffer_before_minutes, value),
     do:
       dgettext("dashboard_availability", "Buffer before meetings updated to %{minutes} minutes",
@@ -475,7 +470,9 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   defp custom_policy_flash(:min_advance_hours),
     do: dgettext("dashboard_availability", "Minimum notice set to custom value")
 
-  defp failure_message(%Changeset{} = changeset), do: ChangesetUtils.get_first_error(changeset)
+  defp failure_message(%Changeset{} = changeset),
+    do: FormErrors.first(changeset, %{name: dgettext("dashboard_availability", "Schedule name")})
+
   defp failure_message(message) when is_binary(message), do: message
 
   defp failure_message(:schedule_limit_reached),
@@ -517,6 +514,16 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
             form_errors={@form_errors}
             client_ip={@client_ip}
             user_agent={@user_agent}
+          />
+
+          <%!-- Inside the panel: the times belong to the selected schedule. --%>
+          <.live_component
+            :if={@selected_schedule}
+            module={ExtraAvailabilityCard}
+            id={"availability-extra-#{@selected_schedule.id}"}
+            schedule={@selected_schedule}
+            profile={@profile}
+            time_format={@time_format}
           />
 
           <PolicyCard.policy_card

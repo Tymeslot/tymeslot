@@ -11,6 +11,7 @@ defmodule TymeslotWeb.OAuthFlow.State do
   import Plug.Conn
 
   alias Plug.Crypto
+  alias Tymeslot.Security.Token
 
   @state_session_key "_oauth_state"
   @state_ttl_seconds 600
@@ -65,7 +66,7 @@ defmodule TymeslotWeb.OAuthFlow.State do
 
   # 32 random bytes, url-safe base64 without padding: 43 characters, which is
   # also the shortest code verifier RFC 7636 allows.
-  defp random_token, do: Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+  defp random_token, do: Token.generate(32)
 
   defp expired?(issued_at) do
     System.system_time(:second) - issued_at > @state_ttl_seconds

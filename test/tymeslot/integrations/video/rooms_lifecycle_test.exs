@@ -309,6 +309,40 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
       assert {:error, :invalid_parameters} = result
     end
 
+    # The adapter times each room operation once, under the video prefix; the
+    # layer above it used to time it again under the calendar's.
+    test "emits one video telemetry event per join URL" do
+      parent = self()
+      handler_id = "rooms-join-url-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach_many(
+        handler_id,
+        [[:tymeslot, :video, :create_join_url], [:tymeslot, :calendar, :video_create_join_url]],
+        fn event, _measurements, metadata, _config -> send(parent, {:timed, event, metadata}) end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      meeting_context = %MeetingContext{
+        provider_type: :mirotalk,
+        provider_module: MiroTalkProvider,
+        room_data: %RoomData{
+          room_id: "room123",
+          meeting_url: "https://mirotalk.example.com/room123",
+          provider_data: %{},
+          provider_config: nil
+        }
+      }
+
+      Rooms.create_join_url(meeting_context, "John Doe", "john@example.com", "attendee", nil)
+
+      assert_received {:timed, [:tymeslot, :video, :create_join_url],
+                       %{provider: :mirotalk, status: :error}}
+
+      refute_received {:timed, _event, _metadata}
+    end
+
     test "logs the role and room fingerprint but never the participant's name" do
       meeting_context = %MeetingContext{
         provider_type: :mirotalk,

@@ -7,7 +7,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
 
   Calendars that return `:not_found` (deleted on the provider side) are
   de-selected as a best-effort side effect so they are not fetched — and
-  404 — again on every subsequent availability check.
+  404 — again on every subsequent availability check. The default booking
+  calendar is the exception: deselecting it would leave the integration
+  booking into a calendar that is gone, so its 404 is reported as a
+  `:booking_calendar_missing` failure instead, as the sync paths report it.
   """
 
   require Logger
@@ -15,11 +18,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
+  alias Tymeslot.Utils.UriUtils
 
   @max_concurrency 20
 
@@ -60,6 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
             on_timeout: :kill_task
           )
           |> Enum.zip(selected)
+          |> Enum.map(&booking_calendar_missing(&1, integration))
 
         deselect_missing_calendars(integration, results)
         collect_events(results)
@@ -133,6 +137,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   defp to_result(%Outcome{failed: []} = outcome), do: {:ok, outcome.events}
   defp to_result(%Outcome{} = outcome), do: {:error, outcome}
 
+  # Never deselected: the booking page would go on offering times whose
+  # bookings then fail to write. As a failure, it fails the read closed.
+  defp booking_calendar_missing(
+         {{:ok, {:error, :not_found, _message}}, calendar} = result,
+         integration
+       ) do
+    if UriUtils.uri_safe_match?(calendar.id, Map.get(integration, :default_booking_calendar_id)),
+      do: {{:ok, {:error, :booking_calendar_missing}}, calendar},
+      else: result
+  end
+
+  defp booking_calendar_missing(result, _integration), do: result
+
   defp deselect_missing_calendars(integration, results) do
     missing_ids =
       for {{:ok, {:error, :not_found, _message}}, calendar} <- results do
@@ -150,14 +167,26 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
       missing_count: length(missing_ids)
     )
 
-    case CalendarIntegrationQueries.deselect_calendars(integration, missing_ids) do
+    case Selection.deselect_missing(integration, missing_ids) do
       {:ok, _updated} ->
         :ok
 
-      {:error, changeset} ->
+      # The integration can be gone (or no longer readable) by the time the
+      # read ends, a race with nothing left to fix; the events read from it
+      # are still answered.
+      {:error, :not_found} ->
+        Logger.info("Integration gone before missing calendars could be de-selected",
+          calendar_integration_id: integration.id
+        )
+
+        :ok
+
+      # Nothing was deselected, so the next read finds them missing again
+      # and tries once more.
+      {:error, reason} ->
         Logger.error("Failed to de-select missing calendars",
           calendar_integration_id: integration.id,
-          error: LogFormat.reason(changeset.errors)
+          error: LogFormat.reason(reason)
         )
 
         :ok

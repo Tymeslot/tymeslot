@@ -417,18 +417,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
 
       expect_provider_update()
 
-      expect(GoogleCalendarAPIMock, :get_event, fn _integration, "primary", "googlehex1" ->
+      expect(Tymeslot.CalendarMock, :fetch_event, fn %{provider_event_id: "googlehex1"},
+                                                     _context ->
         {:ok,
-         %{
-           "id" => "googlehex1",
-           "status" => "confirmed",
-           "summary" => "Planning",
-           "start" => %{"dateTime" => DateTime.to_iso8601(event.start_at)},
-           "end" => %{"dateTime" => DateTime.to_iso8601(event.end_at)},
-           "conferenceData" => %{
-             "entryPoints" => [%{"entryPointType" => "video", "uri" => meet_url}]
+         [
+           %{
+             provider_metadata: %{
+               "id" => "googlehex1",
+               "status" => "confirmed",
+               "summary" => "Planning",
+               "start" => %{"dateTime" => DateTime.to_iso8601(event.start_at)},
+               "end" => %{"dateTime" => DateTime.to_iso8601(event.end_at)},
+               "conferenceData" => %{
+                 "entryPoints" => [%{"entryPointType" => "video", "uri" => meet_url}]
+               }
+             }
            }
-         }}
+         ]}
       end)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

@@ -30,6 +30,7 @@ defmodule Tymeslot.ExchangeCase do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.ProviderBreakers
 
   @types_ns "http://schemas.microsoft.com/exchange/services/2006/types"
   @messages_ns "http://schemas.microsoft.com/exchange/services/2006/messages"
@@ -74,13 +75,13 @@ defmodule Tymeslot.ExchangeCase do
   shared config host by this template's own `setup`; a test working against a
   different base URL calls it again with that URL.
 
-  Scoped to one host rather than `reset_all_hosts/0` so a concurrently running
+  Scoped to one host rather than `ProviderBreakers.reset_all_hosts/0` so a concurrently running
   test of another provider is left alone. The provider-level breaker is reset
   too, since that is the one a base URL with no parseable host falls back to.
   """
   @spec reset_breaker(String.t()) :: :ok
   def reset_breaker(url \\ @config.base_url) do
-    CalendarCircuitBreaker.reset_for_url(:exchange, url)
+    CalendarCircuitBreaker.reset(:exchange, ProviderBreakers.host_from_base_url(url))
     CalendarCircuitBreaker.reset(:exchange)
     :ok
   end

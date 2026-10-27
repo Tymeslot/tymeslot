@@ -157,6 +157,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           user_timezone={@user_timezone}
           myself={@myself}
           video_integrations={@video_integrations}
+          venues={@venues}
+          group_allowed={assigns[:group_bookings_allowed] == true}
         />
         <ImportIcsModal.import_ics_modal
           :if={@ics_import && @ics_import.open}
@@ -195,6 +197,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           pending_attendees={@pending_attendees}
           video_integrations={@video_integrations}
           pending_notification={@pending_notification}
+          recurrence_edit={@recurrence_edit}
         />
         <BookingDetailModal.booking_detail_modal
           :if={@selected_booking}

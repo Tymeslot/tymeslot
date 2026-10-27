@@ -8,10 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   `Exchange.Requests` and the normaliser modules.
 
   The XML on this path comes from a server the user nominated, so it is not
-  trusted input. Parsing therefore runs with `dtd: :none`, which refuses to
-  fetch an external DTD (xmerl would otherwise resolve a `SYSTEM` identifier
-  in a `DOCTYPE`), and with namespace conformance on. Entity declarations are
-  refused by xmerl itself, so no expansion is possible either way.
+  trusted input. Parsing therefore goes through `Utils.SafeXml`, which refuses
+  any `DOCTYPE` (so no external DTD is fetched and no entity expanded) and
+  keeps every element and attribute name a binary, so a hostile server cannot
+  grow the atom table.
 
   Unlike `CalDAV.XmlHandler`, this module applies no size cap of its own. EWS
   bodies reach it through `Tymeslot.Infrastructure.HTTPClient`, which streams
@@ -20,22 +20,23 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   transport layer.
 
   Callers extract values with `xpath/2,3` here rather than with
-  `SweetXml.xpath/2,3`, because this one binds the `t:`, `m:` and `s:`
-  prefixes onto the expression and onto every subspec. SweetXml offers no
-  document-level namespace option: bindings live on the expression itself, and
-  each subspec carries its own, so an unbound prefix in a nested extraction
-  yields `""` rather than an error.
+  `SafeXml.xpath/2,3`, because this one binds the `t:`, `m:` and `s:`
+  prefixes onto the expression and onto every subspec. Bindings live on the
+  expression itself (SweetXml's `~x` sigil builds it), and each subspec
+  carries its own.
   """
 
-  import SweetXml, except: [xpath: 2, xpath: 3]
+  import SweetXml, only: [sigil_x: 2, add_namespace: 3]
+
+  alias Tymeslot.Integrations.Calendar.Utils.SafeXml
 
   require Logger
 
   @typedoc """
   A parsed XML node: the document root returned by `parse/1`, or any element
-  within it. An `xmlElement` record, opaque to callers beyond `xpath/2,3`.
+  within it. Opaque to callers beyond `xpath/2,3`.
   """
-  @type document :: tuple()
+  @type document :: SafeXml.t()
 
   @typedoc "An xpath expression, as built by SweetXml's `~x` sigil."
   @type xpath_spec :: %SweetXpath{}
@@ -104,7 +105,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
       # would make it indistinguishable from no fault at all.
       case xpath(doc, ~x"//s:Fault"o) do
         nil -> {:ok, doc}
-        fault -> {:error, {:soap_fault, SweetXml.xpath(fault, ~x"./faultstring/text()"s)}}
+        fault -> {:error, {:soap_fault, SafeXml.xpath(fault, ~x"./faultstring/text()"s)}}
       end
     end
   end
@@ -187,14 +188,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   end
 
   @doc """
-  `SweetXml.xpath/3` with the EWS prefixes bound on the spec and every subspec.
+  `SafeXml.xpath/3` with the EWS prefixes bound on the spec and every subspec.
 
   Subspecs nest: a value of `[expression, key: expression]` is descended into,
   so every expression in the tree is bound however deep it sits.
   """
   @spec xpath(document(), xpath_spec(), keyword()) :: term()
   def xpath(node, spec, subspecs \\ []) do
-    SweetXml.xpath(node, bind(spec), bind_subspecs(subspecs))
+    SafeXml.xpath(node, bind(spec), bind_subspecs(subspecs))
   end
 
   @doc """
@@ -206,7 +207,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   place instead of once per call site.
 
   The spec is read as a string whatever cast modifier it carries, so
-  `~x"./t:UID/text()"` and `~x"./t:UID/text()"s` behave alike. SweetXml's `so`
+  `~x"./t:UID/text()"` and `~x"./t:UID/text()"s` behave alike. The `so`
   modifier is not a substitute: it answers `""` for a missing element too.
 
   A spec that can match more than one node needs care: casting a nodeset to a
@@ -231,47 +232,27 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   defp bind_subspec(%SweetXpath{} = expr), do: bind(expr)
   defp bind_subspec([%SweetXpath{} = expr | nested]), do: [bind(expr) | bind_subspecs(nested)]
 
-  # Only the parse itself is guarded: widening the guards over the fault xpath
-  # would report a bug there as `:malformed_xml`.
   defp parse_document(body, opts) do
-    {:ok, SweetXml.parse(body, quiet: true, dtd: :none, namespace_conformant: true)}
-  rescue
-    # Most malformed input leaves through the `catch` below, but not all of
-    # it: xmerl raises on some, a malformed hexadecimal character reference
-    # (`&#xZZ;`) among them.
-    error -> malformed_xml(error, opts)
-  catch
-    # xmerl signals a fatal parse error by exiting rather than by raising, so
-    # both escape routes have to be covered to keep this a typed error.
-    :exit, reason -> malformed_xml(reason, opts)
-  end
+    case SafeXml.parse(body) do
+      {:ok, doc} ->
+        {:ok, doc}
 
-  defp malformed_xml(cause, opts) do
-    if Keyword.get(opts, :log, true) do
-      Logger.warning("Exchange SOAP response is not parseable XML", error: cause_label(cause))
+      {:error, reason} ->
+        if Keyword.get(opts, :log, true) do
+          Logger.warning("Exchange SOAP response is not parseable XML",
+            error: cause_label(reason)
+          )
+        end
+
+        {:error, :malformed_xml}
     end
-
-    {:error, :malformed_xml}
   end
 
   # The body itself is never logged: it is calendar data from the user's
-  # mailbox. Nor is the parser's reason term, which quotes it: an unmatched end
-  # tag arrives as `{:endtag_does_not_match, {:was, :a, :should_have_been,
-  # :Leaked}}`, naming an element out of the document. Only the shape of the
-  # failure and where it happened survive, and neither can carry input.
-  defp cause_label({:fatal, {reason, _file, {:line, line}, {:col, column}}}),
-    do: "#{failure_tag(reason)} at line #{line}, column #{column}"
-
-  defp cause_label(%FunctionClauseError{module: module, function: function, arity: arity}),
-    do: "no function clause in #{inspect(module)}.#{function}/#{arity}"
-
-  defp cause_label(%module{}), do: inspect(module)
-  defp cause_label(_other), do: "unrecognised parse failure"
-
-  defp failure_tag(reason) when is_atom(reason), do: reason
-
-  defp failure_tag(reason) when is_tuple(reason) and tuple_size(reason) > 0,
-    do: failure_tag(elem(reason, 0))
-
-  defp failure_tag(_reason), do: :unknown
+  # mailbox. `SafeXml` already reduces a failure to its shape and line, so
+  # neither form here can carry input.
+  defp cause_label(:doctype_not_allowed), do: "DOCTYPE refused"
+  defp cause_label(:too_deep), do: "elements nested too deeply"
+  defp cause_label({:malformed_xml, nil}), do: "malformed XML"
+  defp cause_label({:malformed_xml, line}), do: "malformed XML at line #{line}"
 end

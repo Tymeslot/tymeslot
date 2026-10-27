@@ -56,7 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSweepQueries
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings
@@ -73,16 +73,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
           | {calendar_id :: String.t(), {DateTime.t(), DateTime.t()}, master_id :: String.t()}
 
   @doc """
-  The window a windowed listing started at `now` reads: the configured sync
-  window either side of it.
-  """
-  @spec listing_window(DateTime.t()) :: {DateTime.t(), DateTime.t()}
-  def listing_window(now) do
-    {DateTime.add(now, -ProviderConfig.sync_window_past_days(), :day),
-     DateTime.add(now, ProviderConfig.sync_window_future_days(), :day)}
-  end
-
-  @doc """
   Sweeps each calendar in `listed`, whose complete listings the run begun
   at `run_started_at` read and cached, of the rows those listings no longer
   returned. Always `:ok`; a failure is logged, and the next run sweeps again.
@@ -92,6 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
     swept = Enum.flat_map(listed, &sweep_calendar(integration, &1, run_started_at))
 
     if swept != [] do
+      SeriesRules.forget_orphans(integration.id)
       Sync.invalidate_cache_for_user(integration)
       SyncBroadcast.broadcast_cache_update(integration.user_id, swept)
     end

@@ -16,15 +16,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
     Creation,
     FormView,
     GroupRules,
+    GuestLimit,
     Init,
+    LengthsField,
+    LengthsHandlers,
+    SessionHandlers,
     SlotIntervalField,
     Validation
   }
@@ -33,6 +37,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
+  # The fixed dates' events, all handled by `SessionHandlers`.
+  @session_events SessionHandlers.events()
+
   # Public assigns passed from parent
   # - type: existing meeting type or nil
   # - is_edit: whether the meeting type exists yet (set here too, on creation)
@@ -40,6 +47,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - venues: the organiser's saved venues, for in-person locations
   # - parent_myself: phx-target for parent events (cancel, done, visibility)
   # - current_user: used for security metadata in validation
+
+  # The further lengths' events, all handled by `LengthsHandlers`.
+  @lengths_events LengthsHandlers.events()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -77,10 +87,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        payments_feature_enabled: false,
        payments_charges_enabled: false,
        payment_currency: "usd",
+       payment_currency_support: :supported,
+       payment_account_currency: "usd",
+       payment_stored_price: "",
        payment_currency_minimum_cents: 50,
        payment_required: false,
        payment_price: "",
        allow_guests: false,
+       guest_limit: nil,
        requires_approval: false,
        approval_window_hours: nil,
        show_as_free: false,
@@ -156,6 +170,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     socket = sync_slot_interval_mode(socket, params)
     params = drop_interval_mode_sentinel(params)
 
+    # An input-level change posts one further duration as `%{"<index>" => value}`;
+    # it is folded into the full list before merging, so the other entries
+    # survive.
+    params = LengthsField.fold_params(params, socket.assigns.form_data || %{})
+
     # Merge incoming params into existing form data to prevent wiping other fields
     new_data = Map.merge(socket.assigns.form_data || %{}, params)
 
@@ -165,6 +184,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # Start from existing errors and update only the changed fields
     current_errors = socket.assigns.form_errors || %{}
 
+    # Saving accepts the edited type's own duration even off the step, so
+    # the instant feedback is given the same stored duration.
+    opts = [stored_duration: socket.assigns.type && socket.assigns.type.duration_minutes]
+
     {updated_data, updated_errors} =
       Enum.reduce(changed_fields, {new_data, current_errors}, fn field, {acc_data, acc_errors} ->
         Validation.validate_and_update_field(
@@ -172,7 +195,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
           Map.get(params, field),
           metadata,
           acc_data,
-          acc_errors
+          acc_errors,
+          opts
         )
       end)
 
@@ -181,6 +205,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(form_data: updated_data, form_errors: updated_errors)
      |> Autosave.maybe_run()}
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @lengths_events,
+    do: {:noreply, LengthsHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("select_icon", %{"icon" => icon}, socket) do
@@ -364,14 +392,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("change_payment_price", %{"meeting_type" => %{"price_input" => price}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:payment_price, price)
-     |> assign(
-       :form_errors,
-       FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :price_cents)
-     )
-     |> Autosave.maybe_run()}
+    # Guard, as for the toggle: the price input is not rendered for a host
+    # who cannot set prices, so only a stale or forged event lands here.
+    if socket.assigns.payments_charges_enabled do
+      {:noreply,
+       socket
+       |> assign(:payment_price, price)
+       |> assign(
+         :form_errors,
+         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :price_cents)
+       )
+       |> Autosave.maybe_run()}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -380,13 +414,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # the way (`GroupRules.enable_blocker/1`: no plan access, payment or
     # approval required, a location that is not fixed in advance). The
     # control renders disabled with the reason, so this only stops a stale
-    # or forged event. Turning them off is always allowed.
+    # or forged event. Turning them off is refused only while planned dates
+    # hold a fixed-date type on (`SessionHandlers.dates_planned?/1`).
     #
     # A host who has lost charge capability cannot reach the payments toggle,
     # so a required payment does not block them; enabling clears
     # `payment_required` instead, keeping the two mutually exclusive without
     # a dead end.
-    if socket.assigns.group_bookings_enabled or GroupRules.enable_blocker(socket.assigns) == nil do
+    turning_on? = not socket.assigns.group_bookings_enabled
+
+    if (turning_on? and GroupRules.enable_blocker(socket.assigns) == nil) or
+         (not turning_on? and not SessionHandlers.dates_planned?(socket.assigns)) do
       {:noreply,
        socket
        |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)
@@ -400,6 +438,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:noreply, socket}
     end
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @session_events,
+    do: {:noreply, SessionHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event(
@@ -447,6 +489,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_guest_limit", _params, socket),
+    do: {:noreply, GuestLimit.toggle(socket)}
+
+  @impl Phoenix.LiveComponent
+  def handle_event("change_guest_limit", params, socket),
+    do: {:noreply, GuestLimit.change(params, socket)}
+
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_last_spots", _params, socket) do
     threshold = if is_nil(socket.assigns.last_spots_threshold), do: Init.default_last_spots()
 
@@ -478,30 +528,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     end
   end
 
-  @impl Phoenix.LiveComponent
-  def handle_event("update_reminder_input", params, socket) do
-    socket |> picker_state() |> ReminderPickerState.update_input(params) |> apply_picker(socket)
-  end
+  # The reminder picker's events, all handled by `ReminderHandlers`.
+  @reminder_events ReminderHandlers.events()
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_custom_reminder", _params, socket) do
-    socket |> picker_state() |> ReminderPickerState.toggle_custom() |> apply_picker(socket)
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("add_quick_reminder", params, socket) do
-    socket |> picker_state() |> ReminderPickerState.add_quick(params) |> apply_picker(socket)
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("add_reminder", _params, socket) do
-    socket |> picker_state() |> ReminderPickerState.add_custom() |> apply_picker(socket)
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("remove_reminder", params, socket) do
-    socket |> picker_state() |> ReminderPickerState.remove(params) |> apply_picker(socket)
-  end
+  def handle_event(event, params, socket) when event in @reminder_events,
+    do: {:noreply, ReminderHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("flush_autosave", _params, socket) do
@@ -590,29 +622,4 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp off_preset_interval?(_value), do: false
-
-  # The reminder picker's own state, as the shared module keeps it. This form
-  # holds each field as an assign of its own, so it is lifted out for the
-  # picker to work on and written straight back.
-  defp picker_state(socket) do
-    Map.take(socket.assigns, [
-      :reminders,
-      :new_reminder_value,
-      :new_reminder_unit,
-      :reminder_error,
-      :show_custom_reminder,
-      :reminder_confirmation
-    ])
-  end
-
-  # A change to the list is worth saving, and starts the timer that takes the
-  # confirmation back down; anything else (a keystroke in the custom row, a
-  # rejected reminder) only updates what is on screen.
-  defp apply_picker({:ok, state}, socket) do
-    Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
-
-    {:noreply, socket |> assign(state) |> Autosave.maybe_run()}
-  end
-
-  defp apply_picker({:noop, state}, socket), do: {:noreply, assign(socket, state)}
 end

@@ -10,7 +10,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueriesTest do
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Repo
 
-  describe "count_locked_conflicts/4 with payment statuses" do
+  describe "count_conflicts/4 with payment statuses" do
     test "awaiting_payment meetings count as conflicts for the same organizer" do
       user = insert(:user)
       start_time = ~U[2030-02-01 10:00:00Z]
@@ -25,7 +25,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueriesTest do
 
       Repo.transaction(fn ->
         assert {:error, 1} =
-                 MeetingConflictQueries.count_locked_conflicts(
+                 MeetingConflictQueries.count_conflicts(
                    start_time,
                    end_time,
                    nil,
@@ -48,7 +48,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueriesTest do
 
       Repo.transaction(fn ->
         assert {:ok, :no_conflicts} =
-                 MeetingConflictQueries.count_locked_conflicts(
+                 MeetingConflictQueries.count_conflicts(
                    start_time,
                    end_time,
                    nil,
@@ -72,7 +72,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueriesTest do
 
       Repo.transaction(fn ->
         assert {:ok, :no_conflicts} =
-                 MeetingConflictQueries.count_locked_conflicts(
+                 MeetingConflictQueries.count_conflicts(
                    start_time,
                    end_time,
                    nil,

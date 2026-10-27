@@ -16,13 +16,16 @@ defmodule Tymeslot.Security.FieldValidators.IntegrationNameValidatorTest do
       assert {:error, "Integration name is required"} = IntegrationNameValidator.validate("")
     end
 
-    test "returns error for short names" do
-      assert {:error, "Integration name must be at least 2 characters"} =
-               IntegrationNameValidator.validate("A")
+    test "accepts a one-character name, the same floor every integration has" do
+      assert :ok = IntegrationNameValidator.validate("A")
+      assert :ok = IntegrationNameValidator.validate(" A ")
+    end
 
-      # trimmed check
-      assert {:error, "Integration name must be at least 2 characters"} =
-               IntegrationNameValidator.validate(" A ")
+    test "treats a name of only whitespace or invisible characters as missing" do
+      assert {:error, "Integration name is required"} = IntegrationNameValidator.validate("   ")
+
+      assert {:error, "Integration name is required"} =
+               IntegrationNameValidator.validate("\u200B\u00AD")
     end
 
     test "returns error for long names" do

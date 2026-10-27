@@ -160,6 +160,22 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       assert render(view) =~ "Invalid domain format"
     end
 
+    test "lists every problem with the domains, in the order entered", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      view |> element("button#embed-settings-tabs-tab-security") |> render_click()
+
+      view
+      |> form("form[phx-submit='save_embed_domains']", %{
+        allowed_domains: "example.com/path, *.bad_host.com"
+      })
+      |> render_submit()
+
+      assert render(view) =~
+               "Failed to save: Invalid domain format (e.g. example.com), " <>
+                 "Invalid domain format (e.g. *.example.com)"
+    end
+
     test "shows error when too many domains", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
@@ -599,6 +615,26 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # Verified against the owner, not merely present: a token bound to
       # somebody else renders identically and simulates nothing.
       assert PreviewToken.owner?(token, user.id)
+    end
+  end
+
+  describe "embed snippet for a username containing --" do
+    # The strict sanitiser drops everything from `--` onwards, so the snippet
+    # for "team--alpha" once embedded "team": another organiser's booking page.
+    setup do
+      insert(:profile, username: "team")
+
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      insert(:profile, user: user, username: "team--alpha", allowed_embed_domains: [])
+
+      {:ok, conn: log_in_user(build_conn(), user)}
+    end
+
+    test "points at the organiser's own page, not the truncated one", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/dashboard/embed")
+
+      assert html =~ ~s(data-username=&quot;team--alpha&quot;)
+      refute html =~ ~s(data-username=&quot;team&quot;)
     end
   end
 

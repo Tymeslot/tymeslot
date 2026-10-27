@@ -1,11 +1,11 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: fr\n"
@@ -432,6 +432,35 @@ msgstr "Guide d’installation"
 #, elixir-autogen, elixir-format
 msgid "Delete %{type} integration"
 msgstr "Supprimer l’intégration %{type}"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency is not supported. Choose another to take payments."
+msgstr "La devise de votre compte Stripe n’est pas prise en charge. Choisissez-en une autre pour accepter des paiements."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: 1 change made here was not saved to the calendar."
+msgid_plural "%{name}: %{count} changes made here were not saved to the calendar."
+msgstr[0] "%{name} : %{count} modification effectuée ici n’a pas été enregistrée dans le calendrier."
+msgstr[1] "%{name} : %{count} modifications effectuées ici n’ont pas été enregistrées dans le calendrier."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: %{count} calendar is no longer on your calendar server, so Tymeslot has stopped using it."
+msgid_plural "%{name}: %{count} calendars are no longer on your calendar server, so Tymeslot has stopped using them."
+msgstr[0] "%{name} : %{count} calendrier n’existe plus sur votre serveur de calendrier ; Tymeslot a donc cessé de l’utiliser."
+msgstr[1] "%{name} : %{count} calendriers n’existent plus sur votre serveur de calendrier ; Tymeslot a donc cessé de les utiliser."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: “%{calendar}” is no longer on your calendar server, so Tymeslot has stopped using it."
+msgstr "%{name} : le calendrier « %{calendar} » n’existe plus sur votre serveur de calendrier ; Tymeslot a donc cessé de l’utiliser."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "%{service} is busy right now. Please try again in a minute."
+msgstr "Le service %{service} est actuellement surchargé. Veuillez réessayer dans une minute."
 
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format

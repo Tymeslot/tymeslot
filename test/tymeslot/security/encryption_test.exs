@@ -3,6 +3,7 @@ defmodule Tymeslot.Security.EncryptionTest do
   @moduletag :security
 
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LegacyCiphertext
 
   describe "encrypt/1 and decrypt/1" do
     test "encrypts and decrypts a string successfully" do
@@ -142,12 +143,12 @@ defmodule Tymeslot.Security.EncryptionTest do
 
     test "current?/1 is true for fresh writes and false for legacy values" do
       assert Encryption.current?(Encryption.encrypt("token"))
-      refute Encryption.current?(Encryption.encrypt_legacy("token"))
+      refute Encryption.current?(LegacyCiphertext.encrypt("token"))
       refute Encryption.current?("not ciphertext")
     end
 
     test "decrypts a legacy v0 value and re-encrypts it to the current version" do
-      legacy = Encryption.encrypt_legacy("secret-token")
+      legacy = LegacyCiphertext.encrypt("secret-token")
 
       # Legacy values carry no version prefix and open under the fallback key.
       assert Encryption.decrypt(legacy) == "secret-token"
@@ -178,7 +179,7 @@ defmodule Tymeslot.Security.EncryptionTest do
       # current version id. Trial decryption must still route those to the legacy
       # key rather than mistaking them for current-version ciphertext.
       collision =
-        Stream.repeatedly(fn -> Encryption.encrypt_legacy("collide") end)
+        Stream.repeatedly(fn -> LegacyCiphertext.encrypt("collide") end)
         |> Stream.take(50_000)
         |> Enum.find(fn <<byte, _rest::binary>> -> byte == current end)
 

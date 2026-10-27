@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
   happy-path create / edit / toggle / delete round-trip (line 33) and
   invalid-URL + empty-name form validation (line 121). This file fills
   the single remaining plan-required gap: the rate-limit seam between
-  the LiveComponent, `RateLimiter.check_webhook_write_rate_limit/1`,
+  the LiveComponent, `&RateLimiter.check(:webhook_write, &1)/1`,
   and the `Webhooks.create_webhook/2` entry point.
 
   Dropped from the plan with rationale:
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
       # next create attempt trips the limiter before validation or
       # persistence can fire.
       Enum.each(1..30, fn _i ->
-        :ok = RateLimiter.check_webhook_write_rate_limit(user.id)
+        :ok = RateLimiter.check(:webhook_write, user.id)
       end)
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
@@ -90,6 +90,29 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
       assert html =~ "limit of 30"
       refute html =~ "Webhook created successfully"
       assert Webhooks.list_webhooks(user.id) == []
+    end
+  end
+
+  describe "handle_test_connection" do
+    test "a webhook deleted since the page loaded is reported as not found",
+         %{conn: conn, user: user} do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Gone Webhook",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      assert has_element?(view, "button[title='Test Connection']")
+
+      {:ok, _deleted} = Webhooks.delete_webhook(user.id, webhook.id)
+
+      view |> element("button[title='Test Connection']") |> render_click()
+
+      html = render(view)
+      assert html =~ "Webhook not found"
+      refute html =~ "Unable to perform this action"
     end
   end
 end

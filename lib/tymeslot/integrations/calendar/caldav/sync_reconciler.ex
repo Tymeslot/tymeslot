@@ -35,6 +35,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Repo
@@ -232,6 +233,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
     }
   end
 
+  # First in each atomic transaction, before any cached row is read or
+  # written: the integration cache lock, in the order
+  # `IntegrationCacheQueries` documents, so a deletion of the integration or
+  # its account cannot deadlock against this transaction.
+  defp lock_cache!(integration) do
+    case IntegrationCacheQueries.lock(integration.id) do
+      :ok -> :ok
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
   # Runs the cache upsert + deletion detection + cache delete under a single
   # transaction and returns {calendar_events, deleted_uids}. On post-commit,
   # runs side-effect reconciliation with the returned tuple.
@@ -245,6 +257,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
        ) do
     txn_result =
       Repo.transaction(fn ->
+        lock_cache!(integration)
+
         case Sync.upsert_cache(integration, calendar_events) do
           {:ok, _count} ->
             compute_and_delete_missing_uids(
@@ -282,6 +296,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
   defp run_atomic_tier1(integration, calendar_events, deleted_hrefs) do
     txn_result =
       Repo.transaction(fn ->
+        lock_cache!(integration)
+
         case Sync.upsert_cache(integration, calendar_events) do
           {:ok, _count} ->
             ProviderCalendarEventQueries.delete_by_provider_event_ids(

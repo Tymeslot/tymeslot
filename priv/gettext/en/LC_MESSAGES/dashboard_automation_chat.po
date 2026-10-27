@@ -1,11 +1,11 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: en\n"
@@ -832,6 +832,37 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
+msgstr ""
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Telegram"
+msgstr ""
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "No chat is linked to this integration yet"
+msgstr ""
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "Telegram refused the message (%{status}): %{description}"
+msgstr ""
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "The bot token is missing"
+msgstr ""
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "The shared Telegram bot is not configured"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex

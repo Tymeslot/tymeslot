@@ -547,20 +547,20 @@ defmodule Tymeslot.Availability.TimeOffTest do
     insert(:time_off_period, profile: profile, starts_on: starts_on, ends_on: ends_on)
   end
 
-  describe "busy_intervals/4" do
+  describe "busy_intervals/3" do
     @window_start ~U[2026-09-01 00:00:00Z]
     @window_end ~U[2026-12-01 00:00:00Z]
 
     test "publishes a whole-day period from its first midnight to the midnight after it" do
-      profile = insert(:profile)
+      profile = insert(:profile, timezone: "Europe/Berlin")
       period_for(profile, ~D[2026-09-10], ~D[2026-09-12])
 
-      assert TimeOff.busy_intervals(profile.id, "Europe/Berlin", @window_start, @window_end) ==
+      assert TimeOff.busy_intervals(profile, @window_start, @window_end) ==
                [{~U[2026-09-09 22:00:00Z], ~U[2026-09-12 22:00:00Z]}]
     end
 
     test "publishes a part-day period as one interval between its two times" do
-      profile = insert(:profile)
+      profile = insert(:profile, timezone: "Europe/Berlin")
 
       insert(:time_off_period,
         profile: profile,
@@ -570,34 +570,36 @@ defmodule Tymeslot.Availability.TimeOffTest do
         end_time: ~T[09:00:00]
       )
 
-      assert TimeOff.busy_intervals(profile.id, "Europe/Berlin", @window_start, @window_end) ==
+      assert TimeOff.busy_intervals(profile, @window_start, @window_end) ==
                [{~U[2026-09-11 12:00:00Z], ~U[2026-09-14 07:00:00Z]}]
     end
 
     test "reads each end in the offset in force on its own date" do
       # Berlin leaves summer time on 25 October: the period starts at UTC+2 and
       # ends at UTC+1.
-      profile = insert(:profile)
+      profile = insert(:profile, timezone: "Europe/Berlin")
       period_for(profile, ~D[2026-10-24], ~D[2026-10-25])
 
-      assert TimeOff.busy_intervals(profile.id, "Europe/Berlin", @window_start, @window_end) ==
+      assert TimeOff.busy_intervals(profile, @window_start, @window_end) ==
                [{~U[2026-10-23 22:00:00Z], ~U[2026-10-25 23:00:00Z]}]
     end
 
-    test "falls back to UTC for a profile without a timezone" do
-      profile = insert(:profile)
+    # The booking page reads a host without a timezone on the default zone
+    # (Tallinn, UTC+3 in September); the feed must block the same hours.
+    test "reads a profile without a timezone on the host default zone" do
+      profile = insert(:profile, timezone: nil)
       period_for(profile, ~D[2026-09-10], ~D[2026-09-10])
 
-      assert TimeOff.busy_intervals(profile.id, nil, @window_start, @window_end) ==
-               [{~U[2026-09-10 00:00:00Z], ~U[2026-09-11 00:00:00Z]}]
+      assert TimeOff.busy_intervals(profile, @window_start, @window_end) ==
+               [{~U[2026-09-09 21:00:00Z], ~U[2026-09-10 21:00:00Z]}]
     end
 
     test "leaves out periods outside the window and other profiles' periods" do
-      profile = insert(:profile)
+      profile = insert(:profile, timezone: "Etc/UTC")
       period_for(profile, ~D[2026-12-05], ~D[2026-12-06])
       insert(:time_off_period, starts_on: ~D[2026-09-10], ends_on: ~D[2026-09-10])
 
-      assert TimeOff.busy_intervals(profile.id, "Etc/UTC", @window_start, @window_end) == []
+      assert TimeOff.busy_intervals(profile, @window_start, @window_end) == []
     end
   end
 

@@ -9,6 +9,9 @@ defmodule Tymeslot.Test.MediaFixtures do
 
     * `gps_portrait.jpg`: 32x16 pixels, EXIF Orientation 6 (displayed 16x32),
       GPS coordinates, make, model, serial number and capture time;
+    * `exif_thumbnail.jpg`: 32x16 pixels, with GPS, make and model and a
+      7 KB embedded thumbnail, so its own SOF marker sits past byte 7,000,
+      as in a phone photo;
     * `gps.webp`, `gps.png`: EXIF GPS and device details; the PNG adds a
       `tEXt` comment and XMP;
     * `animated.gif`, `animated.webp`: three 16x8 frames, with a GIF comment

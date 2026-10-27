@@ -55,6 +55,55 @@ defmodule Tymeslot.Workers.DeliveryClaims do
   @type job_id :: integer() | nil
 
   @doc """
+  Keeps `value` on the job under `name` the first time it is asked, and
+  answers that first value on every later run, whatever `value` is then.
+
+  For what a job must say the same way however many times it runs, when the
+  run itself changes what it would compute: an email stating "the end it
+  was" must not, on a retry, read the end it already moved on. Kept as a
+  claim (`name=value`), so it lives and is pruned with the job's other
+  claims. The first value written wins: two runs that both find nothing kept
+  both write, and both then answer the earliest written. A job with no id has
+  no later runs and keeps nothing.
+  """
+  @spec remember(job_id(), String.t(), String.t()) :: String.t()
+  def remember(nil, _name, value), do: value
+
+  def remember(job_id, name, value) when is_integer(job_id) do
+    case recall(job_id, name) do
+      nil ->
+        DeliveryClaimQueries.claim(job_id, name <> "=" <> value)
+        recall(job_id, name)
+
+      kept ->
+        kept
+    end
+  end
+
+  @doc "The value `remember/3` kept on the job under `name`, or `nil`."
+  @spec recall(job_id(), String.t()) :: String.t() | nil
+  def recall(nil, _name), do: nil
+
+  def recall(job_id, name) when is_integer(job_id) do
+    prefix = name <> "="
+
+    case DeliveryClaimQueries.first_key(job_id, prefix) do
+      nil -> nil
+      key -> String.replace_prefix(key, prefix, "")
+    end
+  end
+
+  @doc """
+  Whether an earlier run of the job already performed the effect `key` names
+  (its claim is held). A job with no id has no earlier runs.
+  """
+  @spec claimed?(job_id(), String.t()) :: boolean()
+  def claimed?(nil, _key), do: false
+
+  def claimed?(job_id, key) when is_integer(job_id),
+    do: DeliveryClaimQueries.claimed?(job_id, key)
+
+  @doc """
   Runs `effect` unless an earlier execution of the same job already claimed
   `key`, in which case it returns `:ok` without running it: from the job's
   point of view that effect is done.

@@ -25,6 +25,31 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
     end
   end
 
+  @doc """
+  Percent-encodes a provider-supplied id (a calendar, event or subscription id)
+  for use as one segment of a request path.
+
+  Every character outside the unreserved set is encoded, `#`, `/` and `?`
+  among them. Google's holiday calendar ids carry a `#`
+  (`en.uk#holiday@group.v.calendar.google.com`), which interpolated as it is
+  would end the path and send the request to another calendar.
+  """
+  @spec segment(String.t()) :: String.t()
+  def segment(id) when is_binary(id), do: URI.encode(id, &URI.char_unreserved?/1)
+
+  # Bounds a best-effort request to stop provider push notifications (a
+  # Google channel stop, a Graph subscription delete): nothing waits on its
+  # outcome, and on disconnect it runs while the owner waits on the click.
+  # `request_timeout` caps the whole response, not each chunk of it.
+  @push_stop_http_options [pool_timeout: 1_000, receive_timeout: 5_000, request_timeout: 5_000]
+
+  @doc """
+  HTTP client options for a request that stops provider push notifications,
+  passed as `http_options:` to `request/5` or `request_with_body/6`.
+  """
+  @spec push_stop_http_options() :: keyword()
+  def push_stop_http_options, do: @push_stop_http_options
+
   @spec request(atom() | String.t(), String.t(), String.t(), String.t(), keyword()) :: any()
   def request(method, base_url, path, token, opts \\ []) do
     case normalize_method(method) do
@@ -89,7 +114,8 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
   defp do_request(method, base_url, path, token, body, opts) do
     params = Keyword.get(opts, :params, %{})
     headers = prepend_auth_header(Keyword.get(opts, :headers, []), token)
-    request_fun = Keyword.get(opts, :request_fun, &default_request/4)
+    http_options = Keyword.get(opts, :http_options, [])
+    request_fun = Keyword.get(opts, :request_fun, &default_request(&1, &2, &3, &4, http_options))
     response_handler = Keyword.get(opts, :response_handler, &Function.identity/1)
     final_url = build_url(base_url, path, params)
 
@@ -114,7 +140,7 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
     |> List.insert_at(0, auth_header)
   end
 
-  defp default_request(method, url, body, headers) do
-    Config.http_client_module().request(method, url, body, headers, [])
+  defp default_request(method, url, body, headers, http_options) do
+    Config.http_client_module().request(method, url, body, headers, http_options)
   end
 end

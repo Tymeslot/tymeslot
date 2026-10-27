@@ -27,8 +27,8 @@ set -eu  # Exit on error and on undefined variables
 # this script had exported its own default, often an empty string, for every
 # key it knows, and the release's reader leaves a key that is already set alone.
 #
-# The file is parsed, never sourced, by the same reader start.sh uses on
-# Cloudron.
+# The file is parsed, never sourced, by scripts/dotenv-reader.sh, the reader
+# the release's own DotenvLoader is tested against.
 #
 # Which database the container uses, and which role the embedded cluster is
 # created with, stay with the container environment: POSTGRES_USER,
@@ -138,7 +138,10 @@ echo "✓ All required environment variables are set"
 # with a key derived from SECRET_KEY_BASE (the historical behaviour) — which
 # means rotating SECRET_KEY_BASE would make them undecryptable. Set a dedicated
 # key to decouple the two secrets. Once set it MUST stay stable across restarts.
-if [ -z "${DATA_ENCRYPTION_KEY:-}" ]; then
+# DATA_ENCRYPTION_KEYS alone is the state after a rotation retired key 1, so
+# either variable counts, as in config/runtime.exs.
+# Whitespace-only counts as empty, as the keyring trims it.
+if [ -z "$(printf '%s%s' "${DATA_ENCRYPTION_KEY:-}" "${DATA_ENCRYPTION_KEYS:-}" | tr -d '[:space:]')" ]; then
     echo ""
     echo "⚠ DATA_ENCRYPTION_KEY is not set."
     echo "  Credentials at rest are encrypted with a key derived from SECRET_KEY_BASE,"
@@ -147,8 +150,9 @@ if [ -z "${DATA_ENCRYPTION_KEY:-}" ]; then
     echo "    DATA_ENCRYPTION_KEY=\$(openssl rand -base64 48 | tr -d '\\n')"
     echo "  Then migrate existing rows (see README-Docker.md, 'Data-at-rest encryption')."
 else
-    echo "✓ DATA_ENCRYPTION_KEY is set (data-at-rest key decoupled from SECRET_KEY_BASE)"
+    echo "✓ Data encryption key set (data-at-rest key decoupled from SECRET_KEY_BASE)"
 fi
+# End of data encryption key check
 
 echo ""
 echo "========================================"
@@ -478,10 +482,13 @@ export ALLOW_PRIVATE_IPS_FOR_CALENDAR="${ALLOW_PRIVATE_IPS_FOR_CALENDAR:-false}"
 # which revokes the calendar switch's long-standing cover for it.
 export ALLOW_PRIVATE_IPS_FOR_VIDEO
 export ALLOW_PRIVATE_IPS_FOR_WEBHOOKS="${ALLOW_PRIVATE_IPS_FOR_WEBHOOKS:-false}"
-export ENABLE_GOOGLE_AUTH="${ENABLE_GOOGLE_AUTH:-false}"
-export ENABLE_GITHUB_AUTH="${ENABLE_GITHUB_AUTH:-false}"
+# Passed through only when the operator set them. A default here would pin
+# both sign-in providers off, overriding the admin settings page on every
+# Docker deployment.
+export ENABLE_GOOGLE_AUTH
+export ENABLE_GITHUB_AUTH
 
-if su -p app -c "cd /app && bin/tymeslot eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))'"; then
+if su -p app -c "cd /app && bin/tymeslot eval 'Tymeslot.Release.migrate()'"; then
     echo "========================================"
     echo "✓ Database migrations completed successfully"
     echo "========================================"

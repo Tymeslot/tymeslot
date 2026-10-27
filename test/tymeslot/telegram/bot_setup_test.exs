@@ -100,7 +100,9 @@ defmodule Tymeslot.Telegram.BotSetupTest do
 
       assert url =~ "123456:test-bot-token/setWebhook"
       assert payload["secret_token"] == "test-webhook-secret"
-      assert payload["url"] =~ "/api/telegram/webhook"
+      # The endpoint's configured port is kept; the old hand-built URL dropped it.
+      port = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)[:url][:port]
+      assert payload["url"] == "http://localhost:#{port}/api/telegram/webhook"
     end
 
     test "is idempotent — a second registration is another plain success" do

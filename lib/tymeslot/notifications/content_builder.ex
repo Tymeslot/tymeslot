@@ -1,11 +1,12 @@
 defmodule Tymeslot.Notifications.ContentBuilder do
   @moduledoc """
-  Builds notification content and email data structures.
-  Pure functions for converting meeting data into notification-ready formats.
+  The meeting details `Tymeslot.Meetings.CalendarExport` builds a calendar
+  file from. Emails are built by `Tymeslot.Emails.AppointmentBuilder`.
   """
 
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
@@ -19,6 +20,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
     organizer_timezone = Recipients.get_organizer_timezone(meeting)
     # Get attendee timezone - should always be present
     attendee_timezone = Recipients.get_attendee_timezone(meeting)
+    links = MeetingLinks.for_meeting(meeting)
 
     %{
       # The calendar event's UID, as in `AppointmentBuilder`: never the
@@ -29,7 +31,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       # Attendee information
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
-      attendee_locale: meeting.attendee_locale || "en",
+      attendee_locale: RecipientLocale.attendee_locale(meeting),
       attendee_message: meeting.attendee_message || "",
       attendee_timezone: attendee_timezone,
 
@@ -57,9 +59,9 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       meeting_type: meeting.meeting_type,
 
       # URLs and links
-      view_url: meeting.view_url,
-      reschedule_url: meeting.reschedule_url,
-      cancel_url: meeting.cancel_url,
+      view_url: links.view_url,
+      reschedule_url: links.reschedule_url,
+      cancel_url: links.cancel_url,
 
       # Video room information
       meeting_url: meeting.meeting_url,
@@ -78,140 +80,6 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       # Organizer contact info for email templates
       organizer_contact_info: build_organizer_contact_info(meeting)
     }
-  end
-
-  @doc """
-  Builds cancellation details for email notifications.
-  """
-  @spec build_cancellation_details(%{atom() => term()}) :: %{atom() => term()}
-  def build_cancellation_details(meeting) do
-    organizer_timezone = Recipients.get_organizer_timezone(meeting)
-    attendee_timezone = Recipients.get_attendee_timezone(meeting)
-
-    %{
-      # The calendar event's UID, as in `AppointmentBuilder`: never the
-      # booking's capability-bearing `uid`.
-      uid: meeting.calendar_uid,
-      title: meeting.title,
-
-      # Participant information
-      attendee_name: meeting.attendee_name,
-      attendee_email: meeting.attendee_email,
-      attendee_locale: meeting.attendee_locale || "en",
-      attendee_timezone: attendee_timezone,
-      organizer_name: meeting.organizer_name,
-      organizer_email: meeting.organizer_email,
-      organizer_title: meeting.organizer_title,
-
-      # Meeting timing
-      date: meeting.start_time,
-      start_time: meeting.start_time,
-      end_time: meeting.end_time,
-      start_time_owner_tz: convert_to_timezone(meeting.start_time, organizer_timezone),
-      start_time_attendee_tz: convert_to_timezone(meeting.start_time, attendee_timezone),
-      duration: meeting.duration,
-
-      # Meeting details
-      location: meeting.location,
-      meeting_type: meeting.meeting_type,
-
-      # iCal sequence for cancellation attachments (bumped at render time)
-      ical_sequence: Map.get(meeting, :ical_sequence) || 0,
-
-      # Cancellation context
-      cancelled_at: meeting.cancelled_at || DateTime.utc_now(),
-      cancellation_reason: meeting.cancellation_reason
-    }
-  end
-
-  @doc """
-  Builds reschedule details for email notifications.
-
-  Unlike the other builders here, this payload is rendered by an email template
-  rather than handed to a worker that rebuilds it, so the base comes from
-  `Emails.AppointmentBuilder` — the shape every template is written against.
-  Building it from `build_appointment_details/1` instead omits keys the
-  templates read (`:reminders_summary`, `:location_type`, `:booking_payment`,
-  and a `:date` that is a `Date` rather than a `DateTime`), which crashes the
-  render mid-reschedule and takes the webhook dispatch down with it.
-  """
-  @spec build_reschedule_details(%{atom() => term()}, %{atom() => term()}) :: %{atom() => term()}
-  def build_reschedule_details(updated_meeting, original_meeting) do
-    organizer_timezone = Recipients.get_organizer_timezone(updated_meeting)
-
-    base_details = AppointmentBuilder.from_meeting(updated_meeting)
-    attendee_timezone = base_details.attendee_timezone
-
-    Map.merge(base_details, %{
-      # Original meeting details for comparison
-      original_date: DateTime.to_date(original_meeting.start_time),
-      original_start_time: original_meeting.start_time,
-      original_start_time_owner_tz:
-        convert_to_timezone(original_meeting.start_time, organizer_timezone),
-      original_start_time_attendee_tz:
-        convert_to_timezone(original_meeting.start_time, attendee_timezone),
-      original_end_time: original_meeting.end_time,
-      original_attendee_video_url: Map.get(original_meeting, :attendee_video_url),
-
-      # Reschedule context
-      is_rescheduled: true,
-      rescheduled_at: DateTime.utc_now()
-    })
-  end
-
-  @doc """
-  Builds reschedule details for a booking whose new time was approved after a
-  reschedule sent it back into the approval gate.
-
-  Unlike `build_reschedule_details/2` there is no original meeting to compare
-  with, so the templates leave out their "previously scheduled" line.
-  """
-  @spec build_reapproval_details(%{atom() => term()}) :: %{atom() => term()}
-  def build_reapproval_details(meeting) do
-    meeting
-    |> AppointmentBuilder.from_meeting()
-    |> Map.merge(%{is_rescheduled: true, rescheduled_at: DateTime.utc_now()})
-  end
-
-  @doc """
-  Builds reminder notification details.
-  """
-  @spec build_reminder_details(%{atom() => term()}) :: %{atom() => term()}
-  def build_reminder_details(meeting) do
-    base_details = build_appointment_details(meeting)
-
-    reminder_time =
-      Keyword.get(Application.get_env(:tymeslot, :notifications, []), :reminder_minutes, 30)
-
-    Map.merge(base_details, %{
-      is_reminder: true,
-      reminder_time: "#{reminder_time} minutes"
-    })
-  end
-
-  @doc """
-  Validates that notification content is complete.
-
-  `group?` is true for a group meeting, whose row carries no attendee of its
-  own (`attendee_name`/`attendee_email` are always nil) — those fields are
-  validated per participant elsewhere, not here.
-  """
-  @spec validate_content(%{atom() => term()}, boolean()) :: :ok | {:error, String.t()}
-  def validate_content(content, group? \\ false) do
-    required_fields =
-      if group? do
-        [:uid, :organizer_name, :organizer_email, :start_time]
-      else
-        [:uid, :attendee_name, :attendee_email, :organizer_name, :organizer_email, :start_time]
-      end
-
-    missing_fields =
-      Enum.reject(required_fields, fn field -> Map.has_key?(content, field) and content[field] end)
-
-    case missing_fields do
-      [] -> :ok
-      fields -> {:error, "Missing content fields: #{Enum.join(fields, ", ")}"}
-    end
   end
 
   # Private functions

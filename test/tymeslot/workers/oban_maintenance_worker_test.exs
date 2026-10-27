@@ -5,6 +5,9 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Repo
   alias Tymeslot.Workers.ObanMaintenanceWorker
 
@@ -103,13 +106,39 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
       assert result.stuck_cleaned == 0
     end
 
-    test "schedules next run after completion" do
+    test "leaves scheduling to the crontab rather than enqueuing itself" do
       assert {:ok, _result} = perform_job(ObanMaintenanceWorker, %{})
 
-      assert_enqueued(
-        worker: ObanMaintenanceWorker,
-        args: %{}
-      )
+      refute_enqueued(worker: ObanMaintenanceWorker)
+    end
+  end
+
+  describe "discard_stuck_jobs/1" do
+    # The scan and the discard are two statements: a job can finish between
+    # them, and the guarded discard then leaves it alone.
+    test "leaves a job that finished after the scan without logging an error" do
+      stuck_time = DateTime.add(DateTime.utc_now(), -13, :hour)
+
+      {:ok, job} =
+        Repo.insert(%Oban.Job{
+          state: "executing",
+          attempted_at: stuck_time,
+          worker: "SomeWorker",
+          queue: "default",
+          args: %{},
+          errors: [],
+          inserted_at: stuck_time
+        })
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "completed"])
+
+      {discarded, log} =
+        with_log(fn -> ObanMaintenanceWorker.discard_stuck_jobs([job]) end)
+
+      assert discarded == []
+      assert Repo.get(Oban.Job, job.id).state == "completed"
+      # A routine race, logged below the suite's level, never as a failure.
+      refute log =~ "Failed to clean stuck job"
     end
   end
 

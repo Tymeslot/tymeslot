@@ -30,6 +30,8 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   The remaining three lists are curated by hand and documented on the sync task.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @tld_json_path Path.join([__DIR__, "../../../../priv/tlds.json"])
   @external_resource @tld_json_path
 
@@ -147,7 +149,8 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
     * a well-formed ending we simply do not have, reported as unrecognised and
       possibly newer than this release, since that is the likelier fault.
 
-  The `label` parameter (e.g. `"Email"`, `"Domain"`) is used in the message.
+  The `label` parameter, `"Email"` or `"Domain"`, names what is being
+  validated in the message, which is translated into the current locale.
   """
   @spec validate_tld(String.t(), String.t()) :: :ok | {:error, String.t()}
   def validate_tld(tld, label) when is_binary(tld) and is_binary(label) do
@@ -158,7 +161,7 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
         :ok
 
       MapSet.member?(@special_use_tlds, tld_down) ->
-        {:error, "#{label} has a reserved domain ending (.#{tld})"}
+        {:error, reserved_message(tld, label)}
 
       Map.has_key?(@typo_corrections, tld_down) ->
         {:error, typo_message(tld, @typo_corrections[tld_down], label)}
@@ -171,33 +174,90 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
     end
   end
 
-  defp typo_message(tld, correction, label) do
-    "#{label} has an unrecognised domain ending (.#{tld}) — did you mean .#{correction}?"
-  end
+  defp typo_message(tld, correction, label), do: unrecognised_message(tld, correction, label)
 
   # Reached only by an ending that looks exactly like a TLD and is not one we
   # know, which is what a domain delegated since this release looks like. The
   # wording says so rather than calling the address invalid.
   defp unknown_message(tld, tld_down, label) do
     case suggest_tld(tld_down) do
-      {:ok, suggestion} ->
-        "#{label} has an unrecognised domain ending (.#{tld}) — did you mean .#{suggestion}?"
-
-      :no_suggestion ->
-        "#{label} has an unrecognised domain ending (.#{tld}). If it is correct, " <>
-          "this version of Tymeslot predates it and needs updating."
+      {:ok, suggestion} -> unrecognised_message(tld, suggestion, label)
+      :no_suggestion -> unrecognised_message(tld, nil, label)
     end
   end
 
   defp malformed_message(tld, tld_down, label) do
     case suggest_tld(tld_down) do
-      {:ok, suggestion} ->
-        "#{label} has an invalid domain ending (.#{tld}) — did you mean .#{suggestion}?"
-
-      :no_suggestion ->
-        "#{label} has an invalid domain ending (.#{tld})"
+      {:ok, suggestion} -> invalid_message(tld, suggestion, label)
+      :no_suggestion -> invalid_message(tld, nil, label)
     end
   end
+
+  # One complete msgid per label, so no translation has to splice a
+  # translated "Email" or "Domain" into a sentence it cannot inflect.
+  defp reserved_message(tld, "Email"),
+    do: dgettext("errors_input", "Email has a reserved domain ending (.%{tld})", tld: tld)
+
+  defp reserved_message(tld, _domain),
+    do: dgettext("errors_input", "Domain has a reserved domain ending (.%{tld})", tld: tld)
+
+  defp unrecognised_message(tld, nil, "Email"),
+    do:
+      dgettext(
+        "errors_input",
+        "Email has an unrecognised domain ending (.%{tld}). If it is correct, this version of Tymeslot predates it and needs updating.",
+        tld: tld
+      )
+
+  defp unrecognised_message(tld, nil, _domain),
+    do:
+      dgettext(
+        "errors_input",
+        "Domain has an unrecognised domain ending (.%{tld}). If it is correct, this version of Tymeslot predates it and needs updating.",
+        tld: tld
+      )
+
+  defp unrecognised_message(tld, suggestion, "Email"),
+    do:
+      dgettext(
+        "errors_input",
+        "Email has an unrecognised domain ending (.%{tld}). Did you mean .%{suggestion}?",
+        tld: tld,
+        suggestion: suggestion
+      )
+
+  defp unrecognised_message(tld, suggestion, _domain),
+    do:
+      dgettext(
+        "errors_input",
+        "Domain has an unrecognised domain ending (.%{tld}). Did you mean .%{suggestion}?",
+        tld: tld,
+        suggestion: suggestion
+      )
+
+  defp invalid_message(tld, nil, "Email"),
+    do: dgettext("errors_input", "Email has an invalid domain ending (.%{tld})", tld: tld)
+
+  defp invalid_message(tld, nil, _domain),
+    do: dgettext("errors_input", "Domain has an invalid domain ending (.%{tld})", tld: tld)
+
+  defp invalid_message(tld, suggestion, "Email"),
+    do:
+      dgettext(
+        "errors_input",
+        "Email has an invalid domain ending (.%{tld}). Did you mean .%{suggestion}?",
+        tld: tld,
+        suggestion: suggestion
+      )
+
+  defp invalid_message(tld, suggestion, _domain),
+    do:
+      dgettext(
+        "errors_input",
+        "Domain has an invalid domain ending (.%{tld}). Did you mean .%{suggestion}?",
+        tld: tld,
+        suggestion: suggestion
+      )
 
   # Only the final label decides: a two-part ending reaches here solely when it
   # matched the second-level list above, so anything left is `sub.tld` shaped.

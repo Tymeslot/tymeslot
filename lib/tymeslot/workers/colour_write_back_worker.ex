@@ -33,6 +33,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     ]
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -53,10 +54,12 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   @event_not_cached :event_not_cached
   @never_synced :raw_ical_never_synced
   @no_event_colour :provider_has_no_event_colour
+  # The integration is gone, or was never the job's user's.
+  @not_owned :not_owned
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
-    do: reason in [@event_not_cached, @never_synced, @no_event_colour]
+    do: reason in [@event_not_cached, @never_synced, @no_event_colour, @not_owned]
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, meta: meta}) do
@@ -67,6 +70,16 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
       "colour" => colour
     } = args
 
+    if CalendarIntegrationQueries.owned_by?(integration_id, user_id) do
+      write_back_cached(integration_id, uid, user_id, colour, meta)
+    else
+      {:discard, @not_owned}
+    end
+  end
+
+  # The cached event is read by integration and uid alone, so it is read only
+  # once the integration is known to be the job's user's.
+  defp write_back_cached(integration_id, uid, user_id, colour, meta) do
     case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
       {:ok, event} ->
         event

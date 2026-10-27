@@ -39,6 +39,27 @@ defmodule TymeslotWeb.Plugs.RequireAuthPlugTest do
         |> conn_with_flash()
         |> RequireAuthPlug.call([])
 
+      assert "/auth/login" <> _query = redirected_to(conn)
+    end
+
+    test "names the page a GET asked for in the login link", %{conn: _conn} do
+      conn =
+        :get
+        |> build_conn("/dashboard/meetings?meeting=12")
+        |> conn_with_flash()
+        |> RequireAuthPlug.call([])
+
+      assert redirected_to(conn) ==
+               "/auth/login?redirect_to=%2Fdashboard%2Fmeetings%3Fmeeting%3D12"
+    end
+
+    test "sends any other method to the plain login page", %{conn: _conn} do
+      conn =
+        :post
+        |> build_conn("/dashboard/meetings")
+        |> conn_with_flash()
+        |> RequireAuthPlug.call([])
+
       assert redirected_to(conn) == "/auth/login"
     end
 

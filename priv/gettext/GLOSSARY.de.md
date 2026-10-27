@@ -218,7 +218,7 @@ Upgrade, Workflow.
 - If the msgid has three placeholders, the msgstr must have exactly those three.
 - You **may and should reorder** them to fit German syntax:
   - `"%{month} %{day}, %{year}"` → `"%{day}. %{month} %{year}"`
-  - `"You're booking a %{duration} meeting with %{name}"` → `"Sie buchen einen Termin (%{duration}) mit %{name}"`
+  - `"You're booking %{duration} with %{name}"` → `"Sie buchen einen Termin (%{duration}) mit %{name}"`
 - German date idiom: a `.` follows the day number: `"%{day}. %{month} %{year}"`.
 - A build gate checks this. A dropped or invented placeholder is a runtime crash.
 

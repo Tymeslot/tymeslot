@@ -16,6 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CircuitBreakerTest do
 
   use Tymeslot.ExchangeCase, async: false
 
+  import Tymeslot.AdminAlertsCaptureHelpers
+
   @moduletag :integrations
   @moduletag :calendar
 
@@ -30,6 +32,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CircuitBreakerTest do
   # retunes these tests with it.
   @threshold CalendarCircuitBreaker.get_config(:exchange).failure_threshold
 
+  # Opening the breaker raises an operator alert from a task of its own, which
+  # would otherwise log after the test that opened it has finished.
+  setup :capture_admin_alerts
+
   describe "failures that say the server is unwell" do
     test "a run of transport failures opens the breaker" do
       stub_transport_error()
@@ -37,6 +43,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CircuitBreakerTest do
       for _attempt <- 1..@threshold do
         assert {:error, :network_error} = Client.call(config(), @find_folder)
       end
+
+      assert_breaker_alert("network_error")
 
       # The server is answering again, so the refusal below can only be the
       # breaker's. Without this the assertion would pass on the transport
@@ -52,6 +60,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CircuitBreakerTest do
       for _attempt <- 1..@threshold do
         assert {:error, :server_error} = Client.call(config(), @find_folder)
       end
+
+      assert_breaker_alert("server_error")
 
       respond_with(200, ok_envelope())
 
@@ -150,6 +160,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CircuitBreakerTest do
       assert {:error, :network_error} = Client.call(config(), @find_folder)
     end
 
+    assert_breaker_alert("network_error")
+  end
+
+  defp assert_breaker_alert(last_error) do
+    assert_receive {:send_alert, :circuit_breaker_open, %{last_error: ^last_error}}
     :ok
   end
 end

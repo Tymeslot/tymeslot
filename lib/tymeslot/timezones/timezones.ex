@@ -6,9 +6,16 @@ defmodule Tymeslot.Timezones do
   Callers should alias this single module.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Timezones.{Data, Formatting}
+
+  # Longest IANA id is well under 40 chars; this is an injection guard, not a
+  # format check, so it stays generous.
+  @max_timezone_length 100
 
   # Fail the build if `tz` compiled against a different IANA release than the
   # one Core pins. The pin only takes effect when config/ and priv/tz/ are both
@@ -39,6 +46,7 @@ defmodule Tymeslot.Timezones do
 
   defdelegate format(timezone_id), to: Formatting
   defdelegate utc_offset(timezone_id), to: Formatting
+  defdelegate utc_offset(timezone_id, at), to: Formatting
 
   @fallback "Etc/UTC"
 
@@ -59,35 +67,41 @@ defmodule Tymeslot.Timezones do
   def fallback, do: @fallback
 
   @doc """
-  Validates a timezone string at the LiveView edge, returning it unchanged if valid
-  or `"Etc/UTC"` if invalid.
+  Checks a timezone someone chose, for a form that should tell them when it
+  is wrong.
 
-  Validity is `valid?/1`, a real runtime time-zone database lookup, so any zone
-  IANA knows is kept as-is.
-
-  Emits one `Logger.warning` on fallback. Supply `metadata` (a keyword list) to
-  include contextual fields — e.g. `[user_id: user.id]` — so operators can surface
-  affected accounts from logs.
-
-  ## Examples
-
-      iex> Tymeslot.Timezones.validate_or_utc("Europe/London")
-      "Europe/London"
-
-      iex> Tymeslot.Timezones.validate_or_utc("Not/Real")
-      "Etc/UTC"
+  Identity is decided by `valid?/1`, a real IANA lookup, so anything the time
+  zone database resolves is accepted, including three-segment ids such as
+  `America/Argentina/Buenos_Aires` and offset zones such as `Etc/GMT+5`. An
+  oversized string is refused before it reaches the lookup. The error is a
+  translated message; the log line says which check failed.
   """
-  @spec validate_or_utc(String.t(), keyword()) :: String.t()
-  def validate_or_utc(timezone, metadata \\ []) when is_binary(timezone) do
-    if valid?(timezone) do
-      timezone
-    else
-      Logger.warning(
-        "Invalid user timezone; falling back to UTC for calendar rendering",
-        Keyword.merge([timezone: timezone], metadata)
-      )
+  @spec validate(term()) :: {:ok, String.t()} | {:error, String.t()}
+  def validate(timezone) when is_binary(timezone) do
+    cond do
+      String.length(timezone) > @max_timezone_length ->
+        Logger.warning("Timezone validation failed: too long",
+          timezone_length: String.length(timezone)
+        )
 
-      @fallback
+        {:error, invalid_message()}
+
+      not valid?(timezone) ->
+        Logger.warning("Timezone validation failed: unknown zone", timezone: timezone)
+        {:error, invalid_message()}
+
+      true ->
+        {:ok, timezone}
     end
   end
+
+  def validate(timezone) do
+    Logger.warning("Timezone validation failed: not a string",
+      value_type: LogFormat.reason(timezone)
+    )
+
+    {:error, invalid_message()}
+  end
+
+  defp invalid_message, do: dgettext("errors", "Invalid timezone")
 end

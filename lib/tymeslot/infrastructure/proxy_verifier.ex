@@ -157,6 +157,79 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
     end
   end
 
+  @doc """
+  A plain-text report of a `verify/1` result, for an operator's terminal:
+  each check, any errors, the sanitised configuration and the evidence the
+  verdict rests on. Carries no credentials.
+  """
+  @spec report(verification_result()) :: String.t()
+  def report(result) do
+    checks = [
+      {"Proxy configured", result.proxy_configured},
+      {"Proxy reachable", result.proxy_reachable},
+      {"Traffic flows through the proxy", result.traffic_flows_through_proxy}
+    ]
+
+    verdict =
+      if result.traffic_flows_through_proxy,
+        do: "PASSED: proxy verification passed",
+        else: "FAILED: proxy verification failed"
+
+    [
+      "Results:",
+      Enum.map(checks, fn {label, ok?} -> "  #{if ok?, do: "[ok]", else: "[failed]"} #{label}" end),
+      if(result.errors == [],
+        do: [],
+        else: ["", "Errors:" | Enum.map(result.errors, &"  - #{&1}")]
+      ),
+      detail_lines(result.details),
+      "",
+      verdict
+    ]
+    |> List.flatten()
+    |> Enum.join("\n")
+  end
+
+  defp detail_lines(details) when map_size(details) == 0, do: []
+
+  defp detail_lines(details) do
+    config = details[:config]
+
+    [
+      "",
+      "Details:",
+      if(config, do: config_lines(config), else: []),
+      detail("Proxy used", details[:proxy_used]),
+      detail("Test URL", details[:test_url]),
+      detail("Response status", details[:status]),
+      detail("Origin IP through the proxy", details[:origin_ip]),
+      # The address the destination sees with the proxy bypassed: two
+      # different origins are the evidence the proxy carried the request.
+      detail("Origin IP without the proxy", details[:direct_origin_ip]),
+      if(details[:direct_egress] == :unreachable,
+        do: ["  Origin IP without the proxy: unreachable (no direct route out)"],
+        else: []
+      )
+    ]
+  end
+
+  defp config_lines(config) do
+    [
+      "  Proxy config:",
+      detail("  HTTP", config.http_proxy && report_proxy(config.http_proxy)),
+      detail("  HTTPS", config.https_proxy && report_proxy(config.https_proxy)),
+      detail("  NO_PROXY", config.no_proxy != [] && Enum.join(config.no_proxy, ", "))
+    ]
+  end
+
+  defp detail(_label, value) when value in [nil, false], do: []
+  defp detail(label, value), do: ["  #{label}: #{value}"]
+
+  defp report_proxy(proxy) do
+    auth = if proxy[:auth], do: "[#{proxy[:auth]}]@", else: ""
+    "#{proxy[:scheme]}://#{auth}#{proxy[:host]}:#{proxy[:port]}"
+  end
+
   # Private Functions
 
   defp test_proxy_connectivity(config, test_url, timeout, result) do
@@ -400,7 +473,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
   # Dispatched on shape rather than truthiness so a credential that reached here
   # as anything other than `ProxyConfig.load/0`'s normalised struct crashes
   # naming this function, instead of being reported as an unauthenticated proxy.
-  defp auth_indicator(%ProxyCredentials{}), do: "[auth]"
+  defp auth_indicator(%ProxyCredentials{}), do: "[auth]@"
   defp auth_indicator(nil), do: ""
 
   defp sanitize_config(config) do

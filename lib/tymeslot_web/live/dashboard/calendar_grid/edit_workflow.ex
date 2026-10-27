@@ -202,7 +202,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   `opts` are passed through to `CalendarGrid.update_event/4`, except
   `:notify`: `%{original: event, saved_message: message}` runs the
   attendee-notification decision (`apply_notify_result/5`) once the write
-  succeeds, diffing the event it wrote against `original`.
+  succeeds, diffing the event it wrote against `original`; `:membership`
+  invites the attendees the write added and tells the ones it removed, once
+  it succeeds (`EventHandlers.AttendeeManagement.membership_written/3`).
   """
   @spec update_event_async(Phoenix.LiveView.Socket.t(), map(), map(), keyword()) ::
           Phoenix.LiveView.Socket.t()
@@ -366,6 +368,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
     )
   end
+
+  @doc """
+  The message shown when an event's repeat rule has no Outlook pattern
+  (see `Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter`), so
+  the event was not written.
+  """
+  @spec rule_not_supported_by_outlook_message() :: String.t()
+  def rule_not_supported_by_outlook_message,
+    do: dgettext("dashboard_calendar_events", "This repeat pattern can't be saved to Outlook.")
 
   @doc """
   The message shown when the grid cannot tell which series, or which

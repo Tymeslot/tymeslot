@@ -16,7 +16,9 @@ defmodule Tymeslot.Integrations.Video.OAuth do
   rather than being forced into a shared shape.
   """
 
-  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
+  alias Tymeslot.Integrations.Shared.OAuthConfig
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
   alias TymeslotWeb.Endpoint
@@ -24,15 +26,14 @@ defmodule Tymeslot.Integrations.Video.OAuth do
   @typedoc "A video provider that authenticates over OAuth."
   @type provider :: :google_meet | :teams | :zoom
 
-  # `label` is the brand named in operator-facing errors; `env_prefix` is the
-  # environment-variable prefix for that provider's credentials; `callback` is
-  # the path segment in its OAuth redirect URI. Microsoft's variables are
-  # prefixed OUTLOOK rather than TEAMS because the two share one app
-  # registration.
+  # `label` is the brand named in operator-facing errors; `config` is the
+  # OAuth client whose credentials it uses (Teams shares Microsoft's app
+  # registration with Outlook); `callback` is the path segment in its OAuth
+  # redirect URI.
   @providers %{
-    google_meet: %{label: "Google", env_prefix: "GOOGLE", callback: "google"},
-    teams: %{label: "Microsoft", env_prefix: "OUTLOOK", callback: "teams"},
-    zoom: %{label: "Zoom", env_prefix: "ZOOM", callback: "zoom"}
+    google_meet: %{label: "Google", config: :google, callback: "google"},
+    teams: %{label: "Microsoft", config: :microsoft, callback: "teams"},
+    zoom: %{label: "Zoom", config: :zoom, callback: "zoom"}
   }
 
   @google_scopes [:calendar, :meet]
@@ -61,10 +62,12 @@ defmodule Tymeslot.Integrations.Video.OAuth do
   def reconnect_url(provider, user_id, opts), do: build(provider, user_id, opts)
 
   defp build(provider, user_id, opts) do
-    if supported?(provider) do
-      {:ok, url_for(provider, user_id, redirect_uri(provider), opts)}
+    with true <- supported?(provider),
+         {:ok, flow} <- PendingFlow.start(user_id, provider) do
+      {:ok, url_for(provider, user_id, redirect_uri(provider), Keyword.put(opts, :pkce, flow))}
     else
-      {:error, "Provider does not support OAuth"}
+      false -> {:error, "Provider does not support OAuth"}
+      {:error, _changeset} -> {:error, "Failed to setup #{@providers[provider].label} OAuth"}
     end
   rescue
     error -> {:error, format_error(provider, error)}
@@ -95,32 +98,10 @@ defmodule Tymeslot.Integrations.Video.OAuth do
     zoom_helper().authorization_url(user_id, redirect_uri, opts)
   end
 
-  # Every provider's helper raises the same three misconfigurations, differing
-  # only in the brand prefixing the message, so matching on the suffix keeps one
-  # ladder instead of three.
-  defp format_error(provider, %RuntimeError{message: message} = error) do
-    %{label: label, env_prefix: prefix} = @providers[provider]
-
-    cond do
-      String.ends_with?(message, "State Secret not configured") ->
-        "#{label} OAuth is not configured. Please set #{prefix}_CLIENT_ID, " <>
-          "#{prefix}_CLIENT_SECRET, and #{prefix}_STATE_SECRET environment variables."
-
-      String.ends_with?(message, "Client ID not configured") ->
-        "#{label} OAuth is not configured. Please set #{prefix}_CLIENT_ID environment variable."
-
-      String.ends_with?(message, "Client Secret not configured") ->
-        "#{label} OAuth is not configured. Please set #{prefix}_CLIENT_SECRET environment variable."
-
-      true ->
-        generic_error(label, error)
-    end
+  defp format_error(provider, error) do
+    %{label: label, config: config} = @providers[provider]
+    OAuthConfig.setup_error_message(config, label, error)
   end
-
-  defp format_error(provider, error), do: generic_error(@providers[provider].label, error)
-
-  defp generic_error(label, error),
-    do: "Failed to setup #{label} OAuth: #{Exception.message(error)}"
 
   defp google_helper do
     Application.get_env(:tymeslot, :google_calendar_oauth_helper, GoogleOAuthHelper)

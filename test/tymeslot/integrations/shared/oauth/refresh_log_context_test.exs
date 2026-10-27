@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Common.OAuth.RefreshLogContextTest do
+defmodule Tymeslot.Integrations.Shared.OAuth.RefreshLogContextTest do
   # async: false: LogCapture attaches a global `:logger` handler, and the OAuth
   # client configuration these helpers read is application-wide.
   use ExUnit.Case, async: false
@@ -7,9 +7,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.RefreshLogContextTest do
 
   import Mox
 
-  alias Tymeslot.Integrations.Calendar.Outlook.OAuthHelper, as: OutlookOAuthHelper
-  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
-  alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
+  alias Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
   alias Tymeslot.Test.LogCapture
@@ -74,63 +72,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.RefreshLogContextTest do
 
       assert_named(:google)
     end
-
-    test "Outlook" do
-      expect_refresh_rejection()
-      LogCapture.attach()
-
-      OutlookOAuthHelper.refresh_access_token("rt", nil, log_context: @context)
-
-      assert_named(:outlook)
-    end
-
-    # TokenFlow is the live Outlook calendar refresh, and used to log nothing
-    # at all on failure.
-    test "TokenFlow" do
-      expect_refresh_rejection()
-      LogCapture.attach()
-
-      TokenFlow.refresh_token("http://oauth", %{refresh_token: "rt"},
-        log_context: @context ++ [provider: :outlook]
-      )
-
-      assert_named(:outlook)
-    end
   end
 
-  describe "the allowed-key filter" do
-    # Every caller on these paths is holding decrypted OAuth credentials when
-    # it logs, so a key nobody vetted must not reach the line however it is
-    # spelled.
-    test "TokenFlow drops keys outside the allowed set" do
-      expect_refresh_rejection()
-      LogCapture.attach()
-
-      TokenFlow.refresh_token("http://oauth", %{refresh_token: "rt"},
-        log_context: [
-          integration_id: 42,
-          access_token: "secret-access",
-          refresh_token: "secret-refresh",
-          client_secret: "secret-client",
-          user_id: nil
-        ]
-      )
-
-      event = LogCapture.await_log("OAuth token refresh failed")
-      meta = LogCapture.user_metadata(event)
-
-      assert meta[:integration_id] == 42
-      refute Map.has_key?(meta, :access_token)
-      refute Map.has_key?(meta, :refresh_token)
-      refute Map.has_key?(meta, :client_secret)
-      refute Map.has_key?(meta, :user_id)
-
-      dump = LogCapture.dump(event)
-      refute dump =~ "secret-access"
-      refute dump =~ "secret-refresh"
-      refute dump =~ "secret-client"
-    end
-
+  describe "the provider on the line" do
     # A helper pins its own provider, so a caller cannot relabel a Zoom failure
     # as something else.
     test "a helper's own provider wins over a caller-supplied one" do
@@ -144,25 +88,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.RefreshLogContextTest do
       assert LogCapture.user_metadata(LogCapture.await_log("OAuth token refresh failed"))[
                :provider
              ] == :zoom
-    end
-
-    test "TokenFlow redacts the response body of a failed exchange" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 400,
-           body: ~s({"access_token":"leaked-123","error":"invalid_request"})
-         }}
-      end)
-
-      LogCapture.attach()
-
-      TokenFlow.exchange_code("http://oauth", %{code: "c"}, log_context: [provider: :google])
-
-      event = LogCapture.await_log("OAuth token exchange failed")
-
-      assert LogCapture.user_metadata(event)[:provider] == :google
-      refute LogCapture.dump(event) =~ "leaked-123"
     end
   end
 

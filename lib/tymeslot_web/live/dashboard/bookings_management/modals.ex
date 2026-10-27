@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
 
   alias TymeslotWeb.Components.Dashboard.Meetings.{
     AddGuestsModal,
+    CalendarMoveModal,
     CancelMeetingModal,
     DeclineRequestModal,
     Helpers,
@@ -37,6 +38,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
   attr :reschedule_request, :map, default: nil
   attr :show_reschedule, :boolean, required: true
   attr :sending_reschedule, :any, default: nil
+  attr :calendar_move, :map, default: nil
+  attr :show_calendar_move, :boolean, default: false
   attr :add_guests, :map, default: nil
   attr :show_add_guests, :boolean, required: true
   attr :staged_guests, :list, default: []
@@ -85,6 +88,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
       }
       on_cancel={JS.push("hide_reschedule_modal", target: @target)}
       on_confirm={JS.push("confirm_reschedule_request", target: @target)}
+    />
+
+    <CalendarMoveModal.calendar_move_modal
+      id="calendar-move-modal"
+      show={@show_calendar_move}
+      data={@calendar_move}
+      timezone={timezone_for(@calendar_move && @calendar_move.meeting, @profile)}
+      time_format={@time_format}
+      on_cancel={JS.push("hide_calendar_move_modal", target: @target)}
+      on_confirm={JS.push("confirm_calendar_move", target: @target)}
     />
 
     <AddGuestsModal.add_guests_modal

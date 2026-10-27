@@ -2,28 +2,16 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
   @moduledoc """
   Handler for checkout.session.completed webhook events.
   """
-  use Tymeslot.Payments.Behaviours.WebhookHandler
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def can_handle?(event_type), do: event_type == "checkout.session.completed"
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def validate(session) do
-    # Trust Stripe's data - just ensure we have an ID
-    case Map.get(session, "id") do
-      nil -> {:error, :missing_field, "Session ID missing"}
-      "" -> {:error, :missing_field, "Session ID empty"}
-      _id -> :ok
-    end
-  end
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def process(_event, session) do
-    session_id = Map.get(session, "id")
+  @impl WebhookHandler
+  def handle(%{"data" => %{"object" => %{"id" => session_id} = session}})
+      when is_binary(session_id) and session_id != "" do
     mode = Map.get(session, "mode")
     Logger.info("Processing checkout.session.completed", session_id: session_id, mode: mode)
 
@@ -46,6 +34,8 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
     end
   end
 
+  def handle(_event), do: {:error, :permanent, :missing_session_id}
+
   defp handle_subscription_completion(session) do
     manager = Application.get_env(:tymeslot, :subscription_manager)
 
@@ -60,11 +50,11 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
             error: LogFormat.reason(reason)
           )
 
-          {:error, :subscription_failed, "Subscription processing failed: #{inspect(reason)}"}
+          {:error, :retry_later, {:subscription_failed, reason}}
       end
     else
       Logger.error("Subscription manager not configured for subscription completion")
-      {:error, :subscriptions_not_supported, "Subscription manager not configured"}
+      {:error, :permanent, :subscriptions_not_supported}
     end
   end
 end

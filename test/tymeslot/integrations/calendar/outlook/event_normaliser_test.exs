@@ -41,6 +41,32 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliserTest do
   end
 
   describe "normalise_events/2" do
+    # PostgreSQL refuses a NUL byte in text and jsonb; one left in fails the
+    # whole batch's cache write.
+    test "strips NUL bytes from every text the event carries" do
+      raw =
+        build_raw_event(%{
+          "subject" => "Stand\u0000up",
+          "body" => %{"content" => "Daily\u0000 sync"},
+          "location" => %{"displayName" => "Room\u000042"},
+          "attendees" => [
+            %{
+              "emailAddress" => %{"address" => "a@example.com", "name" => "An\u0000n"},
+              "status" => %{"response" => "accepted"}
+            }
+          ]
+        })
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
+
+      assert {event.summary, event.description, event.location} ==
+               {"Standup", "Daily sync", "Room42"}
+
+      assert [%{display_name: "Ann"}] = event.attendees
+      # Stored as jsonb, which refuses a NUL byte as well.
+      assert event.provider_metadata["subject"] == "Standup"
+    end
+
     test "converts a standard timed event with correct fields" do
       raw = build_raw_event()
 
@@ -188,7 +214,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliserTest do
         })
 
       assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
-      assert event.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE"
+      assert event.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE;WKST=SU"
     end
 
     test "invalid event is skipped" do

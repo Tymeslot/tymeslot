@@ -241,7 +241,8 @@ defmodule TymeslotWeb.SessionControllerTest do
         })
 
       assert redirected_to(conn) == "/auth/login"
-      # AccountLockout throttle kicks in at 10 attempts; message differs from normal auth failure
+
+      # The failed-login throttle kicks in at 10 attempts; message differs from normal auth failure
       assert Flash.get(conn.assigns.flash, :error) ==
                "Too many failed attempts. Please wait before trying again"
     end
@@ -303,7 +304,7 @@ defmodule TymeslotWeb.SessionControllerTest do
         })
 
       assert redirected_to(conn) == "/auth/login"
-      # IP Hammer bucket triggers, naming the per-IP budget rather than the account.
+      # IP rate-limit bucket triggers, naming the per-IP budget rather than the account.
       assert Flash.get(conn.assigns.flash, :error) ==
                "You've reached the limit of 50 authentication (ip) actions per 30 minutes. " <>
                  "Please try again in 30 minutes."

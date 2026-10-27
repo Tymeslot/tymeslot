@@ -59,7 +59,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
       }
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated.video_integration_id == nil
 
@@ -91,7 +91,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
       }
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       # The provider PATCH is deferred to a supervised, retrying Oban job — not
       # made inline — so a transient Zoom failure no longer permanently
@@ -139,7 +139,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
       }
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert_enqueued(
         worker: VideoSyncWorker,
@@ -176,7 +176,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
       }
 
       assert {:ok, _updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       refute_enqueued(worker: VideoSyncWorker)
     end

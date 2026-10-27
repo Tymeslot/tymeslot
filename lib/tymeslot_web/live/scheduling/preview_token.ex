@@ -25,18 +25,16 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewToken do
   `PreviewMode` is the single place that says so.
   """
 
-  alias Phoenix.Token
-  alias TymeslotWeb.Endpoint
+  alias Tymeslot.SignedToken
 
-  @salt "booking owner preview"
-  # Generous enough for an onboarding/dashboard session that lingers on the
-  # preview, short enough that a leaked URL stops simulating well before it
-  # could be mistaken for a durable booking link.
-  @max_age_seconds 3600
+  # Valid for an hour (`Tymeslot.SignedToken`): generous enough for an
+  # onboarding or dashboard session that lingers on the preview, short enough
+  # that a leaked URL stops simulating well before it could be mistaken for a
+  # durable booking link.
 
   @spec sign(integer()) :: String.t()
   def sign(user_id) when is_integer(user_id) do
-    Token.sign(Endpoint, @salt, user_id)
+    SignedToken.sign(:booking_preview, user_id)
   end
 
   @doc """
@@ -45,7 +43,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewToken do
   """
   @spec owner?(String.t() | nil, integer() | nil) :: boolean()
   def owner?(token, owner_user_id) when is_binary(token) and is_integer(owner_user_id) do
-    case Token.verify(Endpoint, @salt, token, max_age: @max_age_seconds) do
+    case SignedToken.verify(:booking_preview, token) do
       {:ok, ^owner_user_id} -> true
       _invalid -> false
     end

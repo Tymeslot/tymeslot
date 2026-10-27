@@ -28,7 +28,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsUpdateOccurrenceTest do
     username: "user",
     password: "pass",
     calendar_paths: ["/cal/"],
-    verify_ssl: true,
     provider: :caldav
   }
 

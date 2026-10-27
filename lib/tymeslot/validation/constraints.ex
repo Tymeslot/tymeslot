@@ -67,6 +67,22 @@ defmodule Tymeslot.Validation.Constraints do
   def duration_minutes_range, do: 5..1440
 
   @doc """
+  How many durations one meeting type may offer the booker to choose from,
+  its own `duration_minutes` included. Enough for a 15-minute-to-two-hour
+  ladder; beyond that the choice step stops being a quick pick.
+  """
+  @spec max_lengths_per_meeting_type() :: pos_integer()
+  def max_lengths_per_meeting_type, do: 8
+
+  @doc """
+  The step a meeting type's duration moves in, in minutes: every duration is
+  a whole multiple of it, matching the five-minute grid the slot intervals
+  are drawn on.
+  """
+  @spec duration_step_minutes() :: pos_integer()
+  def duration_step_minutes, do: 5
+
+  @doc """
   How long a poll's proposed meeting may be, in minutes.
 
   Same floor and ceiling as `duration_minutes_range/0`, and for the same
@@ -99,6 +115,14 @@ defmodule Tymeslot.Validation.Constraints do
   """
   @spec last_spots_threshold_range() :: Range.t()
   def last_spots_threshold_range, do: 1..max_participants_range().last
+
+  @doc """
+  How many guests a meeting type may let one booking bring, when its host
+  limits them: at least one (no guests at all is the guests switch). Its end
+  is the overall limit every booking has, `Tymeslot.Meetings.Guests.max_guests/0`.
+  """
+  @spec guests_per_booking_range() :: Range.t()
+  def guests_per_booking_range, do: 1..10
 
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
@@ -211,6 +235,12 @@ defmodule Tymeslot.Validation.Constraints do
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 
+  @spec guests_per_booking_opts() :: keyword()
+  def guests_per_booking_opts do
+    range = guests_per_booking_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
   @spec poll_duration_minutes_opts() :: keyword()
   def poll_duration_minutes_opts do
     range = poll_duration_minutes_range()
@@ -240,14 +270,38 @@ defmodule Tymeslot.Validation.Constraints do
   @spec name_length_range() :: Range.t()
   def name_length_range, do: 1..100
 
-  @spec webhook_name_length_range() :: Range.t()
-  def webhook_name_length_range, do: 1..255
+  @doc """
+  The name a person gives a Slack, Telegram, webhook, calendar or video
+  integration. Names a provider supplies (a calendar collection title) are
+  held only to their column's width.
+  """
+  @spec integration_name_length_range() :: Range.t()
+  def integration_name_length_range, do: 1..100
 
-  @spec webhook_name_length_opts() :: keyword()
-  def webhook_name_length_opts do
-    range = webhook_name_length_range()
+  @spec integration_name_length_opts() :: keyword()
+  def integration_name_length_opts do
+    range = integration_name_length_range()
     [min: range.first, max: range.last]
   end
+
+  @doc """
+  The longest name a form may submit for an integration whose stored name is
+  `stored_name` (nil on create). A name submitted unchanged is not held to a
+  limit it predates, so an integration whose name is longer than the range
+  can still be edited in every other field; a changed name is.
+  """
+  @spec integration_name_max_length(String.t() | nil, String.t() | nil) :: pos_integer()
+  def integration_name_max_length(submitted, stored_name)
+      when is_binary(submitted) and is_binary(stored_name) do
+    limit = integration_name_length_range().last
+
+    if String.trim(submitted) == stored_name,
+      do: max(limit, String.length(stored_name)),
+      else: limit
+  end
+
+  def integration_name_max_length(_submitted, _stored_name),
+    do: integration_name_length_range().last
 
   @spec url_max_length() :: pos_integer()
   def url_max_length, do: 2048

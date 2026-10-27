@@ -8,15 +8,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.NeedsReauth
-  alias Tymeslot.Integrations.Video.OAuthTokenManager
-  alias Tymeslot.Integrations.Video.Providers.Capabilities
+  alias Tymeslot.Integrations.Video.Providers.OAuthRoom
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload
   alias Tymeslot.Integrations.Video.RoomData
@@ -26,16 +24,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   @behaviour ProviderBehaviour
 
-  @capabilities Capabilities.new!(
-                  waiting_room: true,
-                  recording: true,
-                  dial_in: true,
-                  max_participants: 300,
-                  breakout_rooms: true,
-                  screen_sharing: true,
-                  chat: true
-                )
-
   @graph_api_base_url "https://graph.microsoft.com/v1.0"
 
   # Room creation's requests to the provider's API. `request_timeout` caps each
@@ -44,24 +32,11 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # alone did in practice. The API never redirects these requests, and one
   # that did would get a fresh budget, so redirects are refused.
   @create_request_options [receive_timeout: 45_000, request_timeout: 45_000, redirect: false]
-  @teams_url_pattern ~r/teams\.microsoft\.com\/l\/meetup-join\//
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
     Logger.info("Creating Microsoft Teams meeting room")
-
-    case precheck_create_meeting_room(config) do
-      {:ok, token} ->
-        finish_create_meeting_room(token, config)
-
-      {:provider_error, reason} ->
-        log_create_meeting_room_error(reason)
-        {:error, reason}
-
-      {:error, reason} = error ->
-        log_create_meeting_room_error(reason)
-        error
-    end
+    OAuthRoom.create_meeting_room(__MODULE__, config, "Teams")
   end
 
   @doc false
@@ -81,7 +56,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def precheck_create_meeting_room(config) do
     with {:ok, :valid} <- validate_teams_scope(config) do
-      classify_token_result(get_access_token(config))
+      OAuthRoom.classify_token_result(get_access_token(config))
     end
   end
 
@@ -154,7 +129,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   @doc """
   Deletes a room's event, so a cancelled booking's Teams meeting does not
   linger in the organiser's calendar. An event already gone answers
-  `{:error, :meeting_not_found}`, which the sync treats as done.
+  `{:error, :meeting_not_found}`, which `ProviderAdapter` turns into `:ok`.
   """
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def delete_meeting_room(room_id, config) when is_binary(room_id) do
@@ -172,29 +147,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   `Tymeslot.Integrations.Video.AccessToken`).
   """
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def ensure_valid_token(config) do
-    with {:ok, token} <- get_access_token(config) do
-      {:ok, Map.put(config, :access_token, token)}
-    end
-  end
+  def ensure_valid_token(config), do: OAuthRoom.ensure_valid_token(config, oauth_spec())
 
   defp log_create_meeting_room_error(reason) do
     Logger.error("Failed to create Teams meeting", error: LogFormat.reason(reason))
-  end
-
-  # A rejected/expired grant (`invalid_grant`, `invalid_client`,
-  # `access_denied`) is the tenant's credential, not Graph's availability —
-  # `BreakerOutcome.permanent_credential_error?/1` shares this rule with
-  # `HealthCheck.ResponseHandler`'s reauth fast-path (both Teams and Zoom
-  # refresh through the shared `ErrorParser.build_message/3`). Anything else
-  # (network error, an unrecognised HTTP status) is handed back for the
-  # breaker to witness.
-  defp classify_token_result({:ok, _token} = ok), do: ok
-
-  defp classify_token_result({:error, reason} = error) do
-    if BreakerOutcome.permanent_credential_error?(reason),
-      do: error,
-      else: {:provider_error, reason}
   end
 
   # The slowest creation refreshes the token (through the shared OAuth client,
@@ -237,31 +193,20 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   def extract_room_id(_other), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def valid_meeting_url?(meeting_url) do
-    meeting_url =~ @teams_url_pattern
-  end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
-        {:ok, dgettext("dashboard_video", "Microsoft Teams connected successfully!")}
+        {:ok, dgettext("integrations_video", "Microsoft Teams connected successfully!")}
 
       {:error, reason} ->
         {:error,
          dgettext(
-           "dashboard_video",
+           "integrations_video",
            "Failed to authenticate with Microsoft Teams: %{reason}",
            reason: inspect(reason)
          )}
     end
   end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def provider_type, do: :teams
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def display_name, do: "Microsoft Teams"
 
   # A per-actor bucket shared across every OAuth-backed provider: the test
   # itself rides on a token that is already scarce, but without a charge
@@ -293,31 +238,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities, do: @capabilities
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
-    Logger.info("Teams meeting ended", room_ref: Redactor.fingerprint(room_data.room_id))
-    :ok
-  end
-
-  def handle_meeting_event(_other_event, _room_data, _additional_data) do
-    :ok
-  end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def generate_meeting_metadata(room_data) do
-    %{
-      provider: "teams",
-      meeting_id: room_data.room_id,
-      join_url: room_data.meeting_url,
-      passcode: room_data.provider_data[:passcode],
-      dial_in_number: room_data.provider_data[:toll_number],
-      conference_id: room_data.provider_data[:conference_id]
-    }
-  end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def build_config(integration, decrypted, _opts) do
     %{
       access_token: decrypted.access_token,
@@ -341,9 +261,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       url_fields: []
     }
   end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def url_patterns, do: ["teams.microsoft.com"]
 
   # Private functions
 
@@ -376,76 +293,31 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp get_access_token(config) do
-    OAuthTokenManager.validated_access_token(config,
-      oauth_helper: teams_oauth_helper(),
+    with {:ok, valid} <- OAuthRoom.ensure_valid_token(config, oauth_spec()) do
+      {:ok, valid.access_token}
+    end
+  end
+
+  # A refresh always asks for the Teams scope (the helper's default), not the
+  # stored one, which may have come from a calendar connection and not cover
+  # Teams meetings. Microsoft issues a new refresh token on each refresh, but
+  # the one it replaces stays valid until its own lifetime ends. So a failed
+  # write keeps a still-valid older token: the fresh access token is used, and
+  # each later call refreshes again from the stored token until that one
+  # expires and the integration asks to be reconnected. Failing the call
+  # instead, as Zoom must (it invalidates the old token at once), would turn a
+  # passing database error into a failed booking.
+  defp oauth_spec do
+    helper = teams_oauth_helper()
+
+    %{
+      helper: helper,
       label: "Teams",
-      on_refresh: &refresh_and_update_token/1
-    )
-  end
-
-  defp refresh_and_update_token(config) do
-    OAuthTokenManager.refresh_with_lock(config, %{
-      provider: :teams,
-      refresh: &perform_refresh/1,
-      already_refreshed: fn _config, decrypted -> {:ok, decrypted.access_token} end,
-      fallback_refresh: &perform_refresh/1
-    })
-  end
-
-  defp perform_refresh(config) do
-    case do_actual_refresh(config) do
-      {:ok, refreshed_tokens} -> {:ok, refreshed_tokens.access_token}
-      error -> error
-    end
-  end
-
-  defp do_actual_refresh(config) do
-    refresh_token = Map.get(config, :refresh_token)
-    # Always use Teams-specific scope when refreshing, not the stored scope
-    # The stored scope might be from calendar integration and won't work for Teams meetings
-    # Pass nil to use default Teams scope from TeamsOAuthHelper
-    teams_scope = nil
-
-    case teams_oauth_helper().refresh_access_token(refresh_token, teams_scope,
-           log_context: [
-             integration_id: Map.get(config, :integration_id),
-             user_id: Map.get(config, :user_id)
-           ]
-         ) do
-      {:ok, refreshed_tokens} ->
-        Logger.info("Successfully refreshed Teams OAuth token")
-
-        # Best-effort persistence: Teams does not rotate its refresh token, so a
-        # failed write leaves the stored credentials still usable and the caller
-        # can proceed with the token it just obtained.
-        if Map.get(config, :integration_id) do
-          OAuthTokenManager.persist_tokens(config, token_attrs(refreshed_tokens), "Teams")
-        end
-
-        {:ok, refreshed_tokens}
-
-      {:error, reason} ->
-        Logger.error("Failed to refresh Teams OAuth token", reason: LogFormat.reason(reason))
-        {:error, "Token refresh failed: #{reason}"}
-    end
-  end
-
-  # Microsoft may omit the scope from a refresh response, so an absent or blank
-  # one leaves the stored scope alone rather than clearing it.
-  defp token_attrs(refreshed_tokens) do
-    attrs = %{
-      access_token: refreshed_tokens.access_token,
-      refresh_token: refreshed_tokens.refresh_token || refreshed_tokens.access_token,
-      token_expires_at: refreshed_tokens.expires_at
+      validate_token: &helper.validate_token/1,
+      scope: fn _config -> nil end,
+      persist_failure: :best_effort
     }
-
-    maybe_put_scope(attrs, refreshed_tokens[:scope] || refreshed_tokens.scope)
   end
-
-  defp maybe_put_scope(attrs, scope) when is_binary(scope) and scope != "",
-    do: Map.put(attrs, :oauth_scope, scope)
-
-  defp maybe_put_scope(attrs, _scope), do: attrs
 
   # A room of its own: a new event in the Teams account's default calendar
   # that carries the meeting, titled and timed as the booking is.
@@ -495,7 +367,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   defp handle_failed_write({:error, reason}, _config), do: {:error, reason}
 
   # A room's later writes (a reschedule, a cancellation) only need to land: a
-  # 404 is the room already gone, which the sync treats as done.
+  # 404 is the room already gone, which a delete counts as done.
   defp handle_room_write({:ok, %Req.Response{status: status}}, _config) when status in 200..299,
     do: :ok
 
@@ -507,14 +379,15 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # Flags the integration as needing reauthentication after a 401 from Graph —
   # i.e. the credentials are no longer accepted server-side. The dashboard
   # surfaces this via the "Reconnect required" badge on the video row. Purely
-  # additive: it does not touch token validation or the OAuthTokenManager flow.
-  defp flag_revoked_token(config) do
+  # additive: it does not touch token validation or the refresh.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def flag_revoked_token(config) do
     NeedsReauth.flag(config,
       label: "Teams",
       event: "teams_token_revoked",
       message:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "Microsoft Teams access was revoked. Please reconnect your Teams account."
         )
     )

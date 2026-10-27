@@ -125,13 +125,13 @@ defmodule Tymeslot.Security.FieldValidators.TLDListTest do
 
     test "rejects known mistypings and names the correction" do
       assert {:error, message} = TLDList.validate_tld("con", "Email")
-      assert message == "Email has an unrecognised domain ending (.con) — did you mean .com?"
+      assert message == "Email has an unrecognised domain ending (.con). Did you mean .com?"
 
       assert {:error, ocm_message} = TLDList.validate_tld("ocm", "Email")
-      assert ocm_message =~ "did you mean .com?"
+      assert ocm_message =~ "Did you mean .com?"
 
       assert {:error, ogr_message} = TLDList.validate_tld("ogr", "Domain")
-      assert ogr_message == "Domain has an unrecognised domain ending (.ogr) — did you mean .org?"
+      assert ogr_message == "Domain has an unrecognised domain ending (.ogr). Did you mean .org?"
     end
 
     test "rejects special-use endings reserved by RFC 2606/6761" do

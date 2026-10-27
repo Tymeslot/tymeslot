@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Live.Scheduling.VisitorTodayTest do
 
     test "#{theme.slug} opens the calendar on today in #{zone}, not in UTC",
          %{conn: conn, profile: profile} do
-      {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: @theme.id})
+      {:ok, profile} = Profiles.update_booking_theme(profile, @theme.id)
       freeze_clock(@frozen_at)
 
       html =
@@ -176,7 +176,8 @@ defmodule TymeslotWeb.Live.Scheduling.VisitorTodayTest do
         end_date,
         timezone,
         meeting_type.duration_minutes,
-        meeting_type.id
+        meeting_type.id,
+        nil
       )
 
     match?({:ok, _map}, AvailabilityCache.get_or_compute_events(key, fn -> {:error, :probe} end))

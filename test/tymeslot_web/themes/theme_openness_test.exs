@@ -27,10 +27,10 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
   alias Tymeslot.Test.FixtureThemeSpec
   alias Tymeslot.Test.FixtureThemeSpec.Emblem
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.TestMocks
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Specs
-  alias Tymeslot.ThemeCustomizations.Storage
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Panels
   alias TymeslotWeb.Test.FixtureTheme.EmblemPanel
   alias TymeslotWeb.Themes.Core.ThemeInfo
@@ -63,6 +63,8 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
     {:ok, view, html} = live(conn, ~p"/#{profile.username}")
     %{view: view, html: html, profile: profile}
   end
+
+  defp served?(path), do: get(build_conn(), "/uploads/" <> path).status == 200
 
   describe "the booking page" do
     test "renders in the theme's own wrapper and steps", %{conn: conn} do
@@ -240,16 +242,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
 
   describe "the theme's own upload" do
     setup do
-      upload_root =
-        Path.join(System.tmp_dir!(), "tymeslot_openness_#{System.unique_integer([:positive])}")
-
-      original_root = Application.get_env(:tymeslot, :upload_directory)
-      Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-      on_exit(fn ->
-        Application.put_env(:tymeslot, :upload_directory, original_root)
-        File.rm_rf(upload_root)
-      end)
+      UploadRoot.isolate("tymeslot_openness")
 
       path = Path.join(System.tmp_dir!(), "#{System.unique_integer([:positive])}-emblem.png")
       File.write!(path, @png)
@@ -295,8 +288,8 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
       second_path = second.settings["fixture_emblem_path"]
 
       assert first_path != second_path
-      refute File.exists?(Storage.build_theme_file_path(first_path))
-      assert File.exists?(Storage.build_theme_file_path(second_path))
+      refute served?(first_path)
+      assert served?(second_path)
     end
 
     test "uploads through the theme's own panel in the dashboard", %{conn: conn} do
@@ -363,7 +356,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
 
       bucket = "theme_upload:#{user.id}"
       on_exit(fn -> RateLimiter.clear_bucket(bucket) end)
-      for _attempt <- 1..5, do: RateLimiter.check_rate_limit(bucket, 5, 600_000)
+      for _attempt <- 1..5, do: RateLimiter.check(:theme_upload, user.id)
 
       emblem = %{
         last_modified: System.system_time(:millisecond),

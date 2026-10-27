@@ -19,12 +19,15 @@ defmodule Tymeslot.Infrastructure.FinchPool do
   closed behind our back, and the pool size a larger deployment configures.
 
   Finch can express the same thing without any of that: a *tagged pool* on the
-  instance that is already running. `request_option/2` registers one keyed by
-  the connection options it needs and returns the Req option that selects it,
-  so the caller passes `:finch` alone and never `:connect_options`.
+  instance that is already running. `with_pool/3` registers one keyed by the
+  connection options it needs and hands the request the Req option that
+  selects it, so the caller passes `:finch` alone and never
+  `:connect_options`. The pool is leased to the request while it runs and
+  stopped by `FinchPool.Janitor` once idle, so destinations no longer add up
+  to one pool each for the life of the node.
   """
 
-  alias Finch.Pool
+  alias Tymeslot.Infrastructure.FinchPool.Janitor
 
   @finch Tymeslot.Finch
 
@@ -58,34 +61,47 @@ defmodule Tymeslot.Infrastructure.FinchPool do
   def instance, do: @finch
 
   @doc """
-  Returns the Req `:finch` option to reach `url` with `connect_options`.
+  Runs `fun` with the Req `:finch` option that reaches `url` with
+  `connect_options`, and returns its result.
 
   With no connection options the shared pool serves the request as it always
   did. With some, a pool carrying them is registered on the same instance
   under a tag derived from those options, so that two requests wanting the
   same connection settings to the same destination share one pool and two
-  wanting different ones do not collide.
+  wanting different ones do not collide. The pool is leased to the caller
+  until `fun` returns, so the janitor cannot stop it under the request.
 
-  `:error` means there is no Finch instance to register against — the test
-  suite routes Req through a plug instead — and the caller should fall back to
-  passing the connection options through to Req.
+  `fun` receives `:error` when there is no Finch instance or janitor to
+  register with (the test suite routes Req through a plug instead; a release
+  `eval` starts neither), or when the janitor cannot lease a pool, and should
+  then pass the connection options through to Req.
   """
-  @spec request_option(String.t(), keyword()) :: {:ok, keyword()} | :error
-  def request_option(_url, []), do: {:ok, [name: @finch]}
+  @spec with_pool(String.t(), keyword(), ({:ok, keyword()} | :error -> result)) :: result
+        when result: term()
+  def with_pool(_url, [], fun), do: fun.({:ok, [name: @finch]})
 
-  def request_option(url, connect_options) do
+  def with_pool(url, connect_options, fun) do
     if running?() do
       pool_options = pool_options(connect_options)
       tag = tag_for(pool_options)
 
-      Finch.start_pool(@finch, Pool.new(url, tag: tag), pool_options)
-      {:ok, [name: @finch, pool_tag: tag]}
+      case Janitor.lease(url, pool_options, tag) do
+        {:ok, lease} ->
+          try do
+            fun.({:ok, [name: @finch, pool_tag: tag]})
+          after
+            Janitor.release(lease)
+          end
+
+        :error ->
+          fun.(:error)
+      end
     else
-      :error
+      fun.(:error)
     end
   end
 
-  defp running?, do: is_pid(Process.whereis(@finch))
+  defp running?, do: is_pid(Process.whereis(@finch)) and Janitor.running?()
 
   # `Req.Finch.pool_options/1` is how Req itself turns `:connect_options` into
   # Finch pool configuration, so borrowing it keeps a pinned request connecting

@@ -24,9 +24,13 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
 
   The first two are evaluated hourly by
   `Tymeslot.Workers.IntegrationHealthAlertWorker` over the `:window_hours`
-  that ended at the top of the current hour. When a signal that was at or
-  above its threshold on the previous hourly evaluation drops back under it,
-  `:integration_health_recovery` is raised once.
+  that ended at the top of the current hour. A signal is back to normal only
+  once it has stayed under its threshold for `:recover_after` consecutive
+  windows, and `:integration_health_recovery` is raised once, then. A dip
+  shorter than that is part of the same incident: one organiser's dead
+  calendar, whose page is visited more than the threshold in some hours and
+  less in others, is one incident with one alert, not an alert and a
+  recovery every other hour.
 
   ## Configuration
 
@@ -42,6 +46,9 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
       before alerting
     * `:auto_pause_threshold` [1]: integrations paused in one run before
       alerting
+    * `:recover_after` [2]: consecutive windows under the threshold before a
+      signal counts as recovered; a shorter dip belongs to the incident. At
+      least 1: anything else raises `ArgumentError`
 
   ## Deduplication
 
@@ -53,14 +60,21 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
   alerts also carry the run's date, because each daily run pauses different
   integrations and the next run falls just inside the 24-hour window.
 
-  The two hourly signals also carry the hour their incident began, found by
-  walking back over the consecutive windows at or above the threshold, and
-  their recovery carries the same hour. Without it a second incident on the
-  day of a first one (alert, recovery, then trouble again) would share the
-  first one's keys and be swallowed whole, leaving the recovery as the last
-  word the operator heard. An incident older than the dedup window reports no
-  start, so a long one is reminded of once a day as before rather than every
-  hour as its apparent start slides.
+  The two hourly signals also carry the hour their incident began, and their
+  recovery carries the same hour. Without it a second incident on the day of
+  a first one (alert, recovery, then trouble again) would share the first
+  one's keys and be swallowed whole, leaving the recovery as the last word
+  the operator heard. An incident older than the dedup window reports no
+  start, so a long one is reminded of once a day.
+
+  ## State
+
+  Each hourly signal's state (quiet or in an incident, the incident's start,
+  the last window at or above the threshold, the last window evaluated) is
+  persisted in `integration_health_alert_states`, so each run measures one
+  window instead of walking back over up to a day of them. A signal with no
+  state yet, as on the first run after upgrading, has it rebuilt once from
+  the windows behind it.
 
   Alert metadata carries counts and internal ids only, never user records.
   """
@@ -71,7 +85,9 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.HealthCheck.{AlertStateQueries, AlertStateSchema}
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
+  alias Tymeslot.Repo
 
   @unavailable_reasons [:some_calendars_unavailable, :all_calendars_unavailable]
 
@@ -80,7 +96,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
     refusals_per_user: 5,
     affected_users_threshold: 1,
     reauth_flags_threshold: 10,
-    auto_pause_threshold: 1
+    auto_pause_threshold: 1,
+    recover_after: 2
   ]
 
   @severe_multiplier 10
@@ -140,31 +157,115 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
   @doc """
   Evaluates one signal over the window ending at the top of `now`'s hour,
   raising `:integration_health_failure` at or above its threshold, or
-  `:integration_health_recovery` when it has just dropped back under.
+  `:integration_health_recovery` once it has stayed under it for
+  `:recover_after` windows in a row.
+
+  The signal's state (quiet or in an incident, since when, last window at or
+  above the threshold) is read and written under a row lock, so a window
+  already evaluated is not evaluated again.
   """
   @spec check_signal(signal(), DateTime.t()) :: :alerted | :recovered | :ok
   def check_signal(signal, now \\ Clock.utc_now()) when signal in @signals do
     config = config()
     window_end = hour_start(now)
     threshold = threshold(signal, config)
-    current = measure(signal, window_end, config)
 
-    previous_end = DateTime.add(window_end, -1, :hour)
+    {:ok, outcome} =
+      Repo.transaction(fn ->
+        state =
+          AlertStateQueries.get_for_update(Atom.to_string(signal)) ||
+            reconstruct_state(signal, window_end, threshold, config)
 
-    cond do
-      current.count >= threshold ->
-        started_at = incident_started_at(signal, window_end, threshold, config)
-        report_failure(signal, current, threshold, started_at, config)
-        :alerted
+        if state.last_window_end && DateTime.compare(state.last_window_end, window_end) != :lt do
+          :already_evaluated
+        else
+          current = measure(signal, window_end, config)
+          {outcome, state} = step(state, current.count >= threshold, window_end, config)
+          AlertStateQueries.put(%{state | last_window_end: window_end})
+          {outcome, current, state}
+        end
+      end)
 
-      measure(signal, previous_end, config).count >= threshold ->
-        started_at = incident_started_at(signal, previous_end, threshold, config)
-        report_recovery(signal, current, threshold, started_at, config)
-        :recovered
+    report(signal, outcome, threshold, window_end, config)
+  end
 
-      true ->
-        :ok
-    end
+  # Within an incident each window at or above the threshold re-reports it
+  # (collapsed by the dedup key), and the incident ends once the signal has
+  # been under the threshold for `:recover_after` windows since it was last at
+  # or above it. A shorter dip is part of the same incident.
+  defp step(%{status: :raised} = state, true = _above?, window_end, _config),
+    do: {:alerted, %{state | last_above_at: window_end}}
+
+  defp step(state, true = _above?, window_end, _config),
+    do:
+      {:alerted,
+       %{state | status: :raised, incident_started_at: window_end, last_above_at: window_end}}
+
+  defp step(%{status: :raised} = state, false = _above?, window_end, config) do
+    if DateTime.diff(window_end, state.last_above_at, :hour) >=
+         Keyword.fetch!(config, :recover_after),
+       do: {:recovered, %{state | status: :quiet}},
+       else: {:ok, state}
+  end
+
+  defp step(state, false = _above?, _window_end, _config), do: {:ok, state}
+
+  defp report(_signal, :already_evaluated, _threshold, _window_end, _config), do: :ok
+  defp report(_signal, {:ok, _current, _state}, _threshold, _window_end, _config), do: :ok
+
+  defp report(signal, {:alerted, current, state}, threshold, window_end, config) do
+    report_failure(signal, current, threshold, reported_start(state, window_end), config)
+    :alerted
+  end
+
+  defp report(signal, {:recovered, current, state}, threshold, _window_end, config) do
+    report_recovery(
+      signal,
+      current,
+      threshold,
+      reported_start(state, state.last_above_at),
+      config
+    )
+
+    :recovered
+  end
+
+  # The incident's start goes into the dedup key, so a second incident on the
+  # day of a first is not swallowed by the first one's keys. Once the
+  # incident is older than the dedup window its start is left out, so a long
+  # incident is reminded of once a day rather than never.
+  defp reported_start(%{incident_started_at: nil}, _at), do: nil
+
+  defp reported_start(%{incident_started_at: started_at}, at) do
+    if DateTime.diff(at, started_at, :hour) < @max_incident_lookback_hours,
+      do: DateTime.to_iso8601(started_at)
+  end
+
+  # A signal with no persisted state yet, as on the first run after upgrading
+  # to persisted state, has its state as of the previous window rebuilt from
+  # the windows behind it: in an incident if any of the last `:recover_after`
+  # windows was at or above the threshold, with the incident's start found by
+  # walking back. So the first run neither raises a fresh alert for an
+  # incident already reported nor drops the recovery of one.
+  defp reconstruct_state(signal, window_end, threshold, config) do
+    recover_after = Keyword.fetch!(config, :recover_after)
+
+    last_above =
+      Enum.find_value(1..recover_after//1, fn back ->
+        earlier = DateTime.add(window_end, -back, :hour)
+        if measure(signal, earlier, config).count >= threshold, do: earlier
+      end)
+
+    state = %AlertStateSchema{signal: Atom.to_string(signal), status: :quiet}
+
+    if last_above,
+      do: %{
+        state
+        | status: :raised,
+          last_above_at: last_above,
+          incident_started_at: incident_started_at(signal, last_above, threshold, config)
+      },
+      else: state
   end
 
   @doc """
@@ -228,20 +329,45 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
     %{count: by_provider |> Map.values() |> Enum.sum(), context: %{by_provider: by_provider}}
   end
 
-  # The end of the earliest window in the unbroken run of windows at or above
-  # the threshold that ends with the one ending at `window_end`, or nil when
-  # the run reaches further back than the lookback.
-  defp incident_started_at(signal, window_end, threshold, config),
-    do: walk_back(signal, window_end, threshold, config, @max_incident_lookback_hours)
+  # The end of the earliest window at or above the threshold in the run that
+  # ends with the one ending at `window_end`, where a dip of fewer than
+  # `:recover_after` windows does not break the run, or nil when the run
+  # reaches further back than the lookback.
+  defp incident_started_at(signal, window_end, threshold, config) do
+    walk_back(
+      signal,
+      window_end,
+      threshold,
+      config,
+      @max_incident_lookback_hours,
+      Keyword.fetch!(config, :recover_after)
+    )
+  end
 
-  defp walk_back(_signal, _start, _threshold, _config, 0), do: nil
+  defp walk_back(_signal, _start, _threshold, _config, 0, _recover_after), do: nil
 
-  defp walk_back(signal, start, threshold, config, hours_left) do
-    earlier = DateTime.add(start, -1, :hour)
+  defp walk_back(signal, start, threshold, config, hours_left, recover_after) do
+    reach = min(recover_after, hours_left)
 
-    if measure(signal, earlier, config).count >= threshold,
-      do: walk_back(signal, earlier, threshold, config, hours_left - 1),
-      else: DateTime.to_iso8601(start)
+    case earlier_window_above(signal, start, threshold, config, reach) do
+      {earlier, back} ->
+        walk_back(signal, earlier, threshold, config, hours_left - back, recover_after)
+
+      nil when reach == recover_after ->
+        start
+
+      nil ->
+        nil
+    end
+  end
+
+  # The nearest window at or above the threshold within `reach` windows
+  # before `start`, with how many windows back it lies.
+  defp earlier_window_above(signal, start, threshold, config, reach) do
+    Enum.find_value(1..reach//1, fn back ->
+      earlier = DateTime.add(start, -back, :hour)
+      if measure(signal, earlier, config).count >= threshold, do: {earlier, back}
+    end)
   end
 
   defp report_failure(signal, %{count: count, context: context}, threshold, started_at, config) do
@@ -306,6 +432,26 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
 
   defp hour_start(%DateTime{} = datetime),
     do: %{DateTime.truncate(datetime, :second) | minute: 0, second: 0}
+
+  @doc """
+  Refuses a configuration the hourly check could not run on: a signal can
+  only recover after at least one quiet window, and with fewer the look back
+  over the quiet windows covers nothing, so every window under the threshold
+  would read as a fresh recovery. Called at boot, so a bad value stops the
+  application starting instead of raising in every hourly alert run.
+  """
+  @spec validate_config!() :: :ok
+  def validate_config! do
+    case Keyword.fetch!(config(), :recover_after) do
+      windows when is_integer(windows) and windows >= 1 ->
+        :ok
+
+      other ->
+        raise ArgumentError,
+              "config :tymeslot, :integration_health_alerting, recover_after: must be a " <>
+                "positive integer, got: #{inspect(other)}"
+    end
+  end
 
   defp config do
     Keyword.merge(@defaults, Application.get_env(:tymeslot, :integration_health_alerting, []))

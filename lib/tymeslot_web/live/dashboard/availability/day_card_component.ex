@@ -190,14 +190,16 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
         <% end %>
       </div>
 
-      <p
-        :for={message <- @hours_errors_for_day}
+      <%!-- One element carries every message, so the id the hours selects
+      point at with aria-describedby stays unique. --%>
+      <div
+        :if={@hours_errors_for_day != []}
         id={"day-hours-errors-#{@day}"}
         role="alert"
         class="px-4 pb-3 text-token-sm text-red-600"
       >
-        {message}
-      </p>
+        <p :for={message <- @hours_errors_for_day}>{message}</p>
+      </div>
 
       <%!-- The add-break form drops below its day rather than inline, so the
       row keeps its height until the user asks for it. Fields are top-aligned:

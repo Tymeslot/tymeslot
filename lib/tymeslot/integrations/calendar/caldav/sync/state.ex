@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.CalDAV.Sync.SyncTokenQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
 
   @doc """
@@ -94,10 +95,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
   defp put_sync_tokens(integration, opts) do
     case {opts[:clear_sync_tokens], opts[:sync_token]} do
       {true, _token} ->
-        CalendarIntegrationQueries.clear_caldav_sync_tokens(integration)
+        SyncTokenQueries.clear_caldav_sync_tokens(integration)
 
       {_clear, {path, token}} ->
-        CalendarIntegrationQueries.put_caldav_sync_token(integration, path, token)
+        SyncTokenQueries.put_caldav_sync_token(integration, path, token)
 
       _neither ->
         :ok

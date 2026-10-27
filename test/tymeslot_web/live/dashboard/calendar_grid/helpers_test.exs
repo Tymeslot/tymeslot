@@ -201,13 +201,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
     end
   end
 
-  describe "DataLoading.range_for_view/1 — three_day" do
-    test "returns a one-day buffer before and after the three visible days" do
-      assigns = %{view: :three_day, date: ~D[2026-03-10]}
-      {start_dt, end_dt} = DataLoading.range_for_view(assigns)
+  describe "DataLoading.range_for_view/1" do
+    # The window is the visible days, midnight to midnight in the viewer's zone:
+    # a UTC-midnight window drops a western host's evening on the last day.
+    test "a week view runs from the viewer's Monday midnight to the next" do
+      assigns = %{view: :week, date: ~D[2026-10-07], user_timezone: "America/New_York"}
 
-      assert start_dt == DateTime.new!(~D[2026-03-09], ~T[00:00:00], "Etc/UTC")
-      assert end_dt == DateTime.new!(~D[2026-03-13], ~T[00:00:00], "Etc/UTC")
+      assert DataLoading.range_for_view(assigns) ==
+               {~U[2026-10-05 04:00:00Z], ~U[2026-10-12 04:00:00Z]}
+    end
+
+    test "a day view east of UTC starts on the viewer's midnight, the evening before in UTC" do
+      assigns = %{view: :day, date: ~D[2026-10-07], user_timezone: "Asia/Tokyo"}
+
+      assert DataLoading.range_for_view(assigns) ==
+               {~U[2026-10-06 15:00:00Z], ~U[2026-10-07 15:00:00Z]}
+    end
+
+    test "a three-day view across a DST change ends on the new offset's midnight" do
+      assigns = %{view: :three_day, date: ~D[2026-10-31], user_timezone: "America/New_York"}
+
+      assert DataLoading.range_for_view(assigns) ==
+               {~U[2026-10-31 04:00:00Z], ~U[2026-11-03 05:00:00Z]}
+    end
+
+    test "an agenda runs to midnight after its last day" do
+      assigns = %{view: :agenda, date: ~D[2026-10-07], user_timezone: "America/New_York"}
+
+      assert DataLoading.range_for_view(assigns) ==
+               {~U[2026-10-07 04:00:00Z], ~U[2026-11-07 05:00:00Z]}
+    end
+
+    test "a day with no midnight starts at its first instant" do
+      # Chile moves its clocks forward at 24:00 on the first Saturday of
+      # September, so 6 September 2026 starts at 01:00.
+      assigns = %{view: :day, date: ~D[2026-09-06], user_timezone: "America/Santiago"}
+
+      assert {~U[2026-09-06 04:00:00Z], _end} = DataLoading.range_for_view(assigns)
     end
   end
 

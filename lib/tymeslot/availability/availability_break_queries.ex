@@ -14,13 +14,13 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
   def get_break(id), do: Repo.get(AvailabilityBreakSchema, id)
 
   @doc """
-  Creates an availability break.
+  Deletes every break of one day.
   """
-  @spec create_break(map()) :: {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_break(attrs) when is_map(attrs) do
-    %AvailabilityBreakSchema{}
-    |> AvailabilityBreakSchema.changeset(attrs)
-    |> Repo.insert()
+  @spec delete_for_day(integer()) :: {non_neg_integer(), nil}
+  def delete_for_day(weekly_availability_id) do
+    AvailabilityBreakSchema
+    |> where([b], b.weekly_availability_id == ^weekly_availability_id)
+    |> Repo.delete_all()
   end
 
   @doc """

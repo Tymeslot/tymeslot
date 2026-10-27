@@ -19,6 +19,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
   alias Phoenix.Flash
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
 
   setup :verify_on_exit!
 
@@ -79,8 +80,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Should now be at ready step
-      html = render(view)
-      assert html =~ "all set"
+      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
 
       # Step 7: Ready -> Complete onboarding
       view
@@ -216,6 +216,50 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.username == "oddzone2024"
       assert profile.timezone == "Europe/Tallinn"
+    end
+
+    # A refusal that says what went wrong is shown as is, not replaced by the
+    # generic "check your input" message.
+    test "an exhausted username change allowance is named on the profile step", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Busy Host"})
+      key = "user:" <> Integer.to_string(user.id)
+      for _n <- 1..6, do: RateLimiter.check(:username_change, key)
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      view
+      |> form("form#profile-form", %{"full_name" => "Busy Host", "username" => "busyhost2024"})
+      |> render_change()
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      html = render(view)
+      assert html =~ "Too many username change attempts. Please try again later."
+      refute html =~ "Please check your input"
+    end
+
+    # The strict sanitiser drops everything from `--` onwards and strips
+    # `0x<hex>` runs, so these once saved as "team" and "studio-".
+    for username <- ~w(team--alpha studio-0xab1) do
+      test "the profile step saves #{username} exactly as typed", %{conn: conn} do
+        {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Team Alpha"})
+
+        view |> element("button[phx-click='next_step']") |> render_click()
+
+        view
+        |> form("form#profile-form", %{
+          "full_name" => "Team Alpha",
+          "username" => unquote(username)
+        })
+        |> render_change()
+
+        view |> element("button[phx-click='next_step']") |> render_click()
+
+        assert has_element?(view, ".onboarding-provider-cards")
+
+        profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
+        assert profile.username == unquote(username)
+      end
     end
 
     test "onboarding with custom scheduling preference values", %{conn: conn} do
@@ -359,7 +403,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       end)
 
       html = render(view)
-      assert html =~ "all set"
+      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
 
       # The button is wired to the clipboard hook and carries the booking URL.
       assert has_element?(
@@ -367,10 +411,24 @@ defmodule TymeslotWeb.OnboardingLiveTest do
                "button#onboarding-copy-booking-url[phx-hook='CopyOnClick'][data-copy-text]"
              )
 
-      # Icon-only, so it needs an accessible name, not just a tooltip.
+      # Copying is the step's primary action, labelled in text, and reports
+      # itself to the server since the copy itself never leaves the browser.
       assert has_element?(
                view,
-               "button#onboarding-copy-booking-url[aria-label='Copy booking link']"
+               "button#onboarding-copy-booking-url.action-button--primary",
+               "Copy booking link"
+             )
+
+      assert has_element?(
+               view,
+               "button#onboarding-copy-booking-url[phx-click='share_booking_link'][phx-value-channel='copy']"
+             )
+
+      # Finishing stays available but gives way to the share actions.
+      assert has_element?(
+               view,
+               "button.action-button--secondary[phx-click='next_step']",
+               "Go to dashboard"
              )
 
       button_html = view |> element("#onboarding-copy-booking-url") |> render()

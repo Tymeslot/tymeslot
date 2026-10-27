@@ -7,8 +7,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   require Logger
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.VTimezone
   alias Tymeslot.Timezones
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias Tymeslot.Utils.DateTimeUtils.ICal
 
@@ -97,15 +99,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   end
 
   defp parse_event_block(event_block, vtimezones) do
-    lines = unfold_lines(event_block)
+    {lines, subcomponents} = event_block |> LineFolder.unfold_lines() |> split_subcomponents()
 
     # Extract properties
     uid = extract_property(lines, "UID")
-    summary = extract_property(lines, "SUMMARY")
-    description = extract_property(lines, "DESCRIPTION")
-    location = extract_property(lines, "LOCATION")
-    organizer = extract_organizer(lines)
-    attendees = extract_attendees(lines)
     recurrence_rule = extract_property(lines, "RRULE")
     recurrence_id = extract_recurrence_id(lines)
     exdates = extract_exdates(lines, vtimezones)
@@ -116,18 +113,21 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
     start_time = parse_datetime_property(dtstart, vtimezones)
 
-    end_time =
-      parse_datetime_property(dtend, vtimezones) ||
-        calculate_end_time(start_time, extract_property(lines, "DURATION"))
+    {end_time, duration_defaulted} =
+      case parse_datetime_property(dtend, vtimezones) do
+        nil ->
+          duration = extract_property(lines, "DURATION")
+          calculate_end_time(start_time, duration, dtstart, vtimezones)
+
+        dtend_time ->
+          {dtend_time, false}
+      end
 
     if uid && start_time do
-      %{
+      lines
+      |> descriptive_properties()
+      |> Map.merge(%{
         uid: uid,
-        summary: summary,
-        description: description,
-        location: location,
-        organizer: organizer,
-        attendees: attendees,
         recurrence_rule: recurrence_rule,
         recurrence_id: recurrence_id,
         recurrence_id_range: extract_recurrence_id_range(lines),
@@ -139,33 +139,132 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         exdates: exdates,
         start_time: start_time,
         end_time: end_time,
+        # A DURATION that could not be read, so `end_time` is the default
+        # length instead: an hour for a timed event, a day for an all-day one.
+        # The normaliser reports it, as it reports the events it skips.
+        duration_defaulted: duration_defaulted,
         # The DTSTART TZID as written on the wire, already sanitised to an IANA
         # name. `start_time`/`end_time` above are converted to UTC, which throws
         # the zone away — recurring events need it back to expand occurrences in
         # local wall-clock time across a DST transition (see
-        # `Tymeslot.Integrations.Calendar.ICalNormaliser.expand_event/3`). `nil` for UTC, floating, and
-        # DATE-valued events, none of which have a zone to restore.
+        # `Tymeslot.Integrations.Calendar.ICalNormaliser.expand_occurrences/3`).
+        # `nil` for UTC, floating, and DATE-valued events, none of which have a
+        # zone to restore.
         timezone: dtstart_timezone(dtstart),
         # A DTSTART with neither a TZID nor a `Z` is a floating wall-clock time,
         # which `start_time`/`end_time` above read as UTC. Kept so a caller that
         # knows whose wall clock it is can place it there.
         floating: floating?(dtstart),
-        transparency: normalize_transp(extract_property(lines, "TRANSP")),
-        status: extract_property(lines, "STATUS"),
-        class: extract_property(lines, "CLASS"),
-        colour:
-          extract_property(lines, "COLOR") || extract_property(lines, "X-APPLE-CALENDAR-COLOR")
-      }
+        # The event's VALARMs, as written: each alarm's ACTION and TRIGGER,
+        # which the normaliser maps to the reminders it can represent.
+        valarm: extract_alarms(subcomponents)
+      })
     else
       Logger.debug("Skipping event with missing required fields",
         uid: uid,
-        summary: summary,
+        summary: extract_property(lines, "SUMMARY"),
         has_start: !is_nil(start_time)
       )
 
       nil
     end
   end
+
+  # What the event says about itself, beside its identity and timing.
+  defp descriptive_properties(lines) do
+    %{
+      summary: extract_property(lines, "SUMMARY"),
+      description: extract_property(lines, "DESCRIPTION"),
+      location: extract_property(lines, "LOCATION"),
+      organizer: extract_organizer(lines),
+      attendees: extract_attendees(lines),
+      transparency: normalize_transp(extract_property(lines, "TRANSP")),
+      status: extract_property(lines, "STATUS"),
+      class: extract_property(lines, "CLASS"),
+      colour:
+        extract_property(lines, "COLOR") || extract_property(lines, "X-APPLE-CALENDAR-COLOR")
+    }
+  end
+
+  # A VEVENT's subcomponents (its VALARMs, and RFC 9073's PARTICIPANT or
+  # VLOCATION) reuse the event's property names: RFC 5545 §3.6.6 requires a
+  # DESCRIPTION on a DISPLAY alarm. They are lifted out by nesting depth
+  # before any property is matched, so that a property found in what remains
+  # is the event's own, whether it comes before or after the alarm.
+  defp split_subcomponents([event_begin | rest]),
+    do: split_subcomponents(rest, [event_begin], [])
+
+  defp split_subcomponents([], properties, components),
+    do: {Enum.reverse(properties), Enum.reverse(components)}
+
+  defp split_subcomponents([line | rest] = lines, properties, components) do
+    if component_boundary?(line, "BEGIN:") do
+      {component, remaining} = take_component(lines, 0, [])
+      split_subcomponents(remaining, properties, [component | components])
+    else
+      split_subcomponents(rest, [line | properties], components)
+    end
+  end
+
+  # Takes one component, nested ones included, up to its matching END. An
+  # unterminated component runs to the end of the event block.
+  defp take_component([], _depth, acc), do: {Enum.reverse(acc), []}
+
+  defp take_component([line | rest], depth, acc) do
+    depth =
+      cond do
+        component_boundary?(line, "BEGIN:") -> depth + 1
+        component_boundary?(line, "END:") -> depth - 1
+        true -> depth
+      end
+
+    if depth == 0,
+      do: {Enum.reverse([line | acc]), rest},
+      else: take_component(rest, depth, [line | acc])
+  end
+
+  defp component_boundary?(line, marker),
+    do: line |> String.upcase() |> String.starts_with?(marker)
+
+  defp extract_alarms(components) do
+    for [first | _rest] = lines <- components, String.upcase(first) == "BEGIN:VALARM" do
+      parse_alarm(lines)
+    end
+  end
+
+  @doc """
+  Reads one VALARM, given as its unfolded content lines, into the map
+  `parse/1` lists under an event's `:valarm`: its `ACTION` and its `TRIGGER`
+  with the trigger's `RELATED` and `VALUE` parameters.
+  """
+  @spec parse_alarm([String.t()]) :: map()
+  def parse_alarm(lines) when is_list(lines) do
+    trigger = extract_datetime_property(lines, "TRIGGER")
+
+    %{
+      action: extract_property(lines, "ACTION"),
+      trigger: trigger && trigger.value,
+      trigger_related: trigger_param(lines, "RELATED", "START"),
+      trigger_value: trigger_param(lines, "VALUE", "DURATION")
+    }
+  end
+
+  # RFC 5545 §3.8.6.3: TRIGGER is relative to the start unless RELATED=END,
+  # and a duration unless VALUE=DATE-TIME.
+  defp trigger_param(lines, param, default) do
+    with line when is_binary(line) <- Enum.find(lines, &property_line?(&1, "TRIGGER")),
+         [params | _value] <- String.split(line, ":", parts: 2),
+         [_match, value] <- Regex.run(~r/;#{param}=([^;]+)/i, params) do
+      String.upcase(value)
+    else
+      _absent -> default
+    end
+  end
+
+  defp property_line?(line, property_name),
+    do:
+      String.starts_with?(line, property_name <> ":") or
+        String.starts_with?(line, property_name <> ";")
 
   defp dtstart_timezone(%{timezone: timezone}) when is_binary(timezone), do: timezone
   defp dtstart_timezone(_dtstart), do: nil
@@ -174,25 +273,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     do: Regex.match?(~r/T\d{6}$/, String.trim(value))
 
   defp floating?(_dtstart), do: false
-
-  defp unfold_lines(content) do
-    content
-    |> String.split("\n")
-    |> Enum.reduce([], fn line, acc ->
-      # Continuation line (starts with space or tab)
-      if acc != [] and match?(<<c, _::binary>> when c in [?\s, ?\t], line) do
-        [last | rest] = acc
-        # RFC 5545 §3.1: unfold by removing the line break and exactly ONE
-        # whitespace character; any further whitespace belongs to the value
-        <<_fold, continuation::binary>> = line
-        [last <> continuation | rest]
-      else
-        # New line
-        [line | acc]
-      end
-    end)
-    |> Enum.reverse()
-  end
 
   defp extract_attendees(lines) do
     lines
@@ -288,10 +368,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_property(lines, property_name) do
     line =
-      Enum.find(lines, fn line ->
-        String.starts_with?(line, property_name <> ":") or
-          String.starts_with?(line, property_name <> ";")
-      end)
+      Enum.find(lines, &property_line?(&1, property_name))
 
     case line do
       nil ->
@@ -307,10 +384,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_datetime_property(lines, property_name) do
     line =
-      Enum.find(lines, fn line ->
-        String.starts_with?(line, property_name <> ":") or
-          String.starts_with?(line, property_name <> ";")
-      end)
+      Enum.find(lines, &property_line?(&1, property_name))
 
     case line do
       nil ->
@@ -343,26 +417,39 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
-  defp decode_value(value) do
-    value
-    |> String.trim()
-    |> String.replace("\\n", "\n")
-    |> String.replace("\\,", ",")
-    |> String.replace("\\;", ";")
-    |> String.replace("\\\\", "\\")
-  end
+  # RFC 5545 §3.3.11, in one pass: each escape is read once, so the escaped
+  # backslash in `\\new` stays a backslash before "new" rather than becoming
+  # a line break, and an uppercase `\N` is a line break too.
+  defp decode_value(value), do: value |> String.trim() |> unescape_text("")
+
+  defp unescape_text(<<"\\", char, rest::binary>>, acc) when char in [?n, ?N],
+    do: unescape_text(rest, acc <> "\n")
+
+  defp unescape_text(<<"\\", char, rest::binary>>, acc) when char in [?\\, ?;, ?,],
+    do: unescape_text(rest, <<acc::binary, char>>)
+
+  defp unescape_text(<<char, rest::binary>>, acc), do: unescape_text(rest, <<acc::binary, char>>)
+  defp unescape_text(<<>>, acc), do: acc
 
   defp parse_datetime_property(nil, _vtimezones), do: nil
 
-  defp parse_datetime_property(%{value: value, timezone: timezone} = dt_info, vtimezones) do
-    if vtimezone_override?(timezone, vtimezones) do
-      resolve_via_vtimezone(value, timezone, vtimezones)
+  defp parse_datetime_property(%{value: value, timezone: timezone}, vtimezones) do
+    with {:ok, %NaiveDateTime{} = naive} <- ICal.parse_ical_datetime(value),
+         {:ok, datetime} <- wall_clock_to_utc(naive, timezone, vtimezones) do
+      datetime
     else
-      case ICal.parse_datetime_with_timezone(dt_info) do
-        {:ok, datetime} -> datetime
-        # Fallback for all-day or basic date formats (YYYYMMDD)
-        {:error, _reason} -> all_day_date(value)
-      end
+      # All-day (YYYYMMDD) values, and anything unreadable as nil
+      _not_a_datetime -> all_day_date(value)
+    end
+  end
+
+  # A wall-clock time in a property's TZID, as a UTC DateTime: through the
+  # file's VTIMEZONE when it overrides the zone, else the time zone database.
+  defp wall_clock_to_utc(naive, timezone, vtimezones) do
+    if vtimezone_override?(timezone, vtimezones) do
+      VTimezone.to_utc(Map.fetch!(vtimezones, timezone), naive)
+    else
+      DateTimeUtils.convert_to_utc(naive, timezone)
     end
   end
 
@@ -374,16 +461,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     do: Map.has_key?(vtimezones, timezone) and not tz_database_known?(timezone)
 
   defp vtimezone_override?(_timezone, _vtimezones), do: false
-
-  defp resolve_via_vtimezone(value, timezone, vtimezones) do
-    with {:ok, %NaiveDateTime{} = naive} <- ICal.parse_ical_datetime(value),
-         {:ok, vtz} <- Map.fetch(vtimezones, timezone),
-         {:ok, datetime} <- VTimezone.to_utc(vtz, naive) do
-      datetime
-    else
-      _unresolved -> all_day_date(value)
-    end
-  end
 
   # Probes the configured time zone database at a fixed, transition-free instant
   # so a known zone never reports as unknown via a DST gap/ambiguity result.
@@ -408,34 +485,59 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
-  defp calculate_end_time(nil, _duration), do: nil
+  # The end an event's DTSTART and DURATION give when it has no DTEND, and
+  # whether DURATION was unreadable so the default length stands in for it.
+  defp calculate_end_time(nil, _duration, _dtstart, _vtimezones), do: {nil, false}
 
-  # Default 1 hour for DateTime, 1 day for Date
-  defp calculate_end_time(%DateTime{} = start_time, nil),
-    do: DateTime.add(start_time, 3600, :second)
+  # RFC 5545 §3.6.1: with neither DTEND nor DURATION, a DATE-TIME DTSTART
+  # ends where it starts, and a DATE one takes up that whole day.
+  defp calculate_end_time(%DateTime{} = start_time, nil, _dtstart, _vtimezones),
+    do: {start_time, false}
 
-  defp calculate_end_time(%Date{} = start_time, nil), do: Date.add(start_time, 1)
+  defp calculate_end_time(%Date{} = start_time, nil, _dtstart, _vtimezones),
+    do: {Date.add(start_time, 1), false}
 
-  defp calculate_end_time(%DateTime{} = start_time, duration_str) do
-    # Parse ISO 8601 duration (simplified - only handles basic cases)
-    case Duration.parse(duration_str) do
-      {:ok, seconds} -> DateTime.add(start_time, seconds, :second)
-      {:error, _reason} -> DateTime.add(start_time, 3600, :second)
+  # RFC 5545 §3.3.6: a duration's days are nominal and its time part exact,
+  # so the days move DTSTART's wall-clock time on in its own zone (`P1D`
+  # across a DST change is still the same time the next day), and only then
+  # the hours, minutes and seconds are added as elapsed time.
+  defp calculate_end_time(%DateTime{} = start_time, duration_str, dtstart, vtimezones) do
+    case Duration.parse_nominal(duration_str) do
+      {:ok, {days, seconds}} ->
+        end_time =
+          start_time
+          |> add_nominal_days(days, dtstart, vtimezones)
+          |> DateTime.add(seconds, :second)
+
+        {end_time, false}
+
+      {:error, _reason} ->
+        {DateTime.add(start_time, 3600, :second), true}
     end
   end
 
-  defp calculate_end_time(%Date{} = start_time, duration_str) do
-    # For all-day events with duration, we calculate the number of days.
-    # RFC 5545 durations like PT1H30M or P1D
-    case Duration.parse(duration_str) do
-      {:ok, seconds} ->
-        # Convert seconds to days, rounding up to at least 1 day
-        days = div(seconds, 86_400)
-        Date.add(start_time, max(days, 1))
+  # An all-day event spans whole days: its time part counts in whole days too,
+  # a part day rounding up (`PT48H` is two days, `P1DT12H` also two).
+  defp calculate_end_time(%Date{} = start_time, duration_str, _dtstart, _vtimezones) do
+    case Duration.parse_nominal(duration_str) do
+      {:ok, {days, seconds}} ->
+        days = days + div(seconds + 86_399, 86_400)
+        {Date.add(start_time, max(days, 1)), false}
 
       {:error, _reason} ->
-        # Fallback to 1 day
-        Date.add(start_time, 1)
+        {Date.add(start_time, 1), true}
+    end
+  end
+
+  defp add_nominal_days(start_time, 0, _dtstart, _vtimezones), do: start_time
+
+  defp add_nominal_days(start_time, days, %{value: value, timezone: timezone}, vtimezones) do
+    with {:ok, %NaiveDateTime{} = naive} <- ICal.parse_ical_datetime(value),
+         {:ok, end_time} <-
+           wall_clock_to_utc(NaiveDateTime.add(naive, days, :day), timezone, vtimezones) do
+      end_time
+    else
+      _unresolved -> DateTime.add(start_time, days, :day)
     end
   end
 

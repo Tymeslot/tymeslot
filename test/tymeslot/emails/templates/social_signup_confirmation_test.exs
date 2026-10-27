@@ -9,8 +9,8 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmationTest do
   @recipient %{email: "new@example.com", name: "Ada"}
 
   test "links to finish signing up and names the provider" do
-    html = SocialSignupConfirmation.render(@recipient, "github", @url)
-    text = SocialSignupConfirmation.render_text(@recipient, "github", @url)
+    html = SocialSignupConfirmation.render(@recipient, "github", @url).html_body
+    text = SocialSignupConfirmation.render(@recipient, "github", @url).text_body
 
     assert html =~ ~s(href="#{@url}")
     assert text =~ @url
@@ -20,9 +20,7 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmationTest do
 
   test "is translated for the form's locale" do
     text =
-      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
-        SocialSignupConfirmation.render_text(@recipient, "google", @url)
-      end)
+      SocialSignupConfirmation.render(Map.put(@recipient, :locale, "de"), "google", @url).text_body
 
     assert text =~ "Google"
     refute text =~ "You're signing up"

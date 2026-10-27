@@ -4,6 +4,7 @@ defmodule Tymeslot.Media.VideoMetadataTest do
   @moduletag :security
   @moduletag :unit
 
+  alias Tymeslot.Media.MediaValidator
   alias Tymeslot.Media.VideoMetadata
   alias Tymeslot.Test.MediaFixtures
 
@@ -84,6 +85,55 @@ defmodule Tymeslot.Media.VideoMetadataTest do
 
       assert {:error, :malformed} = VideoMetadata.strip(path)
       assert File.read!(path) == contents
+    end
+  end
+
+  # QuickTime (`qt  ` brand) is the same box structure. An iPhone writes its
+  # location twice: `©xyz` in the movie's user data, and the keyed
+  # `com.apple.quicktime.location.ISO6709` in the movie's `meta`.
+  describe "QuickTime" do
+    @tag :tmp_dir
+    test "removes the user-data and keyed location an iPhone records", %{tmp_dir: tmp_dir} do
+      location = "+51.5074-000.1278+011.000/"
+      key = "com.apple.quicktime.location.ISO6709"
+
+      udta =
+        mp4_box(
+          "udta",
+          mp4_box(<<0xA9, "xyz">>, <<byte_size(location)::16, 0::16, location::binary>>)
+        )
+
+      keys = mp4_box("keys", <<0::32, 1::32, 8 + byte_size(key)::32, "mdta", key::binary>>)
+
+      ilst =
+        mp4_box("ilst", mp4_box(<<1::32>>, mp4_box("data", <<1::32, 0::32, location::binary>>)))
+
+      meta = mp4_box("meta", mp4_box("hdlr", <<0::64, "mdta", 0::96, 0>>) <> keys <> ilst)
+
+      trak = mp4_box("trak", mp4_box("udta", mp4_box(<<0xA9, "mak">>, "Apple iPhone")))
+      mdat = mp4_box("mdat", "FRAMES")
+
+      contents =
+        IO.iodata_to_binary([
+          mp4_box("ftyp", "qt  " <> <<0::32>> <> "qt  "),
+          mp4_box("moov", udta <> meta <> trak),
+          mdat
+        ])
+
+      path = write!(tmp_dir, "iphone.mov", contents)
+
+      assert MediaValidator.valid_video?(contents)
+      assert VideoMetadata.extension(path) == {:ok, ".mp4"}
+      assert {:ok, :stripped} = VideoMetadata.strip(path)
+
+      stripped = File.read!(path)
+
+      for marker <- [location, key, <<0xA9, "xyz">>, "Apple iPhone"] do
+        refute stripped =~ marker, "#{inspect(marker)} survived"
+      end
+
+      assert byte_size(stripped) == byte_size(contents)
+      assert stripped =~ mdat
     end
   end
 
@@ -207,4 +257,23 @@ defmodule Tymeslot.Media.VideoMetadataTest do
 
   defp ebml_unknown(id, payload),
     do: <<:binary.encode_unsigned(id)::binary, 0x01FFFFFFFFFFFFFF::64, payload::binary>>
+
+  describe "extension/1" do
+    test "names MP4 and WebM after their bytes, whatever the file is called" do
+      assert VideoMetadata.extension(MediaFixtures.temp_copy!("gps.mp4")) == {:ok, ".mp4"}
+      assert VideoMetadata.extension(MediaFixtures.temp_copy!("gps.webm")) == {:ok, ".webm"}
+    end
+
+    test "refuses any other container" do
+      path = Path.join(System.tmp_dir!(), "avi_#{System.unique_integer([:positive])}.mp4")
+      File.write!(path, "RIFF" <> <<100::little-32>> <> "AVI LIST")
+      on_exit(fn -> File.rm(path) end)
+
+      assert VideoMetadata.extension(path) == {:error, :unsupported_container}
+    end
+
+    test "returns the error for a missing file" do
+      assert VideoMetadata.extension("/nonexistent/clip.mp4") == {:error, :enoent}
+    end
+  end
 end

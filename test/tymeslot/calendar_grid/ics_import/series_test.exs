@@ -27,6 +27,18 @@ defmodule Tymeslot.CalendarGrid.IcsImport.SeriesTest do
     vevent(["UID:#{uid}", "SUMMARY:#{summary}", "DTSTART:#{start}", "DTEND:#{finish}"] ++ extra)
   end
 
+  # An override moving the occurrence on `date` at 09:00 UTC, and every one
+  # after it, to 14:00.
+  defp later_from(date) do
+    vevent([
+      "UID:s@x",
+      "SUMMARY:Standup, later",
+      "RECURRENCE-ID;RANGE=THISANDFUTURE:#{date}T090000Z",
+      "DTSTART:#{date}T140000Z",
+      "DTEND:#{date}T141500Z"
+    ])
+  end
+
   defp plan!(content) do
     {:ok, plan} = IcsImport.plan(content)
     plan
@@ -216,6 +228,40 @@ defmodule Tymeslot.CalendarGrid.IcsImport.SeriesTest do
       assert tail.recurrence_rule == "FREQ=DAILY;COUNT=3"
       assert tail.recurrence_exceptions == [~U[2026-11-05 14:00:00Z]]
       assert plan.series == 2
+    end
+
+    test "counts a start off the rule as the first occurrence when splitting" do
+      # Monday and Wednesday from Tuesday 3 November: the Tuesday counts
+      # (RFC 5545 3.3.10), so 3, 4 and 9 November come before the 11th.
+      plan =
+        plan!(
+          ics([
+            timed("s@x", "Standup", "20261103T090000Z", "20261103T091500Z", [
+              "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=8"
+            ]),
+            later_from("20261111")
+          ])
+        )
+
+      assert [head, tail] = plan.events
+      assert head.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20261111T085959Z"
+      assert tail.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE;COUNT=5"
+    end
+
+    test "leaves an off-rule start alone in the head when splitting at the rule's first date" do
+      plan =
+        plan!(
+          ics([
+            timed("s@x", "Standup", "20261103T090000Z", "20261103T091500Z", [
+              "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=8"
+            ]),
+            later_from("20261104")
+          ])
+        )
+
+      assert [head, tail] = plan.events
+      assert head.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20261104T085959Z"
+      assert tail.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE;COUNT=7"
     end
 
     test "ends a series where an override cancels that occurrence and every later one" do

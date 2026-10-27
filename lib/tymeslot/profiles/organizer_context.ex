@@ -34,7 +34,7 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   end
 
   defp build_organizer_context(profile, username) do
-    meeting_types = meeting_types_for_profile(profile)
+    meeting_types = profile.meeting_types
     display_name = profile.full_name || get_user_name_from_profile(profile) || username
 
     %{
@@ -48,12 +48,4 @@ defmodule Tymeslot.Profiles.OrganizerContext do
 
   defp get_user_name_from_profile(%{user: %{name: name}}), do: name
   defp get_user_name_from_profile(_arg), do: nil
-
-  defp meeting_types_for_profile(%{meeting_types: meeting_types, user_id: user_id}) do
-    if meeting_types != [] do
-      meeting_types
-    else
-      if user_id, do: MeetingTypes.get_public_meeting_types(user_id), else: []
-    end
-  end
 end

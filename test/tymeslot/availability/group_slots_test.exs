@@ -132,6 +132,21 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
     assert %{seats_left: 2, capacity: 3} = Enum.find(enriched, &(&1.time == "11:00 AM"))
   end
 
+  test "a day whose joinable times cannot be worked out still offers its open times", ctx do
+    start_time = slot_start(ctx.date, ~T[11:00:00])
+    %{meeting: meeting} = book_seat!(ctx, start_time, "one@example.com")
+    starts = base_starts(ctx.date, [own_event(meeting)], ctx.config)
+
+    # A zone the slot grid cannot resolve the booker's day in: the joinable
+    # pass then has no times to add, and the times already offered stand.
+    context = %{context([own_event(meeting)], ctx.config) | user_timezone: "Not/A_Zone"}
+
+    enriched = GroupSlots.enrich_day_slots(starts, ctx.meeting_type, ctx.date, context)
+
+    assert starts != []
+    assert Enum.map(enriched, & &1.time) == labels(starts)
+  end
+
   test "a partially filled meeting is joinable while buffer-adjacent slots stay blocked",
        ctx do
     start_time = slot_start(ctx.date, ~T[11:00:00])

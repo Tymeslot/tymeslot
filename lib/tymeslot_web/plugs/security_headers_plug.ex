@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.Token
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.PathUtils
   alias TymeslotWeb.Plugs.SecurityHeaders.Hsts
@@ -204,7 +205,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   # 18 random bytes → 24-char base64url. Enough entropy to make the nonce
   # unguessable per request, which is the whole point of a CSP nonce.
   defp generate_nonce do
-    18 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+    Token.generate(18)
   end
 
   # Origins the reCAPTCHA v3 script loads from, frames and calls. Added to the

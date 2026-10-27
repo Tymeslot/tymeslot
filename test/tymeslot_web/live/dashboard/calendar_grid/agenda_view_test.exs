@@ -195,6 +195,70 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
     end
   end
 
+  describe "switching view from a week left mid-week" do
+    # The grid shares one anchor date across views, and Week shows the week
+    # containing it. Anchored on a Saturday, Agenda and 3-day used to start on
+    # that Saturday and drop the weekdays the organiser had just been viewing.
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      # A Saturday in a week well clear of today, so today is never on screen.
+      saturday =
+        Date.utc_today()
+        |> Date.add(28)
+        |> Date.beginning_of_week(:monday)
+        |> Date.add(5)
+
+      monday = Date.add(saturday, -5)
+
+      insert_event(integration, %{
+        summary: "Week Opener",
+        start_at: DateTime.new!(monday, ~T[09:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(monday, ~T[10:00:00], "Etc/UTC"),
+        all_day: false
+      })
+
+      {:ok, saturday: saturday, monday: monday}
+    end
+
+    defp open_week_anchored_on(conn, saturday) do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      grid = element(lv, "#calendar-grid")
+      render_hook(grid, "navigate_to_day", %{"date" => Date.to_iso8601(saturday)})
+      render_hook(grid, "set_view", %{"view" => "week"})
+      lv
+    end
+
+    test "Agenda starts on the first day of the week shown", %{
+      conn: conn,
+      saturday: saturday,
+      monday: monday
+    } do
+      lv = open_week_anchored_on(conn, saturday)
+
+      lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "agenda"})
+
+      # The hidden time grid stays mounted under the agenda, so look in the list.
+      assert has_element?(lv, "#calendar-agenda li", Calendar.strftime(monday, "%a %-d %b"))
+      assert has_element?(lv, "#calendar-agenda", "Week Opener")
+    end
+
+    test "the tablet demotion to 3-day keeps the start of the week", %{
+      conn: conn,
+      saturday: saturday,
+      monday: monday
+    } do
+      lv = open_week_anchored_on(conn, saturday)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("set_responsive_view", %{"viewport" => "tablet"})
+
+      assert has_element?(lv, ~s([data-day-col="#{Date.to_iso8601(monday)}"]))
+      refute has_element?(lv, ~s([data-day-col="#{Date.to_iso8601(saturday)}"]))
+    end
+  end
+
   defp insert_event(integration, attrs) do
     insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end

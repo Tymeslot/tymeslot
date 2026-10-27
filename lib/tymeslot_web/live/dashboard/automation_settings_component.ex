@@ -10,6 +10,12 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
   Markup is delegated to focused function-component modules:
     - `WebhookTab`, `TelegramTab`, `SlackTab` — the body of each tab
+
+  While `automations_allowed` is false (the owner's plan doesn't include
+  automations) the section shows the configured `:automation` feature
+  placeholder: on its own when the owner has no integrations, otherwise as a
+  banner above the tabs, whose cards then render paused. Nothing about the
+  pause is stored; it follows the assign, so an upgrade resumes everything.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -36,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias TymeslotWeb.Dashboard.Automation.WebhookEventHandlers
   alias TymeslotWeb.Dashboard.Automation.WebhookFormComponent
   alias TymeslotWeb.Dashboard.Automation.WebhookTab
+  alias TymeslotWeb.Dashboard.ComponentDispatch
 
   @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
@@ -226,6 +233,15 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   @impl Phoenix.LiveComponent
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
+    paused = Map.get(assigns, :automations_allowed, true) == false
+
+    assigns =
+      assign(assigns,
+        automation_paused: paused,
+        placeholder_only: paused and not has_integrations?(assigns),
+        placeholder_components: Map.get(assigns, :feature_placeholder_components, %{})
+      )
+
     ~H"""
     <div>
       <%!-- Modals (outside space-y layout to avoid affecting headline position) --%>
@@ -292,7 +308,25 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         />
       <% end %>
 
-      <.dashboard_page icon="hero-bolt" title={dgettext("dashboard_common", "Automation")}>
+      <ComponentDispatch.feature_placeholder
+        :if={@placeholder_only}
+        section={:automation}
+        current_user={@current_user}
+        feature_placeholder_components={@placeholder_components}
+      />
+
+      <.dashboard_page
+        :if={!@placeholder_only}
+        icon="hero-bolt"
+        title={dgettext("dashboard_common", "Automation")}
+      >
+        <ComponentDispatch.feature_placeholder
+          :if={@automation_paused}
+          section={:automation}
+          variant={:banner}
+          current_user={@current_user}
+          feature_placeholder_components={@placeholder_components}
+        />
         <%= cond do %>
           <% @show_webhook_form -> %>
             <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -363,6 +397,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
                     testing_connection={@testing_connection}
                     time_format={@time_format}
                     myself={@myself}
+                    paused={@automation_paused}
                   />
                 <% :telegram -> %>
                   <TelegramTab.telegram_tab_content
@@ -370,6 +405,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
                     telegram_testing={@telegram_testing}
                     time_format={@time_format}
                     myself={@myself}
+                    paused={@automation_paused}
                   />
                 <% :slack -> %>
                   <SlackTab.slack_tab_content
@@ -378,6 +414,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
                     oauth_mode_available?={@slack_oauth_mode_available?}
                     time_format={@time_format}
                     myself={@myself}
+                    paused={@automation_paused}
                   />
               <% end %>
             </div>
@@ -390,6 +427,11 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   # ============================================================================
   # Private Helpers
   # ============================================================================
+
+  defp has_integrations?(assigns) do
+    assigns.webhooks != [] or assigns.telegram_integrations != [] or
+      assigns.slack_integrations != []
+  end
 
   defp maybe_subscribe_telegram(%{assigns: %{telegram_subscribed: true}} = socket), do: socket
 

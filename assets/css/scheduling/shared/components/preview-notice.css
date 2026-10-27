@@ -8,13 +8,15 @@
    hidden by the component itself (`:if`) whenever `owner_preview` is false.
 
    Amber like .approval-notice: both are warnings that something about this
-   booking is not what it looks like. Reads the --notice-warning role and the
-   --theme-warning input (see shared/tokens.css).
+   booking is not what it looks like. Reads the --notice-warning role, the
+   --theme-warning input and the --preview-notice-ground default (see
+   shared/tokens.css).
 
    Unlike .approval-notice, which sits inside the card, this one sits on the
    page background itself: a video, an image or a colour the organiser chose,
    which a tint alone cannot be read against. Its ground is a near-opaque dark
-   scrim, so the amber text keeps its contrast whatever lies beneath.
+   scrim (--preview-notice-ground, shared/tokens.css), so the amber text keeps
+   its contrast whatever lies beneath.
 
    The demo's theme switcher matches TymeslotWeb.Themes.Shared.Components.
    DemoThemeSwitcher, which Shared.SchedulingPage renders on demo pages only.

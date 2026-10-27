@@ -20,9 +20,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
     DashboardFormat.time_range(start_at, end_at, timezone, fmt)
   end
 
-  @spec tz_abbr(String.t()) :: String.t()
-  def tz_abbr(timezone) do
-    case DateTime.now(timezone) do
+  @doc """
+  The timezone's abbreviation in effect at `at`, not now: a summer event viewed
+  in winter is labelled CEST, not CET. Falls back to the zone name when it is
+  not a known zone.
+  """
+  @spec tz_abbr(String.t(), DateTime.t()) :: String.t()
+  def tz_abbr(timezone, %DateTime{} = at) do
+    case DateTime.shift_zone(at, timezone) do
       {:ok, dt} -> Calendar.strftime(dt, "%Z")
       _error -> timezone
     end
@@ -51,13 +56,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   @spec user_timezone(map()) :: String.t()
   def user_timezone(assigns), do: assigns.user_timezone
 
-  @spec user_tz_abbr(map()) :: String.t()
-  def user_tz_abbr(assigns) do
-    tz = assigns.user_timezone
+  @doc """
+  The timezone's abbreviation over a run of local days, each taken at noon, so
+  a week after the clocks change is not labelled with today's offset. When the
+  days straddle a change, both abbreviations are shown in order: "CEST/CET".
+  """
+  @spec days_tz_abbr(String.t(), [Date.t()]) :: String.t()
+  def days_tz_abbr(timezone, days) do
+    days
+    |> Enum.map(&day_tz_abbr(timezone, &1))
+    |> Enum.dedup()
+    |> Enum.join("/")
+  end
 
-    case DateTime.now(tz) do
+  defp day_tz_abbr(timezone, day) do
+    case DateTime.new(day, ~T[12:00:00], timezone) do
       {:ok, dt} -> Calendar.strftime(dt, "%Z")
-      _error -> tz
+      _error -> timezone
     end
   end
 

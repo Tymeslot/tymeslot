@@ -77,6 +77,7 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     add_guests: {:show_add_guests_modal, :add_guests_modal_data},
     delete_meeting_type: {:show_delete_meeting_type_modal, :delete_meeting_type_modal_data},
     delete_avatar: {:show_delete_avatar_modal, :delete_avatar_modal_data},
+    calendar_move: {:show_calendar_move_modal, :calendar_move_modal_data},
     delete: {:show_delete_modal, :delete_modal_data},
     create: {:show_create_modal, :create_modal_data},
     edit: {:show_edit_modal, :edit_modal_data},

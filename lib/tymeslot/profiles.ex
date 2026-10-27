@@ -11,9 +11,10 @@ defmodule Tymeslot.Profiles do
 
   require Logger
 
+  alias Tymeslot.Availability
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.EmbedDomains
   alias Tymeslot.Profiles.OrganizerContext
@@ -26,8 +27,8 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Repo
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.Catalog
+  alias Tymeslot.Timezones
 
   @type user_id :: pos_integer()
   @type username :: String.t()
@@ -68,20 +69,6 @@ defmodule Tymeslot.Profiles do
   def get_profile_by_user_id(user_id), do: ProfileQueries.get_by_user_id(user_id)
 
   @doc """
-  Assigns a system-generated default username to a profile, bypassing rate limiting.
-
-  This is intended for system use only (e.g. assigning a username during onboarding
-  completion when the user has not chosen one themselves).
-  """
-  @spec assign_default_username(profile(), username()) :: result(profile())
-  def assign_default_username(%ProfileSchema{} = profile, username) do
-    with {:ok, updated_profile} <- ProfileQueries.update_username(profile, username) do
-      Publication.maybe_publish(updated_profile.user_id)
-      {:ok, updated_profile}
-    end
-  end
-
-  @doc """
   Gets a profile by its database ID.
   """
   @spec get_profile_by_id(integer()) :: profile | nil
@@ -90,8 +77,12 @@ defmodule Tymeslot.Profiles do
   @doc """
   Gets or creates a profile for a user.
   Creates default weekly schedule for newly created profiles.
+
+  Safe to call concurrently for the same user: whichever call loses the race
+  to insert returns the winner's profile. Returns `{:error, :user_not_found}`
+  when the user no longer exists.
   """
-  @spec get_or_create_profile(user_id) :: result(profile)
+  @spec get_or_create_profile(user_id) :: result(profile) | {:error, :user_not_found}
   def get_or_create_profile(user_id) do
     case ProfileQueries.get_by_user_id(user_id) do
       {:ok, profile} ->
@@ -103,20 +94,42 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
-  Creates a profile for a user with default weekly schedule.
+  Creates a profile for a user with its default weekly schedule and the
+  default meeting types, which are seeded here, once.
+
+  A profile created concurrently for the same user is returned as if this
+  call had created it; a user deleted meanwhile gives
+  `{:error, :user_not_found}`.
   """
-  @spec create_profile(user_id) :: result(profile)
+  @spec create_profile(user_id) :: result(profile) | {:error, :user_not_found}
   def create_profile(user_id) do
-    Repo.transaction(fn ->
-      with {:ok, profile} <- ProfileQueries.insert_profile(user_id),
-           {:ok, _schedule} <- Schedules.create_default(profile.id) do
-        profile
-      else
-        {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
-        {:error, _reason} -> Repo.rollback(:failed_to_create_schedule)
-      end
-    end)
+    result =
+      Repo.transaction(fn ->
+        with {:ok, profile} <- ProfileQueries.insert_profile(user_id),
+             {:ok, _schedule} <- Schedules.create_default(profile.id) do
+          :ok = MeetingTypes.seed_default_meeting_types(user_id)
+          profile
+        else
+          {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
+          {:error, _reason} -> Repo.rollback(:failed_to_create_schedule)
+        end
+      end)
+
+    settle_insert_race(result, user_id)
   end
+
+  defp settle_insert_race({:error, %Ecto.Changeset{errors: errors}} = error, user_id) do
+    case errors[:user_id] do
+      {_message, opts} -> user_id_refusal(opts[:constraint], user_id, error)
+      nil -> error
+    end
+  end
+
+  defp settle_insert_race(result, _user_id), do: result
+
+  defp user_id_refusal(:unique, user_id, _error), do: ProfileQueries.get_by_user_id(user_id)
+  defp user_id_refusal(:foreign, _user_id, _error), do: {:error, :user_not_found}
+  defp user_id_refusal(_other, _user_id, error), do: error
 
   @doc """
   Gets a profile by username.
@@ -162,23 +175,36 @@ defmodule Tymeslot.Profiles do
   # --- Profile Updates ---
 
   @doc """
-  Updates a user's profile settings.
+  Updates the host's name and time zone together, as the onboarding form
+  submits them. The username is written by `change_username/2` alone.
   """
-  @spec update_profile(profile, map()) :: result(profile)
-  def update_profile(%ProfileSchema{} = profile, attrs) do
-    case ProfileQueries.update_profile(profile, attrs) do
-      {:ok, updated_profile} = result ->
-        Logger.info("Profile updated successfully",
-          user_id: updated_profile.user_id,
-          timezone: updated_profile.timezone
-        )
+  @spec update_basic_details(profile, map()) :: result(profile)
+  def update_basic_details(%ProfileSchema{} = profile, attrs),
+    do: profile |> ProfileQueries.update_basic(attrs) |> changed()
 
-        result
+  @doc """
+  Sets the name and avatar of an account provisioned with both at once.
+  """
+  @spec provision_identity(profile, %{full_name: String.t(), avatar: String.t() | nil}) ::
+          result(profile)
+  def provision_identity(%ProfileSchema{} = profile, attrs),
+    do: ProfileQueries.update_identity(profile, attrs)
 
-      error ->
-        error
-    end
+  @doc """
+  Records whether the profile's booking page carries a theme customisation.
+  """
+  @spec set_custom_theme(profile, boolean()) :: result(profile)
+  def set_custom_theme(%ProfileSchema{} = profile, custom?) when is_boolean(custom?),
+    do: ProfileQueries.update_theme(profile, %{has_custom_theme: custom?})
+
+  # The booking page lays the host's hours out in their time zone and hides a
+  # slot past their booking limits, so either change refreshes what it offers.
+  defp changed({:ok, profile} = result) do
+    Availability.changed(profile)
+    result
   end
+
+  defp changed(error), do: error
 
   @doc """
   Updates the booking page's introductory text and its on/off switch.
@@ -202,7 +228,7 @@ defmodule Tymeslot.Profiles do
   """
   @spec update_full_name(profile, String.t()) :: result(profile)
   def update_full_name(%ProfileSchema{} = profile, full_name),
-    do: update_profile(profile, %{full_name: full_name})
+    do: ProfileQueries.update_basic(profile, %{full_name: full_name})
 
   # --- Timezone Management ---
 
@@ -254,9 +280,28 @@ defmodule Tymeslot.Profiles do
   def get_user_timezone(user_id) do
     case ProfileQueries.get_by_user_id(user_id) do
       {:error, :not_found} -> get_default_timezone()
-      {:ok, profile} -> profile.timezone || get_default_timezone()
+      {:ok, profile} -> timezone(profile)
     end
   end
+
+  @doc """
+  A profile's timezone, or the default for a profile that has none set.
+
+  `profiles.timezone` is nullable, so this is the one rule for reading an
+  owner's clock: the booking page, time off, the free/busy feed and booking
+  limits all go through it, and so agree on where a nil-timezone host's day
+  begins. Takes anything carrying `:timezone`, or `nil` for no profile.
+
+  A blank zone, or one the time-zone database does not know
+  (`Timezones.valid?/1`), counts as none: every caller can shift into
+  whatever this returns.
+  """
+  @spec timezone(map() | nil) :: timezone
+  def timezone(%{timezone: timezone}) when is_binary(timezone) do
+    if Timezones.valid?(timezone), do: timezone, else: get_default_timezone()
+  end
+
+  def timezone(_profile), do: get_default_timezone()
 
   @doc """
   Gets the default timezone.
@@ -269,7 +314,7 @@ defmodule Tymeslot.Profiles do
   """
   @spec update_timezone(profile, timezone) :: result(profile)
   def update_timezone(%ProfileSchema{} = profile, timezone),
-    do: update_profile(profile, %{timezone: timezone})
+    do: profile |> ProfileQueries.update_basic(%{timezone: timezone}) |> changed()
 
   # --- Username Management ---
 
@@ -353,31 +398,30 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
-  Updates a user's username with validation and rate limiting.
+  Changes a profile's username: the one path every username write takes, so
+  each is validated (format and the reserved list), rate limited and can
+  publish the booking page (`Tymeslot.BookingPage.Publication`).
 
+  Submitting the profile's current username writes nothing and costs nothing.
   A username refused by validation does not count towards the change rate
   limit; only an attempt that reaches the database does.
   """
-  @spec update_username(profile(), username(), user_id()) :: result(profile())
-  def update_username(%ProfileSchema{} = profile, username, user_id) do
-    with :ok <- UsernameValidator.validate(username, reserved_words: ReservedPaths.list()),
-         :ok <-
-           RateLimiter.check_username_change_rate_limit("user:" <> Integer.to_string(user_id)),
-         {:ok, updated_profile} <- ProfileQueries.update_username(profile, username) do
-      Publication.maybe_publish(updated_profile.user_id)
-      {:ok, updated_profile}
-    else
-      {:error, :rate_limited} ->
-        {:error,
-         dgettext(
-           "dashboard_profile",
-           "Too many username change attempts. Please try again later."
-         )}
+  @spec change_username(profile(), username()) :: result(profile())
+  defdelegate change_username(profile, username), to: Usernames, as: :change
 
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
+  @doc """
+  Gives a profile without a username the system default
+  (`generate_default_username/1`), as when onboarding moves on without one.
+  A profile that already has a username is returned unchanged.
+
+  A system write: it is validated and can publish the booking page like any
+  other username write, but is not counted against the user's change rate
+  limit, so a user who spent their allowance still gets a resolvable page.
+  `{:error, :not_found}` when the profile has been deleted since it was
+  read.
+  """
+  @spec ensure_default_username(profile()) :: result(profile())
+  defdelegate ensure_default_username(profile), to: Usernames, as: :ensure_default
 
   @doc """
   Returns a list of reserved paths.
@@ -403,11 +447,7 @@ defmodule Tymeslot.Profiles do
 
       {:ok, profile} ->
         %{
-          # A profile's timezone column is nullable, so fall back here as
-          # `get_user_timezone/1` does — the declared `timezone` type is
-          # non-nil, and every caller reads a usable zone rather than each
-          # remembering the fallback.
-          timezone: profile.timezone || get_default_timezone(),
+          timezone: timezone(profile),
           max_bookings_per_day: profile.max_bookings_per_day,
           max_bookings_per_week: profile.max_bookings_per_week,
           max_bookings_per_month: profile.max_bookings_per_month
@@ -460,6 +500,13 @@ defmodule Tymeslot.Profiles do
 
   @spec avatar_url(profile | nil, atom()) :: String.t()
   def avatar_url(profile, version \\ :original), do: Avatars.avatar_url(profile, version)
+
+  @doc """
+  The generated fallback avatar as a data URI, for a profile or profile-shaped
+  map without an uploaded image. See `Avatars.fallback_data_uri/2`.
+  """
+  @spec fallback_avatar_data_uri(map() | nil, non_neg_integer()) :: String.t()
+  def fallback_avatar_data_uri(profile, size \\ 300), do: Avatars.fallback_data_uri(profile, size)
 
   @doc """
   Returns the public path to a profile's uploaded avatar image, or `nil` when
@@ -535,7 +582,7 @@ defmodule Tymeslot.Profiles do
   @spec update_booking_theme(profile, term()) :: result(profile)
   def update_booking_theme(%ProfileSchema{} = profile, theme_id) do
     if Catalog.valid_id?(to_string(theme_id)),
-      do: update_profile(profile, %{booking_theme: theme_id}),
+      do: ProfileQueries.update_theme(profile, %{booking_theme: theme_id}),
       else: {:error, "Invalid theme ID"}
   end
 
@@ -552,11 +599,8 @@ defmodule Tymeslot.Profiles do
   Updates the allowed embed domains for a profile.
   """
   @spec update_allowed_embed_domains(profile, String.t() | [String.t()]) :: result(profile)
-  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains) do
-    with {:ok, attrs} <- EmbedDomains.validate_and_normalize(profile, domains) do
-      update_profile(profile, attrs)
-    end
-  end
+  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains),
+    do: ProfileQueries.update_embed_domains(profile, EmbedDomains.normalize(domains))
 
   # --- Organizer Context ---
 
@@ -566,11 +610,4 @@ defmodule Tymeslot.Profiles do
   @spec resolve_organizer_context(username) :: {:ok, map()} | {:error, :profile_not_found}
   def resolve_organizer_context(username),
     do: OrganizerContext.resolve_organizer_context(username)
-
-  @doc """
-  Optimized version of resolve_organizer_context.
-  """
-  @spec resolve_organizer_context_optimized(username) ::
-          {:ok, map()} | {:error, :profile_not_found}
-  def resolve_organizer_context_optimized(username), do: resolve_organizer_context(username)
 end

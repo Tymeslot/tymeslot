@@ -3,9 +3,10 @@ defmodule TymeslotWeb.SlackOAuthController do
   Slack OAuth v2 start / callback endpoints.
 
   `start/2` redirects the logged-in user to Slack's authorize page with a
-  signed state token. `callback/2` verifies that state, exchanges the code
-  for a bot token, and persists a pending `:slack_integration` row that the
-  dashboard will surface so the user can pick a channel.
+  signed state token. `callback/2` rate-limits by client and hands the rest
+  (state check, code exchange, the pending `:slack_integration` row the
+  dashboard surfaces for picking a channel) to
+  `Slack.complete_oauth_callback/4`.
   """
 
   use TymeslotWeb, :controller
@@ -62,14 +63,11 @@ defmodule TymeslotWeb.SlackOAuthController do
   end
 
   def callback(conn, %{"code" => code, "state" => state}) do
-    redirect_uri = callback_url()
-    current_user_id = conn.assigns.current_user.id
+    user_id = conn.assigns.current_user.id
 
-    with :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
-         {:ok, state_user_id} <- OAuth.verify_state(state),
-         :ok <- verify_state_matches_current_user(state_user_id, current_user_id),
-         {:ok, install} <- OAuth.exchange_code(code, redirect_uri),
-         {:ok, integration} <- Slack.complete_oauth(current_user_id, install) do
+    with :ok <- RateLimiter.check(:oauth_callback, ClientIP.get(conn)),
+         {:ok, integration} <-
+           Slack.complete_oauth_callback(user_id, code, state, callback_url()) do
       conn
       |> put_flash(
         :info,
@@ -112,13 +110,6 @@ defmodule TymeslotWeb.SlackOAuthController do
     |> put_flash(:error, message)
     |> redirect(to: ~p"/dashboard/automation")
   end
-
-  defp verify_state_matches_current_user(state_user_id, current_user_id)
-       when state_user_id == current_user_id,
-       do: :ok
-
-  defp verify_state_matches_current_user(_state_user_id, _current_user_id),
-    do: {:error, :user_mismatch}
 
   defp callback_url, do: "#{Endpoint.url()}#{@callback_path}"
 end

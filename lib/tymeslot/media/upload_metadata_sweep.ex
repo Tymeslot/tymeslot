@@ -23,6 +23,7 @@ defmodule Tymeslot.Media.UploadMetadataSweep do
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Media.ImageMetadata
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Media.VideoMetadata
 
   @image_extensions ~w(.jpg .jpeg .png .gif .webp)
@@ -42,7 +43,7 @@ defmodule Tymeslot.Media.UploadMetadataSweep do
   warning per failed file.
   """
   @spec run(Path.t()) :: report()
-  def run(upload_dir \\ Application.get_env(:tymeslot, :upload_directory, "uploads")) do
+  def run(upload_dir \\ Uploads.root()) do
     upload_dir
     |> media_files()
     |> Enum.reduce(%{stripped: 0, unchanged: 0, failed: []}, fn path, report ->

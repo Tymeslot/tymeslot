@@ -4,9 +4,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ProviderPickerTest do
   @moduletag :integrations
   @moduletag :components
 
-  alias Tymeslot.Integrations.Providers.Descriptor
-  alias Tymeslot.Integrations.Providers.Directory
-  alias Tymeslot.Integrations.Providers.Families
+  alias Tymeslot.Integrations.Shared.Providers.Descriptor
+  alias Tymeslot.Integrations.Shared.Providers.Directory
+  alias Tymeslot.Integrations.Shared.Providers.Families
   alias TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker
 
   defp descriptor(family) do

@@ -2,10 +2,10 @@ defmodule Mix.Tasks.Tymeslot.ReencryptCredentials do
   @moduledoc """
   Re-encrypts stored credentials under the current data-at-rest key.
 
-  After `DATA_ENCRYPTION_KEY` is configured, existing credentials are still stored
-  under the legacy `SECRET_KEY_BASE`-derived key. This task walks every encrypted
-  column across the integration tables and rewrites each value with the new
-  primary key, so the two secrets become fully independent.
+  After `DATA_ENCRYPTION_KEY` is configured, or a new primary is promoted in
+  `DATA_ENCRYPTION_KEYS`, existing credentials are still stored under the
+  previous key. This task walks every encrypted column and rewrites each value
+  with the current primary key.
 
   The sweep is idempotent and resumable: values already stored under the current
   key are skipped, so it is safe to run repeatedly and to re-run after an
@@ -19,17 +19,18 @@ defmodule Mix.Tasks.Tymeslot.ReencryptCredentials do
       mix tymeslot.reencrypt_credentials --batch-size 500
 
   Re-run until the reported `migrated_values` is `0` to confirm the sweep is
-  complete. Only then is it safe to retire the legacy key (a future release).
+  complete, then check `Tymeslot.Security.CredentialReencryption.key_report/0`
+  before retiring the previous key (README-Docker.md, "Rotating the data key").
 
-  Requires `DATA_ENCRYPTION_KEY` to be set; the task aborts otherwise, since there
-  would be no primary key to migrate to.
+  Requires a data encryption key to be set; the task aborts otherwise, since
+  there would be no primary key to migrate to.
   """
 
   use Mix.Task
 
   alias Tymeslot.Security.CredentialReencryption
 
-  @shortdoc "Re-encrypt stored credentials under the current DATA_ENCRYPTION_KEY"
+  @shortdoc "Re-encrypt stored credentials under the current data encryption key"
 
   @impl Mix.Task
   def run(args) do

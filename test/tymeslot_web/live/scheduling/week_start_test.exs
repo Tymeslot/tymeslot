@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekStartTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekStartTest do
     test "a bare English header falls back to the organiser's Sunday",
          %{conn: conn, profile: profile} do
       {:ok, _prefs} =
-        CalendarManagement.save_preferences(profile.user_id, %{week_start_day: "sunday"})
+        Management.save_preferences(profile.user_id, %{week_start_day: "sunday"})
 
       doc = schedule_page(conn, profile, "en")
 
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekStartTest do
     test "the visitor's region wins over the organiser's setting",
          %{conn: conn, profile: profile} do
       {:ok, _prefs} =
-        CalendarManagement.save_preferences(profile.user_id, %{week_start_day: "sunday"})
+        Management.save_preferences(profile.user_id, %{week_start_day: "sunday"})
 
       doc = schedule_page(conn, profile, "de-DE")
 
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekStartTest do
     test "a bare English header falls back to the organiser's Sunday",
          %{conn: conn, profile: profile} do
       {:ok, _prefs} =
-        CalendarManagement.save_preferences(profile.user_id, %{week_start_day: "sunday"})
+        Management.save_preferences(profile.user_id, %{week_start_day: "sunday"})
 
       doc = schedule_page(conn, profile, "en")
 

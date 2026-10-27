@@ -29,7 +29,7 @@ defmodule CredoChecks.WebLayerBoundary do
   - **Forbidden modules.** An `alias`/`import` of, or a call naming, a module
     in the `:forbidden_modules` param or any module below one. The default is
     the calendar runtime layer (`lib/tymeslot/integrations/calendar/runtime/`):
-    `Tymeslot.Integrations.Calendar.Operations`, `EventsRead`,
+    `Tymeslot.Integrations.Calendar.Runtime.Operations`, `EventsRead`,
     `RequestCoalescer`, and everything under
     `Tymeslot.Integrations.Calendar.Runtime`. Web code reaches calendar writes
     and reads through `Tymeslot.Integrations.Calendar` and its public
@@ -45,7 +45,7 @@ defmodule CredoChecks.WebLayerBoundary do
   - **Suffix rules for query modules and workers, a list for adapters.** Query
     and worker modules follow naming conventions the codebase already keeps,
     so a new one is caught by default. Runtime adapters have no such
-    convention (`Calendar.Operations` implements a behaviour and is named for
+    convention (`Calendar.Runtime.Operations` implements a behaviour and is named for
     it), so they are an explicit list that replaces the default when given.
     Only the calendar integration has a runtime layer today; a new one belongs
     in the default list.
@@ -113,9 +113,9 @@ defmodule CredoChecks.WebLayerBoundary do
     param_defaults: [
       allowed: [],
       forbidden_modules: [
-        Tymeslot.Integrations.Calendar.Operations,
-        Tymeslot.Integrations.Calendar.EventsRead,
-        Tymeslot.Integrations.Calendar.RequestCoalescer,
+        Tymeslot.Integrations.Calendar.Runtime.Operations,
+        Tymeslot.Integrations.Calendar.Runtime.EventsRead,
+        Tymeslot.Integrations.Calendar.Runtime.RequestCoalescer,
         Tymeslot.Integrations.Calendar.Runtime
       ]
     ],
@@ -124,7 +124,7 @@ defmodule CredoChecks.WebLayerBoundary do
       Web modules (LiveViews, LiveComponents, controllers and their helpers)
       must go through a context's public API. They must not alias or call
       `*Queries` modules, build or insert Oban jobs, or call runtime adapter
-      modules such as `Tymeslot.Integrations.Calendar.Operations`.
+      modules such as `Tymeslot.Integrations.Calendar.Runtime.Operations`.
       """,
       params: [
         allowed: "List of filename substrings exempt from the check.",

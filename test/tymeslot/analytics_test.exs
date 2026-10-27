@@ -4,12 +4,14 @@ defmodule Tymeslot.AnalyticsTest do
   @moduletag :analytics
   @moduletag :database
 
+  import Tymeslot.ConfigTestHelpers
+
   alias Tymeslot.Analytics
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Analytics.MetricsCache
   alias Tymeslot.Factory
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Security.RateLimiter.Analytics, as: AnalyticsLimiter
 
   setup do
     user = Factory.insert(:user)
@@ -174,7 +176,11 @@ defmodule Tymeslot.AnalyticsTest do
 
       # Exhaust the IP bucket without going through log_page_view
       for _i <- 1..limit do
-        AnalyticsLimiter.check_ip(bucket_key, window_ms, limit)
+        RateLimiter.check_bucket(bucket_key,
+          limit: limit,
+          window_ms: window_ms,
+          operation: "test"
+        )
       end
 
       assert {:ok, :filtered_rate_limit} =
@@ -393,6 +399,80 @@ defmodule Tymeslot.AnalyticsTest do
     test "referrer_host is nil when referrer is nil" do
       result = Analytics.extract_attribution(%{}, nil)
       assert result.referrer_host == nil
+    end
+  end
+
+  describe "dashboard_metrics/3" do
+    defmodule DenyAnalyticsChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :analytics_allowed), do: {:error, :insufficient_plan}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    setup do
+      MetricsCache.clear_all()
+      on_exit(&MetricsCache.clear_all/0)
+    end
+
+    defp log_visit(user, source, ip) do
+      {:ok, _event} =
+        Analytics.log_page_view(%{
+          path: "/alice/intro",
+          user_id: user.id,
+          meeting_type_id: nil,
+          ip: ip,
+          user_agent: "Mozilla/5.0 ... Firefox/120",
+          session_id: "s-" <> ip,
+          params: %{"utm_source" => source},
+          referrer: nil
+        })
+    end
+
+    test "returns the window and its metrics for an entitled organizer", %{user: user} do
+      log_visit(user, "linkedin", "10.0.0.1")
+
+      assert {:ok, metrics} = Analytics.dashboard_metrics(user.id, 7, "Etc/UTC")
+
+      assert metrics.visits == 1
+      assert [%{utm_source: "linkedin", visits: 1}] = metrics.sources
+      assert DateTime.diff(metrics.to, metrics.from) == 7 * 86_400
+    end
+
+    test "refuses an organizer whose plan does not include analytics", %{user: user} do
+      setup_config(:tymeslot, :feature_access_checker, DenyAnalyticsChecker)
+      log_visit(user, "linkedin", "10.0.0.1")
+
+      assert {:error, :insufficient_plan} = Analytics.dashboard_metrics(user.id, 7, "Etc/UTC")
+
+      assert {:error, :insufficient_plan} =
+               Analytics.refresh_dashboard_metrics(user.id, 7, "Etc/UTC")
+    end
+
+    test "refuses everyone when analytics is disabled on the installation", %{user: user} do
+      setup_config(:tymeslot, :booking_analytics_enabled, false)
+
+      assert {:error, :disabled} = Analytics.dashboard_metrics(user.id, 7, "Etc/UTC")
+      assert {:error, :disabled} = Analytics.refresh_dashboard_metrics(user.id, 7, "Etc/UTC")
+    end
+
+    test "caches per time zone, so a zone change recomputes", %{user: user} do
+      log_visit(user, "linkedin", "10.0.0.1")
+      assert {:ok, %{visits: 1}} = Analytics.dashboard_metrics(user.id, 7, "Etc/UTC")
+
+      log_visit(user, "twitter", "10.0.0.2")
+
+      assert {:ok, %{visits: 1}} = Analytics.dashboard_metrics(user.id, 7, "Etc/UTC")
+      assert {:ok, %{visits: 2}} = Analytics.dashboard_metrics(user.id, 7, "Europe/Tallinn")
+    end
+
+    test "refresh_dashboard_metrics/3 recomputes past the cache", %{user: user} do
+      log_visit(user, "linkedin", "10.0.0.1")
+      assert {:ok, %{visits: 1}} = Analytics.dashboard_metrics(user.id, 7, "Etc/UTC")
+
+      log_visit(user, "twitter", "10.0.0.2")
+
+      assert {:ok, %{visits: 2}} = Analytics.refresh_dashboard_metrics(user.id, 7, "Etc/UTC")
     end
   end
 end

@@ -12,7 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemSync do
   so a change to an item ten years out arrives exactly like a change to one
   next week. Bounding the result to the sync window is the caller's job, and it
   can only be done after the fields are fetched, because the ids this module
-  answers carry no dates. `Tymeslot.Workers.SyncExchangeCalendarWorker` does
+  answers carry no dates. `Tymeslot.Integrations.Calendar.Exchange.SyncCycle` does
   that filtering; nothing here knows the window exists.
 
   ## A first call enumerates everything

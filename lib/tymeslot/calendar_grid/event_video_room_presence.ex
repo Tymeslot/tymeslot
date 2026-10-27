@@ -53,12 +53,12 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
-  alias Tymeslot.Integrations.Calendar.Operations, as: CalendarOperations
-  alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviderConfig
+  alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Video.ProviderConfig
 
   @grace_seconds 48 * 3600
-  @seconds_per_day 86_400
 
   @doc """
   The nightly scan: the recorded rooms whose event the calendar cache says is
@@ -67,12 +67,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
   """
   @spec list_gone() :: [EventVideoRoomSchema.t()]
   def list_gone do
-    cache_reaches_back_to =
-      DateTime.add(
-        DateTime.utc_now(),
-        -CalendarProviderConfig.sync_window_past_days() * @seconds_per_day,
-        :second
-      )
+    {cache_reaches_back_to, _window_end} = Sync.window(Clock.utc_now())
 
     ProviderConfig.rooms_recorded_for_grid_events()
     |> EventVideoRoomQueries.list_watched(cache_reaches_back_to)
@@ -194,7 +189,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
   end
 
   defp ask_provider(room) do
-    case CalendarOperations.fetch_event(
+    case CalendarEvents.fetch_event(
            EventVideoRooms.provider_event_ref(room),
            {room.calendar_integration_id, room.user_id}
          ) do
@@ -216,7 +211,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
     end
   end
 
-  defp now, do: DateTime.utc_now(:second)
+  defp now, do: DateTime.truncate(Clock.utc_now(), :second)
 
   defp describe({:ok, []}), do: :no_usable_event
   defp describe({:error, reason}) when is_atom(reason), do: reason

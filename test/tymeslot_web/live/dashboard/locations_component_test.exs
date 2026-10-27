@@ -427,7 +427,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponentTest do
     # message the next refused write flashes.
     defp exhaust_write_limit(user) do
       Enum.find_value(
-        Stream.repeatedly(fn -> RateLimiter.check_meeting_type_write_rate_limit(user.id) end),
+        Stream.repeatedly(fn -> RateLimiter.check(:meeting_type_write, user.id) end),
         fn
           {:error, :rate_limited, message} -> message
           :ok -> nil

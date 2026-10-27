@@ -55,6 +55,50 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       refute html =~ ~s(id="event-booking-#{meeting.id}) <> ~s(" data-draggable="true")
     end
 
+    # A 30-minute block is 2rem tall, too short for the title and the time on
+    # separate lines, so the time moves beside the title instead of being cut off.
+    test "a short booking puts its time beside the title; a longer one stacks it",
+         %{conn: conn, user: user} do
+      start_time = DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC")
+
+      short =
+        insert_booking(user, %{
+          title: "Quick check-in",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30 * 60, :second)
+        })
+
+      long = insert_booking(user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard")
+      doc = Floki.parse_document!(html)
+
+      short_block = Floki.find(doc, ~s{[data-event-id="booking-#{short.id}"]})
+
+      assert [layout] =
+               short_block
+               |> Floki.find("[data-event-layout]")
+               |> Floki.attribute("data-event-layout")
+
+      assert layout == "inline"
+
+      assert short_block |> Floki.find("[data-event-layout]") |> Floki.text() =~
+               ~r/Quick check-in\s+1:00/
+
+      refute Floki.text(short_block) =~ "Ada Lovelace"
+
+      long_block = Floki.find(doc, ~s{[data-event-id="booking-#{long.id}"]})
+
+      assert ["stacked"] =
+               long_block
+               |> Floki.find("[data-event-layout]")
+               |> Floki.attribute("data-event-layout")
+
+      refute long_block |> Floki.find("[data-event-layout]") |> Floki.text() =~ "9:00"
+      assert Floki.text(long_block) =~ "9:00"
+      assert Floki.text(long_block) =~ "Ada Lovelace"
+    end
+
     test "shows the connect-a-calendar banner instead of a blocking empty state",
          %{conn: conn, user: user} do
       # The banner defers to the setup checklist, which carries the same

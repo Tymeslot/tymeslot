@@ -42,7 +42,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientConfig do
     # shaped for the CalDAV family and always sets it. An EWS folder is named
     # by an opaque `FolderId`, never a path, so nothing here reads it.
     calendar_paths: [],
-    verify_ssl: true
+    verify_ssl: true,
+    # Set only for a connection test or discovery a person asked for, which
+    # has to reach a server whose host breaker is open; see
+    # `CalDAV.Client`'s field of the same name.
+    skip_breaker: false
   ]
 
   @type folder_id :: String.t() | :calendar
@@ -58,7 +62,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientConfig do
           booking_folder_id: folder_id() | nil,
           request_timeout: pos_integer() | nil,
           calendar_paths: [String.t()],
-          verify_ssl: boolean()
+          verify_ssl: boolean(),
+          skip_breaker: boolean()
         }
 
   @doc """

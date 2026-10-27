@@ -71,6 +71,64 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
       assert record.failures == 1
     end
 
+    # The email handler stamps `notification_sent_at` once the unhealthy email
+    # has gone out. A probe that read the row before that must not write the
+    # stale value back, or the 30-day cooldown is lost.
+    test "put_state leaves a notification stamp made after the probe read the row" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      read_by_probe = Monitor.get_state(:calendar, integration.id, user.id)
+      stamped_at = DateTime.utc_now(:second)
+
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          notification_sent_at: stamped_at
+        )
+
+      probed = Monitor.update_health(read_by_probe, {:ok, :probe_succeeded})
+      assert {1, _nil} = Monitor.put_state(:calendar, integration.id, probed)
+
+      {:ok, record} = IntegrationHealthStateQueries.get(:calendar, integration.id)
+      assert DateTime.compare(record.notification_sent_at, stamped_at) == :eq
+    end
+
+    # A sync that read the row as unhealthy, then failed below the streak
+    # threshold, must not bring the status back after the probe recorded a
+    # recovery in between: that stale status and `became_unhealthy_at` are
+    # what send an owner an "unhealthy" email just after their integration
+    # recovered.
+    test "put_sync_state below the streak threshold leaves a recovery the probe recorded" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+      became_unhealthy_at = DateTime.add(DateTime.utc_now(), -3, :day)
+
+      {:ok, _record} =
+        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          status: "unhealthy",
+          became_unhealthy_at: became_unhealthy_at
+        )
+
+      read_by_sync = Monitor.get_state(:calendar, integration.id, user.id)
+
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          status: "healthy",
+          became_unhealthy_at: nil
+        )
+
+      failed_sync = Monitor.record_sync_failure(read_by_sync)
+      assert {1, _nil} = Monitor.put_sync_state(:calendar, integration.id, failed_sync)
+
+      {:ok, record} = IntegrationHealthStateQueries.get(:calendar, integration.id)
+      assert record.status == "healthy"
+      assert record.became_unhealthy_at == nil
+      assert record.consecutive_sync_failures == 1
+    end
+
     test "put_state returns {0, nil} when no record exists" do
       health_state = %{
         Monitor.initial_state()

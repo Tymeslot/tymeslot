@@ -194,6 +194,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       host_currency: nil,
       id: "overview-step",
       locale: "en",
+      host_currency: nil,
       username_context: "hostuser",
       organizer_profile: build(:profile, full_name: "Sarah Rodriguez"),
       meeting_types: [],

@@ -1,16 +1,18 @@
 defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
-  @moduledoc "Integration-related emails: unhealthy integration notifications and admin alerts."
+  @moduledoc """
+  Delivers the integration emails and the admin alerts. Each template builds
+  its whole email, recipient and subject included, in the recipient's locale;
+  this module only logs and delivers.
+  """
 
   require Logger
 
-  alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
-  alias Tymeslot.Emails.RecipientLocale
-  alias Tymeslot.Emails.Shared.MjmlEmail
 
   alias Tymeslot.Emails.Templates.{
     AdminAlert,
     AdminAlertDigest,
+    CalendarsRemoved,
     IntegrationPaused,
     IntegrationReauthRequired,
     IntegrationUnhealthy,
@@ -34,20 +36,9 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       type: type
     )
 
-    html_body = IntegrationUnhealthy.render(user, integration, type)
-    text_body = IntegrationUnhealthy.render_text(user, integration, type)
-    type_label = if type == :video, do: "video", else: "calendar"
-
-    display_name = Map.get(user, :name) || user.email
-
-    email =
-      MjmlEmail.base_email()
-      |> Email.to({display_name, user.email})
-      |> Email.subject("Your #{type_label} integration may need attention")
-      |> Email.html_body(html_body)
-      |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+    user
+    |> IntegrationUnhealthy.render(integration, type)
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -70,21 +61,9 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       type: type
     )
 
-    html_body = IntegrationReauthRequired.render(user, integration, type)
-    text_body = IntegrationReauthRequired.render_text(user, integration, type)
-
-    provider_label = IntegrationReauthRequired.provider_label(integration, type)
-
-    display_name = Map.get(user, :name) || user.email
-
-    email =
-      MjmlEmail.base_email()
-      |> Email.to({display_name, user.email})
-      |> Email.subject("Reconnect your #{provider_label} integration")
-      |> Email.html_body(html_body)
-      |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+    user
+    |> IntegrationReauthRequired.render(integration, type)
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -107,20 +86,9 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       type: type
     )
 
-    html_body = IntegrationPaused.render(user, integration, type, cutoff_days)
-    text_body = IntegrationPaused.render_text(user, integration, type, cutoff_days)
-    type_label = if type == :video, do: "video", else: "calendar"
-
-    display_name = Map.get(user, :name) || user.email
-
-    email =
-      MjmlEmail.base_email()
-      |> Email.to({display_name, user.email})
-      |> Email.subject("Your #{type_label} integration has been paused")
-      |> Email.html_body(html_body)
-      |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+    user
+    |> IntegrationPaused.render(integration, type, cutoff_days)
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -128,7 +96,6 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
   rooms for it, why, and how to fix it, from the refusal recorded on
   `integration`.
 
-  Rendered in the owner's locale, since it asks them to change a setting.
   """
   @spec send_video_room_creation_error_notification(
           Tymeslot.Emails.EmailService.user_map(),
@@ -141,16 +108,30 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       code: integration.room_creation_error
     )
 
-    RecipientLocale.with_user_locale(user, fn ->
-      {html_body, text_body} = VideoRoomCreationError.render_both(integration)
+    user
+    |> VideoRoomCreationError.render(integration)
+    |> Delivery.deliver()
+  end
 
-      MjmlEmail.base_email()
-      |> Email.to({Map.get(user, :name) || user.email, user.email})
-      |> Email.subject(VideoRoomCreationError.subject(integration))
-      |> Email.html_body(html_body)
-      |> Email.text_body(text_body)
-      |> Delivery.deliver()
-    end)
+  @doc """
+  Tells the owner of a calendar integration that the calendar server no
+  longer has `calendar_names`, so Tymeslot has stopped using them.
+  """
+  @spec send_calendars_removed_notification(
+          Tymeslot.Emails.EmailService.user_map(),
+          map(),
+          [String.t()]
+        ) :: {:ok, any()} | {:error, any()}
+  def send_calendars_removed_notification(user, integration, calendar_names) do
+    Logger.info("Sending calendars removed notification",
+      user_id: user.id,
+      integration_id: integration.id,
+      count: length(calendar_names)
+    )
+
+    user
+    |> CalendarsRemoved.render(integration, calendar_names)
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -167,17 +148,9 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       severity: severity
     )
 
-    html_body = AdminAlert.render(category, severity, message, metadata)
-    text_body = AdminAlert.render_text(category, severity, message, metadata)
-
-    email =
-      MjmlEmail.base_email()
-      |> Email.to({"Tymeslot Operator", recipient})
-      |> Email.subject(AdminAlert.subject(category, severity))
-      |> Email.html_body(html_body)
-      |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+    recipient
+    |> AdminAlert.render(category, severity, message, metadata)
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -194,13 +167,8 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       entries: length(Map.get(digest, "entries", []))
     )
 
-    email =
-      MjmlEmail.base_email()
-      |> Email.to({"Tymeslot Operator", recipient})
-      |> Email.subject(AdminAlertDigest.subject(digest))
-      |> Email.html_body(AdminAlertDigest.render(digest))
-      |> Email.text_body(AdminAlertDigest.render_text(digest))
-
-    Delivery.deliver(email)
+    recipient
+    |> AdminAlertDigest.render(digest)
+    |> Delivery.deliver()
   end
 end

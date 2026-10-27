@@ -42,6 +42,33 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
       assert GuestBooking.seat_cap(assigns) == Guests.max_guests()
     end
 
+    test "the meeting type's own guest limit caps a solo booking" do
+      assigns = %{
+        meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{
+          max_participants: 1,
+          max_guests_per_booking: 2
+        }
+      }
+
+      assert GuestBooking.seat_cap(assigns) == 2
+    end
+
+    test "a group booking takes the lower of the type's limit and the seats left" do
+      limited = fn limit, seats_left ->
+        %{
+          meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{
+            max_participants: 20,
+            max_guests_per_booking: limit
+          },
+          selected_time: "09:00",
+          available_slots: [%{time: "09:00", seats_left: seats_left, capacity: 20}]
+        }
+      end
+
+      assert GuestBooking.seat_cap(limited.(2, 15)) == 2
+      assert GuestBooking.seat_cap(limited.(5, 3)) == 2
+    end
+
     test "last seat leaves no room for guests" do
       assert GuestBooking.seat_cap(group_assigns(1)) == 0
     end
@@ -49,6 +76,27 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
     test "falls back to the flat cap when the selected slot is unknown" do
       assert GuestBooking.seat_cap(group_assigns(4, %{selected_time: "23:45"})) ==
                Guests.max_guests()
+    end
+  end
+
+  describe "cap_visible?/1" do
+    test "solo types show the flat cap" do
+      assigns = %{meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{max_participants: 1}}
+      assert GuestBooking.cap_visible?(assigns)
+    end
+
+    test "a group slot that hides its count hides the cap" do
+      refute GuestBooking.cap_visible?(group_assigns(6))
+    end
+
+    test "a group slot at or below the last-spots threshold shows the cap" do
+      meeting_type = %Tymeslot.MeetingTypes.MeetingTypeSchema{
+        max_participants: 10,
+        last_spots_threshold: 6
+      }
+
+      assert GuestBooking.cap_visible?(group_assigns(6, %{meeting_type: meeting_type}))
+      refute GuestBooking.cap_visible?(group_assigns(7, %{meeting_type: meeting_type}))
     end
   end
 

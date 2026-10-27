@@ -157,10 +157,12 @@ defmodule Tymeslot.FreeBusyTest do
       assert DateTime.truncate(e, :second) == ~U[2030-06-01 10:00:00Z]
     end
 
-    test "maps all-day events to midnight-to-midnight UTC intervals", %{
+    test "maps an all-day event to the owner's local day", %{
       profile: profile,
       integration: integration
     } do
+      profile = %{profile | timezone: "Australia/Sydney"}
+
       insert(:provider_calendar_event,
         calendar_integration: integration,
         all_day: true,
@@ -175,9 +177,166 @@ defmodule Tymeslot.FreeBusyTest do
       intervals =
         FreeBusy.busy_intervals(profile, ~U[2030-05-01 00:00:00Z], ~U[2030-07-01 00:00:00Z])
 
+      # 1 June in Sydney (AEST, +10:00), not 1 June in UTC.
       assert [{s, e}] = intervals
-      assert s == ~U[2030-06-01 00:00:00Z]
-      assert e == ~U[2030-06-02 00:00:00Z]
+      assert DateTime.compare(s, ~U[2030-05-31 14:00:00Z]) == :eq
+      assert DateTime.compare(e, ~U[2030-06-01 14:00:00Z]) == :eq
+    end
+  end
+
+  describe "busy_intervals/3 and the calendars the owner lets block" do
+    setup do
+      profile = insert(:profile)
+
+      integration =
+        insert(:calendar_integration,
+          user: profile.user,
+          provider: "google",
+          calendar_list: [
+            %{id: "work", selected: true},
+            %{id: "holidays", selected: true, blocks_availability: false},
+            %{id: "archive", selected: false}
+          ]
+        )
+
+      for {calendar_id, hour} <- [{"work", 9}, {"holidays", 11}, {"archive", 13}] do
+        start = DateTime.new!(~D[2030-06-03], Time.new!(hour, 0, 0), "Etc/UTC")
+
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider_calendar_id: calendar_id,
+          start_at: start,
+          end_at: DateTime.add(start, 3600, :second)
+        )
+      end
+
+      %{profile: profile}
+    end
+
+    test "publishes a blocking calendar's events only", %{profile: profile} do
+      starts =
+        profile
+        |> FreeBusy.busy_intervals(~U[2030-06-01 00:00:00Z], ~U[2030-06-10 00:00:00Z])
+        |> Enum.map(fn {s, _e} -> DateTime.truncate(s, :second) end)
+
+      # 11:00 is a show-only calendar; 13:00 a deselected one whose rows a
+      # sync left behind.
+      assert starts == [~U[2030-06-03 09:00:00Z]]
+    end
+  end
+
+  describe "busy_intervals/3 and rows filed under the \"primary\" label" do
+    # An Outlook integration's rows cached before discovery named its default
+    # calendar carry "primary" until a later read relabels them.
+    defp outlook_with(default_blocks?) do
+      profile = insert(:profile)
+
+      integration =
+        insert(:calendar_integration,
+          user: profile.user,
+          provider: "outlook",
+          calendar_list: [
+            %{
+              id: "AAMk-default",
+              primary: true,
+              selected: true,
+              blocks_availability: default_blocks?
+            },
+            %{id: "AAMk-team", selected: true}
+          ]
+        )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "outlook",
+        provider_calendar_id: "primary",
+        start_at: ~U[2030-06-03 09:00:00Z],
+        end_at: ~U[2030-06-03 10:00:00Z]
+      )
+
+      profile
+    end
+
+    defp starts(profile) do
+      profile
+      |> FreeBusy.busy_intervals(~U[2030-06-01 00:00:00Z], ~U[2030-06-10 00:00:00Z])
+      |> Enum.map(fn {s, _e} -> DateTime.truncate(s, :second) end)
+    end
+
+    test "count as the default calendar's when it blocks" do
+      assert starts(outlook_with(true)) == [~U[2030-06-03 09:00:00Z]]
+    end
+
+    test "do not when the default calendar is set to show only" do
+      assert starts(outlook_with(false)) == []
+    end
+  end
+
+  describe "busy_intervals/3 for a CalDAV calendar shared as busy times only" do
+    test "publishes the busy periods its sync cached" do
+      profile = insert(:profile)
+      path = "/calendars/colleague/availability/"
+
+      integration =
+        insert(:calendar_integration,
+          user: profile.user,
+          provider: "caldav",
+          calendar_list: [
+            %{id: "/calendars/host/personal/", path: "/calendars/host/personal/", selected: true},
+            %{id: path, path: path, selected: true, read_only: true, free_busy_only: true}
+          ]
+        )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "caldav",
+        provider_calendar_id: path,
+        provider_event_id: nil,
+        role: "busy_only",
+        uid: "tymeslot:caldav-busy:1",
+        start_at: ~U[2030-06-03 09:00:00Z],
+        end_at: ~U[2030-06-03 10:00:00Z]
+      )
+
+      assert [{start, _end}] =
+               FreeBusy.busy_intervals(
+                 profile,
+                 ~U[2030-06-01 00:00:00Z],
+                 ~U[2030-06-10 00:00:00Z]
+               )
+
+      assert DateTime.truncate(start, :second) == ~U[2030-06-03 09:00:00Z]
+    end
+  end
+
+  describe "busy_intervals/3 for an Exchange mailbox" do
+    test "publishes its mailbox-wide busy time whatever folders are selected" do
+      profile = insert(:profile)
+
+      integration =
+        insert(:calendar_integration,
+          user: profile.user,
+          provider: "exchange",
+          calendar_list: [%{id: "folder-team", name: "Team", selected: true}]
+        )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "exchange",
+        provider_calendar_id: "mailbox",
+        role: "busy_only",
+        start_at: ~U[2030-06-03 09:00:00Z],
+        end_at: ~U[2030-06-03 10:00:00Z]
+      )
+
+      assert [{start, _end}] =
+               FreeBusy.busy_intervals(
+                 profile,
+                 ~U[2030-06-01 00:00:00Z],
+                 ~U[2030-06-10 00:00:00Z]
+               )
+
+      assert DateTime.truncate(start, :second) == ~U[2030-06-03 09:00:00Z]
     end
   end
 

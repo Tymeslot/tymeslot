@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -67,6 +68,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
             class="rounded"
           />
           <span class="text-token-sm text-tymeslot-600 truncate">{calendar.name}</span>
+          <%!-- So an event shown here is not taken for a conflict: its
+               calendar is shown but does not take slots. --%>
+          <span
+            :if={not Blocking.blocks?(integration, calendar)}
+            class="shrink-0 rounded-token-sm bg-tymeslot-100 px-1.5 py-0.5 text-token-2xs font-semibold text-tymeslot-500"
+          >
+            {dgettext("dashboard_calendar", "Doesn't block")}
+          </span>
         </label>
         <div class="pb-1.5 pl-6">
           <ColourSwatches.colour_swatches

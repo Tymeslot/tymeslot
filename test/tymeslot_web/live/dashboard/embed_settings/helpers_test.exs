@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
 
       assert code =~ "data-locale=\"de\""
       assert code =~ "data-theme=\"2\""
-      assert code =~ "data-primary-color=\"#14B8A6\""
+      assert code =~ "data-primary-color=\"#14b8a6\""
       refute code =~ "data-duration"
     end
 
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       # Check for presence of parameters without assuming order
       assert code =~ "TymeslotBooking.open('testuser', {"
       assert code =~ "locale: 'fr'"
-      assert code =~ "primaryColor: '#FF5733'"
+      assert code =~ "primaryColor: '#ff5733'"
       assert code =~ "theme: '1'"
       refute code =~ "duration"
     end
@@ -92,6 +92,17 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       refute code =~ "data-locale"
     end
 
+    test "carries a short colour in the form the booking page reads it" do
+      code =
+        Helpers.embed_code("inline", %{
+          username: "testuser",
+          base_url: "https://tymeslot.com",
+          primary_color: "#ABC"
+        })
+
+      assert code =~ "data-primary-color=\"#aabbcc\""
+    end
+
     test "generates link embed code with the booking URL" do
       assigns = %{
         username: "testuser",
@@ -103,6 +114,23 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
 
       assert code =~ ~s(<a href="https://tymeslot.com/testuser">)
       assert code =~ "Schedule a meeting"
+    end
+
+    # The strict sanitiser drops everything from `--` onwards and strips
+    # `0x<hex>` runs, so these once embedded "team" and the invalid "studio-".
+    for username <- ~w(team--alpha studio-0xab1) do
+      test "keeps #{username} exactly as stored in every snippet that names it" do
+        assigns = %{username: unquote(username), base_url: "https://tymeslot.com"}
+
+        assert Helpers.embed_code("inline", assigns) =~
+                 ~s(data-username="#{unquote(username)}")
+
+        assert Helpers.embed_code("popup", assigns) =~
+                 "TymeslotBooking.open('#{unquote(username)}'"
+
+        assert Helpers.embed_code("floating", assigns) =~
+                 "TymeslotBooking.initFloating('#{unquote(username)}'"
+      end
     end
 
     test "returns empty string for unknown type" do

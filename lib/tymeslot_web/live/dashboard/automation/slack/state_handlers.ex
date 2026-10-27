@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
+  import Tymeslot.Features.AccessErrors, only: [is_access_error: 1]
 
   alias Phoenix.LiveView
   alias Tymeslot.Security.RateLimiter
@@ -47,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
   def handle_test(%{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_webhook_test_rate_limit(user_id) do
+    case RateLimiter.check(:webhook_test, user_id) do
       {:error, :rate_limited, message} ->
         Flash.error(message)
         {:noreply, socket}
@@ -67,6 +68,12 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
           :ok ->
             Flash.info(dgettext("dashboard_automation_chat", "Test message sent! Check Slack."))
             {:noreply, assign(socket, :slack_testing, nil)}
+
+          {:error, reason} when is_access_error(reason) ->
+            {:noreply,
+             socket
+             |> AutomationHelpers.handle_feature_access_error(reason)
+             |> assign(:slack_testing, nil)}
 
           {:error, reason} ->
             Flash.error(Slack.translate_error(reason))
@@ -100,10 +107,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
 
             {:noreply, AutomationHelpers.maybe_load_slack(socket)}
 
-          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
-            {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
-
-          {:error, _reason} ->
+          {:error, _changeset} ->
             Flash.error(dgettext("dashboard_automation_chat", "Failed to disconnect Slack"))
             {:noreply, socket}
         end

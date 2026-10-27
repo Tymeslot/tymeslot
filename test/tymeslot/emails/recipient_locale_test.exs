@@ -82,7 +82,7 @@ defmodule Tymeslot.Emails.RecipientLocaleTest do
     test "translates through the Core backend inside the block" do
       translated =
         RecipientLocale.with_user_locale(%{locale: "de"}, fn ->
-          Gettext.dgettext(TymeslotWeb.Gettext, "emails", "Verify your email address")
+          Gettext.dgettext(TymeslotWeb.Gettext, "emails_account", "Verify your email address")
         end)
 
       assert translated == "Bestätigen Sie Ihre E-Mail-Adresse"

@@ -2,24 +2,15 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
   use Tymeslot.DataCase, async: false
   @moduletag :utils
 
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.ThemeCustomizations.Storage
   alias Tymeslot.ThemeCustomizations.Validation
 
   setup do
-    upload_root =
-      Path.join(System.tmp_dir!(), "tymeslot_uploads_#{System.unique_integer([:positive])}")
-
-    original_root = Application.get_env(:tymeslot, :upload_directory)
-
-    Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :upload_directory, original_root)
-      File.rm_rf(upload_root)
-    end)
-
-    %{upload_root: upload_root}
+    UploadRoot.isolate("tymeslot_uploads")
+    :ok
   end
 
   # A real image and a real video, which the metadata strippers can read to
@@ -45,78 +36,23 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
   end
 
   describe "Storage module" do
-    test "build_theme_file_path/1 creates full path", %{upload_root: upload_root} do
-      relative_path = "themes/1/images/background.jpg"
-      full_path = Storage.build_theme_file_path(relative_path)
-
-      assert full_path =~ "themes/1/images/background.jpg"
-      assert String.starts_with?(full_path, Storage.get_upload_base_directory())
-      assert String.starts_with?(full_path, upload_root)
-    end
-
-    test "get_upload_base_directory/0 returns configured directory", %{upload_root: upload_root} do
-      base_dir = Storage.get_upload_base_directory()
-
-      assert base_dir == upload_root
-    end
-
-    test "get_theme_upload_directory/3 creates correct path structure" do
-      path = Storage.get_theme_upload_directory(123, "1", "images")
-
-      assert path =~ "themes/123/1/images"
-    end
-
-    test "get_theme_upload_directory/3 for videos" do
-      path = Storage.get_theme_upload_directory(456, "2", "videos")
-
-      assert path =~ "themes/456/2/videos"
-    end
-
-    test "ensure_directory_exists/1 creates directory" do
-      test_dir = Path.join([System.tmp_dir!(), "tymeslot_test_#{:rand.uniform(100_000)}"])
-
-      try do
-        assert Storage.ensure_directory_exists(test_dir) == :ok
-        assert File.dir?(test_dir)
-      after
-        File.rm_rf!(test_dir)
-      end
-    end
-
-    test "ensure_directory_exists/1 returns error tuple on permission denied" do
-      # Create a read-only parent directory so mkdir_p inside it fails with :eacces
-      parent = Path.join(System.tmp_dir!(), "tymeslot_readonly_#{:rand.uniform(100_000)}")
-      File.mkdir_p!(parent)
-      File.chmod!(parent, 0o444)
-
-      try do
-        child = Path.join(parent, "subdir")
-        assert {:error, :eacces} = Storage.ensure_directory_exists(child)
-      after
-        File.chmod!(parent, 0o755)
-        File.rm_rf!(parent)
-      end
-    end
-
     test "store_asset/4 returns error tuple when directory creation fails" do
-      # Point upload dir at a read-only location so ensure_directory_exists fails
+      # Point upload dir at a read-only location so the store cannot create its directory
       readonly = Path.join(System.tmp_dir!(), "tymeslot_ro_#{:rand.uniform(100_000)}")
       File.mkdir_p!(readonly)
       File.chmod!(readonly, 0o444)
 
-      original_dir = Application.get_env(:tymeslot, :upload_directory)
-      Application.put_env(:tymeslot, :upload_directory, readonly)
+      UploadRoot.point_at(readonly)
+
+      on_exit(fn ->
+        File.chmod!(readonly, 0o755)
+        File.rm_rf!(readonly)
+      end)
 
       temp_file = MediaFixtures.temp_copy!("gps.webp")
 
-      try do
-        assert {:error, :eacces} =
-                 Storage.store_asset(:image, 1, "1", %{path: temp_file, filename: "bg.webp"})
-      after
-        Application.put_env(:tymeslot, :upload_directory, original_dir)
-        File.chmod!(readonly, 0o755)
-        File.rm_rf!(readonly)
-      end
+      assert {:error, :eacces} =
+               Storage.store_asset(:image, 1, "1", %{path: temp_file, filename: "bg.webp"})
     end
 
     test "store_asset/4 refuses a temp file that does not exist" do
@@ -143,16 +79,16 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       assert {:ok, stored_path} =
                Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: "test.png"})
 
-      assert stored_path =~ ~r|\Athemes/1/1/images/[0-9a-f]{12}-test\.png\z|
-      assert File.exists?(Storage.build_theme_file_path(stored_path))
+      assert stored_path =~ ~r|\Athemes/1/1/images/[0-9a-f-]{36}\.png\z|
+      assert File.exists?(UploadRoot.path(stored_path))
     end
 
     test "store_asset/4 stores a video under the theme's videos directory" do
       assert {:ok, stored_path} =
                Storage.store_asset(:video, 1, "2", %{path: video_file(), filename: "test.mp4"})
 
-      assert stored_path =~ ~r|\Athemes/1/2/videos/[0-9a-f]{12}-test\.mp4\z|
-      assert File.exists?(Storage.build_theme_file_path(stored_path))
+      assert stored_path =~ ~r|\Athemes/1/2/videos/[0-9a-f-]{36}\.mp4\z|
+      assert File.exists?(UploadRoot.path(stored_path))
     end
 
     test "store_asset/4 gives two uploads of the same name paths of their own" do
@@ -163,69 +99,21 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       {:ok, second} = Storage.store_asset(:image, 1, "1", upload.())
 
       assert first != second
-      assert File.exists?(Storage.build_theme_file_path(first))
-      assert File.exists?(Storage.build_theme_file_path(second))
-    end
-
-    test "store_asset/4 keeps the prefix when the client name carries a directory" do
-      {:ok, stored_path} =
-        Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: "../photos/bg.png"})
-
-      assert Path.basename(stored_path) =~ ~r|\A[0-9a-f]{12}-bg\.png\z|
-      assert Path.dirname(stored_path) == "themes/1/1/images"
+      assert File.exists?(UploadRoot.path(first))
+      assert File.exists?(UploadRoot.path(second))
     end
 
     # The media URL is built through `Validation.sanitize_path/1`; a stored
     # name it would rewrite is served under a name no file has, and 404s.
-    for {filename, stem} <- [
-          {"photo (1).jpg", "photo__1_"},
-          {"a..b.png", "a__b"},
-          {"café.png", "caf__"}
-        ] do
-      test "store_asset/4 stores #{inspect(filename)} under a name its URL keeps" do
+    for filename <- ["../photos/bg.png", "photo (1).png", "a..b.png", "café.png"] do
+      test "store_asset/4 stores #{inspect(filename)} under a server-chosen name its URL keeps" do
         {:ok, stored_path} =
           Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: unquote(filename)})
 
-        extension = Path.extname(unquote(filename))
-
-        assert Path.basename(stored_path) =~
-                 ~r/\A[0-9a-f]{12}-#{unquote(stem)}#{Regex.escape(extension)}\z/
-
+        assert Path.dirname(stored_path) == "themes/1/1/images"
+        assert Path.basename(stored_path) =~ ~r/\A[0-9a-f-]{36}\.png\z/
         assert Validation.sanitize_path(stored_path) == stored_path
-
-        assert File.exists?(Storage.build_theme_file_path(Validation.sanitize_path(stored_path)))
-      end
-    end
-
-    test "store_asset/4 shortens a long client name to fit, keeping its extension" do
-      # Uploads are served only with an allowed extension, so a name cut after the
-      # prefix was added would store a file that can never be served.
-      filename = String.duplicate("a", 246) <> ".png"
-
-      {:ok, stored_path} =
-        Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: filename})
-
-      stored_name = Path.basename(stored_path)
-
-      assert stored_name =~ ~r|\A[0-9a-f]{12}-a+\.png\z|
-      assert byte_size(stored_name) == 255
-      assert File.exists?(Storage.build_theme_file_path(stored_path))
-    end
-
-    # The prefix is 13 bytes and the extension 4, so a stem of 238 bytes
-    # exactly fills the 255-byte limit and 239 is the first one cut.
-    for stem_bytes <- [238, 239] do
-      test "store_asset/4 fits a #{stem_bytes}-byte stem into the limit" do
-        filename = String.duplicate("a", unquote(stem_bytes)) <> ".png"
-
-        {:ok, stored_path} =
-          Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: filename})
-
-        stored_name = Path.basename(stored_path)
-
-        assert stored_name =~ ~r|\A[0-9a-f]{12}-a{238}\.png\z|
-        assert byte_size(stored_name) == 255
-        assert File.exists?(Storage.build_theme_file_path(stored_path))
+        assert File.exists?(UploadRoot.path(stored_path))
       end
     end
 
@@ -236,7 +124,7 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
                  filename: "bg.webp"
                })
 
-      contents = stored_path |> Storage.build_theme_file_path() |> File.read!()
+      contents = stored_path |> UploadRoot.path() |> File.read!()
       assert MediaFixtures.image_metadata_fields(contents) == []
       refute contents =~ "Model-X"
     end
@@ -255,7 +143,7 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
                  filename: "test.mp4"
                })
 
-      stored = stored_path |> Storage.build_theme_file_path() |> File.read!()
+      stored = stored_path |> UploadRoot.path() |> File.read!()
       assert byte_size(stored) == byte_size(MediaFixtures.read!("gps.mp4"))
       refute stored =~ <<0xA9, "xyz">>
       refute stored =~ "location.ISO6709"
@@ -270,6 +158,73 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
 
       assert uploaded_files() == []
     end
+
+    test "store_asset/4 for a video names a WebM sent as .mp4 after what it is" do
+      temp_file = MediaFixtures.temp_copy!("gps.webm")
+
+      assert {:ok, stored_path} =
+               Storage.store_asset(:video, 1, "1", %{path: temp_file, filename: "clip.mp4"})
+
+      assert Path.basename(stored_path) =~ ~r/\A[0-9a-f-]{36}\.webm\z/
+      assert File.exists?(UploadRoot.path(stored_path))
+    end
+
+    test "store_asset/4 for a video refuses junk whose first byte is the MPEG-TS sync byte" do
+      temp_file = Path.join(System.tmp_dir!(), "test_video_#{System.unique_integer([:positive])}")
+      File.write!(temp_file, <<0x47>> <> :binary.copy(<<0xFF>>, 1_000))
+      on_exit(fn -> File.rm(temp_file) end)
+
+      assert {:error, :invalid_video_format} =
+               Storage.store_asset(:video, 1, "1", %{path: temp_file, filename: "clip.mp4"})
+    end
+
+    test "store_asset/4 for an image names a PNG sent as .jpg after what it is" do
+      temp_file = MediaFixtures.temp_copy!("gps.png")
+
+      assert {:ok, stored_path} =
+               Storage.store_asset(:image, 1, "1", %{path: temp_file, filename: "bg.jpg"})
+
+      assert Path.basename(stored_path) =~ ~r/\A[0-9a-f-]{36}\.png\z/
+      stored = stored_path |> UploadRoot.path() |> File.read!()
+      assert <<137, 80, 78, 71, _rest::binary>> = stored
+      assert MediaFixtures.image_metadata_fields(stored) == []
+    end
+
+    test "store_asset/4 for an image refuses an animated GIF sent under an accepted name" do
+      temp_file = MediaFixtures.temp_copy!("animated.gif")
+
+      assert {:error, :invalid_image_format} =
+               Storage.store_asset(:image, 1, "1", %{path: temp_file, filename: "bg.png"})
+    end
+
+    # The code default, "uploads", is relative to the working directory. The
+    # row stores the returned path relative to the root, so the file must be
+    # there, not under the root twice.
+    @tag :tmp_dir
+    test "store_asset/4 for a video stores under a relative upload root at the path it returns",
+         %{tmp_dir: tmp_dir} do
+      UploadRoot.point_at(Path.relative_to_cwd(tmp_dir))
+      temp_file = MediaFixtures.temp_copy!("gps.mp4")
+
+      assert {:ok, "themes/1/1/videos/" <> _name = stored_path} =
+               Storage.store_asset(:video, 1, "1", %{path: temp_file, filename: "clip.mp4"})
+
+      assert File.exists?(Path.join(tmp_dir, stored_path))
+      refute File.exists?(Path.join([tmp_dir, Path.relative_to_cwd(tmp_dir), stored_path]))
+    end
+
+    @tag :tmp_dir
+    test "store_asset/4 for an image stores under a relative upload root at the path it returns",
+         %{tmp_dir: tmp_dir} do
+      UploadRoot.point_at(Path.relative_to_cwd(tmp_dir))
+      temp_file = MediaFixtures.temp_copy!("gps.webp")
+
+      assert {:ok, "themes/1/1/images/" <> _name = stored_path} =
+               Storage.store_asset(:image, 1, "1", %{path: temp_file, filename: "bg.webp"})
+
+      assert File.exists?(Path.join(tmp_dir, stored_path))
+      refute File.exists?(Path.join([tmp_dir, Path.relative_to_cwd(tmp_dir), stored_path]))
+    end
   end
 
   # `/uploads` types a file by its extension, and LiveView accepts an upload
@@ -282,32 +237,31 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       assert {:ok, stored_path} =
                Storage.store_asset(:captions, 1, "1", %{path: vtt, filename: "intro.png"})
 
-      assert stored_path =~ ~r|\Athemes/1/1/captions/[0-9a-f]{12}-intro\.vtt\z|
+      assert stored_path =~ ~r|\Athemes/1/1/captions/[0-9a-f-]{36}\.vtt\z|
     end
 
-    test "refuses an image or a video named with an extension its kind does not take" do
-      assert Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg.vtt"}) ==
+    test "is the one the content is, whatever the client named the file" do
+      for filename <- ["bg.vtt", "bg", "BG.JPG"] do
+        assert {:ok, stored_path} =
+                 Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: filename})
+
+        assert Path.extname(stored_path) == ".png", filename
+      end
+    end
+
+    test "refuses content of a format its kind does not take, under any name" do
+      assert Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg.png"}) ==
                {:error, :invalid_image_format}
 
-      assert Storage.store_asset(:image, 1, "1", %{path: gif_file(), filename: "bg"}) ==
-               {:error, :invalid_image_format}
-
-      assert Storage.store_asset(:video, 1, "1", %{path: mp4_file(), filename: "clip.png"}) ==
+      assert Storage.store_asset(:video, 1, "1", %{path: mp4_file(), filename: "clip.mp4"}) ==
                {:error, :invalid_video_format}
 
       assert uploaded_files() == []
     end
-
-    test "keeps an allowed extension, lower-cased" do
-      assert {:ok, stored_path} =
-               Storage.store_asset(:image, 1, "1", %{path: image_file(), filename: "BG.PNG"})
-
-      assert stored_path =~ ~r|\Athemes/1/1/images/[0-9a-f]{12}-BG\.png\z|
-    end
   end
 
   defp uploaded_files do
-    [Storage.get_upload_base_directory(), "**", "*"]
+    [Uploads.root(), "**", "*"]
     |> Path.join()
     |> Path.wildcard()
     |> Enum.filter(&File.regular?/1)

@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Providers.Families do
+defmodule Tymeslot.Integrations.Shared.Providers.Families do
   @moduledoc """
   The provider-family vocabulary, shared by every integration domain.
 

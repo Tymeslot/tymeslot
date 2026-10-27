@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   import TymeslotWeb.Components.UI.LocaleButton
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
@@ -16,8 +17,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
@@ -29,16 +32,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   attr :user_timezone, :string, required: true
   attr :myself, :any, required: true
   attr :video_integrations, :list, default: []
+  attr :venues, :list, default: []
+  attr :group_allowed, :boolean, default: false
 
   @spec create_event_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def create_event_modal(assigns) do
     assigns =
       assigns
       |> assign(:meeting_mode, assigns.creating_event[:mode] == :meeting)
+      |> assign(:group_mode, assigns.creating_event[:mode] == :group_event)
+      |> assign(:event_mode, assigns.creating_event[:mode] in [nil, :event])
       # A subscribed calendar is no more a target than no calendar at all, so
       # the mode toggle and the picker follow what can be written to, not what
       # is connected.
       |> assign(:targets, Calendar.writable_integrations(assigns.integrations))
+      |> assign(:repeatable, repeatable?(assigns.creating_event, assigns.integrations))
       |> assign(
         :reminder_picker,
         assigns.creating_event[:meeting_reminders] || ReminderPickerState.new()
@@ -52,28 +60,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       size={:medium}
     >
       <:header>
-        {if @meeting_mode,
-          do: dgettext("dashboard_calendar_events", "New Meeting"),
-          else: dgettext("dashboard_calendar_events", "New Event")}
+        <%= cond do %>
+          <% @meeting_mode -> %>
+            {dgettext("dashboard_calendar_events", "New Meeting")}
+          <% @group_mode -> %>
+            {dgettext("dashboard_group_events", "New Group Event")}
+          <% true -> %>
+            {dgettext("dashboard_calendar_events", "New Event")}
+        <% end %>
       </:header>
 
-      <%!-- Mode toggle: a bare provider event vs an ad-hoc Tymeslot meeting.
-            Hidden when no calendar is connected — the form is then fixed to
-            meeting mode, the only kind that can exist without one. --%>
+      <%!-- Mode toggle: a bare provider event, an ad-hoc Tymeslot meeting, or
+            a group event. Hidden when no calendar is writable: both other
+            kinds need one, so the form is then fixed to meeting mode, the
+            only kind that can exist without one. --%>
       <div :if={@targets != []} class="mb-4">
         <.segmented_control
           id="create-mode"
-          value={if @meeting_mode, do: "meeting", else: "event"}
+          value={Atom.to_string(@creating_event[:mode] || :event)}
           on_change="set_create_mode"
           param="mode"
           target={@myself}
           aria_label={dgettext("dashboard_calendar_events", "What to create")}
         >
-          <:option value="event" label={dgettext("dashboard_calendar_events", "Event")} />
+          <:option
+            value="event"
+            label={dgettext("dashboard_calendar_events", "Event")}
+          />
           <:option
             value="meeting"
             label={dgettext("dashboard_calendar_events", "Meeting with a guest")}
             testid="create-mode-meeting"
+          />
+          <:option
+            :if={@group_allowed}
+            value="group_event"
+            label={dgettext("dashboard_group_events", "Group event")}
+            testid="create-mode-group-event"
           />
         </.segmented_control>
         <p :if={@meeting_mode} class="mt-1.5 text-token-xs text-tymeslot-400">
@@ -257,7 +280,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         </div>
       </div>
 
-      <div :if={!@meeting_mode} class="mb-3 flex items-center justify-between">
+      <div :if={@event_mode} class="mb-3 flex items-center justify-between">
         <p class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar_events", "All day")}
         </p>
@@ -315,9 +338,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           <span
             :if={!@creating_event[:all_day]}
             class="text-token-xs font-normal text-tymeslot-400 ml-1"
-          >{Helpers.tz_abbr(@user_timezone)}</span>
+          >{Helpers.tz_abbr(@user_timezone, recurrence_start(@creating_event, @user_timezone))}</span>
         </form>
       </div>
+
+      <GroupEventFields.group_event_fields
+        :if={@group_mode}
+        values={@creating_event[:group_event] || %{}}
+        venues={@venues}
+        video_integrations={@video_integrations}
+        user_timezone={@user_timezone}
+        myself={@myself}
+      />
 
       <CalendarPicker.calendar_picker
         :if={@targets != []}
@@ -332,7 +364,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <%!-- Video: which provider backs the event's join link. Offered for a
       plain event as much as a meeting, and before attendees are added, so an
       event can be created with a room in one step. --%>
-      <div :if={@video_integrations != []} class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div
+        :if={@video_integrations != [] and not @group_mode}
+        class="border-t border-tymeslot-200 pt-3 mt-3"
+      >
         <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
           {dgettext("dashboard_calendar_events", "Video")}
         </p>
@@ -345,10 +380,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Repeat --%>
-      <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={@event_mode and @repeatable} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={@creating_event[:recurrence_rule]}
           timezone={@user_timezone}
+          start={recurrence_start(@creating_event, @user_timezone)}
+          notice={repeat_notice(@creating_event, @integrations, @user_timezone)}
           myself={@myself}
           change_event="update_create_recurrence"
         />
@@ -393,7 +430,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
 
       <%!-- Event mode's reminders: alarms the calendar provider fires on the
             organiser's own devices. --%>
-      <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={@event_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RemindersEditor.reminders_editor
           reminders={@creating_event[:reminders] || []}
           myself={@myself}
@@ -403,7 +440,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Attendee section --%>
-      <div :if={!@meeting_mode} class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={@event_mode} class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
         <p class="text-token-xs font-medium text-tymeslot-400">
           {dgettext("dashboard_calendar_events", "Invite attendees (optional)")}
         </p>
@@ -481,5 +518,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </:footer>
     </.modal>
     """
+  end
+
+  # Exchange and other calendars the grid writes no repeat rule to offer none.
+  defp repeatable?(creating_event, integrations) do
+    case Enum.find(integrations, &(&1.id == creating_event[:integration_id])) do
+      nil -> true
+      integration -> CalendarGrid.repeatable_provider?(integration.provider)
+    end
+  end
+
+  # Why the calendar picked would refuse the repeat rule (Outlook's
+  # patterns), said while the pattern is chosen; the save refuses it too.
+  defp repeat_notice(creating_event, integrations, timezone) do
+    with rule when is_binary(rule) <- creating_event[:recurrence_rule],
+         %{provider: provider} <-
+           Enum.find(integrations, &(&1.id == creating_event[:integration_id])),
+         start_date = creating_event |> recurrence_start(timezone) |> start_date(),
+         reason when is_atom(reason) and reason != nil <-
+           CalendarGrid.repeat_refusal(provider, rule, start_date, timezone) do
+      RecurrenceEdit.refusal_message(reason)
+    else
+      _accepted -> nil
+    end
+  end
+
+  defp start_date(%DateTime{} = start), do: DateTime.to_date(start)
+  defp start_date(%Date{} = start), do: start
+
+  # The start a repeat pattern is anchored to: the form's date, at its start
+  # time in the organiser's zone for a timed event.
+  defp recurrence_start(creating_event, timezone) do
+    date =
+      case Date.from_iso8601(creating_event[:date] || "") do
+        {:ok, date} -> date
+        {:error, _reason} -> Date.utc_today()
+      end
+
+    if creating_event[:all_day] do
+      date
+    else
+      time = Time.new!(creating_event[:start_hour] || 0, creating_event[:start_minute] || 0, 0)
+
+      case DateTime.new(date, time, timezone) do
+        {:ok, start} -> start
+        {:ambiguous, first, _second} -> first
+        {:gap, _before, after_gap} -> after_gap
+        {:error, _reason} -> DateTime.new!(date, time, "Etc/UTC")
+      end
+    end
   end
 end

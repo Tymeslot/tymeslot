@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingCard
@@ -28,17 +29,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     >
       <:option
         value="upcoming"
-        label={dgettext("dashboard_bookings", "Upcoming")}
+        label={dpgettext("dashboard_bookings", "filter tab", "Upcoming")}
         icon="hero-clock"
       />
       <:option
         value="past"
-        label={dgettext("dashboard_bookings", "Past")}
+        label={dpgettext("dashboard_bookings", "filter tab", "Past")}
         icon="hero-calendar-days"
       />
       <:option
         value="cancelled"
-        label={dgettext("dashboard_bookings", "Cancelled")}
+        label={dpgettext("dashboard_bookings", "filter tab", "Cancelled")}
         icon="hero-x-mark"
       />
       <%!-- Only shown once there is something to answer: a host who requires no
@@ -55,6 +56,31 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     """
   end
 
+  @doc """
+  The notice above a list narrowed to one booking (`?meeting=<id>`, where a
+  host's links to a booking land), with the way back to the whole list. When
+  the link names no booking of theirs (someone else's, a deleted one, a
+  mangled link), it says so in place of the list.
+  """
+  attr :found, :boolean, required: true
+
+  @spec focus_notice(map()) :: Phoenix.LiveView.Rendered.t()
+  def focus_notice(assigns) do
+    ~H"""
+    <Containers.info_box variant={if @found, do: :info, else: :warning}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <span :if={@found}>{dgettext("dashboard_bookings", "Showing one booking.")}</span>
+        <span :if={!@found}>
+          {dgettext("dashboard_bookings", "This booking isn't available.")}
+        </span>
+        <.link patch="/dashboard/meetings" class="font-semibold underline">
+          {dgettext("dashboard_bookings", "Show all meetings")}
+        </.link>
+      </div>
+    </Containers.info_box>
+    """
+  end
+
   # Meetings List
   attr :loading, :boolean, required: true
   attr :is_empty, :boolean, required: true
@@ -64,6 +90,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
   attr :answering_request, :any, default: nil
+  attr :move_offers, :map, default: %{}
   attr :target, :any, required: true
   attr :meetings_stream, :any, required: true
 
@@ -85,6 +112,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             cancelling_meeting={@cancelling_meeting}
             sending_reschedule={@sending_reschedule}
             answering_request={@answering_request}
+            move_offer={@move_offers[meeting.id]}
             target={@target}
           />
         </div>

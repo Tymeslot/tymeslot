@@ -56,4 +56,34 @@ defmodule Tymeslot.Workers.SnoozePolicyTest do
                SnoozePolicy.snooze_or_exhaust(9, max_snoozes: 10, base_seconds: 120)
     end
   end
+
+  describe "bound/3" do
+    @opts [max_snoozes: 12, reason: "gave up"]
+
+    test "passes a snooze through while executions are under the bound" do
+      assert {:snooze, 120} =
+               SnoozePolicy.bound(
+                 {:snooze, 120},
+                 %Job{attempt: 1, meta: %{"snoozed" => 10}},
+                 @opts
+               )
+    end
+
+    test "turns a snooze into an error once executions reach the bound" do
+      assert {:error, "gave up"} =
+               SnoozePolicy.bound(
+                 {:snooze, 120},
+                 %Job{attempt: 1, meta: %{"snoozed" => 11}},
+                 @opts
+               )
+    end
+
+    test "leaves any other result alone, however many executions" do
+      job = %Job{attempt: 1, meta: %{"snoozed" => 50}}
+
+      assert :ok = SnoozePolicy.bound(:ok, job, @opts)
+      assert {:error, :boom} = SnoozePolicy.bound({:error, :boom}, job, @opts)
+      assert {:discard, "x"} = SnoozePolicy.bound({:discard, "x"}, job, @opts)
+    end
+  end
 end

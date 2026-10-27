@@ -156,6 +156,82 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     end
   end
 
+  describe "refusing?/1" do
+    test "is true only while a call would be refused, and changes nothing" do
+      name = start_breaker(config: %{failure_threshold: 1, recovery_timeout: 60_000})
+      refute CircuitBreaker.refusing?(name)
+
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+
+      assert CircuitBreaker.refusing?(name)
+      assert %{status: :open} = CircuitBreaker.status(name)
+    end
+
+    test "is false once the recovery timeout has elapsed, though the breaker still reads open" do
+      name = start_breaker(config: %{failure_threshold: 1, recovery_timeout: 0})
+
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+
+      refute CircuitBreaker.refusing?(name)
+      assert %{status: :open} = CircuitBreaker.status(name)
+      assert {:ok, :trial} = CircuitBreaker.call(name, fn -> {:ok, :trial} end)
+    end
+  end
+
+  describe "refusing?/1 while half-open" do
+    setup do
+      name =
+        start_breaker(
+          config: %{failure_threshold: 1, recovery_timeout: 60_000, half_open_requests: 1}
+        )
+
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+      long_ago = System.monotonic_time(:millisecond) - 120_000
+      :sys.replace_state(name, &%{&1 | last_failure_time: long_ago})
+
+      parent = self()
+
+      probe =
+        Task.async(fn ->
+          CircuitBreaker.call(name, fn ->
+            send(parent, :probing)
+
+            receive do
+              :finish -> {:ok, :done}
+            end
+          end)
+        end)
+
+      assert_receive :probing
+      on_exit(fn -> send(probe.pid, :finish) end)
+      %{name: name, probe: probe}
+    end
+
+    test "is true once every probe of the round is out, as a call would be refused", %{
+      name: name
+    } do
+      assert %{status: :half_open} = CircuitBreaker.status(name)
+      assert CircuitBreaker.refusing?(name)
+      assert {:error, :circuit_open} = CircuitBreaker.call(name, fn -> {:ok, :refused} end)
+    end
+
+    test "is false once the round has stalled, as a call would start a new one", %{name: name} do
+      long_ago = System.monotonic_time(:millisecond) - 120_000
+      :sys.replace_state(name, &%{&1 | half_open_started_at: long_ago})
+
+      refute CircuitBreaker.refusing?(name)
+      assert {:ok, :probed} = CircuitBreaker.call(name, fn -> {:ok, :probed} end)
+    end
+
+    test "is false once the probe has come back", %{name: name, probe: probe} do
+      send(probe.pid, :finish)
+      assert {:ok, :done} = Task.await(probe)
+      :sys.get_state(name)
+
+      refute CircuitBreaker.refusing?(name)
+    end
+  end
+
   describe "open -> half-open transition" do
     test "transitions to half-open after recovery_timeout" do
       name =

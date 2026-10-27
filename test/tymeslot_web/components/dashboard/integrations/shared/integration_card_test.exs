@@ -314,7 +314,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
 
       assert LazyHTML.text(doc) =~ "Healthy"
       assert [activity] = texts(doc, "[data-part='last-activity']")
-      assert activity =~ "Last synced "
+      assert activity =~ "Last synced 2 minutes ago"
       # The provider logo is decorative: the title beside it names the connection.
       assert doc |> LazyHTML.query("img") |> LazyHTML.attribute("alt") == [""]
       # The sync time moved out of the summary onto the activity line.

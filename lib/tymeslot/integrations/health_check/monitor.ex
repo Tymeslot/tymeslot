@@ -27,7 +27,6 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   # failure — the same order as the probe's own three-strikes-at-30-to-60-
   # minutes, and far short of the eleven days integration 97 went unnoticed.
   @default_sync_failure_threshold 10
-  @check_interval :timer.minutes(30)
   @max_backoff_ms :timer.hours(1)
   # On the very first transition into :unhealthy, override the standard 1 h
   # hard backoff with a quick 15-minute re-probe. This catches the common case
@@ -71,7 +70,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       successes: 0,
       last_check_at: nil,
       status: :healthy,
-      backoff_ms: @check_interval,
+      backoff_ms: IntegrationHealthStateSchema.check_interval_ms(),
       last_error_class: nil,
       became_unhealthy_at: nil,
       notification_sent_at: nil
@@ -85,6 +84,18 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   @spec get_state(integration_type(), integer(), integer()) :: health_state()
   def get_state(type, integration_id, user_id) do
     case IntegrationHealthStateQueries.get_or_init(type, integration_id, user_id) do
+      {:ok, record} -> from_db_record(record)
+      {:error, :not_found} -> initial_state()
+    end
+  end
+
+  @doc """
+  `get_state/3`, with the row locked until the surrounding transaction ends;
+  see `IntegrationHealthStateQueries.get_or_init_for_update/3`.
+  """
+  @spec get_state_for_update(integration_type(), integer(), integer()) :: health_state()
+  def get_state_for_update(type, integration_id, user_id) do
+    case IntegrationHealthStateQueries.get_or_init_for_update(type, integration_id, user_id) do
       {:ok, record} -> from_db_record(record)
       {:error, :not_found} -> initial_state()
     end
@@ -172,20 +183,33 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   Persists the sync-failure streak, and the status it may have forced, for an
   integration.
 
-  Writes only the three fields a sync outcome owns rather than going through
-  `put_state/3`. The probe and a sync run concurrently, and each reads its
-  state before writing it, so a full-row write from either would silently drop
-  the other's update; keeping the two writers to disjoint columns means the
-  worst case is a status write landing twice, not a streak going missing.
+  Writes only the fields a sync outcome owns rather than going through
+  `put_state/3`: the streak always, and the status (with
+  `became_unhealthy_at`) only when the streak has reached
+  `sync_failure_threshold/0` and so forces it. A sync below the threshold
+  says nothing about the status, and writing back the one it read would
+  undo a recovery the probe recorded in between, bringing back an unhealthy
+  status and the old `became_unhealthy_at` that the 48-hour notification
+  reads.
   """
   @spec put_sync_state(integration_type(), integer(), health_state()) ::
           {non_neg_integer(), nil}
   def put_sync_state(type, integration_id, health_state) do
-    IntegrationHealthStateQueries.update_fields(type, integration_id,
-      consecutive_sync_failures: health_state.consecutive_sync_failures,
-      status: HealthStatus.to_db_value(health_state.status),
-      became_unhealthy_at: health_state.became_unhealthy_at
+    IntegrationHealthStateQueries.update_fields(
+      type,
+      integration_id,
+      [consecutive_sync_failures: health_state.consecutive_sync_failures] ++
+        forced_status_fields(health_state)
     )
+  end
+
+  defp forced_status_fields(health_state) do
+    if health_state.consecutive_sync_failures >= sync_failure_threshold(),
+      do: [
+        status: HealthStatus.to_db_value(health_state.status),
+        became_unhealthy_at: health_state.became_unhealthy_at
+      ],
+      else: []
   end
 
   # A streak of failing syncs outranks a passing probe: the probe tests a
@@ -211,7 +235,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
         successes: health_state.successes + 1,
         last_check_at: Clock.utc_now(),
         status: determine_status(0, health_state.successes + 1, health_state.status),
-        backoff_ms: @check_interval,
+        backoff_ms: IntegrationHealthStateSchema.check_interval_ms(),
         last_error_class: nil
     }
   end
@@ -365,7 +389,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   # `consecutive_sync_failures` is absent by design: the probe never changes it
   # and this map is written as a whole-row update, so including it would let a
   # probe that read the row before a sync failure erase that failure's count.
-  # `put_sync_state/3` is the only writer.
+  # `put_sync_state/3` is the only writer. `notification_sent_at` is absent
+  # for the same reason: the probe never changes it, and the email handler
+  # stamps it after the unhealthy email goes out, so writing back the value
+  # the probe read would erase that stamp and the 30-day cooldown with it.
   defp to_db_attrs(health_state) do
     base = %{
       status: HealthStatus.to_db_value(health_state.status),
@@ -376,8 +403,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       last_check_at: health_state.last_check_at,
       last_error_class:
         health_state.last_error_class && Atom.to_string(health_state.last_error_class),
-      became_unhealthy_at: health_state.became_unhealthy_at,
-      notification_sent_at: health_state.notification_sent_at
+      became_unhealthy_at: health_state.became_unhealthy_at
     }
 
     case health_state[:user_id] do

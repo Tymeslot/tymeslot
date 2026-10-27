@@ -45,16 +45,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
     ~H"""
     <div class="space-y-2" data-testid="venue-picker">
       <%= if @venues == [] do %>
-        <Forms.label>{dgettext("dashboard_meeting_form", "Saved locations")}</Forms.label>
+        <Forms.label>{dgettext("dashboard_meeting_locations", "Saved locations")}</Forms.label>
         <p class="text-token-sm text-tymeslot-500">
           <%= if @group_bookings_enabled do %>
             {dgettext(
-              "dashboard_meeting_form",
+              "dashboard_meeting_locations",
               "You have no saved locations yet. Add one here: group bookings need the address up front."
             )}
           <% else %>
             {dgettext(
-              "dashboard_meeting_form",
+              "dashboard_meeting_locations",
               "You have no saved locations yet. Add one here, or leave this empty to arrange the address after booking."
             )}
           <% end %>
@@ -64,17 +64,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
           id="location_venue_ids"
           name="location[venue_ids][]"
           value={if @single, do: List.first(@selected), else: @selected}
-          label={dgettext("dashboard_meeting_form", "Saved locations")}
+          label={dgettext("dashboard_meeting_locations", "Saved locations")}
           options={venue_options(@venues)}
           multiple={not @single}
           errors={FormValidationHelpers.field_errors(@field_errors, :venue_ids)}
         >
           <:description>
             <%= if @group_bookings_enabled do %>
-              {dgettext("dashboard_meeting_form", "Pick one. Group bookings meet in one place.")}
+              {dgettext("dashboard_meeting_locations", "Pick one. Group bookings meet in one place.")}
             <% else %>
               {dgettext(
-                "dashboard_meeting_form",
+                "dashboard_meeting_locations",
                 "Pick one or more. With several, the booker chooses where to meet."
               )}
             <% end %>
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
         data-testid="venue-hint"
       >
         {dgettext(
-          "dashboard_meeting_form",
+          "dashboard_meeting_locations",
           "No address selected: bookers are told it will be arranged after booking."
         )}
       </p>
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VenuePicker do
         data-testid="new-venue-toggle"
         size={:sm}
       >
-        {dgettext("dashboard_meeting_form", "+ New saved location")}
+        {dgettext("dashboard_meeting_locations", "+ New saved location")}
       </Buttons.action_button>
     </div>
     """

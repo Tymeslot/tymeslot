@@ -4,11 +4,12 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   Handles listing, creating, updating, and deleting calendar events.
   Adds context validation and normalisation before invoking the
-  configured behaviour module (defaults to `Calendar.Operations`).
+  configured behaviour module (defaults to `Calendar.Runtime.Operations`).
   """
 
   alias Tymeslot.Availability.Reach
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Client, as: CalDAVClient
@@ -16,17 +17,15 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   alias Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Google.SeriesTransfer, as: GoogleSeriesTransfer
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesTransfer, as: OutlookSeriesTransfer
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
-  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
   alias Tymeslot.Integrations.Calendar.Sync
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
-  alias Tymeslot.Utils.ContextUtils
 
   require Logger
 
@@ -37,19 +36,23 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   # connecting one, and a meeting booked before then never had an event.
   @no_calendar_errors [:no_calendar_client, :no_calendar_integration]
 
-  # A repeat rule the provider cannot hold is refused before anything is sent,
-  # and a replay would be refused alike.
+  # A repeat rule the provider has no pattern for, or one it would move onto
+  # days the organiser never chose, is refused the same way every time, as is
+  # a request the provider declined outright.
   @non_queueable_errors [
                           :unauthorized,
                           :not_found,
                           :meeting_not_found,
                           :rate_limited,
+                          :refused,
+                          :rule_not_supported_by_outlook,
                           :day_missing_in_some_months
-                        ] ++ @no_calendar_errors
+                        ] ++
+                          @no_calendar_errors
 
   # A meeting booked on the last bookable date can run for up to a day past
   # it, plus its after-buffer, so the fetch reaches that much further.
-  @meeting_reach_days Reach.meeting_days()
+  defp meeting_reach_days, do: Reach.meeting_days()
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -73,75 +76,44 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   # ---------------------------
 
   @doc """
-  List events for a user. If user_id is nil, falls back to runtime behavior.
-  """
-  @spec list_events(user_id() | nil) :: {:ok, list()} | {:error, term()}
-  def list_events(user_id \\ nil) do
-    case user_id do
-      id when is_integer(id) and id > 0 ->
-        id |> EventFetcher.list_events() |> Alerting.track_availability(id)
-
-      nil ->
-        EventFetcher.list_events(nil)
-
-      _other ->
-        {:error, :invalid_user_id}
-    end
-  end
-
-  @doc """
   Fetch calendar events for the user's entire booking window.
 
   This ensures that all events within the advance booking period are available
-  for conflict checking, not just the current month.
+  for conflict checking, not just the current month. The date is ignored: the
+  window always runs from today.
 
-  Falls back to list_events if profile cannot be loaded.
+  `opts` may carry the `:organizer_profile` the caller already holds, which
+  saves reading it again.
+
+  Returns `{:error, :profile_not_found}` when the organiser's profile cannot be
+  loaded: an organiser without a profile has no booking page.
   """
   @spec get_calendar_events(Date.t() | any(), user_id(), keyword()) ::
           {:ok, list()} | {:error, term()}
   def get_calendar_events(_date, organizer_user_id, opts \\ []) do
-    debug_module = Keyword.get(opts, :debug_calendar_module)
+    case organizer_profile(organizer_user_id, Keyword.get(opts, :organizer_profile)) do
+      {:ok, profile} ->
+        today = Clock.utc_today()
+        end_date = Date.add(today, booking_window_days(profile) + meeting_reach_days())
+        get_events_for_range_fresh(organizer_user_id, today, end_date)
 
-    cond do
-      is_function(debug_module, 1) ->
-        debug_module.(organizer_user_id)
-
-      is_atom(debug_module) && debug_module != nil ->
-        {start_date, end_date} = calculate_booking_window_range(organizer_user_id, opts)
-        debug_module.get_events_for_range_fresh(organizer_user_id, start_date, end_date)
-
-      true ->
-        fetch_events_for_booking_window(organizer_user_id)
+      {:error, _reason} ->
+        {:error, :profile_not_found}
     end
   end
 
   @doc """
-  Compatibility: context-aware variant that extracts a debug calendar module and organizer profile if present.
+  `get_calendar_events/3` with the organiser's profile taken from a request
+  context, when it carries one.
   """
   @spec get_calendar_events_from_context(
           any(),
           user_id(),
-          %{
-            optional(:debug_calendar_module) => module() | nil,
-            optional(:organizer_profile) => map() | nil
-          }
-          | nil
+          %{optional(:organizer_profile) => map() | nil} | nil
         ) ::
           {:ok, list()} | {:error, term()}
   def get_calendar_events_from_context(date, organizer_user_id, context) do
-    debug_module =
-      if val = ContextUtils.get_from_context(context, :debug_calendar_module) do
-        val
-      else
-        Application.get_env(:tymeslot, :calendar_module)
-      end
-
-    opts = [
-      debug_calendar_module: debug_module,
-      organizer_profile: ContextUtils.get_from_context(context, :organizer_profile)
-    ]
-
-    get_calendar_events(date, organizer_user_id, opts)
+    get_calendar_events(date, organizer_user_id, organizer_profile: context[:organizer_profile])
   end
 
   @doc """
@@ -232,6 +204,25 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   end
 
   @doc """
+  Fetches one event of a calendar integration straight from its provider,
+  bypassing the sync cache. `event_ref` carries the event's `:uid`, and its
+  `:provider_event_id` and `:calendar_id` where known.
+
+  Answers `{:ok, events}` once a writable calendar of the account has it,
+  `{:error, :not_found}` only when none does (a cancelled event counts as
+  none), `{:error, :unsupported}` when the provider cannot fetch a single
+  event, and `{:error, :no_calendar_integration}` for an integration that is
+  not the user's or no longer active. See
+  `Tymeslot.Integrations.Calendar.Runtime.EventOperations.fetch_event/2`.
+  """
+  @spec fetch_event(map(), {integration_id(), user_id()}) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(event_ref, {integration_id, user_id} = context)
+      when is_integer(integration_id) and is_integer(user_id) do
+    behaviour_module().fetch_event(event_ref, context)
+  end
+
+  @doc """
   Delete an event with optional target integration, meeting context, or user_id.
 
   `opts` reach the provider unchanged; pass `provider_event_id:` when the
@@ -256,6 +247,18 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   The linked meeting is looked up before the delete, so its attendee email
   can still be reported once the reconciliation has cancelled it. Nothing is
   reconciled when the delete fails.
+
+  An event the account no longer has is not a failed delete: it is already
+  off the calendar, removed by another client or a sync race, and its booking
+  is reconciled exactly as a successful delete's would be, the result marked
+  `already_gone: true`. The delete's `:not_found` does not prove that on its
+  own: it says only that nothing was at the address the delete used, which
+  is also what a stale calendar id gets, for an event moved to another
+  calendar since it was synced. So the event is looked for in
+  every writable calendar of the account (`fetch_event/2`) first: only when
+  none has it is it already gone. When one does, or the lookup itself
+  fails, the delete fails and nothing is reconciled. A provider that cannot
+  fetch a single event has only the 404 to go on.
 
   Returns `{:ok, result}` where `result` carries `:uid`, `:integration_id`,
   `:reconcile_result` and, when a meeting was linked, `:meeting_attendee_email`.
@@ -282,7 +285,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       ) do
     linked_meeting = Sync.find_meeting(integration_id, provider_event_id, uid)
 
-    with {:ok, deleted} <- deleted(delete_event(uid, context, opts)) do
+    with {:ok, deleted} <- delete_found(uid, provider_event_id, context, opts) do
       reconcile_result = reconcile_deleted(integration_id, provider_event_id, uid)
 
       result =
@@ -296,6 +299,30 @@ defmodule Tymeslot.Integrations.Calendar.Events do
         {:ok, meeting} -> {:ok, Map.put(result, :meeting_attendee_email, meeting.attendee_email)}
         {:error, :not_found} -> {:ok, result}
       end
+    end
+  end
+
+  defp delete_found(uid, provider_event_id, context, opts) do
+    case delete_event(uid, context, opts) do
+      {:error, :not_found} -> confirm_gone(uid, provider_event_id, context, opts)
+      result -> deleted(result)
+    end
+  end
+
+  # An event found anywhere is still on the calendar, so the delete's 404
+  # stands as the failure it is. `:unsupported` leaves only the 404 to go on.
+  defp confirm_gone(uid, provider_event_id, context, opts) do
+    event_ref = %{
+      uid: uid,
+      ical_uid: uid,
+      provider_event_id: provider_event_id,
+      calendar_id: opts[:calendar_id]
+    }
+
+    case fetch_event(event_ref, context) do
+      {:ok, _found} -> {:error, :not_found}
+      {:error, reason} when reason in [:not_found, :unsupported] -> {:ok, %{already_gone: true}}
+      {:error, _reason} = error -> error
     end
   end
 
@@ -379,7 +406,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   # so an integration of anyone else resolves to nothing.
   defp caldav_client(integration_id, user_id, missing) do
     with {:ok, integration} <-
-           CalendarManagement.fetch_integration_for_user(integration_id, user_id),
+           Management.fetch_integration_for_user(integration_id, user_id),
          {:ok, %{client: %CalDAVClient{} = client}} <-
            ProviderAdapter.new_client_from_integration(integration) do
       {:ok,
@@ -467,7 +494,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   end
 
   defp user_integration(provider, integration_id, user_id, missing) do
-    case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
+    case Management.fetch_integration_for_user(integration_id, user_id) do
       {:ok, %{provider: ^provider} = integration} -> {:ok, integration}
       _none -> {:error, missing}
     end
@@ -499,6 +526,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
   @spec queueable_error?(term()) :: boolean()
   def queueable_error?(reason) when reason in @non_queueable_errors, do: false
+  def queueable_error?({:rate_limited, _seconds}), do: false
   def queueable_error?(_reason), do: true
 
   @doc """
@@ -531,7 +559,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       Application.get_env(
         :tymeslot,
         :calendar_module,
-        Tymeslot.Integrations.Calendar.Operations
+        Tymeslot.Integrations.Calendar.Runtime.Operations
       )
 
     if Code.ensure_loaded?(mod) do
@@ -541,40 +569,12 @@ defmodule Tymeslot.Integrations.Calendar.Events do
         calendar_module: LogFormat.reason(mod)
       )
 
-      Tymeslot.Integrations.Calendar.Operations
+      Tymeslot.Integrations.Calendar.Runtime.Operations
     end
   end
 
-  @spec fetch_events_for_booking_window(user_id()) :: {:ok, list()} | {:error, term()}
-  defp fetch_events_for_booking_window(user_id) do
-    {start_date, end_date} = calculate_booking_window_range(user_id)
-
-    case ProfileQueries.get_by_user_id(user_id) do
-      {:ok, _profile} ->
-        get_events_for_range_fresh(user_id, start_date, end_date)
-
-      {:error, _reason} ->
-        list_events(user_id)
-    end
-  end
-
-  defp calculate_booking_window_range(user_id, opts \\ []) do
-    profile_result =
-      case Keyword.get(opts, :organizer_profile) do
-        %{} = profile -> {:ok, profile}
-        nil -> ProfileQueries.get_by_user_id(user_id)
-      end
-
-    case profile_result do
-      {:ok, profile} ->
-        today = Date.utc_today()
-        {today, Date.add(today, booking_window_days(profile) + @meeting_reach_days)}
-
-      {:error, _reason} ->
-        today = Date.utc_today()
-        {today, Date.add(today, 30 + @meeting_reach_days)}
-    end
-  end
+  defp organizer_profile(_user_id, %{} = profile), do: {:ok, profile}
+  defp organizer_profile(user_id, nil), do: ProfileQueries.get_by_user_id(user_id)
 
   # The prefetch range must cover the furthest date any of the host's schedules
   # can be booked into: a meeting type on a longer window than the default would

@@ -13,9 +13,10 @@ defmodule Tymeslot.Integrations.Video.OAuthCallback do
 
   require Logger
 
-  alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
-  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Shared.OAuth.AccountMatch
+  alias Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
+  alias Tymeslot.Integrations.Shared.OAuth.State
   alias Tymeslot.Integrations.Video.OAuth
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Reconnect
@@ -24,36 +25,41 @@ defmodule Tymeslot.Integrations.Video.OAuthCallback do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
-  # Every helper exchanges with the same `(code, redirect_uri, state)` shape and
-  # verifies the signed state itself, returning the state's user and integration
-  # alongside the tokens.
+  # Every helper exchanges with the same `(code, redirect_uri, opts)` shape;
+  # the state and its flow are verified here, before the code is spent.
   @exchange_helpers %{
     google_meet: GoogleOAuthHelper,
     teams: TeamsOAuthHelper,
     zoom: ZoomOAuthHelper
   }
 
-  @doc """
-  Completes an OAuth callback: exchanges the code, checks the grant, and
-  creates or reconnects the user's integration for `provider`.
+  # The OAuth client whose state secret signs each provider's flow.
+  @state_providers %{google_meet: :google, teams: :microsoft, zoom: :zoom}
 
-  On success the user's cached dashboard integration status is invalidated, so
-  the dashboard reflects the new connection straight away rather than after the
-  cache expires. Besides the helpers' own errors, fails with
+  @doc """
+  Completes an OAuth callback for `user_id`, the signed-in user: verifies the
+  state was issued to that user, consumes the flow it names (once), exchanges
+  the code with that flow's PKCE verifier, checks the grant, and creates or
+  reconnects their integration for `provider`.
+
+  Besides the helpers' own errors, fails with
   `:missing_teams_fields` or `:missing_zoom_account_id` when a Teams or Zoom
   grant lacks the account details the provider's API calls need.
   """
-  @spec complete(OAuth.provider(), String.t(), String.t()) ::
+  @spec complete(OAuth.provider(), String.t(), String.t(), pos_integer()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, term()}
-  def complete(provider, code, state) do
+  def complete(provider, code, state, user_id) do
     helper = Map.fetch!(@exchange_helpers, provider)
 
-    with {:ok, tokens} <-
-           helper.exchange_code_for_tokens(code, OAuth.redirect_uri(provider), state),
-         :ok <- validate_tokens(provider, tokens),
-         {:ok, integration} <- persist(provider, tokens) do
-      DashboardContext.invalidate_integration_status(tokens.user_id)
-      {:ok, integration}
+    with {:ok, validated} <- State.verify(state, Map.fetch!(@state_providers, provider), user_id),
+         {:ok, code_verifier} <- PendingFlow.consume(validated.nonce, user_id, provider),
+         {:ok, tokens} <-
+           helper.exchange_code_for_tokens(code, OAuth.redirect_uri(provider),
+             code_verifier: code_verifier
+           ),
+         tokens = Map.merge(tokens, Map.take(validated, [:user_id, :integration_id])),
+         :ok <- validate_tokens(provider, tokens) do
+      persist(provider, tokens)
     end
   end
 
@@ -220,7 +226,7 @@ defmodule Tymeslot.Integrations.Video.OAuthCallback do
         # which account this callback belongs to. Reject to avoid silently overwriting.
         {:error,
          dgettext(
-           "dashboard_video",
+           "integrations_video",
            "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
          )}
 

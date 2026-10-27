@@ -36,17 +36,20 @@ defmodule Tymeslot.CalendarGrid.AllDay do
 
   @doc """
   The calendar date an event begins on, whichever representation it carries:
-  an all-day event's `start_date`, or the UTC date of a timed event's
-  `start_at`. `nil` when it carries neither.
+  an all-day event's `start_date`, or the date a timed event's `start_at`
+  falls on in `timezone` (UTC when `nil`). `nil` when it carries neither.
+
+  A series starting at 00:30 in Berlin starts on that day, not on the UTC
+  day before, so the zone is the one the series is read in.
 
   Reads the fields with `Map.get/2` so it also works on a schema struct, which
   has no Access behaviour.
   """
-  @spec start_date(event()) :: Date.t() | nil
-  def start_date(event) do
+  @spec start_date(event(), String.t() | nil) :: Date.t() | nil
+  def start_date(event, timezone) do
     case {Map.get(event, :start_date), Map.get(event, :start_at)} do
       {%Date{} = date, _start_at} -> date
-      {_no_date, %DateTime{} = start_at} -> DateTime.to_date(start_at)
+      {_no_date, %DateTime{} = start_at} -> local_date(start_at, timezone)
       _neither -> nil
     end
   end
@@ -71,9 +74,15 @@ defmodule Tymeslot.CalendarGrid.AllDay do
     }
   end
 
+  # `end_at` is exclusive too: an event ending at local midnight covers no part
+  # of the day that midnight begins, so its last day is the one before.
   def toggle(event, timezone) do
-    start_date = event.start_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
-    last_day = event.end_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+    start_date = local_date(event.start_at, timezone)
+
+    last_day =
+      if DateTime.after?(event.end_at, event.start_at),
+        do: event.end_at |> DateTime.add(-1, :microsecond) |> local_date(timezone),
+        else: start_date
 
     %{
       event
@@ -84,6 +93,11 @@ defmodule Tymeslot.CalendarGrid.AllDay do
         end_at: nil
     }
   end
+
+  defp local_date(instant, nil), do: DateTime.to_date(instant)
+
+  defp local_date(instant, timezone),
+    do: instant |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
 
   @spec default_instant(Date.t(), Time.t(), String.t()) :: DateTime.t()
   defp default_instant(date, time, timezone) do

@@ -48,8 +48,8 @@ version.
 
 ## Scope
 
-In scope: the Tymeslot Core codebase in this repository, the official Docker and
-Cloudron images, and the managed cloud service.
+In scope: the Tymeslot Core codebase in this repository, the official Docker
+images, and the managed cloud service.
 
 Out of scope: vulnerabilities in third-party dependencies (report those upstream,
 though we appreciate a heads-up), issues requiring physical access to a

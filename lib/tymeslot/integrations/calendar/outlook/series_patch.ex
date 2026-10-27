@@ -61,9 +61,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
   # `EventMapper` drops an empty subject, which a patch has to send to clear.
   @cleared %{"subject" => ""}
 
-  @graph_weekdays ~w(monday tuesday wednesday thursday friday saturday sunday)
-  @rrule_weekdays ~w(MO TU WE TH FR SA SU)
-
   @doc """
   The body that applies `edit` (see `Recurrence.SeriesMove.edit/0`, with
   the payload fields it changes in `:changes`) to `master`, the series
@@ -74,7 +71,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
   def build(master, %{changes: changes} = edit) do
     with {:ok, timing, zone} <- master_timing(master),
          {:ok, move} <- SeriesMove.move(edit, timing, elem(zone, 0)),
-         {:ok, recurrence} <- recurrence(master, move, changes, timing, elem(zone, 0)) do
+         {:ok, recurrence} <-
+           recurrence(
+             master,
+             move,
+             changes,
+             timing,
+             {elem(zone, 0), until_zone(edit, elem(zone, 0))}
+           ) do
       body =
         changes
         |> fields()
@@ -87,7 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   defp fields(changes) do
     changed = Map.take(changes, Map.keys(@field_keys))
-    # No repeat rule is among the fields, so nothing here can be refused.
+    # Plain fields only, so no repeat rule to refuse.
     {:ok, formatted} = EventMapper.format_event_data(changed)
 
     changed
@@ -195,12 +199,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   # --- Recurrence ---
 
-  defp recurrence(master, move, changes, {start, _finish}, zone) do
+  # Read only for a new rule's end date: its UNTIL ends the day the organiser
+  # chose in the zone the edit names, which can differ from the master's.
+  defp until_zone(edit, zone), do: Map.get(edit, :until_timezone) || zone
+
+  defp recurrence(master, move, changes, {start, _finish}, {zone, until_zone}) do
     start_date = date_of(if move == :unmoved, do: start, else: move.start)
     days = if move == :unmoved, do: 0, else: move.days
 
     case Map.fetch(changes, :recurrence_rule) do
-      {:ok, rule} -> with_rule(master["recurrence"], rule, start_date, days, zone)
+      {:ok, rule} -> with_rule(master["recurrence"], rule, start_date, days, until_zone)
       :error -> follow(master["recurrence"], move, start_date, zone)
     end
   end
@@ -209,22 +217,47 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   defp with_rule(recurrence, rule, start_date, days, zone) do
     case RecurrenceConverter.rrule_to_outlook(rule, start_date, zone) do
-      nil ->
+      {:ok, nil} ->
         {:error, :unsupported_rule}
 
-      {:error, _reason} = refused ->
-        refused
+      {:ok, built} ->
+        with {:ok, range} <- range(built, recurrence, rule, {start_date, days}, zone) do
+          {:ok,
+           %{
+             built
+             | "range" => range,
+               "pattern" => week_start(built["pattern"], recurrence, rule)
+           }}
+        end
 
-      built ->
-        with {:ok, range} <- range(built, recurrence, rule, {start_date, days}, zone),
-             do: {:ok, %{built | "range" => range}}
+      {:error, _unsupported} = refused ->
+        refused
     end
   end
+
+  # A rule that states no week start keeps the series' own. Rules cached
+  # before the week start was read from Graph carry no WKST, and writing
+  # them as Monday would move the Sundays of a Sunday-start fortnightly
+  # series into the other weeks. Only a weekly master has a week start of
+  # its own: Graph answers its default on every other pattern too.
+  defp week_start(
+         %{"firstDayOfWeek" => _written} = pattern,
+         %{"pattern" => %{"type" => "weekly", "firstDayOfWeek" => own}},
+         rule
+       )
+       when is_binary(own) do
+    case RRule.parse(rule) do
+      {:ok, %RRule{week_start: nil}} -> Map.put(pattern, "firstDayOfWeek", own)
+      _stated -> pattern
+    end
+  end
+
+  defp week_start(pattern, _recurrence, _rule), do: pattern
 
   # A rule that states an end is written with it; one that states none keeps
   # the master's, which moves with the series as it would without a rule.
   defp range(built, recurrence, rule, {start_date, days}, zone) do
-    parsed = RRule.parse(rule, timezone: zone)
+    parsed = RRule.options(rule, timezone: zone)
 
     case recurrence do
       %{"range" => %{} = master_range}
@@ -244,7 +277,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
     with {:ok, rule} <- pattern_rule(pattern, range),
          {:ok, "RRULE:" <> turned} <-
            RuleShift.follow("RRULE:" <> rule, move.shift, move.days, keep_until: true),
-         %{"pattern" => turned_pattern} <-
+         {:ok, %{"pattern" => turned_pattern}} <-
            RecurrenceConverter.rrule_to_outlook(turned, start_date, zone),
          {:ok, range} <- move_range(range, move.days, start_date) do
       {:ok, %{"pattern" => Map.merge(pattern, turned_pattern), "range" => range}}
@@ -277,23 +310,20 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   @doc """
   The pattern and range of a Graph `recurrence` as an RRULE, with the week
-  start Graph counts an every-other-week pattern from (Sunday unless
-  stated), so that a turn or a count that would cross it can be refused. A
-  relative pattern (the second Monday of the month) has no RRULE form here
-  and pins its occurrences (`{:error, :rule_pins_occurrences}`).
+  start Graph counts an every-other-week pattern from (see "Week start" in
+  `RecurrenceConverter`), so that a turn or a count that would cross it can
+  be refused. A
+  relative pattern (the second Monday of the month) reads as a counted
+  weekday (`BYDAY=2MO`), which `RuleShift` refuses to move to another date;
+  a pattern with no RRULE form here pins its occurrences
+  (`{:error, :rule_pins_occurrences}`).
   """
   @spec pattern_rule(map(), map()) :: {:ok, String.t()} | {:error, :rule_pins_occurrences}
   def pattern_rule(pattern, range) do
     case RecurrenceConverter.outlook_to_rrule(%{"pattern" => pattern, "range" => range}) do
       nil -> {:error, :rule_pins_occurrences}
-      rule -> {:ok, RRule.strip_prefix(rule) <> ";WKST=" <> week_start(pattern)}
+      rule -> {:ok, RRule.strip_prefix(rule)}
     end
-  end
-
-  defp week_start(pattern) do
-    day = String.downcase(Map.get(pattern, "firstDayOfWeek") || "sunday")
-    index = Enum.find_index(@graph_weekdays, &(&1 == day)) || 6
-    Enum.at(@rrule_weekdays, index)
   end
 
   # The date a start falls on, whole day or wall clock.

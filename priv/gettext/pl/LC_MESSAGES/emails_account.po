@@ -579,3 +579,123 @@ msgstr "Dotychczasowy adres pozostaje aktywny do czasu potwierdzenia zmiany"
 #, elixir-autogen, elixir-format
 msgid "Your meetings and settings remain unchanged"
 msgstr "Spotkania i ustawienia pozostają bez zmian"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Account"
+msgstr "Konto"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Account Deletion"
+msgstr "Usunięcie konta"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "As you asked, your Tymeslot account has been deleted, together with everything in it. This cannot be undone."
+msgstr "Zgodnie z twoją prośbą konto Tymeslot zostało usunięte wraz z całą zawartością. Tej operacji nie można cofnąć."
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "As you asked, your Tymeslot account is scheduled for deletion on %{date}. Until then it is frozen: your booking page is offline and nobody can book you. If you change your mind, sign in before that date and you can restore your account."
+msgstr "Zgodnie z twoją prośbą konto Tymeslot zostanie usunięte %{date}. Do tego czasu jest zamrożone: strona rezerwacji jest wyłączona i nikt nie może zarezerwować spotkania. Jeśli zmienisz zdanie, zaloguj się przed tą datą, aby przywrócić konto."
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Everything in it is gone."
+msgstr "Cała zawartość konta została usunięta."
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "If you did not ask for this, contact whoever runs this Tymeslot service straight away."
+msgstr "Jeśli ta prośba nie pochodzi od ciebie, natychmiast skontaktuj się z osobą, która prowadzi tę usługę Tymeslot."
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "If you did not ask for this, sign in now, restore your account and change your password."
+msgstr "Jeśli ta prośba nie pochodzi od ciebie, zaloguj się teraz, przywróć konto i zmień hasło."
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "On %{date}."
+msgstr "Dnia %{date}."
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to restore"
+msgstr "Zaloguj się, aby przywrócić"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to restore:"
+msgstr "Zaloguj się, aby przywrócić:"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your account has been deleted"
+msgstr "Konto zostało usunięte"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is scheduled for deletion"
+msgstr "Zaplanowano usunięcie konta"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your upcoming bookings have been deleted from Tymeslot. Your guests were not notified. Calendar events and video links that already exist have been left as they are. If a meeting will not take place, please contact your guests yourself."
+msgstr "Nadchodzące rezerwacje zostały usunięte z Tymeslot. Goście nie zostali powiadomieni. Istniejące wydarzenia w kalendarzu i linki do spotkań wideo pozostały bez zmian. Jeśli spotkanie się nie odbędzie, skontaktuj się z gośćmi samodzielnie."
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your upcoming bookings will be deleted from Tymeslot with your account. Your guests will not be notified. Calendar events and video links that already exist will stay as they are. If a meeting will not take place, please contact your guests yourself."
+msgstr "Nadchodzące rezerwacje zostaną usunięte z Tymeslot razem z kontem. Goście nie zostaną powiadomieni. Istniejące wydarzenia w kalendarzu i linki do spotkań wideo pozostaną bez zmian. Jeśli spotkanie się nie odbędzie, skontaktuj się z gośćmi samodzielnie."
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone just tried to create a new Tymeslot account with this email address. It belongs to an account that is scheduled for deletion on %{date}. If it was you, sign in before then to restore that account, or sign up again after that date."
+msgstr "Ktoś właśnie próbował założyć nowe konto Tymeslot z tym adresem e-mail. Należy on do konta, którego usunięcie zaplanowano na %{date}. Jeśli to ty, zaloguj się przed tą datą, aby przywrócić konto, albo zarejestruj się ponownie po tej dacie."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up"
+msgstr "Potwierdź adres e-mail, aby dokończyć rejestrację"
+
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex
+#, elixir-autogen, elixir-format
+msgid "Email Address Changed - Tymeslot Account"
+msgstr "Adres e-mail zmieniony – konto Tymeslot"
+
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex
+#, elixir-autogen, elixir-format
+msgid "Email Address Changed Successfully"
+msgstr "Adres e-mail został zmieniony"
+
+#: lib/tymeslot/emails/templates/email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Verify your email address"
+msgstr "Potwierdź adres e-mail"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a Tymeslot account"
+msgstr "Masz już konto Tymeslot"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account has been deleted"
+msgstr "Konto Tymeslot zostało usunięte"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account has no password"
+msgstr "Konto Tymeslot nie ma hasła"
+
+#: lib/tymeslot/emails/templates/account_deletion_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account is scheduled for deletion"
+msgstr "Zaplanowano usunięcie konta Tymeslot"
+
+#: lib/tymeslot/emails/templates/email_change_notification.ex
+#, elixir-autogen, elixir-format
+msgid "⚠️ Email Change Request - Security Alert"
+msgstr "⚠️ Prośba o zmianę adresu e-mail – ostrzeżenie dotyczące bezpieczeństwa"

@@ -2,6 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionFiltersTest do
   use ExUnit.Case, async: true
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.AvailabilityView
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Selection
 
@@ -132,6 +133,146 @@ defmodule Tymeslot.Integrations.Calendar.SelectionFiltersTest do
   end
 
   defp entries(maps), do: Enum.map(maps, &CalendarEntry.normalize/1)
+
+  # =====================================
+  # blocking
+  # =====================================
+
+  describe "blocking_calendars/1" do
+    test "keeps selected calendars that block, read-only ones included" do
+      list =
+        entries([
+          %{id: "work", selected: true},
+          %{id: "shared", selected: true, read_only: true},
+          %{id: "holidays", selected: true, blocks_availability: false},
+          %{id: "old", selected: false, blocks_availability: true}
+        ])
+
+      assert Enum.map(Selection.blocking_calendars(list), & &1.id) == ["work", "shared"]
+    end
+
+    test "returns [] for nil" do
+      assert Selection.blocking_calendars(nil) == []
+    end
+  end
+
+  describe "AvailabilityView.of/1" do
+    test "narrows the list and the paths to the blocking calendars" do
+      integration = %{
+        id: 1,
+        calendar_paths: ["/cal/work/", "/cal/holidays/"],
+        calendar_list:
+          entries([
+            %{id: "/cal/work/", path: "/cal/work/", selected: true},
+            %{
+              id: "/cal/holidays/",
+              path: "/cal/holidays/",
+              selected: true,
+              blocks_availability: false
+            }
+          ])
+      }
+
+      view = AvailabilityView.of(integration)
+
+      assert Enum.map(view.calendar_list, & &1.id) == ["/cal/work/"]
+      assert view.calendar_paths == ["/cal/work/"]
+    end
+
+    test "drops an integration whose selected calendars all show only" do
+      # Passed on with an empty list, Google and Outlook would read the
+      # account's primary calendar instead.
+      integration = %{
+        id: 1,
+        calendar_list: entries([%{id: "work", selected: true, blocks_availability: false}])
+      }
+
+      assert AvailabilityView.of(integration) == nil
+    end
+
+    test "leaves an integration with nothing selected unchanged, as it was read before" do
+      # Google and Outlook read the account's primary calendar then.
+      integration = %{
+        id: 1,
+        calendar_list: entries([%{id: "work", selected: false, blocks_availability: false}])
+      }
+
+      assert AvailabilityView.of(integration) == integration
+    end
+
+    test "leaves an integration that predates calendar selection unchanged" do
+      for list <- [nil, []] do
+        integration = %{id: 1, calendar_list: list, calendar_paths: ["/cal/a/"]}
+        assert AvailabilityView.of(integration) == integration
+      end
+    end
+  end
+
+  describe "AvailabilityView for an Exchange mailbox" do
+    test "reads it whole unless its main calendar is set not to block" do
+      mailbox = fn main ->
+        %{
+          id: 9,
+          provider: "exchange",
+          calendar_list:
+            entries([
+              Map.merge(%{id: "main", primary: true}, main),
+              %{id: "team", selected: true, blocks_availability: false}
+            ])
+        }
+      end
+
+      for main <- [%{selected: false}, %{selected: false, blocks_availability: true}] do
+        integration = mailbox.(main)
+        assert AvailabilityView.of(integration) == integration
+        assert AvailabilityView.rules([integration]) == %{9 => :all}
+      end
+
+      show_only = mailbox.(%{selected: true, blocks_availability: false})
+      assert AvailabilityView.of(show_only) == nil
+      assert AvailabilityView.rules([show_only]) == %{9 => :none}
+    end
+
+    test "reads a mailbox that names no main calendar whole" do
+      integration = %{
+        id: 9,
+        provider: "exchange",
+        calendar_list: entries([%{id: "team", selected: true, blocks_availability: false}])
+      }
+
+      assert AvailabilityView.of(integration) == integration
+    end
+  end
+
+  describe "AvailabilityView.rules/1" do
+    test "matches only the blocking calendars, beside the wider visibility rule" do
+      integration = %{
+        id: 7,
+        calendar_list:
+          entries([
+            %{id: "work", selected: true},
+            %{id: "holidays", selected: true, blocks_availability: false}
+          ])
+      }
+
+      assert AvailabilityView.rules([integration]) ==
+               %{7 => {:selected, [%{id: "work", prefix: "work"}]}}
+
+      assert %{7 => {:selected, [_work, _holidays]}} = Selection.visibility_rules([integration])
+    end
+
+    test "is :none when nothing blocks and :all without a calendar list" do
+      show_only = %{
+        id: 1,
+        calendar_list: entries([%{id: "a", selected: true, blocks_availability: false}])
+      }
+
+      nothing_selected = %{id: 3, calendar_list: entries([%{id: "b", selected: false}])}
+
+      assert AvailabilityView.rules([show_only, %{id: 2, calendar_list: nil}, nothing_selected]) ==
+               %{1 => :none, 2 => :all, 3 => :all}
+    end
+  end
 
   # =====================================
   # find_calendar_by_path/2

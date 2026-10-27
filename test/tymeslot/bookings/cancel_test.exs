@@ -16,6 +16,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -37,13 +38,11 @@ defmodule Tymeslot.Bookings.CancelTest do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
 
-      assert {:ok, cancelled_meeting} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled_meeting} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
+
       assert cancelled_meeting.status == "cancelled"
       assert %DateTime{} = cancelled_meeting.cancelled_at
-    end
-
-    test "returns error when meeting is not found" do
-      assert {:error, :meeting_not_found} = Cancel.execute("non-existent-uid")
     end
 
     test "returns error when meeting is already cancelled" do
@@ -52,7 +51,8 @@ defmodule Tymeslot.Bookings.CancelTest do
       meeting =
         insert_meeting_for_user(user, %{status: "cancelled", start_offset: 3600, duration: 3600})
 
-      assert {:error, "Meeting is already cancelled"} = Cancel.execute(meeting.uid)
+      assert {:error, :already_cancelled} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     end
 
     test "returns error when meeting is completed" do
@@ -65,7 +65,8 @@ defmodule Tymeslot.Bookings.CancelTest do
           duration: 3_600
         })
 
-      assert {:error, "Cannot cancel a completed meeting"} = Cancel.execute(meeting.uid)
+      assert {:error, {:not_cancellable, :completed}} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     end
 
     test "returns error when meeting has already started" do
@@ -77,8 +78,8 @@ defmodule Tymeslot.Bookings.CancelTest do
           duration: 7_200
         })
 
-      assert {:error, "Cannot cancel a meeting that has already started"} =
-               Cancel.execute(meeting.uid)
+      assert {:error, {:not_cancellable, :started}} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     end
 
     test "returns error when meeting has already occurred" do
@@ -90,8 +91,8 @@ defmodule Tymeslot.Bookings.CancelTest do
           duration: 3_600
         })
 
-      assert {:error, "Cannot cancel a meeting that has already occurred"} =
-               Cancel.execute(meeting.uid)
+      assert {:error, {:not_cancellable, :past}} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     end
 
     test "refuses the withdraw link on a request that already expired" do
@@ -114,7 +115,8 @@ defmodule Tymeslot.Bookings.CancelTest do
           cancelled_at: DateTime.utc_now(:second)
         })
 
-      assert {:error, "Cannot cancel an expired meeting"} = Cancel.execute(expired.uid)
+      assert {:error, {:not_cancellable, :expired}} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: expired.uid))
 
       {:ok, stored} = MeetingQueries.get_meeting_by_uid(expired.uid)
       assert stored.status == "expired"
@@ -151,7 +153,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       {:ok, loaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
 
-      assert {:error, "Meeting is already cancelled"} = Cancel.execute(loaded_meeting)
+      assert {:error, :already_cancelled} = Cancel.execute(loaded_meeting)
     end
 
     test "allows cancellation of meeting starting soon" do
@@ -187,7 +189,7 @@ defmodule Tymeslot.Bookings.CancelTest do
         {:ok, %{id: "re_withdrawn"}}
       end)
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
@@ -220,7 +222,7 @@ defmodule Tymeslot.Bookings.CancelTest do
         {:ok, %{id: "re_unexpected"}}
       end)
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       refute_received :refund_attempted
@@ -234,7 +236,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       %{user: user} = create_user_with_profile()
       meeting = insert_held_paid_request(user, "confirmed")
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
@@ -274,7 +276,7 @@ defmodule Tymeslot.Bookings.CancelTest do
         {:ok, %{id: "re_unexpected"}}
       end)
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       refute_received :refund_attempted
@@ -346,7 +348,8 @@ defmodule Tymeslot.Bookings.CancelTest do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
 
-      assert {:ok, _cancelled_meeting} = Cancel.execute(meeting.uid)
+      assert {:ok, _cancelled_meeting} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
 
       # Reload from database to verify persistence
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
@@ -365,7 +368,8 @@ defmodule Tymeslot.Bookings.CancelTest do
         args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
       )
 
-      assert {:ok, _cancelled_meeting} = Cancel.execute(meeting.uid)
+      assert {:ok, _cancelled_meeting} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
 
       refute_enqueued(
         worker: EmailWorker,
@@ -387,7 +391,7 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: "987654321"
         })
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       # The provider call is deferred to a supervised, retrying Oban job rather
@@ -423,7 +427,7 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: "555"
         })
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       assert_enqueued(
@@ -460,7 +464,7 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: "gone"
         })
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
@@ -490,7 +494,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       # key while the Zoom meeting carries on existing.
       assert {:ok, :deleted} = Video.delete_integration(user.id, integration.id)
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
       assert cancelled.video_integration_id == nil
       assert cancelled.video_room_id == "86360699337"
@@ -514,7 +518,7 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: nil
         })
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == "cancelled"
 
       refute_enqueued(worker: VideoSyncWorker)

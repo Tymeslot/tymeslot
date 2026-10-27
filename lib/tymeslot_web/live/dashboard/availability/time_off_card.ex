@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   alias Ecto.Changeset
   alias Phoenix.LiveView.JS
   alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias Tymeslot.Validation.Constraints
 
@@ -478,7 +479,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
           show={@show_time_off_form_modal}
           period_data={@time_off_form_modal_data}
           time_format={@time_format}
-          timezone={@profile.timezone}
+          timezone={Profiles.timezone(@profile)}
           on_cancel={JS.push("hide_time_off_form", target: @myself)}
           myself={@myself}
         />

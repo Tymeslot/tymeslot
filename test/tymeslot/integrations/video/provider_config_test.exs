@@ -138,13 +138,6 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
       assert ProviderConfig.display_name(:jitsi) == "Jitsi Meet"
     end
 
-    test "both agree with their provider module's hardcoded display name and type" do
-      assert ProviderConfig.display_name(:kmeet) == KmeetProvider.display_name()
-      assert ProviderConfig.display_name(:jitsi) == JitsiProvider.display_name()
-      assert KmeetProvider.provider_type() == :kmeet
-      assert JitsiProvider.provider_type() == :jitsi
-    end
-
     test "both appear in the changeset constraint list" do
       list = ProviderConfig.provider_constraint_list_all()
       assert "kmeet" in list

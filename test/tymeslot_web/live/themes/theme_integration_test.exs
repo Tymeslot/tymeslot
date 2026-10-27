@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
 
       {:ok, _view, _html} = live(conn, ~p"/#{profile.username}")
 
-      refute MeetingTypeQueries.has_meeting_types?(user.id)
+      assert MeetingTypeQueries.list_all_meeting_types(user.id) == []
     end
 
     test "invalid theme falls back gracefully", %{conn: conn} do

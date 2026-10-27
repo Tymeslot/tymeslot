@@ -13,6 +13,10 @@ const SCROLL_REASSERT_MS = 1200
 const SNAP_MINUTES = 15
 const TOUCH_HOLD_MS = 200       // long-press threshold before a touch becomes a drag
 const DRAG_THRESHOLD_PX = 5     // pointer movement before drag starts (mouse)
+// How long after a mouse drag or resize ends a stray click is still swallowed.
+// The browser fires it straight after mouseup; a genuine click needs a fresh
+// press, so it cannot land inside this window.
+const CLICK_SUPPRESS_MS = 100
 
 export function snapToGrid(minutes) {
   return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES
@@ -29,6 +33,25 @@ export function pointerXY(e) {
     return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }
   }
   return { x: e.clientX, y: e.clientY }
+}
+
+// Releasing a mouse drag or resize fires a `click` on the element under both
+// press and release, which bubbles to the event block's open-event phx-click.
+// Swallow that one click. The listener captures on window, ahead of
+// LiveView's own click binding there, and expires on a timeout so a release
+// that produces no click (outside the window, say) cannot eat a later one.
+export function suppressNextClick() {
+  const swallow = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    disarm()
+  }
+  const timer = setTimeout(() => disarm(), CLICK_SUPPRESS_MS)
+  function disarm() {
+    clearTimeout(timer)
+    window.removeEventListener('click', swallow, true)
+  }
+  window.addEventListener('click', swallow, true)
 }
 
 export const CalendarDrag = {
@@ -295,6 +318,7 @@ export const CalendarDrag = {
 
       d.clone.remove()
       d.originalEl.style.opacity = ''
+      if (!d.isTouch) suppressNextClick()
     }
 
     this._dragging = null
@@ -409,6 +433,7 @@ export const CalendarResize = {
 
     r.eventEl.style.opacity = ''
     r.eventEl.style.height = ''
+    if (!r.isTouch) suppressNextClick()
     this._resizing = null
   }
 }

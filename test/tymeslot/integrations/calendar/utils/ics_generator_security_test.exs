@@ -47,6 +47,24 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorSecurityTest do
   # that the client handles all scheduling — they must not fire their own
   # iTIP pipeline. Without this, Zimbra/Nextcloud/iCloud auto-generate a
   # second set of notifications (see issue #41).
+  describe "mailto sanitisation" do
+    test "a line break in an organiser or attendee address cannot add a property" do
+      meeting_details = %{
+        title: "Injection Test",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "mailto-injection",
+        organizer_email: "org@example.com\r\nX-INJECTED:organiser",
+        attendee_email: "guest@example.com\nX-INJECTED:attendee"
+      }
+
+      lines = meeting_details |> IcsGenerator.generate_ics() |> String.split("\r\n")
+
+      refute Enum.any?(lines, &String.starts_with?(&1, "X-INJECTED"))
+      assert "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:org@example.comX-INJECTED:organiser" in lines
+    end
+  end
+
   describe "SCHEDULE-AGENT=CLIENT suppression of recipient-side iTIP" do
     test "ORGANIZER line carries SCHEDULE-AGENT=CLIENT" do
       meeting_details = %{

@@ -7,16 +7,36 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Format do
   logic lives here.
   """
 
+  # The mark of an event Tymeslot created. The CalDAV and ICS syncs know
+  # nothing else about who made an event, so a uid carries it only when the
+  # event really is Tymeslot's (`uid_origin/1`).
+  @tymeslot_suffix "@tymeslot.com"
+
   @doc """
   Generates a unique identifier for an event.
 
-  The UID follows the format: `{random-hex}@tymeslot.com`
+  An event of Tymeslot's own (`:tymeslot`, the default) gets
+  `{random-hex}@tymeslot.com`. A new copy of somebody else's event
+  (`:foreign`), such as one moved to another calendar, gets the bare
+  `{random-hex}`, so the copy is not taken for Tymeslot's on the next sync.
   """
-  @spec generate_uid() :: String.t()
-  def generate_uid do
-    random_string = Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
-    "#{random_string}@tymeslot.com"
+  @spec generate_uid(:tymeslot | :foreign) :: String.t()
+  def generate_uid(origin \\ :tymeslot)
+  def generate_uid(:tymeslot), do: random_hex() <> @tymeslot_suffix
+  def generate_uid(:foreign), do: random_hex()
+
+  defp random_hex, do: Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
+
+  @doc """
+  Who created the event `uid` names, as far as the uid tells: `:tymeslot`
+  for one `generate_uid/1` marked as Tymeslot's, `:foreign` for any other.
+  """
+  @spec uid_origin(String.t() | nil) :: :tymeslot | :foreign
+  def uid_origin(uid) when is_binary(uid) do
+    if String.ends_with?(uid, @tymeslot_suffix), do: :tymeslot, else: :foreign
   end
+
+  def uid_origin(_none), do: :foreign
 
   @doc """
   Formats a DateTime for iCalendar format.

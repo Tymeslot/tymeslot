@@ -82,6 +82,14 @@ defmodule TymeslotWeb.Gettext.EctoErrorMsgids do
       "should have at most %{count} item(s)"
     )
 
+    # Tymeslot's own changeset messages that carry a `:count`, which
+    # `Forms.translate_error/1` looks up as plurals.
+    dngettext_noop(
+      "errors",
+      "cannot have more than %{count} reminders",
+      "cannot have more than %{count} reminders"
+    )
+
     :ok
   end
 end

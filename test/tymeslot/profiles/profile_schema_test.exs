@@ -6,12 +6,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
   import Tymeslot.Factory
 
   describe "embed domain validation" do
-    setup do
-      user = insert(:user)
-      {:ok, user: user}
-    end
-
-    test "validates domain format", %{user: user} do
+    test "validates domain format" do
       valid_domains = [
         "example.com",
         "subdomain.example.com",
@@ -29,9 +24,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
 
       for domain <- valid_domains do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{
-            user_id: user.id,
-            timezone: "Europe/Kyiv",
+          ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
             allowed_embed_domains: [domain]
           })
 
@@ -40,7 +33,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       end
     end
 
-    test "rejects invalid domain formats", %{user: user} do
+    test "rejects invalid domain formats" do
       invalid_domains = [
         {"example.com/path", "path"},
         {"example.com?query=1", "query"},
@@ -56,9 +49,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
 
       for {domain, reason} <- invalid_domains do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{
-            user_id: user.id,
-            timezone: "Europe/Kyiv",
+          ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
             allowed_embed_domains: [domain]
           })
 
@@ -70,14 +61,12 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       end
     end
 
-    test "enforces maximum of 20 domains", %{user: user} do
+    test "enforces maximum of 20 domains" do
       # 20 domains should be OK
       domains_20 = for i <- 1..20, do: "example#{i}.com"
 
       changeset_20 =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: domains_20
         })
 
@@ -87,9 +76,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       domains_21 = for i <- 1..21, do: "example#{i}.com"
 
       changeset_21 =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: domains_21
         })
 
@@ -97,7 +84,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       assert Keyword.has_key?(changeset_21.errors, :allowed_embed_domains)
     end
 
-    test "enforces maximum domain length of 255 characters", %{user: user} do
+    test "enforces maximum domain length of 255 characters" do
       # 255 chars should be OK (need multiple labels, each max 63 chars, real TLD)
       # aaa(63).aaa(63).aaa(63).aaa(59).com = 63+1+63+1+63+1+59+1+3 = 255 chars
       label_63 = String.duplicate("a", 63)
@@ -106,9 +93,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       assert byte_size(domain_255) == 255
 
       changeset_255 =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: [domain_255]
         })
 
@@ -120,9 +105,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       assert byte_size(domain_256) == 256
 
       changeset_256 =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: [domain_256]
         })
 
@@ -130,7 +113,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       assert Keyword.has_key?(changeset_256.errors, :allowed_embed_domains)
     end
 
-    test "handles mixed valid and invalid domains", %{user: user} do
+    test "handles mixed valid and invalid domains" do
       mixed_domains = [
         "valid.com",
         "also-valid.org",
@@ -138,9 +121,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       ]
 
       changeset =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: mixed_domains
         })
 
@@ -148,7 +129,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       assert Keyword.has_key?(changeset.errors, :allowed_embed_domains)
     end
 
-    test "sanitizes unicode and emoji from domains", %{user: user} do
+    test "sanitizes unicode and emoji from domains" do
       # Unicode/emoji should be stripped by sanitizer, making domain invalid
       unicode_domains = [
         "example😀.com",
@@ -158,9 +139,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
 
       for domain <- unicode_domains do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{
-            user_id: user.id,
-            timezone: "Europe/Kyiv",
+          ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
             allowed_embed_domains: [domain]
           })
 
@@ -170,22 +149,18 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       end
     end
 
-    test "allows empty list", %{user: user} do
+    test "allows empty list" do
       changeset =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: []
         })
 
       assert changeset.valid?
     end
 
-    test "handles nil allowed_embed_domains", %{user: user} do
+    test "handles nil allowed_embed_domains" do
       changeset =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: nil
         })
 
@@ -193,7 +168,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       assert changeset.valid?
     end
 
-    test "validates multi-level subdomains", %{user: user} do
+    test "validates multi-level subdomains" do
       multi_level_domains = [
         "a.example.com",
         "a.b.example.com",
@@ -203,9 +178,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
 
       for domain <- multi_level_domains do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{
-            user_id: user.id,
-            timezone: "Europe/Kyiv",
+          ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
             allowed_embed_domains: [domain]
           })
 
@@ -213,7 +186,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       end
     end
 
-    test "validates domains with numbers", %{user: user} do
+    test "validates domains with numbers" do
       number_domains = [
         "123.example.com",
         "test123.com",
@@ -223,9 +196,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
 
       for domain <- number_domains do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{
-            user_id: user.id,
-            timezone: "Europe/Kyiv",
+          ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
             allowed_embed_domains: [domain]
           })
 
@@ -233,30 +204,26 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
       end
     end
 
-    test "rejects domain labels exceeding 63 characters", %{user: user} do
+    test "rejects domain labels exceeding 63 characters" do
       # Create a label that's 64 characters
       long_label = String.duplicate("a", 64)
       domain = "#{long_label}.com"
 
       changeset =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: [domain]
         })
 
       refute changeset.valid?
     end
 
-    test "accepts domain labels of exactly 63 characters", %{user: user} do
+    test "accepts domain labels of exactly 63 characters" do
       # Create a label that's exactly 63 characters
       max_label = String.duplicate("a", 63)
       domain = "#{max_label}.com"
 
       changeset =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
-          timezone: "Europe/Kyiv",
+        ProfileSchema.embed_domains_changeset(%ProfileSchema{}, %{
           allowed_embed_domains: [domain]
         })
 
@@ -264,27 +231,100 @@ defmodule Tymeslot.Profiles.ProfileSchemaTest do
     end
   end
 
-  describe "profile changeset" do
+  describe "create_changeset/2" do
     test "requires user_id" do
-      changeset = ProfileSchema.changeset(%ProfileSchema{}, %{})
+      changeset = ProfileSchema.create_changeset(%ProfileSchema{}, %{})
 
       refute changeset.valid?
       assert Keyword.has_key?(changeset.errors, :user_id)
       # Note: timezone has a default value so it won't show in errors when empty
     end
 
-    test "accepts valid profile data with embed domains" do
+    test "accepts a user_id and full_name" do
       user = insert(:user)
 
       changeset =
-        ProfileSchema.changeset(%ProfileSchema{}, %{
-          user_id: user.id,
+        ProfileSchema.create_changeset(%ProfileSchema{}, %{user_id: user.id, full_name: "Jane"})
+
+      assert changeset.valid?
+      assert changeset.changes == %{user_id: user.id, full_name: "Jane"}
+    end
+  end
+
+  describe "basic_changeset/2" do
+    test "accepts valid profile data" do
+      changeset =
+        ProfileSchema.basic_changeset(%ProfileSchema{}, %{
           timezone: "Europe/Kyiv",
-          username: "testuser",
-          allowed_embed_domains: ["example.com", "test.org"]
+          full_name: "Test User"
         })
 
       assert changeset.valid?
+    end
+
+    # Only change_username/2 writes the username, through its own changeset.
+    test "does not cast the username" do
+      assert ProfileSchema.basic_changeset(insert(:profile), %{username: "sneaky"}).changes == %{}
+    end
+  end
+
+  describe "username_changeset/2" do
+    test "casts only the username" do
+      changeset =
+        ProfileSchema.username_changeset(insert(:profile), %{username: "new-host", full_name: "X"})
+
+      assert changeset.changes == %{username: "new-host"}
+    end
+  end
+
+  describe "focused changesets cast only their own fields" do
+    test "fields outside each changeset's set are ignored" do
+      other = insert(:user)
+
+      foreign = %{
+        user_id: other.id,
+        booking_page_published_at: DateTime.utc_now(),
+        freebusy_token_hash: "hash",
+        primary_calendar_integration_id: 1,
+        avatar: "x.png"
+      }
+
+      profile = insert(:profile)
+
+      assert ProfileSchema.basic_changeset(profile, foreign).changes == %{}
+      assert ProfileSchema.username_changeset(profile, foreign).changes == %{}
+
+      assert ProfileSchema.create_changeset(%ProfileSchema{}, Map.delete(foreign, :user_id)).changes ==
+               %{}
+
+      assert ProfileSchema.avatar_changeset(profile, Map.delete(foreign, :avatar)).changes == %{}
+
+      assert ProfileSchema.identity_changeset(profile, Map.delete(foreign, :avatar)).changes ==
+               %{}
+
+      assert ProfileSchema.theme_changeset(profile, foreign).changes == %{}
+      assert ProfileSchema.embed_domains_changeset(profile, foreign).changes == %{}
+
+      assert ProfileSchema.primary_calendar_changeset(
+               profile,
+               Map.delete(foreign, :primary_calendar_integration_id)
+             ).changes == %{}
+
+      assert ProfileSchema.booking_limits_changeset(profile, foreign).changes == %{}
+    end
+
+    test "basic_changeset ignores booking theme, limits and embed domains" do
+      profile = insert(:profile)
+
+      changeset =
+        ProfileSchema.basic_changeset(profile, %{
+          booking_theme: "2",
+          has_custom_theme: true,
+          max_bookings_per_day: 3,
+          allowed_embed_domains: ["example.com"]
+        })
+
+      assert changeset.changes == %{}
     end
   end
 end

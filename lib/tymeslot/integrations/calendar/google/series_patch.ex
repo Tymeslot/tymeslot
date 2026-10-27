@@ -74,7 +74,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
   def build(master, %{changes: changes} = edit) do
     with {:ok, timing, zone} <- master_timing(master),
          {:ok, move} <- SeriesMove.move(edit, timing, zone),
-         {:ok, recurrence} <- recurrence(master, move, changes, timing, zone) do
+         {:ok, recurrence} <-
+           recurrence(master, move, changes, timing, {zone, until_zone(edit, zone)}) do
       body =
         changes
         |> fields()
@@ -151,13 +152,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
 
   # --- Recurrence ---
 
-  defp recurrence(master, move, changes, {start, _finish}, zone) do
+  # A new rule's UNTIL ends the day the organiser chose in the zone the edit
+  # names, which can differ from the master's: its end date is read there.
+  defp until_zone(edit, zone), do: Map.get(edit, :until_timezone) || zone
+
+  defp recurrence(master, move, changes, {start, _finish}, {zone, until_zone}) do
     lines = master["recurrence"] || []
     shift = if move == :unmoved, do: 0, else: move.shift
 
     case Map.fetch(changes, :recurrence_rule) do
       {:ok, rule} ->
-        with_rule(lines, rule, shift, match?(%Date{}, start), zone)
+        with_rule(lines, rule, shift, match?(%Date{}, start), {zone, until_zone})
 
       :error ->
         days = if move == :unmoved, do: 0, else: move.days
@@ -167,8 +172,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
 
   defp with_rule(_lines, nil, _shift, _all_day?, _zone), do: {:error, :rule_removal}
 
-  defp with_rule(lines, rule, shift, all_day?, zone) do
-    with {:ok, rule} <- RRule.retarget(rule, all_day: all_day?, timezone: zone) do
+  defp with_rule(lines, rule, shift, all_day?, {zone, until_zone}) do
+    with {:ok, rule} <- RRule.retarget(rule, all_day: all_day?, timezone: until_zone) do
       line = "RRULE:" <> RRule.strip_prefix(rule)
       # A stated rule is written as given, so only the exceptions move.
       Document.map_ok(lines, fn written ->

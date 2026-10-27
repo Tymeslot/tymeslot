@@ -168,6 +168,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
       assert ServerDetector.detect_from_url("https://RADICALE.example.com") == :radicale
     end
 
+    test "detects cPanel from its calendar server ports" do
+      assert ServerDetector.detect_from_url(
+               "https://mail.example.com:2080/calendars/user@example.com/calendar"
+             ) == :cpanel
+
+      assert ServerDetector.detect_from_url("http://mail.example.com:2079/calendars/") == :cpanel
+    end
+
+    test "detects cPanel from its cpcalendars proxy subdomain" do
+      assert ServerDetector.detect_from_url("https://cpcalendars.example.com/calendars/") ==
+               :cpanel
+    end
+
+    test "does not take a port merely containing 2080 for cPanel" do
+      assert ServerDetector.detect_from_url("https://cal.example.com:20800/") == :generic
+      assert ServerDetector.detect_from_url("https://cal.example.com:12080/") == :generic
+    end
+
     test "detects Radicale from port 5232" do
       assert ServerDetector.detect_from_url("https://cal.example.com:5232") == :radicale
       assert ServerDetector.detect_from_url("http://localhost:5232") == :radicale

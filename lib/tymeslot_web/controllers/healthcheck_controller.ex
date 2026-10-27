@@ -23,7 +23,7 @@ defmodule TymeslotWeb.HealthcheckController do
 
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, _params) do
-    case RateLimiter.check_healthcheck_rate_limit(ClientIP.get(conn)) do
+    case RateLimiter.check(:healthcheck, ClientIP.get(conn)) do
       :ok ->
         %{status: status, checks: checks} = Health.check()
 
@@ -31,7 +31,7 @@ defmodule TymeslotWeb.HealthcheckController do
         |> put_status(http_status(status))
         |> json(%{status: status, timestamp: DateTime.utc_now(), checks: checks})
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _message} ->
         Logger.warning("Health check rate limit exceeded")
 
         conn

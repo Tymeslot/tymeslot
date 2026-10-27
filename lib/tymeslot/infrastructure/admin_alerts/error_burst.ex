@@ -41,7 +41,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.ErrorBurst do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.AdminAlerts.Digest
   alias Tymeslot.Infrastructure.AdminAlerts.DigestEntryQueries
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Repo
   alias Tymeslot.Workers.AdminAlertDigestWorker
   alias Tymeslot.Workers.EmailWorker
@@ -108,7 +108,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.ErrorBurst do
   end
 
   defp emailed_in_window(category, now, window_seconds) do
-    ObanJobQueries.count_inserted_since(
+    Jobs.count_inserted_since(
       EmailWorker,
       %{"action" => "send_admin_alert", "category" => category},
       DateTime.add(now, -window_seconds, :second)

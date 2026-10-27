@@ -7,7 +7,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIErrorTaxonomyTest do
   import Mox
 
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
+  alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.RetryHelpers
 
   setup :verify_on_exit!
 
@@ -65,12 +67,42 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIErrorTaxonomyTest do
                CalendarAPI.delete_event(integration, "primary", "missing-event-id")
     end
 
-    test "500 from the Google API surfaces as :network_error", %{integration: integration} do
+    # A server failure and a throttle are both transient, but neither is a
+    # network failure: a caller waits out a rate limit for as long as Google
+    # asks, and retries a server failure on its own backoff.
+    for status <- [500, 502, 503] do
+      test "#{status} from the Google API surfaces as a transient :server_error", %{
+        integration: integration
+      } do
+        expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: unquote(status), body: "<html>busy</html>"}}
+        end)
+
+        assert {:error, :server_error, message} = CalendarAPI.list_calendars(integration)
+        assert message == "HTTP #{unquote(status)}"
+        assert ErrorAnalysis.classify_error(:server_error) == :transient
+      end
+    end
+
+    test "429 from the Google API surfaces as :rate_limited with its Retry-After", %{
+      integration: integration
+    } do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 500, body: ""}}
+        {:ok, %Req.Response{status: 429, headers: %{"retry-after" => ["30"]}, body: ""}}
       end)
 
-      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
+      assert {:error, :rate_limited, message} = CalendarAPI.list_calendars(integration)
+      assert RetryHelpers.parse_retry_after_from_message(message) == 30
+      assert ErrorAnalysis.classify_error({:error, :rate_limited, message}) == :transient
+    end
+
+    test "429 without a Retry-After surfaces as :rate_limited", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
+
+      assert {:error, :rate_limited, "Too many requests"} =
+               CalendarAPI.list_calendars(integration)
     end
 
     test "403 with rateLimitExceeded reason surfaces as :rate_limited", %{
@@ -113,6 +145,53 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIErrorTaxonomyTest do
 
       assert {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."} =
                CalendarAPI.list_calendars(integration)
+    end
+
+    # Google states a refusal of the request itself in a 403 too: a write to a
+    # calendar the account may only read. The calendar answered, so it is not
+    # a network failure, and sending it again changes nothing.
+    test "403 with an unrecognised reason surfaces as :refused", %{integration: integration} do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "message" => "You need to have writer access to this calendar.",
+            "errors" => [%{"reason" => "requiredAccessLevel"}]
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: body}}
+      end)
+
+      assert {:error, :refused, "You need to have writer access to this calendar."} =
+               CalendarAPI.delete_event(integration, "shared@example.com", "abc123")
+    end
+
+    test "403 with userRateLimitExceeded reason stays :rate_limited", %{
+      integration: integration
+    } do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "message" => "User Rate Limit Exceeded",
+            "errors" => [%{"reason" => "userRateLimitExceeded"}]
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: body}}
+      end)
+
+      assert {:error, :rate_limited, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "a 412 from the Google API surfaces as :refused", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 412, body: ~s({"error":{"message":"Precondition Failed"}})}}
+      end)
+
+      assert {:error, :refused, _msg} =
+               CalendarAPI.delete_event(integration, "primary", "abc123")
     end
 
     test "a transport timeout surfaces as :network_error", %{integration: integration} do

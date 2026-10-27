@@ -12,6 +12,17 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   alias Tymeslot.Utils.UriUtils
 
   @doc """
+  The calendar a booking, and the booking calendar's own reads, address on
+  an integration: its stored booking calendar, or `"primary"`, the name
+  Google and Outlook both answer to for the account's default calendar.
+  """
+  @spec booking_calendar_id(CalendarIntegrationSchema.t() | map()) :: String.t()
+  def booking_calendar_id(%{default_booking_calendar_id: id}) when is_binary(id) and id != "",
+    do: id
+
+  def booking_calendar_id(_integration), do: "primary"
+
+  @doc """
   Determine best default calendar within an integration struct.
 
   Priority:

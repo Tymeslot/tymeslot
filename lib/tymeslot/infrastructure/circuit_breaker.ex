@@ -196,6 +196,17 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   end
 
   @doc """
+  True while a call made now would be refused: the breaker is open and its
+  recovery timeout has not yet elapsed, or it is half-open with every probe
+  of the round already out. Reads the state without changing it,
+  so a caller can skip work that only makes sense if the call goes ahead.
+  """
+  @spec refusing?(GenServer.server()) :: boolean()
+  def refusing?(breaker_name) do
+    GenServer.call(breaker_name, :refusing?, 5_000)
+  end
+
+  @doc """
   Resets the circuit breaker to closed state.
 
   Clears the persisted ETS snapshot directly (not just via the cast) so a
@@ -238,6 +249,12 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     {reply, new_state} = grant_permission(state)
     persist_state(new_state)
     {:reply, reply, new_state, new_state.idle_timeout}
+  end
+
+  @impl GenServer
+  def handle_call(:refusing?, _from, state) do
+    refusing = decide(state, System.monotonic_time(:millisecond)) == :refuse
+    {:reply, refusing, state, state.idle_timeout}
   end
 
   @impl GenServer
@@ -285,44 +302,53 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   # Permission granting: decides whether a caller may run, and records the
   # state transitions that decision implies. Outcomes arrive separately.
 
-  defp grant_permission(%State{status: :closed} = state) do
-    {:allow, maybe_reset_window(state, System.monotonic_time(:millisecond))}
-  end
-
-  defp grant_permission(%State{status: :open} = state) do
+  defp grant_permission(state) do
     now = System.monotonic_time(:millisecond)
 
-    if now - (state.last_failure_time || now) >= state.config.recovery_timeout do
-      Logger.info("Circuit breaker transitioning to half-open", name: state.name)
-      Metrics.track_circuit_breaker_state(state.name, :open, :half_open)
+    case decide(state, now) do
+      :allow ->
+        {:allow, maybe_reset_window(state, now)}
 
-      {:allow, %{start_half_open_round(state, now) | status: :half_open}}
-    else
-      {{:error, :circuit_open}, state}
-    end
-  end
+      :half_open ->
+        Logger.info("Circuit breaker transitioning to half-open", name: state.name)
+        Metrics.track_circuit_breaker_state(state.name, :open, :half_open)
+        {:allow, %{start_half_open_round(state, now) | status: :half_open}}
 
-  defp grant_permission(%State{status: :half_open} = state) do
-    now = System.monotonic_time(:millisecond)
-
-    cond do
-      state.half_open_attempts < state.config.half_open_requests ->
+      :probe ->
         {:allow, %{state | half_open_attempts: state.half_open_attempts + 1}}
 
       # Every probe of this round was granted and none came back. Rather than
       # deny for ever, start a fresh round once the recovery window has passed
       # again.
-      now - (state.half_open_started_at || now) >= state.config.recovery_timeout ->
+      :new_round ->
         Logger.warning("Circuit breaker half-open round stalled, probing again",
           name: state.name
         )
 
         {:allow, start_half_open_round(state, now)}
 
-      true ->
+      :refuse ->
         {{:error, :circuit_open}, state}
     end
   end
+
+  # The decision alone, with no state change, so that `refusing?/1` answers
+  # exactly as a call made now would be answered.
+  defp decide(%State{status: :closed}, _now), do: :allow
+
+  defp decide(%State{status: :open} = state, now),
+    do: if(recovered?(state, now), do: :half_open, else: :refuse)
+
+  defp decide(%State{status: :half_open} = state, now) do
+    cond do
+      state.half_open_attempts < state.config.half_open_requests -> :probe
+      now - (state.half_open_started_at || now) >= state.config.recovery_timeout -> :new_round
+      true -> :refuse
+    end
+  end
+
+  defp recovered?(state, now),
+    do: now - (state.last_failure_time || now) >= state.config.recovery_timeout
 
   defp start_half_open_round(state, now) do
     %{state | half_open_attempts: 1, half_open_successes: 0, half_open_started_at: now}

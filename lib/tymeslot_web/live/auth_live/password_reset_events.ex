@@ -35,7 +35,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   def validate_request(email, socket) do
     metadata = socket |> ClientIP.request_opts() |> Map.new()
 
-    case Auth.validate_email(email, metadata) do
+    case Auth.validate_lookup_email(email, metadata) do
       {:ok, sanitized} -> {:noreply, form_state(socket, %{}, %{email: sanitized})}
       {:error, message} -> {:noreply, form_state(socket, %{email: message}, %{email: email})}
     end

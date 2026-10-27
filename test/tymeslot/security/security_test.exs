@@ -5,36 +5,6 @@ defmodule Tymeslot.Security.SecurityTest do
 
   alias Tymeslot.Security.Security
 
-  describe "validate_timezone/1" do
-    test "accepts valid timezones" do
-      assert {:ok, "Europe/Kyiv"} = Security.validate_timezone("Europe/Kyiv")
-      assert {:ok, "UTC"} = Security.validate_timezone("UTC")
-      assert {:ok, "Etc/UTC"} = Security.validate_timezone("Etc/UTC")
-    end
-
-    test "accepts real zones a format regex would reject" do
-      # Regression: a prior format check rejected these, silently discarding the
-      # visitor's choice even though the picker offers them.
-      assert {:ok, _tz} = Security.validate_timezone("America/Argentina/Buenos_Aires")
-      assert {:ok, _tz} = Security.validate_timezone("America/Indiana/Indianapolis")
-      assert {:ok, _tz} = Security.validate_timezone("Etc/GMT+5")
-    end
-
-    test "rejects invalid formats" do
-      assert {:error, "Unknown timezone"} = Security.validate_timezone("InvalidTimezone")
-      assert {:error, "Unknown timezone"} = Security.validate_timezone("Europe/Kyiv/Kiev")
-    end
-
-    test "rejects an oversized string before the zone lookup" do
-      assert {:error, "Timezone too long"} =
-               Security.validate_timezone(String.duplicate("a", 101))
-    end
-
-    test "rejects non-string values" do
-      assert {:error, "Invalid timezone"} = Security.validate_timezone(123)
-    end
-  end
-
   describe "validate_domain/1" do
     test "accepts valid domains" do
       assert {:ok, "example.com"} = Security.validate_domain("example.com")
@@ -105,7 +75,7 @@ defmodule Tymeslot.Security.SecurityTest do
 
     test "includes suggestion when confident" do
       {:error, msg} = Security.validate_domain("example.ocm")
-      assert msg =~ "did you mean .com?"
+      assert msg =~ "Did you mean .com?"
     end
 
     test "accepts wildcard domains with valid TLDs" do
@@ -115,6 +85,33 @@ defmodule Tymeslot.Security.SecurityTest do
     test "rejects wildcard domains whose ending cannot be a TLD" do
       {:error, msg} = Security.validate_domain("*.example.c0m")
       assert msg =~ "invalid domain ending"
+    end
+  end
+
+  describe "validate_domain/1 in another language" do
+    test "explains a malformed domain in the person's language" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert {:error, "Ungültiges Domain-Format (z. B. example.com)"} =
+                 Security.validate_domain("example.com/path")
+      end)
+    end
+  end
+
+  describe "validate_domains/1" do
+    test "returns each distinct problem as its own message, for the reader's language to join" do
+      assert {:error, messages} =
+               Security.validate_domains(["example.com/path", "other.org/x", "*.bad_host.com"])
+
+      assert Enum.sort(messages) ==
+               Enum.sort([
+                 "Invalid domain format (e.g. example.com)",
+                 "Invalid domain format (e.g. *.example.com)"
+               ])
+    end
+
+    test "returns the valid domains when every entry passes" do
+      assert {:ok, ["example.com", "*.example.org"]} =
+               Security.validate_domains(["example.com", "", "*.example.org"])
     end
   end
 end

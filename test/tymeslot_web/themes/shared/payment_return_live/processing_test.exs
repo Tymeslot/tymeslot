@@ -26,16 +26,19 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Phoenix.PubSub
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
+  alias Tymeslot.Themes.Catalog
 
   setup do
     user = insert(:user)
     {:ok, profile} = Profiles.get_or_create_profile(user.id)
-    {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
+    {:ok, profile} = Profiles.update_booking_theme(profile, "1")
 
     %{user: user, profile: profile}
   end
@@ -53,6 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
 
     assert html =~ "Confirming your payment"
+    refute html =~ ~s(data-testid="payment-paid-amount")
   end
 
   test "flips to confirmation UI when broadcast says paid", %{conn: conn, user: user} do
@@ -191,7 +195,34 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
 
     assert html =~ "Payment received"
+    assert html =~ ~s(data-testid="payment-paid-amount")
     refute html =~ "Booking confirmed"
+  end
+
+  test "the confirmation says what was paid, in the guest's locale", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "confirmed")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: "paid",
+      paid_at: DateTime.utc_now(:second),
+      amount_cents: 4550,
+      currency: "eur",
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert has_element?(view, "h1", "Booking confirmed")
+    assert has_element?(view, "[data-testid='payment-paid-amount']", "Paid: €45.50")
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST&locale=de")
+
+    # The amount is set off from the symbol by a non-breaking space.
+    assert has_element?(view, "[data-testid='payment-paid-amount']", "Bezahlt: 45,50\u00A0€")
   end
 
   test "renders the declined wording and mentions the refund for a declined gated booking", %{
@@ -295,6 +326,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       meeting: meeting,
       host_user_id: user.id,
       status: "pending",
+      stripe_account_id: "acct_TEST",
       stripe_checkout_session_id: "cs_TEST"
     )
 
@@ -309,7 +341,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
              FailAndExpire.handle(
                %{
                  "id" => "evt_async_failed_#{System.unique_integer([:positive])}",
-                 "data" => %{"object" => %{"client_reference_id" => meeting.id}}
+                 "account" => "acct_TEST",
+                 "data" => %{
+                   "object" => %{"id" => "cs_TEST", "client_reference_id" => meeting.id}
+                 }
                },
                "checkout.session.async_payment_failed",
                :async_payment_failed
@@ -449,7 +484,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
 
   test "rejects mismatched theme slug (host uses Rhythm)", %{conn: conn, user: user} do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
+    {:ok, _profile} = Profiles.update_booking_theme(profile, "2")
 
     meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 
@@ -461,6 +496,31 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
 
     assert {:error, {:redirect, _info}} =
              live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+  end
+
+  # The booking page and the checkout return URL both serve an unknown theme
+  # id as the default theme, so the attendee comes back under its slug.
+  test "accepts the default theme's slug for a host whose stored theme is unknown", %{
+    conn: conn,
+    profile: profile,
+    user: user
+  } do
+    profile |> Changeset.change(booking_theme: "42") |> Repo.update!()
+
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    slug = Atom.to_string(Catalog.default_key())
+
+    {:ok, _view, html} =
+      live(conn, "/themes/#{slug}/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert html =~ "Confirming your payment"
   end
 
   test "dead render does not load page data", %{conn: conn, user: user} do

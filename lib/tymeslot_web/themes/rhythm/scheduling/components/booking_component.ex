@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
@@ -36,6 +37,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
     <div
       class="scheduling-box booker-card"
       data-locale={@locale}
+      data-testid="booker-card"
       id={assigns[:moment] && "#{assigns[:moment]}-step"}
       data-moment={assigns[:moment]}
       data-moment-state={assigns[:moment_state]}
@@ -46,8 +48,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
+                length_minutes={ChosenLength.minutes(assigns)}
                 meeting_type={@meeting_type}
                 selected_duration={@duration}
+                host_currency={@host_currency}
+                show_price={!@is_rescheduling}
+                locale={@locale}
               />
             </div>
 
@@ -75,7 +81,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     <div class="summary-label">
                       {BookingText.duration_label(%{
                         meeting_type: @meeting_type,
-                        duration: @selected_duration
+                        duration: @selected_duration,
+                        chosen_length_minutes: ChosenLength.minutes(assigns)
                       })} {dgettext(
                         "booking",
                         "meeting"
@@ -122,6 +129,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 guest_error={@guest_error}
                 guests_open={@guests_open}
                 max_guests={@max_guests}
+                show_cap={@guest_cap_visible}
                 target={@myself}
               />
             </BookingForm.booking_form>

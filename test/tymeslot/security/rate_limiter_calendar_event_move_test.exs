@@ -11,15 +11,15 @@ defmodule Tymeslot.Security.RateLimiterCalendarEventMoveTest do
   end
 
   # ---------------------------------------------------------------------------
-  # check_calendar_event_move_rate_limit/1 — tiered: 3/1m, 5/5m, 15/1h, 30/1d
+  # check(:calendar_event_move, _) — tiered: 3/1m, 5/5m, 15/1h, 30/1d
   # ---------------------------------------------------------------------------
 
-  describe "check_calendar_event_move_rate_limit/1" do
+  describe "check(:calendar_event_move, _)" do
     test "allows moves under the burst limit" do
       user_id = 99_001
 
       for _i <- 1..3 do
-        assert :ok = RateLimiter.check_calendar_event_move_rate_limit(user_id)
+        assert :ok = RateLimiter.check(:calendar_event_move, user_id)
       end
     end
 
@@ -27,29 +27,29 @@ defmodule Tymeslot.Security.RateLimiterCalendarEventMoveTest do
       user_id = 99_002
 
       for _i <- 1..3 do
-        assert :ok = RateLimiter.check_calendar_event_move_rate_limit(user_id)
+        assert :ok = RateLimiter.check(:calendar_event_move, user_id)
       end
 
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_calendar_event_move_rate_limit(user_id)
+               RateLimiter.check(:calendar_event_move, user_id)
 
       assert message =~ "calendar event move"
     end
 
     test "different users have independent limits" do
       for _i <- 1..3 do
-        assert :ok = RateLimiter.check_calendar_event_move_rate_limit(99_003)
+        assert :ok = RateLimiter.check(:calendar_event_move, 99_003)
       end
 
       assert {:error, :rate_limited, _message} =
-               RateLimiter.check_calendar_event_move_rate_limit(99_003)
+               RateLimiter.check(:calendar_event_move, 99_003)
 
-      assert :ok = RateLimiter.check_calendar_event_move_rate_limit(99_004)
+      assert :ok = RateLimiter.check(:calendar_event_move, 99_004)
     end
 
     test "rejects invalid user_id" do
       assert {:error, :invalid_user_id} =
-               RateLimiter.check_calendar_event_move_rate_limit(-1)
+               RateLimiter.check(:calendar_event_move, -1)
     end
   end
 end

@@ -10,7 +10,6 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
-  alias Tymeslot.Security.LegacyPlainColumn
   alias Tymeslot.Security.SsrfGuard
 
   require Logger
@@ -75,17 +74,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:tenant_id_encrypted, :binary)
     field(:teams_user_id_encrypted, :binary)
     # A personal meeting room link often carries its passcode (`?pwd=`), so it
-    # is encrypted at rest. The plain `custom_meeting_url` column predates
-    # this and is no longer read; it is only emptied when the link changes
-    # (see `Tymeslot.Security.LegacyPlainColumn`).
+    # is encrypted at rest.
     field(:custom_meeting_url, EncryptedString,
       source: :custom_meeting_url_encrypted,
-      redact: true
-    )
-
-    field(:legacy_custom_meeting_url, :string,
-      source: :custom_meeting_url,
-      load_in_query: false,
       redact: true
     )
 
@@ -187,7 +178,6 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     |> validate_provider_specific_fields()
     |> clear_deleted_at_on_reactivation()
     |> encrypt_credentials()
-    |> LegacyPlainColumn.clear_on_change(custom_meeting_url: :legacy_custom_meeting_url)
     |> foreign_key_constraint(:user_id)
     |> apply_active_uniqueness_constraints()
   end
@@ -355,9 +345,11 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   under the current keyring. Returns `:ok` when every ciphertext is either
   absent or decryptable, `:requires_reencryption` otherwise.
 
-  Used by workers to short-circuit jobs when SECRET_KEY_BASE has been
-  rotated without keeping the previous key on the keyring — the worker can
-  then flag `needs_reauth` so the user sees a reconnect prompt.
+  Used by workers to short-circuit jobs when no configured key opens a
+  credential: a data key removed from `DATA_ENCRYPTION_KEYS` while values
+  remained under it, `LEGACY_KEY_RETIRED` set too early, or `SECRET_KEY_BASE`
+  changed while values were still on the legacy key. The worker can then flag
+  `needs_reauth` so the user sees a reconnect prompt.
   """
   @spec decryption_status(t()) :: :ok | :requires_reencryption
   def decryption_status(%__MODULE__{} = integration) do

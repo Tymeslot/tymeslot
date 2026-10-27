@@ -10,6 +10,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
   alias Tymeslot.ThemeCustomizations.Options.Background
   alias Tymeslot.ThemeCustomizations.Presets
   alias Tymeslot.ThemeCustomizations.QuillSpec
+  alias Tymeslot.ThemeCustomizations.RhythmSpec
   alias Tymeslot.ThemeCustomizations.Specs
   alias Tymeslot.ThemeCustomizations.Tokens
   alias Tymeslot.Themes.Catalog
@@ -255,6 +256,18 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
                "background_type" => "gradient",
                "background_value" => "gradient_1"
              }
+    end
+
+    # 1.25.0 accepted an uploaded image with no `background_value`; the
+    # spec's default preset must not stand in for it and hide the upload.
+    test "keeps an upload stored without a background value" do
+      stored = %{
+        "color_scheme" => "default",
+        "background_type" => "image",
+        "background_image_path" => "themes/2/5/images/photo.jpg"
+      }
+
+      assert Specs.settings(RhythmSpec, stored) == stored
     end
 
     test "drops a kind the theme stopped offering, with the upload it named" do
@@ -544,8 +557,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
                %{
                  "background_type" => "image",
                  "background_value" => "custom",
-                 "background_image_path" => "themes/1/1/images/a.png",
-                 "background_video_path" => nil
+                 "background_image_path" => "themes/1/1/images/a.png"
                }
     end
   end

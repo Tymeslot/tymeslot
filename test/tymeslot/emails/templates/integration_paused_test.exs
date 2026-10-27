@@ -1,126 +1,85 @@
 defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
   use Tymeslot.DataCase, async: true
+
   @moduletag :emails
+  @moduletag :integrations
 
   alias Tymeslot.Emails.Templates.IntegrationPaused
 
-  describe "IntegrationPaused.render/4" do
-    test "generates valid HTML output for calendar type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+  @user %{id: 1, email: "user@example.com", name: "Test User"}
 
-      html = IntegrationPaused.render(user, integration, :calendar, 14)
+  describe "render/4" do
+    test "addresses the owner and names the calendar integration in every part" do
+      email = IntegrationPaused.render(@user, %{provider: :google}, :calendar, 14)
 
-      assert html =~ "<!doctype html>"
-      assert html =~ "Integration paused"
-      assert html =~ "Google calendar calendar integration has been paused"
-      assert html =~ "Open Integration Settings"
+      assert email.to == [{"Test User", "user@example.com"}]
+      assert email.subject == "Your calendar integration has been paused"
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "paused your Google Calendar integration after 14 days"
+        assert body =~ "Open Integration Settings"
+        assert body =~ "/dashboard/integrations?tab=calendars"
+      end
+
+      assert email.html_body =~ "<!doctype html>"
+      assert email.html_body =~ "<strong>Google Calendar</strong> integration"
+      refute email.text_body =~ "<strong>"
     end
 
-    test "generates valid HTML output for video type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :zoom}
+    test "names a video integration with its kind" do
+      email = IntegrationPaused.render(@user, %{provider: :zoom}, :video, 14)
 
-      html = IntegrationPaused.render(user, integration, :video, 14)
-
-      assert html =~ "<!doctype html>"
-      assert html =~ "Integration paused"
-      assert html =~ "Zoom video integration has been paused"
-      assert html =~ "Open Integration Settings"
+      assert email.subject == "Your video integration has been paused"
+      assert email.text_body =~ "Your Zoom video integration has been failing"
+      assert email.html_body =~ "/dashboard/integrations?tab=video"
     end
 
-    test "includes humanized provider label" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+    test "renders the configured cutoff" do
+      email = IntegrationPaused.render(@user, %{provider: :zoom}, :video, 21)
 
-      html = IntegrationPaused.render(user, integration, :calendar, 14)
-
-      assert html =~ "Google calendar"
+      assert email.text_body =~ "after 21 days of failed health checks"
+      assert email.text_body =~ "for 21+ days"
     end
 
-    test "includes integration type in content" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :zoom}
+    test "lists the steps in both parts" do
+      email = IntegrationPaused.render(@user, %{provider: :zoom}, :video, 14)
 
-      html = IntegrationPaused.render(user, integration, :video, 14)
+      assert email.text_body =~
+               "HOW DO I BRING IT BACK?\n- Open your integration settings\n- Click Reconnect"
 
-      assert html =~ "video"
+      assert email.html_body =~ "Click <strong>Reconnect</strong> and supply fresh credentials"
     end
 
-    test "renders the configured cutoff_days threshold" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+    test "addresses an owner without a name by their address" do
+      email = IntegrationPaused.render(%{@user | name: nil}, %{provider: :zoom}, :video, 14)
 
-      html = IntegrationPaused.render(user, integration, :calendar, 21)
-
-      assert html =~ "21"
+      assert email.to == [{"user@example.com", "user@example.com"}]
     end
 
-    test "includes settings action button" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+    test "escapes an unknown provider's identifier in the markup" do
+      email = IntegrationPaused.render(@user, %{provider: :"weird<b>"}, :calendar, 14)
 
-      html = IntegrationPaused.render(user, integration, :calendar, 14)
-
-      assert html =~ "Open Integration Settings"
-    end
-
-    test "handles unknown integration type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :custom_service}
-
-      html = IntegrationPaused.render(user, integration, :other, 14)
-
-      assert html =~ "<!doctype html>"
-      # An unrecognised type falls back to its own string form rather than
-      # dropping the provider/type wording altogether.
-      assert html =~ "Custom service other integration has been paused"
-      assert html =~ "Open Integration Settings"
+      assert email.text_body =~ "Weird<b> calendar"
+      refute email.html_body =~ "Weird<b>"
+      assert email.html_body =~ "Weird&lt;b&gt;"
     end
   end
 
-  describe "IntegrationPaused.render_text/4" do
-    test "returns plain text with provider and type details" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+  describe "in the recipient's language" do
+    test "writes every part in German for a German-speaking owner" do
+      user = Map.put(@user, :locale, "de")
 
-      text = IntegrationPaused.render_text(user, integration, :calendar, 14)
+      email = IntegrationPaused.render(user, %{provider: :nextcloud}, :calendar, 14)
 
-      assert text =~ "Google calendar"
-      assert text =~ "calendar"
-      assert text =~ "14"
-      assert text =~ "Open Integration Settings"
-    end
+      assert email.subject == "Ihre Kalender-Integration wurde pausiert"
 
-    test "handles video type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :zoom}
+      for body <- [email.html_body, email.text_body] do
+        assert body =~
+                 "Wir haben Ihre Integration Nextcloud-Kalender nach 14 Tagen fehlgeschlagener Statusprüfungen pausiert."
 
-      text = IntegrationPaused.render_text(user, integration, :video, 14)
-
-      assert text =~ "Zoom"
-      assert text =~ "video"
-    end
-
-    test "includes settings URL in plain text body" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
-
-      text = IntegrationPaused.render_text(user, integration, :calendar, 14)
-
-      assert text =~ "/dashboard/settings"
-    end
-  end
-
-  describe "render_text security" do
-    test "IntegrationPaused.render_text returns a valid binary with unusual provider atom" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :"weird<>provider"}
-
-      text = IntegrationPaused.render_text(user, integration, :calendar, 14)
-
-      assert text =~ "Weird<>provider"
-      assert text =~ "Open Integration Settings"
+        assert body =~ "Integrationseinstellungen öffnen"
+        refute body =~ "Open Integration Settings"
+      end
     end
   end
 end

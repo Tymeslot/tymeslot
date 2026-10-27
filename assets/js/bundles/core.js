@@ -12,7 +12,7 @@ import topbar from "../../vendor/topbar.cjs"
 
 // Core utility hooks used everywhere
 import { initializeBundle } from "./bundle_utils"
-import { PageReload, VideoHoverPreview, StopClickPropagation, ModalFocusTrap, SidebarEscape } from "../ui_interaction_hooks"
+import { PageReload, VideoHoverPreview, PreventSummaryToggle, ModalFocusTrap, SidebarEscape } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
@@ -48,7 +48,7 @@ const CoreHooks = {
   // UI interactions
   PageReload,
   VideoHoverPreview,
-  StopClickPropagation,
+  PreventSummaryToggle,
   ModalFocusTrap,
   SidebarEscape,
 

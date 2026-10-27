@@ -58,7 +58,7 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
       |> Component.assign(:timezone_dropdown_open, false)
       |> Component.assign(:timezone_search, "")
 
-    case validate_timezone(timezone) do
+    case Timezones.validate(timezone) do
       {:ok, validated_timezone} ->
         case Settings.update_timezone(socket.assigns.profile, validated_timezone) do
           {:ok, profile} ->
@@ -79,21 +79,8 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
              )}
         end
 
-      {:error, errors} ->
-        {:noreply, Component.assign(socket, :form_errors, errors)}
+      {:error, message} ->
+        {:noreply, Component.assign(socket, :form_errors, %{timezone: message})}
     end
   end
-
-  # Private helpers
-
-  defp validate_timezone(timezone) when is_binary(timezone) do
-    if Timezones.valid?(timezone) do
-      {:ok, timezone}
-    else
-      {:error, %{timezone: dgettext("onboarding_wizard", "Invalid timezone")}}
-    end
-  end
-
-  defp validate_timezone(_invalid),
-    do: {:error, %{timezone: dgettext("onboarding_wizard", "Timezone must be a string")}}
 end

@@ -81,7 +81,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplit do
 
   # Only a COUNT needs the occurrences before the slot; an UNTIL is kept.
   defp count_before(rule, timing, slot, zone) do
-    if Map.has_key?(RRule.parse(rule), :count),
+    if Map.has_key?(RRule.options(rule), :count),
       do: SeriesSplit.count_before(rule, timing, slot, zone),
       else: {:ok, 0}
   end

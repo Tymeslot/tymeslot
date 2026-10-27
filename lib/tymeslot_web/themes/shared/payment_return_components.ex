@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
 
   alias Tymeslot.Meetings.Approval
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PaymentReturn
 
@@ -33,41 +34,41 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
     <%= case PaymentReturn.outcome(@loading, @payment, @meeting) do %>
       <% :failed -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Payment not completed")}
+          {dgettext("booking_payments", "Payment not completed")}
         </h1>
         <p class="payment-page-body">
           {dgettext(
-            "booking",
+            "booking_payments",
             "Your booking is not confirmed. You can return and try again at any time."
           )}
         </p>
         <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
-          {dgettext("booking", "Return to booking")}
+          {dgettext("booking_payments", "Return to booking")}
         </a>
       <% :cancelled -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking cancelled")}
+          {dgettext("booking_payments", "Booking cancelled")}
         </h1>
         <p class="payment-page-body">
           {dgettext(
-            "booking",
+            "booking_payments",
             "This booking has been cancelled, so it won't be going ahead."
           )}
         </p>
       <% :loading -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Confirming your payment…")}
+          {dgettext("booking_payments", "Confirming your payment…")}
         </h1>
         <p class="payment-page-body">
-          {dgettext("booking", "Please wait while we confirm your booking.")}
+          {dgettext("booking_payments", "Please wait while we confirm your booking.")}
         </p>
       <% :awaiting_approval -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Payment received")}
+          {dgettext("booking_payments", "Payment received")}
         </h1>
         <p class="payment-page-body">
           {dgettext(
-            "booking",
+            "booking_payments",
             "Thanks, your payment went through. Your booking is not confirmed yet though:"
           )}
         </p>
@@ -76,13 +77,14 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
           stage={:after}
           class="mt-4"
         />
+        <.paid_line payment={@payment} />
         <p :if={PaymentReturn.approval_deadline_text(@meeting)} class="payment-page-body">
           <%= if Approval.refunds_on_release?(@meeting) do %>
             <.with_date
               date={PaymentReturn.approval_deadline_text(@meeting)}
               text={
                 dgettext(
-                  "booking",
+                  "booking_payments",
                   "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
                   deadline: date_marker()
                 )
@@ -93,7 +95,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
               date={PaymentReturn.approval_deadline_text(@meeting)}
               text={
                 dgettext(
-                  "booking",
+                  "booking_payments",
                   "If there's no answer by %{deadline}, the request lapses.",
                   deadline: date_marker()
                 )
@@ -103,41 +105,41 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
         </p>
       <% :declined -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking not accepted")}
+          {dgettext("booking_payments", "Booking not accepted")}
         </h1>
         <p class="payment-page-body">
           <%= if Approval.refunds_on_release?(@meeting) do %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
             )}
           <% else %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "This booking wasn't accepted, so it won't be going ahead."
             )}
           <% end %>
         </p>
       <% :expired -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking request expired")}
+          {dgettext("booking_payments", "Booking request expired")}
         </h1>
         <p class="payment-page-body">
           <%= if Approval.refunds_on_release?(@meeting) do %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
             )}
           <% else %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "Nobody responded to this request in time, so it has lapsed."
             )}
           <% end %>
         </p>
       <% :confirmed -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking confirmed")}
+          {dgettext("booking_payments", "Booking confirmed")}
         </h1>
         <p class="payment-page-body">
           <.with_date
@@ -148,12 +150,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
               )
             }
             text={
-              dgettext("booking", "Thank you, your booking is confirmed for %{date}.",
+              dgettext("booking_payments", "Thank you, your booking is confirmed for %{date}.",
                 date: date_marker()
               )
             }
           />
         </p>
+        <.paid_line payment={@payment} />
     <% end %>
     """
   end
@@ -165,23 +168,46 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   def cancelled_body(assigns) do
     ~H"""
     <h1 class="payment-page-heading">
-      {dgettext("booking", "Payment cancelled")}
+      {dgettext("booking_payments", "Payment cancelled")}
     </h1>
     <p class="payment-page-body">
       {dgettext(
-        "booking",
+        "booking_payments",
         "Your booking is not confirmed. You can return and try again at any time."
       )}
     </p>
     <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
-      {dgettext("booking", "Return to booking")}
+      {dgettext("booking_payments", "Return to booking")}
     </a>
     """
   end
 
-  # A sentence's date or time is drawn in its own `payment-page-date` span,
-  # which a theme can keep on one line: the message is translated with a
-  # marker in the placeholder's place, then split around it. A translation
+  attr :payment, :any, required: true
+
+  # What the booker paid, once the payment has gone through: the amount the
+  # payment row took, in the guest's locale. Nothing for a payment without an
+  # amount.
+  defp paid_line(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :amount,
+        MeetingPrice.paid_price(assigns.payment, Gettext.get_locale(TymeslotWeb.Gettext))
+      )
+
+    ~H"""
+    <p :if={@amount} class="payment-page-body" data-testid="payment-paid-amount">
+      <.with_date
+        date={@amount}
+        text={dgettext("booking_payments", "Paid: %{amount}", amount: date_marker())}
+      />
+    </p>
+    """
+  end
+
+  # A sentence's date, time or amount is drawn in its own `payment-page-date`
+  # span, which a theme can keep on one line: the message is translated with
+  # a marker in the placeholder's place, then split around it. A translation
   # that dropped the placeholder is shown as it is.
   @date_marker "\uE000"
 

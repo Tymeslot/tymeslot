@@ -154,15 +154,7 @@ defmodule TymeslotWeb.E2EHelpers do
   """
   @spec assert_no_horizontal_overflow(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
   def assert_no_horizontal_overflow(session, context) do
-    me = self()
-    ref = make_ref()
-
-    session =
-      execute_script(session, overflow_script(), fn culprits ->
-        send(me, {:overflow, ref, culprits})
-      end)
-
-    assert_receive {:overflow, ^ref, culprits}, 5_000
+    culprits = evaluate_script(session, overflow_script())
 
     assert culprits == [],
            """
@@ -172,6 +164,22 @@ defmodule TymeslotWeb.E2EHelpers do
            """
 
     session
+  end
+
+  @doc """
+  Runs `script` in the page and returns the value its `return` statement
+  yields, for an assertion to inspect. `Wallaby.Browser.execute_script/3` only
+  hands the value to a callback.
+  """
+  @spec evaluate_script(Wallaby.Session.t(), String.t()) :: term()
+  def evaluate_script(session, script) do
+    me = self()
+    ref = make_ref()
+
+    execute_script(session, script, fn value -> send(me, {:script_result, ref, value}) end)
+
+    assert_receive {:script_result, ^ref, value}, 5_000
+    value
   end
 
   defp overflow_script do

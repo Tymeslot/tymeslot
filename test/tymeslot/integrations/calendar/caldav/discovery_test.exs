@@ -5,13 +5,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
   import Tymeslot.CalDAVTestHelpers
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Discovery
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
 
   @caldav_client %{
     base_url: "https://caldav.example.com",
     username: "user",
     password: "pass",
     calendar_paths: [],
-    verify_ssl: true,
     provider: :caldav
   }
 
@@ -120,6 +120,35 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
   # ---------------------------------------------------------------------------
   # discover_calendars/2 — RFC 4791 discovery chain
   # ---------------------------------------------------------------------------
+
+  describe "calendar_user_addresses/1" do
+    test "reads the address set from the principal the server names" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:propfind, conn.request_path})
+        answer_address_lookup(conn, ["login@mailbox.org", "alias@mailbox.org"])
+      end)
+
+      assert Discovery.calendar_user_addresses(@subpath_client) ==
+               {:ok, ["login@mailbox.org", "alias@mailbox.org"]}
+
+      assert_received {:propfind, "/caldav/"}
+      assert_received {:propfind, "/principals/users/3"}
+    end
+
+    test "fails when no principal answers" do
+      ReqTest.stub(:tymeslot_http, &Conn.send_resp(&1, 404, ""))
+
+      assert {:error, _reason} = Discovery.calendar_user_addresses(@subpath_client)
+    end
+
+    test "fails when the principal lists no address" do
+      ReqTest.stub(:tymeslot_http, &answer_address_lookup(&1, []))
+
+      assert Discovery.calendar_user_addresses(@subpath_client) == {:error, :not_found}
+    end
+  end
 
   describe "discover_calendars/2 RFC 4791 chain" do
     test "follows full chain when discovery path returns 404" do
@@ -351,6 +380,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
 
       assert {:error, _reason} =
                Discovery.discover_calendars(client, skip_breaker: true)
+    end
+
+    # The connection test names the address as the reason, in the owner's
+    # language: matching on the validator's sentence broke once that sentence
+    # was translated.
+    test "names a private address in the owner's language on a connection test" do
+      client = %{@caldav_client | base_url: "https://10.0.0.5"}
+
+      assert {:error, :private_address} =
+               Discovery.test_connection(client, allow_private_ips: false)
+
+      assert {_category, message} =
+               Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+                 ErrorHandler.classify_and_format(:private_address, :caldav)
+               end)
+
+      assert message =~ "Private oder lokale Netzwerkadressen sind nicht zulässig"
     end
 
     test "rejects RFC 1918 private host (10.x)" do

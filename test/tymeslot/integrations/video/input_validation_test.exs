@@ -471,6 +471,42 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
     end
   end
 
+  describe "validate_video_integration_form/2 - credentials and server URLs kept as typed" do
+    test "keeps an API key containing a hex run and a double hyphen" do
+      api_key = "key0xdeadbeef--rest-of-key"
+
+      params = %{
+        "provider" => "mirotalk",
+        "name" => "Team Meetings",
+        "api_key" => api_key,
+        "base_url" => "https://meet.example.com"
+      }
+
+      assert {:ok, %{"api_key" => ^api_key}} =
+               InputValidation.validate_video_integration_form(params)
+
+      assert {:ok, ^api_key} = InputValidation.validate_single_field(:api_key, api_key)
+    end
+
+    test "keeps an internationalised Jitsi server address" do
+      url = "https://xn--mnchen-3ya.example/meet"
+
+      params = %{"provider" => "jitsi", "name" => "Our Jitsi", "base_url" => url}
+
+      assert {:ok, %{"base_url" => ^url}} =
+               InputValidation.validate_video_integration_form(params)
+    end
+
+    test "keeps a hex-looking Nextcloud Talk server path" do
+      url = "https://cloud.example.com/0xabc"
+
+      params = %{"provider" => "nextcloud_talk", "name" => "Talk", "base_url" => url}
+
+      assert {:ok, %{"base_url" => ^url}} =
+               InputValidation.validate_video_integration_form(params)
+    end
+  end
+
   describe "validate_video_integration_form/2 - unknown provider" do
     test "returns error for unknown provider" do
       params = %{"provider" => "zoom", "name" => "Zoom Meeting"}

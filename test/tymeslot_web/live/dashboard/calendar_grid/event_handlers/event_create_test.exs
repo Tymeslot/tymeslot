@@ -196,6 +196,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       # submitted, so it is still the first sync's job to supply it.
       assert is_nil(cached.raw_ical)
     end
+
+    test "a repeat rule Outlook refuses fails the create, and the flash says why" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, provider: "outlook", is_active: true)
+
+      # Refused before anything is written, so no video room is made either.
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _event_data, _context ->
+        {:error, :rule_not_supported_by_outlook}
+      end)
+
+      payload = %{
+        creating: %{
+          title: "Review",
+          integration_id: integration.id,
+          calendar_id: "primary",
+          attendees: [],
+          recurrence_rule: "FREQ=MONTHLY;BYDAY=2TU,-1FR"
+        },
+        user_id: user.id,
+        start_at: ~U[2026-04-14 09:00:00Z],
+        end_at: ~U[2026-04-14 09:30:00Z]
+      }
+
+      assert {:error, %{reason: :rule_not_supported_by_outlook, retry: :not_queued} = failure} =
+               EventCreation.run_create_event(payload)
+
+      {:noreply, socket} = CreateExecution.handle_create_result({:error, failure}, build_socket())
+
+      assert socket.assigns.flash["error"] == "This repeat pattern can't be saved to Outlook."
+    end
   end
 
   describe "handle_create_result/2 — no Meet URL warning" do

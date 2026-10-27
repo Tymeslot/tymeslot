@@ -57,26 +57,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
     end
   end
 
-  describe "send_appointment_reminders/1" do
-    test "sends both reminders with the default time_until" do
-      details = build_appointment_details()
-
-      {org_result, att_result} = EmailService.send_appointment_reminders(details)
-
-      assert {:ok, _response} = org_result
-      assert {:ok, _response} = att_result
-
-      organizer = next_email()
-      assert organizer.to == [{"John Organizer", "organizer@example.com"}]
-      assert organizer.subject =~ "in 30 minutes"
-
-      attendee = next_email()
-      assert attendee.to == [{"Jane Attendee", "attendee@example.com"}]
-      assert attendee.subject =~ "30 minutes"
-
-      assert_no_more_emails()
-    end
-
+  describe "send_appointment_reminders/2" do
     test "a custom time_until reaches both subjects" do
       details = build_appointment_details()
 
@@ -91,14 +72,15 @@ defmodule Tymeslot.Emails.EmailServiceTest do
     end
   end
 
-  describe "send_cancellation_emails/1" do
+  describe "send_cancellation_email_to_organizer/2 and send_cancellation_email_to_attendee/2" do
     test "tells each party the meeting is cancelled, naming the other one" do
       details = build_appointment_details()
 
-      {org_result, att_result} = EmailService.send_cancellation_emails(details)
+      assert {:ok, _response} =
+               EmailService.send_cancellation_email_to_organizer(details.organizer_email, details)
 
-      assert {:ok, _response} = org_result
-      assert {:ok, _response} = att_result
+      assert {:ok, _response} =
+               EmailService.send_cancellation_email_to_attendee(details.attendee_email, details)
 
       organizer = next_email()
       assert organizer.to == [{"John Organizer", "organizer@example.com"}]
@@ -108,33 +90,6 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       assert attendee.to == [{"Jane Attendee", "attendee@example.com"}]
       assert attendee.subject == "Meeting Cancelled - 15 Jan with John Organizer"
 
-      assert_no_more_emails()
-    end
-  end
-
-  describe "send_appointment_cancellation/2" do
-    test "routes to the organizer variant when the address is the organizer's" do
-      details = build_appointment_details(%{organizer_email: "organizer@example.com"})
-
-      assert {:ok, _response} =
-               EmailService.send_appointment_cancellation("organizer@example.com", details)
-
-      email = next_email()
-      assert email.to == [{"John Organizer", "organizer@example.com"}]
-      # The organizer's copy names the attendee; the attendee's names the organizer.
-      assert email.subject == "Meeting Cancelled - 15 Jan with Jane Attendee"
-      assert_no_more_emails()
-    end
-
-    test "routes to the attendee variant for any other address" do
-      details = build_appointment_details(%{attendee_email: "attendee@example.com"})
-
-      assert {:ok, _response} =
-               EmailService.send_appointment_cancellation("attendee@example.com", details)
-
-      email = next_email()
-      assert email.to == [{"Jane Attendee", "attendee@example.com"}]
-      assert email.subject == "Meeting Cancelled - 15 Jan with John Organizer"
       assert_no_more_emails()
     end
   end
@@ -484,6 +439,35 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       email = next_email()
       assert email.subject == "Reconnect your Nextcloud Talk integration"
+      assert_no_more_emails()
+    end
+  end
+
+  describe "send_integration_paused_notification/4" do
+    test "delivers the paused notice to the owner" do
+      user = build_user_data(%{email: "owner@example.com", name: "Integration Owner"})
+      integration = %{id: System.unique_integer([:positive]), provider: :zoom}
+
+      assert {:ok, _response} =
+               EmailService.send_integration_paused_notification(user, integration, :video, 14)
+
+      email = next_email()
+      assert email.to == [{"Integration Owner", "owner@example.com"}]
+      assert email.subject == "Your video integration has been paused"
+      assert email.text_body =~ "after 14 days of failed health checks"
+      assert_no_more_emails()
+    end
+  end
+
+  describe "send_calendar_sync_error/2" do
+    test "delivers the sync failure notice to the organiser" do
+      meeting = insert(:meeting, organizer_name: "Sam Host", organizer_email: "sam@example.com")
+
+      assert {:ok, _response} = EmailService.send_calendar_sync_error(meeting, :timeout)
+
+      email = next_email()
+      assert email.to == [{"Sam Host", "sam@example.com"}]
+      assert email.subject == "⚠️ Calendar Sync Error - Manual Action Required"
       assert_no_more_emails()
     end
   end

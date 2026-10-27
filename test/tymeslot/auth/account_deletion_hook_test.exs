@@ -23,12 +23,24 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     @behaviour Tymeslot.Auth.Behaviours.AccountDeletionHook
     @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
     def on_account_deletion(_user_id), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_requested(_user_id, _feedback), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_restored(_user_id), do: :ok
   end
 
   defmodule FailingHook do
     @behaviour Tymeslot.Auth.Behaviours.AccountDeletionHook
     @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
     def on_account_deletion(_user_id), do: {:error, :subscription_cancel_failed}
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_requested(_user_id, _feedback), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_restored(_user_id), do: :ok
   end
 
   setup do

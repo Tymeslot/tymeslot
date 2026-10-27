@@ -3,6 +3,8 @@ defmodule Tymeslot.Availability.Breaks do
   Context for managing availability breaks.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Ecto.Changeset
@@ -32,9 +34,71 @@ defmodule Tymeslot.Availability.Breaks do
 
     %AvailabilityBreakSchema{}
     |> AvailabilityBreakSchema.changeset(attrs, work_hours: work_hours)
-    |> validate_break_within_work_hours(work_hours)
+    |> require_work_hours(work_hours)
     |> validate_no_break_overlap(weekly_availability_id, work_hours)
     |> AvailabilityBreakQueries.insert_changeset()
+  end
+
+  @doc """
+  The breaks among `breaks` that would fall outside `work_hours` (a day's
+  `start_time`, `end_time` and `ends_next_day`), in the order given. A day
+  without hours has nothing to fall outside of.
+  """
+  @spec outside_hours([map()], map()) :: [map()]
+  def outside_hours(breaks, %{start_time: %Time{}, end_time: %Time{}} = work_hours) do
+    # `break_within?/3` also refuses a break whose end reads as before its
+    # start in these hours: one that crossed midnight in overnight hours that
+    # no longer run past midnight.
+    Enum.reject(breaks, &Window.break_within?(work_hours, &1.start_time, &1.end_time))
+  end
+
+  def outside_hours(_breaks, _no_hours), do: []
+
+  @doc """
+  Replaces a day's breaks with copies of `breaks` (anything carrying
+  `start_time`, `end_time`, `label` and `sort_order`), each validated against
+  that day's hours like a break added by hand.
+
+  Run it inside the caller's transaction: on the first refused copy it returns
+  `{:error, {:break_outside_hours, day, break}}` (the copy falls outside the
+  day's hours, as a break saved before its day's hours were narrowed can) or
+  `{:error, changeset}`, and leaves the rollback to the caller. Copies are
+  checked against the day's hours, not against each other: they come from a
+  day whose breaks were already checked for overlap.
+  """
+  @spec replace_breaks(map(), [map()]) ::
+          :ok | {:error, {:break_outside_hours, map(), map()} | Ecto.Changeset.t()}
+  def replace_breaks(%{id: _id} = day, breaks) when is_list(breaks) do
+    work_hours = Map.take(day, [:start_time, :end_time, :ends_next_day])
+
+    case outside_hours(breaks, work_hours) do
+      [] -> insert_copies(day, breaks, work_hours)
+      [break | _others] -> {:error, {:break_outside_hours, day, break}}
+    end
+  end
+
+  defp insert_copies(%{id: weekly_availability_id}, breaks, work_hours) do
+    AvailabilityBreakQueries.delete_for_day(weekly_availability_id)
+
+    Enum.reduce_while(breaks, :ok, fn break, :ok ->
+      attrs = %{
+        weekly_availability_id: weekly_availability_id,
+        start_time: break.start_time,
+        end_time: break.end_time,
+        label: break.label,
+        sort_order: break.sort_order
+      }
+
+      changeset =
+        AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+          work_hours: work_hours
+        )
+
+      case AvailabilityBreakQueries.insert_changeset(changeset) do
+        {:ok, _break} -> {:cont, :ok}
+        {:error, changeset} -> {:halt, {:error, changeset}}
+      end
+    end)
   end
 
   @doc """
@@ -84,40 +148,12 @@ defmodule Tymeslot.Availability.Breaks do
 
   # Private functions
 
-  defp validate_break_within_work_hours(changeset, work_hours) do
-    with %{} = window <- work_hours,
-         %Time{} = start_time <- Changeset.get_field(changeset, :start_time),
-         %Time{} = end_time <- Changeset.get_field(changeset, :end_time) do
-      within_work_hours(changeset, window, start_time, end_time)
-    else
-      nil -> Changeset.add_error(changeset, :base, "Work hours not found")
-      _other -> changeset
-    end
-  end
+  # The within-hours rule itself is the changeset's, given the hours; a day
+  # with no row to read them from cannot take a break.
+  defp require_work_hours(changeset, %{}), do: changeset
 
-  # The same two messages as before. In an overnight window a start outside
-  # the hours reads as a large offset, so it is reported against the end.
-  defp within_work_hours(
-         changeset,
-         %{start_time: %Time{}, end_time: %Time{}} = window,
-         start_time,
-         end_time
-       ) do
-    {from, to} = Window.break_offsets(window, start_time, end_time)
-
-    cond do
-      from < 0 ->
-        Changeset.add_error(changeset, :start_time, "cannot be before work hours")
-
-      to > Window.span_seconds(window) ->
-        Changeset.add_error(changeset, :end_time, "cannot be after work hours")
-
-      true ->
-        changeset
-    end
-  end
-
-  defp within_work_hours(changeset, _no_hours, _start_time, _end_time), do: changeset
+  defp require_work_hours(changeset, nil),
+    do: Changeset.add_error(changeset, :base, dgettext_noop("errors", "Work hours not found"))
 
   defp validate_no_break_overlap(changeset, weekly_availability_id, window) do
     start_time = Changeset.get_field(changeset, :start_time)
@@ -128,7 +164,11 @@ defmodule Tymeslot.Availability.Breaks do
         AvailabilityBreakQueries.get_existing_breaks_for_validation(weekly_availability_id)
 
       if has_overlap?(window, {start_time, end_time}, existing_breaks) do
-        Changeset.add_error(changeset, :base, "Break times overlap with existing break")
+        Changeset.add_error(
+          changeset,
+          :base,
+          dgettext_noop("errors", "Break times overlap with existing break")
+        )
       else
         changeset
       end

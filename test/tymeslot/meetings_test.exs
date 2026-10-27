@@ -206,7 +206,7 @@ defmodule Tymeslot.MeetingsTest do
           end_time: DateTime.add(DateTime.utc_now(), -1800)
         )
 
-      assert {:error, "Cannot reschedule a meeting that has already occurred"} =
+      assert {:error, {:not_reschedulable, :past}} =
                Meetings.send_reschedule_request(meeting)
     end
 
@@ -218,7 +218,7 @@ defmodule Tymeslot.MeetingsTest do
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
         )
 
-      assert {:error, "Cannot request a reschedule while the booking awaits approval"} =
+      assert {:error, {:not_reschedulable, :awaiting_approval}} =
                Meetings.send_reschedule_request(meeting)
 
       # The slot must stay live: no reschedule_requested_at was stamped, so
@@ -346,13 +346,21 @@ defmodule Tymeslot.MeetingsTest do
     end
   end
 
-  describe "list_user_meetings_cursor_page_by_id/2" do
+  describe "list_user_meeting/2" do
+    test "returns an empty page for a meeting id that is not a string" do
+      for mangled <- [%{"x" => "1"}, ["a"], nil] do
+        assert {:ok, %{items: []}} = Meetings.list_user_meeting(1, mangled)
+      end
+    end
+  end
+
+  describe "list_organizer_meetings_cursor_page/2" do
     test "returns meetings for valid user id" do
       %{user: user} = create_user_with_profile()
 
       insert_meeting_for_user(user)
 
-      assert {:ok, page} = Listing.list_user_meetings_cursor_page_by_id(user.id, [])
+      assert {:ok, page} = Listing.list_organizer_meetings_cursor_page(user.id, [])
 
       assert length(page.items) == 1
     end
@@ -360,7 +368,7 @@ defmodule Tymeslot.MeetingsTest do
     test "returns empty page for non-existent user" do
       non_existent_id = 999_999_999
 
-      assert {:ok, page} = Listing.list_user_meetings_cursor_page_by_id(non_existent_id, [])
+      assert {:ok, page} = Listing.list_organizer_meetings_cursor_page(non_existent_id, [])
 
       assert page.items == []
       assert page.has_more == false

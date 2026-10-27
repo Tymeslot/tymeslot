@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverride do
   Exactly one target is set: a Tymeslot booking (`meeting_id`) or an external
   event (`calendar_integration_id` + `provider_uid`).
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -29,7 +30,9 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverride do
     |> cast(attrs, [:user_id, :colour, :meeting_id, :calendar_integration_id, :provider_uid])
     |> validate_required([:user_id, :colour])
     |> validate_change(:colour, fn :colour, value ->
-      if EventColour.valid_key?(value), do: [], else: [colour: "is not a valid palette key"]
+      if EventColour.valid_key?(value),
+        do: [],
+        else: [colour: dgettext_noop("errors", "is not a valid palette key")]
     end)
     |> validate_exactly_one_target()
     |> unique_constraint([:user_id, :meeting_id],

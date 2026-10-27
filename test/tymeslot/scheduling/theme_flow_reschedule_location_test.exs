@@ -25,7 +25,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleLocationTest do
       )
 
     assert %{option_id: "loc-offices", venue_id: venue_id} =
-             ThemeFlow.reschedule_location_choice(meeting.uid, user.id)
+             meeting.uid |> context!(user.id) |> ThemeFlow.reschedule_location_choice()
 
     assert venue_id == venue.id
   end
@@ -44,12 +44,15 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleLocationTest do
       )
 
     assert %{location: "Our offices", address_to_arrange: true, venue_id: nil} =
-             ThemeFlow.reschedule_location_choice(meeting.uid, user.id)
+             meeting.uid |> context!(user.id) |> ThemeFlow.reschedule_location_choice()
   end
 
-  test "is nil for a meeting that is not the organiser's" do
-    meeting = insert(:meeting, organizer_user_id: insert(:user).id)
+  test "is nil when the page is not moving a booking" do
+    assert ThemeFlow.reschedule_location_choice(nil) == nil
+  end
 
-    assert ThemeFlow.reschedule_location_choice(meeting.uid, insert(:user).id) == nil
+  defp context!(uid, user_id) do
+    {:ok, context} = ThemeFlow.reschedule_context(uid, user_id)
+    context
   end
 end

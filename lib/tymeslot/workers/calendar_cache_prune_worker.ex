@@ -9,7 +9,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
      would be re-fetched on the next run, and deleting it only to write it
      back is churn.
 
-     The cutoff is therefore derived from `ProviderConfig.sync_window_past_days/0`
+     The cutoff is therefore derived from `Sync.window_past_days/0`
      rather than fixed. It was previously a flat 90 days, justified by a
      60-day CalDAV window that no longer exists: every provider now reads a
      year back, so the prune was deleting a year's worth of live rows every
@@ -29,8 +29,9 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
+  alias Tymeslot.Integrations.Calendar.SeriesRules
+  alias Tymeslot.Integrations.Calendar.Sync
 
   @grace_days 30
 
@@ -39,8 +40,9 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
     retention_days = retention_days()
     cutoff = DateTime.add(DateTime.utc_now(), -retention_days, :day)
 
-    old_count = ProviderCalendarEventQueries.prune_ended_before(cutoff)
-    inactive_count = ProviderCalendarEventQueries.prune_inactive_integrations()
+    old_count = IntegrationCacheQueries.prune_ended_before(cutoff)
+    inactive_count = IntegrationCacheQueries.prune_inactive_integrations()
+    SeriesRules.forget_all_orphans()
 
     Logger.info("Calendar cache prune completed",
       old_events_pruned: old_count,
@@ -56,5 +58,5 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   # dependency of it, and `mix xref graph --label compile-connected` is
   # budgeted at 25 edges; this one pushed it to 26.
   @spec retention_days() :: pos_integer()
-  defp retention_days, do: ProviderConfig.sync_window_past_days() + @grace_days
+  defp retention_days, do: Sync.window_past_days() + @grace_days
 end

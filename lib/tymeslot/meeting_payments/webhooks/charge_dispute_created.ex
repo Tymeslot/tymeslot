@@ -9,24 +9,29 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
   Idempotent on `last_event_id`.
   """
 
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Workers.SendChargeDisputeOpened
 
   @event_type "charge.dispute.created"
 
-  @spec handle(map()) :: :ok | {:error, term()}
+  @impl WebhookHandler
+  @spec handle(map()) :: WebhookHandler.result()
   def handle(event) do
     Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
   end
 
   defp do_handle(%{"id" => event_id, "data" => %{"object" => object}} = event) do
-    case PaymentLookup.find(object["charge"], object["payment_intent"], event["account"]) do
+    case PaymentLookup.find_for_charge(event, object["charge"]) do
       nil ->
         Logger.info("charge.dispute.created: no booking_payment matched",
           charge_id: object["charge"]
@@ -42,15 +47,28 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
     end
   end
 
-  defp do_handle(_other), do: {{:error, :invalid_event}, :error}
+  defp do_handle(_other), do: {{:error, :permanent, :invalid_event}, :error}
 
   defp classify(:ok), do: {:ok, :ok}
-  defp classify({:error, _reason} = err), do: {err, :error}
+  defp classify({:error, reason}), do: {{:error, :retry_later, reason}, :error}
 
+  # Written to the locked row (`LockedPayment`); the email is enqueued only
+  # once the dispute status has committed, and not at all for a replay.
   defp mark_disputed(payment, event_id, object) do
-    case BookingPaymentQueries.update(payment, %{status: "disputed", last_event_id: event_id}) do
-      {:ok, updated} ->
-        Telemetry.emit_status_changed(payment.status, updated.status, :webhook_dispute_created)
+    result =
+      LockedPayment.run(payment, event_id, fn locked ->
+        case BookingPaymentQueries.update(locked, %{status: "disputed", last_event_id: event_id}) do
+          {:ok, updated} -> {:ok, {locked.status, updated}}
+          {:error, _changeset} = error -> error
+        end
+      end)
+
+    case result do
+      {:ok, :idempotent_replay} ->
+        :ok
+
+      {:ok, {old_status, updated}} ->
+        Telemetry.emit_status_changed(old_status, updated.status, :webhook_dispute_created)
         enqueue_dispute_email(updated, object)
         :ok
 

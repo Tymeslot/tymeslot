@@ -368,7 +368,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
 
       view |> element("button", "Add Telegram Account") |> render_click()
       [stub] = Telegram.list_integrations(user.id)
-      {:ok, _linked} = TelegramQueries.update_integration(stub, %{chat_id: "444333222"})
+      {:ok, _linked} = TelegramQueries.update_link_state(stub, %{chat_id: "444333222"})
 
       view |> element("button[aria-label='Close']") |> render_click()
 

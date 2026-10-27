@@ -5,7 +5,7 @@ defmodule Tymeslot.Availability.Calculate do
   """
 
   alias Tymeslot.Availability.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
-  alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, Reach, SlotGrid, TimeSlots}
+  alias Tymeslot.Availability.{Conflicts, Events, Reach, SlotGrid, TimeSlots}
   alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Locales.WeekStart
@@ -51,7 +51,7 @@ defmodule Tymeslot.Availability.Calculate do
   # How many owner days either side of the booker's dates the schedule may be
   # read for. A caller that prefetches for the engine pads by the same
   # `Reach.owner_days/0`, or the engine misses what lies beyond.
-  @owner_date_reach Reach.owner_days()
+  defp owner_date_reach, do: Reach.owner_days()
 
   @doc """
   Calculates available time slots for a specific date: `available_starts/6`,
@@ -114,8 +114,8 @@ defmodule Tymeslot.Availability.Calculate do
       prefetch_schedule_data(
         config,
         schedule_id,
-        Date.add(date, -@owner_date_reach),
-        Date.add(date, @owner_date_reach)
+        Date.add(date, -owner_date_reach()),
+        Date.add(date, owner_date_reach())
       )
 
     with {:ok, starts} <-
@@ -207,14 +207,14 @@ defmodule Tymeslot.Availability.Calculate do
     schedule_id = Map.get(config, :schedule_id)
 
     # Prefetch schedule data once for the entire range, padded by the owner
-    # days each booker date may read (`@owner_date_reach`).
+    # days each booker date may read (`owner_date_reach/0`).
     config =
       config
       |> Map.put(:duration_minutes, duration_minutes)
       |> prefetch_schedule_data(
         schedule_id,
-        Date.add(start_date, -@owner_date_reach),
-        Date.add(end_date, @owner_date_reach)
+        Date.add(start_date, -owner_date_reach()),
+        Date.add(end_date, owner_date_reach())
       )
 
     availability_map =
@@ -288,9 +288,9 @@ defmodule Tymeslot.Availability.Calculate do
     # `range_availability/6` already do. Without it the per-day fallback runs an
     # uncached override lookup and a weekly-availability lookup for every
     # non-past day in the grid — up to 42 of each, from inside the template
-    # render of a public page. Padded by `@owner_date_reach` at each end to
-    # match `available_slots/6` and `range_availability/6`; the fallback
-    # itself only reads the day before each date.
+    # render of a public page. Padded by `owner_date_reach/0` at each end to
+    # match `available_slots/6` and `range_availability/6`, which also covers
+    # the fallback's own reads (from the day before each date up to its reach).
     #
     # Only the business-hours fallback (`availability_map` neither a map nor
     # `:loading`) ever reads `weekly_schedule`/`overrides` back out of
@@ -303,8 +303,8 @@ defmodule Tymeslot.Availability.Calculate do
         prefetch_schedule_data(
           config,
           Map.get(config, :schedule_id),
-          Date.add(first_display_date, -@owner_date_reach),
-          Date.add(end_date, @owner_date_reach)
+          Date.add(first_display_date, -owner_date_reach()),
+          Date.add(end_date, owner_date_reach())
         )
       end
 
@@ -339,8 +339,8 @@ defmodule Tymeslot.Availability.Calculate do
   booking page, and rendering an atom to user-facing text is the web layer's
   responsibility (the same split `Tymeslot.Bookings.Errors` states).
   """
-  @spec validate_time_selection(term(), term(), term()) :: :ok | {:error, selection_error()}
-  def validate_time_selection(date, time, _slots) do
+  @spec validate_time_selection(term(), term()) :: :ok | {:error, selection_error()}
+  def validate_time_selection(date, time) do
     cond do
       date in [nil, ""] -> {:error, :date_required}
       time in [nil, ""] -> {:error, :time_required}
@@ -444,11 +444,13 @@ defmodule Tymeslot.Availability.Calculate do
   Whether a date can be offered when no conflict-aware availability map has
   been fetched yet.
 
-  This is the rule the calendar grid falls back to: business hours, the
-  advance-booking window, and — for today alone — whether the hours still to
-  come clear the minimum notice. Public so the week strip answers the same
-  question the month grid does; the two used to disagree about today, and the
-  web copy treated it as unconditionally bookable.
+  This is the rule the calendar grid falls back to: the date offers at least
+  one slot from business hours, ignoring calendar events. It asks the same
+  slot generator `range_availability/6` does, with an empty event list, so
+  the booker's date is read through the owner's adjacent days (a Tokyo
+  Monday morning is a Los Angeles Sunday evening), and the minimum notice and
+  advance-booking window apply slot by slot. Public so the week strip answers
+  the same question the month grid does.
   """
   @spec day_bookable_by_business_hours?(Date.t(), String.t(), availability_config()) :: boolean()
   def day_bookable_by_business_hours?(date, user_timezone, config) do
@@ -457,46 +459,11 @@ defmodule Tymeslot.Availability.Calculate do
   end
 
   defp fallback_day_available?(date, today, now, config) do
-    schedule_id = Map.get(config, :schedule_id)
-    max_advance_booking_days = config_policy(config).max_advance_booking_days
-
-    is_business_day = BusinessHours.business_day?(date, schedule_id, config)
-    is_future = Date.compare(date, today) == :gt
-    is_today = date == today
-    is_within_limit = Date.diff(date, today) <= max_advance_booking_days
-
-    today_available =
-      if is_today and is_business_day do
-        check_today_fallback_availability(date, now, config)
-      else
-        false
-      end
-
-    (is_future or today_available) and is_business_day and is_within_limit
-  end
-
-  # Today stays bookable while the latest window reaching into it, its own or
-  # the previous day's overnight tail, still ends late enough to clear the
-  # notice and hold a meeting.
-  defp check_today_fallback_availability(date, now, config) do
-    schedule_id = Map.get(config, :schedule_id)
+    max_booking_date = Date.add(today, config_policy(config).max_advance_booking_days)
     owner_timezone = Map.get(config, :owner_timezone, "Etc/UTC")
+    config = Map.put(config, :duration_minutes, Map.get(config, :duration_minutes) || 30)
 
-    case BusinessHours.owner_windows(
-           [Date.add(date, -1), date],
-           schedule_id,
-           owner_timezone,
-           config
-         ) do
-      [] ->
-        false
-
-      windows ->
-        end_dt = windows |> Enum.map(& &1.end_dt) |> Enum.max(DateTime)
-        min_advance_hours = config_policy(config).min_advance_hours
-        duration_minutes = config |> Map.get(:duration_minutes) |> Kernel.||(30)
-        latest_start = DateTime.add(end_dt, -(min_advance_hours * 60 + duration_minutes), :minute)
-        DateTime.compare(now, latest_start) != :gt
-    end
+    Date.compare(date, today) != :lt and Date.compare(date, max_booking_date) != :gt and
+      Conflicts.date_has_slots_with_events?(date, owner_timezone, now.time_zone, [], now, config)
   end
 end

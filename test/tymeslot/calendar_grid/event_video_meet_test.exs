@@ -5,8 +5,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
   `conferenceData`, the event is read back once for its link, and moving away
   takes the conference off in the same write.
 
-  The calendar write is stubbed at `Tymeslot.CalendarMock`, the read back at
-  `GoogleCalendarAPIMock`. The wire shape of the update itself is pinned
+  The calendar write and the read back are both stubbed at
+  `Tymeslot.CalendarMock`, the seam the domain reaches the calendar through.
+  The wire shape of the update itself is pinned
   against `Google.CalendarAPI` with HTTP stubbed at `Tymeslot.HTTPClientMock`.
 
   Whether Google removes a conference from a `PUT` sent with
@@ -73,9 +74,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
 
       expect_update()
 
-      expect(GoogleCalendarAPIMock, :get_event, fn _integration, "primary", "googlehex1" ->
-        {:ok, google_event(conference: @meet_url)}
-      end)
+      expect_read_back(conference: @meet_url)
 
       assert {:ok, @meet_url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.meet.id)
 
@@ -97,9 +96,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
       event = insert_event(ctx.calendar)
       expect_update()
 
-      expect(GoogleCalendarAPIMock, :get_event, fn _integration, _calendar, _id ->
-        {:ok, google_event(conference: nil)}
-      end)
+      expect_read_back(conference: nil)
 
       assert {:error, :meet_link_pending} =
                CalendarGrid.change_event_video(ctx.user.id, event, ctx.meet.id)
@@ -118,7 +115,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
           video_integration_id: ctx.meet.id
         })
 
-      expect(GoogleCalendarAPIMock, :get_event, 0, fn _integration, _calendar, _id -> :ok end)
+      expect(Tymeslot.CalendarMock, :fetch_event, 0, fn _ref, _context -> :ok end)
       %{event: event}
     end
 
@@ -247,6 +244,19 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
     expect(Tymeslot.CalendarMock, :update_event, fn _uid, payload, _context ->
       send(test_pid, {:update, payload})
       :ok
+    end)
+  end
+
+  # The event as the calendar answers it, addressed by the cached row's id and
+  # calendar: the raw Google event is what a fetched event carries as its
+  # provider metadata.
+  defp expect_read_back(conference: url) do
+    expect(Tymeslot.CalendarMock, :fetch_event, fn %{
+                                                     provider_event_id: "googlehex1",
+                                                     calendar_id: "primary"
+                                                   },
+                                                   {_integration_id, _user_id} ->
+      {:ok, [%{provider_metadata: google_event(conference: url)}]}
     end)
   end
 

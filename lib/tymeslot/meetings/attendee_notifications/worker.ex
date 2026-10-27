@@ -23,6 +23,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   inside a `Repo.transaction/1` so a failing step rolls back and the next
   Oban retry sees the same starting state.
 
+  ## Changes saved to sync later
+
+  An edit made while a CalDAV server could not be reached is saved on the
+  cached row and replayed on a later sync. Until that replay succeeds the
+  job does not run: it snoozes (`ReplayWait`), so the attendees hear about
+  the change once the calendar holds it, and hear about it once, diffed
+  against the baseline as usual, however many edits were saved meanwhile.
+
   ## Deletes
 
   Only updates come through here. A deleted event has no row left to re-read,
@@ -36,7 +44,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
 
   use Oban.Worker, queue: :emails, max_attempts: 5
 
-  alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -45,8 +53,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
-  alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
   alias Tymeslot.Repo
 
   require Logger
@@ -62,9 +69,22 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     :ok
   end
 
-  def perform(%Oban.Job{args: %{"event_id" => id, "kind" => kind, "action" => action}}) do
-    txn_result = Repo.transaction(fn -> do_run(id, kind, action) end)
-    handle_result(txn_result, id, kind, action)
+  def perform(%Oban.Job{args: %{"event_id" => id, "kind" => kind, "action" => action}} = job) do
+    if awaiting_replay?(id, kind) do
+      ReplayWait.wait(job)
+    else
+      txn_result = Repo.transaction(fn -> do_run(id, kind, action) end)
+      handle_result(txn_result, id, kind, action)
+    end
+  end
+
+  # See "Changes saved to sync later" in the moduledoc. A missing event is
+  # left to `run/3`, which reports it.
+  defp awaiting_replay?(id, kind) do
+    case load_event(id, kind) do
+      {:ok, event} -> ReplayWait.awaiting_replay?(event)
+      {:error, :not_found} -> false
+    end
   end
 
   defp do_run(id, kind, action) do
@@ -105,16 +125,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       summary = ChangeDetector.diff(baseline, current, current_sequence: event.ical_sequence)
 
       if ChangeSummary.any_changes?(summary) do
-        :ok = dispatch(event, summary)
-        persist_new_baseline(event, current, summary.next_sequence)
+        # The baseline advances only once the notification is enqueued: a
+        # failed enqueue rolls the transaction back, so the retry diffs
+        # against the same baseline and announces the change after all.
+        with :ok <- dispatch(event, summary) do
+          persist_new_baseline(event, current, summary.next_sequence)
+        end
       else
         log_noop(event, action_atom)
         :ok
       end
     end
   end
-
-  defp load_event(id, "meeting"), do: MeetingQueries.get_meeting(id)
 
   defp load_event(id, "provider_calendar_event") when is_integer(id),
     do: fetch_provider_event(id)
@@ -186,14 +208,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   end
 
   # One job for the whole recipient list, which is what the handler on the
-  # other end expects (`attendee_emails` is a list it maps over) and what the
-  # scheduler's uniqueness key requires: it is keyed on action + event_uid +
-  # method and deliberately not on the recipients, so a job per attendee
-  # collapses into the first one and everybody else is silently dropped.
+  # other end expects (`attendee_emails` is a list it maps over). Returns the
+  # scheduler's result, so a failed enqueue fails the run.
   defp dispatch_to([], _event, _method, _sequence), do: :ok
 
   defp dispatch_to(recipient_emails, event, method, sequence) do
-    CalendarScheduler.schedule_event_update_notification(%{
+    EmailScheduler.schedule_event_update_notification(%{
       user_id: user_id_for(event),
       event_uid: event.uid,
       integration_id: integration_id_for(event),
@@ -209,8 +229,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       method: method,
       sequence: sequence
     })
-
-    :ok
   end
 
   defp user_id_for(%{organizer_user_id: id}) when is_integer(id), do: id
@@ -244,9 +262,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       {:error, changeset} -> {:error, changeset}
     end
   end
-
-  defp update_baseline(%MeetingSchema{} = meeting, state, sequence),
-    do: MeetingQueries.update_notification_baseline(meeting, state, sequence)
 
   defp update_baseline(%ProviderCalendarEventSchema{} = event, state, sequence),
     do: ProviderCalendarEventQueries.update_notification_baseline(event, state, sequence)

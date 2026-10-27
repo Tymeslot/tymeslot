@@ -20,8 +20,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
   as its hover title), and the footer wraps as a row rather than stacking.
 
   The card is stateless: the switch pushes `toggle_event` with
-  `phx-value-id={@id}` to `target`, and every action is the caller's own
-  markup.
+  `phx-value-id={@id}` to `target` (nothing while `toggle_disabled`), and
+  every action is the caller's own markup.
   """
   use TymeslotWeb, :html
 
@@ -56,9 +56,18 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
     doc: "The event the switch pushes; no switch is shown without one"
 
   attr :toggle_id, :string, default: nil, doc: "The switch's DOM id; defaults to `toggle-<id>`"
+
+  attr :toggle_disabled, :boolean,
+    default: false,
+    doc: "Render the switch greyed out and inert, still showing its state"
+
   attr :target, :any, default: nil
   attr :tags, :list, default: [], doc: "Event names shown as chips"
-  attr :notice, :string, default: nil, doc: "What needs the owner's attention"
+
+  attr :notice, :any,
+    default: nil,
+    doc: "What needs the owner's attention: a string, or a list of them shown one under another"
+
   attr :notice_tone, :atom, default: :warning, values: [:neutral, :warning, :danger]
 
   attr :heading_level, :integer,
@@ -147,6 +156,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
           checked={@active}
           on_change={@toggle_event}
           target={@target}
+          disabled={@toggle_disabled}
           phx-value-id={@id}
           aria_label={@title}
           class="shrink-0"
@@ -188,12 +198,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
       </div>
 
       <p
-        :if={@notice}
+        :for={notice <- List.wrap(@notice)}
         data-part="notice"
         data-tone={@notice_tone}
         class={["mt-2 text-token-sm font-medium", @notice_class]}
       >
-        {@notice}
+        {notice}
       </p>
 
       <div

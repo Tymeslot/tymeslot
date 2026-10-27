@@ -8,6 +8,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   import Ecto.Query
 
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.MeetingListQueries
@@ -363,5 +364,5 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
 
   defp escape_like(value), do: String.replace(value, ~r/([\\%_])/, "\\\\\\1")
 
-  defp now, do: DateTime.utc_now(:second)
+  defp now, do: DateTime.truncate(Clock.utc_now(), :second)
 end

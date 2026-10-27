@@ -5,6 +5,8 @@ defmodule TymeslotWeb.BookingDriver do
   so one walk books on every theme, whatever its journey and its markup:
 
     * `data-fact="meeting_type"`, `data-value` the meeting type's slug;
+    * `data-fact="length"`, `data-value` the length in minutes, on a
+      meeting type that offers several;
     * `data-fact="date"`, `data-value` an ISO date, then `data-fact="time"`,
       `data-value` the time as `select_time` sends it;
     * `data-fact="slot"`, `data-date` and `data-time`: a day and a time in
@@ -53,6 +55,7 @@ defmodule TymeslotWeb.BookingDriver do
   alias Phoenix.LiveViewTest.View
 
   @meeting_type "[data-fact='meeting_type']"
+  @length "[data-fact='length']"
   @date "[data-fact='date']"
   @time "[data-fact='time']"
   @slot "[data-fact='slot']"
@@ -145,6 +148,31 @@ defmodule TymeslotWeb.BookingDriver do
          "the page renders no meeting-type choice and holds #{inspect(chosen)}, " <>
            "not #{inspect(duration)}"}
     end
+  end
+
+  # The length
+
+  @doc "The lengths the page offers for the meeting type: their `data-value`s, in page order."
+  @spec lengths(View.t()) :: [String.t()]
+  def lengths(view), do: attribute(view, @length, "data-value")
+
+  @doc """
+  Chooses the length whose `data-value` is `minutes`, on a meeting type that
+  offers several. Fails by name when the page offers no such length.
+  """
+  @spec choose_length(View.t(), pos_integer() | String.t()) :: :ok
+  def choose_length(view, minutes) do
+    value = to_string(minutes)
+    offered = lengths(view)
+
+    unless value in offered,
+      do:
+        flunk(
+          "BookingDriver.choose_length/2: the page offers no length #{inspect(value)} " <>
+            "(offered: #{inspect(offered)})"
+        )
+
+    click(view, "#{@length}[data-value='#{value}']")
   end
 
   # The slot
@@ -361,7 +389,7 @@ defmodule TymeslotWeb.BookingDriver do
   @doc "Types `attrs` into the booking form, as the visitor typing would (`phx-change`)."
   @spec fill_attendee(View.t(), attendee()) :: :ok
   def fill_attendee(view, attrs) do
-    view |> form(@attendee, %{"booking" => booking_params(attrs)}) |> render_change()
+    view |> form(@attendee, %{"booking" => form_params(attrs)}) |> render_change()
     sync(view)
   end
 
@@ -372,7 +400,7 @@ defmodule TymeslotWeb.BookingDriver do
   """
   @spec submit(View.t(), attendee()) :: String.t() | {:error, term()}
   def submit(view, attrs \\ %{}) do
-    case view |> form(@attendee, %{"booking" => booking_params(attrs)}) |> render_submit() do
+    case view |> form(@attendee, %{"booking" => form_params(attrs)}) |> render_submit() do
       html when is_binary(html) ->
         sync(view)
         render(view)
@@ -386,7 +414,8 @@ defmodule TymeslotWeb.BookingDriver do
 
   @doc """
   Books on whatever page `view` shows, doing what the page asks for next:
-  the meeting type (`:meeting_type`, else the first offered), the slot
+  the meeting type (`:meeting_type`, else the first offered), the length
+  where the type offers several (`:length`, else the first offered), the slot
   (`:date` and `:time`; the first free time on `:date` when only that is
   given; else the first free time), each question on show (`:answers`, a
   map of question id to value; a question with no entry is left as it is),
@@ -425,6 +454,7 @@ defmodule TymeslotWeb.BookingDriver do
     ask =
       cond do
         :meeting_type not in done and has_element?(view, @meeting_type) -> :meeting_type
+        :length not in done and has_element?(view, @length) -> :length
         :slot not in done and slot_picker?(view) -> :slot
         true -> question_or_attendee(view, done)
       end
@@ -443,6 +473,9 @@ defmodule TymeslotWeb.BookingDriver do
 
   defp do_ask(view, :meeting_type, opts),
     do: choose_meeting_type(view, opts[:meeting_type] || first_meeting_type(view))
+
+  defp do_ask(view, :length, opts),
+    do: choose_length(view, opts[:length] || first_length(view))
 
   defp do_ask(view, :slot, opts), do: book_slot(view, opts[:date], opts[:time])
 
@@ -492,6 +525,13 @@ defmodule TymeslotWeb.BookingDriver do
     end
   end
 
+  defp first_length(view) do
+    case lengths(view) do
+      [minutes | _rest] -> minutes
+      [] -> flunk("the page offers no length")
+    end
+  end
+
   # A page is a slot picker when it shows a day or a slot control, before or
   # after `load/1` runs its mounted pushes (a week grid shows its slots only
   # once it has asked for its week).
@@ -530,19 +570,6 @@ defmodule TymeslotWeb.BookingDriver do
         {iso, time} = slot_of(node)
         click(view, "#{@slot}[data-date='#{iso}'][data-time='#{time}']")
         {iso, time}
-    end
-  end
-
-  defp slot_of(node) do
-    case {Floki.attribute(node, "data-date"), Floki.attribute(node, "data-time")} do
-      {[iso], [time]} ->
-        {iso, time}
-
-      _missing ->
-        flunk(
-          "a data-fact=\"slot\" button lacks its data-date or data-time: " <>
-            Floki.raw_html(node)
-        )
     end
   end
 
@@ -619,6 +646,4 @@ defmodule TymeslotWeb.BookingDriver do
     view |> element(selector <> @enabled) |> render_click()
     sync(view)
   end
-
-  defp booking_params(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 end

@@ -42,6 +42,33 @@ defmodule Tymeslot.ExpiringTestCatalog do
   end
 end
 
+defmodule Tymeslot.FuturePublishedTestCatalog do
+  @moduledoc false
+  # Fixture catalog with one entry that is not yet published and one that is.
+
+  alias Tymeslot.Announcements.Announcement
+
+  @spec list() :: [Announcement.t()]
+  def list do
+    [
+      %Announcement{
+        key: "not_yet_published",
+        title: "Soon",
+        body: "Publishes far in the future",
+        published_at: ~U[2099-01-01 00:00:00Z],
+        expires_at: nil
+      },
+      %Announcement{
+        key: "already_published",
+        title: "Now",
+        body: "Published long ago",
+        published_at: DateTime.add(~U[2099-01-01 00:00:00Z], -100 * 365, :day),
+        expires_at: nil
+      }
+    ]
+  end
+end
+
 defmodule Tymeslot.AllExpiredTestCatalog do
   @moduledoc false
   # Fixture catalog whose every entry has already expired — used to verify
@@ -78,6 +105,7 @@ defmodule Tymeslot.AnnouncementsTest do
   alias Tymeslot.Announcements.UserSeenAnnouncementSchema
   alias Tymeslot.AnnouncementsTestCatalog
   alias Tymeslot.ExpiringTestCatalog
+  alias Tymeslot.FuturePublishedTestCatalog
   alias Tymeslot.RaisingTestCatalog
   alias Tymeslot.Repo
 
@@ -102,11 +130,11 @@ defmodule Tymeslot.AnnouncementsTest do
     end
   end
 
-  describe "AnnouncementQueries.mark_seen!/2" do
+  describe "AnnouncementQueries.mark_seen/2" do
     test "writes a row" do
       user = insert(:user)
 
-      assert :ok = AnnouncementQueries.mark_seen!(user.id, "feature_a")
+      assert :ok = AnnouncementQueries.mark_seen(user.id, "feature_a")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
     end
@@ -114,8 +142,8 @@ defmodule Tymeslot.AnnouncementsTest do
     test "is idempotent — calling twice does not raise and does not duplicate" do
       user = insert(:user)
 
-      assert :ok = AnnouncementQueries.mark_seen!(user.id, "feature_a")
-      assert :ok = AnnouncementQueries.mark_seen!(user.id, "feature_a")
+      assert :ok = AnnouncementQueries.mark_seen(user.id, "feature_a")
+      assert :ok = AnnouncementQueries.mark_seen(user.id, "feature_a")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
     end
@@ -126,7 +154,7 @@ defmodule Tymeslot.AnnouncementsTest do
           # A non-existent user_id triggers an FK violation. Marking-seen is a
           # non-critical dashboard side effect, so it must swallow the error
           # and return :ok rather than crashing the LiveView.
-          assert :ok = AnnouncementQueries.mark_seen!(-1, "feature_a")
+          assert :ok = AnnouncementQueries.mark_seen(-1, "feature_a")
         end)
 
       # The schema declares foreign_key_constraint(:user_id), so the FK violation
@@ -140,7 +168,7 @@ defmodule Tymeslot.AnnouncementsTest do
   describe "FK cascade on user delete" do
     test "deleting a user removes their seen records" do
       user = insert(:user)
-      AnnouncementQueries.mark_seen!(user.id, "feature_a")
+      AnnouncementQueries.mark_seen(user.id, "feature_a")
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
 
       Repo.delete!(user)
@@ -149,11 +177,11 @@ defmodule Tymeslot.AnnouncementsTest do
     end
   end
 
-  describe "Announcements.mark_seen!/2" do
+  describe "Announcements.mark_seen/2" do
     test "marks the announcement as seen" do
       user = insert(:user)
 
-      assert :ok = Announcements.mark_seen!(user, "test_alpha")
+      assert :ok = Announcements.mark_seen(user, "test_alpha")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["test_alpha"]
     end
@@ -161,8 +189,8 @@ defmodule Tymeslot.AnnouncementsTest do
     test "is idempotent" do
       user = insert(:user)
 
-      assert :ok = Announcements.mark_seen!(user, "test_alpha")
-      assert :ok = Announcements.mark_seen!(user, "test_alpha")
+      assert :ok = Announcements.mark_seen(user, "test_alpha")
+      assert :ok = Announcements.mark_seen(user, "test_alpha")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["test_alpha"]
     end
@@ -170,7 +198,7 @@ defmodule Tymeslot.AnnouncementsTest do
     test "is a no-op for a nil user rather than crashing" do
       # A modal event can arrive on a socket whose current_user is nil; the
       # context must guard this rather than raise a FunctionClauseError.
-      assert :ok = Announcements.mark_seen!(nil, "test_alpha")
+      assert :ok = Announcements.mark_seen(nil, "test_alpha")
     end
   end
 
@@ -196,7 +224,7 @@ defmodule Tymeslot.AnnouncementsTest do
 
     test "filters out announcements the user has already seen" do
       user = insert(:user, inserted_at: ~N[2025-12-01 00:00:00])
-      Announcements.mark_seen!(user, "test_alpha")
+      Announcements.mark_seen(user, "test_alpha")
 
       assert [%{key: "test_beta"}] = Announcements.list_for(user)
     end
@@ -280,6 +308,23 @@ defmodule Tymeslot.AnnouncementsTest do
       assert "live_entry" in keys
       assert "evergreen_entry" in keys
       refute "expired_entry" in keys
+    end
+  end
+
+  describe "Announcements.list_for/1 publication date" do
+    setup do
+      previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
+      Application.put_env(:tymeslot, :announcement_catalogs, [FuturePublishedTestCatalog])
+      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, previous) end)
+      :ok
+    end
+
+    test "hides an announcement whose published_at is still in the future" do
+      user = insert(:user, inserted_at: ~N[1990-01-01 00:00:00])
+
+      keys = user |> Announcements.list_for() |> Enum.map(& &1.key)
+
+      assert keys == ["already_published"]
     end
   end
 

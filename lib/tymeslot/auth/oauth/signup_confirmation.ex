@@ -21,19 +21,16 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
 
   require Logger
 
-  alias Phoenix.Token
   alias Tymeslot.Auth.OAuth.{Providers, UserRegistration}
+  alias Tymeslot.Auth.RateLimit
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
   alias Tymeslot.Security.{RateLimiter, SecurityLogger}
+  alias Tymeslot.SignedToken
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Endpoint
-
-  @salt "oauth typed-email sign-up confirmation"
-  @max_age_seconds 24 * 60 * 60
 
   @type provider :: Providers.provider()
 
@@ -47,7 +44,9 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
   """
   @spec request(provider(), map(), map(), String.t() | nil) :: :sent | :rate_limited
   def request(provider, oauth_data, profile_params, ip) do
-    case RateLimiter.check_verification_ip_rate_limit(ip) do
+    limit = RateLimiter.check(:verification_ip, ip)
+
+    case RateLimit.check(limit, event: "email_verification", identifier: nil, ip: ip) do
       :ok ->
         send_link(provider, oauth_data, profile_params)
         :sent
@@ -60,7 +59,7 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
   defp send_link(provider, oauth_data, profile_params) do
     email = oauth_data.email
 
-    with :ok <- RateLimiter.check_social_signup_confirmation_rate_limit(email),
+    with :ok <- RateLimiter.check(:social_signup_confirmation, email),
          {:ok, _status} <-
            EmailScheduler.schedule_social_signup_confirmation(%{
              email: email,
@@ -82,7 +81,7 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
   defp confirm_url(token), do: UrlBuilder.build_url("/auth/oauth/confirm/#{token}")
 
   defp sign(provider, oauth_data, profile_params) do
-    Token.sign(Endpoint, @salt, %{
+    SignedToken.sign(:oauth_signup_confirmation, %{
       "provider" => to_string(provider),
       "provider_uid" => oauth_data.provider_uid,
       "email" => oauth_data.email,
@@ -118,7 +117,7 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
   def confirm(_token, _metadata), do: {:error, :invalid_link}
 
   defp verify(token),
-    do: Token.verify(Endpoint, @salt, token, max_age: @max_age_seconds)
+    do: SignedToken.verify(:oauth_signup_confirmation, token)
 
   defp still_possible(provider, claims) do
     cond do

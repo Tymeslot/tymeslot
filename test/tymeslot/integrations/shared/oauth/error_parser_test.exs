@@ -1,8 +1,8 @@
-defmodule Tymeslot.Integrations.Common.OAuth.ErrorParserTest do
+defmodule Tymeslot.Integrations.Shared.OAuth.ErrorParserTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Common.OAuth.ErrorParser
+  alias Tymeslot.Integrations.Shared.OAuth.ErrorParser
 
   describe "build_message/3" do
     test "extracts OAuth error type from a 400 response with valid OAuth-error JSON" do

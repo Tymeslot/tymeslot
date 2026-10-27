@@ -5,13 +5,14 @@ defmodule Tymeslot.Integrations.Video.NeedsReauth do
   Providers learn that stored credentials were refused in the middle of a call,
   holding only the runtime config `build_config/3` gave them, not the
   integration row. This is the one path from that config to
-  `Tymeslot.Integrations.Video.flag_and_notify/2`, whatever the provider
+  `Tymeslot.Integrations.Shared.ReauthHandling.flag_and_notify/3`, whatever the provider
   authenticates with: a revoked OAuth grant (Zoom, Teams, Google Meet) or a
   refused app password (Nextcloud Talk).
   """
 
   require Logger
 
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video
 
   @doc """
@@ -60,12 +61,12 @@ defmodule Tymeslot.Integrations.Video.NeedsReauth do
     :ok
   end
 
-  # Delegates to `Video.flag_and_notify/2`, the same false to true seam used by
+  # Delegates to `ReauthHandling.flag_and_notify/3`, the same false to true seam used by
   # `Video.handle_reauth_required/2`, so the two paths cannot drift on whether
   # reconnecting is announced.
   defp mark_needs_reauth(integration_id, user_id, message) do
     case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, integration} -> Video.flag_and_notify(integration, message)
+      {:ok, integration} -> ReauthHandling.flag_and_notify(:video, integration, message)
       {:error, :not_found} -> :ok
     end
   end

@@ -23,6 +23,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     needs_action: "needsAction"
   }
 
+  # Event fields an edit's body carries over from the stored event because
+  # `format_event_data/1` never writes them. Attachments are not among them:
+  # Google only accepts them alongside `supportsAttachments=true`.
+  @unmodelled_fields ~w(extendedProperties source guestsCanInviteOthers guestsCanModify
+                        guestsCanSeeOtherGuests anyoneCanAddSelf)
+
   @doc """
   Formats internal event data into a Google Calendar API event body.
 
@@ -81,21 +87,49 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   def requires_conference_data_version?(_other), do: false
 
   @doc """
+  Marks `body` as Tymeslot's unless `event_data` says the event belongs to
+  someone else (`created_by_tymeslot: false`, which the calendar grid sends
+  for an event it did not create). Anything that does not say so is a
+  booking or an event Tymeslot is creating, and is marked: a booking whose
+  mark was dropped would be read back by the next sync as an external event.
+  """
+  @spec put_provenance(map(), map()) :: map()
+  def put_provenance(body, %{created_by_tymeslot: false}), do: body
+  def put_provenance(body, _event_data), do: add_tymeslot_fingerprint(body)
+
+  @doc """
   Adds Tymeslot provenance markers to a Google Calendar event body.
 
-  Sets `source` and `extendedProperties` so events created by Tymeslot
-  can be identified later during sync.
+  Sets `source` and `extendedProperties.private.createdBy` so events created
+  by Tymeslot can be identified later during sync. Other properties already
+  in the body's `extendedProperties` are kept.
   """
   @spec add_tymeslot_fingerprint(map()) :: map()
   def add_tymeslot_fingerprint(body) do
+    properties = body["extendedProperties"] || %{}
+    private = Map.put(properties["private"] || %{}, "createdBy", "tymeslot")
+
     # The instance that created the event, not the hosted service: a
     # self-hoster's Google events used to point their attendees at a site
     # they have nothing to do with.
     Map.merge(body, %{
       "source" => %{"title" => "Tymeslot", "url" => UrlBuilder.base_url()},
-      "extendedProperties" => %{"private" => %{"createdBy" => "tymeslot"}}
+      "extendedProperties" => Map.put(properties, "private", private)
     })
   end
+
+  @doc """
+  Copies onto `body` the fields of the event as Google last gave it
+  (`event_data[:provider_metadata]`, the cached raw event) that Tymeslot does
+  not model. `events.update` is a `PUT`, so a field left out of its body is
+  reset: other apps' `extendedProperties` would be deleted and the guest
+  permissions returned to Google's defaults on every edit.
+  """
+  @spec carry_unmodelled_fields(map(), map()) :: map()
+  def carry_unmodelled_fields(body, %{provider_metadata: %{} = stored}),
+    do: Map.merge(Map.take(stored, @unmodelled_fields), body)
+
+  def carry_unmodelled_fields(body, _event_data), do: body
 
   # A recurring instance's id is its series id plus the original start,
   # `<id>_YYYYMMDD` or `<id>_YYYYMMDDTHHMMSSZ`. It is already a Google id, and

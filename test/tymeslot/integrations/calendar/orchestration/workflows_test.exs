@@ -3,8 +3,9 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Selection
   import Tymeslot.Factory
   import Mox
 
@@ -27,7 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       assert [%CalendarEntry{id: "cal_1", name: "New Calendar"}] = calendars
 
       # Verify DB was updated
-      {:ok, updated} = CalendarManagement.get_calendar_integration(integration.id, user.id)
+      {:ok, updated} = Management.get_calendar_integration(integration.id, user.id)
       assert length(updated.calendar_list) == 1
     end
 
@@ -55,7 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
 
       assert_receive {:calendar_list_refreshed, ^component_id, _, _calendars}, 5000
 
-      {:ok, updated} = CalendarManagement.get_calendar_integration(integration.id, user.id)
+      {:ok, updated} = Management.get_calendar_integration(integration.id, user.id)
 
       assert Enum.find(updated.calendar_list, &(&1.id == kept)).selected == true
       assert Enum.find(updated.calendar_list, &(&1.id == "new")).selected == false
@@ -118,6 +119,37 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       assert updated.calendar_paths == ["cal_1"]
     end
 
+    # Discovery spends seconds on the network; a calendar the owner ticks
+    # meanwhile keeps their choice rather than being reverted by the merge.
+    test "keeps a selection the owner saves while discovery is running" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [
+            %{"id" => "cal_1", "selected" => true, "path" => "cal_1"},
+            %{"id" => "cal_2", "selected" => false, "path" => "cal_2"}
+          ]
+        )
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok, fresh} = Management.get_calendar_integration(integration.id, user.id)
+
+        {:ok, _saved} =
+          select_only(fresh, ["cal_1", "cal_2"])
+
+        {:ok,
+         [%{"id" => "cal_1", "summary" => "Cal 1"}, %{"id" => "cal_2", "summary" => "Cal 2"}]}
+      end)
+
+      assert {:ok, updated} = Workflows.update_integration_with_discovery(integration)
+
+      assert Enum.find(updated.calendar_list, &(&1.id == "cal_2")).selected == true
+      assert Enum.sort(updated.calendar_paths) == ["cal_1", "cal_2"]
+    end
+
     test "preserves existing list if discovery returns empty" do
       user = insert(:user)
       existing = [%{"id" => "cal_1", "selected" => true}]
@@ -158,5 +190,16 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       assert updated.calendar_paths == ["p1"]
       assert [%CalendarEntry{id: "cal_1", selected: true}] = updated.calendar_list
     end
+  end
+
+  # Another writer's selection, landed on the row as it stands: only `ids`
+  # selected.
+  defp select_only(integration, ids) do
+    integration = Repo.reload!(integration)
+
+    Selection.persist_calendar_list(
+      integration,
+      Enum.map(integration.calendar_list, &%{&1 | selected: &1.id in ids})
+    )
   end
 end

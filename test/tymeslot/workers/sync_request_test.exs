@@ -251,7 +251,7 @@ defmodule Tymeslot.Workers.SyncRequestTest do
         |> RefreshOutlookCalendarWorker.new()
         |> Oban.insert()
 
-      assert %{snoozed: 1, success: 1} = drain(:calendar_integrations)
+      assert %{snoozed: 1, success: 1} = drain(:calendar_events)
       assert_received :bootstrapped
       assert_received :bootstrapped
     end

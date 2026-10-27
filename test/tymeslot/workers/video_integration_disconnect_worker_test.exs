@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.InviteeData
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
@@ -117,6 +118,97 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
 
     assert Repo.reload!(ended).video_room_id == nil
     assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+  end
+
+  # Scrubbing a one-to-one meeting's invitee data nils the attendee fields
+  # the full meeting changeset requires, so a room clear written through it
+  # failed: the room stayed on the meeting, and the drain met it again on
+  # every later page and run. Both scrub paths are covered: the retention
+  # purge, and an operator's erasure, which leaves `invitee_data_erased_at`
+  # nil.
+  describe "an ended one-to-one Talk meeting whose invitee data was erased" do
+    for {label, scrub} <- [
+          {"by the retention purge", :anonymise_expired},
+          {"by an erasure request", :erase}
+        ] do
+      @scrub scrub
+
+      test "has its room cleared, and the row purged, on the first run (#{label})" do
+        %{user: user} = create_user_with_profile()
+        host = "disconnect-erased.example.com"
+        integration = insert_talk_integration(user, host)
+
+        ended =
+          insert_meeting_for_user(user, %{
+            start_offset: -2 * 86_400,
+            duration: 1800,
+            video_integration_id: integration.id,
+            video_provider: "nextcloud_talk",
+            video_room_id: "erased01"
+          })
+
+        scrub!(@scrub, ended)
+        assert Repo.reload!(ended).attendee_email == nil
+
+        {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+        expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 200, body: talk_ocs(nil)}}
+        end)
+
+        assert :ok =
+                 perform_job(VideoIntegrationDisconnectWorker, %{
+                   "integration_id" => integration.id
+                 })
+
+        assert Repo.reload!(ended).video_room_id == nil
+        assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+      end
+    end
+  end
+
+  defp scrub!(:anonymise_expired, _meeting), do: {1, nil} = InviteeData.anonymise_expired(1)
+
+  defp scrub!(:erase, meeting),
+    do: {:ok, _counts} = InviteeData.erase(meeting.attendee_email)
+
+  # Refreshing a cancelled booking's event would put it back on the
+  # organiser's calendar (an update recreates an event it cannot find), and an
+  # ended one's is history.
+  test "refreshes the calendar event of a booking still to come only" do
+    %{user: user} = create_user_with_profile()
+    integration = insert_talk_integration(user, "disconnect-refresh.example.com")
+
+    room = fn attrs ->
+      insert_meeting_for_user(
+        user,
+        Map.merge(
+          %{video_integration_id: integration.id, video_provider: "nextcloud_talk"},
+          attrs
+        )
+      )
+    end
+
+    upcoming = room.(%{video_room_id: "upcoming1"})
+    cancelled = room.(%{video_room_id: "cancelled1", status: "cancelled"})
+    ended = room.(%{video_room_id: "ended0001", start_offset: -2 * 86_400, duration: 1800})
+
+    {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+    expect(HTTPClientMock, :request, 3, fn :delete, _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 200, body: talk_ocs(nil)}}
+    end)
+
+    assert :ok =
+             perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
+
+    assert Enum.map([upcoming, cancelled, ended], &Repo.reload!(&1).video_room_id) ==
+             [nil, nil, nil]
+
+    assert [%{args: %{"meeting_id" => refreshed}}] =
+             all_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
+
+    assert refreshed == upcoming.id
   end
 
   test "retries and keeps the row when the provider call fails" do

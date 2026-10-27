@@ -9,7 +9,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
 
   alias Tymeslot.Demo
   alias Tymeslot.Integrations.Calendar.BookingEligibility
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
 
   @type dashboard_reason :: :no_username | :no_calendar
   @type public_reason :: :no_calendar
@@ -93,7 +93,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
         {:error, :no_calendar}
 
       true ->
-        integrations = CalendarManagement.list_active_calendar_integrations(profile.user_id)
+        integrations = Management.list_active_calendar_integrations(profile.user_id)
         bookable = BookingEligibility.filter_bookable(integrations)
         if bookable != [], do: {:ok, :ready}, else: {:error, :no_calendar}
     end
@@ -122,6 +122,17 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
     end
   end
 
+  @doc """
+  Whether the dashboard's integration status has a calendar connected, the
+  half of `can_link?/2` that features needing a calendar but not a username
+  gate on.
+  """
+  @spec has_calendar?(map() | nil) :: boolean()
+  def has_calendar?(integration_status) when is_map(integration_status),
+    do: integration_status[:has_calendar] || false
+
+  def has_calendar?(_integration_status), do: false
+
   # --- Private helpers ---
 
   defp has_username?(nil), do: false
@@ -130,9 +141,4 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
     do: String.trim(username) != ""
 
   defp has_username?(_user), do: false
-
-  defp has_calendar?(integration_status) when is_map(integration_status),
-    do: integration_status[:has_calendar] || false
-
-  defp has_calendar?(_integration_status), do: false
 end

@@ -31,11 +31,11 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       ip = unique_ip()
 
       for _i <- 1..10 do
-        assert :ok = RateLimiter.check_oauth_initiation_rate_limit(ip)
+        assert :ok = RateLimiter.check(:oauth_initiation, ip)
       end
 
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_oauth_initiation_rate_limit(ip)
+               RateLimiter.check(:oauth_initiation, ip)
 
       assert message =~ "OAuth initiation"
     end
@@ -46,10 +46,10 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       ip = unique_ip()
 
       for _i <- 1..20 do
-        assert :ok = RateLimiter.check_oauth_callback_rate_limit(ip)
+        assert :ok = RateLimiter.check(:oauth_callback, ip)
       end
 
-      assert {:error, :rate_limited, message} = RateLimiter.check_oauth_callback_rate_limit(ip)
+      assert {:error, :rate_limited, message} = RateLimiter.check(:oauth_callback, ip)
       assert message =~ "OAuth callback"
     end
   end
@@ -59,11 +59,11 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       ip = unique_ip()
 
       for _i <- 1..6 do
-        assert :ok = RateLimiter.check_oauth_completion_rate_limit(ip)
+        assert :ok = RateLimiter.check(:oauth_completion, ip)
       end
 
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_oauth_completion_rate_limit(ip)
+               RateLimiter.check(:oauth_completion, ip)
 
       assert message =~ "OAuth completion"
     end
@@ -74,27 +74,27 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       ip = unique_ip()
 
       for _i <- 1..10 do
-        assert :ok = RateLimiter.check_oauth_initiation_rate_limit(ip)
+        assert :ok = RateLimiter.check(:oauth_initiation, ip)
       end
 
-      assert {:error, :rate_limited, _msg} = RateLimiter.check_oauth_initiation_rate_limit(ip)
+      assert {:error, :rate_limited, _msg} = RateLimiter.check(:oauth_initiation, ip)
 
       # Every other bucket still has its full budget for this IP.
-      assert :ok = RateLimiter.check_oauth_callback_rate_limit(ip)
-      assert :ok = RateLimiter.check_oauth_completion_rate_limit(ip)
+      assert :ok = RateLimiter.check(:oauth_callback, ip)
+      assert :ok = RateLimiter.check(:oauth_completion, ip)
     end
 
     test "exhausting completion does not impact initiation or callback" do
       ip = unique_ip()
 
       for _i <- 1..6 do
-        assert :ok = RateLimiter.check_oauth_completion_rate_limit(ip)
+        assert :ok = RateLimiter.check(:oauth_completion, ip)
       end
 
-      assert {:error, :rate_limited, _msg} = RateLimiter.check_oauth_completion_rate_limit(ip)
+      assert {:error, :rate_limited, _msg} = RateLimiter.check(:oauth_completion, ip)
 
-      assert :ok = RateLimiter.check_oauth_initiation_rate_limit(ip)
-      assert :ok = RateLimiter.check_oauth_callback_rate_limit(ip)
+      assert :ok = RateLimiter.check(:oauth_initiation, ip)
+      assert :ok = RateLimiter.check(:oauth_callback, ip)
     end
 
     test "two different IPs on the same bucket have independent budgets" do
@@ -102,12 +102,12 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       ip_b = unique_ip()
 
       for _i <- 1..10 do
-        assert :ok = RateLimiter.check_oauth_initiation_rate_limit(ip_a)
+        assert :ok = RateLimiter.check(:oauth_initiation, ip_a)
       end
 
-      assert {:error, :rate_limited, _msg} = RateLimiter.check_oauth_initiation_rate_limit(ip_a)
+      assert {:error, :rate_limited, _msg} = RateLimiter.check(:oauth_initiation, ip_a)
       # ip_b is untouched.
-      assert :ok = RateLimiter.check_oauth_initiation_rate_limit(ip_b)
+      assert :ok = RateLimiter.check(:oauth_initiation, ip_b)
     end
   end
 

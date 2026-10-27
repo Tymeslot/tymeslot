@@ -40,8 +40,8 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
   import Tymeslot.MeetingTestHelpers
 
   alias Tymeslot.Bookings.Reschedule
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
@@ -64,9 +64,13 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
 
     test_pid = self()
 
-    stub(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn details ->
+    stub(Tymeslot.EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, _details ->
+      {:ok, :sent}
+    end)
+
+    stub(Tymeslot.EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
       send(test_pid, {:reschedule_email, details})
-      {{:ok, :organizer}, {:ok, :attendee}}
+      {:ok, :sent}
     end)
 
     %{user: user} = create_always_bookable_profile()
@@ -373,7 +377,7 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
     }
 
     assert {:ok, updated} =
-             Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+             Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
     updated
   end
@@ -390,9 +394,16 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
     perform_job(VideoRoomWorker, Enum.max_by(jobs, & &1.id).args, opts)
   end
 
+  # One job per fetch unless the caller sets a limit: a single fetch of every
+  # available job returns them in no guaranteed order, and a write run ahead
+  # of the earlier one it waits behind is snoozed, which a drain never
+  # restages.
   defp drain_calendar_queue(opts \\ []) do
-    result = Oban.drain_queue(Keyword.merge([queue: :calendar_events], opts))
-    assert %{failure: 0, discard: 0} = result
+    one_at_a_time =
+      if Keyword.has_key?(opts, :with_limit), do: [], else: [with_limit: 1, with_recursion: true]
+
+    result = Oban.drain_queue([queue: :calendar_events] ++ one_at_a_time ++ opts)
+    assert %{failure: 0, discard: 0, snoozed: 0} = result
     result
   end
 
@@ -429,6 +440,7 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
   # of the Teams meeting it is actually held in.
   defp assert_last_email_link(meeting) do
     updated = Repo.get!(MeetingSchema, meeting.id)
+    Oban.drain_queue(queue: :emails)
     emails = reschedule_emails()
     assert [_email | _more] = emails
     last = List.last(emails)

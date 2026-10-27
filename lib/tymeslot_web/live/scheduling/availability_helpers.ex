@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Tymeslot.Availability.{Calculate, Offer, Schedules}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Tasks
+  alias TymeslotWeb.Themes.Shared.ChosenLength
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
 
   require Logger
 
@@ -31,9 +33,10 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       user_timezone: socket.assigns[:user_timezone],
       meeting_type: socket.assigns[:meeting_type],
       reschedule_uid: socket.assigns[:reschedule_meeting_uid],
+      reschedule: socket.assigns[:reschedule_context],
       reschedule_seat_token: socket.assigns[:reschedule_seat_token],
-      demo_mode?: Demo.demo_mode?(socket),
-      debug_calendar_module: socket.private[:debug_calendar_module]
+      seat_move: socket.assigns[:seat_move_context],
+      demo_mode?: Demo.demo_mode?(socket)
     }
   end
 
@@ -64,6 +67,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   """
   @spec fetch_month_availability_async(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def fetch_month_availability_async(socket) do
+    socket = assign_planned_sessions(socket)
+
     if can_fetch_availability?(socket) do
       socket
       |> maybe_cancel_existing_task()
@@ -71,6 +76,17 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     else
       socket
     end
+  end
+
+  # A fixed-date type's sessions, listed above its calendar
+  # (`SessionList`). Loaded with each month fetch, the moment the page
+  # re-reads what it offers, rather than on every render.
+  defp assign_planned_sessions(socket) do
+    assign(
+      socket,
+      :planned_sessions,
+      SessionList.load(socket.assigns[:meeting_type], socket.assigns[:user_timezone] || "Etc/UTC")
+    )
   end
 
   @doc """
@@ -204,15 +220,20 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   @doc """
   The meeting length the flow is operating on, in minutes.
 
-  Resolved by `Tymeslot.Availability.Offer.duration_minutes/2`, the resolver
+  Resolved by `Tymeslot.Availability.Offer.duration_minutes/3`, the resolver
   the booking and reschedule submits share, so the display path and the
-  submit path cannot disagree about the duration or its bound.
+  submit path cannot disagree about the duration or its bound. On a type
+  offering several lengths it is the one the booker chose; a reschedule keeps
+  the booked length.
   """
-  @spec duration_minutes(Phoenix.LiveView.Socket.t()) :: pos_integer()
-  def duration_minutes(socket) do
+  @spec duration_minutes(Phoenix.LiveView.Socket.t() | map()) :: pos_integer()
+  def duration_minutes(%Phoenix.LiveView.Socket{assigns: assigns}), do: duration_minutes(assigns)
+
+  def duration_minutes(assigns) when is_map(assigns) do
     Offer.duration_minutes(
-      socket.assigns[:meeting_type],
-      socket.assigns[:duration] || socket.assigns[:selected_duration]
+      assigns[:meeting_type],
+      assigns[:duration] || assigns[:selected_duration],
+      ChosenLength.minutes(assigns)
     )
   end
 

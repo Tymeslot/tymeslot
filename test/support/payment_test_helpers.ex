@@ -4,7 +4,6 @@ defmodule Tymeslot.PaymentTestHelpers do
   """
 
   alias Tymeslot.Payments.PaymentQueries
-  alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.Repo
 
   @doc """
@@ -82,13 +81,5 @@ defmodule Tymeslot.PaymentTestHelpers do
   @spec clear_payment_transactions() :: {integer(), nil}
   def clear_payment_transactions do
     Repo.delete_all(Tymeslot.Payments.PaymentTransactionSchema)
-  end
-
-  @doc """
-  Clears the webhook idempotency cache.
-  """
-  @spec clear_idempotency_cache() :: :ok
-  def clear_idempotency_cache do
-    IdempotencyCache.clear_all()
   end
 end

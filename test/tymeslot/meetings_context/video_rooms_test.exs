@@ -54,7 +54,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
 
       form_data = build_form_data()
 
-      result = Create.execute_with_video_room(meeting_params, form_data)
+      result = Create.execute(meeting_params, form_data, with_video_room: true)
 
       assert {:ok, meeting} = result
       assert meeting.status == "confirmed"
@@ -66,7 +66,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
       meeting_params = build_meeting_params(user, %{date: Date.add(Date.utc_today(), 7)})
       form_data = build_form_data()
 
-      result = Create.execute_with_video_room(meeting_params, form_data)
+      result = Create.execute(meeting_params, form_data, with_video_room: true)
 
       assert {:ok, meeting} = result
       assert meeting.status == "confirmed"

@@ -1,85 +1,122 @@
 defmodule Tymeslot.Infrastructure.Retry do
   @moduledoc """
-  Provides retry logic with exponential backoff for external service calls.
+  Retries a call with exponential backoff and jitter while it fails with a
+  transient error.
+
+  The function returns `{:ok, _}` or `{:error, reason}`; anything else is
+  returned as it is, without retrying. Whether `reason` is worth another
+  attempt is decided by `:retriable?`, by default
+  `Tymeslot.Infrastructure.BreakerOutcome.transient?/1`, the rule the circuit
+  breakers count failures by. When the attempts run out, or the error is not
+  retriable, the last `{:error, reason}` is returned, so the caller still
+  knows what failed.
+
+  A rate limit that names its wait, `{:rate_limited, seconds}`, is retried
+  after that wait (capped at `:max_delay`) rather than the usual backoff, or
+  returned at once when the wait is longer than `:max_rate_limit_wait`.
+  `retry_after_seconds/1` reads the wait from a 429 response.
   """
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
 
   @default_opts [
     max_attempts: 3,
-    # 1 second
-    initial_delay: 1000,
-    # 16 seconds
+    initial_delay: 1_000,
     max_delay: 16_000,
-    jitter: true
+    max_rate_limit_wait: :infinity,
+    jitter: 0.25,
+    retriable?: &BreakerOutcome.transient?/1
   ]
 
+  @type opts :: [
+          max_attempts: pos_integer(),
+          initial_delay: non_neg_integer(),
+          max_delay: non_neg_integer(),
+          max_rate_limit_wait: non_neg_integer() | :infinity,
+          jitter: float(),
+          retriable?: (term() -> boolean())
+        ]
+
   @doc """
-  Executes a function with retry logic and exponential backoff.
+  Runs `fun`, retrying it while it returns a retriable `{:error, reason}`.
 
   ## Options
-    * `:max_attempts` - Maximum number of attempts (default: 3)
-    * `:initial_delay` - Initial delay in milliseconds (default: 1000)
-    * `:max_delay` - Maximum delay in milliseconds (default: 16000)
-    * `:jitter` - Whether to add random jitter to delays (default: true)
-    * `:retriable?` - Function to determine if error is retriable (default: checks for network/timeout errors)
 
-  ## Examples
-
-      iex> Retry.with_backoff(fn -> Calendar.create_event(data) end)
-      {:ok, result}
-
-      iex> Retry.with_backoff(fn -> Calendar.get_events() end, max_attempts: 5)
-      {:error, :max_attempts_exceeded}
+    * `:max_attempts` - attempts in all, the first included (default 3)
+    * `:initial_delay` - delay before the second attempt, in ms (default 1000);
+      each later delay doubles
+    * `:max_delay` - cap on any one delay, in ms (default 16000)
+    * `:max_rate_limit_wait` - the longest wait a rate limit may name, in ms,
+      for it to be retried (default `:infinity`). Set it where someone is
+      waiting on the answer: past it, waiting less than the provider asked
+      only earns another rate limit, so the error is returned instead.
+    * `:jitter` - each delay varies by up to this fraction either way
+      (default 0.25; 0.0 for none)
+    * `:retriable?` - whether an error reason is worth another attempt
+      (default `BreakerOutcome.transient?/1`)
   """
-  @spec with_backoff((-> any), Keyword.t()) :: any
+  @spec with_backoff((-> result), opts()) :: result when result: term()
   def with_backoff(fun, opts \\ []) when is_function(fun, 0) do
-    opts =
-      @default_opts
-      |> Keyword.merge(opts)
-      |> Keyword.put_new(:retriable?, &default_retriable?/1)
-
-    do_retry(fun, 1, opts)
+    run(fun, 1, Keyword.merge(@default_opts, opts))
   end
 
-  defp do_retry(fun, attempt, opts) do
-    case fun.() do
-      {:ok, _result} = success ->
-        success
+  @doc """
+  The delay before attempt `attempt + 1`, in ms: `initial_delay` doubled for
+  each attempt after the first, capped at `max_delay`, varied by `jitter`.
+  """
+  @spec delay(pos_integer(), opts()) :: non_neg_integer()
+  def delay(attempt, opts) do
+    opts = Keyword.merge(@default_opts, opts)
+    capped = min(round(opts[:initial_delay] * :math.pow(2, attempt - 1)), opts[:max_delay])
+    spread = round(capped * opts[:jitter])
 
-      {:error, reason} ->
-        handle_retry_result(reason, fun, attempt, opts)
+    if spread > 0,
+      do: max(0, capped + :rand.uniform(spread * 2 + 1) - spread - 1),
+      else: capped
+  end
 
-      # Handle cases where function returns :error atom directly
-      :error ->
-        if attempt >= opts[:max_attempts] do
-          {:error, :max_attempts_exceeded}
-        else
-          delay = calculate_delay(attempt, opts)
-          Process.sleep(delay)
-          do_retry(fun, attempt + 1, opts)
-        end
-
-      other ->
-        # For non-standard returns, don't retry
-        other
+  @doc """
+  The wait a rate-limited `response` names in its `Retry-After` header, in
+  seconds, or `nil` when it names none (or names a date).
+  """
+  @spec retry_after_seconds(map()) :: non_neg_integer() | nil
+  def retry_after_seconds(response) do
+    with [value | _rest] <- response |> Map.get(:headers, %{}) |> Map.get("retry-after"),
+         {seconds, _remainder} when seconds >= 0 <- Integer.parse(value) do
+      seconds
+    else
+      _no_seconds -> nil
     end
   end
 
-  defp handle_retry_result(reason, fun, attempt, opts) do
-    if attempt >= opts[:max_attempts] do
-      Logger.warning("Max retry attempts exceeded",
-        attempt: attempt,
-        max_attempts: opts[:max_attempts],
-        error: LogFormat.reason(reason)
-      )
+  defp run(fun, attempt, opts) do
+    case fun.() do
+      {:error, reason} = error -> retry_or_return(error, reason, fun, attempt, opts)
+      result -> result
+    end
+  end
 
-      {:error, :max_attempts_exceeded}
-    else
-      if opts[:retriable?].(reason) do
-        delay = calculate_delay(attempt, opts)
+  defp retry_or_return(error, reason, fun, attempt, opts) do
+    cond do
+      not opts[:retriable?].(reason) ->
+        error
+
+      waits_too_long?(reason, opts[:max_rate_limit_wait]) ->
+        error
+
+      attempt >= opts[:max_attempts] ->
+        Logger.warning("Retry attempts exhausted",
+          attempts: attempt,
+          error: LogFormat.reason(reason)
+        )
+
+        error
+
+      true ->
+        delay = delay_for(reason, attempt, opts)
 
         Logger.info("Retrying after error",
           attempt: attempt,
@@ -89,61 +126,19 @@ defmodule Tymeslot.Infrastructure.Retry do
         )
 
         Process.sleep(delay)
-        do_retry(fun, attempt + 1, opts)
-      else
-        Logger.debug("Error is not retriable", error: LogFormat.reason(reason))
-        {:error, reason}
-      end
+        run(fun, attempt + 1, opts)
     end
   end
 
-  defp calculate_delay(attempt, opts) do
-    base_delay = opts[:initial_delay] * :math.pow(2, attempt - 1)
-    delay = min(round(base_delay), opts[:max_delay])
+  defp waits_too_long?({:rate_limited, seconds}, max_wait)
+       when is_integer(seconds) and is_integer(max_wait),
+       do: seconds * 1_000 > max_wait
 
-    if opts[:jitter] do
-      # Add random jitter (±25% of delay)
-      jitter_range = max(round(delay * 0.25), 1)
-      delay + :rand.uniform(jitter_range * 2) - jitter_range
-    else
-      delay
-    end
-  end
+  defp waits_too_long?(_reason, _max_wait), do: false
 
-  # Default function to determine if an error is retriable
-  defp default_retriable?(reason) when is_binary(reason) do
-    retriable_patterns = [
-      "timeout",
-      "connection refused",
-      "socket closed",
-      "no route to host",
-      "network is unreachable",
-      "HTTP request failed",
-      "502",
-      "503",
-      "504"
-    ]
+  defp delay_for({:rate_limited, seconds}, _attempt, opts)
+       when is_integer(seconds) and seconds >= 0,
+       do: min(seconds * 1_000, opts[:max_delay])
 
-    down = String.downcase(reason)
-    Enum.any?(retriable_patterns, fn pattern -> String.contains?(down, pattern) end)
-  end
-
-  defp default_retriable?(exception) when is_exception(exception) do
-    # Handle Req/Finch/Mint exceptions - only retry transient errors
-    case exception do
-      %Mint.TransportError{reason: reason} ->
-        reason in [:timeout, :closed, :econnrefused, :ehostunreach, :enetunreach]
-
-      %Req.TransportError{reason: reason} when is_atom(reason) ->
-        reason in [:timeout, :closed, :econnrefused, :ehostunreach, :enetunreach]
-
-      %Finch.Error{reason: reason} when is_atom(reason) ->
-        reason in [:timeout, :closed, :econnrefused, :ehostunreach, :enetunreach]
-
-      _other ->
-        false
-    end
-  end
-
-  defp default_retriable?(_error), do: false
+  defp delay_for(_reason, attempt, opts), do: delay(attempt, opts)
 end

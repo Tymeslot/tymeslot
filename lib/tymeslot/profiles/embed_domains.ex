@@ -6,9 +6,7 @@ defmodule Tymeslot.Profiles.EmbedDomains do
   for the embed/iframe security policy.
   """
 
-  alias Ecto.Changeset
   alias Tymeslot.Profiles.ProfileSchema
-  alias Tymeslot.Security.Security
 
   @type profile :: ProfileSchema.t()
   @type result(t) :: {:ok, t} | {:error, any()}
@@ -30,41 +28,24 @@ defmodule Tymeslot.Profiles.EmbedDomains do
   end
 
   @doc """
-  Validates and normalizes the allowed embed domains for a profile.
+  Normalises the allowed embed domains a host submitted, as a comma-separated
+  string or a list: trimmed, lower-cased, de-duplicated, with the `"none"`
+  keyword dropped. An input that leaves no domain, whether empty, blank or
+  only `"none"`, disables embedding and becomes `["none"]`, so a cleared
+  whitelist has one representation however it was cleared.
 
-  Accepts a comma-separated string or a list. An input that leaves no domain,
-  whether empty, blank or only the `"none"` keyword, disables embedding and is
-  stored as `["none"]`, so a cleared whitelist has one representation however
-  it was cleared.
-
-  Returns `{:ok, attrs}` where `attrs` is a map ready to be passed to
-  `Profiles.update_profile/2`, or `{:error, changeset}` on validation failure.
+  Validating the domains is the profile changeset's job
+  (`ProfileSchema.embed_domains_changeset/2`), done once, on write.
   """
-  @spec validate_and_normalize(profile(), String.t() | [String.t()]) ::
-          {:ok, map()} | {:error, Ecto.Changeset.t()}
-  def validate_and_normalize(%ProfileSchema{} = profile, domains) when is_binary(domains) do
-    domain_list =
-      domains
-      |> String.split(",")
-      |> Enum.map(&String.trim/1)
+  @spec normalize(String.t() | [String.t()]) :: [String.t()]
+  def normalize(domains) when is_binary(domains), do: domains |> String.split(",") |> normalize()
 
-    validate_and_normalize(profile, domain_list)
-  end
-
-  def validate_and_normalize(%ProfileSchema{} = profile, domains) when is_list(domains) do
-    case Security.validate_domains(domains) do
-      {:ok, validated} ->
-        normalized = validated |> Enum.reject(&(&1 == "none")) |> Enum.uniq()
-        {:ok, %{allowed_embed_domains: disabled_when_empty(normalized)}}
-
-      {:error, error_msg} ->
-        changeset =
-          profile
-          |> Changeset.change()
-          |> Changeset.add_error(:allowed_embed_domains, error_msg)
-
-        {:error, changeset}
-    end
+  def normalize(domains) when is_list(domains) do
+    domains
+    |> Enum.map(&(&1 |> to_string() |> String.trim() |> String.downcase()))
+    |> Enum.reject(&(&1 in ["", "none"]))
+    |> Enum.uniq()
+    |> disabled_when_empty()
   end
 
   # --- Private helpers ---

@@ -12,14 +12,26 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
   Push subscription is a bonus on top of polling: it only fires on deployments
   that expose a public webhook URL. Self-hosted deployments without one still
   get correct sync via the Oban fallback sweep.
+
+  Google offers no way to extend a channel, so every registration opens a new
+  one. The channel it supersedes is stopped once the new one is stored, and a
+  disconnected integration's channel is stopped with `stop_push_channel/1`.
+  Stopping is best-effort: a channel left running expires on its own, and its
+  notifications are rejected because they match no stored channel id, so a
+  failed stop is logged and never fails the caller.
   """
+
+  require Logger
 
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
+  alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
-  alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.HTTP
+  alias Tymeslot.Integrations.Calendar.Tokens
 
   @doc """
   Subscribes the integration to Google Calendar push notifications and persists
@@ -41,14 +53,40 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
     end
   end
 
+  @doc """
+  Stops the integration's stored push channel at Google, so that it no longer
+  sends notifications: the channel a new registration supersedes, and the
+  channel of an integration being disconnected.
+
+  Best-effort: always returns `:ok`. A failure is logged, and the channel then
+  runs until it expires.
+  """
+  @spec stop_push_channel(CalendarIntegrationSchema.t()) :: :ok
+  def stop_push_channel(
+        %CalendarIntegrationSchema{
+          google_channel_id: channel_id,
+          google_channel_resource_id: resource_id
+        } = integration
+      )
+      when is_binary(channel_id) and is_binary(resource_id) do
+    result =
+      Tokens.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
+        stop_channel(token, channel_id, resource_id)
+      end)
+
+    log_stop_result(result, integration)
+  end
+
+  def stop_push_channel(%CalendarIntegrationSchema{}), do: :ok
+
   # --- Private helpers ---
 
   defp do_register_push_channel(integration, webhook_base_url) do
-    calendar_id = integration.default_booking_calendar_id || "primary"
+    calendar_id = Defaults.booking_calendar_id(integration)
     channel_id = UUID.generate()
     channel_secret = Base.url_encode64(:crypto.strong_rand_bytes(32))
 
-    AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
+    Tokens.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
       with {:ok, channel_attrs} <-
              subscribe_to_calendar_events(
                token,
@@ -56,10 +94,41 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
                channel_id,
                channel_secret,
                webhook_base_url
-             ) do
-        persist_push_channel(integration, channel_attrs)
+             ),
+           {:ok, updated} <- persist_push_channel(integration, channel_attrs) do
+        # `integration` still names the channel this one supersedes. Stopping
+        # it only after the new one is stored leaves no gap in which Google
+        # pushes to a channel the webhook would reject.
+        stop_push_channel(integration)
+        {:ok, updated}
       end
     end)
+  end
+
+  defp stop_channel(token, channel_id, resource_id) do
+    CalendarCircuitBreaker.call(:google, fn ->
+      CalendarAPI.make_request_with_body(
+        :post,
+        "/channels/stop",
+        token,
+        %{"id" => channel_id, "resourceId" => resource_id},
+        http_options: HTTP.push_stop_http_options()
+      )
+    end)
+  end
+
+  # Google answers 404 for a channel that has already expired or been
+  # stopped, which is the outcome a stop wants.
+  defp log_stop_result({:ok, _response}, _integration), do: :ok
+  defp log_stop_result({:error, :not_found, _message}, _integration), do: :ok
+
+  defp log_stop_result(error, integration) do
+    Logger.warning("Failed to stop Google Calendar push channel; it will run until it expires",
+      calendar_integration_id: integration.id,
+      error: LogFormat.reason(error)
+    )
+
+    :ok
   end
 
   defp subscribe_to_calendar_events(
@@ -80,7 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
       CalendarCircuitBreaker.call(:google, fn ->
         CalendarAPI.make_request_with_body(
           :post,
-          "/calendars/#{URI.encode(calendar_id)}/events/watch",
+          "/calendars/#{HTTP.segment(calendar_id)}/events/watch",
           token,
           body
         )

@@ -23,6 +23,14 @@ defmodule Tymeslot.Bookings.GroupBookingsPausedTest do
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
+
+  # The booking reads the host's calendars before committing; these hosts have
+  # nothing in them.
+  setup do
+    TestMocks.stub_no_calendar_events()
+    :ok
+  end
 
   defmodule DenyGroupBookingsChecker do
     @moduledoc false
@@ -91,9 +99,7 @@ defmodule Tymeslot.Bookings.GroupBookingsPausedTest do
   end
 
   defp book(params, email) do
-    Create.execute(params, %{"name" => "Booker", "email" => email, "message" => ""},
-      skip_calendar_check: true
-    )
+    Create.execute(params, %{"name" => "Booker", "email" => email, "message" => ""})
   end
 
   defp live_emails(meeting) do

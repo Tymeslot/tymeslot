@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.25.0",
+      version: "1.32.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -85,9 +85,11 @@ defmodule Tymeslot.MixProject do
     ]
   end
 
-  # Specifies which paths to compile per environment.
-  defp elixirc_paths(:dev), do: ["lib", "dev/support"]
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  # Specifies which paths to compile per environment. `dev_support/tooling`
+  # (the precommit gate, test selection and other dev-only Mix tasks) is never
+  # compiled into a release.
+  defp elixirc_paths(:dev), do: ["lib", "dev_support/dev_calendar", "dev_support/tooling"]
+  defp elixirc_paths(:test), do: ["lib", "test/support", "dev_support/tooling"]
   defp elixirc_paths(:prod), do: ["lib"]
   defp elixirc_paths(_), do: ["lib"]
 
@@ -143,18 +145,15 @@ defmodule Tymeslot.MixProject do
       # deliberately as a guard against a future dependency reintroducing a
       # lower requirement and silently downgrading hackney underneath it.
       {:hackney, "~> 4.0", override: true},
-      {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},
       {:gen_smtp, "~> 1.2"},
       {:castore, "~> 1.0"},
       {:mjml, "~> 6.0"},
-      {:nodejs, "~> 3.0"},
       {:oban, "~> 2.20"},
       {:error_tracker, "~> 0.9"},
       {:logger_json, "~> 7.0"},
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},
-      {:nimble_parsec, "~> 1.4"},
       {:ex_image_info, "~> 1.0"},
       # libvips through vix, which ships prebuilt binaries: re-encodes uploaded
       # images so their metadata (EXIF location, capture time, device) is never
@@ -194,7 +193,7 @@ defmodule Tymeslot.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      # `mix precommit` is a task (lib/mix/tasks/precommit.ex), not an alias:
+      # `mix precommit` is a task (dev_support/tooling/mix/tasks/precommit.ex), not an alias:
       # an alias aborts at the first failing step, and the gate is more useful
       # when one run reports everything that needs fixing.
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
@@ -210,9 +209,13 @@ defmodule Tymeslot.MixProject do
       # Every `:e2e` test module lives in this repo, and `test_helper.exs` starts
       # the endpoint and Wallaby only when E2E is set, so the tag is unrunnable
       # without this alias. Needs a local Chrome and chromedriver, which is why
-      # it is not part of the default gate or of CI.
+      # it is not part of the default gate or of CI. The browser loads the
+      # bundles in priv/static, which nothing else rebuilds outside a running
+      # dev server's watchers, so without `assets.build` a JavaScript or CSS
+      # change goes untested and the run passes against the stale build.
       "test.e2e": [
         &set_e2e_env/1,
+        "assets.build",
         "ecto.create --quiet",
         "ecto.migrate --quiet",
         "test --color --preload-modules --only e2e"

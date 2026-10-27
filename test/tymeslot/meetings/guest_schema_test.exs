@@ -64,4 +64,49 @@ defmodule Tymeslot.Meetings.GuestSchemaTest do
                Repo.preload(participant, :guests)
     end
   end
+
+  describe "a guest's own language and timezone" do
+    defp guest_changeset(attrs) do
+      GuestSchema.creation_changeset(
+        %GuestSchema{},
+        Map.merge(%{email: "guest@example.com", meeting_id: UUID.generate()}, attrs)
+      )
+    end
+
+    test "are stored when supported" do
+      meeting = insert(:meeting)
+
+      assert {:ok, guest} =
+               GuestQueries.insert_guest(%{
+                 meeting_id: meeting.id,
+                 email: "gast@example.com",
+                 locale: "de",
+                 timezone: "America/New_York"
+               })
+
+      assert {guest.locale, guest.timezone} == {"de", "America/New_York"}
+    end
+
+    test "are optional, as for a guest added on an ordinary booking" do
+      changeset = guest_changeset(%{})
+
+      assert changeset.valid?
+      assert get_field(changeset, :locale) == nil
+      assert get_field(changeset, :timezone) == nil
+    end
+
+    test "reject a locale the app does not support" do
+      changeset = guest_changeset(%{locale: "xx"})
+
+      refute changeset.valid?
+      assert "is not a supported locale" in errors_on(changeset).locale
+    end
+
+    test "reject a timezone that is not a known IANA zone" do
+      changeset = guest_changeset(%{timezone: "Mars/Olympus_Mons"})
+
+      refute changeset.valid?
+      assert "is not a valid timezone" in errors_on(changeset).timezone
+    end
+  end
 end

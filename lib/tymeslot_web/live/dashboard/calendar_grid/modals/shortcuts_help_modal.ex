@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal do
       on_cancel={JS.push("toggle_shortcuts_help", target: @myself)}
       size={:medium}
     >
-      <:header>{dgettext("dashboard_calendar_events", "Keyboard shortcuts")}</:header>
+      <:header>{dgettext("dashboard_calendar", "Keyboard shortcuts")}</:header>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
         <div :for={{title, shortcuts} <- @groups}>
@@ -48,25 +48,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal do
 
   defp shortcut_groups do
     [
-      {dgettext("dashboard_calendar_events", "Navigation"),
+      {dgettext("dashboard_calendar", "Navigation"),
        [
-         {["→", "n"], dgettext("dashboard_calendar_events", "Next period")},
-         {["←", "p"], dgettext("dashboard_calendar_events", "Previous period")},
-         {["t"], dgettext("dashboard_calendar_events", "Jump to today")}
+         {["→", "n"], dgettext("dashboard_calendar", "Next period")},
+         {["←", "p"], dgettext("dashboard_calendar", "Previous period")},
+         {["t"], dgettext("dashboard_calendar", "Jump to today")}
        ]},
-      {dgettext("dashboard_calendar_events", "Views"),
+      {dgettext("dashboard_calendar", "Views"),
        [
-         {["1", "d"], dgettext("dashboard_calendar_events", "Day view")},
-         {["2", "w"], dgettext("dashboard_calendar_events", "Week view")},
-         {["3", "m"], dgettext("dashboard_calendar_events", "Month view")},
-         {["4"], dgettext("dashboard_calendar_events", "Agenda view")}
+         {["1", "d"], dgettext("dashboard_calendar", "Day view")},
+         {["2", "w"], dgettext("dashboard_calendar", "Week view")},
+         {["3", "m"], dgettext("dashboard_calendar", "Month view")},
+         {["4"], dgettext("dashboard_calendar", "Agenda view")}
        ]},
-      {dgettext("dashboard_calendar_events", "Actions"),
+      {dgettext("dashboard_calendar", "Actions"),
        [
-         {["c"], dgettext("dashboard_calendar_events", "Create event")},
-         {["/"], dgettext("dashboard_calendar_events", "Focus search")},
-         {["?"], dgettext("dashboard_calendar_events", "Toggle this help")},
-         {["Esc"], dgettext("dashboard_calendar_events", "Close dialogs")}
+         {["c"], dgettext("dashboard_calendar", "Create event")},
+         {["/"], dgettext("dashboard_calendar", "Focus search")},
+         {["?"], dgettext("dashboard_calendar", "Toggle this help")},
+         {["Esc"], dgettext("dashboard_calendar", "Close dialogs")}
        ]}
     ]
   end

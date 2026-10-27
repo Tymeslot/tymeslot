@@ -49,13 +49,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   import Phoenix.LiveView, only: [connected?: 1, push_patch: 2]
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Ambient
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.PathHandlers
-  alias TymeslotWeb.Themes.Shared.PaymentReturn
   alias TymeslotWeb.Themes.Shared.ReschedulePin
 
   @type reply :: {:noreply, Socket.t()}
@@ -222,6 +222,25 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   def settle(socket), do: socket
 
   @doc """
+  Resumes on the moment the URL names (`params["step"]`), through the
+  navigator's `resume/4`; the socket unchanged without one, without a
+  `step`, or on a page already navigating elsewhere.
+  """
+  @spec resume(Socket.t(), map()) :: Socket.t()
+  def resume(
+        %Socket{redirected: nil, assigns: %{journey: %Journey{navigator: navigator} = journey}} =
+          socket,
+        %{"step" => step} = params
+      )
+      when is_binary(step) do
+    if Code.ensure_loaded?(navigator) and function_exported?(navigator, :resume, 4),
+      do: navigator.resume(journey, socket, step, params),
+      else: socket
+  end
+
+  def resume(socket, _params), do: socket
+
+  @doc """
   Starts the booking again, in place: the confirmation's "Schedule another
   meeting". It keeps the meeting type and forgets every fact depending on
   it (the time, the answers, the booking just made). A booker who came
@@ -238,7 +257,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # the booking just made: kept, the schedule step would reopen the calendar
   # on them, with a time that is no longer free. The answers are the last
   # booker's, and the booking's `meeting_uid` would leave the attendee
-  # known, so the next booking's details moment would open as done. The form
+  # known, so the next booking's details moment would open as done; what
+  # its payment took is that booking's too (`:paid_payment`). The form
   # goes too: the details moment carries what was typed into it while the
   # page stays on one booking (`StepEntry`), never into the next. A
   # reschedule still named in the URL is patched out of it, to the route the
@@ -255,7 +275,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     |> forget_payment_wait()
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
-    |> assign(selected_date: nil, selected_time: nil, form: nil)
+    |> assign(selected_date: nil, selected_time: nil, form: nil, paid_payment: nil)
     |> assign(
       journey_opened: MapSet.new(),
       entry_action: route,
@@ -273,7 +293,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   @spec forget_payment_wait(Socket.t()) :: Socket.t()
   def forget_payment_wait(socket) do
     case socket.assigns[:awaiting_payment_meeting] do
-      %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, PaymentReturn.topic(id))
+      %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(id))
       _none -> :ok
     end
 
@@ -306,6 +326,21 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   end
 
   def navigable_steps(_assigns), do: []
+
+  @doc """
+  The step number of each moment the booking needs, by moment key, for a
+  step indicator whose steps are not the journey's moments one for one (one
+  that shows the length choice under the same step as the meeting type).
+  Empty on a page without a journey, or whose navigator numbers no steps.
+  """
+  @spec step_numbers(map()) :: %{atom() => pos_integer()}
+  def step_numbers(%{journey: %Journey{navigator: navigator} = journey} = assigns) do
+    if Code.ensure_loaded?(navigator) and function_exported?(navigator, :step_numbers, 2),
+      do: navigator.step_numbers(journey, assigns),
+      else: %{}
+  end
+
+  def step_numbers(_assigns), do: %{}
 
   defp navigation?(journey, assigns, moment_key, event) do
     event in [:next_step, :back_step] and moment_key == assigns[:current_state] and

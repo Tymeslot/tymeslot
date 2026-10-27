@@ -86,6 +86,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
 
     meeting =
       insert(:meeting,
+        organizer_user_id: user.id,
         organizer_email: user.email,
         start_time: start,
         end_time: DateTime.add(start, 3600, :second),

@@ -51,6 +51,23 @@ defmodule Tymeslot.Integrations.Calendar.Utils.XmlEscapeTest do
       assert XmlEscape.escape("&<") == "&amp;&lt;"
     end
 
+    test "strips the characters XML 1.0 forbids, so the document still parses" do
+      pasted = "Line\vbreak\fpage\x01\x1F\u{FFFE}\u{FFFF} & done"
+
+      escaped = XmlEscape.escape(pasted)
+
+      assert escaped == "Linebreakpage &amp; done"
+      assert xpath("<v>#{escaped}</v>", ~x"//v/text()"s) == "Linebreakpage & done"
+    end
+
+    test "keeps the tab, newline and carriage return XML allows" do
+      assert XmlEscape.escape("a\tb\nc\rd") == "a\tb\nc\rd"
+    end
+
+    test "strips forbidden characters from a value that is not valid UTF-8" do
+      assert XmlEscape.escape(<<0xFF, 0x01, ?a>>) == <<0xFF, ?a>>
+    end
+
     test "leaves ordinary text untouched" do
       assert XmlEscape.escape("hello world") == "hello world"
     end

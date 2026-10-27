@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
   @moduledoc """
-  Robustness tests for token refresh error handling and lock recovery.
+  Robustness tests for lock recovery around token refreshes.
 
   ## Note on Process.sleep Usage
 
@@ -20,36 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.Lock
-
-  import Mox
-  setup :verify_on_exit!
-
-  describe "refresh_oauth_token robustness" do
-    test "handles non-integer string integration_id safely" do
-      # Should not raise, just fallback to perform_refresh without lock
-      integration = %{provider: "google", id: "not-an-integer", refresh_token: "ref"}
-
-      # Mock the actual refresh call
-      expect(GoogleCalendarAPIMock, :refresh_token, 1, fn _int ->
-        {:ok, {"new", "ref", DateTime.utc_now()}}
-      end)
-
-      assert {:ok, _result} = Tokens.refresh_oauth_token(integration)
-    end
-
-    test "handles malformed integration maps" do
-      # Missing ID - should still work (unlocked)
-      integration = %{provider: "google", refresh_token: "ref"}
-
-      expect(GoogleCalendarAPIMock, :refresh_token, 1, fn _int ->
-        {:ok, {"new", "ref", DateTime.utc_now()}}
-      end)
-
-      assert {:ok, _result} = Tokens.refresh_oauth_token(integration)
-    end
-  end
 
   describe "Lock lifecycle" do
     test "works even if init() wasn't called (table auto-created)" do

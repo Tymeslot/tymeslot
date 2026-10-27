@@ -158,20 +158,92 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
     end
   end
 
-  describe "validate/1" do
-    test "accepts valid refund object with required fields" do
-      refund = %{"id" => "re_test_123"}
-      assert RefundHandler.validate(refund) == :ok
+  describe "refunds_current_subscription?/2" do
+    @current %{stripe_subscription_id: "sub_current", status: "active"}
+
+    test "a charge with no invoice paid for no subscription" do
+      refute RefundHandler.refunds_current_subscription?(
+               %{invoice_id: nil, subscription_id: nil},
+               @current
+             )
     end
 
-    test "rejects refund object missing id" do
-      refund = %{"amount" => 1000}
-      assert {:error, :missing_fields, _message} = RefundHandler.validate(refund)
+    test "a charge for the current subscription refunds it" do
+      assert RefundHandler.refunds_current_subscription?(
+               %{invoice_id: "in_1", subscription_id: "sub_current"},
+               @current
+             )
     end
 
-    test "rejects non-map input" do
-      assert {:error, :invalid_structure, _message} = RefundHandler.validate("not a map")
-      assert {:error, :invalid_structure, _message} = RefundHandler.validate(nil)
+    # The subscription is read from Stripe when not recorded here, so an
+    # invoice that names none billed none: the current subscription is not
+    # assumed, since it may be one taken out after the refunded invoice.
+    test "an invoice that billed no subscription does not refund the current one" do
+      refute RefundHandler.refunds_current_subscription?(
+               %{invoice_id: "in_1", subscription_id: nil},
+               @current
+             )
+    end
+
+    test "a charge for an earlier subscription does not refund the current one" do
+      refute RefundHandler.refunds_current_subscription?(
+               %{invoice_id: "in_1", subscription_id: "sub_earlier"},
+               @current
+             )
+    end
+
+    test "a subscription that has already ended is not refunded again" do
+      for status <- ~w(canceled incomplete_expired) do
+        refute RefundHandler.refunds_current_subscription?(
+                 %{invoice_id: "in_1", subscription_id: "sub_current"},
+                 %{@current | status: status}
+               )
+      end
+    end
+
+    # Only a live subscription has access a refund can end; an incomplete or
+    # paused one never had it, so the email must not claim it was revoked.
+    test "a subscription that is incomplete or paused is not refunded" do
+      for status <- ~w(incomplete paused) do
+        refute RefundHandler.refunds_current_subscription?(
+                 %{invoice_id: "in_1", subscription_id: "sub_current"},
+                 %{@current | status: status}
+               )
+      end
+    end
+
+    test "every live subscription status is refunded" do
+      for status <- ~w(active trialing past_due unpaid) do
+        assert RefundHandler.refunds_current_subscription?(
+                 %{invoice_id: "in_1", subscription_id: "sub_current"},
+                 %{@current | status: status}
+               ),
+               status
+      end
+    end
+  end
+
+  describe "handle/1 with a malformed event" do
+    for type <- ["charge.refunded", "charge.refund.updated"] do
+      test "#{type} without an object id is a permanent failure" do
+        for object <- [%{"amount" => 1000}, %{}, nil] do
+          event = %{"id" => "evt_bad", "type" => unquote(type), "data" => %{"object" => object}}
+          assert {:error, :permanent, :missing_fields} = RefundHandler.handle(event)
+        end
+
+        assert {:error, :permanent, :missing_fields} =
+                 RefundHandler.handle(%{"id" => "evt_bad", "type" => unquote(type)})
+      end
+    end
+
+    test "an event type the handler does not own is a permanent failure" do
+      event = %{
+        "id" => "evt_other",
+        "type" => "charge.succeeded",
+        "data" => %{"object" => %{"id" => "ch_1"}}
+      }
+
+      assert {:error, :permanent, :missing_fields} = RefundHandler.handle(event)
     end
   end
 
@@ -193,22 +265,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
 
     test "defaults to eur when currency value is nil" do
       assert RefundHandler.extract_charge_currency(%{"currency" => nil}) == "eur"
-    end
-  end
-
-  describe "can_handle?/1" do
-    test "handles charge.refunded events" do
-      assert RefundHandler.can_handle?("charge.refunded") == true
-    end
-
-    test "handles charge.refund.updated events" do
-      assert RefundHandler.can_handle?("charge.refund.updated") == true
-    end
-
-    test "rejects other event types" do
-      assert RefundHandler.can_handle?("charge.succeeded") == false
-      assert RefundHandler.can_handle?("payment_intent.succeeded") == false
-      assert RefundHandler.can_handle?("customer.created") == false
     end
   end
 end

@@ -1,102 +1,81 @@
 defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
   @moduledoc """
-  Registry for webhook event handlers.
+  Maps each platform Stripe event type to its handler, or to `:ignore` for
+  a type the platform endpoint receives but deliberately takes no action on.
+
+  An event type listed here neither way is unexpected, and
+  `Tymeslot.Payments.Webhooks.Ingress` raises an admin alert for it.
   """
 
-  # Map of handler modules to their supported event types
-  @event_types %{
-    Tymeslot.Payments.Webhooks.CheckoutSessionHandler => ["checkout.session.completed"],
-    Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler => ["checkout.session.expired"],
-    Tymeslot.Payments.Webhooks.ChargeHandler => ["charge.succeeded", "charge.failed"],
-    Tymeslot.Payments.Webhooks.PaymentMethodHandler => ["payment_method.attached"],
-    Tymeslot.Payments.Webhooks.PaymentIntentHandler => [
-      "payment_intent.succeeded",
-      "payment_intent.created"
-    ],
-    Tymeslot.Payments.Webhooks.CustomerHandler => ["customer.created", "customer.updated"],
-    Tymeslot.Payments.Webhooks.SubscriptionHandler => [
-      "customer.subscription.created",
-      "customer.subscription.updated",
-      "customer.subscription.deleted"
-    ],
-    Tymeslot.Payments.Webhooks.SetupIntentHandler => [
-      "setup_intent.created",
-      "setup_intent.succeeded"
-    ],
-    Tymeslot.Payments.Webhooks.InvoiceHandler => [
-      "invoice.created",
-      "invoice.finalized",
-      "invoice.paid",
-      "invoice.payment_succeeded",
-      "invoice.payment_failed",
-      "invoice.upcoming"
-    ],
-    Tymeslot.Payments.Webhooks.RefundHandler => [
-      "charge.refunded",
-      "charge.refund.updated"
-    ],
-    Tymeslot.Payments.Webhooks.TrialWillEndHandler => [
-      "customer.subscription.trial_will_end"
-    ],
-    Tymeslot.Payments.Webhooks.DisputeHandler => [
-      "charge.dispute.created",
-      "charge.dispute.updated",
-      "charge.dispute.closed"
-    ]
+  alias Tymeslot.Payments.Webhooks.{
+    CheckoutSessionExpiredHandler,
+    CheckoutSessionHandler,
+    DisputeHandler,
+    InvoiceHandler,
+    RefundHandler,
+    SubscriptionHandler,
+    TrialWillEndHandler
   }
 
-  # Event types we deliberately receive but take no action on. Connect
-  # application-fee events fire on the platform account for every paid booking
-  # (the platform fee being collected or returned); they are expected and
-  # benign, so we acknowledge them silently rather than raising an
-  # unhandled-event admin alert for each one.
-  @ignored_event_types [
-    "application_fee.created",
-    "application_fee.refunded"
-  ]
-
-  @doc """
-  Finds a handler for the given event type.
-
-  Uses the @event_types map for O(1) lookup efficiency.
-
-  Returns {:ok, handler_module} if a handler is found,
-  or {:error, :no_handler} if no handler exists for the event type.
-  """
-  @spec find_handler(String.t()) :: {:ok, module()} | {:error, :no_handler}
-  def find_handler(event_type) do
-    handler =
-      Enum.find_value(@event_types, fn {module, event_types} ->
-        if event_type in event_types, do: module, else: nil
-      end)
-
-    case handler do
-      nil -> {:error, :no_handler}
-      module -> {:ok, module}
-    end
+  # A function rather than a module attribute: an attribute is evaluated at
+  # compile time, which would make this module a compile-time dependant of
+  # every handler.
+  defp handlers do
+    %{
+      "checkout.session.completed" => CheckoutSessionHandler,
+      "checkout.session.expired" => CheckoutSessionExpiredHandler,
+      "customer.subscription.created" => SubscriptionHandler,
+      "customer.subscription.updated" => SubscriptionHandler,
+      "customer.subscription.deleted" => SubscriptionHandler,
+      "customer.subscription.trial_will_end" => TrialWillEndHandler,
+      "invoice.created" => InvoiceHandler,
+      "invoice.finalized" => InvoiceHandler,
+      "invoice.paid" => InvoiceHandler,
+      "invoice.payment_succeeded" => InvoiceHandler,
+      "invoice.payment_failed" => InvoiceHandler,
+      "invoice.upcoming" => InvoiceHandler,
+      "invoice.voided" => InvoiceHandler,
+      "invoice.marked_uncollectible" => InvoiceHandler,
+      "charge.refunded" => RefundHandler,
+      "charge.refund.updated" => RefundHandler,
+      "charge.dispute.created" => DisputeHandler,
+      "charge.dispute.updated" => DisputeHandler,
+      "charge.dispute.closed" => DisputeHandler
+    }
   end
 
-  @doc """
-  Returns true for event types we intentionally receive but do not handle,
-  and which should not trigger an unhandled-event admin alert.
-  """
-  @spec ignored?(String.t()) :: boolean()
-  def ignored?(event_type), do: event_type in @ignored_event_types
+  # Received but acted on elsewhere or not at all. The payment itself is
+  # recorded from checkout.session.completed and the invoice events, so the
+  # charge, payment-intent, customer and setup events that accompany it carry
+  # nothing further. Connect application-fee events fire on the platform
+  # account for every paid booking (the platform fee being collected or
+  # returned). `customer.deleted` is the echo of a customer we removed
+  # ourselves, for instance when an account is deleted.
+  @ignored ~w(
+    charge.succeeded
+    charge.failed
+    payment_intent.created
+    payment_intent.succeeded
+    customer.created
+    customer.updated
+    payment_method.attached
+    setup_intent.created
+    setup_intent.succeeded
+    application_fee.created
+    application_fee.refunded
+    customer.deleted
+  )
 
   @doc """
-  Validates an object using the appropriate handler.
-
-  Returns :ok if valid, or {:error, reason, message} if validation fails.
+  The handler for `event_type`, `:ignore` for a deliberately ignored type,
+  or `nil` for an unexpected one.
   """
-  @spec validate(String.t(), map()) :: :ok | {:error, atom(), String.t()}
-  def validate(event_type, object) do
-    with {:ok, handler} <- find_handler(event_type),
-         :ok <- handler.validate(event_type, object) do
-      :ok
-    else
-      {:error, reason, message} -> {:error, reason, message}
-      # No validation if no handler
-      {:error, :no_handler} -> :ok
+  @spec handler_for(String.t()) :: module() | :ignore | nil
+  def handler_for(event_type) do
+    case Map.fetch(handlers(), event_type) do
+      {:ok, handler} -> handler
+      :error when event_type in @ignored -> :ignore
+      :error -> nil
     end
   end
 end

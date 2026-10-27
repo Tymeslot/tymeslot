@@ -28,7 +28,6 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     Formatting,
     MeetingComponents,
     MjmlEmail,
-    Sanitise,
     TemplateHelper,
     Text,
     TextBodyHelper
@@ -47,6 +46,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       intent = intent(variant)
       copy = copy(variant, details)
+      meeting_details = TemplateHelper.organizer_meeting_details(details)
 
       mjml_content = """
       #{Text.centered_text(copy.lead, padding: "8px 0 16px 0")}
@@ -55,15 +55,15 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
 
       #{MeetingComponents.attendee_message_box(intent, details[:attendee_message])}
 
-      #{MeetingComponents.meeting_details_table(TemplateHelper.organizer_meeting_details(details), locale)}
+      #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       #{MeetingComponents.custom_answers_section(details)}
 
       #{if line = seats_line(details), do: Text.centered_text(line, font_size: "14px", padding: "8px 0 8px 0")}
 
-      #{Text.section_title(dgettext("emails_booking", "Need to make changes?"))}
+      #{Text.section_title(dgettext("emails_booking_changes", "Need to make changes?"))}
 
-      #{MeetingComponents.meeting_actions_bar(intent, [%{text: dgettext("emails_booking", "Open in dashboard"), url: details.dashboard_url, style: :primary}])}
+      #{MeetingComponents.meeting_actions_bar(intent, [%{text: dgettext("emails_booking_changes", "Open in dashboard"), url: details.dashboard_url, style: :primary}])}
       """
 
       stage =
@@ -77,9 +77,9 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
       MjmlEmail.base_email()
       |> to({details.organizer_name, organizer_email})
       |> MjmlEmail.put_reply_to(details.attendee_name, details.attendee_email)
-      |> subject(Sanitise.sanitize_for_header(copy.subject))
+      |> subject(copy.subject)
       |> html_body(TemplateHelper.compile_template(mjml_content, stage))
-      |> text_body(text_body(details, copy, locale))
+      |> text_body(text_body(details, meeting_details, copy, locale))
     end)
   end
 
@@ -91,12 +91,14 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     name = details.attendee_name
 
     %{
-      eyebrow: dgettext("emails_booking", "New booking"),
-      title: dgettext("emails_booking", "A spot was booked"),
+      eyebrow: dgettext("emails_booking_changes", "New booking"),
+      title: dgettext("emails_booking_changes", "A spot was booked"),
       lead:
-        dgettext("emails_booking", "%{name} booked a spot in your group meeting.", name: name),
+        dgettext("emails_booking_changes", "%{name} booked a spot in your group meeting.",
+          name: name
+        ),
       subject:
-        dgettext("emails_booking", "Spot booked: %{name} - %{date}",
+        dgettext("emails_booking_changes", "Spot booked: %{name} - %{date}",
           name: name,
           date: short_date(details)
         )
@@ -109,16 +111,16 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     name = details.attendee_name
 
     %{
-      eyebrow: dgettext("emails_booking", "Cancelled"),
-      title: dgettext("emails_booking", "The last participant cancelled their spot"),
+      eyebrow: dgettext("emails_booking_changes", "Cancelled"),
+      title: dgettext("emails_booking_changes", "The last participant cancelled their spot"),
       lead:
         dgettext(
-          "emails_booking",
+          "emails_booking_changes",
           "%{name} cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again.",
           name: name
         ),
       subject:
-        dgettext("emails_booking", "Slot freed: %{name} cancelled - %{date}",
+        dgettext("emails_booking_changes", "Slot freed: %{name} cancelled - %{date}",
           name: name,
           date: short_date(details)
         )
@@ -129,16 +131,16 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     name = details.attendee_name
 
     %{
-      eyebrow: dgettext("emails_booking", "Cancelled"),
-      title: dgettext("emails_booking", "A participant cancelled their spot"),
+      eyebrow: dgettext("emails_booking_changes", "Cancelled"),
+      title: dgettext("emails_booking_changes", "A participant cancelled their spot"),
       lead:
         dgettext(
-          "emails_booking",
+          "emails_booking_changes",
           "%{name} cancelled their spot. The meeting goes ahead for everyone else.",
           name: name
         ),
       subject:
-        dgettext("emails_booking", "Spot cancelled: %{name} - %{date}",
+        dgettext("emails_booking_changes", "Spot cancelled: %{name} - %{date}",
           name: name,
           date: short_date(details)
         )
@@ -149,11 +151,11 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     name = details.attendee_name
 
     %{
-      eyebrow: dgettext("emails_booking", "Rescheduled"),
-      title: dgettext("emails_booking", "A participant moved their spot"),
+      eyebrow: dgettext("emails_booking_changes", "Rescheduled"),
+      title: dgettext("emails_booking_changes", "A participant moved their spot"),
       lead: moved_lead(details) <> old_slot_freed_note(details),
       subject:
-        dgettext("emails_booking", "Spot moved: %{name} - %{date}",
+        dgettext("emails_booking_changes", "Spot moved: %{name} - %{date}",
           name: name,
           date: short_date(details)
         )
@@ -161,27 +163,34 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   end
 
   defp short_date(details),
-    do: Formatting.format_date_short(details.date, RecipientLocale.organizer_locale(details))
+    do:
+      Formatting.format_date_short(
+        TemplateHelper.organizer_meeting_details(details).date,
+        RecipientLocale.organizer_locale(details)
+      )
 
   # The time the spot moved from is unknown only when its seat row has since
   # gone (see `SeatEmails`), so the sentence then names the new time alone.
   defp moved_lead(%{original_start_time_owner_tz: %DateTime{} = previous} = details) do
     locale = RecipientLocale.organizer_locale(details)
 
-    dgettext("emails_booking", "%{name} moved their spot from %{from} to %{to}.",
+    time_format = Map.get(details, :organizer_time_format)
+
+    dgettext("emails_booking_changes", "%{name} moved their spot from %{from} to %{to}.",
       name: details.attendee_name,
-      from: Formatting.format_datetime(previous, locale),
-      to: Formatting.format_datetime(details.start_time_owner_tz, locale)
+      from: Formatting.format_datetime(previous, locale, time_format),
+      to: Formatting.format_datetime(details.start_time_owner_tz, locale, time_format)
     )
   end
 
   defp moved_lead(details) do
-    dgettext("emails_booking", "%{name} moved their spot to %{to}.",
+    dgettext("emails_booking_changes", "%{name} moved their spot to %{to}.",
       name: details.attendee_name,
       to:
         Formatting.format_datetime(
           details.start_time_owner_tz,
-          RecipientLocale.organizer_locale(details)
+          RecipientLocale.organizer_locale(details),
+          Map.get(details, :organizer_time_format)
         )
     )
   end
@@ -189,7 +198,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   defp old_slot_freed_note(%{old_slot_freed: true}) do
     " " <>
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Nobody is left at the earlier time, so that meeting has been cancelled and the time is free again."
       )
   end
@@ -211,7 +220,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
 
   defp seats_line(details) do
     dngettext(
-      "emails_booking",
+      "emails_booking_changes",
       "%{taken} of %{count} spot taken",
       "%{taken} of %{count} spots taken",
       details.capacity,
@@ -220,19 +229,17 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     )
   end
 
-  defp text_body(details, copy, locale) do
-    view = TemplateHelper.as_organizer_view(details)
-
+  defp text_body(details, meeting_details, copy, locale) do
     """
     #{copy.title}
 
     #{copy.lead}
-    #{TextBodyHelper.format_attendee_info(view, locale)}
-    #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{TextBodyHelper.format_meeting_details(view, locale)}#{TextBodyHelper.format_custom_answers(view, locale)}
+    #{TextBodyHelper.format_attendee_info(details, locale)}
+    #{dgettext("emails_booking_changes", "MEETING DETAILS:")}
+    #{TextBodyHelper.format_meeting_details(meeting_details, locale)}#{TextBodyHelper.format_custom_answers(details, locale)}
 
     #{seats_line(details)}
-    #{dgettext("emails_booking", "Open in dashboard")}: #{details.dashboard_url}
+    #{dgettext("emails_booking_changes", "Open in dashboard")}: #{details.dashboard_url}
     """
   end
 end

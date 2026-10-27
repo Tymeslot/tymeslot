@@ -124,12 +124,12 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "revokes a pending email change and a live reset link", %{user: user} do
-      change_token = Token.generate_token()
+      change_token = Token.generate()
 
       {:ok, user} =
         UserTokenQueries.request_email_change(user, "pending@example.com", change_token)
 
-      reset_token = Token.generate_token()
+      reset_token = Token.generate()
       {:ok, user} = UserTokenQueries.set_reset_token(user, reset_token)
 
       assert {:ok, updated_user} =
@@ -156,12 +156,12 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     # that; the owner's password change must still kill it, although the
     # struct it was handed shows no pending change and no reset token.
     test "revokes tokens issued after the caller loaded its copy of the user", %{user: stale_user} do
-      change_token = Token.generate_token()
+      change_token = Token.generate()
 
       {:ok, _fresh} =
         UserTokenQueries.request_email_change(stale_user, "attacker@example.com", change_token)
 
-      reset_token = Token.generate_token()
+      reset_token = Token.generate()
       {:ok, _fresh} = UserTokenQueries.set_reset_token(stale_user, reset_token)
 
       assert stale_user.pending_email == nil

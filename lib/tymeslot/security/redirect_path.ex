@@ -2,10 +2,10 @@ defmodule Tymeslot.Security.RedirectPath do
   @moduledoc """
   Decides whether a redirect target is a safe, same-origin relative path.
 
-  This is the single validator for open-redirect protection: the web layer's
-  `TymeslotWeb.Helpers.RedirectSanitizer` delegates here, and so does the
-  `return_to` embedded in a signed OAuth state, so a path can never be
-  accepted by one and rejected by the other.
+  This is the single validator for open-redirect protection: the sign-in
+  redirects, the page kept across sign-in (`TymeslotWeb.Plugs.ReturnTo`) and
+  the `return_to` embedded in a signed OAuth state all use it, so a path can
+  never be accepted by one and rejected by another.
   """
 
   # Browsers strip ASCII tab (0x09), LF (0x0A) and CR (0x0D) from a URL before

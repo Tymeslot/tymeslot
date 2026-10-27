@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Video.AccountKey do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
+  alias Tymeslot.Integrations.Shared.OAuth.AccountMatch
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Security.Token
 

@@ -60,6 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
+  alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Utils.MapKeys
 
   # The feed is one calendar with no server-side identifier, so every event
@@ -76,7 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   # `ProviderConfig.display_name/1`, so this is the string the picker card and
   # the connected-integration rows actually render.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def display_name, do: dgettext("dashboard_calendar_providers", "Calendar subscription")
+  def display_name, do: dgettext("integrations_calendar", "Calendar subscription")
 
   # Same reasoning as the video `:custom` bucket: this probes an arbitrary
   # user-supplied host rather than one the operator configured, so it draws
@@ -106,7 +107,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
         url |> Feed.normalise_url() |> ProviderCommon.validate_url()
 
       _other ->
-        {:error, "Missing required fields: subscription_url"}
+        ProviderConfigHelper.missing_fields_error([:subscription_url])
     end
   end
 
@@ -235,6 +236,9 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   # still parses raw iCalendar, because the sync worker feeds it the feed itself.
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events_representation, do: :normalised
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def convert_events(events), do: events
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context) do

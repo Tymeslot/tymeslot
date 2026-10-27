@@ -222,7 +222,7 @@ defmodule Tymeslot.Notifications.ReminderScheduleTest do
       meeting = future_meeting([%{"value" => 20, "unit" => "minutes"}])
 
       # An incomplete recipient: the orchestrator validates before enqueueing.
-      assert {:error, _reason} =
+      assert {:ok, :not_sendable} =
                Orchestrator.schedule_reminder_notifications(%{meeting | attendee_name: nil})
 
       assert ReminderSchedule.scheduled_by_meeting([meeting]) == %{}

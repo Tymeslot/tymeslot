@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.HealthCheck
-  alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
+  alias Tymeslot.Integrations.Shared.Providers.Directory, as: ProviderDirectory
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider

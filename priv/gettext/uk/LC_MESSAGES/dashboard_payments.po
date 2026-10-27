@@ -108,6 +108,7 @@ msgstr "Валюту оновлено."
 msgid "Currency updated. Paid event-type prices have been reset."
 msgstr "Валюту оновлено. Ціни на платні типи подій скинуто."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Date"
@@ -387,11 +388,6 @@ msgstr "Зміна валюти зробить усі платні типи по
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled"
-msgstr "Скасовано"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
-#, elixir-autogen, elixir-format
 msgid "Outstanding"
 msgstr "До повернення"
 
@@ -443,3 +439,53 @@ msgstr[2] "За вами досі %{count} повернень коштів на 
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected, so these refunds have to be issued from your Stripe dashboard. The money is still owed."
 msgstr "Ваш обліковий запис Stripe не підключено, тому ці повернення коштів потрібно здійснити з панелі керування Stripe. Кошти досі не повернуто."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled %{date}"
+msgstr "Скасовано %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Прострочено"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired, paid %{date}"
+msgstr "Прострочено, оплачено %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired bookings were paid for but never confirmed, for example because the payment arrived after the slot was taken. Their refund is issued automatically; if one is still listed later, refund it here or in Stripe."
+msgstr "Прострочені бронювання було оплачено, але так і не підтверджено, наприклад, тому що оплата надійшла вже після того, як слот зайняли. Повернення коштів відбувається автоматично; якщо якесь із них згодом усе ще буде в цьому списку, поверніть кошти тут або в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Declined %{date}"
+msgstr "Відхилено %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "You declined these bookings, but their automatic refund didn't go through. Refund them here or in Stripe."
+msgstr "Ви відхилили ці бронювання, але автоматичне повернення коштів за них не вдалося. Поверніть кошти тут або в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency, %{currency}, is not supported for meeting payments. Choose one of the currencies below to take payments again."
+msgstr "Валюта вашого облікового запису Stripe (%{currency}) не підтримується для оплати зустрічей. Виберіть одну з валют нижче, щоб знову приймати платежі."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Currency not supported"
+msgstr "Валюта не підтримується"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Payments cannot be taken in your account's currency, %{currency}. Choose a supported currency below to take payments again."
+msgstr "У валюті вашого облікового запису (%{currency}) не можна приймати платежі. Виберіть підтримувану валюту нижче, щоб знову приймати платежі."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Bookings are still charged their current prices; choose one of the currencies below to change them."
+msgstr "У валюті вашого облікового запису Stripe (%{currency}) більше не можна встановлювати ціни. За бронювання й надалі стягується плата за поточними цінами; щоб їх змінити, виберіть одну з валют нижче."

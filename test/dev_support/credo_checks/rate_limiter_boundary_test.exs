@@ -70,12 +70,12 @@ defmodule CredoChecks.RateLimiterBoundaryTest do
   end
 
   describe "allowed functions" do
-    test "check_integration_write_rate_limit is not flagged (out of scope)" do
+    test "other rate limits are not flagged (out of scope)" do
       """
       defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         alias Tymeslot.Security.RateLimiter
 
-        def guard(user_id), do: RateLimiter.check_integration_write_rate_limit(user_id)
+        def guard(user_id), do: RateLimiter.check(:integration_write, user_id)
       end
       """
       |> to_source_file("lib/tymeslot_web/live/dashboard/video_settings_component.ex")
@@ -134,7 +134,7 @@ defmodule CredoChecks.RateLimiterBoundaryTest do
       defmodule Tymeslot.Integrations.Calendar do
         alias Tymeslot.Security.RateLimiter
 
-        def check(bucket, scope), do: RateLimiter.check_rate_limit(bucket, scope, 1000)
+        def check(name, key), do: RateLimiter.check(name, key)
       end
       """
       |> to_source_file("lib/tymeslot/integrations/calendar.ex")

@@ -68,5 +68,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigator do
   """
   @callback frame() :: {String.t(), keyword()}
 
-  @optional_callbacks settle: 2, frame: 0, can_go_to?: 3
+  @doc """
+  Resumes on the moment a URL names (`step`, the moment's key as a string),
+  once the route's entry moment is shown and the URL's choices applied: the
+  page a reconnect mounts again from the URL `ChoicesInUrl` keeps. A moment
+  the choices do not reach is never shown. Optional: a navigator that moves
+  on by itself (`settle/2`) reaches the moment from the choices alone.
+  """
+  @callback resume(Journey.t(), Socket.t(), step :: String.t(), params :: map()) :: Socket.t()
+
+  @optional_callbacks settle: 2, frame: 0, can_go_to?: 3, resume: 4
 end

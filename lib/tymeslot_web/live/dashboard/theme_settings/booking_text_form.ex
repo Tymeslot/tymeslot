@@ -379,7 +379,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   end
 
   defp check_rate_limit(socket) do
-    case RateLimiter.check_theme_customization_rate_limit(socket.assigns.profile.user_id) do
+    case RateLimiter.check(:theme_customization, socket.assigns.profile.user_id) do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, :rate_limited, message}
     end

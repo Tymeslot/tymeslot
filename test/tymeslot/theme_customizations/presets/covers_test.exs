@@ -4,7 +4,6 @@ defmodule Tymeslot.ThemeCustomizations.Presets.CoversTest do
   @moduletag :themes
   @moduletag :unit
 
-  alias Tymeslot.ThemeCustomizations.Options.Background
   alias Tymeslot.ThemeCustomizations.Presets
   alias Tymeslot.ThemeCustomizations.Presets.Covers
 
@@ -34,7 +33,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets.CoversTest do
     assert length(reused) >= 4
 
     assert Enum.reject(reused, fn {_id, cover, image} ->
-             cover.name == image.name and cover.src == Background.preset_image_url(image.file)
+             cover.name == image.name and cover.src == Presets.image_url(image.file)
            end) == []
   end
 

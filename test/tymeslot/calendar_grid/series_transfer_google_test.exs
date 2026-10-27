@@ -32,6 +32,8 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
   @api "https://www.googleapis.com/calendar/v3"
   @source_calendar "team-calendar"
   @destination_calendar "projects@group.calendar.google.com"
+  # Calendar ids are percent-encoded as path segments, so the `@` travels as `%40`.
+  @encoded_destination_calendar "projects%40group.calendar.google.com"
   @master_url "#{@api}/calendars/#{@source_calendar}/events/master1"
 
   @conference %{
@@ -338,7 +340,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
              ] = requests()
 
       assert split_url(post_url) ==
-               {"#{@api}/calendars/#{@destination_calendar}/events",
+               {"#{@api}/calendars/#{@encoded_destination_calendar}/events",
                 %{"sendUpdates" => "none", "conferenceDataVersion" => "1"}}
 
       # The whole series as the source holds it, the taken-out occurrence

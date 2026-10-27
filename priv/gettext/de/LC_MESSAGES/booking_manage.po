@@ -258,6 +258,7 @@ msgid "Not set"
 msgstr "Nicht festgelegt"
 
 #: lib/tymeslot_web/components/shared/token_page.ex
+#: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Bitte warten Sie einen Moment und versuchen Sie es erneut."
@@ -601,12 +602,32 @@ msgstr "Dies ist ein Gruppentermin, daher kann er über diesen Link nicht geänd
 msgid "%{minutes} min"
 msgstr "%{minutes} Min."
 
-#: lib/tymeslot_web/themes/core/meeting_management.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to cancel meeting. Please try again."
-msgstr "Termin konnte nicht abgesagt werden. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot_web/themes/core/meeting_management.ex
+#: lib/tymeslot_web/themes/core/mount_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting can no longer be changed."
 msgstr "Dieser Termin kann nicht mehr geändert werden."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This booking was already cancelled."
+msgstr "Diese Buchung wurde bereits storniert."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting could not be cancelled. Please try again."
+msgstr "Der Termin konnte nicht abgesagt werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting is now fully booked"
+msgstr "Dieser Termin ist inzwischen ausgebucht"
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
+msgstr "Ihr Platz wurde nach Ihrer Absage an jemand anderen vergeben. Ihre Antwort bleibt unverändert; wenden Sie sich bitte an die Person, die Sie eingeladen hat, oder an den Gastgeber."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Dieser Termin wurde per Umfrage festgelegt, daher kann nur der Gastgeber ihn verschieben oder absagen. Wenn Sie nicht können, nutzen Sie „Kann nicht teilnehmen“ in Ihrer Einladung oder antworten Sie darauf."

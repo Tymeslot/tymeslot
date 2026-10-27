@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Calendar.EventsRead
+  alias Tymeslot.Integrations.Calendar.Runtime.EventsRead
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
   alias Tymeslot.Test.LogCapture
 
@@ -29,6 +29,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
          }
        ]}
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Simulates a provider that fails on narrow range queries but succeeds on wide-range
@@ -62,11 +66,19 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
         {:error, :forced_failure}
       end
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   defmodule ErroringProvider do
     @spec list_events(any(), keyword()) :: {:error, :fail}
     def list_events(_client, _opts), do: {:error, :fail}
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Simulates a Google/Outlook provider whose own multi-calendar fetch
@@ -92,6 +104,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
 
     @spec calls() :: non_neg_integer()
     def calls, do: Process.get(:degraded_aggregate_provider_calls, 0)
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Simulates a Google/Outlook provider whose own multi-calendar fetch
@@ -111,6 +127,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
          failed: [%{source: "cal-broken", reason: :timeout}]
        }}
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Simulates the edge case where every selected calendar was confirmed
@@ -140,6 +160,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
         {:error, %Outcome{events: [], attempted: 1, succeeded: 0, failed: []}}
       end
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Simulates a provider that fails on narrow range queries but succeeds on wide-range
@@ -180,6 +204,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
         {:error, :trigger_fallback}
       end
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Simulates a provider that fails on narrow range queries but succeeds on wide-range
@@ -236,6 +264,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
         {:error, :fallback}
       end
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   describe "fetch_events_with_fallback/3" do
@@ -424,6 +456,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
          }
        ]}
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   # Provider returning a recurring event with an EXDATE that should be excluded.
@@ -442,6 +478,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
          }
        ]}
     end
+
+    @spec convert_events([map()]) :: [map()]
+
+    def convert_events(events), do: events
   end
 
   describe "recurring event expansion in fetch_events_with_fallback/3" do
@@ -536,69 +576,6 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
                ~U[2024-01-03 09:45:00Z],
                ~U[2024-01-04 09:45:00Z]
              ]
-    end
-  end
-
-  # Provider returning a recurring event relative to "now" so it falls within
-  # the hardcoded range used by fetch_events_without_range (now-30d to now+365d).
-  defmodule NowRelativeRecurringProvider do
-    @spec list_events(any(), keyword()) :: {:ok, list(map())}
-    def list_events(_client, _opts) do
-      now = DateTime.utc_now()
-      start = DateTime.add(now, -1, :day)
-
-      {:ok,
-       [
-         %{
-           uid: "recurring-now",
-           summary: "Daily recurring",
-           start_time: start,
-           end_time: DateTime.add(start, 900, :second),
-           recurrence_rule: "FREQ=DAILY;COUNT=3"
-         }
-       ]}
-    end
-  end
-
-  describe "fetch_events_without_range/1" do
-    test "successfully fetches all events without time range" do
-      adapter_client = %{
-        provider_type: :fake,
-        provider_module: SuccessfulProvider,
-        client: %{calendar_path: "/cal/all"}
-      }
-
-      assert {:ok, events, "/cal/all"} = EventsRead.fetch_events_without_range(adapter_client)
-
-      assert length(events) == 2
-      assert Enum.all?(events, &Map.has_key?(&1, :uid))
-    end
-
-    test "expands recurring events within the default range" do
-      adapter_client = %{
-        provider_type: :fake,
-        provider_module: NowRelativeRecurringProvider,
-        client: %{calendar_path: "/cal/recurring-no-range"}
-      }
-
-      assert {:ok, events, "/cal/recurring-no-range"} =
-               EventsRead.fetch_events_without_range(adapter_client)
-
-      # COUNT=3 starting yesterday — all 3 occurrences fall within now-30d..now+365d
-      assert length(events) == 3
-
-      recurring = Enum.filter(events, &(&1[:uid] == "recurring-now"))
-      assert length(recurring) == 3
-    end
-
-    test "returns error tuple when provider fails" do
-      adapter_client = %{
-        provider_type: :fake,
-        provider_module: ErroringProvider,
-        client: %{calendar_path: "/cal/a"}
-      }
-
-      assert {:error, :fail, "/cal/a"} = EventsRead.fetch_events_without_range(adapter_client)
     end
   end
 end

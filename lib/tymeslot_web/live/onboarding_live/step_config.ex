@@ -202,7 +202,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def step_title(:buffer_time), do: dgettext("onboarding_wizard", "Buffer between meetings")
   def step_title(:booking_window), do: dgettext("onboarding_wizard", "Booking window")
   def step_title(:minimum_notice), do: dgettext("onboarding_wizard", "Minimum notice")
-  def step_title(:ready), do: dgettext("onboarding_wizard", "You're all set!")
+  def step_title(:ready), do: dgettext("onboarding_wizard", "Share your booking page")
 
   @doc """
   Returns the step description for display purposes.
@@ -253,8 +253,26 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     do:
       dgettext(
         "onboarding_wizard",
-        "Your account is ready. Head to your dashboard to start scheduling."
+        "Your page is live. Send the link to one person who might book with you now."
       )
+
+  @doc """
+  Returns the step description, given whether the booking page is live. Only
+  the final step reads differently: it cannot ask the host to share a page
+  that refuses visitors, and says nothing while that is not known yet (`nil`,
+  on the disconnected render).
+  """
+  @spec step_description(step(), boolean() | nil) :: String.t()
+  def step_description(:ready, nil), do: ""
+
+  def step_description(:ready, false),
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Your link is ready, but the page only goes live once a calendar is connected."
+      )
+
+  def step_description(step, _booking_page_live), do: step_description(step)
 
   @doc """
   Returns the button text for the next step.
@@ -263,6 +281,14 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def next_button_text(:welcome), do: dgettext("onboarding_wizard", "Let's go")
   def next_button_text(:ready), do: dgettext("onboarding_wizard", "Go to dashboard")
   def next_button_text(_step), do: dgettext("onboarding_wizard", "Continue")
+
+  @doc """
+  Returns the variant of the next button. On the final step the share actions
+  lead, so finishing is a secondary action.
+  """
+  @spec next_button_variant(step()) :: :primary | :secondary
+  def next_button_variant(:ready), do: :secondary
+  def next_button_variant(_step), do: :primary
 
   @doc """
   Returns whether the back button should be shown for a given step.

@@ -11,7 +11,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.ImageMetadata
+  alias Tymeslot.Media.Uploads
+  alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
 
   attr :id, :string, required: true, doc: "the form's DOM id"
   attr :field, :atom, required: true, doc: "the image asset field the upload saves into"
@@ -48,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
           <%= for err <- upload_errors(@upload) do %>
             <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
               <.icon name="hero-exclamation-circle" class="w-4 h-4" />
-              {Phoenix.Naming.humanize(err)}
+              {AssetUploads.error_message(:image, err)}
             </div>
           <% end %>
 
@@ -71,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
               <%= for err <- upload_errors(@upload, entry) do %>
                 <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
                   <.icon name="hero-exclamation-circle" class="w-4 h-4" />
-                  {Phoenix.Naming.humanize(err)}
+                  {AssetUploads.error_message(:image, err)}
                 </div>
               <% end %>
             </div>
@@ -87,11 +89,17 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
       </div>
 
       <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">
-        {dgettext("dashboard_appearance", "JPG, PNG or WebP. Max %{size} MB.",
-          size: UploadConstraints.max_file_size_mb(:image)
+        {dgettext(
+          "dashboard_appearance",
+          "JPG, PNG or WebP. Max %{size} MB and %{megapixels} megapixels (%{webp_megapixels} for WebP).",
+          size: Uploads.max_file_size_mb(:image),
+          megapixels: megapixel_limit(".jpg"),
+          webp_megapixels: megapixel_limit(".webp")
         )}
       </p>
     </form>
     """
   end
+
+  defp megapixel_limit(extension), do: div(ImageMetadata.pixel_limit(extension), 1_000_000)
 end

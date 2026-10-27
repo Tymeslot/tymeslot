@@ -158,10 +158,6 @@ msgid "Choose a New Time:"
 msgstr "Оберіть новий час:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Date:"
 msgstr "Дата:"
@@ -177,10 +173,6 @@ msgid "Decline:"
 msgstr "Відхилити:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Duration:"
 msgstr "Тривалість:"
@@ -264,10 +256,6 @@ msgid "Let's find a new time"
 msgstr "Знайдімо новий час"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Location:"
 msgstr "Місце:"
@@ -497,21 +485,9 @@ msgid "Time:"
 msgstr "Час:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone:"
 msgstr "Часовий пояс:"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Type:"
-msgstr "Тип:"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format

@@ -27,6 +27,7 @@ msgid "%{day} hours updated"
 msgstr "Pracovní doba pro den %{day} byla aktualizována."
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Přidat"
@@ -120,6 +121,7 @@ msgid "Failed to update availability"
 msgstr "Dostupnost se nepodařilo aktualizovat."
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "Od"
@@ -439,6 +441,7 @@ msgid "Schedule duplicated"
 msgstr "Rozvrh duplikován"
 
 #: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule name"
 msgstr "Název rozvrhu"
@@ -556,11 +559,6 @@ msgstr "Nepřijímat rezervace v %{day}"
 #, elixir-autogen, elixir-format
 msgid "Take bookings on %{day}"
 msgstr "Přijímat rezervace v %{day}"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule duplicated. Its date overrides were not copied."
-msgstr "Rozvrh duplikován. Jeho výjimky pro konkrétní dny nebyly zkopírovány."
 
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
@@ -878,3 +876,123 @@ msgstr "Smazat přestávku"
 #, elixir-autogen, elixir-format
 msgid "Delete schedule"
 msgstr "Smazat rozvrh"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{from}–%{to}"
+msgstr "%{from}–%{to}"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "A schedule can hold up to %{count} extra times."
+msgstr "Rozvrh může obsahovat nejvýše %{count} dodatečných časů."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Datum"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Dates you can be booked besides your weekly hours, such as office hours once a month. With every weekday switched off, only these are offered. They apply to the meeting types using this schedule; past dates are removed automatically."
+msgstr "Dny, kdy si vás lze rezervovat nad rámec týdenního rozvrhu, třeba konzultační hodiny jednou měsíčně. Když jsou všechny dny v týdnu vypnuté, nabízejí se jen tyto. Platí pro typy schůzek s tímto rozvrhem; minulé dny se odstraňují automaticky."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a date, a from and a to time."
+msgstr "Zadejte datum, čas od a čas do."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a from time before the to time."
+msgstr "Čas od musí být dříve než čas do."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra available times"
+msgstr "Dodatečná dostupnost"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra time added"
+msgstr "Dodatečný čas přidán"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra time removed"
+msgstr "Dodatečný čas odebrán"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "No extra times added."
+msgstr "Žádné dodatečné časy."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Remove this time"
+msgstr "Odebrat tento čas"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated. Its extra available times for specific dates were not copied."
+msgstr "Rozvrh zduplikován. Jeho dodatečná dostupnost v konkrétní dny nebyla zkopírována."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "The date must be today or later."
+msgstr "Datum musí být dnes nebo později."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "This time overlaps another extra time on that date."
+msgstr "Tento čas se překrývá s jiným dodatečným časem v ten den."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "To"
+msgstr "Do"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} cannot be more than %{max}"
+msgstr "%{setting} nesmí být větší než %{max}"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be a whole number"
+msgstr "%{setting} musí být celé číslo"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be at least %{min}"
+msgstr "%{setting} musí být alespoň %{min}"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking days"
+msgstr "Období pro rezervace předem (dny)"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after"
+msgstr "Časová rezerva po schůzkách"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before"
+msgstr "Časová rezerva před schůzkami"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum advance hours"
+msgstr "Minimální předstih v hodinách"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break no longer fits these hours. Move or delete it first."
+msgstr "Přestávka %{break} se už do této pracovní doby nevejde. Nejprve ji přesuňte nebo smažte."
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break on %{day} falls outside that day's hours. Move or delete it, then try again."
+msgstr "Přestávka %{break} (%{day}) leží mimo pracovní dobu tohoto dne. Přesuňte ji nebo smažte a pak to zkuste znovu."

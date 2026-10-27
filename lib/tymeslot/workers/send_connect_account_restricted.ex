@@ -83,7 +83,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   defp send_email(account, args, job) do
     case UserQueries.get_user(account.user_id) do
       {:ok, %UserSchema{email: email} = user} when is_binary(email) and email != "" ->
-        DeliveryClaims.once(job, "restricted_email", fn -> deliver(account, user, args) end)
+        DeliveryClaims.once(job, "restricted_email", fn -> deliver(account, user, args, job) end)
 
       {:ok, _user} ->
         Logger.warning("Connect-restricted email skipped — user has no email",
@@ -101,12 +101,12 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
     end
   end
 
-  defp deliver(account, user, args) do
+  defp deliver(account, user, args, job) do
     context = build_context(account, user, args)
 
     context
     |> ConnectAccountRestricted.render()
-    |> TransactionalEmailDelivery.deliver("Connect-restricted email delivery failed",
+    |> TransactionalEmailDelivery.deliver(job, "Connect-restricted email delivery failed",
       connect_account_id: account.id
     )
   end
@@ -115,6 +115,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
     %RestrictionContext{
       host_email: user.email,
       host_name: user_display_name(user),
+      host_user_id: user.id,
       disabled_reason: account.disabled_reason || args["disabled_reason"],
       previous_disabled_reason: args["previous_disabled_reason"],
       charges_enabled: account.charges_enabled,

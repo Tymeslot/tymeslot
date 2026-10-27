@@ -45,8 +45,35 @@ defmodule Tymeslot.Availability.TimeOffTimezoneTest do
       refute "7:00 AM" in slots
     end
 
-    # These two use 15-minute slots: a 30-minute one starting at 23:30 would
-    # end on the next booker date, which the grid never offers, time off or not.
+    test "the owner's 09:00 is offered at 11:30 PM on the booker's previous date" do
+      # It ends at or after the booker's midnight, which the grid used to cut
+      # the window at, so neither length was ever offered.
+      assert "11:30 PM" in slots(@sunday, "America/New_York", "Asia/Kolkata", [], 30)
+      assert "11:30 PM" in slots(@sunday, "America/New_York", "Asia/Kolkata", [], 60)
+    end
+
+    test "a slot straddling the booker's midnight belongs to the date it starts on" do
+      monday = slots(@monday, "America/New_York", "Asia/Kolkata", [], 60)
+
+      # The owner's grid continues across midnight rather than restarting
+      # there: 09:00 IST is 23:30 on Sunday, so the next start is 00:30.
+      assert List.first(monday) == "12:30 AM"
+      refute "12:00 AM" in monday
+
+      # The owner's Tuesday 09:00, 23:30 to 00:30 on the booker's clock.
+      assert List.last(monday) == "11:30 PM"
+    end
+
+    test "time off ending at a boundary leaves the slot starting there bookable" do
+      # Off until 09:30 IST on the owner's Monday, which is midnight in New York.
+      time_off = [
+        %{starts_on: @monday, ends_on: @monday, start_time: nil, end_time: ~T[09:30:00]}
+      ]
+
+      refute "11:30 PM" in slots(@sunday, "America/New_York", "Asia/Kolkata", time_off)
+      assert "12:00 AM" in slots(@monday, "America/New_York", "Asia/Kolkata", time_off)
+    end
+
     test "a whole day off on the owner's Monday also clears the booker's Sunday night" do
       assert "11:30 PM" in slots(@sunday, "America/New_York", "Asia/Kolkata", [], 15)
 

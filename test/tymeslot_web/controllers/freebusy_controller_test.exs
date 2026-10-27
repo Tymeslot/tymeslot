@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.FreebusyControllerTest do
-  # async: false — the rate-limit test relies on the shared Hammer ETS bucket,
+  # async: false — the rate-limit test relies on the shared rate-limit ETS bucket,
   # which other async tests clear via RateLimiter's test-only reset. Matches the
   # convention of the other rate-limited controller tests (session, guest_rsvp).
   use TymeslotWeb.ConnCase, async: false
@@ -27,7 +27,9 @@ defmodule TymeslotWeb.FreebusyControllerTest do
     test "publishes a holiday as busy when its subscription counts every event as busy", %{
       conn: conn
     } do
-      {:ok, profile} = FreeBusy.enable_feed(insert(:profile))
+      # An all-day event spans the owner's local day; a UTC owner's is
+      # midnight to midnight UTC.
+      {:ok, profile} = FreeBusy.enable_feed(insert(:profile, timezone: "Etc/UTC"))
 
       subscription =
         insert(:calendar_integration,
@@ -72,7 +74,7 @@ defmodule TymeslotWeb.FreebusyControllerTest do
       # forwarded headers are present, so `ClientIP.get/1` resolves to exactly
       # this address — matching the bucket we pre-fill here.
       rate_limit_ip = {203, 0, 113, 7}
-      for _i <- 1..60, do: RateLimiter.check_freebusy_feed_rate_limit("203.0.113.7")
+      for _i <- 1..60, do: RateLimiter.check(:freebusy, "203.0.113.7")
 
       conn = get(%{conn | remote_ip: rate_limit_ip}, ~p"/free-busy/any-token")
 

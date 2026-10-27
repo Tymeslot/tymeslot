@@ -4,8 +4,10 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver do
 
   When the integration carries a `default_booking_calendar_id` and a
   `calendar_list`, the matching calendar's `path` is returned. Otherwise
-  the first entry in `calendar_paths` is used as a backwards-compatible
-  fallback. The matching is URI-safe so encoded and decoded forms compare
+  the first entry in `calendar_paths` that `calendar_list` does not mark
+  read-only is used as a backwards-compatible fallback: a selected read-only
+  share is read for availability, and can be listed first, but takes no
+  bookings. The matching is URI-safe so encoded and decoded forms compare
   equal.
   """
 
@@ -23,8 +25,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver do
     if calendar_id && calendar_list != nil && calendar_list != [] do
       find_calendar_path_by_id(calendar_list, calendar_id)
     else
-      List.first(integration.calendar_paths || [])
+      first_writable_path(integration.calendar_paths || [], integration.calendar_list || [])
     end
+  end
+
+  defp first_writable_path(paths, calendar_list) do
+    read_only = for %{read_only: true} = cal <- calendar_list, do: cal.path || cal.id
+    Enum.find(paths, fn path -> not Enum.any?(read_only, &UriUtils.uri_safe_match?(&1, path)) end)
   end
 
   defp find_calendar_path_by_id(calendar_list, calendar_id) do

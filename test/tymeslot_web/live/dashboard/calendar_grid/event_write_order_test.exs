@@ -13,6 +13,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
   @moduletag :calendar
   @moduletag :live
 
+  # Each write runs in a task the test waits to hear from; on a loaded machine
+  # that can take longer than a second.
+  @write_timeout 5_000
+
   import Tymeslot.Factory
   import TymeslotWeb.CalendarGridWriteHelpers
 
@@ -31,12 +35,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       edit(lv, "update_event_title", "First title")
       edit(lv, "update_event_title", "Second title")
 
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
       refute_receive {:write_started, _pid, _uid, _payload}, 100
 
       answer(first, :ok)
 
-      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, 1_000
+      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, @write_timeout
       answer(second, :ok)
 
       assert settled(lv) =~ "Second title"
@@ -48,12 +52,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       edit(lv, "update_event_title", "Renamed")
       edit(lv, "update_event_location", "Room 9")
 
-      assert_receive {:write_started, first, _uid, %{summary: "Renamed"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "Renamed"}}, @write_timeout
       answer(first, {:error, :unauthorized})
 
       # The second write still runs, carrying its own change and not the one
       # the calendar refused.
-      assert_receive {:write_started, second, _uid, payload}, 1_000
+      assert_receive {:write_started, second, _uid, payload}, @write_timeout
       assert %{summary: "Team Standup", location: "Room 9"} = payload
 
       html = settled(lv)
@@ -86,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
     lv = open_event(conn, event)
 
     lv |> element(~s|button[phx-value-video_integration_id="#{video.id}"]|) |> render_click()
-    assert_receive {:write_started, first, _uid, %{description: with_room}}, 1_000
+    assert_receive {:write_started, first, _uid, %{description: with_room}}, @write_timeout
     assert with_room =~ "Join video call: https://meet.example.com/"
 
     edit(lv, "update_event_title", "Renamed")
@@ -97,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
     # Written onto the event as the calendar now holds it, not onto the copy
     # the grid had when the title was changed, which had no link yet.
     assert_receive {:write_started, second, _uid, %{summary: "Renamed", description: ^with_room}},
-                   1_000
+                   @write_timeout
 
     answer(second, :ok)
   end
@@ -114,8 +118,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
     lv |> element("[id^='event-#{review.id}-']") |> render_click()
     edit(lv, "update_event_title", "Review renamed")
 
-    assert_receive {:write_started, first, uid_one, _payload}, 1_000
-    assert_receive {:write_started, second, uid_two, _payload}, 1_000
+    assert_receive {:write_started, first, uid_one, _payload}, @write_timeout
+    assert_receive {:write_started, second, uid_two, _payload}, @write_timeout
     assert Enum.sort([uid_one, uid_two]) == Enum.sort([standup.uid, review.uid])
 
     answer(first, :ok)
@@ -129,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
     edit(lv, "update_event_title", "Renamed")
     assert render(lv) =~ "Renamed"
 
-    assert_receive {:write_started, write, _uid, %{summary: "Renamed"}}, 1_000
+    assert_receive {:write_started, write, _uid, %{summary: "Renamed"}}, @write_timeout
     answer(write, {:error, :unauthorized})
 
     html = settled(lv)
@@ -153,14 +157,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       edit(lv, "update_event_title", "First title")
       edit(lv, "update_event_location", "Room 9")
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
 
       kill(lv)
       refute_receive {:write_started, _pid, _uid, _payload}, 100
 
       answer(first, :ok)
 
-      assert_receive {:write_started, second, _uid, payload}, 1_000
+      assert_receive {:write_started, second, _uid, payload}, @write_timeout
       assert %{summary: "First title", location: "Room 9"} = payload
       answer(second, :ok)
 
@@ -175,13 +179,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       edit(lv, "update_event_title", "First title")
       edit(lv, "update_event_title", "Second title")
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
 
       # The grid is unmounted while the LiveView lives on.
       render_patch(lv, ~p"/dashboard/overview")
       answer(first, :ok)
 
-      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, 1_000
+      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, @write_timeout
       answer(second, :ok)
       refute_receive {:write_started, _pid, _uid, _payload}, 200
     end
@@ -197,11 +201,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       edit(lv, "update_event_title", "First title")
       edit(lv, "update_event_location", "Room 9")
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
 
       render_patch(lv, ~p"/dashboard/overview")
       answer(first, :ok)
-      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, @write_timeout
 
       render_patch(lv, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
@@ -210,7 +214,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       answer(second, :ok)
 
-      assert_receive {:write_started, third, _uid, payload}, 1_000
+      assert_receive {:write_started, third, _uid, payload}, @write_timeout
       assert %{summary: "Third title", location: "Room 9"} = payload
       answer(third, :ok)
 
@@ -231,13 +235,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       edit(lv, "update_event_title", "First title")
       edit(lv, "update_event_location", "Room 9")
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
 
       leave_suspended(lv, ~p"/dashboard/overview")
       return_suspended(lv, ~p"/dashboard/calendar")
 
       answer(first, :ok)
-      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, @write_timeout
       refute_receive {:write_started, _pid, _uid, _payload}, 200
       answer(second, :ok)
 
@@ -257,13 +261,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       edit(lv, "update_event_title", "First title")
       edit(lv, "update_event_location", "Room 9")
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
 
       leave_suspended(lv, ~p"/dashboard/overview")
       answer(first, :ok)
       :ok = :sys.resume(lv.pid)
 
-      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, @write_timeout
       refute_receive {:write_started, _pid, _uid, _payload}, 200
       answer(second, :ok)
       refute_receive {:write_started, _pid, _uid, _payload}, 200
@@ -278,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       lv = open_event(conn, event)
 
       edit(lv, "update_event_title", "First title")
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
 
       crashed = WriteGuardian.whereis(lv.pid)
       Process.exit(crashed, :kill)
@@ -290,7 +294,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       kill(lv)
       answer(first, :ok)
 
-      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, 1_000
+      assert_receive {:write_started, second, _uid, %{location: "Room 9"}}, @write_timeout
       answer(second, :ok)
     end
 
@@ -299,9 +303,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
 
       edit(lv, "update_event_title", "First title")
       edit(lv, "update_event_title", "Second title")
-      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, 1_000
+      assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
       answer(first, :ok)
-      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, 1_000
+      assert_receive {:write_started, second, _uid, %{summary: "Second title"}}, @write_timeout
       answer(second, :ok)
       assert settled(lv) =~ "Second title"
 
@@ -312,7 +316,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest do
       kill(lv)
 
       # With nothing left to finish it stops, having written nothing.
-      assert_receive {:DOWN, ^ref, :process, ^guardian, :normal}, 1_000
+      assert_receive {:DOWN, ^ref, :process, ^guardian, :normal}, @write_timeout
       refute_receive {:write_started, _pid, _uid, _payload}, 200
     end
   end

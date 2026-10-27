@@ -14,18 +14,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
 
   setup :verify_on_exit!
 
-  describe "provider_type/0" do
-    test "returns :google_meet" do
-      assert GoogleMeetProvider.provider_type() == :google_meet
-    end
-  end
-
-  describe "display_name/0" do
-    test "returns correct display name" do
-      assert GoogleMeetProvider.display_name() == "Google Meet"
-    end
-  end
-
   describe "config_schema/0" do
     test "returns schema with required OAuth fields" do
       schema = GoogleMeetProvider.config_schema()
@@ -36,20 +24,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert schema[:refresh_token][:required] == true
       assert schema[:token_expires_at][:type] == :datetime
       assert schema[:token_expires_at][:required] == true
-    end
-  end
-
-  describe "capabilities/0" do
-    test "returns correct capabilities for Google Meet" do
-      capabilities = GoogleMeetProvider.capabilities()
-
-      assert capabilities[:recording] == true
-      assert capabilities[:screen_sharing] == true
-      assert capabilities[:waiting_room] == false
-      assert capabilities[:max_participants] == 250
-      assert capabilities[:dial_in] == true
-      assert capabilities[:chat] == true
-      assert capabilities[:breakout_rooms] == true
     end
   end
 
@@ -234,78 +208,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
 
     test "handles empty string" do
       assert GoogleMeetProvider.extract_room_id("") == nil
-    end
-  end
-
-  describe "valid_meeting_url?/1" do
-    test "accepts valid Google Meet URL" do
-      assert GoogleMeetProvider.valid_meeting_url?("https://meet.google.com/abc-defg-hij")
-    end
-
-    test "accepts Google Meet URL with query parameters" do
-      assert GoogleMeetProvider.valid_meeting_url?(
-               "https://meet.google.com/xyz-abcd-efg?authuser=user@example.com"
-             )
-    end
-
-    test "rejects URL with wrong host" do
-      refute GoogleMeetProvider.valid_meeting_url?("https://example.com/meeting/123456")
-    end
-
-    test "rejects URL with wrong format (not xxx-xxxx-xxx)" do
-      refute GoogleMeetProvider.valid_meeting_url?("https://meet.google.com/invalid-format")
-      refute GoogleMeetProvider.valid_meeting_url?("https://meet.google.com/abc")
-      refute GoogleMeetProvider.valid_meeting_url?("https://meet.google.com/abc-def")
-    end
-
-    test "rejects URL without path" do
-      refute GoogleMeetProvider.valid_meeting_url?("https://meet.google.com")
-      refute GoogleMeetProvider.valid_meeting_url?("https://meet.google.com/")
-    end
-
-    test "rejects nil" do
-      refute GoogleMeetProvider.valid_meeting_url?(nil)
-    end
-
-    test "rejects empty string" do
-      refute GoogleMeetProvider.valid_meeting_url?("")
-    end
-  end
-
-  describe "handle_meeting_event/3" do
-    test "returns :ok for created event" do
-      room_data = %{room_id: "abc-defg-hij"}
-
-      assert GoogleMeetProvider.handle_meeting_event(:created, room_data, %{}) == :ok
-    end
-  end
-
-  describe "generate_meeting_metadata/1" do
-    test "returns metadata with all Google Meet features" do
-      room_data = %{
-        room_id: "abc-defg-hij",
-        meeting_url: "https://meet.google.com/abc-defg-hij"
-      }
-
-      metadata = GoogleMeetProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:room_id] == "abc-defg-hij"
-      assert metadata[:meeting_url] == "https://meet.google.com/abc-defg-hij"
-      assert metadata[:provider_name] == "Google Meet"
-      assert metadata[:provider_type] == :google_meet
-      assert metadata[:supports_dial_in] == true
-      assert metadata[:supports_recording] == true
-      assert metadata[:max_participants] == 250
-      assert metadata[:meeting_instructions] =~ "join the Google Meet video conference"
-      assert metadata[:technical_requirements] =~ "Modern web browser or Google Meet mobile app"
-
-      assert metadata[:additional_features] == [
-               "Recording available",
-               "Screen sharing",
-               "Live captions",
-               "Breakout rooms",
-               "Phone dial-in available"
-             ]
     end
   end
 

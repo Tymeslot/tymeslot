@@ -10,6 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
       default so the renewal sweep can find the row,
     * missing `:webhook_base_url` is a tagged error (`:webhook_base_url_not_configured`)
       rather than a crash — the polling fallback must keep working.
+
+  It also covers stopping a channel at Google, best-effort, once a new one
+  supersedes it and when the integration is disconnected.
   """
 
   use Tymeslot.DataCase, async: false
@@ -19,8 +22,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
 
   import Tymeslot.Factory
   import Mox
+  import ExUnit.CaptureLog
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.Calendar.Google.PushChannel
   alias Tymeslot.Security.Encryption
 
@@ -51,7 +58,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
       )
 
-    %{integration: integration}
+    %{integration: integration, user: user}
+  end
+
+  @stop_url "https://www.googleapis.com/calendar/v3/channels/stop"
+
+  defp with_stored_channel(integration) do
+    integration
+    |> Changeset.change(
+      google_channel_id: "old-channel-id",
+      google_channel_resource_id: "old-resource-id",
+      google_channel_expires_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
+    )
+    |> Repo.update!()
+  end
+
+  defp watch_response do
+    {:ok,
+     %Req.Response{
+       status: 200,
+       body: Jason.encode!(%{"id" => "client-channel-id", "resourceId" => "new-resource-id"})
+     }}
   end
 
   describe "register_push_channel/1" do
@@ -151,6 +178,94 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
       end)
 
       assert {:error, :unauthorized, _msg} = PushChannel.register_push_channel(integration)
+    end
+  end
+
+  describe "replacing a stored channel" do
+    setup %{integration: integration} do
+      Application.put_env(:tymeslot, :webhook_base_url, "https://hooks.example.com")
+      %{integration: with_stored_channel(integration)}
+    end
+
+    test "stops the superseded channel once the new one is stored", %{integration: integration} do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn
+        :post,
+        "https://www.googleapis.com/calendar/v3/calendars/primary/events/watch",
+        _b,
+        _h,
+        _o ->
+          watch_response()
+
+        :post, @stop_url, body, _headers, _opts ->
+          # The stop must come after the new channel is stored, or Google
+          # would push to no channel the webhook accepts in between.
+          stored = Repo.get!(CalendarIntegrationSchema, integration.id)
+          send(test_pid, {:stop_request, Jason.decode!(body), stored.google_channel_id})
+          {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:ok, updated} = PushChannel.register_push_channel(integration)
+
+      assert_receive {:stop_request, stop_body, channel_id_at_stop}
+      assert stop_body == %{"id" => "old-channel-id", "resourceId" => "old-resource-id"}
+      assert channel_id_at_stop == updated.google_channel_id
+      refute channel_id_at_stop == "old-channel-id"
+    end
+
+    test "a failed stop leaves the new channel registered", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn
+        :post, @stop_url, _body, _headers, _opts -> {:ok, %Req.Response{status: 500, body: ""}}
+        :post, _watch_url, _body, _headers, _opts -> watch_response()
+      end)
+
+      log =
+        capture_log([level: :warning], fn ->
+          assert {:ok, updated} = PushChannel.register_push_channel(integration)
+          assert updated.google_channel_resource_id == "new-resource-id"
+        end)
+
+      assert log =~ "Failed to stop Google Calendar push channel"
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).google_channel_resource_id ==
+               "new-resource-id"
+    end
+  end
+
+  describe "disconnecting the integration" do
+    setup %{integration: integration} do
+      %{integration: with_stored_channel(integration)}
+    end
+
+    test "stops its push channel", %{integration: integration, user: user} do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, @stop_url, body, _headers, opts ->
+        send(test_pid, {:stop_request, Jason.decode!(body)})
+        send(test_pid, {:stop_options, opts})
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:ok, _result} = Deletion.delete_with_primary_reassignment(user.id, integration.id)
+
+      assert_receive {:stop_request,
+                      %{"id" => "old-channel-id", "resourceId" => "old-resource-id"}}
+
+      # Bounded: the disconnect click waits on this request.
+      assert_receive {:stop_options, opts}
+      assert opts[:request_timeout] == 5_000
+
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
+    end
+
+    test "still disconnects when the stop fails", %{integration: integration, user: user} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, @stop_url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      assert {:ok, _result} = Deletion.delete_with_primary_reassignment(user.id, integration.id)
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
     end
   end
 end

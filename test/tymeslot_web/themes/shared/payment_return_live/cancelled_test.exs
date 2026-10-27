@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
   setup do
     user = insert(:user)
     {:ok, profile} = Profiles.get_or_create_profile(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
+    {:ok, _profile} = Profiles.update_booking_theme(profile, "1")
     %{user: user}
   end
 
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
 
   test "offers a rebook link to the meeting type's booking page", %{conn: conn, user: user} do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{username: "hosttester"})
+    {:ok, _profile} = Profiles.change_username(profile, "hosttester")
 
     meeting_type = insert(:meeting_type, user: user, name: "Paid Consultation")
 
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
     user: user
   } do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{username: "hosttester"})
+    {:ok, _profile} = Profiles.change_username(profile, "hosttester")
 
     # The name-derived slug would be "paid-consultation"; the custom slug
     # overrides it in the rebook path.
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
 
   test "redirects to / when meeting belongs to a different theme", %{conn: conn, user: user} do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
+    {:ok, _profile} = Profiles.update_booking_theme(profile, "2")
 
     meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 

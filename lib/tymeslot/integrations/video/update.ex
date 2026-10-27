@@ -35,6 +35,7 @@ defmodule Tymeslot.Integrations.Video.Update do
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
+  alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.Reconnect
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -51,6 +52,21 @@ defmodule Tymeslot.Integrations.Video.Update do
   # login name.
   @talk_saved_fields [:provider_account_id | @server_config_fields]
 
+  # What an owner's edit may change. Everything else on the row (its owner,
+  # provider, OAuth tokens, account key, active flag) is set by connecting,
+  # reconnecting and toggling, never by an edit, however the attrs arrived.
+  # The account key a new address implies is derived below.
+  @user_editable [
+    :name,
+    :base_url,
+    :api_key,
+    :client_id,
+    :client_secret,
+    :custom_meeting_url,
+    :settings,
+    :remove_token_authentication
+  ]
+
   @doc """
   Updates the integration `id` owned by `user_id`.
 
@@ -63,9 +79,9 @@ defmodule Tymeslot.Integrations.Video.Update do
           {:ok, VideoIntegrationSchema.t()} | {:error, any()}
   def run(user_id, id, attrs)
       when is_integer(user_id) and is_integer(id) and is_map(attrs) do
-    attrs = AttrsCasting.atomize_known_attrs(attrs)
+    attrs = attrs |> AttrsCasting.atomize_known_attrs() |> Map.take(@user_editable)
 
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
+    case VideoIntegrationQueries.get_live_for_user(id, user_id) do
       {:ok, integration} ->
         attrs = effective_changes(integration, attrs)
 
@@ -235,6 +251,19 @@ defmodule Tymeslot.Integrations.Video.Update do
     end
   end
 
+  # A new MiroTalk address is checked as a create checks it. The one stored
+  # is not, so a rename resubmitting it is never refused over a rule added
+  # after it was saved.
+  defp validate_update(%VideoIntegrationSchema{provider: "mirotalk"} = integration, attrs) do
+    case Map.fetch(attrs, :base_url) do
+      {:ok, base_url} when base_url != integration.base_url ->
+        MiroTalkProvider.validate_config_for_save(%{base_url: base_url})
+
+      _unchanged ->
+        :ok
+    end
+  end
+
   defp validate_update(_integration, _attrs), do: :ok
 
   defp talk_connection_changed?(attrs),
@@ -252,7 +281,7 @@ defmodule Tymeslot.Integrations.Video.Update do
       {:error,
        {:secret_required,
         dgettext(
-          "dashboard_video",
+          "integrations_video",
           "Enter the app password again to connect to a different server."
         )}}
     end

@@ -86,7 +86,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.FormHandlers do
       if is_binary(value) and String.trim(value) == "" do
         FormValidationHelpers.delete_field_error(socket.assigns.slack_form_errors, field_atom)
       else
-        case SlackInputValidation.validate_form(form_values, mode: mode) do
+        case SlackInputValidation.validate_form(form_values,
+               mode: mode,
+               stored_name: AutomationHelpers.stored_name(socket.assigns.slack_form_data)
+             ) do
           {:ok, _sanitized} ->
             FormValidationHelpers.delete_field_error(
               socket.assigns.slack_form_errors,

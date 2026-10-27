@@ -44,9 +44,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   """
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
-  alias Tymeslot.Infrastructure.CircuitBreakerHelpers
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.ProviderBreakers
+  alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Integrations.Calendar.Exchange.ClientConfig
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.Shared.HttpLogging
@@ -73,6 +74,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
           | :network_error
           | :tls_error
           | :malformed_xml
+          | :response_too_large
           | :circuit_open
           | :circuit_breaker_error
           | {:soap_fault, String.t()}
@@ -94,6 +96,18 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   # while to answer a CalendarView.
   @default_timeout 30_000
 
+  # Every EWS response is parsed whole, so it gets a budget well under the
+  # HTTP client's general default. The largest responses are batched
+  # `GetItem`s (100 items, `BaseShape=Default`, bodies included): 8 MB
+  # averages about 80 KB an item, several times a long HTML invitation with
+  # its attendee list. That average is not a per-item limit: a batch over
+  # budget is halved and retried by `ItemDiscovery.fetch_items/2`, so only a
+  # single item larger than 8 MB on its own is refused. The other operations
+  # ask for ids or a free/busy view and stay far below it: a `FindItem`
+  # window at the default 1000-item `FindCountLimit` is about 0.4 MB, a
+  # `SyncFolderItems` page of 512 changes about 0.25 MB.
+  @max_response_bytes 8 * 1024 * 1024
+
   @doc """
   Sends one EWS operation and returns the parsed response document.
 
@@ -114,7 +128,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
     options = options(config)
     envelope = Soap.envelope(body)
 
-    with_breaker(url, fn -> post(url, envelope, headers, options) end)
+    with_breaker(url, Map.get(config, :skip_breaker, false), fn ->
+      post(url, envelope, headers, options)
+    end)
   end
 
   defp post(url, envelope, headers, options) do
@@ -136,10 +152,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   # A base URL with no parseable host resolves to a nil host, which
   # `CalendarCircuitBreaker.with_breaker/3` answers with the provider-level
   # breaker rather than by running unprotected.
-  defp with_breaker(url, fun) do
-    host = CircuitBreakerHelpers.host_from_base_url(url)
+  defp with_breaker(url, skip_breaker, fun) do
+    host = ProviderBreakers.host_from_base_url(url)
 
-    CalendarCircuitBreaker.with_breaker(:exchange, [host: host], fun)
+    CalendarCircuitBreaker.with_breaker(:exchange, [host: host, skip_breaker: skip_breaker], fun)
   end
 
   # A 500 carrying anything other than a fault is the server failing without
@@ -178,6 +194,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   end
 
   defp transport_error(%Mint.TransportError{reason: :timeout}, _url), do: {:error, :timeout}
+
+  # The HTTP client abandoned the body at the budget above. Not a network
+  # failure: the server answered, and would answer the same way again.
+  defp transport_error(%ResponseTooLargeError{}, _url), do: {:error, :response_too_large}
   defp transport_error(%Req.TransportError{reason: :timeout}, _url), do: {:error, :timeout}
   defp transport_error(%Mint.HTTPError{reason: :timeout}, _url), do: {:error, :timeout}
 
@@ -239,6 +259,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
       # three-argument `Map.get/3` would answer nil and never reach this
       # module's own default.
       receive_timeout: Map.get(config, :request_timeout) || @default_timeout,
+      max_response_bytes: @max_response_bytes,
       # The EWS endpoint is a URL the user typed, so it gets the same
       # request-time SSRF validation and redirect refusal the CalDAV family
       # gets. An operator whose Exchange server genuinely sits on a private

@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   import Tymeslot.DashboardTestHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Repo
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
@@ -116,6 +116,30 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   end
 
   describe "Theme customization" do
+    # Customisations are kept per theme and the booking page renders only the
+    # chosen one, so customising another saves changes no visitor sees.
+    test "says when the theme being customised is not the booking page's", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      view
+      |> element("button[phx-value-theme='2']", "Customise Style")
+      |> render_click()
+
+      assert view |> element("#customising-inactive-theme") |> render() =~
+               "You are customising Rhythm, but your booking page uses Quill."
+    end
+
+    test "says nothing of the kind for the booking page's own theme", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      view
+      |> element("button[phx-value-theme='1']", "Customise Style")
+      |> render_click()
+
+      assert has_element?(view, "#theme-customization-uploads")
+      refute has_element?(view, "#customising-inactive-theme")
+    end
+
     test "opens and closes customization", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
@@ -337,8 +361,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
         |> render_click()
 
       # The hints state the limits the uploads enforce.
-      image_hint = "JPG, PNG or WebP. Max #{UploadConstraints.max_file_size_mb(:image)} MB."
-      video_hint = "MP4 or WebM. Max #{UploadConstraints.max_file_size_mb(:video)} MB."
+      image_hint =
+        "JPG, PNG or WebP. Max #{Uploads.max_file_size_mb(:image)} MB " <>
+          "and 40 megapixels (16 for WebP)."
+
+      video_hint = "MP4 or WebM. Max #{Uploads.max_file_size_mb(:video)} MB."
 
       refute html_gradient =~ "Select a solid colour"
       refute html_gradient =~ image_hint

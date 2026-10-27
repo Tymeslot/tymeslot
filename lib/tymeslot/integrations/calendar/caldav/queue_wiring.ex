@@ -32,9 +32,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings.MeetingSchema
 
   @type action :: :create | :update | :delete
@@ -121,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
         {:error, :not_found}
 
       {:error, :requires_reencryption, integration} ->
-        CalendarManagement.handle_reauth_required(integration)
+        Management.handle_reauth_required(integration)
         {:error, :requires_reencryption}
     end
   end
@@ -165,11 +165,34 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
       sync_attempts: 0,
       sync_last_attempt_at: now,
       sync_last_error: nil,
-      created_by_tymeslot: true
+      sync_deferred_since: nil
     }
+    |> Map.merge(ownership_attrs(meeting, action))
     |> Map.merge(content_attrs(event_data))
+    |> Map.merge(reminders_change_attrs(event_data))
     |> Map.merge(timing_attrs(event_data))
   end
+
+  # The row holds the reminders a change left, not whether it changed them,
+  # and an empty list cannot say which: a row cached before the sync read
+  # alarms holds none whatever its document says. So a change that carries
+  # reminders marks the row, and the replay sends them even when it removed
+  # every one (`OfflineQueue`). A change without them leaves the mark alone:
+  # a rename queued behind a reminder edit that has not reached the server
+  # yet must not hide it. A successful replay clears it
+  # (`QueueQueries.mark_synced/3`).
+  defp reminders_change_attrs(%{reminders: _reminders}), do: %{sync_reminders_changed: true}
+  defp reminders_change_attrs(_event_data), do: %{}
+
+  # A meeting's event is a booking, and an event the grid is creating is
+  # Tymeslot's own, so both are marked. Any other grid write is about an
+  # event the cache row already describes, and leaves the row's flag as it
+  # is: marking an organiser's edit of somebody else's event would hide it
+  # from the agenda for good (a sync never clears the flag) and grant its
+  # replay the `:keep_local` force-write over the owner's own changes.
+  defp ownership_attrs(%MeetingSchema{}, _action), do: %{created_by_tymeslot: true}
+  defp ownership_attrs(_grid_target, :create), do: %{created_by_tymeslot: true}
+  defp ownership_attrs(_grid_target, _action), do: %{}
 
   # Carried straight through when present. `status` and `transparency` are
   # converted rather than copied, and are dropped when nil because both columns
@@ -198,11 +221,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   # from an all-day edit and ISO-8601 strings from a payload that has been
   # through JSON; both used to fall through to "no timing at all", which left
   # the row permanently unsendable because `OfflineQueue.sendable_event_data/1`
-  # refuses a row with no start or end. An unrecognised shape now writes no
-  # timing rather than nulling what the row already holds.
+  # refuses a row with no start or end. A start or an end that does not parse
+  # (an unrecognised shape, a timed start with a date for its end) writes no
+  # timing rather than nulling what the row already holds: the cache's other
+  # writers refuse a half-timed row, and this one, which upserts the queue
+  # row directly, must not make one either.
   defp timing_attrs(event_data) do
     case {parse_time(event_data[:start_time]), parse_time(event_data[:end_time])} do
-      {{:ok, %Date{} = start_date}, end_time} ->
+      {{:ok, %Date{} = start_date}, {:ok, end_time}} ->
         %{
           all_day: true,
           start_date: start_date,
@@ -211,26 +237,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
           end_at: nil
         }
 
-      {{:ok, %DateTime{} = start_at}, end_time} ->
+      {{:ok, %DateTime{} = start_at}, {:ok, %DateTime{} = end_at}} ->
         %{
           all_day: false,
           start_at: ensure_usec(start_at),
-          end_at: as_datetime(end_time),
+          end_at: ensure_usec(end_at),
           start_date: nil,
           end_date: nil
         }
 
-      _no_usable_start ->
+      _no_usable_timing ->
         %{}
     end
   end
 
-  defp as_date({:ok, %Date{} = date}), do: date
-  defp as_date({:ok, %DateTime{} = datetime}), do: DateTime.to_date(datetime)
-  defp as_date(:error), do: nil
-
-  defp as_datetime({:ok, %DateTime{} = datetime}), do: ensure_usec(datetime)
-  defp as_datetime(_other), do: nil
+  defp as_date(%Date{} = date), do: date
+  defp as_date(%DateTime{} = datetime), do: DateTime.to_date(datetime)
 
   defp parse_time(%DateTime{} = datetime), do: {:ok, datetime}
   defp parse_time(%Date{} = date), do: {:ok, date}

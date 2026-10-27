@@ -18,8 +18,9 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAsymmetricBuffersTest d
   import Tymeslot.AvailabilityTestHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{CalendarCheck, Create, Policy}
+  alias Tymeslot.Bookings.{CalendarCheck, Create}
   alias Tymeslot.CalendarMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.TestMocks
@@ -89,7 +90,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAsymmetricBuffersTest d
       end)
 
       offered = offered(profile, date, "30min", meeting_type: meeting_type)
-      config = Policy.scheduling_config(user.id, meeting_type)
+      config = Schedules.booking_config(user.id, meeting_type)
 
       for {time, expected?} <- @asymmetric_expectations do
         assert time in offered == expected?, "display: #{time} offered? expected #{expected?}"

@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
      |> assign(:outstanding_refunds_summary, %{count: 0, totals: []})
-     |> assign(:stats, %{received: 0, refunded: 0, platform_fee: 0})
+     |> assign(:stats, [])
      |> assign(:pending_payments_count, 0)}
   end
 
@@ -171,20 +171,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   def handle_event("change_currency", %{"currency" => currency}, socket) do
     user = socket.assigns.current_user
 
-    cond do
-      is_nil(socket.assigns.connect_account) ->
-        {:noreply, socket}
-
-      not MeetingPayments.currency_allowed?(currency) ->
-        Flash.error(dgettext("dashboard_payments", "Currency not supported."))
-        {:noreply, socket}
-
-      currency == socket.assigns.connect_account.default_currency ->
-        {:noreply, socket}
-
-      true ->
-        change_currency(socket, user, currency)
-    end
+    if is_nil(socket.assigns.connect_account),
+      do: {:noreply, socket},
+      else: change_currency(socket, user, currency)
   end
 
   def handle_event("open_refund_modal", %{"id" => id}, socket) do
@@ -286,6 +275,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       {:ok, :no_reset} ->
         Flash.info(dgettext("dashboard_payments", "Currency updated."))
         {:noreply, assign_payments_state(socket, user)}
+
+      {:ok, :unchanged} ->
+        {:noreply, socket}
+
+      {:error, :unsupported_currency} ->
+        Flash.error(dgettext("dashboard_payments", "Currency not supported."))
+        {:noreply, socket}
 
       {:error, _reason} ->
         Flash.error(

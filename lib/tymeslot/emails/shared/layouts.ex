@@ -52,8 +52,8 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   """
   @spec system_layout(String.t(), keyword()) :: String.t()
   def system_layout(content, opts) do
-    intent = fetch_required!(opts, :intent)
-    eyebrow = fetch_required!(opts, :eyebrow)
+    intent = Stage.fetch_required!(opts, :intent)
+    eyebrow = Stage.fetch_required!(opts, :eyebrow)
     raw_title = Keyword.get(opts, :title, Branding.brand_name())
     title = Sanitise.sanitize_for_email(raw_title)
 
@@ -76,19 +76,6 @@ defmodule Tymeslot.Emails.Shared.Layouts do
       body: content,
       footer: system_footer()
     })
-  end
-
-  @spec fetch_required!(keyword(), atom()) :: term()
-  defp fetch_required!(opts, key) do
-    case Keyword.fetch(opts, key) do
-      {:ok, value} ->
-        value
-
-      :error ->
-        raise ArgumentError,
-              "Tymeslot.Emails.Shared.Layouts: missing required option `#{inspect(key)}`. " <>
-                "Email layouts do not infer intent — the template must declare it."
-    end
   end
 
   @spec system_footer() :: String.t()

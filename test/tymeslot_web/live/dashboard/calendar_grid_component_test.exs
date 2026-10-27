@@ -59,6 +59,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
     end
   end
 
+  describe "timezone label" do
+    # Fixed dates either side of a change, whatever the date the suite runs on:
+    # the label is the offset in force on the day shown, not today's.
+    for {date, abbr} <- [{"2027-01-12", "CET"}, {"2027-07-13", "CEST"}] do
+      test "names the offset in force on #{date} (#{abbr})" do
+        user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+        insert(:profile, user: user, timezone: "Europe/Berlin")
+        conn = build_conn() |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(user)
+
+        {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("navigate_to_day", %{"date" => unquote(date)})
+
+        assert lv |> element("#calendar-tz-label") |> render() =~ ">#{unquote(abbr)}<"
+      end
+    end
+  end
+
   describe "view switching" do
     test "switches to day view", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

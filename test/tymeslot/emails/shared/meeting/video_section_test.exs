@@ -15,6 +15,12 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSectionTest do
       refute html =~ "<script>"
     end
 
+    test "renders nothing for an unsafe or missing URL" do
+      assert VideoSection.video_meeting_section(:confirmed, "javascript:alert(1)") == ""
+      assert VideoSection.video_meeting_section(:confirmed, nil) == ""
+      assert VideoSection.video_meeting_section(:confirmed, "mailto:host@example.com") == ""
+    end
+
     test "includes meeting URL in button" do
       url = "https://meet.example.com/room123"
       html = VideoSection.video_meeting_section(:confirmed, url)
@@ -79,19 +85,12 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSectionTest do
     end
   end
 
-  describe "time_alert_badge/3" do
+  describe "time_alert_badge/2" do
     test "sanitizes time text" do
       html = VideoSection.time_alert_badge(:alert, "<script>alert('xss')</script>30 minutes")
 
       refute html =~ "<script>"
       assert html =~ "30 minutes"
-    end
-
-    test "supports custom icon" do
-      html = VideoSection.time_alert_badge(:confirmed, "Starting soon", icon: "⏰")
-
-      assert html =~ "⏰"
-      assert html =~ "Starting soon"
     end
 
     test "supports different intents" do

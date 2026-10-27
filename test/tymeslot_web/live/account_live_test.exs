@@ -54,6 +54,22 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert html =~ user.email
     end
 
+    test "says how long ago a pending email change was sent, as one sentence", %{
+      conn: conn,
+      user: user
+    } do
+      user
+      |> Changeset.change(
+        pending_email: "new@example.com",
+        email_change_sent_at: DateTime.add(DateTime.utc_now(:second), -300, :second)
+      )
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      assert render(view) =~ "Sent 5 minutes ago"
+    end
+
     test "Back to Dashboard navigates rather than patches, as it leaves this LiveView", %{
       conn: conn
     } do
@@ -364,7 +380,11 @@ defmodule TymeslotWeb.AccountLiveTest do
       # Exhaust the account-wide auth ceiling (50 per 30 minutes) before each
       # test; it applies whatever address the request comes from.
       Enum.each(1..50, fn _i ->
-        RateLimiter.check_rate("login:#{user.email}", 1_800_000, 50)
+        RateLimiter.check_bucket("login:#{user.email}",
+          limit: 50,
+          window_ms: 1_800_000,
+          operation: "test"
+        )
       end)
 
       :ok

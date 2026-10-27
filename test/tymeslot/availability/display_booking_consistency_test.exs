@@ -24,11 +24,14 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
 
   import Mox
   import Tymeslot.AvailabilityTestHelpers
+  import Tymeslot.Test.ClockHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.Create
   alias Tymeslot.CalendarMock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.TestMocks
   alias Tymeslot.Utils.DateTimeUtils
@@ -97,14 +100,14 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       TestMocks.stub_no_calendar_events()
       slots_without_block = offered(profile, target_date, "30min")
 
-      assert slots_without_block != [],
-             "expected at least one slot before the blocking event was introduced"
+      assert slots_without_block != [], "expected a slot before the blocking event was introduced"
 
       stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
         {:ok, [blocking_event]}
       end)
 
-      # Display path with the blocking event: every slot must disappear.
+      # Display path with the blocking event, once a sync drops the cached window.
+      AvailabilityCache.invalidate_for_user(user.id)
       slots_with_block = offered(profile, target_date, "30min")
 
       assert slots_with_block == [],
@@ -113,8 +116,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # The diff is load-bearing: it proves the block actually caused the removal.
       blocked_slots = slots_without_block -- slots_with_block
 
-      assert blocked_slots != [],
-             "expected blocking event to hide at least one slot"
+      assert blocked_slots != [], "expected blocking event to hide at least one slot"
 
       # Booking path — each slot the display hid must be rejected by the booking API.
       Enum.each(blocked_slots, fn blocked_slot ->
@@ -385,6 +387,71 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
     end
   end
 
+  # A host whose working day begins on the booker's previous date: Kolkata's
+  # 09:00 is 23:30 the evening before in New York (EDT), so the host's first
+  # slot ends at or after the booker's midnight. Cutting the window there used
+  # to lose it for every duration of 30 minutes or more.
+  describe "a slot that ends at or crosses the booker's midnight" do
+    # 2027-09-06 is a Monday; 09:00 IST that day is 23:30 EDT on Sunday the 5th.
+    @booker_sunday ~D[2027-09-05]
+
+    setup do
+      freeze_clock(DateTime.new!(~D[2027-08-25], ~T[00:00:00], "Etc/UTC"))
+      TestMocks.stub_no_calendar_events()
+
+      %{user: user, profile: profile} =
+        create_bookable_profile(
+          timezone: "Asia/Kolkata",
+          hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
+        )
+
+      %{user: user, profile: profile}
+    end
+
+    for duration <- [30, 60] do
+      test "the host's 09:00 is offered at 11:30 PM and books, for #{duration} minutes",
+           %{user: user, profile: profile} do
+        duration = unquote(duration)
+        slug = "#{duration}min"
+
+        assert offered(profile, @booker_sunday, slug, timezone: "America/New_York") ==
+                 ["11:30 PM"]
+
+        assert {:ok, meeting} =
+                 Create.execute(
+                   %{
+                     date: @booker_sunday,
+                     time: "11:30 PM",
+                     duration: slug,
+                     user_timezone: "America/New_York",
+                     organizer_user_id: user.id
+                   },
+                   %{
+                     "name" => "Late Attendee",
+                     "email" => "late-attendee@example.com",
+                     "message" => "Booking across midnight"
+                   }
+                 )
+
+        assert meeting.status == "confirmed"
+        assert DateTime.compare(meeting.start_time, ~U[2027-09-06 03:30:00Z]) == :eq
+        assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == duration
+      end
+    end
+
+    test "the month view marks the booker's date as available", %{profile: profile} do
+      request = %{profile: profile, user_timezone: "America/New_York", meeting_type: nil}
+
+      assert {:ok, days} =
+               Offer.days_in_range(request, @booker_sunday, Date.add(@booker_sunday, 1), 60)
+
+      assert days[Date.to_iso8601(@booker_sunday)] == true
+      # Saturday the 4th has no host hours on either side of it.
+      assert {:ok, %{"2027-09-04" => false}} =
+               Offer.days_in_range(request, ~D[2027-09-04], ~D[2027-09-04], 60)
+    end
+  end
+
   # Every scheduling rule the page offers under, set at once and read through
   # the page's own pipeline: a rule the display path drops (or builds without
   # the check that enforces it) shows up here as an offered time the booking
@@ -452,7 +519,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
 
       assert offered(profile, tomorrow, "30min", meeting_type: meeting_type) == []
 
-      assert {:error, "Booking requires at least 48 hours in advance"} =
+      assert {:error, {:too_soon, 48}} =
                book(user, meeting_type, tomorrow, "11:00 PM")
     end
 

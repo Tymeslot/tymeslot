@@ -23,11 +23,19 @@ defmodule Tymeslot.Security.UrlValidation do
   reserved. `http_to_internal_name?/1` tells the SSRF guard which requests
   passed on that claim, so it can confirm at request time that the address it
   connects to really is private before any credentials are sent.
+
+  ## Refusals
+
+  A refusal is a sentence in the current locale. A caller that maps refusals
+  to its own guidance passes an atom in place of a message option (for
+  example `private_ip_error_message: :private_address`) and gets that atom
+  back, so it never has to match on translated text.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Security.{PrivateIPv4, PrivateIPv6}
 
-  @default_invalid_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
   @default_max_length 2_000
 
   # Two refusals, two messages. The scheme check fires on what someone typed
@@ -38,18 +46,14 @@ defmodule Tymeslot.Security.UrlValidation do
   # https:// would be nonsense, so it keeps the rule as its wording. Callers
   # that want one message for both still get it: `:disallowed_protocol_error`
   # overrides the pair.
-  @default_scheme_error "Enter a full address starting with https://, for example https://example.com"
-  @default_blocked_protocol_error "Only HTTP and HTTPS URLs are allowed"
-  @default_https_error "Use HTTPS for non-local servers"
-  @default_private_ip_error "Private or local network addresses are not allowed"
   @disallowed_protocols ["javascript:", "data:", "file:", "ftp:"]
   @internal_suffixes [".local", ".lan", ".internal", ".home.arpa"]
 
-  @spec validate_http_url(String.t(), keyword()) :: :ok | {:error, String.t()}
+  @spec validate_http_url(String.t(), keyword()) :: :ok | {:error, String.t() | atom()}
   def validate_http_url(url, opts \\ [])
 
   def validate_http_url(url, opts) when is_binary(url) do
-    invalid_message = Keyword.get(opts, :invalid_message, @default_invalid_message)
+    invalid_message = Keyword.get_lazy(opts, :invalid_message, &default_invalid_message/0)
 
     case URI.parse(url) do
       %URI{scheme: scheme, host: host, authority: authority}
@@ -60,14 +64,14 @@ defmodule Tymeslot.Security.UrlValidation do
         end
 
       %URI{scheme: scheme} when scheme not in ["http", "https"] ->
-        {:error, Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)}
+        {:error, Keyword.get_lazy(opts, :disallowed_protocol_error, &default_scheme_error/0)}
 
       _invalid_url ->
         {:error, invalid_message}
     end
   end
 
-  def validate_http_url(_url, _opts), do: {:error, @default_invalid_message}
+  def validate_http_url(_url, _opts), do: {:error, default_invalid_message()}
 
   @doc """
   Whether `host` is shaped like a name on a private network: a single label (a
@@ -111,13 +115,16 @@ defmodule Tymeslot.Security.UrlValidation do
     max_length = Keyword.get(opts, :max_length, @default_max_length)
 
     length_error =
-      Keyword.get(opts, :length_error_message, default_length_error(max_length))
+      Keyword.get_lazy(opts, :length_error_message, fn -> default_length_error(max_length) end)
 
     blocked_protocol_error =
-      Keyword.get(opts, :disallowed_protocol_error, @default_blocked_protocol_error)
+      Keyword.get_lazy(opts, :disallowed_protocol_error, &default_blocked_protocol_error/0)
 
-    https_error_message = Keyword.get(opts, :https_error_message, @default_https_error)
-    private_ip_error = Keyword.get(opts, :private_ip_error_message, @default_private_ip_error)
+    https_error_message = Keyword.get_lazy(opts, :https_error_message, &default_https_error/0)
+
+    private_ip_error =
+      Keyword.get_lazy(opts, :private_ip_error_message, &default_private_ip_error/0)
+
     disallowed_protocols = Keyword.get(opts, :disallowed_protocols, @disallowed_protocols)
     enforce_https_for_public = Keyword.get(opts, :enforce_https_for_public, false)
     # Note: enforce_https only rejects HTTP for public hosts — localhost/private
@@ -145,7 +152,28 @@ defmodule Tymeslot.Security.UrlValidation do
     end
   end
 
-  defp default_length_error(max_length), do: "URL must be #{max_length} characters or less"
+  # Translated when the refusal is made, in the caller's locale: these come
+  # back as plain strings, outside a changeset's `{message, opts}`.
+  defp default_length_error(max_length),
+    do: dgettext("errors_input", "URL must be %{max} characters or less", max: max_length)
+
+  defp default_invalid_message,
+    do: dgettext("errors_input", "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)")
+
+  defp default_scheme_error,
+    do:
+      dgettext(
+        "errors_input",
+        "Enter a full address starting with https://, for example https://example.com"
+      )
+
+  defp default_blocked_protocol_error,
+    do: dgettext("errors_input", "Only HTTP and HTTPS URLs are allowed")
+
+  defp default_https_error, do: dgettext("errors_input", "Use HTTPS for non-local servers")
+
+  defp default_private_ip_error,
+    do: dgettext("errors_input", "Private or local network addresses are not allowed")
 
   defp contains_disallowed_substring?(url, disallowed_protocols) do
     Enum.any?(disallowed_protocols, &String.contains?(url, &1))

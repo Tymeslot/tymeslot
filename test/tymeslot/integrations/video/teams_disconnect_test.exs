@@ -264,7 +264,7 @@ defmodule Tymeslot.Integrations.Video.TeamsDisconnectTest do
 
       form_data = %{"name" => "Ada", "email" => "ada@example.com", "message" => ""}
 
-      assert {:ok, meeting} = Create.execute_with_video_room(params, form_data)
+      assert {:ok, meeting} = Create.execute(params, form_data, with_video_room: true)
       assert meeting.video_integration_id == nil
       refute_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => meeting.id})
     end

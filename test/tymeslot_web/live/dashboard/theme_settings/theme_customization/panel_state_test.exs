@@ -39,10 +39,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PanelStateTest 
                )
     end
 
-    test "a save moves to the saved kind and leaves the colour disclosure as it was" do
-      ui = %{browsing_type: "gradient", custom_picker_open: true}
+    test "a save keeps the open tab and the colour disclosure as they were" do
+      # Removing an upload not on show saves a background of another kind
+      # than the open tab's.
+      ui = %{browsing_type: "color", custom_picker_open: true}
 
-      assert BackgroundPanel.ui(@background, customization(%{"background_type" => "color"}), ui) ==
+      assert BackgroundPanel.ui(@background, customization(%{"background_type" => "video"}), ui) ==
                %{browsing_type: "color", custom_picker_open: true}
     end
 

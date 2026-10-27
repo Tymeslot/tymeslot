@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
@@ -14,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   @doc """
   Renders a meeting type card with status toggle and action buttons.
@@ -27,6 +29,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   attr :group_bookings_allowed, :boolean,
     default: true,
     doc: "whether the host may take group bookings; a group type without it is paused"
+
+  attr :payments_accepted, :boolean,
+    default: true,
+    doc: "whether the host can take payments; a paid type without it is not offered to guests"
+
+  attr :next_date, :any,
+    default: :not_fixed,
+    doc: "a fixed-date type's next date open for registration, or nil when it has none"
+
+  attr :timezone, :string, default: "Etc/UTC"
+  attr :time_format, :string, default: "24h"
 
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
@@ -64,12 +77,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               {dgettext("dashboard_meeting_types", "Unlisted")}
             </Feedback.pill>
             <Feedback.pill
+              :if={is_nil(@next_date)}
+              tone={:warning}
+              icon="hero-calendar-mini"
+              title={
+                dgettext(
+                  "dashboard_meeting_types",
+                  "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+                )
+              }
+              data-testid="no-open-dates"
+            >
+              {dgettext("dashboard_meeting_types", "No open dates")}
+            </Feedback.pill>
+            <Feedback.pill
               :if={group_paused?(@type, @group_bookings_allowed)}
               tone={:warning}
               icon="hero-pause-circle-mini"
               data-testid="group-type-paused"
             >
               {dgettext("dashboard_meeting_types", "Paused")}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={unsellable?(@type, @payments_accepted)}
+              tone={:warning}
+              icon="hero-exclamation-triangle-mini"
+              data-testid="paid-type-unsellable"
+            >
+              {dgettext("dashboard_meeting_types", "Not offered")}
             </Feedback.pill>
           </div>
           <p
@@ -81,7 +116,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
             <span class="flex items-center shrink-0">
               <Icons.icon name="hero-clock" class="w-3.5 h-3.5 mr-1" />
-              {dgettext("dashboard_meeting_types", "%{minutes} min", minutes: @type.duration_minutes)}
+              <%= case Lengths.offered(@type) do %>
+                <% [_single] -> %>
+                  {dgettext("dashboard_meeting_types", "%{minutes} min",
+                    minutes: @type.duration_minutes
+                  )}
+                <% offered -> %>
+                  {dgettext("dashboard_meeting_types", "%{min}–%{max} min",
+                    min: List.first(offered),
+                    max: List.last(offered)
+                  )}
+              <% end %>
             </span>
             <%= if paid?(@type) do %>
               <span class="flex items-center shrink-0 font-medium text-green-600">
@@ -97,6 +142,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               <Icons.icon name="hero-users-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
               {dgettext("dashboard_meeting_types", "Group · up to %{count}",
                 count: @type.max_participants
+              )}
+            </span>
+            <span
+              :if={match?(%DateTime{}, @next_date)}
+              class="flex items-center shrink-0"
+              data-testid="next-fixed-date"
+            >
+              <Icons.icon name="hero-calendar-days-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
+              {dgettext("dashboard_meeting_types", "Next date: %{date}",
+                date: next_date_label(@next_date, @timezone, @time_format)
               )}
             </span>
             <.location_summary type={@type} icon_size={@icon_size} venues={@venues} />
@@ -132,6 +187,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             {dgettext(
               "dashboard_meeting_types",
               "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+            )}
+          </p>
+          <p
+            :if={unsellable?(@type, @payments_accepted)}
+            class="mt-1 text-token-xs text-amber-700 leading-relaxed"
+            data-testid="paid-type-unsellable-notice"
+          >
+            {dgettext(
+              "dashboard_meeting_types",
+              "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
             )}
           </p>
         </div>
@@ -228,11 +293,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     end
   end
 
+  defp next_date_label(datetime, timezone, time_format) do
+    date = datetime |> DashboardFormat.local_date(timezone) |> DashboardFormat.short_date()
+    "#{date}, #{DashboardFormat.clock(datetime, timezone, time_format)}"
+  end
+
   # A group type saved while the host had group bookings, kept after they lost
   # access: it keeps its bookings but takes no new ones (see
   # `Tymeslot.MeetingTypes.GroupAccess`).
   defp group_paused?(type, group_bookings_allowed),
     do: not group_bookings_allowed and MeetingTypes.group_type?(type)
+
+  # A paid type whose host cannot take payments right now: the booking page
+  # leaves it out (see `Tymeslot.MeetingTypes.PaymentAccess`), so the host is
+  # told here rather than finding out from a guest.
+  defp unsellable?(type, payments_accepted),
+    do: not payments_accepted and type.payment_required == true
 
   defp paid?(%{payment_required: true, price_cents: cents}) when is_integer(cents), do: true
   defp paid?(_type), do: false
@@ -240,14 +316,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   defp described?(%{description: nil}), do: false
   defp described?(%{description: description}), do: String.trim(description) != ""
 
-  # One location is named; several are counted. Naming them all would push
-  # the calendar and question badges off the row on a card that is already a
-  # single line of metadata.
+  @doc """
+  Where a meeting type takes place, as its card's metadata row shows it. One
+  location is named; several are counted. Naming them all would push the
+  calendar and question badges off the row on a card that is already a
+  single line of metadata.
+  """
   attr :type, :map, required: true
   attr :icon_size, :string, required: true
   attr :venues, :list, required: true
 
-  defp location_summary(assigns) do
+  @spec location_summary(map()) :: Phoenix.LiveView.Rendered.t()
+  def location_summary(assigns) do
     assigns = assign(assigns, :locations, MeetingTypes.location_options(assigns.type))
 
     ~H"""

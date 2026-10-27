@@ -92,27 +92,39 @@ defmodule Tymeslot.Meetings.Cancellation do
   @doc """
   Cancels the meeting, then issues the resolved refund.
 
-  `acting_user_id` is whoever asked for the cancellation. Anyone the caller
-  allows to cancel may cancel without a refund, but a refund moves the host's
-  money, so only the host who took the payment may ask for one. Anyone else
-  asking for a refund gets `{:error, :not_found}`, returned before the meeting
-  is touched: a refusal is not a failed refund, and must not leave a cancelled
-  meeting behind.
+  `acting_user_id` is whoever asked for the cancellation, and must be the
+  meeting's organiser (`organizer_user_id`): this cancels as the organiser,
+  which for a group meeting releases every seat. A refund moves the host's
+  money, so it also needs the payment to be the acting organiser's. Anyone
+  else gets `{:error, :not_found}`, returned before the meeting is touched: a
+  refusal is not a failed cancellation or refund, and must not leave a
+  cancelled meeting behind.
 
   A refund failure is reported as `{:error, {:refund_failed, reason}}` and
   leaves the meeting cancelled; see the module docs on ordering.
   """
-  @spec cancel(struct(), integer(), refund_action()) ::
+  @spec cancel(struct(), integer() | nil, refund_action()) ::
           {:ok, struct()}
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
           | {:error, term()}
-  def cancel(meeting, _acting_user_id, :none), do: Cancel.execute(meeting, caller: :organizer)
+  def cancel(%{organizer_user_id: owner_id} = meeting, acting_user_id, refund_action)
+      when is_integer(owner_id) and owner_id == acting_user_id,
+      do: cancel_as_organizer(meeting, acting_user_id, refund_action)
 
-  def cancel(%{id: meeting_id} = meeting, acting_user_id, {:refund, amount_cents}) do
-    case MeetingPayments.payment_for_meeting(meeting_id, acting_user_id) do
+  def cancel(_meeting, _acting_user_id, _refund_action), do: {:error, :not_found}
+
+  defp cancel_as_organizer(meeting, _organizer_user_id, :none),
+    do: Cancel.execute(meeting, caller: :organizer)
+
+  defp cancel_as_organizer(
+         %{id: meeting_id} = meeting,
+         organizer_user_id,
+         {:refund, amount_cents}
+       ) do
+    case MeetingPayments.payment_for_meeting(meeting_id, organizer_user_id) do
       nil -> {:error, :not_found}
-      payment -> cancel_and_refund(meeting, payment, acting_user_id, amount_cents)
+      payment -> cancel_and_refund(meeting, payment, organizer_user_id, amount_cents)
     end
   end
 

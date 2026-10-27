@@ -13,8 +13,6 @@ defmodule TymeslotWeb.OAuthIntegrationCase do
   alias Tymeslot.DataCase
   alias Tymeslot.Security.RateLimiter
 
-  @account_lockout_table :account_lockout_table
-
   using do
     quote do
       # The default endpoint for testing
@@ -32,13 +30,9 @@ defmodule TymeslotWeb.OAuthIntegrationCase do
   setup tags do
     DataCase.setup_sandbox(tags)
 
-    # RateLimit (Hammer ETS) and the account lockout ETS table are always
-    # started in the supervision tree. Clear their state for test isolation.
+    # RateLimit (an ETS table) is always started in the supervision tree.
+    # Clear its state for test isolation.
     RateLimiter.clear_all()
-
-    if :ets.whereis(@account_lockout_table) != :undefined do
-      :ets.delete_all_objects(@account_lockout_table)
-    end
 
     {:ok, conn: setup_session(ConnTest.build_conn())}
   end

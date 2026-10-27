@@ -25,7 +25,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   update is a `PATCH` and a patched CalDAV document keeps what the payload
   leaves out, so on those writes the guest list is sent only by an edit that
   changes it: a Graph `PATCH` that carries attendees resets every reply, and
-  a CalDAV write that carries them states the new complete list.
+  a CalDAV write that carries them states the new complete list. Reminders
+  are the other, on a patched CalDAV document only: the sync does not read
+  its alarms, so the cached list is empty and would delete them all.
 
   ## Recurring events
 
@@ -69,19 +71,20 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   series member is never queued (see `Tymeslot.CalendarGrid.SeriesEdit`).
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.SeriesEdit
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Recurrence.Series
 
   require Logger
 
@@ -94,6 +97,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   @typedoc "Whether a failed provider write may be queued for offline replay."
   @type retry_policy :: :queue_recoverable | :never_queue
+
+  @doc """
+  The cache fields an edit may change: the keys `changes` may carry.
+  """
+  @spec editable_fields() :: [atom()]
+  def editable_fields, do: @editable_fields
 
   @doc """
   Applies `changes` to `event`, writes the whole updated event to the
@@ -109,7 +118,10 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
     * `:recurrence_scope` - which occurrences of a recurring series the edit
       applies to, a `t:Tymeslot.CalendarGrid.RecurrenceScope.t/0`; defaults to
-      `:this_only`, and is ignored for an event outside a series. Anything
+      `:this_only`, and is ignored for an event outside a series, but for
+      a change of `recurrence_rule` in `:following`: the event was a member
+      of a series when that scope was chosen, and the change is refused
+      with `:ends_before` (see `SeriesEdit.following_rule/3`). Anything
       else raises `ArgumentError`: a scope arriving from a form is parsed with
       `RecurrenceScope.parse/1` first. See `Tymeslot.CalendarGrid.SeriesEdit`.
     * `:conference_data` - a change to a Google event's own conference, sent
@@ -121,6 +133,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       instant (RFC 5545 §3.3.10), so refitting one has to end the organiser's
       chosen day in their own zone; without it the day ends in UTC and the
       series gains or loses its last occurrence.
+    * `:until_timezone` - the zone a new rule's `UNTIL` ended its day in, in
+      which the Google and Outlook series writers read the end date back
+      (see `Tymeslot.CalendarGrid.SeriesEdit`).
 
   Returns `{:ok, updated_event}`, or `{:error, %{reason: reason, retry:
   :queued | :not_queued}}` where `:queued` means the edit is saved locally
@@ -142,10 +157,21 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     stored = stored_row(event)
 
     case Occurrence.series_family(stored || event) do
-      :single -> write_edit(user_id, event, stored, changes, opts, :queue_recoverable)
+      :single -> update_single(user_id, event, stored, scope, changes, opts)
       family -> SeriesEdit.update_event(user_id, event, stored, family, scope, changes, opts)
     end
   end
+
+  # A change of repeat rule for this and the following events was chosen
+  # for a member of a series, with a `COUNT` given for the whole series. A
+  # sync since may have made the cached event a one-off, and writing the
+  # rule to it would start a new series of the whole count from here, so it
+  # is refused as a series with nothing left of it from this event on.
+  defp update_single(_user_id, _event, _stored, :following, %{recurrence_rule: _rule}, _opts),
+    do: {:error, %{reason: :ends_before, retry: :not_queued}}
+
+  defp update_single(user_id, event, stored, _scope, changes, opts),
+    do: write_edit(user_id, event, stored, changes, opts, :queue_recoverable)
 
   @doc """
   How `event` may be edited from the grid: `{:ok, :single}` for an event
@@ -170,7 +196,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   Answers `{:ok, updated_event}` once it is queued, or `{:error,
   :not_queued}` for an event whose integration has no offline queue, a
-  member of a series (never queued), or a change that cannot be applied.
+  member of a series or an event the change makes one (never queued), or a
+  change that cannot be applied.
   """
   @spec queue_for_retry(pos_integer(), map(), changes(), keyword()) ::
           {:ok, map()} | {:error, :not_queued}
@@ -181,7 +208,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     with :single <- Occurrence.series_family(stored || event),
          {:ok, updated} <- apply_changes(event, changes, opts),
          {:ok, payload} <- ProviderPayload.from_event(updated),
-         payload = payload |> put_stored_document(stored) |> scope_attendees(event, changes),
+         payload = payload |> put_stored_document(stored) |> scope_merged_fields(event, changes),
          :queued <- queue_retry(:queue_recoverable, user_id, updated, payload, :not_written) do
       {:ok, updated}
     else
@@ -243,8 +270,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
          {:ok, payload} <-
            payload
            |> maybe_put_conference(Keyword.get(opts, :conference_data))
+           |> ProviderPayload.put_series_zone(Keyword.get(opts, :timezone))
            |> put_stored_document(stored)
-           |> scope_attendees(event, changes)
+           |> scope_merged_fields(event, changes)
            |> address.() do
       write_to_provider(user_id, event, updated, payload, retry, answered)
     else
@@ -277,11 +305,26 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   # assigned and may be an optimistic copy built from a form: a payload that
   # quietly arrived without a document would be rebuilt, which is the loss
   # this exists to prevent.
-  defp put_stored_document(payload, %{raw_ical: raw_ical} = row)
+  #
+  # The row also says whose event it is, which decides whether the write
+  # marks it as Tymeslot's, and holds the raw Google event, whose unmodelled
+  # fields a Google `PUT` has to restate.
+  defp put_stored_document(payload, nil), do: payload
+
+  defp put_stored_document(payload, row) do
+    payload
+    |> Map.merge(%{
+      created_by_tymeslot: row.created_by_tymeslot,
+      provider_metadata: row.provider_metadata
+    })
+    |> put_raw_ical(row)
+  end
+
+  defp put_raw_ical(payload, %{raw_ical: raw_ical} = row)
        when is_binary(raw_ical) and raw_ical != "",
        do: Map.merge(payload, %{raw_ical: raw_ical, etag: row.etag})
 
-  defp put_stored_document(payload, _never_synced), do: payload
+  defp put_raw_ical(payload, _no_document), do: payload
 
   # Google's `events.update` is a `PUT`, so its payload has to carry the guest
   # list on every write or the guests are deleted. Outlook's `PATCH` and a
@@ -292,6 +335,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   # guests off the event. So those writes carry attendees only when the edit
   # changes them. A CalDAV event with no stored document is rebuilt from the
   # payload, not patched, and keeps the whole list.
+  defp scope_merged_fields(payload, event, changes) do
+    payload
+    |> scope_attendees(event, changes)
+    |> scope_reminders(event, changes)
+  end
+
   defp scope_attendees(payload, _event, %{attendees: _attendees}), do: payload
 
   defp scope_attendees(payload, event, _changes) do
@@ -301,11 +350,28 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   end
 
   defp merges_attendees?(provider, _payload) when provider in [:outlook, "outlook"], do: true
+  defp merges_attendees?(provider, payload), do: patches_document?(provider, payload)
 
-  defp merges_attendees?(provider, %{raw_ical: _stored_document}),
+  # The patcher removes the alarms a reminder can express that the payload's
+  # `:reminders` leaves out, and a row cached before the sync read alarms
+  # holds no reminders at all, so sending them with an edit that is not
+  # about reminders could delete the reminders on the organiser's server. A
+  # patched document keeps the alarms a payload leaves out, so those writes
+  # carry reminders only when the edit changes them. Google and Outlook read
+  # their reminders back on sync and treat a missing key as a reset (Google's
+  # calendar defaults, Outlook's reminder switched off), so they keep it.
+  defp scope_reminders(payload, _event, %{reminders: _reminders}), do: payload
+
+  defp scope_reminders(payload, event, _changes) do
+    if patches_document?(Map.get(event, :provider), payload),
+      do: Map.delete(payload, :reminders),
+      else: payload
+  end
+
+  defp patches_document?(provider, %{raw_ical: _stored_document}),
     do: ProviderConfig.caldav_based?(provider)
 
-  defp merges_attendees?(_provider, _payload), do: false
+  defp patches_document?(_provider, _payload), do: false
 
   defp write_to_provider(user_id, event, updated, payload, retry, answered) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
@@ -351,6 +417,23 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
         document
       )
 
+  @doc """
+  The event as it would read toggled between all-day and timed, its dates or
+  times derived in `timezone`: the zone the caller passes `update_event/4` as
+  `:timezone`, so the dates and a recurring event's refitted `UNTIL` are read
+  on the same calendar. See `Tymeslot.CalendarGrid.AllDay.toggle/2`.
+
+  The grid renders this copy while the write is queued, and writes its timing
+  fields (`timing_changes/1`).
+  """
+  @spec toggle_all_day(map(), String.t()) :: map()
+  defdelegate toggle_all_day(event, timezone), to: AllDay, as: :toggle
+
+  @doc "The timing fields of `event`, as `update_event/4` takes them."
+  @spec timing_changes(map()) :: changes()
+  def timing_changes(event),
+    do: Map.take(event, [:all_day, :start_at, :end_at, :start_date, :end_date])
+
   defp ensure_known_fields!(changes) do
     case Map.keys(changes) -- @editable_fields do
       [] ->
@@ -381,7 +464,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp retarget_rule(updated, _was_all_day, timezone) do
     case RRule.retarget(updated.recurrence_rule,
            all_day: updated.all_day,
-           start_date: AllDay.start_date(updated),
+           start_date: AllDay.start_date(updated, timezone),
            timezone: timezone
          ) do
       {:ok, rule} -> {:ok, %{updated | recurrence_rule: rule}}
@@ -394,10 +477,15 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   defp queue_retry(:never_queue, _user_id, _event, _payload, _reason), do: :not_queued
 
+  # An edit that leaves the event part of a series, a one-off given a rule
+  # among them, is not queued: the offline queue never replays a series
+  # member's change (it would rewrite every occurrence), so it would sit
+  # there unsent while the grid called it saved.
   defp queue_retry(:queue_recoverable, user_id, event, payload, reason) do
     target = %{uid: event.uid, calendar_integration_id: event.calendar_integration_id}
 
-    with true <- CalendarEvents.queueable_error?(reason),
+    with false <- Series.member?(event),
+         true <- CalendarEvents.queueable_error?(reason),
          :ok <- CalendarEvents.queue_for_offline_retry(target, :update, payload) do
       # The queue tag writes the edit's own fields, so this is no longer
       # repairing what the tag blanked. It stays for the other half of the
@@ -429,6 +517,6 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
         )
     end
 
-    AvailabilityCache.invalidate_for_user(user_id)
+    Availability.changed(user_id)
   end
 end

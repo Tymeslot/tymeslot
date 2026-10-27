@@ -61,7 +61,7 @@ defmodule Tymeslot.ThemeCustomizations.Options.PaletteTest do
       cs = changeset(%{"custom_palette_seed" => "not-hex"})
 
       refute cs.valid?
-      assert {"must be a valid hex colour", _opts} = cs.errors[:custom_palette_seed]
+      assert {"must be a hex colour such as #14b8a6", _opts} = cs.errors[:custom_palette_seed]
     end
 
     test "rejects an unknown preset scheme when no seed is set" do

@@ -38,9 +38,13 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       test_pid = self()
 
-      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+      stub(EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, _details ->
+        {:ok, :sent}
+      end)
+
+      stub(EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
         send(test_pid, {:reschedule_emails, details})
-        {{:ok, :sent}, {:ok, :sent}}
+        {:ok, :sent}
       end)
 
       Map.put(scenario, :original, moved_back(scenario.meeting))
@@ -53,6 +57,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       assert :ok = perform_job(VideoRoomWorker, args)
 
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, details}
       assert details.attendee_video_url =~ "https://test.mirotalk.com/join/test-room-123"
       assert details.original_start_time == original.start_time
@@ -78,6 +83,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
                  attempt: 1
                )
 
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, %{attendee_video_url: nil}}
       assert_enqueued(worker: WebhookWorker, args: %{"event_type" => "meeting.rescheduled"})
     end
@@ -99,6 +105,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       assert :ok = perform_job(VideoRoomWorker, args)
 
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
       refute_enqueued(worker: WebhookWorker)
       assert Repo.get!(MeetingSchema, meeting.id).video_room_id
@@ -113,6 +120,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
       end)
 
       assert {:snooze, _seconds} = perform_job(VideoRoomWorker, args, attempt: 5)
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, %{attendee_video_url: nil}}
 
       expect_mirotalk_success()
@@ -121,6 +129,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       # The link reaches the attendee through the meeting page and reminders;
       # a second email and event for the same move would not help.
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
       assert Repo.get!(MeetingSchema, meeting.id).video_room_id
     end
@@ -176,10 +185,42 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
         |> Jason.decode!()
         |> Announcement.from_args()
 
-      assert {:rescheduled, %{start_time: previous_start, end_time: previous_end}, to} = decoded
+      assert {:rescheduled, %{start_time: previous_start, end_time: previous_end}, to, []} =
+               decoded
+
       assert previous_start == meeting.start_time
       assert previous_end == meeting.end_time
       assert to == moved.start_time
+    end
+
+    test "a host's move reads back as the host's" do
+      meeting = insert(:meeting)
+      moved = %{meeting | start_time: DateTime.add(meeting.start_time, 1, :day)}
+
+      decoded =
+        moved
+        |> Announcement.rescheduled(meeting, moved_by: :host)
+        |> Announcement.to_args()
+        |> Jason.encode!()
+        |> Jason.decode!()
+        |> Announcement.from_args()
+
+      assert {:rescheduled, _previous, _to, [moved_by: :host]} = decoded
+    end
+
+    # Jobs enqueued before `moved_by` was carried have no such key; they
+    # announce the reschedule as the attendee's, as they always did.
+    test "args without moved_by read back as an attendee's reschedule" do
+      meeting = insert(:meeting)
+
+      args = %{
+        "announce" => "rescheduled",
+        "previous_start_time" => DateTime.to_iso8601(meeting.start_time),
+        "previous_end_time" => DateTime.to_iso8601(meeting.end_time),
+        "start_time" => DateTime.to_iso8601(DateTime.add(meeting.start_time, 1, :day))
+      }
+
+      assert {:rescheduled, _previous, _to, []} = Announcement.from_args(args)
     end
   end
 

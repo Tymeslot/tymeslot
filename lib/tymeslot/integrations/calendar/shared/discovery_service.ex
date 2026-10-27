@@ -16,16 +16,33 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
 
   @doc """
   Builds the `Tymeslot.Integrations.Calendar.Shared.DiscoveryCache` key for a
-  CalDAV discovery request against raw connection config.
+  CalDAV discovery request against raw connection config, on behalf of
+  `actor` (the rate-limit actor the discovery is charged to).
+
+  A cached answer is served without reaching the server, so it must only be
+  served to the request that produced it: the same requester, server address
+  and credentials. The address, username and password are hashed rather than
+  kept, so the key never holds a credential.
   """
-  @spec build_cache_key(atom(), %{
-          required(:base_url) => String.t(),
-          required(:username) => String.t(),
-          optional(atom()) => term()
-        }) :: {atom(), String.t()}
-  def build_cache_key(provider, config) do
-    user_id = "#{config[:username]}@#{extract_domain(config[:base_url])}"
-    {provider, user_id}
+  @spec build_cache_key(
+          atom(),
+          %{
+            required(:base_url) => String.t(),
+            required(:username) => String.t(),
+            optional(:password) => String.t() | nil,
+            optional(atom()) => term()
+          },
+          term()
+        ) :: {atom(), term(), binary()}
+  def build_cache_key(provider, config, actor) do
+    credentials =
+      Enum.map_join(
+        [config[:base_url], config[:username], config[:password]],
+        <<0>>,
+        &to_string/1
+      )
+
+    {provider, actor, :crypto.hash(:sha256, credentials)}
   end
 
   @doc """
@@ -59,11 +76,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   end
 
   # Private functions
-
-  defp extract_domain(url) do
-    uri = URI.parse(url)
-    uri.host || url
-  end
 
   # Generate a unique ID for calendars that have neither an `:id` nor a
   # `:path`/`:href` to fall back to (`CalendarEntry.with_defaults/1` already

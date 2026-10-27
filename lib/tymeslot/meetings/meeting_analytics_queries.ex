@@ -1,25 +1,54 @@
 defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   @moduledoc """
-  Aggregate queries over an organiser's meetings for the analytics
-  dashboard: booking volume, attribution by `utm_source`, and converting
-  visitors. Composed into user-facing figures by `Tymeslot.Analytics`
-  through the `Tymeslot.Meetings` context.
+  Aggregate queries over organisers' meetings: booking volume, attribution
+  by `utm_source` and converting visitors for the analytics dashboard
+  (composed into user-facing figures by `Tymeslot.Analytics` through the
+  `Tymeslot.Meetings` context), and which organisers have had a real
+  booking.
   """
 
   import Ecto.Query, warn: false
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
   @doc """
   Returns the count of bookings created for an organizer within the given
   window. Used by the analytics dashboard to compute conversion rate.
+
+  A session the host planned on a fixed-date type
+  (`Tymeslot.Meetings.PlannedSessions`) is a row before anyone books it, so
+  it counts only once someone has signed up for it, and in the window its
+  first live participant signed up in rather than the one the host planned
+  it in: a slot a first booker creates is inserted when they book, and a
+  planned session counts the same way.
   """
   @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   def count_bookings(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
-    Meeting
+    from(m in Meeting, as: :meeting)
     |> where([m], m.organizer_user_id == ^organizer_user_id)
-    |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
+    |> where(
+      [meeting: m],
+      (not m.planned and m.inserted_at >= ^from and m.inserted_at <= ^to) or
+        (m.planned and
+           exists(
+             from(p in ParticipantSchema,
+               where:
+                 p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at) and
+                   p.inserted_at >= ^from and p.inserted_at <= ^to,
+               select: 1
+             )
+           ) and
+           not exists(
+             from(p in ParticipantSchema,
+               where:
+                 p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at) and
+                   p.inserted_at < ^from,
+               select: 1
+             )
+           ))
+    )
     |> Repo.aggregate(:count, :id)
   end
 
@@ -76,5 +105,42 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
       converting_visitors: count(m.visitor_hash, :distinct)
     })
     |> Repo.all()
+  end
+
+  @doc """
+  Of `organizer_user_ids`, those who have had at least one real booking: a
+  meeting, not cancelled, booked by someone other than the organiser.
+
+  A one-to-one meeting qualifies when its attendee is not the organiser. A
+  group meeting leaves its attendee columns empty and holds its bookers as
+  participant rows, so it qualifies when at least one participant still
+  holding a seat is not the organiser. A host booking their own page as a
+  test is left out: such a booking carries no test flag, and the organiser's
+  own address is the closest signal there is.
+  """
+  @spec organisers_with_real_booking([integer()]) :: [integer()]
+  def organisers_with_real_booking([]), do: []
+
+  def organisers_with_real_booking(organizer_user_ids) when is_list(organizer_user_ids) do
+    Meeting
+    |> where([m], m.organizer_user_id in ^organizer_user_ids)
+    |> where([m], m.status != "cancelled")
+    |> where(
+      [m],
+      m.attendee_email != m.organizer_email or
+        m.id in subquery(meetings_with_foreign_participant())
+    )
+    |> distinct(true)
+    |> select([m], m.organizer_user_id)
+    |> Repo.all()
+  end
+
+  defp meetings_with_foreign_participant do
+    from(p in ParticipantSchema,
+      join: gm in Meeting,
+      on: gm.id == p.meeting_id,
+      where: is_nil(p.cancelled_at) and p.email != gm.organizer_email,
+      select: p.meeting_id
+    )
   end
 end

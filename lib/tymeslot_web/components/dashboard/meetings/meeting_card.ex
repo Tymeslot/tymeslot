@@ -9,8 +9,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Clock
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Seats
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
@@ -28,6 +31,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
   attr :answering_request, :any, default: nil
+  attr :move_offer, :map, default: nil
   attr :target, :any, required: true
 
   @spec meeting_card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -39,6 +43,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         timezone: timezone,
         guests: guest_list(assigns.meeting),
         group?: Helpers.group_meeting?(assigns.meeting),
+        managed?: HostManaged.managed?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
         answered_fields: answered_fields(assigns.meeting)
       )
@@ -51,6 +56,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             is_nil(@meeting.calendar_sync_status_dismissed_at)
         }
         meeting={@meeting}
+        move_offer={@move_offer}
+        timezone={@timezone}
+        time_format={@time_format}
         target={@target}
       />
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
@@ -67,6 +75,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
             <Feedback.pill
+              :if={@managed?}
+              tone={:brand}
+              size={:sm}
+              icon="hero-hand-raised"
+              data-testid="poll-meeting-badge"
+            >
+              {dgettext("dashboard_bookings", "Poll")}
+            </Feedback.pill>
+            <Feedback.pill
               :if={@group?}
               tone={:brand}
               size={:sm}
@@ -74,6 +91,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               data-testid="group-seats-badge"
             >
               {seats_label(@meeting, @guests)}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={registration_closed?(@meeting)}
+              tone={:danger}
+              size={:sm}
+              icon="hero-lock-closed"
+              data-testid="registration-closed-badge"
+            >
+              {dgettext("dashboard_bookings", "Registration closed")}
             </Feedback.pill>
             <Feedback.pill
               :if={Meetings.organizer_join_url(@meeting)}
@@ -97,8 +123,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
                 {Helpers.format_meeting_time(@meeting, @timezone, @time_format)}
               </span>
             </Containers.detail_line>
+            <%!-- A meeting from a poll carries the poll's title as its type,
+                 which already heads the card. --%>
             <Containers.detail_line
-              :if={@meeting.meeting_type}
+              :if={@meeting.meeting_type && !@managed?}
               variant={:tile}
               icon="hero-squares-2x2"
               label={dgettext("dashboard_bookings", "Meeting type")}
@@ -107,9 +135,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.meeting_type}
             </Containers.detail_line>
             <%!-- A group slot has no single attendee: every booker is listed
-                 in the participants panel below. --%>
+                 in the participants panel below. Nor has a meeting from a
+                 poll: everyone on it is a guest, listed below, the person in
+                 its attendee fields included. --%>
             <Containers.detail_line
-              :if={not @group? and @meeting.attendee_email}
+              :if={!@group? && !@managed? && @meeting.attendee_email}
               variant={:tile}
               tone={:info}
               icon="hero-envelope"
@@ -255,12 +285,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   end
 
   attr :meeting, :map, required: true
+  attr :move_offer, :map, default: nil
+  attr :timezone, :string, required: true
+  attr :time_format, :string, required: true
   attr :target, :any, required: true
 
   defp calendar_sync_banner(assigns) do
     ~H"""
     <div class={[
-      "flex items-start justify-between gap-4 rounded-token-2xl px-5 py-4 mb-6 border-2",
+      "flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 rounded-token-2xl px-5 py-4 mb-6 border-2",
       if(@meeting.calendar_sync_status == "externally_deleted",
         do: "bg-red-50 border-red-200 text-red-800",
         else: "bg-amber-50 border-amber-200 text-amber-800"
@@ -280,16 +313,30 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
           )}
         </span>
       </p>
-      <Buttons.action_button
-        variant={:outline}
-        size={:sm}
-        phx-click="dismiss_calendar_sync_banner"
-        phx-value-id={@meeting.id}
-        phx-target={@target}
-        class="shrink-0"
-      >
-        {dgettext("dashboard_bookings", "Dismiss")}
-      </Buttons.action_button>
+      <div class="flex flex-wrap sm:justify-end gap-2 sm:shrink-0">
+        <Buttons.action_button
+          :if={@move_offer}
+          variant={:primary}
+          size={:sm}
+          class="whitespace-normal"
+          phx-click="show_calendar_move_modal"
+          phx-value-id={@meeting.id}
+          phx-target={@target}
+        >
+          {dgettext("dashboard_bookings", "Move booking to %{time}",
+            time: Helpers.format_move_time(@move_offer, @timezone, @time_format)
+          )}
+        </Buttons.action_button>
+        <Buttons.action_button
+          variant={:outline}
+          size={:sm}
+          phx-click="dismiss_calendar_sync_banner"
+          phx-value-id={@meeting.id}
+          phx-target={@target}
+        >
+          {dgettext("dashboard_bookings", "Dismiss")}
+        </Buttons.action_button>
+      </div>
     </div>
     """
   end
@@ -335,12 +382,23 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     )
   end
 
+  # A planned session (`PlannedSessions`) that has not started yet but takes
+  # no more sign-ups. Once it has started, the card's status says enough.
+  defp registration_closed?(%{planned: true, status: status} = session)
+       when status != "cancelled" do
+    now = Clock.utc_now()
+    DateTime.compare(session.start_time, now) == :gt and not PlannedSessions.open?(session, now)
+  end
+
+  defp registration_closed?(_meeting), do: false
+
   # A solo card is titled after its attendee. A group card has no single
-  # attendee, so it is named after what was booked: `title` is a required
-  # field on every meeting, snapshotted at creation, so it survives the
-  # meeting type being edited or deleted.
+  # attendee, and a meeting from a poll none that matters, so they are named
+  # after what was booked: `title` is a required field on every meeting,
+  # snapshotted at creation, so it survives the meeting type being edited or
+  # deleted.
   defp meeting_title(meeting) do
-    if Helpers.group_meeting?(meeting),
+    if Helpers.group_meeting?(meeting) or HostManaged.managed?(meeting),
       do: group_title(meeting),
       else: solo_title(meeting)
   end

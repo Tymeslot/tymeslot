@@ -52,6 +52,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
 
   defp wire_lines(ical), do: String.split(ical, "\r\n")
 
+  defp alarm_lines(ical) do
+    ical
+    |> lines()
+    |> Enum.drop_while(&(&1 != "BEGIN:VALARM"))
+    |> Enum.take_while(&(&1 != "END:VALARM"))
+  end
+
   describe "patch_event_properties/3 on an event Tymeslot did not write" do
     test "renaming it keeps both ATTENDEE lines with their parameters" do
       patched = ICalBuilder.patch_event_properties(@foreign_event, %{summary: "Renamed"})
@@ -174,6 +181,56 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
       assert "TRIGGER:-PT45M" in lines(patched)
       assert "ACTION:EMAIL" in lines(patched)
       refute "TRIGGER:-PT10M" in lines(patched)
+    end
+
+    test "an email reminder is addressed to the organiser and titled after the event" do
+      patched =
+        ICalBuilder.patch_event_properties(@foreign_event, %{
+          reminders: [%{method: :email, minutes_before: 45}]
+        })
+
+      assert "ATTENDEE:mailto:dana@example.com" in alarm_lines(patched)
+      assert "SUMMARY:Sprint review" in alarm_lines(patched)
+    end
+
+    test "an email reminder takes the title the same edit gives the event, escaped" do
+      patched =
+        ICalBuilder.patch_event_properties(@foreign_event, %{
+          summary: "Review; part 2",
+          reminders: [%{"method" => "email", "minutes_before" => 45}]
+        })
+
+      assert "SUMMARY:Review\\; part 2" in alarm_lines(patched)
+    end
+
+    test "an email reminder keeps the recipient the stored email alarm names" do
+      with_email_alarm =
+        String.replace(
+          @foreign_event,
+          "ACTION:DISPLAY\r\n",
+          "ACTION:EMAIL\r\nATTENDEE:mailto:Me@Example.com\r\nSUMMARY:Soon\r\n"
+        )
+
+      patched =
+        ICalBuilder.patch_event_properties(with_email_alarm, %{
+          reminders: [%{method: :email, minutes_before: 45}]
+        })
+
+      assert "ATTENDEE:mailto:me@example.com" in alarm_lines(patched)
+      refute "ATTENDEE:mailto:dana@example.com" in alarm_lines(patched)
+    end
+
+    test "an email reminder with nobody to address becomes a display alarm" do
+      unaddressed =
+        String.replace(@foreign_event, "ORGANIZER;CN=Dana:mailto:dana@example.com\r\n", "")
+
+      patched =
+        ICalBuilder.patch_event_properties(unaddressed, %{
+          reminders: [%{method: :email, minutes_before: 45}]
+        })
+
+      assert "ACTION:DISPLAY" in alarm_lines(patched)
+      refute "ACTION:EMAIL" in alarm_lines(patched)
     end
 
     test "supplying no reminders at all removes the stored alarms" do

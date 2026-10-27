@@ -86,4 +86,4 @@ USER appuser
 
 EXPOSE 8080
 
-CMD ["/bin/sh", "-c", "/app/bin/tymeslot eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))' && exec /app/bin/tymeslot start"]
+CMD ["/bin/sh", "-c", "/app/bin/tymeslot eval 'Tymeslot.Release.migrate()' && exec /app/bin/tymeslot start"]

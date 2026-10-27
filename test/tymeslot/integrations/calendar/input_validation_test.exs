@@ -78,6 +78,37 @@ defmodule Tymeslot.Integrations.Calendar.InputValidationTest do
     end
   end
 
+  describe "validate_calendar_integration_form/1 - identifiers kept as typed" do
+    test "keeps a double hyphen in the username" do
+      params = Map.put(@valid_params, "username", "alice--work@example.com")
+
+      assert {:ok, result} = InputValidation.validate_calendar_integration_form(params)
+      assert result["username"] == "alice--work@example.com"
+    end
+
+    test "keeps a hex-looking run in the username" do
+      params = Map.put(@valid_params, "username", "crypto0xabc")
+
+      assert {:ok, result} = InputValidation.validate_calendar_integration_form(params)
+      assert result["username"] == "crypto0xabc"
+    end
+
+    test "keeps calendar paths with double hyphens, hex runs and percent-encoding" do
+      paths = "/dav/calendars/user%40example.com/work--2026/,/dav/calendars/0xabc/"
+      params = Map.put(@valid_params, "calendar_paths", paths)
+
+      assert {:ok, result} = InputValidation.validate_calendar_integration_form(params)
+      assert result["calendar_paths"] == paths
+    end
+
+    test "keeps the Exchange mailbox exactly as typed" do
+      params = Map.put(@valid_params, "mailbox", "crypto0xabc@corp.com")
+
+      assert {:ok, result} = InputValidation.validate_exchange_form(params, [])
+      assert result["mailbox"] == "crypto0xabc@corp.com"
+    end
+  end
+
   describe "validate_calendar_integration_form/1 - password validation" do
     test "rejects nil password" do
       params = Map.put(@valid_params, "password", nil)

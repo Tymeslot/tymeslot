@@ -253,4 +253,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
       assert stored_tier(integration) == 1
     end
   end
+
+  describe "a server that is down" do
+    test "keeps delta sync when the sync-collection REPORT meets a 503",
+         %{integration: integration} do
+      # A 503 during maintenance is the server being away, not the server
+      # refusing the feature, so it must not cost a day of delta sync.
+      stub_server(fn conn -> Conn.send_resp(conn, 503, "Service Unavailable") end)
+
+      run_sync(integration)
+
+      assert stored_tier(integration) == 1
+    end
+  end
 end

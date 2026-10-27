@@ -65,7 +65,9 @@ defmodule Tymeslot.ExchangeFixtures do
 
   `overrides` replaces any of `:id`, `:change_key`, `:subject`, `:uid`,
   `:start`, `:end` and `:calendar_item_type`; the last is omitted entirely
-  unless given, matching a server that does not answer it.
+  unless given, matching a server that does not answer it. `id_only: true`
+  answers the item id alone, as a server ignoring `t:AdditionalProperties`
+  would.
   """
   @spec get_item_response(keyword()) :: String.t()
   def get_item_response(overrides \\ []) do
@@ -209,6 +211,18 @@ defmodule Tymeslot.ExchangeFixtures do
   end
 
   defp calendar_item(overrides) do
+    if overrides[:id_only], do: bare_item(overrides), else: full_item(overrides)
+  end
+
+  defp bare_item(overrides) do
+    """
+    <t:CalendarItem>
+      <t:ItemId Id="#{overrides[:id] || @item_id}" ChangeKey="#{@change_key}"/>
+    </t:CalendarItem>
+    """
+  end
+
+  defp full_item(overrides) do
     fields =
       Keyword.merge(
         [

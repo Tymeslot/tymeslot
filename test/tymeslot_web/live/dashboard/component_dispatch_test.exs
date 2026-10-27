@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
   @moduletag :dashboard
 
   alias Tymeslot.Agenda.Day
+  alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingsManagementComponent
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -95,15 +96,16 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
                ComponentDispatch.props_for_action(assigns)
     end
 
-    test ":availability prefills the profile timezone from the detected timezone" do
+    # The page shows the clock the booking engine reads, not the browser's.
+    test ":availability gives a profile with no timezone the default one, not the detected one" do
       assigns = %{
         live_action: :availability,
         profile: %{timezone: nil},
         detected_timezone: "Europe/London"
       }
 
-      assert %{profile: %{timezone: "Europe/London"}} =
-               ComponentDispatch.props_for_action(assigns)
+      default = Profiles.get_default_timezone()
+      assert %{profile: %{timezone: ^default}} = ComponentDispatch.props_for_action(assigns)
     end
 
     test ":settings keeps an existing profile timezone instead of overriding" do

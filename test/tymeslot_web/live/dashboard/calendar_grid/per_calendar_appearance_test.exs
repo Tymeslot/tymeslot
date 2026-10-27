@@ -18,10 +18,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock_midweek: 0]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Appearance
 
+  # The grid opens on the week that holds today in the host's zone (Tallinn
+  # by default), and these events sit on today in UTC; late on a Sunday the
+  # two are different weeks. Midweek they are always the same one.
+  setup do: freeze_clock_midweek()
   setup :setup_dashboard_user
 
   setup %{user: user} do
@@ -126,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
     } do
       # The assertions above prove the row is written. This one proves the row
       # is read: without it, deleting the filter entirely still passes the suite.
-      today = Date.utc_today()
+      today = Clock.utc_today()
       at = DateTime.new!(today, ~T[10:00:00], "Etc/UTC")
 
       insert(:provider_calendar_event,
@@ -202,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
       # Storing the row is not the feature; painting the event is. Asserting only
       # on the stored colour passes even when no view receives the colour map,
       # which is exactly how the first version of this shipped broken.
-      at = DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC")
+      at = DateTime.new!(Clock.utc_today(), ~T[10:00:00], "Etc/UTC")
 
       for {cal, summary} <- [{"cal-main", "Sprint planning"}, {"cal-birthdays", "A birthday"}] do
         insert(:provider_calendar_event,

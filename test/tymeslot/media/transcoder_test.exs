@@ -7,6 +7,8 @@ defmodule Tymeslot.Media.TranscoderTest do
 
   alias Tymeslot.Media.Transcoder
 
+  import Tymeslot.TestHelpers.Eventually
+
   describe "available?/0" do
     # Asserting that ffmpeg is simply present would test the machine running
     # the suite rather than Tymeslot: it holds on a developer's box and fails
@@ -138,7 +140,99 @@ defmodule Tymeslot.Media.TranscoderTest do
       args = args_file |> File.read!() |> String.split("\n", trim: true)
       assert ["-map_metadata", "-1"] in Enum.chunk_every(args, 2, 1, :discard)
       assert ["-map_chapters", "-1"] in Enum.chunk_every(args, 2, 1, :discard)
+      assert "-nostdin" in args
     end
+  end
+
+  describe "transcode/3 with an ffmpeg that never finishes" do
+    @tag :tmp_dir
+    test "kills it once the timeout passes and reports :timeout", %{tmp_dir: tmp_dir} do
+      source = Path.join(tmp_dir, "stalls.mp4")
+      output = Path.join(tmp_dir, "stalls-desktop.mp4")
+      File.write!(source, "video")
+
+      # Records its pid beside itself, then becomes a process that would
+      # outlast the test by far. `$0` for the same reason as above.
+      stub = Path.join(tmp_dir, "ffmpeg")
+      File.write!(stub, "#!/bin/sh\necho $$ > \"$0.pid\"\nexec /bin/sleep 5\n")
+      File.chmod!(stub, 0o755)
+
+      # Long enough for the stub to have written its pid before it is killed.
+      variant = [codec: "libx264", max_height: 1080, format: "mp4", timeout: 1_000]
+
+      assert {:error, :timeout} =
+               with_path(tmp_dir, fn -> Transcoder.transcode(source, output, variant) end)
+
+      os_pid = (stub <> ".pid") |> File.read!() |> String.trim()
+
+      # Gone, not merely abandoned: `kill -0` fails once the process no
+      # longer exists (after the port's helper has reaped it).
+      eventually(fn -> not os_process_alive?(os_pid) end,
+        message: "ffmpeg (pid #{os_pid}) is still running after the timeout"
+      )
+    end
+  end
+
+  describe "variant_timeout/1" do
+    # An ffmpeg that describes its input as the real one does when given no
+    # output: on stderr, then a non-zero exit.
+    defp probe_stub(tmp_dir, duration) do
+      stub = Path.join(tmp_dir, "ffmpeg")
+
+      File.write!(stub, """
+      #!/bin/sh
+      echo "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'upload.mp4':" >&2
+      echo "  Duration: #{duration}, start: 0.000000, bitrate: 1046 kb/s" >&2
+      echo "At least one output file must be specified" >&2
+      exit 1
+      """)
+
+      File.chmod!(stub, 0o755)
+      source = Path.join(tmp_dir, "upload.mp4")
+      File.write!(source, "video")
+      source
+    end
+
+    @tag :tmp_dir
+    test "is ten times the source's length", %{tmp_dir: tmp_dir} do
+      source = probe_stub(tmp_dir, "00:06:00.00")
+
+      assert with_path(tmp_dir, fn -> Transcoder.variant_timeout(source) end) ==
+               :timer.minutes(60)
+    end
+
+    @tag :tmp_dir
+    test "gives a short clip the 45-minute floor", %{tmp_dir: tmp_dir} do
+      source = probe_stub(tmp_dir, "00:00:30.50")
+
+      assert with_path(tmp_dir, fn -> Transcoder.variant_timeout(source) end) ==
+               :timer.minutes(45)
+    end
+
+    @tag :tmp_dir
+    test "stops at the ceiling for a long clip", %{tmp_dir: tmp_dir} do
+      source = probe_stub(tmp_dir, "02:00:00.00")
+
+      assert with_path(tmp_dir, fn -> Transcoder.variant_timeout(source) end) ==
+               Transcoder.max_variant_timeout()
+
+      assert Transcoder.max_variant_timeout() == :timer.minutes(70)
+    end
+
+    @tag :tmp_dir
+    test "gives a source whose length cannot be read the floor", %{tmp_dir: tmp_dir} do
+      source = probe_stub(tmp_dir, "N/A")
+
+      assert with_path(tmp_dir, fn -> Transcoder.variant_timeout(source) end) ==
+               :timer.minutes(45)
+    end
+  end
+
+  defp os_process_alive?(os_pid) do
+    {_output, status} =
+      System.cmd("/bin/sh", ["-c", "kill -0 #{os_pid}"], stderr_to_stdout: true, env: [])
+
+    status == 0
   end
 
   # Runs `fun` with the PATH narrowed to `dir`, restoring the caller's PATH

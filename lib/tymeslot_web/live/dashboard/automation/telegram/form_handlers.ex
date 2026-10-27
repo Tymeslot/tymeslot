@@ -125,7 +125,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_validate_field(%{"field" => field, "value" => value}, socket) do
     form_values = Map.put(socket.assigns.telegram_form_values, field, value)
-    bot_mode = if Telegram.shared_bot_mode?(), do: "shared", else: "own"
+    mode = socket.assigns.telegram_form_mode
+    bot_mode = Telegram.form_bot_mode(mode, socket.assigns.telegram_form_data)
     allowed_fields = ~w(name bot_token chat_id events)
     field_atom = FormValidationHelpers.atomize_field(field, allowed_fields)
 
@@ -135,7 +136,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
       else
         case TelegramInputValidation.validate_form(form_values,
                bot_mode: bot_mode,
-               mode: socket.assigns.telegram_form_mode
+               mode: mode,
+               stored_name: AutomationHelpers.stored_name(socket.assigns.telegram_form_data)
              ) do
           {:ok, _validated} ->
             FormValidationHelpers.delete_field_error(

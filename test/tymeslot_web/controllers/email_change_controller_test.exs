@@ -20,7 +20,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
   describe "GET /email-change/:token" do
     test "renders a confirmation page without changing the email", %{conn: conn} do
       user = Factory.insert(:user, email: "old@example.com")
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
 
       conn = get(conn, ~p"/email-change/#{token}")
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
     test "verifies email change with valid token", %{conn: conn} do
       user = Factory.insert(:user, email: "old@example.com")
       new_email = "new@example.com"
-      token = Token.generate_token()
+      token = Token.generate()
 
       {:ok, _user} = UserTokenQueries.request_email_change(user, new_email, token)
 
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       # cannot tell a working form from one whose token is missing or wrong.
       # Round-trip the rendered form with the check switched back on.
       user = Factory.insert(:user, email: "old@example.com")
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
 
       page = get(conn, ~p"/email-change/#{token}")
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
 
     test "refuses a confirmation posted without the form's CSRF token", %{conn: conn} do
       user = Factory.insert(:user, email: "old@example.com")
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
 
       page = get(conn, ~p"/email-change/#{token}")
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
     test "fails with expired token", %{conn: conn} do
       user = Factory.insert(:user, email: "old@example.com")
       new_email = "new@example.com"
-      token = Token.generate_token()
+      token = Token.generate()
 
       {:ok, _user} = UserTokenQueries.request_email_change(user, new_email, token)
 

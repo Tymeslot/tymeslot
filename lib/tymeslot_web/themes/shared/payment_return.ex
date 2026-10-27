@@ -80,10 +80,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   Assigns the organiser's customisation for the page's theme, as the booking
   page loads it (`Customization.Helpers.assign_theme_customization/3`):
   `:theme_tokens`, the `%Tokens{}` the theme's spec builds from the saved
-  customisation or from its defaults, and `:theme_customized`, whether the
-  organiser saved one. A theme with a `page_shell:` hands the tokens to its
-  shell; Quill and Rhythm, whose own payment cards never showed the booking
-  page's defaults, write them only when `:theme_customized` is true.
+  customisation or from its defaults. Every theme hands them to the shell
+  its booking page uses, so the attendee comes back from Stripe to the
+  booking page's own background and palette.
 
   Called on the connected mount, once the meeting's organiser is known: the
   dead render reads no data, so it has no customisation
@@ -95,16 +94,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     theme_id = socket.assigns.theme_id
     customization = Demo.get_theme_customization(profile.id, theme_id)
 
-    Component.assign(socket,
-      theme_tokens: ThemeCustomizations.tokens(theme_id, customization),
-      theme_customized: customization != nil
-    )
+    Component.assign(socket, :theme_tokens, ThemeCustomizations.tokens(theme_id, customization))
   end
 
   @doc "Assigns no customisation: the dead render's, before any data is read."
   @spec no_customization(LiveView.Socket.t()) :: LiveView.Socket.t()
   def no_customization(socket),
-    do: Component.assign(socket, theme_tokens: nil, theme_customized: false)
+    do: Component.assign(socket, :theme_tokens, nil)
 
   @doc """
   Assigns the language switcher's state: `:language_dropdown_open`, which a
@@ -172,12 +168,6 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   defp meeting_type_slug(_meeting), do: nil
 
   @doc """
-  Stable PubSub topic for payment status broadcasts on a given meeting.
-  """
-  @spec topic(String.t()) :: String.t()
-  def topic(meeting_id), do: "meeting_payment:#{meeting_id}"
-
-  @doc """
   Resolves the URL's theme slug and assigns `:theme_id` and `:theme_module`.
 
   The scheduling root layout reads `:theme_id` to choose the theme's
@@ -235,7 +225,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       )
 
     if LiveView.connected?(socket) do
-      PubSub.subscribe(Tymeslot.PubSub, topic(meeting_id))
+      PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting_id))
 
       case authorize(meeting_id, theme_slug, params["session_id"]) do
         {:ok, %{meeting: meeting, payment: payment, profile: profile}} ->
@@ -322,6 +312,16 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   end
 
   @doc """
+  Where an outcome leaves the booking, for the page's status mark: still
+  waiting (on the payment, or on the organiser's approval), confirmed, or
+  ended (it will not go ahead).
+  """
+  @spec progress(outcome()) :: :waiting | :confirmed | :ended
+  def progress(outcome) when outcome in [:loading, :awaiting_approval], do: :waiting
+  def progress(:confirmed), do: :confirmed
+  def progress(_failed_or_ended), do: :ended
+
+  @doc """
   Formats a gated meeting's approval deadline for the return page, or
   `nil` when there is none to show (an unpaid/ungated meeting, or one
   where the deadline field has not been backfilled).
@@ -358,15 +358,23 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     end
   end
 
+  # A theme id the catalogue does not know is served as the default theme, on
+  # the booking page and in the checkout return URL alike, so it is checked
+  # as the default here too.
   defp validate_theme(profile, slug) do
-    case ThemeRegistry.id_to_key(profile.booking_theme || ThemeRegistry.default_theme_id()) do
-      {:ok, key} ->
-        if Atom.to_string(key) == slug, do: :ok, else: {:error, :wrong_theme}
+    if Atom.to_string(profile_theme_key(profile)) == slug,
+      do: :ok,
+      else: {:error, :wrong_theme}
+  end
 
-      {:error, :invalid_theme_id} ->
-        {:error, :wrong_theme}
+  defp profile_theme_key(%{booking_theme: theme_id}) when is_binary(theme_id) do
+    case ThemeRegistry.id_to_key(theme_id) do
+      {:ok, key} -> key
+      {:error, :invalid_theme_id} -> ThemeRegistry.default_theme_key()
     end
   end
+
+  defp profile_theme_key(_profile), do: ThemeRegistry.default_theme_key()
 
   defp get_payment(meeting_id) do
     case MeetingPayments.payment_for_meeting(meeting_id) do

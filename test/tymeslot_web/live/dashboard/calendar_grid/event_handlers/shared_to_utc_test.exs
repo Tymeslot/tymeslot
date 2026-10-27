@@ -102,6 +102,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
     end
   end
 
+  # The editor shows the number or date field only once its end is picked,
+  # so the pick arrives without one.
+  describe "compose_recurrence_rule with an end picked before its value" do
+    test "ends after the default count" do
+      params = %{"freq" => "weekly", "end_type" => "count"}
+      context = %{start_date: ~D[2026-06-01], all_day: true}
+      assert Shared.compose_recurrence_rule(params, context) == "FREQ=WEEKLY;COUNT=10"
+    end
+
+    test "ends on the day of the tenth occurrence" do
+      params = %{"freq" => "weekly", "end_type" => "until", "until" => ""}
+      context = %{start_date: ~D[2026-06-01], all_day: true}
+      assert Shared.compose_recurrence_rule(params, context) == "FREQ=WEEKLY;UNTIL=20260803"
+    end
+
+    test "takes an interval and a count no larger than the editor's fields allow" do
+      params = %{
+        "freq" => "daily",
+        "interval" => "5000",
+        "end_type" => "count",
+        "count" => "5000"
+      }
+
+      context = %{start_date: ~D[2026-06-01], all_day: true}
+
+      assert Shared.compose_recurrence_rule(params, context) ==
+               "FREQ=DAILY;INTERVAL=999;COUNT=999"
+    end
+  end
+
   describe "compose_recurrence_rule all-day UNTIL (#5)" do
     test "emits UNTIL as YYYYMMDD (no time) for all-day events" do
       params = %{"freq" => "weekly", "end_type" => "until", "until" => "2026-12-31"}
@@ -144,7 +174,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
       context = %{all_day: false, start_date: ~D[2026-06-01], timezone: "America/Los_Angeles"}
       rule = Shared.compose_recurrence_rule(@params, context)
 
-      assert %{until: ~D[2026-06-30]} = RRule.parse(rule, timezone: "America/Los_Angeles")
+      assert %{until: ~D[2026-06-30]} = RRule.options(rule, timezone: "America/Los_Angeles")
     end
   end
 
@@ -160,6 +190,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
       assert Shared.recurrence_timezone(%{timezone: nil}, "Europe/Tallinn") == "Europe/Tallinn"
       assert Shared.recurrence_timezone(%{timezone: ""}, "Europe/Tallinn") == "Europe/Tallinn"
       assert Shared.recurrence_timezone(%{}, "Europe/Tallinn") == "Europe/Tallinn"
+    end
+
+    # Sync stores UTC for any event written with UTC times, which says how a
+    # one-off was written rather than which local time a series made from it
+    # keeps.
+    test "a one-off carrying UTC falls back to the organiser's" do
+      for zone <- ["Etc/UTC", "UTC", "GMT"], rule <- [nil, ""] do
+        assert Shared.recurrence_timezone(
+                 %{timezone: zone, recurrence_rule: rule},
+                 "Europe/Tallinn"
+               ) == "Europe/Tallinn"
+      end
+    end
+
+    # Its writers read an UNTIL back as a date in the series' own zone.
+    test "a series carrying UTC keeps it" do
+      assert Shared.recurrence_timezone(
+               %{timezone: "Etc/UTC", recurrence_rule: "FREQ=WEEKLY"},
+               "America/Los_Angeles"
+             ) == "Etc/UTC"
     end
 
     test "no event at all falls back to the organiser's" do

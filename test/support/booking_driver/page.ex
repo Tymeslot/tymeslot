@@ -8,6 +8,7 @@ defmodule TymeslotWeb.BookingDriver.Page do
   and the mounted pushes already sent.
   """
 
+  import ExUnit.Assertions, only: [flunk: 1]
   import Phoenix.LiveViewTest
 
   alias Phoenix.LiveViewTest.View
@@ -189,4 +190,26 @@ defmodule TymeslotWeb.BookingDriver.Page do
   @doc "The moment `remember/1` last kept for `view`, or nil."
   @spec last_moment(View.t()) :: String.t() | nil
   def last_moment(view), do: Process.get({__MODULE__, :last_moment, view.pid})
+
+  @doc """
+  The day and time a `data-fact="slot"` button books, failing on a button
+  that lacks either.
+  """
+  @spec slot_of(Floki.html_node()) :: {String.t(), String.t()}
+  def slot_of(node) do
+    case {Floki.attribute(node, "data-date"), Floki.attribute(node, "data-time")} do
+      {[iso], [time]} ->
+        {iso, time}
+
+      _missing ->
+        flunk(
+          "a data-fact=\"slot\" button lacks its data-date or data-time: " <>
+            Floki.raw_html(node)
+        )
+    end
+  end
+
+  @doc "`attrs` as the string-keyed params a form submits."
+  @spec form_params(map() | keyword()) :: map()
+  def form_params(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 end

@@ -1,5 +1,5 @@
 {
   "deploy": {
-    "startCommand": "/app/_build/prod/rel/tymeslot/bin/tymeslot eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))' && exec /app/_build/prod/rel/tymeslot/bin/tymeslot start"
+    "startCommand": "/app/_build/prod/rel/tymeslot/bin/tymeslot eval 'Tymeslot.Release.migrate()' && exec /app/_build/prod/rel/tymeslot/bin/tymeslot start"
   }
 }

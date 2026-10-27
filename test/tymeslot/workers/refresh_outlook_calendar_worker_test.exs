@@ -9,7 +9,9 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
 
@@ -24,10 +26,26 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
       is_active: true,
       access_token_encrypted: Encryption.encrypt("test-access-token"),
       refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+      # A delta link bootstrapped an hour ago: young enough to be used.
+      last_full_sync_at: DateTime.add(DateTime.utc_now(:second), -3600, :second)
     ]
 
     insert(:calendar_integration, Keyword.merge(defaults, attrs))
+  end
+
+  defp expect_delta_page(events) do
+    body =
+      Jason.encode!(%{
+        "value" => events,
+        "@odata.deltaLink" =>
+          "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
+      })
+
+    expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+      assert url =~ "$deltatoken=old"
+      {:ok, %{status: 200, body: body}}
+    end)
   end
 
   defp subscribe_to_sync_topic(user_id) do
@@ -133,6 +151,180 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
       assert reloaded.graph_delta_link =~ "$deltatoken=fresh"
     end
 
+    # The link tracks the window of the bootstrap that issued it, fixed at
+    # those dates; a week on, it is replaced so the cache keeps reaching the
+    # full window ahead. It is followed one last time first: the bootstrap
+    # only upserts, so a removal pending on the old link would otherwise
+    # leave a ghost event in the cache.
+    for {label, bootstrapped_at} <- [
+          {"a week old", -7 * 86_400},
+          {"of unknown age", nil}
+        ] do
+      test "follows a delta link #{label} once more, then re-bootstraps" do
+        bootstrapped_at =
+          case unquote(bootstrapped_at) do
+            nil -> nil
+            seconds -> DateTime.add(DateTime.utc_now(:second), seconds, :second)
+          end
+
+        integration =
+          outlook_integration(
+            graph_delta_link:
+              "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old",
+            last_full_sync_at: bootstrapped_at
+          )
+
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "outlook",
+          uid: "removed-on-the-old-link",
+          provider_event_id: "removed-1"
+        )
+
+        expect_delta_page([
+          %{"id" => "removed-1", "iCalUId" => "removed-on-the-old-link", "@removed" => %{}}
+        ])
+
+        expect(OutlookCalendarAPIMock, :bootstrap_sync, fn received ->
+          # The old link was followed before the bootstrap ran.
+          assert received.graph_delta_link =~ "$deltatoken=fresh"
+          {:ok, %{received | graph_delta_link: "fresh-delta-link"}}
+        end)
+
+        expect(OutlookCalendarAPIMock, :register_graph_subscription, fn updated ->
+          {:ok, updated}
+        end)
+
+        assert :ok =
+                 perform_job(RefreshOutlookCalendarWorker, %{
+                   "calendar_integration_id" => integration.id
+                 })
+
+        assert ProviderCalendarEventQueries.get_by_uid(integration.id, "removed-on-the-old-link") ==
+                 {:error, :not_found}
+      end
+    end
+
+    test "keeps the old link's changes when the re-bootstrap fails" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old",
+          last_full_sync_at: nil
+        )
+
+      :ok = subscribe_to_sync_topic(integration.user_id)
+
+      expect_delta_page([])
+
+      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :too_many_pages}
+      end)
+
+      assert :ok =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert_receive {:calendar_sync_complete, _user_id, _integration_id}
+
+      {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
+      assert reloaded.graph_delta_link =~ "$deltatoken=fresh"
+      assert is_nil(reloaded.last_full_sync_at)
+    end
+
+    test "re-bootstraps when following the old link fails" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old",
+          last_full_sync_at: nil
+        )
+
+      :ok = subscribe_to_sync_topic(integration.user_id)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 500, body: "boom"}}
+      end)
+
+      # Stores the new link as the real bootstrap does.
+      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn received ->
+        now = DateTime.utc_now(:second)
+        attrs = %{graph_delta_link: "fresh-bootstrap-link", last_full_sync_at: now}
+        CalendarIntegrationWebhookQueries.update_graph_subscription(received, attrs)
+      end)
+
+      expect(OutlookCalendarAPIMock, :register_graph_subscription, fn updated ->
+        assert updated.graph_delta_link == "fresh-bootstrap-link"
+        {:ok, updated}
+      end)
+
+      assert :ok =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert_receive {:calendar_sync_complete, _user_id, _integration_id}
+
+      {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
+      assert reloaded.graph_delta_link == "fresh-bootstrap-link"
+      assert %DateTime{} = reloaded.last_full_sync_at
+    end
+
+    test "retries when both the old link and the re-bootstrap fail" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old",
+          last_full_sync_at: nil
+        )
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 500, body: "boom"}}
+      end)
+
+      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :circuit_open}
+      end)
+
+      assert {:error, :bootstrap_failed} =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+    end
+
+    # One event Graph returns with a NUL byte used to fail the batch's cache
+    # write, so the new link was never stored and every later refresh failed
+    # on the same event.
+    test "stores the new link when an event carries a NUL byte" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old"
+        )
+
+      expect_delta_page([
+        %{
+          "id" => "nul-1",
+          "iCalUId" => "nul-uid-1",
+          "subject" => "Stand\u0000up",
+          "start" => %{"dateTime" => "2026-11-02T09:00:00.0000000", "timeZone" => "UTC"},
+          "end" => %{"dateTime" => "2026-11-02T09:15:00.0000000", "timeZone" => "UTC"}
+        }
+      ])
+
+      assert :ok =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert {:ok, %{summary: "Standup"}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "nul-uid-1")
+
+      {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
+      assert reloaded.graph_delta_link =~ "$deltatoken=fresh"
+    end
+
     test "chains into bootstrap in the same job when the obsolete-link auto-clear fires" do
       # Existing integrations may carry a `/me/events/delta` link from the old
       # bootstrap path. DeltaSync detects and clears it; the worker must then
@@ -204,7 +396,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
       # any unexpected call.
       integration = insert(:calendar_integration, provider: "google", is_active: true)
 
-      assert {:discard, "Integration is not Outlook"} =
+      assert {:discard, "Integration is not outlook"} =
                perform_job(RefreshOutlookCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
@@ -299,7 +491,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
         )
 
       expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
-        {:error, :unauthorized, "Token refresh failed"}
+        {:error, :api_error, "Token refresh failed"}
       end)
 
       assert {:error, :delta_sync_failed} =
@@ -312,52 +504,18 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
     end
   end
 
-  describe "perform/1 when a series cached as its master arrives as occurrences" do
-    # A series the grid created with a video was cached as its master row,
-    # the one place the video is recorded; the sync never writes a row's
-    # video, so the occurrences replacing that row must be given it.
-    test "gives the occurrences the master row's video before dropping the row" do
-      integration =
-        outlook_integration(
-          graph_delta_link:
-            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old"
-        )
+  # The refresh is the only full Outlook sync for an integration without
+  # webhooks, so its verdict has to reach health state like every other
+  # provider's sync, and a refused credential has to reach the owner.
+  describe "perform/1 - health state" do
+    defp delta_link, do: "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old"
 
-      video = insert(:video_integration, user: integration.user, provider: "mirotalk")
-      link = "https://video.example.com/join/weekly"
-
-      insert(:provider_calendar_event,
-        calendar_integration: integration,
-        provider: "outlook",
-        uid: "040000008200E00074C5B7101A82E008",
-        provider_event_id: "master-1",
-        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
-        video_link: link,
-        video_integration_id: video.id
-      )
-
-      occurrence = fn id, day ->
-        %{
-          "id" => id,
-          "iCalUId" => "040000008200E00074C5B7101A82E008-#{id}",
-          "type" => "occurrence",
-          "seriesMasterId" => "master-1",
-          "subject" => "Weekly",
-          "isAllDay" => false,
-          "start" => %{"dateTime" => "2026-11-#{day}T08:00:00.0000000", "timeZone" => "UTC"},
-          "end" => %{"dateTime" => "2026-11-#{day}T09:00:00.0000000", "timeZone" => "UTC"}
-        }
-      end
-
-      delta_response_body =
-        Jason.encode!(%{
-          "value" => [occurrence.("occ-1", "02"), occurrence.("occ-2", "09")],
-          "@odata.deltaLink" =>
-            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
-        })
+    test "a completed refresh clears a reconnect flag the integration has recovered from" do
+      integration = outlook_integration(graph_delta_link: delta_link(), needs_reauth: true)
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %{status: 200, body: delta_response_body}}
+        {:ok,
+         %{status: 200, body: Jason.encode!(%{"value" => [], "@odata.deltaLink" => delta_link()})}}
       end)
 
       assert :ok =
@@ -365,20 +523,77 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
                  "calendar_integration_id" => integration.id
                })
 
-      assert ProviderCalendarEventQueries.get_by_uid(
-               integration.id,
-               "040000008200E00074C5B7101A82E008"
-             ) == {:error, :not_found}
+      assert {:ok, %{needs_reauth: false}} = CalendarIntegrationQueries.get(integration.id)
+    end
 
-      for id <- ["occ-1", "occ-2"] do
-        assert {:ok, row} =
-                 ProviderCalendarEventQueries.get_by_uid(
-                   integration.id,
-                   "040000008200E00074C5B7101A82E008-#{id}"
-                 )
+    test "a failed refresh counts towards the failure streak" do
+      integration = outlook_integration(graph_delta_link: delta_link())
 
-        assert {row.video_integration_id, row.video_link} == {video.id, link}
-      end
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 500, body: ~s({"error":"server_error"})}}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert Monitor.get_state(:calendar, integration.id, integration.user_id).consecutive_sync_failures ==
+               1
+    end
+
+    test "a refused credential flags the integration for reconnection instead of retrying" do
+      integration = outlook_integration(graph_delta_link: delta_link())
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 401, body: ~s({"error":"unauthorized"})}}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert {:ok, %{needs_reauth: true}} = CalendarIntegrationQueries.get(integration.id)
+    end
+
+    test "a refused credential stores the untranslated reason whatever the locale" do
+      integration = outlook_integration(graph_delta_link: delta_link())
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 401, body: ~s({"error":"unauthorized"})}}
+      end)
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert {:discard, _reason} =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert {:ok, %{sync_error: sync_error}} = CalendarIntegrationQueries.get(integration.id)
+
+      assert sync_error ==
+               "Microsoft rejected the stored credentials. Please reconnect the integration."
+    end
+
+    test "a refresh token Microsoft has revoked flags the integration instead of retrying" do
+      integration =
+        outlook_integration(
+          graph_delta_link: delta_link(),
+          token_expires_at: DateTime.add(DateTime.utc_now(), -60, :second)
+        )
+
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, "invalid_grant: the refresh token has been revoked"}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(RefreshOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert {:ok, %{needs_reauth: true}} = CalendarIntegrationQueries.get(integration.id)
     end
   end
 end

@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
         guide_slug={@config.guide_slug}
       />
 
-      <.password_hint provider={@provider} />
+      <SharedForm.app_password_hint provider={@provider} />
 
       <SharedForm.config_form
         provider={Atom.to_string(@provider)}
@@ -170,57 +170,4 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
   end
 
   defp t(msgid), do: Gettext.dgettext(TymeslotWeb.Gettext, @domain, msgid)
-
-  # Nextcloud, mailbox.org and iCloud refuse the account password once
-  # two-factor authentication is on (iCloud always), so their forms say where
-  # to make an app password. The other servers take an ordinary login.
-  attr :provider, :atom, required: true
-
-  defp password_hint(%{provider: :nextcloud} = assigns) do
-    ~H"""
-    <SharedForm.nextcloud_app_password_hint />
-    """
-  end
-
-  defp password_hint(%{provider: :mailbox_org} = assigns) do
-    ~H"""
-    <p class="text-sm text-tymeslot-600 leading-relaxed">
-      {raw(
-        dgettext(
-          "dashboard_calendar_providers",
-          "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password.",
-          location:
-            ~s(<span class="font-semibold">) <>
-              dgettext("dashboard_calendar_providers", "Settings → Security") <> ~s(</span>)
-        )
-      )}
-    </p>
-    """
-  end
-
-  defp password_hint(%{provider: :apple} = assigns) do
-    ~H"""
-    <p class="text-sm text-tymeslot-600 leading-relaxed">
-      {raw(
-        dgettext(
-          "dashboard_calendar_providers",
-          "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email.",
-          app_specific_password:
-            ~s(<span class="font-semibold">) <>
-              dgettext("dashboard_calendar_providers", "app-specific password") <> ~s(</span>),
-          link:
-            ~s(<a href="https://appleid.apple.com" target="_blank" rel="noopener noreferrer" class="font-semibold text-turquoise-600 hover:text-turquoise-700 underline">appleid.apple.com</a>),
-          location:
-            ~s(<span class="font-semibold">) <>
-              dgettext(
-                "dashboard_calendar_providers",
-                "Sign-In and Security → App-Specific Passwords"
-              ) <> ~s(</span>)
-        )
-      )}
-    </p>
-    """
-  end
-
-  defp password_hint(assigns), do: ~H""
 end

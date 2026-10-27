@@ -168,6 +168,173 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplitTest do
     end
   end
 
+  # A Monday-and-Wednesday series created through the API on Tuesday 2 June:
+  # Graph keeps the master's start on the Tuesday, but its first occurrence
+  # is Wednesday 3 June, and `numberOfOccurrences` counts pattern dates only
+  # (3, 8, 10, 15 June, ...), unlike RFC 5545, where the start always counts.
+  @off_pattern_master @master
+                      |> Map.merge(%{
+                        "start" => %{
+                          "dateTime" => "2026-06-02T07:00:00.0000000",
+                          "timeZone" => "UTC"
+                        },
+                        "end" => %{
+                          "dateTime" => "2026-06-02T08:00:00.0000000",
+                          "timeZone" => "UTC"
+                        }
+                      })
+                      |> put_in(["recurrence", "pattern", "daysOfWeek"], ["monday", "wednesday"])
+                      |> put_in(["recurrence", "range"], %{
+                        "type" => "numbered",
+                        "startDate" => "2026-06-02",
+                        "numberOfOccurrences" => 10,
+                        "recurrenceTimeZone" => @zone
+                      })
+
+  describe "a series whose start is off its pattern" do
+    test "counts only pattern dates before the slot, so the tail keeps every occurrence" do
+      # Monday 15 June: three occurrences (3, 8 and 10 June) come before it.
+      slot = ~U[2026-06-15 07:00:00Z]
+
+      assert {:ok, %{tail: tail}} = SeriesSplit.build(@off_pattern_master, edit(%{}, slot))
+
+      assert get_in(tail, ["recurrence", "range", "numberOfOccurrences"]) == 7
+    end
+
+    test "at its first pattern date is an edit of every occurrence" do
+      assert SeriesSplit.build(@off_pattern_master, edit(%{}, ~U[2026-06-03 07:00:00Z])) ==
+               :first_occurrence
+    end
+  end
+
+  defp late_start_master(pattern, date) do
+    pattern
+    |> off_day_master()
+    |> Map.merge(%{
+      "start" => %{"dateTime" => "#{date}T08:00:00.0000000", "timeZone" => "UTC"},
+      "end" => %{"dateTime" => "#{date}T09:00:00.0000000", "timeZone" => "UTC"}
+    })
+    |> put_in(["recurrence", "range", "startDate"], date)
+  end
+
+  # An API-created absolute pattern on the 10th whose master starts on
+  # Friday 5 June: Graph's first occurrence is the 10th, and
+  # `numberOfOccurrences` counts the 10ths only.
+  defp off_day_master(pattern) do
+    @master
+    |> Map.merge(%{
+      "start" => %{"dateTime" => "2026-06-05T07:00:00.0000000", "timeZone" => "UTC"},
+      "end" => %{"dateTime" => "2026-06-05T08:00:00.0000000", "timeZone" => "UTC"}
+    })
+    |> put_in(["recurrence", "pattern"], pattern)
+    |> put_in(["recurrence", "range"], %{
+      "type" => "numbered",
+      "startDate" => "2026-06-05",
+      "numberOfOccurrences" => 10,
+      "recurrenceTimeZone" => @zone
+    })
+  end
+
+  @monthly_on_the_10th %{"type" => "absoluteMonthly", "interval" => 1, "dayOfMonth" => 10}
+
+  @yearly_on_10_june %{
+    "type" => "absoluteYearly",
+    "interval" => 1,
+    "dayOfMonth" => 10,
+    "month" => 6
+  }
+
+  describe "an absolute monthly series whose start is off its day of the month" do
+    test "counts only the 10ths before the slot" do
+      # 10 August: 10 June and 10 July come before it.
+      master = off_day_master(@monthly_on_the_10th)
+
+      assert {:ok, %{tail: tail}} = SeriesSplit.build(master, edit(%{}, ~U[2026-08-10 07:00:00Z]))
+
+      assert get_in(tail, ["recurrence", "range", "numberOfOccurrences"]) == 8
+    end
+
+    test "at its first 10th is an edit of every occurrence" do
+      master = off_day_master(@monthly_on_the_10th)
+
+      assert SeriesSplit.build(master, edit(%{}, ~U[2026-06-10 07:00:00Z])) ==
+               :first_occurrence
+    end
+  end
+
+  describe "an absolute yearly series whose start is off its date" do
+    test "counts only the 10 Junes before the slot" do
+      # 10 June 2028: 10 June 2026 and 2027 come before it.
+      master = off_day_master(@yearly_on_10_june)
+
+      assert {:ok, %{tail: tail}} = SeriesSplit.build(master, edit(%{}, ~U[2028-06-10 07:00:00Z]))
+
+      assert get_in(tail, ["recurrence", "range", "numberOfOccurrences"]) == 8
+    end
+
+    test "at its first 10 June is an edit of every occurrence" do
+      master = off_day_master(@yearly_on_10_june)
+
+      assert SeriesSplit.build(master, edit(%{}, ~U[2026-06-10 07:00:00Z])) ==
+               :first_occurrence
+    end
+  end
+
+  # A start on a day some months lack: an RRULE stepping on that day skips
+  # those months, while Graph has a pattern date in every period.
+  describe "an absolute series whose start falls on a day some months lack" do
+    test "a monthly one counts a 10th in every month since the start" do
+      # From 31 January, 10 June: the 10ths of February to May come before it.
+      master = late_start_master(@monthly_on_the_10th, "2027-01-31")
+
+      assert {:ok, %{tail: tail}} = SeriesSplit.build(master, edit(%{}, ~U[2027-06-10 07:00:00Z]))
+
+      assert get_in(tail, ["recurrence", "range", "numberOfOccurrences"]) == 6
+    end
+
+    test "a yearly one counts a 10 June in every year since the start" do
+      # From 29 February 2028, 10 June 2031: 2028, 2029 and 2030 come before it.
+      master = late_start_master(@yearly_on_10_june, "2028-02-29")
+
+      assert {:ok, %{tail: tail}} = SeriesSplit.build(master, edit(%{}, ~U[2031-06-10 07:00:00Z]))
+
+      assert get_in(tail, ["recurrence", "range", "numberOfOccurrences"]) == 7
+    end
+  end
+
+  describe "a relative monthly series" do
+    # The first Monday of every month, from Monday 1 June; 2 November is
+    # the first Monday of November.
+    @first_monday %{
+      "type" => "relativeMonthly",
+      "interval" => 1,
+      "daysOfWeek" => ["monday"],
+      "index" => "first",
+      "firstDayOfWeek" => "sunday"
+    }
+
+    test "with no end is split, the tail repeating as the series did" do
+      master =
+        @master
+        |> put_in(["recurrence", "pattern"], @first_monday)
+        |> put_in(["recurrence", "range"], %{"type" => "noEnd", "startDate" => "2026-06-01"})
+
+      assert {:ok, %{tail: tail, head: head}} = SeriesSplit.build(master, edit())
+
+      assert tail["recurrence"]["pattern"] == @first_monday
+      assert tail["recurrence"]["range"] == %{"type" => "noEnd", "startDate" => "2026-11-02"}
+      assert head["recurrence"]["range"]["endDate"] == "2026-11-01"
+    end
+
+    # The occurrences before the split are not counted over a counted
+    # weekday (`RecurrenceExpander.countable?/1`).
+    test "with a number of occurrences is refused" do
+      master = put_in(@master, ["recurrence", "pattern"], @first_monday)
+
+      assert SeriesSplit.build(master, edit()) == {:error, :unsupported_rule}
+    end
+  end
+
   describe "what is not split" do
     test "the first occurrence is an edit of every occurrence" do
       assert SeriesSplit.build(@master, edit(%{}, ~U[2026-06-01 07:00:00Z])) ==

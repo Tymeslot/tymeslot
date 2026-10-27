@@ -22,6 +22,15 @@ defmodule Tymeslot.Migrations.AddLinkStateToTelegramIntegrationsTest do
 
   @version 20_260_917_131_412
 
+  # `drop_plain_copies_of_encrypted_secrets` later drops the plain columns
+  # this migration works on, so each test first rolls that one back.
+  @contract_version 20_261_012_214_443
+
+  setup do
+    MigrationRunner.down!(@contract_version)
+    :ok
+  end
+
   @updated_at ~U[2026-08-01 10:00:00Z]
 
   describe "linked_at" do

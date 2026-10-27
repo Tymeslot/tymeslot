@@ -1,10 +1,10 @@
-defmodule Tymeslot.Integrations.Providers.FamiliesTest do
+defmodule Tymeslot.Integrations.Shared.Providers.FamiliesTest do
   use ExUnit.Case, async: true
 
   @moduletag :integrations
   @moduletag :unit
 
-  alias Tymeslot.Integrations.Providers.Families
+  alias Tymeslot.Integrations.Shared.Providers.Families
 
   describe "all/0" do
     test "is the vocabulary every domain and the picker share" do

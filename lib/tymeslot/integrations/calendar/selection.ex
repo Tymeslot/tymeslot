@@ -4,11 +4,14 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   for persistence.
   """
 
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Availability
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarSelectionQueries
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.RemovedCalendars
   alias Tymeslot.Utils.UriUtils
 
   @doc """
@@ -40,24 +43,11 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   end
 
   @doc """
-  Discover calendars for the given integration and merge with existing selection
-  state (integration.calendar_list), returning a unified list where each item
-  includes a boolean "selected" field.
-  """
-  @spec discover_with_selection(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()) ::
-          {:ok, list()} | {:error, term()}
-  def discover_with_selection(integration) do
-    case Calendar.discover_calendars_for_integration(integration) do
-      {:ok, calendars} ->
-        {:ok, unify_discovered_with_existing(calendars, integration.calendar_list)}
-
-      error ->
-        error
-    end
-  end
-
-  @doc """
   Merge discovered calendars with an existing list of selections.
+
+  A calendar already in `existing_list` keeps the owner's choices, whether it
+  is selected and whether it blocks availability. A new one arrives
+  deselected, with the blocking default its discovery gave it.
   """
   @spec unify_discovered_with_existing(list(), list()) :: [CalendarEntry.t()]
   def unify_discovered_with_existing(discovered, existing_list) do
@@ -69,20 +59,42 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     # always persist a usable path rather than `null`.
     |> Enum.map(&CalendarEntry.with_defaults/1)
     |> Enum.map(fn entry ->
-      selected = lookup_selection(existing_map, [entry.path, entry.id])
-      %{entry | selected: selected}
+      case lookup_choices(existing_map, [entry.path, entry.id]) do
+        nil -> %{entry | selected: false}
+        choices -> Map.merge(entry, choices)
+      end
+    end)
+  end
+
+  @doc """
+  `calendar_list` with each calendar that `existing_list` already knows
+  keeping the owner's blocking choice, for a write that rebuilds the list
+  from a fresh discovery with a selection made anew (a reconnect). A
+  calendar `existing_list` does not know keeps the default its discovery
+  gave it.
+  """
+  @spec carry_blocking_choices([CalendarEntry.t()], list() | nil) :: [CalendarEntry.t()]
+  def carry_blocking_choices(calendar_list, existing_list) do
+    existing_map = build_existing_selection_map(existing_list || [])
+
+    Enum.map(calendar_list, fn entry ->
+      case lookup_choices(existing_map, [entry.path, entry.id]) do
+        nil -> entry
+        %{blocks_availability: blocks} -> %{entry | blocks_availability: blocks}
+      end
     end)
   end
 
   defp build_existing_selection_map(existing) do
     Enum.reduce(existing, %{}, fn cal, acc ->
       entry = CalendarEntry.normalize(cal)
+      choices = Map.take(entry, [:selected, :blocks_availability])
 
       acc
-      |> maybe_put(entry.path, entry.selected)
-      |> maybe_put(entry.id, entry.selected)
-      |> maybe_put_decoded(entry.path, entry.selected)
-      |> maybe_put_decoded(entry.id, entry.selected)
+      |> maybe_put(entry.path, choices)
+      |> maybe_put(entry.id, choices)
+      |> maybe_put_decoded(entry.path, choices)
+      |> maybe_put_decoded(entry.id, choices)
     end)
   end
 
@@ -90,19 +102,16 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     Enum.any?(selected_paths, &UriUtils.uri_safe_match?(path, &1))
   end
 
-  # Looks up a selection boolean for a calendar identified by any of the given
-  # keys (tried in order). Treats false and true as distinct — unlike `||`, this
-  # returns false immediately when a key is present with that value rather than
-  # continuing to the next candidate.
-  defp lookup_selection(existing_map, keys) do
+  # Looks up the stored choices for a calendar identified by any of the given
+  # keys (tried in order, each also percent-decoded), or nil for a calendar
+  # the existing list does not know.
+  defp lookup_choices(existing_map, keys) do
     keys
     |> Enum.flat_map(fn
       nil -> []
       key -> [key, UriUtils.safe_decode(key)]
     end)
-    |> Enum.find_value(false, fn key ->
-      if Map.has_key?(existing_map, key), do: Map.fetch!(existing_map, key)
-    end)
+    |> Enum.find_value(&Map.get(existing_map, &1))
   end
 
   defp maybe_put(acc, nil, _val), do: acc
@@ -116,24 +125,154 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   end
 
   @doc """
-  Update calendar selection for an integration.
-  """
-  @spec update_calendar_selection(
-          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
-          %{String.t() => term()}
-        ) :: {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()} | {:error, any()}
-  def update_calendar_selection(integration, params) do
-    selected_calendar_ids = params["selected_calendars"] || []
+  Merges freshly `discovered` calendars into the integration's selection and
+  persists the result, returning the updated integration and the merged list.
 
-    calendar_list =
-      Enum.map(integration.calendar_list || [], fn cal ->
-        entry = cal |> CalendarEntry.normalize() |> CalendarEntry.with_defaults()
-        is_selected = Enum.any?(selected_calendar_ids, &UriUtils.uri_safe_match?(entry.id, &1))
-        %{entry | selected: is_selected}
+  The merge is made against the row as it stands once discovery is back, not
+  against the struct discovery started from: discovery spends seconds on the
+  network, and a calendar the owner ticked or unticked meanwhile must keep
+  their choice. A merge that would empty a selection that was not empty
+  keeps the stored list instead (see `keep_selection_if_emptied/2`).
+
+  A selected calendar the discovery no longer returns is dropped from the
+  list, and so recorded as removed and emailed about (see
+  `Tymeslot.Integrations.Calendar.RemovedCalendars`). A discovery that
+  failed never reaches this function.
+  """
+  @spec persist_discovered(
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
+          list()
+        ) ::
+          {:ok,
+           {Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(), [CalendarEntry.t()]}}
+          | {:error, any()}
+  def persist_discovered(%{id: id}, discovered) do
+    result =
+      CalendarSelectionQueries.with_locked(id, fn fresh ->
+        merged =
+          discovered
+          |> unify_discovered_with_existing(fresh.calendar_list)
+          |> keep_selection_if_emptied(fresh.calendar_list)
+
+        with {:ok, updated} <- write_selection(fresh, calendar_list_attrs(merged)) do
+          {:ok, {updated, merged, blocking_ids(fresh.calendar_list) != blocking_ids(merged)}}
+        end
       end)
 
-    persist_calendar_list(integration, calendar_list)
+    case result do
+      # A calendar that stopped blocking (gone from the provider) frees its
+      # slots at once rather than after the cache expires.
+      {:ok, {updated, merged, blocking_changed?}} ->
+        if blocking_changed?, do: invalidate_after_commit({:ok, updated})
+        {:ok, {updated, merged}}
+
+      error ->
+        error
+    end
   end
+
+  defp blocking_ids(calendar_list),
+    do: calendar_list |> blocking_calendars() |> Enum.map(& &1.id) |> Enum.sort()
+
+  # `calendar_paths` is derived from the `selected` flags on `calendar_list`, so
+  # a re-discovery that matches nothing — an empty result, or a server that
+  # changed the shape of the hrefs it returns — silently deselects everything
+  # and leaves the integration syncing no calendars at all. Discovery is
+  # triggered by opening a meeting-type form, so this can happen without the
+  # owner touching their calendar settings. Keep the stored list whenever the
+  # merge would empty a selection that was not empty before; deselecting every
+  # calendar deliberately still works, because that goes through
+  # `persist_calendar_list/2` directly rather than through discovery.
+  defp keep_selection_if_emptied(merged, existing) do
+    if derive_selected_paths(merged) == [] and derive_selected_paths(existing || []) != [] do
+      existing
+    else
+      merged
+    end
+  end
+
+  @doc """
+  Deselects the calendars `calendar_ids` of `integration` that the provider
+  answered as gone (HTTP 404), on the row as it stands, recording them as
+  removed and scheduling the email about them in the same transaction (see
+  `Tymeslot.Integrations.Calendar.RemovedCalendars`). A calendar that stopped
+  blocking frees its slots at once.
+  """
+  @spec deselect_missing(
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
+          [String.t()]
+        ) ::
+          {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | :not_found | term()}
+  def deselect_missing(%{id: id}, calendar_ids) do
+    ids = MapSet.new(calendar_ids)
+
+    id
+    |> CalendarSelectionQueries.with_locked(fn fresh ->
+      calendar_list =
+        Enum.map(fresh.calendar_list, fn cal ->
+          if MapSet.member?(ids, cal.id), do: %{cal | selected: false}, else: cal
+        end)
+
+      write_selection(fresh, %{calendar_list: calendar_list})
+    end)
+    |> invalidate_after_commit()
+  end
+
+  @doc """
+  `deselect_missing/2` for CalDAV collections, by path: removes them from
+  `calendar_paths` too, since pruning paths alone would leave them selected,
+  failing booking pages closed.
+  """
+  @spec remove_missing_paths(
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
+          [String.t()]
+        ) ::
+          {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | :not_found | term()}
+  def remove_missing_paths(%{id: id}, paths) do
+    gone? = fn path -> Enum.any?(paths, &UriUtils.uri_safe_match?(&1, path)) end
+
+    id
+    |> CalendarSelectionQueries.with_locked(fn fresh ->
+      calendar_list =
+        Enum.map(fresh.calendar_list || [], fn cal ->
+          if gone?.(cal.path || cal.id), do: %{cal | selected: false}, else: cal
+        end)
+
+      write_selection(fresh, %{
+        calendar_paths: Enum.reject(fresh.calendar_paths || [], gone?),
+        calendar_list: calendar_list
+      })
+    end)
+    |> invalidate_after_commit()
+  end
+
+  # The one write of a selection that can drop calendars the server stopped
+  # listing: what it deselects is recorded on the row it deselects them on,
+  # merged into what `fresh` (read under the row lock) already records, and
+  # the email is scheduled in the same transaction. A retry finds them
+  # already deselected and records and sends nothing.
+  defp write_selection(fresh, attrs) do
+    removed = RemovedCalendars.removed(fresh.calendar_list, attrs.calendar_list)
+    recorded = RemovedCalendars.merge(fresh.removed_calendars, removed, DateTime.utc_now())
+
+    with {:ok, updated} <- CalendarSelectionQueries.update_selection(fresh, attrs, recorded),
+         :ok <- RemovedCalendars.notify(fresh, removed) do
+      {:ok, updated}
+    end
+  end
+
+  # Dropped once the write commits, never inside a caller's transaction,
+  # where a read in between would cache the old answer again.
+  defp invalidate_after_commit({:ok, %{user_id: user_id}} = ok) do
+    unless CalendarIntegrationQueries.in_transaction?(),
+      do: Availability.changed(user_id)
+
+    ok
+  end
+
+  defp invalidate_after_commit(error), do: error
 
   @doc """
   Persists `calendar_list` together with the `calendar_paths` derived from
@@ -155,7 +294,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
         ) ::
           {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()} | {:error, any()}
   def persist_calendar_list(integration, calendar_list) when is_list(calendar_list) do
-    CalendarManagement.update_calendar_integration(
+    Management.update_calendar_integration(
       integration,
       calendar_list_attrs(calendar_list)
     )
@@ -209,6 +348,25 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   end
 
   @doc """
+  Whether `entry`'s busy time removes slots from the booking page: it is
+  selected and the owner has not set it to show only. A deselected calendar
+  never blocks, whatever its `blocks_availability` says.
+  """
+  @spec blocking?(CalendarEntry.t()) :: boolean()
+  def blocking?(%CalendarEntry{selected: selected, blocks_availability: blocks}),
+    do: selected and blocks
+
+  @doc """
+  Returns the entries from a `calendar_list` that block availability (see
+  `blocking?/1`), read-only ones included. `[]` for nil input.
+  """
+  @spec blocking_calendars([CalendarEntry.t()] | nil) :: [CalendarEntry.t()]
+  def blocking_calendars(nil), do: []
+
+  def blocking_calendars(calendar_list) when is_list(calendar_list),
+    do: calendar_list |> Enum.map(&CalendarEntry.normalize/1) |> Enum.filter(&blocking?/1)
+
+  @doc """
   Returns the selected entries from a `calendar_list` that are also
   writable — the calendars available as booking/sync targets. Read-only
   calendars can still be selected for conflict-checking visibility (see
@@ -246,11 +404,9 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     Enum.filter(integrations, &writable_target?/1)
   end
 
-  @doc """
-  Whether `integration` can take a new event. See `writable_integrations/1`.
-  """
+  # Whether `integration` can take a new event. See `writable_integrations/1`.
   @spec writable_target?(BookingEligibility.integration()) :: boolean()
-  def writable_target?(integration) do
+  defp writable_target?(integration) do
     BookingEligibility.bookable?(integration) and has_writable_calendar?(integration)
   end
 
@@ -359,18 +515,25 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   """
   @spec visibility_rules([map()]) :: %{integer() => visibility_rule()}
   def visibility_rules(integrations) do
-    Map.new(integrations, fn integration -> {integration.id, integration_rule(integration)} end)
+    Map.new(integrations, fn integration ->
+      {integration.id, integration_rule(integration, &selected_calendars/1)}
+    end)
   end
 
-  defp integration_rule(%{calendar_list: nil}), do: :all
-  defp integration_rule(%{calendar_list: []}), do: :all
+  defp integration_rule(%{calendar_list: list}, _pick) when list in [nil, []], do: :all
 
-  defp integration_rule(%{calendar_list: calendar_list}) do
-    case selected_calendars(calendar_list) do
-      [] -> :none
-      selected -> {:selected, Enum.map(selected, &%{id: &1.id, prefix: &1.path || &1.id})}
-    end
-  end
+  defp integration_rule(%{calendar_list: calendar_list}, pick),
+    do: entries_rule(pick.(calendar_list))
+
+  @doc """
+  The `t:visibility_rule/0` matching cached rows from `entries`: `:none`
+  for no entries.
+  """
+  @spec entries_rule([CalendarEntry.t()]) :: visibility_rule()
+  def entries_rule([]), do: :none
+
+  def entries_rule(entries),
+    do: {:selected, Enum.map(entries, &%{id: &1.id, prefix: &1.path || &1.id})}
 
   @doc """
   Resolves the entry in `calendar_list` that `event` came from, or `nil` when

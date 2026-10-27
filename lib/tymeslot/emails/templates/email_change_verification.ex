@@ -5,10 +5,14 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Swoosh.Email
+  alias Tymeslot.Emails.RecipientLocale
+
   alias Tymeslot.Emails.Shared.{
     Buttons,
     Callouts,
     Greeting,
+    MjmlEmail,
     Sanitise,
     Styles,
     TemplateHelper,
@@ -18,8 +22,25 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
   # A confirmation-style action to finalise an account change.
   @intent :confirmed
 
-  @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
+  @doc """
+  The email, addressed and rendered in the recipient's locale.
+  """
+  @spec render(
+          Tymeslot.Emails.EmailService.user_map(),
+          String.t(),
+          String.t()
+        ) :: Email.t()
   def render(user, new_email, verification_url) do
+    RecipientLocale.with_user_locale(user, fn ->
+      MjmlEmail.base_email()
+      |> Email.to({user.name || new_email, new_email})
+      |> Email.subject(dgettext("emails_account", "Verify your new email address"))
+      |> Email.html_body(html_body(user, new_email, verification_url))
+      |> Email.text_body(text_body(user, new_email, verification_url))
+    end)
+  end
+
+  defp html_body(user, new_email, verification_url) do
     mjml_content = """
     #{Text.centered_html(Greeting.html(user),
     font_size: "16px",
@@ -94,8 +115,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
     """
   end
 
-  @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
-  def render_text(user, new_email, verification_url) do
+  defp text_body(user, new_email, verification_url) do
     """
     #{dgettext("emails_account", "Verify your new email address")}
 

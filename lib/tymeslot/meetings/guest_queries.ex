@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
 
@@ -63,6 +64,51 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Records a change to the meeting's end on every live guest (see
+  `list_live_for_meeting/1`). A guest with no end change pending keeps
+  `previous_end`, the end they knew, as their `notified_end_time`; one
+  already pending keeps the end they were last told.
+  """
+  @spec record_end_change(binary(), DateTime.t()) :: non_neg_integer()
+  def record_end_change(meeting_id, %DateTime{} = previous_end) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.meeting_id == ^meeting_id)
+      |> where(
+        [g],
+        is_nil(g.participant_id) or
+          g.participant_id in subquery(
+            from(p in Participant, where: is_nil(p.cancelled_at), select: p.id)
+          )
+      )
+      |> update([g],
+        set: [notified_end_time: fragment("COALESCE(?, ?)", g.notified_end_time, ^previous_end)]
+      )
+      |> Repo.update_all([])
+
+    count
+  end
+
+  @doc "Records that the guest has been told the meeting ends at `end_time`."
+  @spec put_notified_end(binary(), DateTime.t()) :: :ok
+  def put_notified_end(guest_id, %DateTime{} = end_time) do
+    Guest
+    |> where([g], g.id == ^guest_id)
+    |> Repo.update_all(set: [notified_end_time: end_time])
+
+    :ok
+  end
+
+  @doc "Reads a guest's RSVP status as it stands now; `nil` when the guest is gone."
+  @spec get_status(Guest.t()) :: String.t() | nil
+  def get_status(%Guest{id: id}) do
+    Guest
+    |> where([g], g.id == ^id)
+    |> select([g], g.status)
+    |> Repo.one()
+  end
+
   @doc "Applies an RSVP changeset and persists the guest."
   @spec update_rsvp(Guest.t(), map()) :: {:ok, Guest.t()} | {:error, Changeset.t()}
   def update_rsvp(%Guest{} = guest, attrs) when is_map(attrs) do
@@ -87,6 +133,20 @@ defmodule Tymeslot.Meetings.GuestQueries do
   def list_for_participant(participant_id) do
     Guest
     |> where([g], g.participant_id == ^participant_id)
+    |> order_by([g], asc: g.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists the guests belonging to one participant whose confirmation email has
+  gone out, oldest first. A follow-up about the meeting (such as a moved
+  session) goes only to these: a guest never told of the booking must not
+  learn of it from a change notice.
+  """
+  @spec list_notified_for_participant(binary()) :: [Guest.t()]
+  def list_notified_for_participant(participant_id) do
+    Guest
+    |> where([g], g.participant_id == ^participant_id and not is_nil(g.confirmation_sent_at))
     |> order_by([g], asc: g.inserted_at)
     |> Repo.all()
   end
@@ -131,6 +191,30 @@ defmodule Tymeslot.Meetings.GuestQueries do
     {count, _rows} =
       Guest
       |> where([g], g.meeting_id == ^meeting_id)
+      |> Repo.update_all(
+        set: [
+          status: "pending",
+          responded_at: nil,
+          reminders_sent: nil,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+
+    count
+  end
+
+  @doc """
+  `reset_for_new_time/1` for a planned session its host moved
+  (`Tymeslot.Meetings.SessionMove`): the guests answer for the new time,
+  except that a guest who declined keeps their answer. They are told the
+  new time like everyone else and can still say yes, which then has to
+  find a free seat; reset to pending, they would take one unasked.
+  """
+  @spec reset_for_moved_session(binary()) :: non_neg_integer()
+  def reset_for_moved_session(meeting_id) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.meeting_id == ^meeting_id and g.status != "declined")
       |> Repo.update_all(
         set: [
           status: "pending",

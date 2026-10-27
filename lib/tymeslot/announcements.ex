@@ -13,7 +13,7 @@ defmodule Tymeslot.Announcements do
   alias Tymeslot.Announcements.Announcement
   alias Tymeslot.Announcements.AnnouncementQueries
   alias Tymeslot.Auth.UserSchema
-  alias TymeslotWeb.Live.Shared.DocsUrl
+  alias Tymeslot.Docs
 
   @doc """
   Records that the given user has seen an announcement.
@@ -23,13 +23,13 @@ defmodule Tymeslot.Announcements do
   crash, and the underlying query swallows DB/constraint errors — this is a
   non-critical dashboard side effect that must never take down the LiveView.
   """
-  @spec mark_seen!(UserSchema.t() | nil, String.t()) :: :ok
-  def mark_seen!(%UserSchema{id: user_id}, announcement_key)
+  @spec mark_seen(UserSchema.t() | nil, String.t()) :: :ok
+  def mark_seen(%UserSchema{id: user_id}, announcement_key)
       when is_binary(announcement_key) do
-    AnnouncementQueries.mark_seen!(user_id, announcement_key)
+    AnnouncementQueries.mark_seen(user_id, announcement_key)
   end
 
-  def mark_seen!(nil, announcement_key) when is_binary(announcement_key), do: :ok
+  def mark_seen(nil, announcement_key) when is_binary(announcement_key), do: :ok
 
   @doc """
   Returns the unseen, unexpired announcements a user should be shown.
@@ -38,6 +38,7 @@ defmodule Tymeslot.Announcements do
 
     * the user has not already marked it seen;
     * it has not expired (`expires_at` is `nil` or still in the future);
+    * it has been published (`published_at` is not in the future);
     * the user signed up before it was published.
 
   Admins are gated by signup date exactly like everyone else — there is no
@@ -56,7 +57,7 @@ defmodule Tymeslot.Announcements do
     candidates =
       catalogs()
       |> Enum.flat_map(&safe_list/1)
-      |> Enum.reject(&expired?(&1, now))
+      |> Enum.reject(&(expired?(&1, now) or unpublished?(&1, now)))
       |> Enum.filter(&published_after_signup?(&1, user_inserted_at))
 
     case candidates do
@@ -75,18 +76,21 @@ defmodule Tymeslot.Announcements do
   @doc """
   Composes the full documentation URL for a CTA slug.
 
-  Delegates to `TymeslotWeb.Live.Shared.DocsUrl.article_url/1`, the single
-  place `:docs_article_base_url` is read and normalised, so an operator
+  Delegates to `Tymeslot.Docs.article_url/1`, the single place
+  `:docs_article_base_url` is read and normalised, so an operator
   pointing that setting at their own docs gets announcement CTAs too, not
   just the rest of the dashboard's help links.
   """
   @spec docs_url(String.t()) :: String.t()
-  def docs_url(slug) when is_binary(slug), do: DocsUrl.article_url(slug)
+  def docs_url(slug) when is_binary(slug), do: Docs.article_url(slug)
 
   defp expired?(%Announcement{expires_at: nil}, _now), do: false
 
   defp expired?(%Announcement{expires_at: expires_at}, now),
     do: not DateTime.after?(expires_at, now)
+
+  defp unpublished?(%Announcement{published_at: published_at}, now),
+    do: DateTime.after?(published_at, now)
 
   defp published_after_signup?(%Announcement{published_at: published_at}, user_inserted_at),
     do: DateTime.after?(published_at, user_inserted_at)

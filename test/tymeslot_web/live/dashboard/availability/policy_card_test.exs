@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.PolicyCardTest do
         |> render_change()
 
         assert Map.fetch!(Repo.reload!(schedule), String.to_existing_atom(field)) == persisted
-        assert render(view) =~ "#{unquote(label)} cannot exceed 120"
+        assert render(view) =~ "#{unquote(label)} cannot be more than 120"
       end
     end
 

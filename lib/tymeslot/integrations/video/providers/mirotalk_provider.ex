@@ -17,23 +17,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
-  alias Tymeslot.Integrations.Video.Providers.Capabilities
+  alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Integrations.Video.Providers.SsrfOptions
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
-
-  @capabilities Capabilities.new!(
-                  recording: false,
-                  screen_sharing: true,
-                  waiting_room: false,
-                  max_participants: 100,
-                  dial_in: false,
-                  chat: true,
-                  breakout_rooms: false
-                )
 
   @typedoc """
   A tagged `perform_connection_test/1` failure.
@@ -43,12 +33,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   reached or did not answer as a MiroTalk API, which points at the base URL.
   """
   @type test_failure :: {:invalid_api_key | :unreachable, String.t()}
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def provider_type, do: :mirotalk
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def display_name, do: "MiroTalk P2P"
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def connection_test_bucket, do: :mirotalk
@@ -74,8 +58,12 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     end
   end
 
+  # The API key travels with every request, and a login name or password in
+  # the address would travel beside it as Basic auth. Checked when an address
+  # is saved only: one stored before the rule keeps getting rooms.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities, do: @capabilities
+  def validate_config_for_save(config),
+    do: LinkRoom.validate_server_url(Map.get(config, :base_url))
 
   @doc """
   Tests the connection to the MiroTalk API.
@@ -114,7 +102,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   # provider shares, and its contract is `{:error, message}`. Only
   # `perform_connection_test/1` tags what it hands back.
   defp validate_base_url(url) when url in [nil, ""],
-    do: {:error, dgettext("dashboard_video", "Base URL is required")}
+    do: {:error, dgettext("integrations_video", "Base URL is required")}
 
   defp validate_base_url(url) do
     UrlValidation.validate_http_url(url,
@@ -146,13 +134,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp handle_api_response({:error, error}), do: handle_http_error(error)
 
   defp handle_http_response(%Req.Response{status: 200}) do
-    {:ok, dgettext("dashboard_video", "Connection successful - API key is valid")}
+    {:ok, dgettext("integrations_video", "Connection successful - API key is valid")}
   end
 
   defp handle_http_response(%Req.Response{status: 401, body: body}) do
     handle_auth_error(
       body,
-      dgettext("dashboard_video", "Authentication failed - Please check your API key")
+      dgettext("integrations_video", "Authentication failed - Please check your API key")
     )
   end
 
@@ -162,7 +150,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Access forbidden - API key may lack required permissions"
       )}}
   end
@@ -171,7 +159,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "API endpoint not found - Please verify the base URL is correct"
       )}}
   end
@@ -180,7 +168,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Not Acceptable - The MiroTalk server rejected the request. Please verify your base URL and API configuration"
       )}}
   end
@@ -194,7 +182,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "MiroTalk server error (status %{status}) - Please try again later",
         status: status
       )}}
@@ -204,7 +192,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Unexpected response (status %{status}) - Please verify your configuration",
         status: status
       )}}
@@ -213,7 +201,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp handle_auth_error(body, default_message) do
     if String.contains?(body || "", "Unauthorized") do
       {:error,
-       {:invalid_api_key, dgettext("dashboard_video", "Invalid API key - Authentication failed")}}
+       {:invalid_api_key,
+        dgettext("integrations_video", "Invalid API key - Authentication failed")}}
     else
       {:error, {:invalid_api_key, default_message}}
     end
@@ -245,7 +234,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       _other ->
         {:error,
          {:unreachable,
-          dgettext("dashboard_video", "Connection failed: %{reason}",
+          dgettext("integrations_video", "Connection failed: %{reason}",
             reason: Exception.message(exception)
           )}}
     end
@@ -398,32 +387,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   def extract_room_id(_url), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def valid_meeting_url?(meeting_url) do
-    case URI.parse(meeting_url) do
-      %URI{scheme: scheme, host: host}
-      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
-        true
-
-      _other ->
-        false
-    end
-  end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def handle_meeting_event(_event, _room_data, _additional_data) do
-    :ok
-  end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def generate_meeting_metadata(room_data) do
-    %{
-      provider: "mirotalk",
-      meeting_id: room_data.room_id,
-      join_url: room_data.meeting_url
-    }
-  end
-
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def build_config(integration, decrypted, _opts) do
     %{api_key: decrypted.api_key, base_url: integration.base_url}
   end
@@ -437,27 +400,16 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     }
   end
 
-  # A bare `"talk."` used to sit here, which claimed every host containing it:
-  # Nextcloud Talk on `talk.example.org`, and even `cloud.mytalk.de`. These
-  # patterns decide whose `extract_room_id/1` parses a stored link, and
-  # `Tymeslot.CalendarGrid.EventVideo` recovers a room id that way before
-  # deleting the room an event no longer uses, so claiming another provider's
-  # URL turns that cleanup into a delete with a room id parsed by the wrong
-  # rules. Self-hosted instances on arbitrary domains stay recognised through
-  # `/join/`, the path MiroTalk's own meeting URLs carry.
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def url_patterns, do: ["mirotalk", "/join/"]
-
   defp domain_not_found_message,
-    do: dgettext("dashboard_video", "Domain not found - Please check the URL")
+    do: dgettext("integrations_video", "Domain not found - Please check the URL")
 
   defp connection_refused_message,
     do:
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Connection refused - Server may be down or URL incorrect"
       )
 
   defp connection_timeout_message,
-    do: dgettext("dashboard_video", "Connection timeout - Server took too long to respond")
+    do: dgettext("integrations_video", "Connection timeout - Server took too long to respond")
 end

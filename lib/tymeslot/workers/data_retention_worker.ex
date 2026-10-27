@@ -12,13 +12,22 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   6. Hourly calendar availability refusal counters (30 days retention)
   7. Abandoned Telegram setup stubs (own minute-scale TTL, not a day count)
   8. Analytics visitor-hash salts (each kept only for its own UTC day)
-  9. Accounts still unverified 30 days after sign-up, with the email address
-     and sign-up IP they hold
+  9. Abandoned sign-ups: password accounts still unverified 30 days after
+     sign-up that never had a session, never finished onboarding and are not
+     admins, with the email address and sign-up IP they hold
   10. Financial records past their statutory retention period (years, counted
       from the end of the financial year; see
-      `Tymeslot.MeetingPayments.DataRetention`)
-  11. What invitees gave on meetings and polls that ended two years ago,
+      `Tymeslot.FinancialRetention`)
+  11. Integration OAuth flows past their one-hour expiry, with the PKCE
+      verifiers they hold
+  12. Slack OAuth installs never finished by picking a channel, a day after
+      they were started, with the workspace bot token they hold
+  13. What invitees gave on meetings and polls that ended two years ago,
       anonymised rather than deleted (see `Tymeslot.InviteeData`)
+  14. Requests for a poll voting link never confirmed within the link's
+      lifetime (48 hours, not a day count), with the name and email they hold
+  15. Extra available times on dates that have passed (see
+      `Tymeslot.Availability.ExtraAvailability`)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -33,10 +42,15 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
   alias Tymeslot.Analytics
   alias Tymeslot.Auth
+  alias Tymeslot.Availability.ExtraAvailability
+  alias Tymeslot.Clock
+  alias Tymeslot.FinancialRetention
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
+  alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.InviteeData
-  alias Tymeslot.MeetingPayments.DataRetention
+  alias Tymeslot.Payments.Webhooks.StripeEventQueries
+  alias Tymeslot.Polls
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookQueries
@@ -115,7 +129,15 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     prune_orphaned_telegram_stubs()
 
+    prune_unconfirmed_poll_participants()
+
+    prune_past_extra_availability()
+
+    prune_orphaned_slack_stubs()
+
     prune_expired_analytics_salts()
+
+    prune_expired_oauth_flows()
 
     purge_expired_financial_records()
 
@@ -131,7 +153,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   @spec prune_incoming_webhook_events(integer()) :: {non_neg_integer(), nil}
   def prune_incoming_webhook_events(days) do
     cutoff_date = DateTime.add(DateTime.utc_now(), -days, :day)
-    WebhookQueries.delete_old_webhook_events(cutoff_date)
+    StripeEventQueries.delete_before(cutoff_date)
   end
 
   defp run_cleanup(
@@ -173,6 +195,28 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
     end
   end
 
+  # Not a `@retention_jobs` entry: an unconfirmed participant's lifetime is
+  # their link's, counted in hours from their first request.
+  defp prune_unconfirmed_poll_participants do
+    {count, _rows} = Polls.prune_unconfirmed_participants()
+    Logger.info("Pruned unconfirmed poll participants", deleted_count: count)
+  end
+
+  # Not a `@retention_jobs` entry: an extra available time lasts until its
+  # date has passed everywhere, so yesterday's UTC date is the cutoff and a
+  # time still today in some timezone is never removed.
+  defp prune_past_extra_availability do
+    {count, _rows} = ExtraAvailability.prune_past(Date.add(Clock.utc_today(), -1))
+    Logger.info("Pruned past extra available times", deleted_count: count)
+  end
+
+  # Not a `@retention_jobs` entry: an unfinished install has a fixed one-day
+  # window, not a configurable retention.
+  defp prune_orphaned_slack_stubs do
+    {count, _rows} = Slack.prune_orphaned_stubs()
+    Logger.info("Pruned unfinished Slack OAuth installs", deleted_count: count)
+  end
+
   # Deliberately not a `@retention_jobs` entry either: a salt's lifetime is its
   # own UTC day, not a configurable window, because keeping it any longer keeps
   # that day's visitor hashes recomputable.
@@ -181,11 +225,18 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
     Logger.info("Pruned expired analytics salts", deleted_count: count)
   end
 
+  # Not a `@retention_jobs` entry: a flow carries its own expiry, an hour after
+  # it starts, and nothing is gained by keeping a spent or abandoned verifier.
+  defp prune_expired_oauth_flows do
+    {count, _rows} = PendingFlow.prune_expired()
+    Logger.info("Pruned expired integration OAuth flows", deleted_count: count)
+  end
+
   # Not a `@retention_jobs` entry: the statutory period is counted in years
   # from the end of a financial year, not as a rolling window of days, and it
   # is fixed by law rather than tunable per run.
   defp purge_expired_financial_records do
-    case DataRetention.purge_expired() do
+    case FinancialRetention.purge_expired() do
       {:ok, counts} ->
         Logger.info("Purged financial records past their retention period", Map.to_list(counts))
 
@@ -204,7 +255,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     cutoff_date = DateTime.add(DateTime.utc_now(), -retention_days, :day)
 
-    case WebhookQueries.nullify_stale_payloads(cutoff_date) do
+    case StripeEventQueries.clear_payloads_before(cutoff_date) do
       {count, _nil} when count > 0 ->
         Logger.info("Nullified stale webhook payloads",
           count: count,

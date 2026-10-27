@@ -17,7 +17,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
   ## Orchestration Value
 
   This module provides:
-  - GenServer lifecycle management for periodic scheduling
+  - Scheduling, through `Scheduler` run by `IntegrationHealthSweepWorker`
   - Public API surface for the health check system
   - Stateless orchestration functions called directly by Oban workers
   - Coordination of the check flow: Schedule → Assess → Analyze → Monitor → Respond
@@ -36,50 +36,33 @@ defmodule Tymeslot.Integrations.HealthCheck do
   Without it, queries may be slow on systems with thousands of pending jobs.
   """
 
-  use GenServer
   @behaviour Tymeslot.Integrations.HealthCheck.HealthCheckBehaviour
 
   require Logger
 
-  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
-  alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Shared.IntegrationTypes
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   alias Tymeslot.Integrations.HealthCheck.{
     Assessor,
     ErrorAnalysis,
     Monitor,
-    ResponseHandler,
-    Scheduler
+    ResponseHandler
   }
-
-  @check_interval :timer.minutes(30)
 
   # Type definitions
   @type health_status :: Monitor.health_status()
   @type integration_type :: Monitor.integration_type()
   @type health_state :: Monitor.health_state()
 
-  defmodule State do
-    @moduledoc false
-    @type t :: %__MODULE__{
-            check_timer: reference() | nil
-          }
-    defstruct check_timer: nil
-  end
-
   # Client API
 
   @doc """
   Performs a single health check for an integration.
-  Called directly by Oban workers — does not go through the GenServer,
-  so multiple checks can run concurrently without serialising.
+  Called by `IntegrationHealthWorker`, so checks run concurrently, one job each.
 
   ## Orchestration Flow
 
@@ -101,41 +84,24 @@ defmodule Tymeslot.Integrations.HealthCheck do
   end
 
   @doc """
-  Starts the health check process.
+  The unhealthy health states of a user's active integrations, by kind and
+  then integration id: what the dashboard's badges and attention list read.
+  An integration absent from its map is not unhealthy.
   """
-  @spec start_link(keyword()) :: GenServer.on_start()
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
-  end
+  @spec health_states_for_user(integer()) :: %{
+          calendar: %{integer() => health_state()},
+          video: %{integer() => health_state()}
+        }
+  def health_states_for_user(user_id) do
+    grouped =
+      user_id
+      |> IntegrationHealthStateQueries.list_unhealthy_for_user()
+      |> Enum.group_by(& &1.integration_type)
 
-  @doc """
-  Manually triggers a health check for all integrations.
-  Uses Scheduler to enqueue jobs for all active integrations.
-  """
-  @spec check_all_integrations() :: :ok
-  def check_all_integrations do
-    GenServer.call(__MODULE__, :check_all)
-  end
-
-  @doc """
-  Gets the current health status for a specific integration.
-  Queries the database directly; does not go through the GenServer.
-  """
-  @spec get_health_status(integration_type(), integer()) :: health_state() | nil
-  def get_health_status(type, integration_id) do
-    case IntegrationHealthStateQueries.get(type, integration_id) do
-      {:ok, record} -> Monitor.from_db_record(record)
-      {:error, :not_found} -> nil
-    end
-  end
-
-  @doc """
-  Lists unhealthy health-state records for a user's active integrations.
-  Queries the database directly; does not go through the GenServer.
-  """
-  @spec list_unhealthy_for_user(integer()) :: [IntegrationHealthStateSchema.t()]
-  def list_unhealthy_for_user(user_id) do
-    IntegrationHealthStateQueries.list_unhealthy_for_user(user_id)
+    Map.new(IntegrationTypes.kinds(), fn kind ->
+      records = Map.get(grouped, IntegrationTypes.db_value(kind), [])
+      {kind, Map.new(records, &{&1.integration_id, Monitor.from_db_record(&1)})}
+    end)
   end
 
   @doc """
@@ -237,76 +203,25 @@ defmodule Tymeslot.Integrations.HealthCheck do
   """
   @spec record_sync_failure(integration_type(), map()) :: :ok
   def record_sync_failure(type, integration) do
-    old_health_state = Monitor.get_state(type, integration.id, integration.user_id)
-    new_health_state = Monitor.record_sync_failure(old_health_state)
-    transition = Monitor.detect_transition(old_health_state, new_health_state)
+    {:ok, {old_health_state, new_health_state}} =
+      Repo.transaction(fn ->
+        old_health_state = Monitor.get_state_for_update(type, integration.id, integration.user_id)
+        new_health_state = Monitor.record_sync_failure(old_health_state)
+        Monitor.put_sync_state(type, integration.id, new_health_state)
+        {old_health_state, new_health_state}
+      end)
 
-    Monitor.put_sync_state(type, integration.id, new_health_state)
+    transition = Monitor.detect_transition(old_health_state, new_health_state)
     ResponseHandler.handle_transition(type, integration, transition, new_health_state)
 
     :ok
-  end
-
-  # Server Callbacks
-
-  @impl GenServer
-  def init(opts) do
-    interval = Keyword.get(opts, :check_interval, @check_interval)
-    initial_delay = Keyword.get(opts, :initial_delay, 1000)
-
-    timer =
-      if initial_delay > 0 do
-        Process.send_after(self(), :scheduled_check, initial_delay)
-      else
-        schedule_next_check(interval)
-      end
-
-    {:ok, %State{check_timer: timer}}
-  end
-
-  @impl GenServer
-  def handle_call(:check_all, _from, state) do
-    Logger.info("Manual health check triggered for all integrations")
-    Scheduler.schedule_all(force: true)
-    {:reply, :ok, state}
-  end
-
-  @impl GenServer
-  def handle_info(:scheduled_check, state) do
-    Logger.debug("Scheduling health check jobs for all integrations")
-
-    run_scheduled_sweep()
-
-    timer = schedule_next_check(@check_interval)
-
-    {:noreply, %{state | check_timer: timer}}
-  end
-
-  # A failed sweep must never take this process down: it is permanent under
-  # the application supervisor, so repeated crashes would exceed the restart
-  # intensity and stop the whole application. Report it and wait for the next
-  # tick instead.
-  @spec run_scheduled_sweep() :: :ok
-  defp run_scheduled_sweep do
-    Scheduler.schedule_all()
-    :ok
-  rescue
-    e ->
-      ErrorTracking.report_error(e, __STACKTRACE__, %{context: :scheduled_health_check})
-      :ok
   end
 
   # Private Functions — Orchestration Logic
 
   @spec orchestrate_health_check(integration_type(), integer()) :: :ok | {:error, any()}
   defp orchestrate_health_check(type, id) do
-    integration_result =
-      case type do
-        :calendar -> CalendarIntegrationQueries.get(id)
-        :video -> VideoIntegrationQueries.get(id)
-      end
-
-    case integration_result do
+    case IntegrationTypes.queries(type).get(id) do
       {:ok, %{is_active: false}} ->
         Logger.debug("Skipping health check for deactivated integration",
           type: type,
@@ -341,11 +256,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
         :ok
 
       {:error, :requires_reencryption, integration} ->
-        case type do
-          :calendar -> CalendarManagement.handle_reauth_required(integration)
-          :video -> Video.handle_reauth_required(integration)
-        end
-
+        IntegrationTypes.domain(type).handle_reauth_required(integration)
         :ok
     end
   end
@@ -356,20 +267,29 @@ defmodule Tymeslot.Integrations.HealthCheck do
   @spec update_health_state(integration_type(), integer(), map(), {:ok, any()} | {:error, any()}) ::
           :ok | {:error, any()}
   defp update_health_state(type, id, integration, check_result) do
-    # Step 1: Get current health state from DB (creates default record if absent)
-    old_health_state = Monitor.get_state(type, id, integration.user_id)
+    # Steps 1, 3, 4 and 6 under the row lock, so a sync of the same
+    # integration cannot write between this read and this write (see
+    # `Monitor.get_state_for_update/3`): read the current health state
+    # (creating a default record if absent), classify the result, fold it in,
+    # and persist.
+    {:ok, {old_health_state, new_health_state}} =
+      Repo.transaction(fn ->
+        old_health_state = Monitor.get_state_for_update(type, id, integration.user_id)
 
-    # Step 3: Use ErrorAnalysis to classify the result
-    analyzed_result = ErrorAnalysis.analyze(check_result, old_health_state)
+        analyzed_result =
+          ErrorAnalysis.analyze(check_result, old_health_state,
+            type: type,
+            integration_id: id,
+            provider: integration.provider
+          )
 
-    # Step 4: Update health state (pure — does not persist)
-    new_health_state = Monitor.update_health(old_health_state, analyzed_result)
+        new_health_state = Monitor.update_health(old_health_state, analyzed_result)
+        Monitor.put_state(type, id, new_health_state)
+        {old_health_state, new_health_state}
+      end)
 
     # Step 5: Detect status transition
     transition = Monitor.detect_transition(old_health_state, new_health_state)
-
-    # Step 6: Persist new health state to DB
-    Monitor.put_state(type, id, new_health_state)
 
     # Steps 7-8: Fast-path immediate reauth + notification on permanent auth
     # failures (e.g. Google `invalid_grant`), which cannot recover without user
@@ -388,10 +308,5 @@ defmodule Tymeslot.Integrations.HealthCheck do
       {:error, _reason} = error -> error
       _ok -> :ok
     end
-  end
-
-  @spec schedule_next_check(pos_integer()) :: reference()
-  defp schedule_next_check(interval) do
-    Process.send_after(self(), :scheduled_check, interval)
   end
 end

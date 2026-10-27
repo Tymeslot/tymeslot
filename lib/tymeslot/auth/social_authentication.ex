@@ -169,9 +169,9 @@ defmodule Tymeslot.Auth.SocialAuthentication do
     )
   end
 
-  defp oauth_limit(:initiation, ip), do: RateLimiter.check_oauth_initiation_rate_limit(ip)
-  defp oauth_limit(:callback, ip), do: RateLimiter.check_oauth_callback_rate_limit(ip)
-  defp oauth_limit(:completion, ip), do: RateLimiter.check_oauth_completion_rate_limit(ip)
+  defp oauth_limit(:initiation, ip), do: RateLimiter.check(:oauth_initiation, ip)
+  defp oauth_limit(:callback, ip), do: RateLimiter.check(:oauth_callback, ip)
+  defp oauth_limit(:completion, ip), do: RateLimiter.check(:oauth_completion, ip)
 
   @doc """
   Finishes a social sign-up from its emailed confirmation link: creates the

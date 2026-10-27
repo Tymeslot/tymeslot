@@ -14,6 +14,7 @@ defmodule Tymeslot.Emails.EmailService.AccountEmailsTest do
 
   import Swoosh.TestAssertions
   import Tymeslot.EmailTestHelpers
+  import Tymeslot.Test.ClockHelpers
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
   # would otherwise post {:email, _} to that process rather than to this one.
@@ -76,6 +77,35 @@ defmodule Tymeslot.Emails.EmailService.AccountEmailsTest do
 
       assert new_mail.to == [{"Anja Bauer", "anja.neu@example.com"}]
       assert new_mail.subject == "E-Mail-Adresse erfolgreich geändert"
+    end
+  end
+
+  # Both times read `Tymeslot.Clock`, so a frozen clock is the time the mail
+  # states: no real clock gives a 2019 date.
+  describe "the time an email change mail states" do
+    setup do
+      freeze_clock(~U[2019-03-14 12:00:00Z])
+      %{user: german_user(%{locale: nil, email: "anja.neu@example.com"})}
+    end
+
+    test "is the clock's for the request notice", %{user: user} do
+      AccountEmails.send_email_change_notification(user, "anja.neu@example.com")
+
+      assert_receive {:email, email}, 1000
+      assert email.text_body =~ "2019"
+    end
+
+    test "is the clock's for the confirmations", %{user: user} do
+      AccountEmails.send_email_change_confirmations(
+        user,
+        "anja.alt@example.com",
+        "anja.neu@example.com"
+      )
+
+      assert_receive {:email, old_mail}, 1000
+      assert_receive {:email, new_mail}, 1000
+      assert old_mail.text_body =~ "2019"
+      assert new_mail.text_body =~ "2019"
     end
   end
 

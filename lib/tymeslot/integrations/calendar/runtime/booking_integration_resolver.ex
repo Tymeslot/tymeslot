@@ -26,8 +26,8 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   """
 
   alias Tymeslot.Integrations.Calendar.BookingEligibility
-  alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Calendar.Management
+  alias Tymeslot.Integrations.Calendar.Primary
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   def resolve(%MeetingTypeSchema{user_id: user_id}), do: resolve(user_id)
 
   def resolve(user_id) when is_integer(user_id) do
-    case CalendarPrimary.get_primary_calendar_integration(user_id) do
+    case Primary.get_primary_calendar_integration(user_id) do
       {:ok, integration} when is_binary(integration.default_booking_calendar_id) ->
         if booking_target?(integration),
           do: integration,
@@ -113,7 +113,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   end
 
   defp explicit_target(integration_id, user_id) do
-    case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
+    case Management.fetch_integration_for_user(integration_id, user_id) do
       {:ok, integration} -> if booking_target?(integration), do: integration
       {:error, :not_found} -> nil
     end
@@ -129,7 +129,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
 
   defp bookable_integrations(user_id) do
     user_id
-    |> CalendarManagement.list_active_calendar_integrations()
+    |> Management.list_active_calendar_integrations()
     |> Enum.filter(&booking_target?/1)
   end
 

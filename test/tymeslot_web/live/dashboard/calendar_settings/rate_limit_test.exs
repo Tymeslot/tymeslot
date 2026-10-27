@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
       # validated and before the feed probe runs, so the refusal arrives with
       # no outbound request made.
       for _i <- 1..30 do
-        assert :ok = RateLimiter.check_integration_write_rate_limit(user.id)
+        assert :ok = RateLimiter.check(:integration_write, user.id)
       end
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
@@ -180,11 +180,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
       # correcting a mistyped feed URL must not be locked out by their
       # corrections.
       for _i <- 1..30 do
-        assert :ok = RateLimiter.check_integration_write_rate_limit(user.id)
+        assert :ok = RateLimiter.check(:integration_write, user.id)
       end
 
       assert {:error, :rate_limited, _message} =
-               RateLimiter.check_integration_write_rate_limit(user.id)
+               RateLimiter.check(:integration_write, user.id)
     end
   end
 end

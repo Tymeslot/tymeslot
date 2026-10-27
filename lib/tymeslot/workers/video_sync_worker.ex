@@ -63,6 +63,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.IntegrationResolver
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
@@ -493,9 +494,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defp room_changes(%{kind: :event_room, record: room}),
     do: [start_time: room.lobby_opens_at, end_time: room.ends_at]
 
-  # The provider treats a missing remote meeting as success, so :ok and the
-  # idempotent not-found cases both arrive here as :ok. Anything else is a
-  # genuine failure worth retrying via Oban's backoff.
+  # `ProviderAdapter` treats a missing remote meeting as deleted, so a delete
+  # and the idempotent not-found case both arrive here as :ok. Anything else
+  # is a genuine failure worth retrying via Oban's backoff.
   #
   # Clearing the room id after a delete is what makes "still holding a room id"
   # mean "cleanup has not happened yet", which both
@@ -507,13 +508,15 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   defp handle_result(:ok, _action, _target, _executions), do: :ok
 
+  # A room gone before its update has nothing left to move. (A delete never
+  # sees this: `ProviderAdapter` counts a room already gone as deleted.)
   defp handle_result({:error, :meeting_not_found}, action, target, _executions) do
     Logger.info(
       "Provider video meeting already gone, treating as synced",
       target.log ++ [action: action]
     )
 
-    if action in @removals, do: clear_room(target), else: :ok
+    :ok
   end
 
   # The integration's OAuth grant lacks the scope this action needs. Only the
@@ -585,7 +588,10 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     {:error, reason}
   end
 
-  defp clear_room(%{kind: :meeting, record: meeting}), do: clear_video_room(meeting)
+  # The booking's join links are dead and go with the room. Its calendar event
+  # is left alone: every booking whose room this job deletes was released or
+  # has ended (see `Tymeslot.Meetings.VideoRoomAttachment.forget/2`).
+  defp clear_room(%{kind: :meeting, record: meeting}), do: Meetings.forget_video_room(meeting)
 
   # A room no record holds: once it is gone there is nothing left to clear.
   defp clear_room(%{kind: :room}), do: :ok
@@ -598,32 +604,4 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # The meeting let go of a released room before the job was enqueued, so
   # there is nothing left to clear.
   defp clear_room(%{kind: :released}), do: :ok
-
-  # The room is gone on the provider, so the booking's join links are dead and
-  # go with it, as `Tymeslot.Workers.VideoIntegrationDisconnectWorker` already
-  # does for the same reason. A cancellation used to clear the room id alone and
-  # leave `organizer_video_url` and `attendee_video_url` pointing at a
-  # conversation nobody can join, for every reader that keeps showing them.
-  defp clear_video_room(meeting) do
-    case MeetingQueries.update_meeting(meeting, %{
-           video_room_id: nil,
-           video_room_enabled: false,
-           organizer_video_url: nil,
-           attendee_video_url: nil
-         }) do
-      {:ok, _updated} ->
-        :ok
-
-      {:error, changeset} ->
-        # The provider room is gone either way, so the job has done its work.
-        # Only the local marker is stale, and the orphan scan will retry it
-        # harmlessly.
-        Logger.warning("Failed to clear video room marker after provider delete",
-          meeting_id: meeting.id,
-          errors: LogFormat.reason(changeset.errors)
-        )
-
-        :ok
-    end
-  end
 end

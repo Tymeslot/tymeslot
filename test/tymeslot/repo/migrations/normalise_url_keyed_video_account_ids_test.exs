@@ -20,6 +20,15 @@ defmodule Tymeslot.Repo.Migrations.NormaliseUrlKeyedVideoAccountIdsTest do
 
   @version 20_260_921_121_101
 
+  # `drop_plain_copies_of_encrypted_secrets` later drops the plain columns
+  # this migration works on, so each test first rolls that one back.
+  @contract_version 20_261_012_214_443
+
+  setup do
+    MigrationRunner.down!(@contract_version)
+    :ok
+  end
+
   setup do
     %{user: insert(:user)}
   end

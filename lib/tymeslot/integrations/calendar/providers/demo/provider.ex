@@ -59,6 +59,9 @@ defmodule Tymeslot.Integrations.Calendar.DemoCalendarProvider do
   def list_events_representation, do: :raw
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def convert_events(events), do: events
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(_raw_events, _context), do: {:ok, []}
 
   @impl Tymeslot.Integrations.Calendar.Provider

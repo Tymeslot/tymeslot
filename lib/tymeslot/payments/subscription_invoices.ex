@@ -33,6 +33,16 @@ defmodule Tymeslot.Payments.SubscriptionInvoices do
   @subscription_create "subscription_create"
 
   @doc """
+  Returns the Stripe subscription id a captured invoice belongs to, or `nil`
+  when the invoice is unknown (not captured, or no invoice id at all).
+  """
+  @spec subscription_id_for_invoice(String.t() | nil) :: String.t() | nil
+  def subscription_id_for_invoice(nil), do: nil
+
+  def subscription_id_for_invoice(stripe_invoice_id),
+    do: SubscriptionInvoiceQueries.subscription_id_for_invoice(stripe_invoice_id)
+
+  @doc """
   Lists a user's invoices, newest first.
   """
   @spec list(pos_integer()) :: [SubscriptionInvoice.t()]
@@ -48,6 +58,14 @@ defmodule Tymeslot.Payments.SubscriptionInvoices do
     |> SubscriptionInvoiceQueries.list_for_user(limit)
     |> Enum.map(&SubscriptionInvoice.from_schema/1)
   end
+
+  @doc """
+  The payments a user has made for subscriptions, oldest first: each paid
+  invoice that took money (a trial's zero invoice is not a payment), with
+  the subscription it billed and when it was paid.
+  """
+  @spec payments(pos_integer()) :: [%{subscription_id: String.t() | nil, paid_at: DateTime.t()}]
+  def payments(user_id), do: SubscriptionInvoiceQueries.payments_for_user(user_id)
 
   @doc """
   Captures (inserts or merges) the invoice document described by `event`.

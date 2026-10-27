@@ -6,7 +6,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
   cancelled-meeting 404s, `.ics` body content correctness, and the per-IP
   rate limit.
   """
-  # async: false — the rate-limit test relies on the shared Hammer ETS
+  # async: false — the rate-limit test relies on the shared rate-limit ETS
   # bucket, which other async tests clear via RateLimiter's test-only reset.
   # Matches the convention of the other rate-limited controller tests
   # (freebusy, session, guest_rsvp).
@@ -177,7 +177,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
       # forwarded headers are present, so `ClientIP.get/1` resolves to exactly
       # this address — matching the bucket we pre-fill here.
       rate_limit_ip = {203, 0, 113, 9}
-      for _i <- 1..60, do: RateLimiter.check_meeting_calendar_feed_rate_limit("203.0.113.9")
+      for _i <- 1..60, do: RateLimiter.check(:meeting_ics, "203.0.113.9")
 
       profile = insert(:profile, user: insert(:user), username: "throttledhost")
 

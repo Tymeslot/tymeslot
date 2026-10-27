@@ -32,8 +32,7 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "Room creation error no longer recorded",
        "Event or user not found",
        "Cached event has no timing",
-       "Credentials require reauthentication",
-       "One booking request leg already sent; the other failed and was requeued: :timeout"
+       "Credentials require reauthentication"
      ],
      recorded: [
        "Email sending timed out",
@@ -162,7 +161,7 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "Credentials require reauthentication",
        "Outlook sync failed transiently; the next scheduled sweep will retry"
      ],
-     recorded: ["Integration is not Outlook"]},
+     recorded: ["Integration is not outlook"]},
     {Workers.ReregisterOutlookSubscriptionWorker,
      expected: ["Integration not found", "Credentials require reauthentication"], recorded: []},
     {Workers.SyncGoogleCalendarWorker,
@@ -189,7 +188,8 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "CalDAV booking calendar not found — user action required",
        "CalDAV integration has no calendar selected — user action required",
        "CalDAV server returned a server error; the next scheduled sync will retry",
-       "CalDAV server did not respond; the next scheduled sync will retry"
+       "CalDAV server did not respond; the next scheduled sync will retry",
+       "CalDAV server returned more data than Tymeslot can process at once"
      ],
      recorded: ["CalDAV deletion circuit breaker refused a suspicious bulk deletion"]},
     {Workers.SyncExchangeCalendarWorker,
@@ -199,11 +199,12 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "Exchange server rejected credentials — reauthentication required",
        "Exchange integration has no addressable mailbox",
        "Exchange server returned a server error; the next scheduled sync will retry",
-       "Exchange server refused the sync request: forbidden"
+       "Exchange server refused the sync request: forbidden",
+       "Exchange server returned more data than Tymeslot can process at once"
      ],
      recorded: []},
     {Workers.SyncDebugCalendarWorker,
-     expected: ["Integration not found"], recorded: ["Integration requires re-encryption"]},
+     expected: ["Integration not found", "Credentials require reauthentication"], recorded: []},
     {Workers.SyncIcsCalendarWorker,
      expected: ["Integration not found", "Credentials require reauthentication"],
      recorded: ["Subscription has no feed URL"]},
@@ -212,7 +213,8 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "Integration not found",
        "Credentials require reauthentication",
        "Credentials require reauthentication: invalid_grant",
-       "Credentials require reauthentication: invalid_grant: Token has been expired"
+       "Credentials require reauthentication: invalid_grant: Token has been expired",
+       "Another refresh held the integration's lock through every wait"
      ],
      recorded: ["Credentials require reauthentication: invalid_client"]}
   ]

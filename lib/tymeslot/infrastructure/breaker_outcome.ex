@@ -97,11 +97,19 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   # so a status that would trip the breaker as `{:http_error, 500}` has to trip
   # it in atom form too. Without it every calendar 5xx was scored `:ignore` and
   # a server answering nothing but 500s could never open its breaker.
+  #
+  # `malformed_response` is the JSON calendar clients' name for a reply whose
+  # body will not decode (`Shared.ApiResponse`), typically a proxy or load
+  # balancer answering with HTML in front of a struggling provider. It was a
+  # `network_error` until it got its own name, and a provider that answers
+  # nothing but garbage still has to be able to open its breaker.
   @transport_reasons ~w(
     timeout network_error closed econnrefused econnreset ehostunreach
     enetunreach etimedout nxdomain closed_by_peer socket_closed_remotely
-    rate_limited service_unavailable server_error
+    rate_limited service_unavailable server_error malformed_response
   )a
+
+  @transport_tokens Enum.map(@transport_reasons, &Atom.to_string/1)
 
   # Transport-level exception structs, matched by name so that neither Req nor
   # Mint has to be a compile-time dependency of this module.
@@ -130,6 +138,21 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   def classify(_other), do: :success
 
   @doc """
+  Whether an error `reason` says the provider cannot serve the call right
+  now (a transport failure, a timeout, 408, 429 or 5xx), so the same call may
+  succeed if retried: exactly the reasons a breaker counts as a failure.
+
+  The default retry rule of `Tymeslot.Infrastructure.Retry`, so a retry loop
+  and the breaker around it agree on what is transient. A refusal from an open
+  breaker is not: retrying it only asks the breaker again. A rate limit that
+  names its wait (`{:rate_limited, seconds}`, as the Zoom and Teams profile
+  requests report one) is transient too.
+  """
+  @spec transient?(term()) :: boolean()
+  def transient?({:rate_limited, _retry_after}), do: true
+  def transient?(reason), do: classify_error(reason) == :failure
+
+  @doc """
   A short description of why a call counted as a `:failure`, safe to put in
   an admin alert or a log line.
 
@@ -137,9 +160,25 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   status, an exception's module. Response bodies, exception messages and free
   text are dropped, because a provider call runs with decrypted credentials
   in scope and any of them can echo one back.
+
+  The one thing taken from a message is a known transport reason. The JSON
+  calendar clients fold every transport failure into `:network_error` and
+  keep the underlying reason only in the message
+  (`"Network error: %Req.TransportError{reason: :nxdomain}"`), and a DNS
+  failure, a refused connection and a timeout call for different responses.
+  Only a word from `@transport_reasons` is ever copied, never the text
+  around it.
   """
   @spec failure_summary(term()) :: String.t()
   def failure_summary({:provider_error, reason}), do: "provider error: #{summarise(reason)}"
+
+  def failure_summary({:error, reason, message}) when is_atom(reason) and is_binary(message) do
+    case message_transport_reason(reason, message) do
+      nil -> summarise(reason)
+      detail -> "#{summarise(reason)} (#{detail})"
+    end
+  end
+
   def failure_summary({:error, reason, _message}), do: summarise(reason)
   def failure_summary({:error, reason}), do: summarise(reason)
   def failure_summary(_result), do: "unclassified"
@@ -155,6 +194,11 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
 
   defp summarise(%module{}), do: inspect(module)
   defp summarise(_reason), do: "unclassified"
+
+  defp message_transport_reason(reason, message) do
+    own = Atom.to_string(reason)
+    Enum.find(error_tokens(message), &(&1 in @transport_tokens and &1 != own))
+  end
 
   # A breaker refusal from a nested call says nothing new about the provider,
   # and counting it would let an open breaker keep itself open.

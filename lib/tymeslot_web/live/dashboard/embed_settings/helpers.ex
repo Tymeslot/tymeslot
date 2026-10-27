@@ -7,8 +7,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
 
   alias Phoenix.HTML
   alias Tymeslot.Locales
-  alias Tymeslot.Security.FieldValidators.UsernameValidator
-  alias Tymeslot.Security.UniversalSanitizer
+  alias Tymeslot.Security.InputProcessor
+  alias Tymeslot.Utils.Colour
   alias TymeslotWeb.Themes.Core.Context, as: ThemeContext
 
   @doc "Returns the list of valid embed type strings."
@@ -247,11 +247,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   defp escape(nil), do: ""
   defp escape(val), do: val |> HTML.html_escape() |> HTML.safe_to_string()
 
+  # The username is interpolated into HTML and JavaScript, so only one the
+  # username rules accept is emitted. It is never rewritten: a shortened
+  # username can be another organiser's booking page.
   defp sanitize_username(username) do
-    with {:ok, sanitized} <- UniversalSanitizer.sanitize_and_validate(username || ""),
-         :ok <- UsernameValidator.validate(sanitized) do
-      sanitized
-    else
+    case InputProcessor.validate_field(username || "", :username) do
+      {:ok, valid} -> valid
       {:error, _error} -> "invalid-username"
     end
   end
@@ -263,14 +264,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     if Regex.match?(~r/^\d+$/, theme), do: theme, else: nil
   end
 
-  defp sanitize_primary_color(nil), do: nil
-
+  # The booking page reads the colour with `Colour.cast_hex/1`
+  # (`ThemeContext.from_params/2`), so the snippet carries it in that form or
+  # not at all.
   defp sanitize_primary_color(color) do
-    color = to_string(color)
-
-    if Regex.match?(~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, color),
-      do: color,
-      else: nil
+    case Colour.cast_hex(color) do
+      {:ok, hex} -> hex
+      :error -> nil
+    end
   end
 
   defp sanitize_locale(nil), do: ""

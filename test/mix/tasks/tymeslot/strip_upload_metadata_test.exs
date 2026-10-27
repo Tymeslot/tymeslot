@@ -9,11 +9,10 @@ defmodule Mix.Tasks.Tymeslot.StripUploadMetadataTest do
 
   alias Mix.Tasks.Tymeslot.StripUploadMetadata
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
 
   setup %{tmp_dir: upload_dir} do
-    original = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_dir)
-    on_exit(fn -> Application.put_env(:tymeslot, :upload_directory, original) end)
+    UploadRoot.point_at(upload_dir)
 
     avatar = Path.join(upload_dir, "avatars/1/1_avatar.jpg")
     File.mkdir_p!(Path.dirname(avatar))

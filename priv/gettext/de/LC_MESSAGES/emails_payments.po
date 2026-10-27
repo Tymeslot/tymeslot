@@ -1,0 +1,214 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} disputed by the cardholder"
+msgstr "%{amount} vom Karteninhaber angefochten"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "A cardholder has disputed one of your booking payments."
+msgstr "Ein Karteninhaber hat eine Zahlung für eine Ihrer Buchungen angefochten."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "A dispute was opened"
+msgstr "Es wurde eine Zahlungsstreitigkeit eröffnet"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "ACCOUNT STATUS:"
+msgstr "KONTOSTATUS:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Account restricted"
+msgstr "Konto eingeschränkt"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Account status"
+msgstr "Kontostatus"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Action required"
+msgstr "Handlungsbedarf"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee email:"
+msgstr "E-Mail des Teilnehmers:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee:"
+msgstr "Teilnehmer:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Charges enabled:"
+msgstr "Zahlungen aktiviert:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "DISPUTE DETAILS:"
+msgstr "DETAILS ZUR ZAHLUNGSSTREITIGKEIT:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Dispute details"
+msgstr "Details zur Zahlungsstreitigkeit"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Disputed amount:"
+msgstr "Streitbetrag:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "If the dispute is closed in your favour, the booking will reconcile automatically. If lost, the booking is marked refunded."
+msgstr "Wird die Zahlungsstreitigkeit zu Ihren Gunsten abgeschlossen, wird die Buchung automatisch abgeglichen. Geht sie verloren, wird die Buchung als erstattet markiert."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting:"
+msgstr "Termin:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Once Stripe is satisfied, your account state updates automatically. Nothing more is needed on Tymeslot's side."
+msgstr "Sobald Stripe zufrieden ist, aktualisiert sich der Status Ihres Kontos automatisch. Auf Seiten von Tymeslot ist nichts weiter nötig."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Open Stripe dashboard"
+msgstr "Stripe-Dashboard öffnen"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Open the Stripe dashboard to see exactly what Stripe needs from you and complete any outstanding requirements."
+msgstr "Öffnen Sie das Stripe-Dashboard, um genau zu sehen, was Stripe von Ihnen benötigt, und erledigen Sie alle offenen Anforderungen."
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Open the Stripe dashboard to see what Stripe needs from you:"
+msgstr "Öffnen Sie das Stripe-Dashboard, um zu sehen, was Stripe von Ihnen benötigt:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Payouts enabled:"
+msgstr "Auszahlungen aktiviert:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "RESTORE YOUR ACCOUNT:"
+msgstr "KONTO WIEDERHERSTELLEN:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Restore your account"
+msgstr "Konto wiederherstellen"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Restriction:"
+msgstr "Einschränkung:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "STRIPE ACCOUNT RESTRICTED"
+msgstr "STRIPE-KONTO EINGESCHRÄNKT"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "STRIPE DISPUTE OPENED"
+msgstr "STRIPE-ZAHLUNGSSTREITIGKEIT ERÖFFNET"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stated reason:"
+msgstr "Angegebener Grund:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account restricted"
+msgstr "Stripe-Konto eingeschränkt"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account restricted: action required"
+msgstr "Stripe-Konto eingeschränkt: Handlungsbedarf"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe charge:"
+msgstr "Stripe-Zahlung:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe dispute opened"
+msgstr "Stripe-Zahlungsstreitigkeit eröffnet"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe dispute opened: %{amount}"
+msgstr "Stripe-Zahlungsstreitigkeit eröffnet: %{amount}"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe has flagged your connected account as restricted. New paid bookings will continue to work only while charges remain enabled, so please act on this promptly."
+msgstr "Stripe hat Ihr verbundenes Konto als eingeschränkt markiert. Neue kostenpflichtige Buchungen funktionieren nur weiter, solange Zahlungen aktiviert bleiben. Bitte handeln Sie daher zeitnah."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe has opened a dispute on a %{amount} payment for one of your bookings."
+msgstr "Stripe hat für eine Ihrer Buchungen eine Zahlungsstreitigkeit über %{amount} eröffnet."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe needs evidence from you within their stated deadline to challenge the dispute. Open the dispute in the Stripe dashboard to upload evidence or accept the dispute."
+msgstr "Stripe benötigt innerhalb der genannten Frist Nachweise von Ihnen, damit Sie der Zahlungsstreitigkeit widersprechen können. Öffnen Sie sie im Stripe-Dashboard, um Nachweise hochzuladen oder die Streitigkeit anzuerkennen."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "WHAT HAPPENS NEXT:"
+msgstr "WAS ALS NÄCHSTES PASSIERT:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "What happens next?"
+msgstr "Was passiert als Nächstes?"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is restricted"
+msgstr "Ihr Stripe-Konto ist eingeschränkt"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account needs attention to keep taking payments."
+msgstr "Ihr Stripe-Konto braucht Ihre Aufmerksamkeit, damit Sie weiterhin Zahlungen annehmen können."
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "no"
+msgstr "nein"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "yes"
+msgstr "ja"

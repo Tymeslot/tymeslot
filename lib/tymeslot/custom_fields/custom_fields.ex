@@ -8,6 +8,8 @@ defmodule Tymeslot.CustomFields do
   questions they were actually asked.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.CustomFields.{Snapshot, Validator}
 
   # Hard ceiling on a raw binary answer before any type-specific validation
@@ -38,7 +40,7 @@ defmodule Tymeslot.CustomFields do
   @spec validate_answer(any(), map()) :: {:ok, term()} | {:error, String.t()}
   def validate_answer(raw, _definition)
       when is_binary(raw) and byte_size(raw) > @max_raw_answer_length,
-      do: {:error, "Answer is too long"}
+      do: {:error, dgettext("errors", "Answer is too long")}
 
   def validate_answer(raw, definition), do: Validator.validate(raw, definition)
 

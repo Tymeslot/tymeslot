@@ -26,9 +26,10 @@ defmodule Tymeslot.ThemeCustomizations.Specs do
   @doc """
   A customisation's stored settings as the spec reads them, the one reading
   the booking page, the dashboard and every save share. For each option
-  group in turn: its stored settings over the spec's `defaults/0` for them,
-  kept when the group's own `changeset/3` accepts them (normalised, as a
-  save stores them), and otherwise the spec's defaults for that group alone.
+  group in turn: its stored settings, or the spec's `defaults/0` for them
+  when the row stores none of the group's settings, kept when the group's
+  own `changeset/3` accepts them (normalised, as a save stores them), and
+  otherwise the spec's defaults for that group alone.
   So a value a group no longer accepts (a preset dropped from its list, a
   kind the theme stopped offering) costs that group its choice and no other
   group anything, and a group the spec gained after the row was saved
@@ -48,8 +49,13 @@ defmodule Tymeslot.ThemeCustomizations.Specs do
     types = module.types()
     keys = Enum.map(types, fn {key, _type} -> Atom.to_string(key) end)
     own_defaults = defaults |> Map.take(keys) |> present()
+    own_stored = stored |> Map.take(keys) |> present()
 
-    candidate = Map.merge(own_defaults, stored |> Map.take(keys) |> present())
+    # The defaults stand in for a group stored without any of its settings,
+    # never key by key: a stored background kind with no value (an upload
+    # saved before `background_value` was required) would otherwise take the
+    # default's preset, and lose the upload it names.
+    candidate = if own_stored == %{}, do: own_defaults, else: own_stored
 
     case accepted(group, types, candidate) do
       {:ok, settings} -> settings

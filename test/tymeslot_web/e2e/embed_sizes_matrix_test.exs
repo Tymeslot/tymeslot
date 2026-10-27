@@ -19,25 +19,22 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   """
   use TymeslotWeb.BrowserCase, async: false
 
+  import TymeslotWeb.E2E.BookerLayoutAssertions
+  import TymeslotWeb.E2E.BookerSteps
+
   alias Ecto.Changeset
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias TymeslotWeb.ThemeTestMatrix
-  alias Wallaby.Element
 
   @moduletag :e2e
   @moduletag :scheduling
 
   @widths [320, 480, 640, 860, 1280]
   @height 800
-
-  # Sub-pixel rounding in the WebDriver bridge can show a measurement one px
-  # over the viewport even when the element fits. Shared with the
-  # `assert_no_horizontal_overflow/2` in `E2EHelpers`, which carries its own
-  # copy: the tolerance is a property of the bridge, not of either module.
-  @overflow_tolerance 1
 
   # Short viewports where the schedule step used to overflow its card and overlap
   # the action buttons. Includes the common laptop-height band (~660-820px inner
@@ -76,6 +73,47 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> assert_no_horizontal_overflow("#{theme.name} overview width=#{width}px")
         |> advance_to_schedule()
         |> assert_no_horizontal_overflow("#{theme.name} schedule width=#{width}px")
+    end
+  end
+
+  feature "length step fits without horizontal overflow in both themes",
+          %{session: session} do
+    # A type offering several lengths asks for one between the overview and
+    # the schedule, a step with a layout of its own.
+    # The onboarded organiser has types of their own, so the one with several
+    # lengths is picked by its slug rather than as the first card.
+    {profile, slug} = create_user_with_several_lengths()
+
+    for theme <- ThemeTestMatrix.all(), width <- @widths, reduce: session do
+      acc ->
+        acc
+        |> resize_window(width, @height)
+        |> visit("/#{profile.username}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> pick_first("[data-testid='duration-option'][data-duration='#{slug}']")
+        |> assert_has(css("[data-testid='next-step']:not([disabled])"))
+        |> click_next_step()
+        |> assert_has(css("[data-testid='length-step']"))
+        |> assert_has(css("[data-testid='length-option']", count: 3))
+        |> assert_no_horizontal_overflow("#{theme.name} length width=#{width}px")
+    end
+  end
+
+  feature "length step keeps its actions reachable on wide-short viewports (both themes)",
+          %{session: session} do
+    {profile, slug} = create_user_with_several_lengths()
+
+    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
+      acc ->
+        context = "#{theme.name} length #{width}x#{height}"
+
+        acc
+        |> resize_window(width, height)
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> assert_has(css("[data-testid='length-step']"))
+        |> assert_no_horizontal_overflow(context)
+        |> assert_cta_reachable(context)
     end
   end
 
@@ -182,6 +220,64 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
+  feature "embedded schedule flows to its natural height instead of the viewport's (both themes)",
+          %{session: session} do
+    # In an embed the viewport is the iframe, which iframe_embed.js sizes from
+    # the content. A schedule step locked to the viewport would measure the
+    # previous step's height and keep it, hiding the slots in a squeezed inner
+    # scroll. `data-embedded` on a top-level page exercises the same rules, as
+    # EmbedConfirmationLayoutTest does; the short window stands in for an
+    # iframe still at the overview's height.
+    {profile, _slug} = create_user_with_meeting_type()
+
+    for theme <- ThemeTestMatrix.all(), width <- [480, 1280], reduce: session do
+      acc ->
+        context = "#{theme.name} embedded schedule #{width}x463"
+
+        acc
+        |> resize_window(width, 463)
+        |> visit("/#{profile.username}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> mark_embedded()
+        |> advance_to_schedule()
+        |> pick_first_visible_day()
+        |> assert_has(css("[data-testid='time-slot']", minimum: 1))
+        |> assert_no_inner_scroll_region(context)
+    end
+  end
+
+  feature "a fixed-date type's dates scroll with the calendar at short heights (both themes)",
+          %{session: session} do
+    # The list of dates sits above the calendar. Were the calendar the only
+    # scroll region, a long list would keep its height and squeeze the
+    # calendar to nothing between the header and the actions.
+    {profile, slug} = create_user_with_fixed_date_sessions(8)
+
+    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
+      acc ->
+        context = "#{theme.name} fixed-date schedule #{width}x#{height}"
+
+        acc
+        |> resize_window(width, height)
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> assert_has(css("[data-testid='session-list']"))
+        |> assert_has(css("[data-testid='schedule-actions']"))
+        |> assert_no_horizontal_overflow(context)
+        |> assert_calendar_scrolls_with_session_list(context)
+        |> assert_cta_reachable(context)
+        |> then(fn acc ->
+          if theme.pins_schedule_actions do
+            acc
+            |> assert_actions_within_viewport(context)
+            |> assert_no_vertical_page_scroll(context)
+          else
+            acc
+          end
+        end)
+    end
+  end
+
   feature "branding banner stays within the viewport when the page content fits",
           %{session: session} do
     # Inject a stand-in for the SaaS branding banner via the theme-extensions
@@ -219,9 +315,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     |> resize_window(640, @height)
     |> visit("/#{profile.username}/#{slug}")
     |> wait_for_live()
-    |> pick_first_calendar_day()
-    |> pick_first_time_slot()
-    |> click_next_step()
+    |> pick_first_slot()
     |> assert_has(css(".custom-question-yes-no"))
     |> resize_window(320, @height)
     |> assert_has(css(".custom-question-yes-no-tile.is-yes"))
@@ -232,19 +326,15 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   feature "booking form name+email stack vertically at 320px", %{session: session} do
     {profile, slug} = create_user_with_meeting_type()
 
-    session =
-      session
-      |> resize_window(640, @height)
-      |> visit("/#{profile.username}/#{slug}")
-      |> wait_for_live()
-      |> pick_first_calendar_day()
-      |> pick_first_time_slot()
-      |> click_next_step()
-      |> assert_has(css("[data-testid='booking-form']"))
-      |> resize_window(320, @height)
-      |> assert_no_horizontal_overflow("booking form width=320px")
-
-    assert_name_email_stacked(session)
+    session
+    |> resize_window(640, @height)
+    |> visit("/#{profile.username}/#{slug}")
+    |> wait_for_live()
+    |> pick_first_slot()
+    |> assert_has(css("[data-testid='booking-form']"))
+    |> resize_window(320, @height)
+    |> assert_no_horizontal_overflow("booking form width=320px")
+    |> assert_name_email_stacked("booking form width=320px")
   end
 
   # ── Setup helpers ──────────────────────────────────────────────────────
@@ -265,18 +355,50 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     {profile, slug}
   end
 
-  defp create_user_with_meeting_type do
+  defp create_user_with_meeting_type(attrs \\ %{}) do
     user = create_onboarded_user()
     profile = Profiles.get_profile(user.id)
     insert(:calendar_integration, user_id: user.id, user: user)
 
     {:ok, meeting_type} =
-      MeetingTypes.create_meeting_type(%{
+      %{
         user_id: user.id,
         name: "Sizes Matrix Meeting",
         duration_minutes: 30,
         is_active: true
-      })
+      }
+      |> Map.merge(attrs)
+      |> MeetingTypes.create_meeting_type()
+
+    {profile, Slugs.to_slug(meeting_type)}
+  end
+
+  defp create_user_with_several_lengths,
+    do: create_user_with_meeting_type(%{extra_lengths_minutes: [60, 15]})
+
+  # A fixed-date group type held at one venue, with `count` sessions planned
+  # two days apart from tomorrow.
+  defp create_user_with_fixed_date_sessions(count) do
+    user = create_onboarded_user()
+    profile = Profiles.get_profile(user.id)
+    insert(:calendar_integration, user_id: user.id, user: user)
+    venue = insert(:venue, user: user, name: "Main Hall")
+
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        name: "Sizes Matrix Workshop",
+        duration_minutes: 90,
+        is_active: true,
+        max_participants: 12,
+        fixed_dates: true,
+        locations: [in_person_location([venue])]
+      )
+
+    for day <- 1..count do
+      starts_at = Date.utc_today() |> Date.add(day * 2) |> DateTime.new!(~T[16:00:00], "Etc/UTC")
+      {:ok, _session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
+    end
 
     {profile, Slugs.to_slug(meeting_type)}
   end
@@ -303,317 +425,5 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
       })
 
     {profile, Slugs.to_slug(meeting_type)}
-  end
-
-  # ── Navigation helpers ────────────────────────────────────────────────
-
-  # Walks the overview → schedule journey. Choosing a meeting type is the way
-  # on (the matrix runs the shipped themes, none of which has an overview
-  # Next): on a paged theme it shows the schedule step; on a continuous page
-  # (Folio, from J5F2) it opens the calendar below. Either way a day, a time
-  # or a slot to pick shows: at its narrowest Quill hides the month grid that
-  # carries the days' marks and shows the landed day's times.
-  #
-  # This is the only entry path that renders the Back button, and so the only one
-  # that produces the full two-button actions row: a direct booking link sets
-  # `entered_via_overview: false`, because there is no overview to go back to.
-  # It is also the journey an embedded booker actually takes.
-  #
-  # The short-viewport features deliberately deep-link instead. Below roughly
-  # 250px of usable height the overview's own primary action sits past the end
-  # of a page that doesn't scroll, so it can't be clicked — a limit of the
-  # overview, not of the schedule layout those features guard.
-  defp advance_to_schedule(session) do
-    session =
-      session
-      |> pick_first_duration()
-      |> assert_has(css("[data-fact='date'], [data-fact='time'], [data-fact='slot']", minimum: 1))
-
-    # The full two-button row the overflow check is meant to prove: a Back that
-    # never rendered would leave only the primary action to measure. A
-    # continuous page (Folio) has no actions row and no page to go back to.
-    if has?(session, css(".journey--continuous")),
-      do: session,
-      else: assert_has(session, css("[data-testid='schedule-actions'] [data-testid='back-step']"))
-  end
-
-  defp pick_first_duration(session) do
-    session
-    |> find(css("[data-testid='duration-option']", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    session
-  end
-
-  defp click_next_step(session) do
-    click(session, css("[data-testid='next-step']"))
-  end
-
-  defp pick_first_calendar_day(session) do
-    session
-    |> find(css("[data-testid='calendar-day']:not([disabled])", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    session
-  end
-
-  defp pick_first_time_slot(session) do
-    session = assert_has(session, css("[data-testid='time-slot']", minimum: 1))
-
-    session
-    |> find(css("[data-testid='time-slot']", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    session
-  end
-
-  defp click_first_free_date(session) do
-    session
-    |> find(css("[data-fact='date']:not([disabled])", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    session
-  end
-
-  defp pick_first_free_slot(session) do
-    session
-    |> find(
-      css("[data-fact='slot']:not([disabled]), [data-fact='time']:not([disabled])", count: :any)
-    )
-    |> List.first()
-    |> Element.click()
-
-    session
-  end
-
-  # ── Layout assertions ─────────────────────────────────────────────────
-
-  # Stronger than assert_cta_reachable: on the bounded-card model of an
-  # app-shell theme the pinned actions must sit fully inside the viewport at
-  # short heights — proving the calendar scrolls internally rather than
-  # pushing the buttons off-screen.
-  #
-  # Measures the actions row rather than the individual buttons: Back only exists
-  # when the booker came via the overview, but the row it lives in is what has to
-  # stay pinned, and both buttons share its vertical extent.
-  defp assert_actions_within_viewport(session, context) do
-    me = self()
-    ref = make_ref()
-
-    execute_script(
-      session,
-      """
-      const actions = document.querySelector("[data-testid='schedule-actions']");
-      if (!actions) return null;
-      const a = actions.getBoundingClientRect();
-      return [Math.round(a.top), Math.round(a.bottom), window.innerHeight];
-      """,
-      fn value -> send(me, {:actions, ref, value}) end
-    )
-
-    assert_receive {:actions, ^ref, value}, 5_000
-    assert is_list(value), "schedule actions not found at #{context}"
-    [top, bottom, inner_h] = value
-
-    assert top >= -@overflow_tolerance and bottom <= inner_h + @overflow_tolerance,
-           "The schedule actions row is outside the viewport at #{context} " <>
-             "(top=#{top}, bottom=#{bottom}, viewport=#{inner_h}) — the bounded " <>
-             "schedule card should keep it pinned on-screen."
-
-    session
-  end
-
-  # Regression guard for the "double overflow": the viewport-locked schedule step
-  # must scroll only inside the calendar — never the page on top of it. Asserts the
-  # document doesn't exceed the viewport height (a few px of WebDriver rounding
-  # tolerated).
-  defp assert_no_vertical_page_scroll(session, context) do
-    me = self()
-    ref = make_ref()
-
-    execute_script(
-      session,
-      "return [document.documentElement.scrollHeight, window.innerHeight];",
-      fn [scroll_height, inner_height] ->
-        send(me, {:vscroll, ref, scroll_height, inner_height})
-      end
-    )
-
-    assert_receive {:vscroll, ^ref, scroll_height, inner_height}, 5_000
-
-    assert scroll_height <= inner_height + 2,
-           """
-           Page scrolls vertically at #{context} (double overflow):
-             document scrollHeight = #{scroll_height}px
-             viewport innerHeight  = #{inner_height}px
-           The schedule step should lock to the viewport and scroll only inside
-           the calendar.
-           """
-
-    session
-  end
-
-  # Guards the wide-short schedule fix: the layout must not let the calendar
-  # overflow its card and paint over the actions row. A week grid's navigation
-  # row stands in for the calendar's first day: it sits at the top of the
-  # picker, as that day does, and is there before the week's times load.
-  defp assert_no_actions_calendar_overlap(session, context) do
-    me = self()
-    ref = make_ref()
-
-    execute_script(
-      session,
-      """
-      const actions = document.querySelector("[data-testid='schedule-actions']");
-      const day = document.querySelector("[data-testid='calendar-day'], .week-grid__nav");
-      if (!actions || !day) return "missing";
-      const a = actions.getBoundingClientRect(), c = day.getBoundingClientRect();
-      // overlap iff the rects intersect on both axes
-      return !(a.right <= c.left || a.left >= c.right || a.bottom <= c.top || a.top >= c.bottom);
-      """,
-      fn value -> send(me, {:overlap, ref, value}) end
-    )
-
-    assert_receive {:overlap, ^ref, overlap}, 5_000
-
-    # Nothing to compare would let the check pass without testing anything.
-    refute overlap == "missing",
-           "#{context}: no schedule actions row, or neither calendar days nor a week grid's navigation"
-
-    refute overlap,
-           "The schedule actions row overlaps the calendar at #{context} — the " <>
-             "schedule card is clipping/overflowing instead of growing to its " <>
-             "natural height."
-
-    session
-  end
-
-  # The page's primary action must live inside the scrollable page (reachable
-  # by scrolling), not be clipped beyond the document's scroll height. On the
-  # overview that is its first meeting type, which is the way on; on the
-  # schedule it is the actions row's Next. Whichever of the two the page
-  # renders is the one measured.
-  defp assert_cta_reachable(session, context) do
-    me = self()
-    ref = make_ref()
-
-    execute_script(
-      session,
-      """
-      const cta = document.querySelector("[data-testid='next-step']") || document.querySelector("[data-fact='meeting_type']");
-      if (!cta) return null;
-      const r = cta.getBoundingClientRect();
-      return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];
-      """,
-      fn value -> send(me, {:cta, ref, value}) end
-    )
-
-    assert_receive {:cta, ^ref, value}, 5_000
-
-    assert is_list(value),
-           "primary action (a Next, or else a meeting type) not found at #{context}"
-
-    [cta_doc_bottom, cta_height, scroll_height] = value
-
-    assert cta_height > 0, "primary action has zero height at #{context}"
-
-    assert cta_doc_bottom <= scroll_height + @overflow_tolerance,
-           "primary action at #{context} sits below the document scroll height " <>
-             "(#{cta_doc_bottom}px > #{scroll_height}px) — it is clipped and unreachable."
-
-    session
-  end
-
-  # The first element matching `selector` must live inside the scrollable page
-  # (its document bottom within the scroll height), not be clipped beyond it.
-  defp assert_reachable(session, selector, context) do
-    me = self()
-    ref = make_ref()
-
-    execute_script(
-      session,
-      """
-      const el = document.querySelector(arguments[0]);
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];
-      """,
-      [selector],
-      fn value -> send(me, {:reachable, ref, value}) end
-    )
-
-    assert_receive {:reachable, ^ref, value}, 5_000
-    assert is_list(value), "#{context}: not found"
-
-    [doc_bottom, height, scroll_height] = value
-    assert height > 0, "#{context}: zero height"
-
-    assert doc_bottom <= scroll_height + @overflow_tolerance,
-           "#{context} sits below the document scroll height " <>
-             "(#{doc_bottom}px > #{scroll_height}px) — it is clipped and unreachable."
-
-    session
-  end
-
-  # On a page whose booking content fits the viewport, the branding banner must
-  # sit inside the viewport (its bottom within innerHeight), not be pushed past
-  # 100vh by the content area's centering padding.
-  defp assert_branding_footer_within_viewport(session, context) do
-    me = self()
-    ref = make_ref()
-
-    execute_script(
-      session,
-      """
-      const f = document.querySelector('.branding-footer');
-      if (!f) return null;
-      return [Math.round(f.getBoundingClientRect().bottom), window.innerHeight];
-      """,
-      fn value -> send(me, {:foot, ref, value}) end
-    )
-
-    assert_receive {:foot, ^ref, value}, 5_000
-
-    assert is_list(value), "branding footer not found at #{context}"
-    [foot_bottom, inner_h] = value
-
-    assert foot_bottom <= inner_h + @overflow_tolerance,
-           "Branding banner overflows the viewport at #{context}: banner bottom " <>
-             "#{foot_bottom}px > viewport #{inner_h}px. Content fits, so the banner " <>
-             "must share the viewport (see the :has(.branding-footer) rule)."
-
-    session
-  end
-
-  defp assert_name_email_stacked(session) do
-    me = self()
-    ref = make_ref()
-
-    execute_script(
-      session,
-      """
-      const name = document.querySelector("input[name='booking[name]']");
-      const email = document.querySelector("input[name='booking[email]']");
-      if (!name || !email) return null;
-      return [name.getBoundingClientRect().top, email.getBoundingClientRect().top];
-      """,
-      fn value -> send(me, {:positions, ref, value}) end
-    )
-
-    assert_receive {:positions, ^ref, positions}, 5_000
-
-    assert is_list(positions),
-           "Expected name + email bounding rects, got nil — fields not in DOM"
-
-    [name_top, email_top] = positions
-
-    assert email_top > name_top,
-           "Name and email did not stack at 320px " <>
-             "(name_top=#{name_top}, email_top=#{email_top}). " <>
-             "`.booking-inline-fields` should collapse to one column."
   end
 end

@@ -18,9 +18,9 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
   @moduletag :bookings
 
   alias ErrorTracker.Error
-  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -116,10 +116,12 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       # rejected or misbehaving invitee address must never leave the host
       # unaware a booking request exists at all.
       meeting = held_meeting()
+      job_id = System.unique_integer([:positive])
       test_pid = self()
 
-      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _sent ->
-        {:error, "recipient_rejected"}
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, 2, fn _sent ->
+        send(test_pid, :invitee_email)
+        if Process.get(:invitee_failed), do: {:ok, :sent}, else: fail_once()
       end)
 
       expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn variant,
@@ -130,20 +132,41 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
         {:ok, :sent}
       end)
 
-      assert {:discard, _reason} = request_job(meeting)
+      # The invitee leg failed while the host's went out, so the job fails
+      # for a retry; the retry, the same job, sends only the invitee's.
+      assert {:error, _reason} = run_request(meeting, job_id)
       assert_received {:host_email, :request, host_id} when host_id == meeting.id
 
-      # The invitee leg failed while the host's succeeded, so a plain
-      # whole-job retry would duplicate the host's copy: a single-leg
-      # follow-up is requeued instead, skipping the host leg this time.
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "action" => "send_booking_request_emails",
-          "meeting_id" => meeting.id,
-          "skip_host_request" => true
-        }
-      )
+      assert :ok = run_request(meeting, job_id)
+      assert_received :invitee_email
+      assert_received :invitee_email
+      refute_received {:host_email, _variant, _id}
+    end
+
+    # A suppressed invitee address must not cost the host their retry.
+    test "a rejected invitee address alongside a failing host request still retries for the host" do
+      meeting = held_meeting()
+      job_id = System.unique_integer([:positive])
+      test_pid = self()
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, 2, fn _sent ->
+        {:error, {:recipient_rejected, {422, %{"ErrorCode" => 406}}}}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, 2, fn :request,
+                                                                              _sent,
+                                                                              _urls,
+                                                                              _locale ->
+        send(test_pid, :host_email)
+        if Process.get(:host_failed), do: {:ok, :sent}, else: fail_once(:host_failed)
+      end)
+
+      assert {:error, reason} = run_request(meeting, job_id)
+      refute match?({:recipient_rejected, _rejection}, reason)
+
+      assert {:error, {:recipient_rejected, _rejection}} = run_request(meeting, job_id)
+      assert_received :host_email
+      assert_received :host_email
     end
 
     test "hands a reschedule's previous time to both emails" do
@@ -214,72 +237,86 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       assert reason =~ "invalid_format"
     end
 
-    test "a single-leg follow-up keeps the reschedule's previous time" do
+    test "the retry of a failed host leg keeps the reschedule's previous time" do
       meeting = held_meeting()
-      previous_iso = "2026-09-01T13:00:00Z"
+      previous = ~U[2026-09-01 13:00:00Z]
+      job_id = System.unique_integer([:positive])
+      test_pid = self()
 
       expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _sent, _opts ->
         {:ok, :sent}
       end)
 
-      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn _variant,
-                                                                           _sent,
-                                                                           _urls,
-                                                                           _locale,
-                                                                           _opts ->
-        {:error, "recipient_rejected"}
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, 2, fn _variant,
+                                                                              _sent,
+                                                                              _urls,
+                                                                              _locale,
+                                                                              opts ->
+        send(test_pid, {:host_opts, opts})
+        if Process.get(:host_failed), do: {:ok, :sent}, else: fail_once(:host_failed)
       end)
 
-      perform_job(EmailWorker, %{
-        "action" => "send_booking_request_emails",
-        "meeting_id" => meeting.id,
-        "previous_start_time" => previous_iso
-      })
+      args = %{"previous_start_time" => DateTime.to_iso8601(previous)}
 
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "action" => "send_booking_request_emails",
-          "meeting_id" => meeting.id,
-          "skip_attendee_ack" => true,
-          "previous_start_time" => previous_iso
-        }
-      )
+      assert {:error, _reason} = run_request(meeting, job_id, args)
+      assert :ok = run_request(meeting, job_id, args)
+
+      assert_received {:host_opts, [previous_start_time: ^previous]}
+      assert_received {:host_opts, [previous_start_time: ^previous]}
     end
 
-    test "the single-leg follow-up can insert while its parent job is still executing" do
-      # Regression coverage for the self-conflict bug: the follow-up used to
-      # be inserted with a uniqueness scope that included Oban's :executing
-      # state, so it matched — and was silently swallowed by — the very job
-      # that was inserting it.
-      meeting = held_meeting()
-      now = DateTime.utc_now()
+    # A follow-up job queued by older code, after one leg had gone out, names
+    # that leg with a skip flag; it must send only the other one.
+    for {flag, sent_leg} <- [
+          {"skip_host_request", :invitee},
+          {"skip_attendee_ack", :host}
+        ] do
+      test "a follow-up queued by older code with #{flag} sends only the #{sent_leg} leg" do
+        meeting = held_meeting()
+        test_pid = self()
 
-      {:ok, _executing_job} =
-        Repo.insert(%Oban.Job{
-          state: "executing",
-          worker: "Tymeslot.Workers.EmailWorker",
-          queue: "emails",
-          args: %{"action" => "send_booking_request_emails", "meeting_id" => meeting.id},
-          errors: [],
-          inserted_at: now,
-          attempted_at: now
-        })
+        stub(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _sent ->
+          send(test_pid, :invitee)
+          {:ok, :sent}
+        end)
 
-      assert :ok =
-               EmailScheduler.schedule_request_emails(meeting.id,
-                 skip_host_request: true
-               )
+        stub(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn _variant,
+                                                                           _sent,
+                                                                           _urls,
+                                                                           _locale ->
+          send(test_pid, :host)
+          {:ok, :sent}
+        end)
 
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "action" => "send_booking_request_emails",
-          "meeting_id" => meeting.id,
-          "skip_host_request" => true
-        }
-      )
+        assert :ok =
+                 perform_job(EmailWorker, %{
+                   "action" => "send_booking_request_emails",
+                   "meeting_id" => meeting.id,
+                   unquote(flag) => true
+                 })
+
+        assert_received unquote(sent_leg)
+        refute_received unquote(if sent_leg == :host, do: :invitee, else: :host)
+      end
     end
+  end
+
+  # Runs the request job as Oban runs one execution of a persisted job: the
+  # same id each time, so a retry sees the legs the earlier run claimed.
+  defp run_request(meeting, job_id, extra_args \\ %{}) do
+    EmailHandlers.execute_email_action(
+      "send_booking_request_emails",
+      Map.merge(
+        %{"action" => "send_booking_request_emails", "meeting_id" => meeting.id},
+        extra_args
+      ),
+      job_id
+    )
+  end
+
+  defp fail_once(flag \\ :invitee_failed) do
+    Process.put(flag, true)
+    {:error, "recipient_rejected"}
   end
 
   describe "send_booking_approval_nudge" do

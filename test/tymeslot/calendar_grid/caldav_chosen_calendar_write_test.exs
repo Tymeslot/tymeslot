@@ -19,8 +19,8 @@ defmodule Tymeslot.CalendarGrid.CalDAVChosenCalendarWriteTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
 
   setup :verify_on_exit!
 

@@ -81,6 +81,46 @@ defmodule Tymeslot.Workers.DeliveryClaimsTest do
     end
   end
 
+  describe "remember/3 and recall/2" do
+    test "keep the first value and answer it on later runs", %{job: job} do
+      assert DeliveryClaims.recall(job.id, "from") == nil
+      assert DeliveryClaims.remember(job.id, "from", "10:30") == "10:30"
+      assert DeliveryClaims.remember(job.id, "from", "11:30") == "10:30"
+      assert DeliveryClaims.recall(job.id, "from") == "10:30"
+    end
+
+    # Two first runs can both find nothing kept and both write; each then
+    # answers the earliest written.
+    test "answer the first value written when two were", %{job: job} do
+      :claimed = DeliveryClaimQueries.claim(job.id, "from=10:30")
+      :claimed = DeliveryClaimQueries.claim(job.id, "from=11:30")
+
+      assert DeliveryClaims.recall(job.id, "from") == "10:30"
+      assert DeliveryClaims.remember(job.id, "from", "12:00") == "10:30"
+    end
+
+    test "keep values under each name apart, matching the name exactly", %{job: job} do
+      assert DeliveryClaims.remember(job.id, "axb", "1") == "1"
+
+      # `_` would be a LIKE wildcard; the name is matched as written.
+      assert DeliveryClaims.recall(job.id, "a_b") == nil
+      assert DeliveryClaims.recall(job.id, "a") == nil
+      assert DeliveryClaims.remember(job.id, "a", "2") == "2"
+    end
+
+    test "pass the value through for a job with no id" do
+      assert DeliveryClaims.remember(nil, "from", "10:30") == "10:30"
+      assert DeliveryClaims.recall(nil, "from") == nil
+    end
+
+    test "survive pruning while the job lives", %{job: job} do
+      DeliveryClaims.remember(job.id, "from", "10:30")
+
+      assert DeliveryClaims.prune_orphaned() == 0
+      assert DeliveryClaims.recall(job.id, "from") == "10:30"
+    end
+  end
+
   describe "prune_orphaned/0" do
     test "deletes the claims of pruned jobs and keeps those of live ones", %{job: job} do
       {:ok, pruned_job} =

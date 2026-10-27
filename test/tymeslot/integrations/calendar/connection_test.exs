@@ -5,116 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
   import Tymeslot.Factory
   import Mox
   alias Tymeslot.Integrations.Calendar.Connection
-  alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
-
-  describe "validate_connection/2" do
-    setup do
-      user = insert(:user)
-      %{user: user}
-    end
-
-    test "validates CalDAV provider connection", %{user: user} do
-      integration = %{
-        provider: "caldav",
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass"
-      }
-
-      result = Connection.validate_connection(integration, user.id)
-
-      # Will fail without real server
-      assert {:error, :network_error} = result
-    end
-
-    test "validates Nextcloud provider connection", %{user: user} do
-      integration = %{
-        provider: "nextcloud",
-        base_url: "https://cloud.example.com/remote.php/dav",
-        username: "user",
-        password: "pass"
-      }
-
-      result = Connection.validate_connection(integration, user.id)
-
-      assert {:error, :network_error} = result
-    end
-
-    test "validates Radicale provider connection", %{user: user} do
-      integration = %{
-        provider: "radicale",
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass"
-      }
-
-      result = Connection.validate_connection(integration, user.id)
-
-      assert {:error, :network_error} = result
-    end
-
-    test "returns error for unsupported provider", %{user: user} do
-      integration = %{
-        provider: "unknown"
-      }
-
-      result = Connection.validate_connection(integration, user.id)
-
-      assert {:error, :unsupported_provider} = result
-    end
-
-    test "handles OAuth providers with token validation", %{user: user} do
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          access_token_encrypted: Encryption.encrypt("access_token"),
-          refresh_token_encrypted: Encryption.encrypt("refresh_token"),
-          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-          oauth_scope: "https://www.googleapis.com/auth/calendar"
-        )
-
-      integration_map = %{
-        id: integration.id,
-        provider: "google",
-        access_token: "access_token",
-        refresh_token: "refresh_token",
-        token_expires_at: integration.token_expires_at
-      }
-
-      # Mock token refresh
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok,
-         {"new_access_token", "new_refresh_token",
-          DateTime.add(DateTime.utc_now(), 3600, :second)}}
-      end)
-
-      # Mock connection test
-      expect(GoogleCalendarAPIMock, :list_primary_events, fn _int, _start, _end ->
-        {:ok, []}
-      end)
-
-      result = Connection.validate_connection(integration_map, user.id)
-
-      assert {:ok, updated} = result
-      assert updated.access_token == "new_access_token"
-    end
-
-    test "handles network errors gracefully", %{user: user} do
-      integration = %{
-        provider: "caldav",
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass"
-      }
-
-      result = Connection.validate_connection(integration, user.id)
-
-      assert {:error, :network_error} = result
-    end
-  end
 
   describe "test_connection/1" do
     test "tests CalDAV provider connection" do
@@ -130,6 +22,28 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
 
       # Will fail without real server
       assert {:error, _reason} = result
+    end
+
+    # The owner learns it was the address, in their language: the reason
+    # comes back from discovery as :private_address, not as a sentence.
+    test "names a private server address in the owner's language" do
+      user = insert(:user)
+
+      integration = %{
+        user_id: user.id,
+        provider: "caldav",
+        base_url: "https://10.0.0.5",
+        username: "user",
+        password: "pass",
+        calendar_paths: []
+      }
+
+      assert {:error, message} =
+               Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+                 Connection.test_connection(integration)
+               end)
+
+      assert message == "Private oder lokale Netzwerkadressen sind nicht zulässig"
     end
 
     test "tests Google Calendar provider connection" do

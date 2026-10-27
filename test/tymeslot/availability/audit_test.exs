@@ -4,8 +4,17 @@ defmodule Tymeslot.Availability.AuditTest do
   @moduletag :availability
 
   import ExUnit.CaptureIO
+  import Mox
 
   alias Tymeslot.Availability.Audit
+  alias Tymeslot.CalendarMock
+
+  setup :verify_on_exit!
+
+  setup do
+    stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end -> {:ok, []} end)
+    :ok
+  end
 
   defp setup_bookable_profile(username) do
     user = insert(:user)
@@ -86,7 +95,7 @@ defmodule Tymeslot.Availability.AuditTest do
       # protects the guarantee against future drift.
       profile = setup_bookable_profile("audit-empty-#{System.unique_integer([:positive])}")
 
-      result = Audit.audit(profile, start_date: future_monday(), horizon_days: 14)
+      {:ok, result} = Audit.audit(profile, start_date: future_monday(), horizon_days: 14)
 
       assert result.disagreements == []
       assert result.checked_days == 15
@@ -95,7 +104,7 @@ defmodule Tymeslot.Availability.AuditTest do
     test "respects :duration_minutes option" do
       profile = setup_bookable_profile("audit-dur-#{System.unique_integer([:positive])}")
 
-      result =
+      {:ok, result} =
         Audit.audit(profile, start_date: future_monday(), horizon_days: 1, duration_minutes: 60)
 
       assert result.duration_minutes == 60
@@ -106,7 +115,7 @@ defmodule Tymeslot.Availability.AuditTest do
       profile = setup_bookable_profile("audit-range-#{System.unique_integer([:positive])}")
       start_date = future_monday()
 
-      result = Audit.audit(profile, start_date: start_date, horizon_days: 5)
+      {:ok, result} = Audit.audit(profile, start_date: start_date, horizon_days: 5)
 
       assert result.horizon == {start_date, Date.add(start_date, 5)}
       assert result.checked_days == 6
@@ -119,7 +128,7 @@ defmodule Tymeslot.Availability.AuditTest do
       # such a database produces: it has to survive the state it is diagnosing.
       profile = insert(:profile, username: "audit-nodefault", timezone: "Etc/UTC")
 
-      result = Audit.audit(profile, start_date: future_monday(), horizon_days: 3)
+      {:ok, result} = Audit.audit(profile, start_date: future_monday(), horizon_days: 3)
 
       assert result.schedule_id == nil
       assert result.checked_days == 4
@@ -129,7 +138,7 @@ defmodule Tymeslot.Availability.AuditTest do
     end
 
     test "judges a slot running into the next day against that day's events too" do
-      # Monday 22:00 – 02:00 (+1) offers 90-minute starts at 22:00 and 23:30.
+      # Monday 22:00 to 02:00 (+1) offers 90-minute starts at 22:00 and 23:30.
       # One event blocks 22:00 on Monday, another blocks 23:30 after midnight,
       # so Monday has nothing left. The per-day read has to fetch Tuesday's
       # events as the month view does, or it calls Monday bookable and the
@@ -149,26 +158,32 @@ defmodule Tymeslot.Availability.AuditTest do
         )
       end)
 
-      integration = insert(:calendar_integration, user: user)
       monday = future_monday()
 
-      for {date, from, to} <- [
-            {monday, ~T[22:00:00], ~T[22:30:00]},
-            {Date.add(monday, 1), ~T[00:15:00], ~T[00:45:00]}
-          ] do
-        insert(:provider_calendar_event,
-          calendar_integration: integration,
-          start_at: DateTime.new!(date, from, "Etc/UTC"),
-          end_at: DateTime.new!(date, to, "Etc/UTC")
-        )
-      end
+      events =
+        for {date, from, to} <- [
+              {monday, ~T[22:00:00], ~T[22:30:00]},
+              {Date.add(monday, 1), ~T[00:15:00], ~T[00:45:00]}
+            ] do
+          %{
+            uid: "busy-#{date}-#{from}",
+            start_time: DateTime.new!(date, from, "Etc/UTC"),
+            end_time: DateTime.new!(date, to, "Etc/UTC")
+          }
+        end
 
-      result = Audit.audit(profile, start_date: monday, horizon_days: 3, duration_minutes: 90)
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:ok, events}
+      end)
+
+      {:ok, result} =
+        Audit.audit(profile, start_date: monday, horizon_days: 3, duration_minutes: 90)
+
       assert result.disagreements == []
 
       # The same with Monday as the horizon's last day: the month view's own
       # read has to reach past the horizon for Tuesday's event.
-      ending_monday =
+      {:ok, ending_monday} =
         Audit.audit(profile,
           start_date: Date.add(monday, -2),
           horizon_days: 2,
@@ -176,6 +191,28 @@ defmodule Tymeslot.Availability.AuditTest do
         )
 
       assert ending_monday.disagreements == []
+    end
+
+    test "reads the host's calendars once for the whole horizon, as the booking page does" do
+      profile = setup_bookable_profile("audit-once-#{System.unique_integer([:positive])}")
+
+      expect(CalendarMock, :get_events_for_range_fresh, 1, fn _user_id, _start, _end ->
+        {:ok, []}
+      end)
+
+      assert {:ok, %{checked_days: 15, disagreements: []}} =
+               Audit.audit(profile, start_date: future_monday(), horizon_days: 14)
+    end
+
+    test "reports a calendar it cannot read instead of auditing without it" do
+      profile = setup_bookable_profile("audit-unread-#{System.unique_integer([:positive])}")
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:error, :all_calendars_unavailable}
+      end)
+
+      assert Audit.audit(profile, start_date: future_monday(), horizon_days: 3) ==
+               {:error, :all_calendars_unavailable}
     end
   end
 end

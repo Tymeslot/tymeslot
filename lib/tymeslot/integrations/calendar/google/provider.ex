@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   to fetch calendar events for availability calculation.
   """
 
-  use Tymeslot.Integrations.Common.OAuthBase,
+  use Tymeslot.Integrations.Calendar.Providers.OAuthBase,
     provider_name: "google",
     display_name: "Google Calendar",
     base_url: "https://www.googleapis.com/calendar/v3"
@@ -16,11 +16,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Google.SeriesExceptions
   alias Tymeslot.Integrations.Calendar.Google.SeriesPatch
   alias Tymeslot.Integrations.Calendar.Google.SeriesSplit
+  alias Tymeslot.Integrations.Calendar.Providers.OAuthProvider
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit, as: RecurrenceSplit
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, EventSearch, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
@@ -77,6 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   # Required callbacks for OAuth base
 
+  @impl OAuthProvider
   @spec validate_oauth_scope(map()) :: :ok | {:error, String.t()}
   def validate_oauth_scope(config) do
     case Map.get(config, :oauth_scope) do
@@ -102,11 +105,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   # --- Legacy conversion (used by OAuthBase get_events / create_event / update_event) ---
 
+  @impl Tymeslot.Integrations.Calendar.Provider
   @spec convert_events(list(map())) :: list(converted_event())
   def convert_events(google_events) do
     Enum.map(google_events, &convert_event/1)
   end
 
+  @impl OAuthProvider
   @spec convert_event(map()) :: converted_event()
   def convert_event(google_event) do
     %{
@@ -120,15 +125,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       all_day: all_day_google_event?(google_event),
       start_time: event_time(google_event, "start"),
       end_time: event_time(google_event, "end"),
-      status: google_event["status"],
+      status: EventNormaliser.effective_status(google_event),
       transparency: google_event["transparency"],
       meet_url: ConferenceData.meet_url_from_google_event(google_event)
     }
   end
 
+  @impl OAuthProvider
   @spec get_calendar_api_module() :: module()
   def get_calendar_api_module, do: api_module()
 
+  @impl OAuthProvider
   @spec call_list_events(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
           {:ok, list(map())} | {:error, Outcome.t()} | {:error, atom(), String.t()}
   def call_list_events(integration, start_time, end_time) do
@@ -140,11 +147,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     )
   end
 
+  @impl OAuthProvider
   @spec call_create_event(CalendarIntegrationSchema.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()}
   def call_create_event(integration, event_attrs) do
     calendar_id =
-      event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+      event_attrs[:calendar_id] || Defaults.booking_calendar_id(integration)
 
     api_module().create_event(integration, calendar_id, event_attrs)
   end
@@ -168,11 +176,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   an edit of the first occurrence is written as one of every occurrence. A
   refusal of the edit is answered before anything is written.
   """
+  @impl OAuthProvider
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
   def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit} = attrs)
       when scope in [:all, :following] do
-    calendar_id = attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+    calendar_id = attrs[:calendar_id] || Defaults.booking_calendar_id(integration)
 
     with {:ok, master} <- api_module().get_event(integration, calendar_id, edit.master_id) do
       if scope == :all,
@@ -183,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   def call_update_event(integration, event_id, %{colour_only: true} = event_attrs) do
     calendar_id =
-      event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+      event_attrs[:calendar_id] || Defaults.booking_calendar_id(integration)
 
     effective_id = event_attrs[:provider_event_id] || event_id
     api_module().patch_event_colour(integration, calendar_id, effective_id, event_attrs[:colour])
@@ -191,7 +200,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   def call_update_event(integration, event_id, event_attrs) do
     calendar_id =
-      event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+      event_attrs[:calendar_id] || Defaults.booking_calendar_id(integration)
 
     # Prefer the provider-native event ID when available (avoids iCalUID→ID conversion)
     effective_id = event_attrs[:provider_event_id] || event_id
@@ -306,6 +315,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       synced_at: DateTime.utc_now()
     }
 
+  @impl OAuthProvider
   @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, atom(), String.t()}
   def call_delete_event(integration, event_id, opts) do
@@ -314,7 +324,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     # resource for every event on a secondary calendar, which Google answers
     # with a 404.
     calendar_id =
-      opts[:calendar_id] || integration.default_booking_calendar_id || "primary"
+      opts[:calendar_id] || Defaults.booking_calendar_id(integration)
 
     api_module().delete_event(integration, calendar_id, event_id)
   end
@@ -356,14 +366,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            DateTime.add(DateTime.utc_now(), 1, :day)
          ) do
       {:ok, _events} ->
-        {:ok, dgettext("dashboard_calendar_providers", "Google Calendar connection successful")}
+        {:ok, dgettext("integrations_calendar", "Google Calendar connection successful")}
 
       {:error, :unauthorized, message} ->
         {:error, ProviderCommon.unauthorized_reason(message)}
 
       {:error, :rate_limited, _message} ->
-        {:error,
-         dgettext("dashboard_calendar_providers", "Rate limited - please try again later")}
+        {:error, dgettext("integrations_calendar", "Rate limited - please try again later")}
 
       {:error, _type, reason} ->
         message = ErrorHandler.sanitize_error_message(reason, :google)
@@ -424,11 +433,25 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       selected: cal["primary"] || false,
       access_role: cal["accessRole"],
       read_only: read_only_access_role?(cal["accessRole"]),
+      blocks_availability: not informational_calendar?(cal["id"]),
+      free_busy_only: cal["accessRole"] == "freeBusyReader",
       color: cal["backgroundColor"]
     }
     |> CalendarEntry.normalize()
     |> CalendarEntry.with_defaults()
   end
+
+  # Calendars Google generates rather than the owner keeps: public holidays,
+  # contacts' birthdays, week numbers. Their entries are all-day markers, not
+  # busy time, so they are shown but do not block until the owner says so.
+  @informational_suffixes ~w(#holiday@group.v.calendar.google.com
+                             #contacts@group.v.calendar.google.com
+                             #weeknum@group.v.calendar.google.com)
+
+  defp informational_calendar?(id) when is_binary(id),
+    do: String.ends_with?(id, @informational_suffixes)
+
+  defp informational_calendar?(_id), do: false
 
   # Google's accessRole reports the caller's permission on the calendar:
   # "owner"/"writer" can create events, "reader"/"freeBusyReader" cannot.

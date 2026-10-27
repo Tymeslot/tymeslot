@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
   @moduletag :integrations
   @moduletag :unit
 
+  alias Ecto.Adapters.SQL
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -69,6 +70,34 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
                ProviderCalendarEventQueries.get_by_uid(integration.id, "grid-event-uid")
     end
 
+    test "leaves a grid edit of somebody else's event unmarked" do
+      integration = caldav_integration()
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "their-event",
+        provider: "caldav",
+        created_by_tymeslot: false
+      )
+
+      target = %{uid: "their-event", calendar_integration_id: integration.id}
+      assert :ok = QueueWiring.tag(target, :update, event_data())
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "their-event")
+      assert row.sync_state == "locally_modified"
+      assert row.created_by_tymeslot == false
+    end
+
+    test "marks an event the grid is creating as Tymeslot's" do
+      integration = caldav_integration()
+      target = %{uid: "grid-created", calendar_integration_id: integration.id}
+
+      assert :ok = QueueWiring.tag(target, :create, event_data())
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "grid-created")
+      assert row.created_by_tymeslot == true
+    end
+
     test "writes locally_created with summary/times for :create" do
       integration = caldav_integration()
       meeting = build_meeting(integration, "new-uid")
@@ -113,6 +142,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "evolving-uid")
       assert row.sync_state == "locally_modified"
+    end
+
+    # A new local change is a new change: the run of unanswered replays the
+    # old one had built up says nothing about it, and left in place it would
+    # count the new change's first failure against the cap at once.
+    test "a new local change ends the old one's run of unanswered replays" do
+      integration = caldav_integration()
+      meeting = build_meeting(integration, "deferred-uid")
+
+      assert :ok = QueueWiring.tag(meeting, :update, event_data())
+
+      SQL.query!(
+        Repo,
+        "UPDATE provider_calendar_events SET sync_deferred_since = $1, sync_attempts = 3 " <>
+          "WHERE calendar_integration_id = $2 AND uid = $3",
+        [DateTime.add(DateTime.utc_now(), -25, :hour), integration.id, "deferred-uid"]
+      )
+
+      assert :ok = QueueWiring.tag(meeting, :update, event_data())
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "deferred-uid")
+      assert %{sync_deferred_since: nil, sync_attempts: 0} = row
     end
 
     test "returns :ignored for non-CalDAV providers" do
@@ -306,6 +357,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
       assert row.start_at == ~U[2026-05-01 10:00:00.000000Z]
       assert row.end_at == ~U[2026-05-01 11:00:00.000000Z]
       assert row.summary == "Round-tripped"
+    end
+
+    # The queue row is upserted directly, past the cache's timing check, so a
+    # change carrying a start with no usable end must not write a timed row
+    # with no end; it leaves the row's timing as it was.
+    test "a start without a usable end leaves the row's timing alone" do
+      integration = caldav_integration()
+      meeting = build_meeting(integration, "no-end")
+      assert :ok = QueueWiring.tag(meeting, :create, event_data())
+
+      for end_time <- [nil, ~D[2026-05-01], "not a time"] do
+        assert :ok =
+                 QueueWiring.tag(meeting, :update, %{
+                   summary: "Moved",
+                   start_time: ~U[2026-05-01 12:00:00Z],
+                   end_time: end_time
+                 })
+
+        {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "no-end")
+
+        assert row.summary == "Moved"
+        assert row.start_at == ~U[2026-05-01 10:00:00.000000Z]
+        assert row.end_at == ~U[2026-05-01 11:00:00.000000Z]
+      end
     end
   end
 

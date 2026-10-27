@@ -12,6 +12,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
            | :rate_limited
            | :not_a_calendar_user
            | :network_error
+           # A 4xx the provider answered with a refusal of the request itself.
+           | :refused
+           | :malformed_response
+           | :timeout
+           | :server_error
            | :authentication_error
            | :gone
            # A listing walked past the paginator's page cap, which means the
@@ -36,6 +41,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
               {:ok, map()} | api_error()
   @callback get_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
               {:ok, map()} | api_error()
+  @callback get_series_master(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+              {:ok, map()} | api_error() | {:error, term()}
   @callback list_instances(
               CalendarIntegrationSchema.t(),
               String.t(),

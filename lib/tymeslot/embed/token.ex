@@ -6,22 +6,17 @@ defmodule Tymeslot.Embed.Token do
   bypassing third-party cookie restrictions in cross-origin iframes.
   """
 
-  alias Phoenix.Token
   alias Tymeslot.SignedToken
-
-  @salt "embed_session"
-  @max_age_seconds 21_600
 
   @spec sign(String.t(), String.t() | nil) :: String.t()
   def sign(username, parent_origin \\ nil) when is_binary(username) do
-    Token.sign(TymeslotWeb.Endpoint, @salt, {username, parent_origin})
+    SignedToken.sign(:embed_session, {username, parent_origin})
   end
 
   @spec verify(String.t(), keyword()) ::
           {:ok, {String.t(), String.t() | nil}} | {:error, atom()}
   def verify(token, opts \\ []) do
-    max_age = Keyword.get(opts, :max_age, @max_age_seconds)
-    SignedToken.verify(token, @salt, max_age, &validate/1)
+    SignedToken.verify(:embed_session, token, Keyword.put(opts, :validate, &validate/1))
   end
 
   defp validate({username, parent_origin})

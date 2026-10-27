@@ -12,7 +12,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
 
   use TymeslotWeb.Components.CoreComponents, only: [button_classes: 2, icon: 1]
 
-  alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Components.TimezoneDropdown
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
             )}
           </p>
           <div class="relative group">
-            <% base_url = Policy.app_url() %>
+            <% base_url = UrlBuilder.base_url() %>
             <% display_url = String.replace(base_url, ~r/^https?:\/\//, "") %>
             <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
               <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight">

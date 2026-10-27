@@ -15,7 +15,7 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
   @moduletag :integration
 
   alias Tymeslot.Availability.Calculate
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Meetings.BookingLimits.Checker
 
   import Tymeslot.MeetingTestHelpers
@@ -127,7 +127,7 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
 
     test "Sunday weeks count the Sunday before into the booked week",
          %{user: user, profile: profile, sunday_before: sunday_before} do
-      {:ok, _prefs} = CalendarManagement.save_preferences(user.id, %{week_start_day: "sunday"})
+      {:ok, _prefs} = Management.save_preferences(user.id, %{week_start_day: "sunday"})
 
       assert {:error, :booking_limit_reached} =
                Checker.check_booking_allowed(user.id, profile, nil, sunday_before)
@@ -139,7 +139,9 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
       %{user: user, profile: profile} =
         create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_day: 1})
 
-      date = future_weekday()
+      # A Tuesday and the Wednesday after it, so both fall within the
+      # fallback business hours whatever day the suite runs.
+      date = future_weekday() |> Date.beginning_of_week(:monday) |> Date.add(8)
       next_day = Date.add(date, 1)
       booking_on(user, date, ~T[12:00:00])
 
@@ -149,11 +151,7 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
                Calculate.range_availability(date, next_day, "Etc/UTC", "Etc/UTC", [], config)
 
       refute map[Date.to_string(date)]
-
-      # Only assert the neighbour when it's a weekday (fallback hours).
-      if Date.day_of_week(next_day) <= 5 do
-        assert map[Date.to_string(next_day)]
-      end
+      assert map[Date.to_string(next_day)]
     end
 
     test "a weekly cap greys out the whole Monday-week but not the next" do
@@ -205,9 +203,8 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
                  config
                )
 
-      for {_date, available?} <- map do
-        refute available?
-      end
+      assert map_size(map) == Date.diff(range_end, range_start) + 1
+      assert Enum.filter(map, fn {_date, available?} -> available? end) == []
     end
   end
 end

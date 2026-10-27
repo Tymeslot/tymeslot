@@ -13,7 +13,7 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
   describe "get_user_by_token/3 for a reset token, locked" do
     test "returns {:ok, user} for a valid unconsumed token" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _stored} = UserTokenQueries.set_reset_token(user, token)
 
       assert {:ok, found} = UserTokenQueries.get_user_by_token(:reset, token, lock: true)
@@ -22,7 +22,7 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
 
     test "returns {:error, :not_found} when the token has already been consumed" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _stored} = UserTokenQueries.set_reset_token(user, token)
 
       # Mark the token as consumed by setting reset_token_used_at
@@ -41,7 +41,7 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
 
     test "locks the row it reads, so a concurrent reset cannot consume the token twice" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _stored} = UserTokenQueries.set_reset_token(user, token)
 
       token_hash = Token.hash_token(token)

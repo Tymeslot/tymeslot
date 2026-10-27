@@ -5,6 +5,16 @@ defmodule Tymeslot.GettextCompletenessCase.Catalogue do
   Each check returns a list of readable findings, empty when the catalogues are
   sound, so the test that calls it only has to assert on emptiness and explain
   what a finding means.
+
+  Every file is parsed once, by `load/2`, and the checks read the result. Each
+  check covers every locale and domain, so parsing inside each one meant reading
+  the whole directory once per check; under a busy full suite that is what pushed
+  a single check past ExUnit's 60-second test timeout.
+
+  The parsed files live in `:persistent_term`, not in the struct: a `setup_all`
+  context is copied into every test process, and tens of megabytes copied into
+  each of some sixty tests costs more than the parsing it saves. A persistent term
+  is read in place.
   """
 
   alias Expo.Message
@@ -17,92 +27,121 @@ defmodule Tymeslot.GettextCompletenessCase.Catalogue do
   @placeholder ~r/%\{(\w+)\}/
   @key_style ~r/\A[a-z][a-z0-9]*(_[a-z0-9]+)+\z/
 
+  @enforce_keys [:gettext_path, :domains]
+  defstruct @enforce_keys
+
+  @type t :: %__MODULE__{gettext_path: Path.t(), domains: [String.t()]}
+
+  @doc """
+  Parses every template and every supported locale's catalogue for `domains`,
+  in parallel. A file that fails to parse is kept as its error, so the check that
+  reads it fails with the reason rather than the whole module failing to set up.
+  """
+  @spec load(Path.t(), [String.t()]) :: t()
+  def load(gettext_path, domains) do
+    pots = Enum.map(domains, &pot_path(gettext_path, &1))
+
+    pos =
+      for locale <- Locales.supported_codes(),
+          domain <- domains,
+          do: po_path(gettext_path, locale, domain)
+
+    files =
+      (pots ++ Enum.filter(pos, &File.exists?/1))
+      |> Task.async_stream(&{&1, parse(&1)}, ordered: false, timeout: :infinity)
+      |> Map.new(fn {:ok, parsed} -> parsed end)
+
+    :persistent_term.put({__MODULE__, gettext_path}, files)
+    %__MODULE__{gettext_path: gettext_path, domains: domains}
+  end
+
   @doc "Locales that must carry a translation for every message."
   @spec translated_locales() :: [String.t()]
   def translated_locales, do: Locales.supported_codes() -- [Locales.default_locale()]
 
   @doc "Every `{msgctxt, msgid}` in a domain's `.pot` template, sorted."
-  @spec template_keys(Path.t(), String.t()) :: [{String.t(), String.t()}]
-  def template_keys(gettext_path, domain), do: gettext_path |> pot_path(domain) |> keys()
+  @spec template_keys(t(), String.t()) :: [{String.t(), String.t()}]
+  def template_keys(catalogues, domain),
+    do: keys(catalogues, pot_path(catalogues.gettext_path, domain))
 
   @doc """
   How a locale's catalogue differs from its template: `{missing, extra}`, each a
   list of formatted message keys.
   """
-  @spec template_drift(Path.t(), String.t(), String.t()) :: {[String.t()], [String.t()]}
-  def template_drift(gettext_path, locale, domain) do
-    template = template_keys(gettext_path, domain)
-    actual = gettext_path |> po_path(locale, domain) |> keys()
+  @spec template_drift(t(), String.t(), String.t()) :: {[String.t()], [String.t()]}
+  def template_drift(catalogues, locale, domain) do
+    template = template_keys(catalogues, domain)
+    actual = keys(catalogues, po_path(catalogues.gettext_path, locale, domain))
 
     {format_keys(template -- actual), format_keys(actual -- template)}
   end
 
-  @spec missing_catalogues(Path.t(), [String.t()]) :: [String.t()]
-  def missing_catalogues(gettext_path, domains) do
+  @spec missing_catalogues(t()) :: [String.t()]
+  def missing_catalogues(catalogues) do
     for locale <- Locales.supported_codes(),
-        domain <- domains,
-        not File.exists?(po_path(gettext_path, locale, domain)),
+        domain <- catalogues.domains,
+        not Map.has_key?(files(catalogues), po_path(catalogues.gettext_path, locale, domain)),
         do: "#{locale}/#{domain}.po"
   end
 
-  @spec header_problems(Path.t(), [String.t()]) :: [String.t()]
-  def header_problems(gettext_path, domains) do
+  @spec header_problems(t()) :: [String.t()]
+  def header_problems(catalogues) do
     for locale <- Locales.supported_codes(),
-        domain <- domains,
-        headers = gettext_path |> po_path(locale, domain) |> parse!() |> Map.fetch!(:headers),
+        domain <- catalogues.domains,
+        headers = catalogues |> catalogue(locale, domain) |> Map.fetch!(:headers),
         headers = Enum.join(headers),
         header <- ["Language: #{locale}", "Plural-Forms:"],
         not String.contains?(headers, header),
         do: "#{locale}/#{domain}.po is missing its `#{header}` header"
   end
 
-  @spec oversized(Path.t(), [String.t()], pos_integer()) :: [String.t()]
-  def oversized(gettext_path, domains, max_msgids) do
-    for domain <- domains,
-        count = length(template_keys(gettext_path, domain)),
+  @spec oversized(t(), pos_integer()) :: [String.t()]
+  def oversized(catalogues, max_msgids) do
+    for domain <- catalogues.domains,
+        count = length(template_keys(catalogues, domain)),
         count > max_msgids,
         do: "#{domain}: #{count} messages"
   end
 
-  @spec filled_source_msgstrs(Path.t(), [String.t()]) :: [String.t()]
-  def filled_source_msgstrs(gettext_path, domains) do
-    for domain <- domains,
-        message <- messages(gettext_path, Locales.default_locale(), domain),
+  @spec filled_source_msgstrs(t()) :: [String.t()]
+  def filled_source_msgstrs(catalogues) do
+    for domain <- catalogues.domains,
+        message <- messages(catalogues, Locales.default_locale(), domain),
         not untranslated?(message),
         do: "#{domain}: #{msgid(message)}"
   end
 
-  @spec key_style_msgids(Path.t(), [String.t()]) :: [String.t()]
-  def key_style_msgids(gettext_path, domains) do
-    for domain <- domains,
-        {_msgctxt, msgid} <- template_keys(gettext_path, domain),
+  @spec key_style_msgids(t()) :: [String.t()]
+  def key_style_msgids(catalogues) do
+    for domain <- catalogues.domains,
+        {_msgctxt, msgid} <- template_keys(catalogues, domain),
         msgid =~ @key_style,
         do: "#{domain}: #{msgid}"
   end
 
-  @spec untranslated(Path.t(), [String.t()]) :: [String.t()]
-  def untranslated(gettext_path, domains) do
+  @spec untranslated(t()) :: [String.t()]
+  def untranslated(catalogues) do
     for locale <- translated_locales(),
-        domain <- domains,
-        message <- messages(gettext_path, locale, domain),
+        domain <- catalogues.domains,
+        message <- messages(catalogues, locale, domain),
         untranslated?(message),
         do: "#{locale}/#{domain}: #{msgid(message)}"
   end
 
-  @spec fuzzy(Path.t(), [String.t()]) :: [String.t()]
-  def fuzzy(gettext_path, domains) do
+  @spec fuzzy(t()) :: [String.t()]
+  def fuzzy(catalogues) do
     for locale <- Locales.supported_codes(),
-        domain <- domains,
-        message <- messages(gettext_path, locale, domain),
+        domain <- catalogues.domains,
+        message <- messages(catalogues, locale, domain),
         "fuzzy" in List.flatten(message.flags),
         do: "#{locale}/#{domain}: #{msgid(message)}"
   end
 
-  @spec placeholder_mismatches(Path.t(), [String.t()]) :: [String.t()]
-  def placeholder_mismatches(gettext_path, domains) do
+  @spec placeholder_mismatches(t()) :: [String.t()]
+  def placeholder_mismatches(catalogues) do
     for locale <- translated_locales(),
-        domain <- domains,
-        message <- messages(gettext_path, locale, domain),
+        domain <- catalogues.domains,
+        message <- messages(catalogues, locale, domain),
         {unknown, dropped} = placeholder_mismatch(message),
         unknown != [] or dropped != [],
         do:
@@ -110,11 +149,11 @@ defmodule Tymeslot.GettextCompletenessCase.Catalogue do
             "(unknown: #{inspect(unknown)}, dropped: #{inspect(dropped)})"
   end
 
-  @spec plural_count_mismatches(Path.t(), [String.t()]) :: [String.t()]
-  def plural_count_mismatches(gettext_path, domains) do
+  @spec plural_count_mismatches(t()) :: [String.t()]
+  def plural_count_mismatches(catalogues) do
     for locale <- Locales.supported_codes(),
-        domain <- domains,
-        catalogue = gettext_path |> po_path(locale, domain) |> parse!(),
+        domain <- catalogues.domains,
+        catalogue = catalogue(catalogues, locale, domain),
         nplurals = nplurals(catalogue),
         %Message.Plural{msgstr: msgstr} = message <- catalogue.messages,
         map_size(msgstr) != nplurals,
@@ -133,27 +172,46 @@ defmodule Tymeslot.GettextCompletenessCase.Catalogue do
 
   defp pot_path(gettext_path, domain), do: Path.join(gettext_path, "#{domain}.pot")
 
-  defp parse!(path) do
-    PO.parse_file!(path)
-  rescue
-    error in PO.SyntaxError ->
-      Assertions.flunk("#{path} is not a valid .po file: #{Exception.message(error)}")
+  defp parse(path) do
+    case PO.parse_file(path) do
+      {:ok, messages} ->
+        {:ok, messages}
+
+      {:error, reason} when is_atom(reason) ->
+        {:error, reason |> :file.format_error() |> to_string()}
+
+      {:error, error} ->
+        {:error, Exception.message(error)}
+    end
   end
 
-  defp messages(gettext_path, locale, domain),
-    do: gettext_path |> po_path(locale, domain) |> messages()
+  defp files(catalogues), do: :persistent_term.get({__MODULE__, catalogues.gettext_path})
 
-  defp messages(path) do
-    path
-    |> parse!()
+  defp parsed!(catalogues, path) do
+    case Map.fetch(files(catalogues), path) do
+      {:ok, {:ok, messages}} -> messages
+      {:ok, {:error, reason}} -> Assertions.flunk("#{path} is not a valid .po file: #{reason}")
+      :error -> Assertions.flunk("#{path} does not exist")
+    end
+  end
+
+  defp catalogue(catalogues, locale, domain),
+    do: parsed!(catalogues, po_path(catalogues.gettext_path, locale, domain))
+
+  defp messages(catalogues, locale, domain),
+    do: messages(catalogues, po_path(catalogues.gettext_path, locale, domain))
+
+  defp messages(catalogues, path) do
+    catalogues
+    |> parsed!(path)
     |> Map.fetch!(:messages)
     |> Enum.reject(&(&1.obsolete or msgid(&1) == ""))
   end
 
   # A message is identified by its context as well as its msgid: the same msgid
   # under two contexts is two messages.
-  defp keys(path) do
-    path |> messages() |> Enum.map(&{text(&1.msgctxt), msgid(&1)}) |> Enum.sort()
+  defp keys(catalogues, path) do
+    catalogues |> messages(path) |> Enum.map(&{text(&1.msgctxt), msgid(&1)}) |> Enum.sort()
   end
 
   defp format_keys(keys) do

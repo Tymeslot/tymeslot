@@ -1,9 +1,9 @@
 defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
   @moduledoc """
   Covers the CalDAV sync worker's error handling: provider authentication
-  failures (401), missing calendar paths (404), refused requests (415 and 405),
-  sync-token expiry (410), the deletion circuit breaker, and a delta the
-  server answered without any event data.
+  failures (401), missing calendar paths (404), sync-token expiry (410), the
+  deletion circuit breaker, and a delta the server answered without any event
+  data. Requests the server refuses are in `RefusedRequestsTest`.
   """
 
   use Tymeslot.DataCase, async: false
@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
   alias Req.Test, as: ReqTest
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
@@ -183,57 +184,55 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       assert updated.calendar_paths == [path1()]
       assert updated.needs_reauth == false
     end
-  end
 
-  describe "perform/1 - the server refuses the request" do
-    test "discards on a 4xx the transport layer does not model" do
+    # The booking calendar is the one the integration names, not the first
+    # path: a read-only share can be listed before it.
+    test "a gone read-only share listed first is deselected, not taken for the booking calendar" do
       integration =
         insert(:calendar_integration,
           provider: "caldav",
           is_active: true,
           caldav_sync_tier: 3,
-          calendar_paths: [path1()]
+          calendar_paths: [path2(), path1()],
+          default_booking_calendar_id: path1(),
+          calendar_list: [
+            %{id: path2(), path: path2(), name: "Shared", selected: true, read_only: true},
+            %{id: path1(), path: path1(), name: "Bookings", selected: true}
+          ]
         )
 
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        Conn.send_resp(conn, 415, "Unsupported Media Type")
-      end)
+      stub_only_path1_exists()
 
-      # Retrying re-sends the same bytes for the same refusal, so the job must
-      # not burn its remaining attempts and raise an admin alert on the last.
-      assert {:discard, reason} =
+      assert :ok =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
 
-      assert reason =~ "HTTP 415"
-
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      # The refusal says nothing about the credentials, so it must not push the
-      # user through a reconnection they do not need.
       assert updated.needs_reauth == false
+      assert Enum.find(updated.calendar_list, &(&1.path == path2())).selected == false
+      assert updated.calendar_paths == [path1()]
     end
 
-    test "discards a 405 without treating the calendar as gone" do
-      # 405 is modelled as `:method_not_allowed` so discovery can fall back on
-      # it. Two things must survive that: it stays terminal here (a retryable
-      # 405 re-sends the same bytes for the same refusal three times, then
-      # raises a permanent-failure admin alert nobody can act on), and it never
-      # behaves like `:not_found`, which deletes calendar paths and pushes the
-      # owner through a reconnection they do not need.
+    # Deselecting the booking calendar would leave the page offering times
+    # whose bookings then fail to write; it is flagged for the owner instead.
+    test "a gone booking calendar listed second is flagged, never deselected" do
       integration =
         insert(:calendar_integration,
           provider: "caldav",
           is_active: true,
           caldav_sync_tier: 3,
-          calendar_paths: [path1(), path2()]
+          calendar_paths: [path1(), path2()],
+          default_booking_calendar_id: path2(),
+          calendar_list: [
+            %{id: path1(), path: path1(), name: "Personal", selected: true},
+            %{id: path2(), path: path2(), name: "Bookings", selected: true}
+          ]
         )
 
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        Conn.send_resp(conn, 405, "Method Not Allowed")
-      end)
+      stub_only_path1_exists()
 
       assert {:discard, _reason} =
                perform_job(SyncCalDavCalendarWorker, %{
@@ -243,41 +242,55 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert updated.calendar_paths == [path1(), path2()]
-      assert updated.needs_reauth == false
+      assert updated.needs_reauth == true
+      assert updated.sync_error =~ "no longer exists"
+      assert Enum.find(updated.calendar_list, &(&1.path == path2())).selected == true
+      assert path2() in updated.calendar_paths
     end
 
-    test "discards a 5xx and leaves the retry to the next scheduled sync" do
+    # A calendar shared read-only and since unshared answers 404. Left
+    # selected, it stays in the set availability reads, so every booking
+    # page load fails closed on a calendar that no longer exists while the
+    # sync reports healthy.
+    test "deselects a selected calendar that is gone, so availability stops reading it" do
+      user = insert(:user)
+
       integration =
         insert(:calendar_integration,
+          user: user,
           provider: "caldav",
           is_active: true,
           caldav_sync_tier: 3,
-          calendar_paths: [path1()]
+          calendar_paths: [path1(), path2()],
+          calendar_list: [
+            %{id: path1(), path: path1(), name: "Bookings", selected: true},
+            %{id: path2(), path: path2(), name: "Shared", selected: true, read_only: true}
+          ]
         )
 
       ReqTest.stub(:tymeslot_http, fn conn ->
-        Conn.send_resp(conn, 503, "Service Unavailable")
+        if conn.request_path == path1() do
+          conn
+          |> Conn.put_resp_header("content-type", "application/xml")
+          |> Conn.send_resp(207, caldav_report_xml("#{path1()}event1.ics", ical_path1()))
+        else
+          Conn.send_resp(conn, 404, "Not Found")
+        end
       end)
 
-      # The remote is broken, not the request — but the three Oban attempts
-      # span under a minute, far too short for a server to recover, while the
-      # scheduled sync comes round again in minutes. A server that 5xxs
-      # persistently used to exhaust the retries every cycle and raise a
-      # permanent-failure admin alert each time.
-      assert {:discard, reason} =
+      assert :ok =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
 
-      assert reason =~ "server error"
-
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      # A remote outage says nothing about the credentials, so it must not push
-      # the user through a reconnection they do not need.
-      assert updated.needs_reauth == false
+      assert Enum.find(updated.calendar_list, &(&1.path == path2())).selected == false
+      assert Enum.find(updated.calendar_list, &(&1.path == path1())).selected == true
+
+      {clients, []} = ClientManager.availability_sources(user.id)
+      assert Enum.flat_map(clients, & &1.client.calendar_paths) == [path1()]
     end
   end
 
@@ -464,5 +477,17 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
 
       assert updated.caldav_sync_tokens == %{path1() => "known-token"}
     end
+  end
+
+  defp stub_only_path1_exists do
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      if conn.request_path == path1() do
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, caldav_report_xml("#{path1()}event1.ics", ical_path1()))
+      else
+        Conn.send_resp(conn, 404, "Not Found")
+      end
+    end)
   end
 end

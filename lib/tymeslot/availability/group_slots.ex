@@ -215,20 +215,22 @@ defmodule Tymeslot.Availability.GroupSlots do
   # Re-runs the day's slot calculation with any joinable-by-seats meeting's
   # own event ignored, so its slot passes the same notice/window/buffer
   # checks as everything else instead of a second, hand-rolled copy of them.
+  # A day it cannot work out adds no joinable times; the times already
+  # offered stand.
   defp joinable_starts(_meeting_type, _date, _context, []), do: []
 
   defp joinable_starts(meeting_type, date, context, joinable) do
-    {:ok, starts} =
-      Calculate.available_starts(
-        date,
-        meeting_type.duration_minutes,
-        context.user_timezone,
-        context.owner_timezone,
-        context.events,
-        joinable_config(context.config, joinable)
-      )
-
-    starts
+    case Calculate.available_starts(
+           date,
+           meeting_type.duration_minutes,
+           context.user_timezone,
+           context.owner_timezone,
+           context.events,
+           joinable_config(context.config, joinable)
+         ) do
+      {:ok, starts} -> starts
+      {:error, _reason} -> []
+    end
   end
 
   # Meetings are keyed by their stored start: UTC, whole seconds.

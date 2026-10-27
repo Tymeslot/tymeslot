@@ -79,6 +79,63 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpersTest do
     end
   end
 
+  # ── view_switch_anchor/1 ──────────────────────────────────────────────
+
+  describe "view_switch_anchor/1" do
+    # Wednesday 28 October 2026 is "today" throughout.
+    setup do
+      freeze_clock(~U[2026-10-28 12:00:00Z])
+      :ok
+    end
+
+    @monday_prefs %{week_start_day: "monday"}
+
+    test "a week not containing today hands over its first day" do
+      assigns = %{view: :week, date: ~D[2026-11-07], preferences: @monday_prefs}
+      assert PreferenceHelpers.view_switch_anchor(assigns) == ~D[2026-11-02]
+    end
+
+    test "a week starting on Sunday hands over the Sunday" do
+      assigns = %{view: :week, date: ~D[2026-11-07], preferences: %{week_start_day: "sunday"}}
+      assert PreferenceHelpers.view_switch_anchor(assigns) == ~D[2026-11-01]
+    end
+
+    test "the week containing today hands over today" do
+      assigns = %{view: :week, date: ~D[2026-10-31], preferences: @monday_prefs}
+      assert PreferenceHelpers.view_switch_anchor(assigns) == ~D[2026-10-28]
+    end
+
+    test "a month not containing today hands over the first of the month" do
+      assigns = %{view: :month, date: ~D[2026-12-19], preferences: @monday_prefs}
+      assert PreferenceHelpers.view_switch_anchor(assigns) == ~D[2026-12-01]
+    end
+
+    test "the month containing today hands over today" do
+      assigns = %{view: :month, date: ~D[2026-10-31], preferences: @monday_prefs}
+      assert PreferenceHelpers.view_switch_anchor(assigns) == ~D[2026-10-28]
+    end
+
+    test "today is read in the organiser's timezone" do
+      # 12:00 UTC on 28 October is already 29 October in Kiritimati (UTC+14),
+      # so the week of 26 October hands over the 29th there.
+      assigns = %{
+        view: :week,
+        date: ~D[2026-10-26],
+        preferences: @monday_prefs,
+        user_timezone: @ahead_tz
+      }
+
+      assert PreferenceHelpers.view_switch_anchor(assigns) == ~D[2026-10-29]
+    end
+
+    test "views that start at their anchor keep it" do
+      for view <- [:day, :three_day, :agenda] do
+        assigns = %{view: view, date: ~D[2026-11-07], preferences: @monday_prefs}
+        assert {view, PreferenceHelpers.view_switch_anchor(assigns)} == {view, ~D[2026-11-07]}
+      end
+    end
+  end
+
   # ── period_label/1 — agenda view ──────────────────────────────────────
 
   describe "period_label/1 — agenda view" do

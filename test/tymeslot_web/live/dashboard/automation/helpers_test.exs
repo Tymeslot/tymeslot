@@ -90,21 +90,30 @@ defmodule TymeslotWeb.Dashboard.Automation.HelpersTest do
     end
   end
 
-  describe "format_changeset_errors/1" do
-    test "formats changeset errors into a flat map" do
-      import Ecto.Changeset
-      data = %{}
-      types = %{name: :string, url: :string}
+  describe "do_rate_limited_test/6" do
+    setup do
+      user_id = System.unique_integer([:positive])
 
-      changeset =
-        {data, types}
-        |> cast(%{name: "", url: "invalid"}, [:name, :url])
-        |> validate_required([:name])
-        |> add_error(:url, "is invalid")
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, current_user: %{id: user_id}, testing: nil}
+      }
 
-      errors = Helpers.format_changeset_errors(changeset)
-      assert errors.name == "can't be blank"
-      assert errors.url == "is invalid"
+      {:ok, socket: socket}
+    end
+
+    test "a test that finds the entity gone says it was not found", %{socket: socket} do
+      {:noreply, socket} =
+        Helpers.do_rate_limited_test(
+          socket,
+          "7",
+          :testing,
+          fn _socket -> {:ok, :entity} end,
+          fn :entity -> {:error, :not_found} end,
+          {"Worked", "Webhook not found"}
+        )
+
+      assert_received {:flash, {:error, "Webhook not found"}}
+      assert socket.assigns.testing == nil
     end
   end
 end

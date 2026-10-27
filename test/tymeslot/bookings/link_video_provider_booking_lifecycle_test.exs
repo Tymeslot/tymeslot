@@ -31,6 +31,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
@@ -88,7 +89,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
       new_start = DateTime.add(booked.start_time, 2, :day)
 
       assert {:ok, _rescheduled} =
-               Reschedule.execute(booked.uid, reschedule_params(new_start), %{}, user.id)
+               Reschedule.execute(booked.uid, reschedule_params(new_start), user.id)
 
       assert_enqueued(worker: VideoSyncWorker, args: sync_args(booked, "update"))
       assert %{success: 1, failure: 0} = drain_video_rooms()
@@ -100,7 +101,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
       assert rescheduled.video_room_id == with_room.video_room_id
 
       # There is nothing on kMeet to delete, so cancelling only forgets the room.
-      assert {:ok, _cancelled} = Cancel.execute(booked.uid)
+      assert {:ok, _cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: booked.uid))
       assert_enqueued(worker: VideoSyncWorker, args: sync_args(booked, "delete"))
       assert %{success: 1, failure: 0} = drain_video_rooms()
 
@@ -142,7 +143,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
       new_start = DateTime.add(booked.start_time, 2, :day)
 
       assert {:ok, _rescheduled} =
-               Reschedule.execute(booked.uid, reschedule_params(new_start), %{}, user.id)
+               Reschedule.execute(booked.uid, reschedule_params(new_start), user.id)
 
       assert %{success: 1, failure: 0} = drain_video_rooms()
 
@@ -178,7 +179,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
       new_start = DateTime.add(start_time, 7, :day)
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(booked.uid, reschedule_params(new_start), %{}, user.id)
+               Reschedule.execute(booked.uid, reschedule_params(new_start), user.id)
 
       stored = Repo.reload!(booked)
       assert stored.attendee_video_url == rescheduled.attendee_video_url
@@ -190,7 +191,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
       assert %{success: 1, failure: 0} = drain_video_rooms()
       assert_tokens(Repo.reload!(booked), room_url, new_start)
 
-      assert {:ok, _cancelled} = Cancel.execute(booked.uid)
+      assert {:ok, _cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: booked.uid))
       assert %{success: 1, failure: 0} = drain_video_rooms()
 
       assert %{status: "cancelled", video_room_id: nil} = Repo.reload!(booked)

@@ -1,16 +1,21 @@
 defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
   @moduledoc """
-  Builds and parses RFC-5545 RRULE strings for the calendar grid's recurrence
-  editor. Pure data transformations — no side effects.
+  The one reader and writer of RFC 5545 `RRULE` values.
 
-  The supported surface matches the recurrence editor UI: a frequency
-  (daily/weekly/monthly/yearly), an `INTERVAL` ("every N"), an optional `BYDAY`
-  weekday selection for weekly rules, and one of two mutually-exclusive end
-  conditions — `COUNT` (after N occurrences) or `UNTIL` (on a date). Complex
-  rules (BYSETPOS, BYMONTH, multiple BYxxx parts) are intentionally out of
-  scope; `parse/2` ignores tokens it does not understand rather than failing.
+  `parse/1` reads a rule into a `%RRule{}` holding every part the expander
+  follows (`FREQ`, `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY` with ordinals,
+  `BYMONTHDAY`, `BYMONTH`, `BYSETPOS`, `WKST`); every other part is kept as
+  written under `:other`, so a caller can tell a rule it cannot follow in
+  full, and `format/1` writes the rule back with those parts unchanged.
 
-  The canonical option map shape used by both functions:
+  The calendar grid's recurrence editor works on a narrower view,
+  `options/2`: a frequency, an `INTERVAL` ("every N"), a `BYDAY` weekday
+  selection for weekly rules, and one of two mutually-exclusive end
+  conditions, `COUNT` (after N occurrences) or `UNTIL` (on a date). `build/2`
+  writes that view back, keeping the parts of the rule being edited that the
+  editor does not show (`:keep`).
+
+  The canonical option map shape:
 
       %{
         freq: :daily | :weekly | :monthly | :yearly,
@@ -22,30 +27,31 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
 
   ## `UNTIL` and the event's timezone
 
-  `:until` is the calendar date the organiser picked, which is a *local* date:
-  it has no timezone of its own. On the wire it is written differently
-  depending on the event it bounds (RFC 5545 §3.3.10, "UNTIL MUST be the same
-  value type as DTSTART"):
+  `:until` in the option map is the calendar date the organiser picked, which
+  is a *local* date: it has no timezone of its own. On the wire it is written
+  differently depending on the event it bounds (RFC 5545 §3.3.10, "UNTIL MUST
+  be the same value type as DTSTART"):
 
     * an all-day event's `DTSTART` is a DATE, so `UNTIL` is a bare `YYYYMMDD`,
       zone-free in both directions;
     * a timed event's `DTSTART` is a DATE-TIME, so `UNTIL` is an *instant* in
       UTC — the end of the chosen day in the event's own timezone.
 
-  That second form is why `build/2`, `parse/2` and `retarget/2` all take a
+  That second form is why `build/2`, `options/2` and `retarget/2` all take a
   `:timezone`: end-of-day in Los Angeles and end-of-day in Auckland are
   different instants, and both fall on a UTC date the organiser never picked.
   Stamping `T235959Z` on the local date instead ends the series a day early
   west of UTC and a day late east of it. The option is threaded through all
   three so the value written and the value read back agree, which also makes
-  `retarget/2` idempotent.
+  `retarget/2` idempotent. `RRule.Until` holds the reading and writing, and
+  `until_instant/2` reads the value in the same zone for the expander.
 
   Without a `:timezone` the UTC day is used in both directions, which is the
   right answer for a rule that is already expressed in UTC (an Outlook range,
   a legacy stored rule) and the wrong one for an organiser's local date.
   """
 
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule.Until
 
   @type freq :: :daily | :weekly | :monthly | :yearly
   @type weekday :: :mo | :tu | :we | :th | :fr | :sa | :su
@@ -57,71 +63,188 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
           optional(:until) => Date.t() | nil
         }
 
+  @typedoc """
+  A parsed rule. Weekdays are ISO numbers (1 is Monday), and each `BYDAY`
+  entry is `{ordinal, weekday}` with `ordinal` nil for every such weekday
+  (`MO`) and counted from the end when negative (`-1FR`). `:until` is the
+  value as written (see `until_instant/2`); `:week_start` is nil when the
+  rule states no `WKST` (Monday, by RFC 5545). `:other` holds every other
+  part as `{name, value}`, in the order written.
+  """
+  @type t :: %__MODULE__{
+          freq: freq(),
+          interval: pos_integer(),
+          count: non_neg_integer() | nil,
+          until: String.t() | nil,
+          by_day: [{integer() | nil, 1..7}] | nil,
+          by_month_day: [integer()] | nil,
+          by_month: [1..12] | nil,
+          by_set_pos: [integer()] | nil,
+          week_start: 1..7 | nil,
+          other: [{String.t(), String.t()}]
+        }
+
+  @known_parts ~w(FREQ INTERVAL COUNT UNTIL BYDAY BYMONTHDAY BYMONTH BYSETPOS WKST)
+
+  @enforce_keys [:freq]
+  defstruct [
+    :freq,
+    :count,
+    :until,
+    :by_day,
+    :by_month_day,
+    :by_month,
+    :by_set_pos,
+    :week_start,
+    interval: 1,
+    other: []
+  ]
+
   @freq_to_token %{daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY"}
-  @token_to_freq %{
-    "DAILY" => :daily,
-    "WEEKLY" => :weekly,
-    "MONTHLY" => :monthly,
-    "YEARLY" => :yearly
-  }
+  @token_to_freq Map.new(@freq_to_token, fn {freq, token} -> {token, freq} end)
 
-  @weekday_to_token %{
-    mo: "MO",
-    tu: "TU",
-    we: "WE",
-    th: "TH",
-    fr: "FR",
-    sa: "SA",
-    su: "SU"
-  }
-  @token_to_weekday Map.new(@weekday_to_token, fn {atom, token} -> {token, atom} end)
-
-  @end_of_day ~T[23:59:59]
-  @start_of_day ~T[00:00:00]
   @utc "Etc/UTC"
 
-  # See `until_date/2`: an UNTIL ending in this is a local date stamped with
-  # end-of-day UTC, not an instant to be shifted into the event's timezone.
-  @legacy_utc_end_of_day "T235959Z"
+  @weekday_tokens ~w(MO TU WE TH FR SA SU)
+  @token_to_iso @weekday_tokens |> Enum.with_index(1) |> Map.new()
+  @iso_to_token Map.new(@token_to_iso, fn {token, iso} -> {iso, token} end)
+  @weekday_atoms ~w(mo tu we th fr sa su)a
+  @atom_to_iso @weekday_atoms |> Enum.with_index(1) |> Map.new()
+  @iso_to_atom Map.new(@atom_to_iso, fn {atom, iso} -> {iso, atom} end)
 
   @doc """
-  Builds an RFC-5545 RRULE string from the canonical option map.
+  Parses an `RRULE` value, with or without its `RRULE:` prefix.
+
+  `:error` for a rule without a known `FREQ` or with an `INTERVAL` below 1,
+  which RFC 5545 does not allow and which would never move forward. A value
+  that is not a number, or is out of range, is dropped from a list part
+  (`BYMONTHDAY=1,40` reads as `[1]`); a part left empty is absent.
+  """
+  @spec parse(String.t()) :: {:ok, t()} | :error
+  def parse(rrule) when is_binary(rrule) do
+    parts =
+      rrule
+      |> strip_prefix()
+      |> String.split(";", trim: true)
+      |> Enum.flat_map(&split_part/1)
+
+    fields = Map.new(parts)
+
+    with {:ok, freq} <- parse_freq(fields["FREQ"]),
+         interval when interval > 0 <- parse_int(fields["INTERVAL"], 1) do
+      {:ok,
+       %__MODULE__{
+         freq: freq,
+         interval: interval,
+         count: parse_int(fields["COUNT"], nil),
+         until: fields["UNTIL"],
+         by_day: parse_by_day(fields["BYDAY"]),
+         by_month_day: parse_int_list(fields["BYMONTHDAY"], -31..31),
+         by_month: parse_int_list(fields["BYMONTH"], 1..12),
+         by_set_pos: parse_int_list(fields["BYSETPOS"], -366..366),
+         week_start: Map.get(@token_to_iso, String.upcase(fields["WKST"] || "")),
+         other: Enum.reject(parts, fn {name, _value} -> name in @known_parts end)
+       }}
+    else
+      _invalid -> :error
+    end
+  end
+
+  @doc """
+  The rule among a series' recurrence lines (`RRULE:`, `EXDATE`, `RDATE`, in
+  any order, as Google lists them), without its prefix; nil when none is a
+  rule.
+  """
+  @spec from_lines([String.t()] | nil) :: String.t() | nil
+  def from_lines(lines) when is_list(lines) do
+    Enum.find_value(lines, fn
+      "RRULE:" <> rule -> rule
+      _other_line -> nil
+    end)
+  end
+
+  def from_lines(_lines), do: nil
+
+  @doc """
+  Writes a rule back as an `RRULE` value without its prefix. Parts come in a
+  stable order, `FREQ`, `INTERVAL` (only when above 1), `BYMONTH`,
+  `BYMONTHDAY`, `BYDAY`, `BYSETPOS`, `WKST`, the parts under `:other` as
+  written, then the end condition.
+  """
+  @spec format(t()) :: String.t()
+  def format(%__MODULE__{} = rule) do
+    [
+      {"FREQ", Map.get(@freq_to_token, rule.freq)},
+      {"INTERVAL", if(rule.interval > 1, do: Integer.to_string(rule.interval))},
+      {"BYMONTH", join_ints(rule.by_month)},
+      {"BYMONTHDAY", join_ints(rule.by_month_day)},
+      {"BYDAY", format_by_day(rule.by_day)},
+      {"BYSETPOS", join_ints(rule.by_set_pos)},
+      {"WKST", Map.get(@iso_to_token, rule.week_start)}
+    ]
+    |> Enum.concat(rule.other)
+    |> Enum.concat([
+      {"COUNT", rule.count && Integer.to_string(rule.count)},
+      {"UNTIL", rule.until}
+    ])
+    |> Enum.reject(fn {_name, value} -> is_nil(value) end)
+    |> Enum.map_join(";", fn {name, value} -> name <> "=" <> value end)
+  end
+
+  @doc """
+  The last instant `rule` may start an occurrence at, its `UNTIL` read in
+  `zone`, the zone the series' occurrences are stepped in (see
+  `RRule.Until.instant/2`). `nil` when the rule has no readable `UNTIL`.
+  """
+  @spec until_instant(t(), String.t()) :: DateTime.t() | nil
+  def until_instant(%__MODULE__{until: nil}, _zone), do: nil
+  def until_instant(%__MODULE__{until: until}, zone), do: Until.instant(until, zone)
+
+  @doc """
+  Builds an `RRULE` value from the editor's option map.
 
   Parts are emitted in a stable order: `FREQ`, `INTERVAL` (only when > 1),
   `BYDAY` (only when non-empty), then the end condition. `COUNT` wins over
   `UNTIL` when both are supplied.
 
-  The optional `all_day:` keyword controls the `UNTIL` value type (RFC 5545
-  §3.3.10): when `true`, UNTIL is emitted as a bare date (`YYYYMMDD`) to match
-  the DATE-form `DTSTART` of an all-day event. When `false` (the default),
-  UNTIL is the instant that ends `:until` in `timezone:`, written in UTC, so
-  the chosen calendar date is fully included wherever the organiser is.
-
   ## Options
-    - `:all_day` — boolean, default `false`
+    - `:all_day` — boolean, default `false`. When `true`, `UNTIL` is a bare
+      date (`YYYYMMDD`) to match the DATE-form `DTSTART` of an all-day event
+      (RFC 5545 §3.3.10); otherwise it is the instant that ends `:until` in
+      `:timezone`, written in UTC, so the chosen calendar date is fully
+      included wherever the organiser is.
     - `:timezone` — the event's timezone, used to resolve a timed `UNTIL`.
       Defaults to `nil`, which ends the day in UTC.
+    - `:keep` — the rule being edited, or `nil`. The parts of it the editor
+      does not show are kept on top of the options:
+        * always, `WKST` and every part that is not a `BY` part;
+        * while the frequency stays the same, every `BY` part too
+          (`BYMONTH`, `BYMONTHDAY`, `BYDAY`, `BYSETPOS`, and ones `parse/1`
+          does not follow such as `BYHOUR`), except that a weekly rule takes
+          its `BYDAY` from the options, since the editor shows its weekdays,
+          and drops its `BYSETPOS`, which picked among the old days;
+        * a rule that changes frequency drops every `BY` part, which
+          belonged to the old period.
+      A `BYSETPOS` left with no other `BY` part to pick among is dropped, as
+      RFC 5545 §3.3.10 allows it only beside one.
   """
   @spec build(opts(), keyword()) :: String.t()
   def build(opts, extra \\ []) do
     all_day = Keyword.get(extra, :all_day, false)
     timezone = Keyword.get(extra, :timezone)
 
-    [
-      build_freq(opts),
-      build_interval(opts),
-      build_by_day(opts),
-      build_end_condition(opts, all_day, timezone)
-    ]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(";")
+    opts
+    |> from_options(all_day, timezone)
+    |> keep_parts(Keyword.get(extra, :keep))
+    |> format()
   end
 
   @doc """
-  Parses an RRULE string into the canonical option map.
+  Reads a rule into the editor's option map.
 
-  Lenient: a leading `RRULE:` prefix is stripped, unknown tokens are ignored,
-  and only keys that are present in the string appear in the result.
+  Lenient: a rule `parse/1` cannot read gives an empty map, and only the keys
+  the editor shows appear: `:interval` only above 1, `:by_day` only for the
+  plain weekdays (`MO`, not `2MO`), `:count` only above 0.
 
   `:until` comes back as the organiser's local calendar date, which for a
   DATE-TIME `UNTIL` means the date its UTC instant falls on in `timezone:`.
@@ -130,13 +253,28 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
     - `:timezone` — the event's timezone, used to read a DATE-TIME `UNTIL`
       back as a local date. Defaults to `nil`, which reads it as a UTC date.
   """
-  @spec parse(String.t(), keyword()) :: opts()
-  def parse(rrule, opts \\ []) when is_binary(rrule) do
-    rrule
-    |> strip_prefix()
-    |> String.split(";", trim: true)
-    |> Enum.reduce(%{}, &parse_token/2)
-    |> resolve_until(Keyword.get(opts, :timezone))
+  @spec options(String.t() | t(), keyword()) :: opts()
+  def options(rule, opts \\ [])
+
+  def options(rrule, opts) when is_binary(rrule) do
+    case parse(rrule) do
+      {:ok, rule} -> options(rule, opts)
+      :error -> %{}
+    end
+  end
+
+  def options(%__MODULE__{} = rule, opts) do
+    by_day = for {nil, iso} <- rule.by_day || [], do: Map.fetch!(@iso_to_atom, iso)
+
+    [
+      freq: rule.freq,
+      interval: if(rule.interval > 1, do: rule.interval),
+      by_day: if(by_day != [], do: by_day),
+      count: if(is_integer(rule.count) and rule.count > 0, do: rule.count),
+      until: local_until(rule.until, Keyword.get(opts, :timezone))
+    ]
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
   end
 
   @doc """
@@ -155,7 +293,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
       instant for a timed one, as `build/2` would emit it.
 
   Only the `UNTIL` part is rewritten; every other part, including ones
-  `parse/2` does not understand, is kept as it was. A `nil` rule stays `nil`.
+  `options/2` does not show, is kept as it was. A `nil` rule stays `nil`.
 
   The rule is read back in `timezone:` before it is rewritten in it, so
   retargeting the same rule twice is a no-op rather than walking its end date
@@ -174,10 +312,10 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
     all_day = Keyword.get(opts, :all_day, false)
     timezone = Keyword.get(opts, :timezone)
 
-    case parse(rrule, timezone: timezone) do
+    case options(rrule, timezone: timezone) do
       %{until: until} ->
         with :ok <- validate_until_after_start(until, Keyword.get(opts, :start_date)) do
-          {:ok, replace_until(rrule, format_until(until, all_day, timezone))}
+          {:ok, replace_until(rrule, Until.format(until, all_day, timezone))}
         end
 
       _no_until ->
@@ -212,7 +350,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
   """
   @spec reduce_count(String.t(), non_neg_integer()) :: String.t()
   def reduce_count(rrule, occurrences) when is_binary(rrule) and occurrences >= 0 do
-    case parse(rrule) do
+    case options(rrule) do
       %{count: count} -> replace_end(rrule, "COUNT=#{max(count - occurrences, 1)}")
       _no_count -> rrule
     end
@@ -290,73 +428,86 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
 
   # --- build helpers ---
 
-  defp build_freq(%{freq: freq}) when is_map_key(@freq_to_token, freq),
-    do: "FREQ=#{@freq_to_token[freq]}"
+  defp from_options(opts, all_day, timezone) do
+    count = opts[:count]
+    count = if is_integer(count) and count > 0, do: count
 
-  defp build_freq(_opts), do: nil
-
-  defp build_interval(%{interval: interval}) when is_integer(interval) and interval > 1,
-    do: "INTERVAL=#{interval}"
-
-  defp build_interval(_opts), do: nil
-
-  defp build_by_day(%{by_day: [_first | _rest] = days}) do
-    tokens =
-      days
-      |> Enum.map(&Map.get(@weekday_to_token, &1))
-      |> Enum.reject(&is_nil/1)
-
-    if tokens == [], do: nil, else: "BYDAY=#{Enum.join(tokens, ",")}"
+    %__MODULE__{
+      freq: if(is_map_key(@freq_to_token, opts[:freq]), do: opts[:freq]),
+      interval:
+        if(is_integer(opts[:interval]) and opts[:interval] > 1, do: opts[:interval], else: 1),
+      by_day: options_by_day(opts[:by_day]),
+      count: count,
+      until:
+        if(is_nil(count) and is_struct(opts[:until], Date),
+          do: Until.format(opts[:until], all_day, timezone)
+        )
+    }
   end
 
-  defp build_by_day(_opts), do: nil
-
-  defp build_end_condition(%{count: count}, _all_day, _timezone)
-       when is_integer(count) and count > 0,
-       do: "COUNT=#{count}"
-
-  defp build_end_condition(%{until: %Date{} = until}, all_day, timezone),
-    do: "UNTIL=#{format_until(until, all_day, timezone)}"
-
-  defp build_end_condition(_opts, _all_day, _timezone), do: nil
-
-  # RFC 5545 §3.3.10: UNTIL MUST be the same value type as DTSTART.
-  # All-day events use DATE-form DTSTART, so UNTIL must also be a bare date,
-  # which is zone-free by definition.
-  # Timed events use DATE-TIME DTSTART, so UNTIL is the instant that ends the
-  # chosen day in the event's own timezone, written in UTC.
-  defp format_until(%Date{} = date, true, _timezone), do: Date.to_iso8601(date, :basic)
-
-  defp format_until(%Date{} = date, _all_day, timezone) do
-    date
-    |> end_of_day_utc(timezone)
-    |> DateTime.to_iso8601(:basic)
+  defp options_by_day([_first | _rest] = days) do
+    case for(day <- days, iso = Map.get(@atom_to_iso, day), do: {nil, iso}) do
+      [] -> nil
+      by_day -> by_day
+    end
   end
 
-  # Built as the next local day's first instant less a second, rather than as
-  # 23:59:59 on this one. The two agree on an ordinary day and diverge where a
-  # DST transition makes 23:59:59 ambiguous: `create_datetime_safe/3` resolves
-  # an ambiguous wall clock to the *first* of the pair, which is right for a
-  # start instant and an hour early for an upper bound, so a series ending on
-  # the transition date in Cairo, Beirut or Amman dropped its last evening
-  # occurrence. Midnight is the one wall clock on a day that cannot be
-  # ambiguous in that direction: where it repeats, the earlier of the two is
-  # still the first instant to carry the new date, which is exactly the bound
-  # wanted, and where it does not exist the subtraction is instant arithmetic
-  # and lands on the real last second regardless.
-  #
-  # `create_datetime_safe/3` applies the project-wide rule for a wall-clock
-  # time that a DST transition makes ambiguous or non-existent, and falls back
-  # to UTC when the timezone is not one tzdata knows.
-  defp end_of_day_utc(date, timezone) when is_binary(timezone) do
-    date
-    |> Date.add(1)
-    |> DateTimeUtils.create_datetime_safe(@start_of_day, timezone)
-    |> DateTime.add(-1, :second)
-    |> DateTime.shift_zone!(@utc)
+  defp options_by_day(_days), do: nil
+
+  defp keep_parts(built, kept) when is_binary(kept) do
+    case parse(kept) do
+      {:ok, %{freq: :weekly} = kept} when built.freq == :weekly ->
+        without_lone_set_pos(%{
+          built
+          | by_month: kept.by_month,
+            by_month_day: kept.by_month_day,
+            week_start: kept.week_start,
+            other: kept.other
+        })
+
+      {:ok, %{freq: freq} = kept} when freq == built.freq ->
+        without_lone_set_pos(%{
+          built
+          | by_month: kept.by_month,
+            by_month_day: kept.by_month_day,
+            by_set_pos: kept.by_set_pos,
+            by_day: kept.by_day,
+            week_start: kept.week_start,
+            other: kept.other
+        })
+
+      {:ok, kept} ->
+        other = Enum.reject(kept.other, fn {name, _value} -> by_part?(name) end)
+        %{built | week_start: kept.week_start, other: other}
+
+      :error ->
+        built
+    end
   end
 
-  defp end_of_day_utc(date, _no_timezone), do: DateTime.new!(date, @end_of_day, @utc)
+  defp keep_parts(built, _no_rule), do: built
+
+  defp without_lone_set_pos(%{by_set_pos: nil} = rule), do: rule
+
+  defp without_lone_set_pos(rule) do
+    if rule.by_day || rule.by_month_day || rule.by_month ||
+         Enum.any?(rule.other, fn {name, _value} -> by_part?(name) end),
+       do: rule,
+       else: %{rule | by_set_pos: nil}
+  end
+
+  defp by_part?(name), do: String.starts_with?(name, "BY")
+
+  defp format_by_day(nil), do: nil
+
+  defp format_by_day(by_day) do
+    Enum.map_join(by_day, ",", fn {ordinal, iso} ->
+      "#{ordinal}#{Map.fetch!(@iso_to_token, iso)}"
+    end)
+  end
+
+  defp join_ints(nil), do: nil
+  defp join_ints(values), do: Enum.join(values, ",")
 
   # --- parse helpers ---
 
@@ -365,114 +516,88 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
 
   Used by the iCal builder and Google event mapper to ensure exactly one
   `RRULE:` prefix is emitted regardless of whether the stored rule already
-  carries one (Google's normaliser keeps the prefix on read; CalDAV and Outlook
-  store the bare rule body).
+  carries one (every provider now stores the bare rule body, but rows cached
+  from Google before that carry the prefix).
   """
   @spec strip_prefix(String.t()) :: String.t()
   def strip_prefix("RRULE:" <> rest), do: rest
   def strip_prefix(rrule), do: rrule
 
-  defp parse_token(token, acc) do
-    case String.split(token, "=", parts: 2) do
-      [key, value] -> apply_token(String.upcase(key), value, acc)
-      _other -> acc
+  defp split_part(part) do
+    case String.split(part, "=", parts: 2) do
+      [name, value] -> [{String.upcase(name), value}]
+      _no_value -> []
     end
   end
 
-  defp apply_token("FREQ", value, acc) do
-    case Map.get(@token_to_freq, String.upcase(value)) do
-      nil -> acc
-      freq -> Map.put(acc, :freq, freq)
+  defp parse_freq(nil), do: :error
+
+  defp parse_freq(token) do
+    case Map.fetch(@token_to_freq, String.upcase(token)) do
+      {:ok, freq} -> {:ok, freq}
+      :error -> :error
     end
   end
 
-  defp apply_token("INTERVAL", value, acc) do
+  defp parse_int(nil, default), do: default
+
+  defp parse_int(value, default) do
     case Integer.parse(value) do
-      {int, ""} when int > 0 -> Map.put(acc, :interval, int)
-      _other -> acc
+      {n, ""} -> n
+      _other -> default
     end
   end
 
-  defp apply_token("BYDAY", value, acc) do
+  defp parse_by_day(nil), do: nil
+
+  defp parse_by_day(value) do
     days =
       value
-      |> String.split(",", trim: true)
-      |> Enum.map(&Map.get(@token_to_weekday, String.upcase(&1)))
-      |> Enum.reject(&is_nil/1)
+      |> String.split(",")
+      |> Enum.flat_map(fn day ->
+        case Regex.run(~r/^([+-]?\d{1,2})?([A-Z]{2})$/, day |> String.trim() |> String.upcase()) do
+          [_match, ordinal, token] when is_map_key(@token_to_iso, token) ->
+            ordinal_day(ordinal, Map.fetch!(@token_to_iso, token))
 
-    if days == [], do: acc, else: Map.put(acc, :by_day, days)
+          _other ->
+            []
+        end
+      end)
+
+    if days == [], do: nil, else: days
   end
 
-  defp apply_token("COUNT", value, acc) do
-    case Integer.parse(value) do
-      {int, ""} when int > 0 -> Map.put(acc, :count, int)
-      _other -> acc
+  defp ordinal_day("", weekday), do: [{nil, weekday}]
+
+  defp ordinal_day(ordinal, weekday) do
+    case Integer.parse(ordinal) do
+      {n, ""} when n != 0 -> [{n, weekday}]
+      _invalid -> []
     end
   end
 
-  # The raw value is carried through the reduce and resolved once, in
-  # `resolve_until/2`, because reading it needs the timezone and none of the
-  # other tokens do.
-  defp apply_token("UNTIL", value, acc), do: Map.put(acc, :until, value)
+  defp parse_int_list(nil, _valid), do: nil
 
-  defp apply_token(_unknown, _value, acc), do: acc
+  defp parse_int_list(value, valid) do
+    values =
+      value
+      |> String.split(",")
+      |> Enum.flat_map(fn item ->
+        case Integer.parse(String.trim(item)) do
+          {n, ""} when n != 0 -> if n in valid, do: [n], else: []
+          _invalid -> []
+        end
+      end)
 
-  defp resolve_until(%{until: raw} = parsed, timezone) do
-    case until_date(raw, timezone) do
-      {:ok, date} -> %{parsed | until: date}
-      :error -> Map.delete(parsed, :until)
-    end
+    if values == [], do: nil, else: values
   end
 
-  defp resolve_until(parsed, _timezone), do: parsed
+  defp local_until(nil, _timezone), do: nil
 
-  # A DATE-TIME UNTIL is a UTC instant, so the date the organiser picked is the
-  # one it falls on in the event's timezone. Anything else — a bare DATE, a
-  # form this parser does not recognise — is read as the date it spells.
-  #
-  # `T235959Z` is the exception, and it is a legacy marker rather than an
-  # instant. Rules written before UNTIL carried the event's timezone stamped
-  # the organiser's local date with a literal end-of-day *UTC*, so reading one
-  # back through a timezone shifts it onto the next local day everywhere east
-  # of UTC — silently extending the series, and baking that extension in as
-  # soon as anything rewrites the rule. `Outlook.RecurrenceConverter` also
-  # builds this form from a Graph `endDate`, which is likewise a local date.
-  #
-  # The form is safe to special-case because it is never ambiguous: end-of-day
-  # in a zero-offset zone is the only case this module itself writes as
-  # `T235959Z`, and there the instant and the date it spells are the same day.
-  # Every other zone produces some other wall-clock time.
-  defp until_date(value, timezone) do
-    if String.ends_with?(value, @legacy_utc_end_of_day) do
-      basic_date(value)
-    else
-      case local_date_of_instant(value, timezone) do
-        {:ok, date} -> {:ok, date}
-        :error -> basic_date(value)
-      end
-    end
-  end
-
-  defp local_date_of_instant(value, timezone) when is_binary(timezone) do
-    with {:ok, instant, _offset} <- DateTime.from_iso8601(value, Calendar.ISO, :basic),
-         {:ok, local} <- DateTime.shift_zone(instant, timezone) do
-      {:ok, DateTime.to_date(local)}
-    else
-      _other -> :error
-    end
-  end
-
-  defp local_date_of_instant(_value, _no_timezone), do: :error
-
-  defp basic_date(value) do
-    with <<y::binary-4, m::binary-2, d::binary-2, _rest::binary>> <- String.slice(value, 0, 10),
-         {year, ""} <- Integer.parse(y),
-         {month, ""} <- Integer.parse(m),
-         {day, ""} <- Integer.parse(d),
-         {:ok, date} <- Date.new(year, month, day) do
-      {:ok, date}
-    else
-      _other -> :error
+  defp local_until(until, timezone) do
+    case Until.local_date(until, timezone) do
+      {:ok, date} -> date
+      :error -> nil
     end
   end
 end

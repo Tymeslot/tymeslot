@@ -168,11 +168,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
       # The budget meters writes, and nothing above wrote anything: an organiser
       # correcting a typo must not be locked out of saving by their corrections.
       for _i <- 1..30 do
-        assert :ok = RateLimiter.check_integration_write_rate_limit(user.id)
+        assert :ok = RateLimiter.check(:integration_write, user.id)
       end
 
       assert {:error, :rate_limited, _message} =
-               RateLimiter.check_integration_write_rate_limit(user.id)
+               RateLimiter.check(:integration_write, user.id)
     end
   end
 

@@ -295,7 +295,10 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
     end
 
     test "rejects an unknown variant rather than emitting a class nothing styles" do
-      assert_raise FunctionClauseError, fn -> Buttons.button_classes(:brand, :md) end
+      # Through a list, as the type checker already refuses the literal call.
+      for variant <- [:brand] do
+        assert_raise FunctionClauseError, fn -> Buttons.button_classes(variant, :md) end
+      end
     end
   end
 

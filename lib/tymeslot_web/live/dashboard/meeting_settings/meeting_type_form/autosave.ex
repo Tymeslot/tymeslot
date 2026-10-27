@@ -38,10 +38,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Venues
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
+  alias TymeslotWeb.Helpers.ContextErrors
+  alias TymeslotWeb.Helpers.FormErrors
 
   # Backoff before a throttled save is retried (milliseconds).
   @retry_after_ms 4_000
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   def maybe_run(socket), do: socket
 
   defp run(socket) do
-    case RateLimiter.check_meeting_type_autosave_rate_limit(socket.assigns.current_user.id) do
+    case RateLimiter.check(:meeting_type_autosave, socket.assigns.current_user.id) do
       :ok ->
         socket.assigns
         |> Submission.build_params()
@@ -126,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   # and shows beside the price input like any other.
   defp apply_result({:error, %Ecto.Changeset{} = changeset}, socket)
        when socket.assigns.payment_required == true do
-    errors = Helpers.changeset_form_errors(changeset)
+    errors = FormErrors.to_map(changeset)
 
     cond do
       Map.keys(errors) != [:price_cents] ->
@@ -151,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     log_changeset_failure(socket)
 
     socket
-    |> assign(:form_errors, Helpers.changeset_form_errors(changeset))
+    |> assign(:form_errors, FormErrors.to_map(changeset))
     |> assign(:save_status, :error)
   end
 
@@ -163,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     )
 
     socket
-    |> assign(:form_errors, FormHelpers.format_context_error(reason))
+    |> assign(:form_errors, ContextErrors.format_context_error(reason))
     |> assign(:save_status, :error)
   end
 

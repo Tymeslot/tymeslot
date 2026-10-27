@@ -2,54 +2,24 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
   @moduledoc """
   Handler for invoice.* webhook events.
   """
-  use Tymeslot.Payments.Behaviours.WebhookHandler
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.ChangesetHelpers
   alias Tymeslot.Payments.DatabaseOperations
   alias Tymeslot.Payments.SubscriptionInvoices
   alias Tymeslot.Payments.SubscriptionNotifications
   alias Tymeslot.Payments.Webhooks.InvoiceEvent
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def can_handle?(event_type) do
-    event_type in [
-      "invoice.created",
-      "invoice.finalized",
-      "invoice.paid",
-      "invoice.payment_succeeded",
-      "invoice.payment_failed",
-      "invoice.upcoming",
-      "invoice.voided",
-      "invoice.marked_uncollectible"
-    ]
-  end
+  # An upcoming invoice is a preview Stripe has not created yet, so it alone
+  # carries no id.
+  @impl WebhookHandler
+  def handle(%{"type" => "invoice.upcoming"}), do: {:ok, :invoice_upcoming}
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def validate(invoice), do: validate(nil, invoice)
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def validate(event_type, invoice) do
-    case Map.get(invoice, "id") do
-      nil when event_type == "invoice.upcoming" ->
-        :ok
-
-      nil ->
-        {:error, :missing_field, "Invoice ID missing"}
-
-      "" ->
-        {:error, :missing_field, "Invoice ID empty"}
-
-      _id ->
-        :ok
-    end
-  end
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def process(event, invoice) do
-    # WebhookProcessor stamps an atom :type on every event before dispatch.
-    event_type = Map.get(event, :type)
+  def handle(%{"type" => event_type, "data" => %{"object" => %{"id" => id} = invoice}})
+      when is_binary(id) and id != "" do
     subscription_id = subscription_id(invoice)
 
     Logger.info("Processing invoice event",
@@ -79,13 +49,12 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
       "invoice.marked_uncollectible" ->
         capture_document(subscription_id, invoice, :invoice_uncollectible)
 
-      "invoice.upcoming" ->
-        {:ok, :invoice_upcoming}
-
       _other ->
         {:ok, :ignored}
     end
   end
+
+  def handle(_event), do: {:error, :permanent, :missing_invoice_id}
 
   # Stripe API 2025-03-31.basil moved the invoice's subscription reference
   # from the top-level field into parent.subscription_details. Read whichever
@@ -126,7 +95,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
           error: error_summary(reason)
         )
 
-        {:error, :processing_failed, "Failed to process invoice success for #{subscription_id}"}
+        {:error, :retry_later, {:processing_failed, subscription_id}}
     end
   end
 
@@ -206,7 +175,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
           error: LogFormat.reason(reason)
         )
 
-        {:error, :processing_failed, "Failed to process invoice failure: #{inspect(reason)}"}
+        {:error, :retry_later, {:processing_failed, reason}}
     end
   end
 end

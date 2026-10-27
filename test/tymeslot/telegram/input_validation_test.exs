@@ -136,6 +136,33 @@ defmodule Tymeslot.Telegram.InputValidationTest do
       assert sanitized.events
     end
 
+    test "drops a chat id on the shared bot, where only the deep link may set it" do
+      params = %{
+        "name" => "My Notifications",
+        "chat_id" => "-1009999999999",
+        "events" => ["meeting.created"]
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_form(params, bot_mode: "shared")
+      refute Map.has_key?(sanitized, :chat_id)
+    end
+
+    test "never returns a bot mode" do
+      params = %{
+        "name" => "My Bot",
+        "bot_token" => "1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789",
+        "chat_id" => "123456789",
+        "events" => ["meeting.created"]
+      }
+
+      for bot_mode <- ["own", "shared"], mode <- [:create, :edit] do
+        assert {:ok, sanitized} =
+                 InputValidation.validate_form(params, bot_mode: bot_mode, mode: mode)
+
+        refute Map.has_key?(sanitized, :bot_mode)
+      end
+    end
+
     test "returns errors for missing fields" do
       assert {:error, errors} = InputValidation.validate_form(%{}, bot_mode: "own")
       assert Map.has_key?(errors, :name)
@@ -143,5 +170,17 @@ defmodule Tymeslot.Telegram.InputValidationTest do
       assert Map.has_key?(errors, :chat_id)
       assert Map.has_key?(errors, :events)
     end
+  end
+
+  # The form shows these under their field as they come back, so they are in
+  # the host's language.
+  test "refuses in the current locale" do
+    Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+      assert {nil, %{events: "enthält ungültige Ereignisse"}} =
+               InputValidation.validate_events(["no.such.event"], %{})
+
+      assert {nil, %{events: "bitte mindestens ein Ereignis auswählen"}} =
+               InputValidation.validate_events([], %{})
+    end)
   end
 end

@@ -238,7 +238,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       # `approval_requested_at`, a fresh deadline, and above all a different
       # time from the one rendered on the host's page.
       {:ok, rerequested} =
-        Reschedule.execute(meeting.uid, reschedule_params(), %{}, user.id)
+        Reschedule.execute(meeting.uid, reschedule_params(), user.id)
 
       assert rerequested.start_time != meeting.start_time
 
@@ -270,7 +270,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
 
       {:ok, view, _html} = live(conn, request_path(meeting))
 
-      {:ok, rerequested} = Reschedule.execute(meeting.uid, reschedule_params(), %{}, user.id)
+      {:ok, rerequested} = Reschedule.execute(meeting.uid, reschedule_params(), user.id)
       assert rerequested.status == "awaiting_approval"
 
       # Dispatched directly, as the older DOM the host is looking at would:
@@ -294,6 +294,36 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
 
       assert html =~ "Booking confirmed"
       assert render(view) =~ "already been answered"
+    end
+
+    # The approval and its confirmation commit together, so an approval whose
+    # confirmation cannot be queued changes nothing and can be tried again.
+    test "an approval that could not be saved leaves the request open to approve again", %{
+      conn: conn
+    } do
+      meeting = held_meeting()
+      {:ok, view, _html} = live(conn, request_path(meeting))
+
+      :meck.new(Oban, [:passthrough])
+
+      :meck.expect(Oban, :insert, fn changeset ->
+        if Changeset.get_field(changeset, :args)["action"] == "send_confirmation_emails",
+          do: {:error, :queue_not_available},
+          else: :meck.passthrough([changeset])
+      end)
+
+      html =
+        try do
+          view |> element("[data-testid='approve-request']") |> render_click()
+        after
+          :meck.unload(Oban)
+        end
+
+      assert html =~ "Please wait a moment and try again."
+      assert reload(meeting).status == "awaiting_approval"
+
+      assert view |> element("[data-testid='approve-request']") |> render_click() =~
+               "Booking confirmed"
     end
   end
 
@@ -322,7 +352,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       {:ok, view, _html} = live(conn, request_path(meeting))
 
       client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip]
-      Enum.each(1..20, fn _i -> RateLimiter.check_meeting_approval_rate_limit(client_ip) end)
+      Enum.each(1..20, fn _i -> RateLimiter.check(:meeting_approval, client_ip) end)
 
       html = view |> element("[data-testid='approve-request']") |> render_click()
 

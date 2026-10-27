@@ -32,8 +32,8 @@ defmodule Tymeslot.Announcements.AnnouncementQueries do
     * an FK violation (user deleted concurrently) or any other DB error is
       caught and logged rather than raised.
   """
-  @spec mark_seen!(integer(), String.t()) :: :ok
-  def mark_seen!(user_id, announcement_key)
+  @spec mark_seen(integer(), String.t()) :: :ok
+  def mark_seen(user_id, announcement_key)
       when is_integer(user_id) and is_binary(announcement_key) do
     now = DateTime.utc_now(:second)
 

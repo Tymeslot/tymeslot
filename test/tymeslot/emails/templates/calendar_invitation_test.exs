@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.CalendarInvitation
 
   describe "render/2" do
@@ -148,7 +149,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
             {30, "30 minutes"},
             {45, "45 minutes"},
             {60, "1 hour"},
-            {90, "1.5 hours"},
+            {90, "1 hour 30 minutes"},
             {120, "2 hours"}
           ] do
         details = build_invitation_details(%{duration: duration})
@@ -164,7 +165,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
             {"en", "Calendar Invitation", "You're Invited"},
             {"de", "Kalendereinladung", "Sie sind eingeladen"},
             {"uk", "Запрошення до календаря", "Вас запрошено"},
-            {"fr", "Invitation :", "Vous êtes invité(e)"},
+            {"fr", "Invitation :", "Vous avez reçu une invitation"},
             {"it", "Invito di calendario", "Hai ricevuto un invito"}
           ] do
         details = build_invitation_details(%{attendee_locale: locale})
@@ -195,6 +196,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
       email = CalendarInvitation.render("guest@example.com", details)
 
+      email = Delivery.sanitise_headers(email)
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end

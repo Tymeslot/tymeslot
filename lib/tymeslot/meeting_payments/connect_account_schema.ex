@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.MeetingPayments.Currency
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -47,6 +48,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     |> cast(attrs, @castable)
     |> validate_required([:status])
     |> validate_inclusion(:status, @valid_statuses)
+    |> validate_inclusion(:default_currency, Currency.allowlist())
     |> unique_constraint(:stripe_account_id,
       name: :connect_accounts_stripe_account_id_live_unique_index
     )

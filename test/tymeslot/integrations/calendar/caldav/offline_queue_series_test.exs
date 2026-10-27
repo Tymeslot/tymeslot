@@ -1,7 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueSeriesTest do
   @moduledoc """
   Covers the offline queue's refusal to replay an update or delete of a row
-  that belongs to a repeating series.
+  that belongs to a repeating series, and its replay of a queued series
+  create.
 
   A CalDAV series is one resource: an update of any occurrence is patched
   onto the master VEVENT and a delete removes the resource, so replaying
@@ -20,6 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueSeriesTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Repo
   alias Tymeslot.Test.LogCapture
 
@@ -28,7 +30,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueSeriesTest do
     username: "user",
     password: "pass",
     calendar_paths: ["/cal/"],
-    verify_ssl: true,
     provider: :caldav
   }
 
@@ -177,6 +178,40 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueSeriesTest do
       assert :ok = OfflineQueue.flush(integration, @client)
 
       assert Repo.reload!(single).sync_state == "synced"
+    end
+  end
+
+  # A series create queued while the server was unreachable is written the
+  # way the grid writes one: in the zone the row records, the organiser's.
+  describe "flush/2 — a queued series create" do
+    test "writes the series in the zone its row records", %{integration: integration} do
+      insert_pending_row(integration,
+        uid: "weekly-sync",
+        provider_event_id: "/cal/weekly-sync.ics",
+        sync_state: "locally_created",
+        start_at: ~U[2026-10-05 07:00:00.000000Z],
+        end_at: ~U[2026-10-05 07:30:00.000000Z],
+        timezone: "Europe/Berlin",
+        recurrence_rule: "FREQ=WEEKLY",
+        etag: nil
+      )
+
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        {:ok, body, conn} = Conn.read_body(conn)
+        send(test_pid, {:put, body})
+        Conn.send_resp(conn, 201, "")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      assert_received {:put, body}
+      lines = LineFolder.unfold_lines(body)
+
+      assert "DTSTART;TZID=Europe/Berlin:20261005T090000" in lines
+      assert "BEGIN:VTIMEZONE" in lines
     end
   end
 end

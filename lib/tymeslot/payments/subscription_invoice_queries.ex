@@ -10,6 +10,20 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueries do
   @default_limit 24
 
   @doc """
+  The Stripe subscription id of a captured invoice, or `nil` when the
+  invoice was never captured.
+  """
+  @spec subscription_id_for_invoice(String.t()) :: String.t() | nil
+  def subscription_id_for_invoice(stripe_invoice_id) do
+    Repo.one(
+      from(pi in SubscriptionInvoice,
+        where: pi.stripe_invoice_id == ^stripe_invoice_id,
+        select: pi.subscription_id
+      )
+    )
+  end
+
+  @doc """
   Inserts an invoice, or merges into it if one with the same
   `stripe_invoice_id` already exists.
 
@@ -120,6 +134,25 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueries do
       )
 
     Repo.all(query)
+  end
+
+  @doc """
+  The payments a user has made for subscriptions: every paid invoice that
+  took money, oldest first, as `%{subscription_id, paid_at}`.
+  """
+  @spec payments_for_user(pos_integer()) :: [
+          %{subscription_id: String.t() | nil, paid_at: DateTime.t()}
+        ]
+  def payments_for_user(user_id) do
+    Repo.all(
+      from(pi in SubscriptionInvoice,
+        where:
+          pi.user_id == ^user_id and pi.status == :paid and pi.amount_cents > 0 and
+            not is_nil(pi.paid_at),
+        order_by: [asc: pi.paid_at, asc: pi.id],
+        select: %{subscription_id: pi.subscription_id, paid_at: pi.paid_at}
+      )
+    )
   end
 
   @doc """

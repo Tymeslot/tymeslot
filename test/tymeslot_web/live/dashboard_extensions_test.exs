@@ -40,11 +40,13 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     # Save original config
     original_sidebar = Application.get_env(:tymeslot, :dashboard_sidebar_extensions)
     original_components = Application.get_env(:tymeslot, :dashboard_action_components)
+    original_notices = Application.get_env(:tymeslot, :dashboard_notice_components)
 
     on_exit(fn ->
       # Restore original config
       Application.put_env(:tymeslot, :dashboard_sidebar_extensions, original_sidebar)
       Application.put_env(:tymeslot, :dashboard_action_components, original_components)
+      Application.put_env(:tymeslot, :dashboard_notice_components, original_notices)
     end)
 
     %{conn: conn, user: user}
@@ -77,6 +79,39 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       # Extension items should not be present
       refute html =~ "Test Extension"
       refute html =~ "Custom Feature"
+    end
+  end
+
+  defmodule NoticeComponent do
+    use Phoenix.LiveComponent
+
+    @impl Phoenix.LiveComponent
+    def render(assigns) do
+      ~H"""
+      <p id="test-notice">Notice for {@current_user.email}</p>
+      """
+    end
+  end
+
+  describe "dashboard notices" do
+    setup do
+      Application.put_env(:tymeslot, :dashboard_notice_components, [NoticeComponent])
+      :ok
+    end
+
+    test "an overlay's notice renders on the overview, for the signed-in user", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+
+      assert has_element?(view, "#test-notice", "Notice for #{user.email}")
+    end
+
+    test "notices stay off every other dashboard page", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      refute has_element?(view, "#test-notice")
     end
   end
 

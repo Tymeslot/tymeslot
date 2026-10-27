@@ -33,8 +33,8 @@ defmodule Tymeslot.Agenda do
   @doc """
   Assembles the Today/Tomorrow agenda for `user` in `timezone`.
 
-  `user` needs `:id` (to resolve calendar integrations) and `:email` (to resolve
-  bookings). A nil/blank/unknown timezone falls back to UTC.
+  `user` needs `:id`, which resolves both the calendar integrations and the
+  bookings they organise. A nil/blank/unknown timezone falls back to UTC.
   """
   @spec day_agenda(map(), String.t() | nil) :: Day.t()
   def day_agenda(user, timezone) do
@@ -130,30 +130,45 @@ defmodule Tymeslot.Agenda do
     # The `/2` query filters to live confirmed bookings, excluding slots
     # voided by a pending reschedule request; `/1` would include pending
     # and cancelled ones, which have no place on the agenda.
-    meetings = Meetings.list_upcoming_meetings_for_user(user.email, @meeting_limit)
-
-    # Bookings synced to the calendar reappear as provider events; dedup on the
-    # shared identifier so the (richer) Tymeslot copy is the one we keep.
-    booked_identifiers = Meetings.calendar_identifier_set(meetings)
+    meetings = Meetings.list_upcoming_meetings_for_organizer(user.id, @meeting_limit)
 
     calendar_names = Map.new(integrations, &{&1.id, &1.name})
 
-    external =
+    events =
       integrations
       |> Enum.map(& &1.id)
       |> CalendarGrid.list_events_for_range(now, window_end, limit: @external_event_limit)
       |> Calendar.visible_events(integrations)
-      |> Enum.reject(&drop_external?(&1, booked_identifiers))
+
+    booked_identifiers = booked_identifiers(user, events)
+    external = Enum.reject(events, &drop_external?(&1, booked_identifiers))
 
     Enum.map(meetings, &entry_from_meeting(&1, tz, overrides)) ++
       Enum.map(external, &entry_from_event(&1, tz, calendar_names, overrides))
   end
 
+  # Bookings synced to the calendar reappear as provider events; dedup on the
+  # shared identifier so the (richer) Tymeslot copy is the one we keep. Matched
+  # against every booking the user organises, not only the confirmed ones
+  # listed above: a booking held back by a pending reschedule request, or past
+  # the listing's limit, still has its event in the calendar and is not an
+  # external appointment. `created_by_tymeslot` cannot stand in for this: it is
+  # also set on events the organiser drew on the grid, on another instance's
+  # bookings, and on events an older release wrongly claimed, and all of those
+  # are the organiser's real appointments.
+  defp booked_identifiers(user, events) do
+    identifiers =
+      events
+      |> Meetings.calendar_identifier_set()
+      |> MapSet.to_list()
+
+    Meetings.organizer_calendar_identifiers(user.id, identifiers)
+  end
+
   # An external event is dropped when it is one of our own synced bookings, a
   # cancellation, a free/transparent block, or a timed event missing its start.
   defp drop_external?(event, booked_identifiers) do
-    event.created_by_tymeslot or
-      event.status == "cancelled" or
+    event.status == "cancelled" or
       event.transparency == "transparent" or
       (not event.all_day and is_nil(event.start_at)) or
       Meetings.linked_to_calendar_event?(event, booked_identifiers)

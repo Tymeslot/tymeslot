@@ -57,6 +57,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       provider_event_id: meeting.provider_event_id,
       participants: participants(meeting),
       capacity: meeting.capacity,
+      planned: meeting.planned,
       seats_taken: seats_taken(meeting),
       status: meeting.status
     }

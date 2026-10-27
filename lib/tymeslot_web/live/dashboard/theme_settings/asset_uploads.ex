@@ -29,16 +29,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [allow_upload: 3, consume_uploaded_entries: 3, send_update: 3]
 
-  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
   alias TymeslotWeb.Helpers.ImageUploadErrors
   alias TymeslotWeb.Live.Shared.Flash
-
-  # Five uploads per ten minutes, shared across every field: video encoding is
-  # the expensive part and a per-field budget would multiply the ceiling.
-  @rate_limit_max 5
-  @rate_limit_window_ms 600_000
 
   @doc """
   Declares an upload input for each asset field the theme's spec lists
@@ -57,9 +52,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
         acc
       else
         allow_upload(acc, field,
-          accept: UploadConstraints.allowed_extensions(kind),
+          accept: Uploads.allowed_extensions(kind),
           max_entries: 1,
-          max_file_size: UploadConstraints.max_file_size(kind),
+          max_file_size: Uploads.max_file_size(kind),
           auto_upload: true,
           progress: progress_callback(component, field)
         )
@@ -84,6 +79,17 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
 
   A rate-limited or not-yet-finished upload returns the socket untouched: the
   entry stays put and the next form event (`upload_asset`) tries again.
+
+  ## Each entry is consumed once
+
+  Both entry points fire for the same finished upload: the progress callback,
+  and the form's submit, which `AutoUpload` clicks on selection and LiveView
+  holds back until the upload completes. A consumed channel upload stays in
+  `entries` until the LiveView handles its upload channel's exit, so the
+  second trigger would otherwise find it still finished, charge the rate limit
+  again and call into the stopped channel, which crashes the LiveView after
+  the file was saved. The refs of consumed entries are therefore remembered
+  (`:consumed_upload_refs`) and never count as ready again.
   """
   @spec consume(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
   def consume(socket, field) do
@@ -99,15 +105,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   defp rate_limited(socket, fun) do
     user_id = socket.assigns.profile.user_id
 
-    case RateLimiter.check_rate_limit(
-           "theme_upload:#{user_id}",
-           @rate_limit_max,
-           @rate_limit_window_ms
-         ) do
+    case RateLimiter.check(:theme_upload, user_id) do
       :ok ->
         fun.()
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _message} ->
         Flash.error(
           dgettext(
             "dashboard_appearance",
@@ -134,6 +136,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
 
     # The file must be stored inside the callback: the temporary upload is
     # deleted as soon as it returns.
+    socket = remember_consumed(socket, field)
+
     results =
       consume_uploaded_entries(socket, field, fn %{path: path}, entry ->
         {:ok,
@@ -184,12 +188,63 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   defp success_message(_field), do: dgettext("dashboard_appearance", "File uploaded successfully")
 
   # Consuming an in-flight entry would truncate the file, so every entry must
-  # have finished or been cancelled first.
+  # have finished or been cancelled first; one already consumed is not
+  # waiting to be (see "Each entry is consumed once" in the module docs).
   defp ready?(socket, field) do
-    case socket.assigns[:uploads][field] do
-      nil -> false
-      %{entries: []} -> false
-      %{entries: entries} -> Enum.all?(entries, &(&1.done? or &1.cancelled?))
+    case pending_entries(socket, field) do
+      [] -> false
+      entries -> Enum.all?(entries, &(&1.done? or &1.cancelled?))
     end
   end
+
+  defp pending_entries(socket, field) do
+    consumed = consumed_refs(socket)
+
+    case socket.assigns[:uploads][field] do
+      %{entries: entries} -> Enum.reject(entries, &MapSet.member?(consumed, &1.ref))
+      nil -> []
+    end
+  end
+
+  defp remember_consumed(socket, field) do
+    refs = socket.assigns.uploads[field].entries |> Enum.map(& &1.ref) |> MapSet.new()
+    assign(socket, :consumed_upload_refs, MapSet.union(consumed_refs(socket), refs))
+  end
+
+  defp consumed_refs(socket), do: socket.assigns[:consumed_upload_refs] || MapSet.new()
+
+  @doc """
+  The message to show for an error LiveView reports on an upload of `kind`
+  (`upload_errors/1,2`), which refuses a file before it reaches
+  `consume/2`: over the kind's size limit, of a type it does not take, or one
+  file too many.
+  """
+  @spec error_message(:image | :video, term()) :: String.t()
+  def error_message(kind, :too_large),
+    do:
+      dgettext(
+        "dashboard_appearance",
+        "This file is too large. Please upload one of at most %{size} MB.",
+        size: Uploads.max_file_size_mb(kind)
+      )
+
+  def error_message(:image, :not_accepted),
+    do:
+      dgettext(
+        "dashboard_appearance",
+        "This file type is not supported. Please upload a JPG, PNG or WebP image."
+      )
+
+  def error_message(:video, :not_accepted),
+    do:
+      dgettext(
+        "dashboard_appearance",
+        "This file type is not supported. Please upload an MP4 or WebM video."
+      )
+
+  def error_message(_kind, :too_many_files),
+    do: dgettext("dashboard_appearance", "Please upload one file at a time.")
+
+  def error_message(_kind, _reason),
+    do: dgettext("dashboard_appearance", "The upload failed. Please try again.")
 end

@@ -26,27 +26,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
   @moduletag :live
   @moduletag :integration
 
+  import TymeslotWeb.RepeatEditorHelpers
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock_midweek: 0]
   import Tymeslot.TestHelpers.Eventually
 
   alias Ecto.Changeset
   alias Plug.Test
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+
+  # Events are built from "today" and read in the organiser's zone, which is
+  # not UTC: near midnight UTC on a Sunday, "today" is last week there.
+  setup do: freeze_clock_midweek()
 
   setup :set_mox_global
   setup :verify_on_exit!
 
   # The provider write runs in a Task; allow for a busy test machine.
   @task_timeout 5_000
+  @second_monday ~D[2026-10-12]
 
   defp swap_env(key, module) do
     previous = Application.get_env(:tymeslot, key)
@@ -65,15 +73,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
     swap_env(:outlook_calendar_api_module, OutlookAPI)
 
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
+    profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(user)
 
-    {:ok, conn: conn, user: user}
+    {:ok, conn: conn, user: user, profile: profile}
   end
 
   # The series started two weeks ago, so today's occurrence is not its first,
   # whose "this and following" would be "all events".
-  defp today, do: Date.utc_today()
+  defp today, do: Clock.utc_today()
   defp first_day, do: Date.add(today(), -14)
 
   describe "an occurrence of a CalDAV series" do
@@ -209,7 +217,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
 
       lv
       |> element("#calendar-grid")
-      |> render_hook("update_event_recurrence", %{
+      |> render_repeat_save(%{
         "freq" => "daily",
         "interval" => "1",
         "end_type" => "never"
@@ -239,7 +247,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
 
       lv
       |> element("#calendar-grid")
-      |> render_hook("update_event_recurrence", %{"freq" => "", "end_type" => "never"})
+      |> render_repeat_save(%{"freq" => "", "end_type" => "never"})
 
       # The flash is relayed to the parent LiveView, so it lands on the next
       # render rather than in the hook's own reply.
@@ -313,35 +321,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
           calendar_paths: ["/cal/"]
         )
 
-      key = Calendar.strftime(today(), "%Y%m%dT090000")
-
-      start_at =
-        today()
-        |> DateTime.new!(~T[09:00:00], "Europe/Berlin")
-        |> DateTime.shift_zone!("Etc/UTC")
-
-      event =
-        insert(:provider_calendar_event,
-          calendar_integration: integration,
-          uid: "pinned-standup_#{key}",
-          provider: "caldav",
-          provider_calendar_id: "/cal/",
-          provider_event_id: "/cal/pinned-standup.ics",
-          summary: "Pinned standup",
-          start_at: start_at,
-          end_at: DateTime.add(start_at, 1, :hour),
-          all_day: false,
-          timezone: "Europe/Berlin",
-          # A COUNT over an ordinal BYDAY (the second Monday) is outside what
-          # `RecurrenceExpander.countable?/1` follows, so a "this and
-          # following" split of it is refused (`:unsupported_rule`)
-          # before anything is written.
-          recurrence_rule: "FREQ=MONTHLY;BYDAY=2MO;COUNT=24",
-          provider_metadata: %{"uid" => "pinned-standup"},
-          etag: "\"etag-1\"",
-          raw_ical: pinned_caldav_series(),
-          sync_state: "synced"
-        )
+      # A COUNT over an ordinal BYDAY (the second Monday) is outside what
+      # `RecurrenceExpander.countable?/1` follows, so a "this and following"
+      # split of it is refused (`:unsupported_rule`) before anything is
+      # written.
+      event = pinned_occurrence(integration, "FREQ=MONTHLY;BYDAY=2MO;COUNT=24")
 
       %{event: event}
     end
@@ -350,7 +334,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
     # rule change can now hit, and would otherwise contradict the refusal's
     # own flash once the write answers.
     test "is refused without ever flashing that it saved", %{conn: conn, event: event} do
-      lv = change_rule(conn, event)
+      lv = change_rule(conn, event, @second_monday)
       confirm_scope(lv, "following")
 
       eventually(
@@ -359,6 +343,131 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
       )
 
       refute render(lv) =~ "Changes saved."
+    end
+  end
+
+  describe "a rule change to a series with parts the editor does not show" do
+    # An imported "second Monday" rule with a BYHOUR the editor cannot build:
+    # it is shown, not edited, until the organiser replaces it.
+    @imported_rule "FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9"
+
+    setup %{user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          calendar_paths: ["/cal/"]
+        )
+
+      event = pinned_occurrence(integration, @imported_rule)
+
+      %{event: event}
+    end
+
+    test "replacing it for all events writes the rule the editor built", %{
+      conn: conn,
+      event: event
+    } do
+      expect_puts(1)
+      lv = open_on(conn, event, @second_monday)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_repeat_save(%{
+        "freq" => "monthly",
+        "interval" => "2",
+        "end_type" => "never"
+      })
+
+      confirm_scope(lv, "all")
+
+      assert [{_url, body, _headers}] = await_puts(1)
+      assert "RRULE:FREQ=MONTHLY;INTERVAL=2" in LineFolder.unfold_lines(body)
+    end
+  end
+
+  describe "a repeat rule given to a one-off CalDAV event" do
+    setup %{user: user, profile: profile} do
+      profile |> Changeset.change(timezone: "Europe/Berlin") |> Repo.update!()
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          calendar_paths: ["/cal/"]
+        )
+
+      start_at =
+        today()
+        |> DateTime.new!(~T[09:00:00], "Europe/Berlin")
+        |> DateTime.shift_zone!("Etc/UTC")
+
+      utc = &Calendar.strftime(&1, "%Y%m%dT%H%M%SZ")
+
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "planning",
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: "/cal/planning.ics",
+          summary: "Planning",
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 1, :hour),
+          all_day: false,
+          # Sync stores UTC for an event written with UTC times, as Tymeslot
+          # writes every one-off.
+          timezone: "Etc/UTC",
+          etag: "\"etag-1\"",
+          raw_ical:
+            Enum.join(
+              [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "BEGIN:VEVENT",
+                "UID:planning",
+                "DTSTAMP:20260901T090000Z",
+                "DTSTART:#{utc.(start_at)}",
+                "DTEND:#{utc.(DateTime.add(start_at, 1, :hour))}",
+                "SUMMARY:Planning",
+                "END:VEVENT",
+                "END:VCALENDAR"
+              ],
+              "\r\n"
+            ) <> "\r\n",
+          sync_state: "synced"
+        )
+
+      %{event: event}
+    end
+
+    # As a series it keeps its local time across DST only if it is written in
+    # a zone: RFC 5545 expands a rule in DTSTART's zone. The event's own zone
+    # is UTC, which keeps no local time, so the organiser's is used.
+    test "writes the new series in the organiser's zone", %{conn: conn, event: event} do
+      expect_puts(1)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
+
+      lv
+      |> element("#calendar-grid")
+      |> render_repeat_save(%{
+        "freq" => "weekly",
+        "interval" => "1",
+        "end_type" => "never"
+      })
+
+      assert [{_url, body, _headers}] = await_puts(1)
+      lines = LineFolder.unfold_lines(body)
+
+      assert "DTSTART;TZID=Europe/Berlin:#{Calendar.strftime(today(), "%Y%m%d")}T090000" in lines
+      assert "TZID:Europe/Berlin" in lines
+      assert Enum.any?(lines, &String.starts_with?(&1, "RRULE:FREQ=WEEKLY"))
     end
   end
 
@@ -386,9 +495,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
     ) <> "\r\n"
   end
 
-  defp pinned_caldav_series do
-    first = Calendar.strftime(first_day(), "%Y%m%d")
+  # A "second Monday" series from Monday 14 September 2026, opened on its
+  # 12 October occurrence, the second Monday of that month.
+  defp pinned_occurrence(integration, rule) do
+    start_at = DateTime.new!(@second_monday, ~T[09:00:00], "Europe/Berlin")
 
+    insert(:provider_calendar_event,
+      calendar_integration: integration,
+      uid: "pinned-standup_#{Calendar.strftime(@second_monday, "%Y%m%dT090000")}",
+      provider: "caldav",
+      provider_calendar_id: "/cal/",
+      provider_event_id: "/cal/pinned-standup.ics",
+      summary: "Pinned standup",
+      start_at: DateTime.shift_zone!(start_at, "Etc/UTC"),
+      end_at: start_at |> DateTime.add(1, :hour) |> DateTime.shift_zone!("Etc/UTC"),
+      all_day: false,
+      timezone: "Europe/Berlin",
+      recurrence_rule: rule,
+      provider_metadata: %{"uid" => "pinned-standup"},
+      etag: "\"etag-1\"",
+      raw_ical: pinned_caldav_series(rule),
+      sync_state: "synced"
+    )
+  end
+
+  defp pinned_caldav_series(rule) do
     Enum.join(
       [
         "BEGIN:VCALENDAR",
@@ -396,9 +527,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
         "BEGIN:VEVENT",
         "UID:pinned-standup",
         "DTSTAMP:20260901T090000Z",
-        first_start_line(),
-        "DTEND;TZID=Europe/Berlin:#{first}T100000",
-        "RRULE:FREQ=MONTHLY;BYDAY=2MO;COUNT=24",
+        "DTSTART;TZID=Europe/Berlin:20260914T090000",
+        "DTEND;TZID=Europe/Berlin:20260914T100000",
+        "RRULE:" <> rule,
         "SUMMARY:Pinned standup",
         "END:VEVENT",
         "END:VCALENDAR"
@@ -446,22 +577,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeCalDavLiveViewTest do
 
   # Opens `event` and changes its repeat rule to daily, which asks for a
   # scope.
-  defp change_rule(conn, event) do
-    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+  defp change_rule(conn, event, date) do
+    lv = open_on(conn, event, date)
 
     lv
     |> element("#calendar-grid")
-    |> render_hook("show_event", %{"event-id" => to_string(event.id)})
-
-    lv
-    |> element("#calendar-grid")
-    |> render_hook("update_event_recurrence", %{
+    |> render_repeat_save(%{
       "freq" => "daily",
       "interval" => "1",
       "end_type" => "never"
     })
 
     assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='following']")
+    lv
+  end
+
+  # Opens `event` on the grid, on `date` when it is not this week.
+  defp open_on(conn, event, date) do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    if date,
+      do:
+        lv |> element("#calendar-grid") |> render_hook("navigate_to_day", %{"date" => "#{date}"})
+
+    lv
+    |> element("#calendar-grid")
+    |> render_hook("show_event", %{"event-id" => to_string(event.id)})
+
     lv
   end
 

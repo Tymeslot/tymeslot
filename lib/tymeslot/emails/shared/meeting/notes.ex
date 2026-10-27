@@ -10,7 +10,6 @@ defmodule Tymeslot.Emails.Shared.Meeting.Notes do
 
   alias Tymeslot.Emails.Shared.{Sanitise, Stack, Styles}
   alias Tymeslot.Emails.Shared.Styles.Tokens
-  alias Tymeslot.Security.UniversalSanitizer
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -29,14 +28,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Notes do
   @spec callout(Tokens.intent(), String.t(), String.t() | nil) :: String.t()
   def callout(intent, heading, message)
       when is_atom(intent) and is_binary(message) and message != "" do
-    sanitized =
-      case UniversalSanitizer.sanitize_and_validate(message,
-             allow_html: false,
-             on_too_long: :truncate
-           ) do
-        {:ok, value} -> value
-        {:error, _reason} -> Sanitise.sanitize_for_email(message)
-      end
+    sanitized = Sanitise.sanitize_multiline_for_email(message)
 
     tokens = Styles.intent(intent)
 

@@ -3,19 +3,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.Providers.CustomProvider
-  alias Tymeslot.Integrations.Video.RoomData
-
-  describe "provider_type/0" do
-    test "returns :custom" do
-      assert CustomProvider.provider_type() == :custom
-    end
-  end
-
-  describe "display_name/0" do
-    test "returns correct display name" do
-      assert CustomProvider.display_name() == "Custom Video Link"
-    end
-  end
 
   describe "config_schema/0" do
     test "returns schema with custom_meeting_url field" do
@@ -26,20 +13,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
       assert schema[:custom_meeting_url][:label] == "Meeting URL"
       assert schema[:custom_meeting_url][:placeholder] == "https://meet.example.com/room123"
       assert schema[:custom_meeting_url][:help_text] =~ "complete video meeting URL"
-    end
-  end
-
-  describe "capabilities/0" do
-    test "returns correct capabilities for custom provider" do
-      capabilities = CustomProvider.capabilities()
-
-      assert capabilities[:waiting_room] == false
-      assert capabilities[:recording] == false
-      assert capabilities[:dial_in] == false
-      assert capabilities[:max_participants] == nil
-      assert capabilities[:breakout_rooms] == false
-      assert capabilities[:screen_sharing] == false
-      assert capabilities[:chat] == false
     end
   end
 
@@ -194,100 +167,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
       room_id2 = CustomProvider.extract_room_id(url2)
 
       assert room_id1 != room_id2
-    end
-  end
-
-  describe "valid_meeting_url?/1" do
-    test "accepts valid HTTPS URL" do
-      assert CustomProvider.valid_meeting_url?("https://meet.example.com/room123")
-    end
-
-    test "accepts valid HTTP URL" do
-      assert CustomProvider.valid_meeting_url?("http://meet.example.com/room123")
-    end
-
-    test "accepts URL with query parameters" do
-      assert CustomProvider.valid_meeting_url?("https://meet.example.com/room123?param=value")
-    end
-
-    test "accepts URL with port number" do
-      assert CustomProvider.valid_meeting_url?("https://meet.example.com:8443/room123")
-    end
-
-    test "rejects URL without scheme" do
-      refute CustomProvider.valid_meeting_url?("meet.example.com/room123")
-    end
-
-    test "rejects URL with invalid scheme" do
-      refute CustomProvider.valid_meeting_url?("ftp://meet.example.com/room123")
-      refute CustomProvider.valid_meeting_url?("ws://meet.example.com/room123")
-    end
-
-    test "rejects URL with empty host" do
-      refute CustomProvider.valid_meeting_url?("https:///room123")
-    end
-
-    test "rejects malformed URLs" do
-      refute CustomProvider.valid_meeting_url?("https://")
-      refute CustomProvider.valid_meeting_url?("http://:8080")
-    end
-
-    test "rejects nil" do
-      refute CustomProvider.valid_meeting_url?(nil)
-    end
-
-    test "rejects empty string" do
-      refute CustomProvider.valid_meeting_url?("")
-    end
-
-    test "rejects non-string values" do
-      refute CustomProvider.valid_meeting_url?(123)
-      refute CustomProvider.valid_meeting_url?([])
-    end
-  end
-
-  describe "handle_meeting_event/3" do
-    test "returns :ok for any event" do
-      room_data = %{meeting_url: "https://meet.example.com/room123"}
-
-      assert CustomProvider.handle_meeting_event(:created, room_data, %{}) == :ok
-      assert CustomProvider.handle_meeting_event(:started, room_data, %{}) == :ok
-      assert CustomProvider.handle_meeting_event(:ended, room_data, %{}) == :ok
-      assert CustomProvider.handle_meeting_event(:cancelled, room_data, %{}) == :ok
-      assert CustomProvider.handle_meeting_event(:unknown_event, room_data, %{}) == :ok
-    end
-  end
-
-  describe "generate_meeting_metadata/1" do
-    test "returns metadata with custom provider info" do
-      room_data = %RoomData{
-        room_id: "abc123def456",
-        meeting_url: "https://meet.example.com/room123",
-        provider_data: %{
-          original_url: "https://meet.example.com/room123"
-        }
-      }
-
-      metadata = CustomProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:provider] == "custom"
-      assert metadata[:meeting_id] == "abc123def456"
-      assert metadata[:join_url] == "https://meet.example.com/room123"
-      assert metadata[:custom_url] == "https://meet.example.com/room123"
-    end
-
-    test "handles missing provider_data gracefully" do
-      room_data = %RoomData{
-        room_id: "xyz789",
-        meeting_url: "https://meet.example.com/room456",
-        provider_data: %{}
-      }
-
-      metadata = CustomProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:provider] == "custom"
-      assert metadata[:meeting_id] == "xyz789"
-      assert is_nil(metadata[:custom_url])
     end
   end
 

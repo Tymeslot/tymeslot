@@ -7,8 +7,11 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
   committed. Each contender here therefore runs on its own connection
   (`Ecto.Adapters.SQL.Sandbox.unboxed_run/2`) and commits for real, which is
   why the module is synchronous (ExUnit runs it after every async module, with
-  nothing else in flight), why `on_exit` deletes the users it committed, and
-  why the race tests reopen the bootstrap and close it again themselves.
+  nothing else in flight), and why `on_exit` deletes the users it committed
+  and closes the bootstrap the race tests reopen. Cleanup that other tests
+  depend on lives in `on_exit`, which runs even when a timeout has killed the
+  test, and every process holding a lock is linked to the test, so it dies
+  with it instead of holding the settings row for the rest of the run.
 
   Each race is staged so that neither transaction has committed when both
   reach the contended step: both are released together, the first to finish
@@ -39,10 +42,15 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     emails =
       for n <- 1..2, do: "first-signup-#{n}-#{System.unique_integer([:positive])}@example.com"
 
+    # Every test starts on an established install, whatever ran before it.
+    close_bootstrap!()
+
     on_exit(fn ->
       Sandbox.unboxed_run(Repo, fn ->
         Repo.delete_all(from(u in UserSchema, where: u.email in ^emails))
       end)
+
+      close_bootstrap!()
     end)
 
     %{emails: emails}
@@ -87,7 +95,9 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     task = Task.async(fn -> AdminBootstrap.maybe_promote_first_user(user) end)
 
     try do
-      assert {:ok, {:ok, returned}} = Task.yield(task, 2_000)
+      # Bounded, but far longer than an unblocked sign-up takes on a loaded
+      # machine: one that queued on the row would never return.
+      assert {:ok, {:ok, returned}} = Task.yield(task, 10_000)
       refute returned.is_admin
     after
       Task.shutdown(task, :brutal_kill)
@@ -95,15 +105,13 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     end
   end
 
+  # `on_exit` closes it again.
   defp with_open_bootstrap(fun) do
     Sandbox.unboxed_run(Repo, fn -> AdminBootstrapHelpers.reopen_admin_bootstrap() end)
-
-    try do
-      fun.()
-    after
-      Sandbox.unboxed_run(Repo, &AdminBootstrapHelpers.close!/0)
-    end
+    fun.()
   end
+
+  defp close_bootstrap!, do: Sandbox.unboxed_run(Repo, &AdminBootstrapHelpers.close!/0)
 
   # Runs each step in its own committed transaction on its own connection,
   # releasing them together and committing only once the first has finished
@@ -112,10 +120,10 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     parent = self()
     tasks = Enum.map(steps, fn step -> Task.async(fn -> contend(parent, step) end) end)
 
-    for _task <- tasks, do: assert_receive({:ready, _pid}, 5_000)
+    for _task <- tasks, do: assert_receive({:ready, _pid}, 10_000)
     Enum.each(tasks, &send(&1.pid, :go))
 
-    assert_receive {:done, _first}, 5_000
+    assert_receive {:done, _first}, 10_000
 
     receive do
       {:done, _second} -> :ok
@@ -147,7 +155,7 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     parent = self()
 
     holder =
-      spawn(fn ->
+      spawn_link(fn ->
         Sandbox.unboxed_run(Repo, fn ->
           Repo.transaction(fn ->
             Repo.one!(from(s in AppSettingsSchema, where: s.id == 1, lock: "FOR UPDATE"))
@@ -157,7 +165,7 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
         end)
       end)
 
-    assert_receive :row_locked, 5_000
+    assert_receive :row_locked, 10_000
     holder
   end
 end

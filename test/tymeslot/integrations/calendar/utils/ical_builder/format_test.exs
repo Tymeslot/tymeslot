@@ -22,6 +22,28 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.FormatTest do
     end
   end
 
+  describe "generate_uid/1" do
+    test "a uid for somebody else's event carries no Tymeslot mark" do
+      uid = Format.generate_uid(:foreign)
+
+      assert uid =~ ~r/\A[0-9a-f]{32}\z/
+      assert Format.uid_origin(uid) == :foreign
+    end
+
+    test "a uid for Tymeslot's own event reads back as Tymeslot's" do
+      assert Format.uid_origin(Format.generate_uid(:tymeslot)) == :tymeslot
+    end
+  end
+
+  describe "uid_origin/1" do
+    test "only the @tymeslot.com suffix marks a uid as Tymeslot's" do
+      assert Format.uid_origin("abc@tymeslot.com") == :tymeslot
+      assert Format.uid_origin("abc@tymeslot.com.example.org") == :foreign
+      assert Format.uid_origin("abc@example.com") == :foreign
+      assert Format.uid_origin(nil) == :foreign
+    end
+  end
+
   describe "format_datetime/1" do
     test "formats DateTime in iCalendar format" do
       datetime = ~U[2024-01-15 10:30:45.123456Z]

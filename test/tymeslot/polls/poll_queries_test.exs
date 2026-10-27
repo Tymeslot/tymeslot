@@ -6,7 +6,15 @@ defmodule Tymeslot.Polls.PollQueriesTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.Polls.{PollParticipantQueries, PollQueries, PollVoteQueries}
+  alias Tymeslot.Polls.{
+    PollParticipantQueries,
+    PollParticipantSchema,
+    PollQueries,
+    PollSchema,
+    PollVoteQueries
+  }
+
+  alias Tymeslot.Repo
 
   describe "get_by_token/1" do
     test "returns preloaded poll for a known token, nil otherwise" do
@@ -80,5 +88,45 @@ defmodule Tymeslot.Polls.PollQueriesTest do
       assert PollParticipantQueries.get_by_poll_and_email(participant.poll_id, "x@example.com") ==
                nil
     end
+  end
+
+  describe "insert_or_lock_existing/1" do
+    test "inserts a participant under a new address" do
+      poll = insert(:poll)
+
+      assert {:ok, %PollParticipantSchema{email: "ada@example.com", poll_id: poll_id}} =
+               PollParticipantQueries.insert_or_lock_existing(invitation(poll, "ada@example.com"))
+
+      assert poll_id == poll.id
+    end
+
+    test "returns the participant already under the address, unchanged, instead of raising" do
+      existing = insert(:poll_participant, email: "ada@example.com", name: "Ada L")
+      poll = %PollSchema{id: existing.poll_id}
+
+      assert {:existing, %PollParticipantSchema{} = found} =
+               PollParticipantQueries.insert_or_lock_existing(invitation(poll, "ada@example.com"))
+
+      assert found.id == existing.id
+      assert found.token == existing.token
+      assert found.name == "Ada L"
+      assert found.confirmed_at == existing.confirmed_at
+      assert [_one] = Repo.all(PollParticipantSchema)
+    end
+
+    test "returns the changeset of an invalid participant" do
+      poll = insert(:poll)
+
+      assert {:error, %Ecto.Changeset{valid?: false}} =
+               PollParticipantQueries.insert_or_lock_existing(invitation(poll, "not an address"))
+    end
+  end
+
+  defp invitation(poll, email) do
+    PollParticipantSchema.invitation_changeset(
+      %PollParticipantSchema{},
+      %{poll_id: poll.id, email: email, name: "Ada"},
+      DateTime.utc_now()
+    )
   end
 end

@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
     <div
       class="scheduling-box booker-card"
       data-locale={@locale}
+      data-testid="booker-card"
       id={assigns[:moment] && "#{assigns[:moment]}-step"}
       data-moment={assigns[:moment]}
       data-moment-state={assigns[:moment_state]}

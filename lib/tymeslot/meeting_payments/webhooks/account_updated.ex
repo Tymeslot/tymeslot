@@ -13,24 +13,29 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdated do
   end state.
   """
 
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @event_type "account.updated"
 
-  @spec handle(map()) :: :ok | {:error, term()}
+  @impl WebhookHandler
+  @spec handle(map()) :: WebhookHandler.result()
   def handle(event) do
     Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
   end
 
   defp do_handle(%{"data" => %{"object" => %{"id" => account_id} = object}} = event)
        when is_binary(account_id) do
-    ConnectAccounts.apply_account_event(object, event_time(event))
-
-    {:ok, :ok}
+    case ConnectAccounts.apply_account_event(object, event_time(event)) do
+      :ok -> {:ok, :ok}
+      {:error, reason} -> {{:error, :retry_later, reason}, :error}
+    end
   end
 
-  defp do_handle(_other), do: {{:error, :invalid_event}, :error}
+  defp do_handle(_other), do: {{:error, :permanent, :invalid_event}, :error}
 
   # Order events by the event envelope's `created` (the event emission time),
   # NOT the account object's `created`. The account object's `created` is the

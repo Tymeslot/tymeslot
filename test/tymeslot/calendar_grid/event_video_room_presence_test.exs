@@ -29,6 +29,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.CalDAVAccountStub
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
@@ -42,6 +43,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   setup :verify_on_exit!
 
   setup do
+    # The provider read runs for real, behind the `:calendar_module` seam.
+    stub(Tymeslot.CalendarMock, :fetch_event, &Operations.fetch_event/2)
     user = insert(:user)
     talk_host = "talk-#{System.unique_integer([:positive])}.example.com"
     answer_requests(%{})

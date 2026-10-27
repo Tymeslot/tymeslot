@@ -10,7 +10,6 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheckTest do
   import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.ConfigTestHelpers
 
-  alias Tymeslot.Payments.StripeMock
   alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Payments.Webhooks.SecretCheck
   alias Tymeslot.Test.LogCapture
@@ -27,10 +26,10 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheckTest do
       stripe_secret_key: nil,
       subscription_manager: SubscriptionManagerMock,
       meeting_payments_enabled: true,
+      stripe_webhook_secret: "whsec_platform",
       stripe_connect_webhook_secret: "whsec_connect"
     )
 
-    stub(StripeMock, :webhook_secret, fn -> "whsec_platform" end)
     :ok
   end
 
@@ -40,7 +39,7 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheckTest do
   end
 
   test "a missing platform secret alerts and logs an error" do
-    stub(StripeMock, :webhook_secret, fn -> nil end)
+    setup_config(:tymeslot, :stripe_webhook_secret, nil)
     LogCapture.attach()
 
     assert SecretCheck.check() == ["STRIPE_WEBHOOK_SECRET"]
@@ -72,7 +71,7 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheckTest do
 
   test "a missing platform secret is fine without subscriptions" do
     setup_config(:tymeslot, :subscription_manager, nil)
-    stub(StripeMock, :webhook_secret, fn -> nil end)
+    setup_config(:tymeslot, :stripe_webhook_secret, nil)
 
     assert SecretCheck.check() == []
     refute_receive {:send_alert, _type, _payload}
@@ -80,7 +79,7 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheckTest do
 
   test "nothing is checked without a real Stripe key" do
     setup_config(:stripity_stripe, :api_key, "sk_test_fake")
-    stub(StripeMock, :webhook_secret, fn -> nil end)
+    setup_config(:tymeslot, :stripe_webhook_secret, nil)
     setup_config(:tymeslot, :stripe_connect_webhook_secret, nil)
 
     assert SecretCheck.check() == []

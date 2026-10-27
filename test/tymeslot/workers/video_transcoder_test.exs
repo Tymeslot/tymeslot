@@ -2,7 +2,8 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
   @moduledoc """
   The transcoding worker records each video's processing state under its
   own asset field, so two videos of one theme are processed, retried and
-  reported apart.
+  reported apart, and only while the field still holds the video the job
+  transcodes.
   """
   use Tymeslot.DataCase, async: false
 
@@ -11,9 +12,11 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
   import Mox
+  import Ecto.Query
   import Tymeslot.Factory
 
   alias Tymeslot.Media.Transcoder
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
@@ -23,9 +26,10 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
 
   setup :verify_on_exit!
 
-  defp insert_theme_customization do
+  # The row a job reports to holds the video the job transcodes.
+  defp insert_theme_customization(video_path \\ "uploads/test-video.mp4") do
     profile = insert(:profile)
-    insert(:theme_customization, profile: profile)
+    insert(:theme_customization, profile: profile, background_video_path: video_path)
   end
 
   defp args(customization, video_path, field \\ @field) do
@@ -38,6 +42,33 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
 
   defp statuses(customization),
     do: Repo.get!(ThemeCustomizationSchema, customization.id).video_processing_status
+
+  # What an upload into `field` writes: the new path, then its pending state.
+  defp put_video!(customization, field, video_path) do
+    {1, _rows} =
+      Repo.update_all(
+        from(c in ThemeCustomizationSchema,
+          where: c.id == ^customization.id,
+          update: [
+            set: [
+              settings:
+                fragment(
+                  "? || jsonb_build_object(?::text, ?::text)",
+                  c.settings,
+                  ^field,
+                  ^video_path
+                )
+            ]
+          ]
+        ),
+        []
+      )
+
+    {:ok, _pending} =
+      ThemeCustomizationQueries.update_video_processing_status(customization.id, field, "pending")
+
+    :ok
+  end
 
   defp stub_all_variants_success do
     variant_count = length(Transcoder.variant_definitions())
@@ -61,14 +92,7 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
 
     test "records only its own field, leaving another video's state as it is" do
       customization = insert_theme_customization()
-
-      {:ok, _pending} =
-        ThemeCustomizationQueries.update_video_processing_status(
-          customization.id,
-          "host_video_path",
-          "pending"
-        )
-
+      put_video!(customization, "host_video_path", "uploads/host.mp4")
       stub_all_variants_success()
 
       assert :ok = perform_job(VideoTranscoder, args(customization, "uploads/test-video.mp4"))
@@ -170,12 +194,7 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
       customization = insert_theme_customization()
 
       # What a replacement upload writes before enqueuing its own transcode.
-      {:ok, _pending} =
-        ThemeCustomizationQueries.update_video_processing_status(
-          customization.id,
-          @field,
-          "pending"
-        )
+      put_video!(customization, @field, "uploads/test-video.mp4")
 
       expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
 
@@ -194,12 +213,54 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
     end
   end
 
-  describe "perform/1 - path traversal" do
-    test "rejects a video_path containing directory traversal and records the field as failed" do
+  describe "timeout/1" do
+    test "bounds the job, with room for every variant's own bound" do
+      job = VideoTranscoder.new(%{theme_customization_id: 1, video_path: "uploads/v.mp4"})
+
+      timeout = VideoTranscoder.timeout(job)
+
+      assert is_integer(timeout)
+
+      assert timeout >
+               length(Transcoder.variant_definitions()) * Transcoder.max_variant_timeout()
+    end
+
+    test "ends the job before the Oban lifeline would run it a second time" do
+      job = VideoTranscoder.new(%{theme_customization_id: 1, video_path: "uploads/v.mp4"})
+
+      # `ObanRescue`'s longest legitimate job: the lifeline rescues after more.
+      assert VideoTranscoder.timeout(job) <= :timer.hours(5)
+    end
+  end
+
+  describe "perform/1 - a variant that times out" do
+    test "marks the video failed on the first attempt, without a retry" do
+      # A retry would run as long again, holding the one-at-a-time queue for
+      # every other video.
       customization = insert_theme_customization()
+
       expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
 
-      assert {:error, "Invalid video path"} =
+      expect(Tymeslot.Media.TranscoderMock, :transcode, fn _src, _out, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:cancel, "Video encode timed out"} =
+               perform_job(VideoTranscoder, args(customization, "uploads/test-video.mp4"),
+                 attempt: 1
+               )
+
+      assert statuses(customization) == %{@field => "failed"}
+    end
+  end
+
+  describe "perform/1 - path traversal" do
+    test "cancels without retrying and records the field as failed" do
+      customization = insert_theme_customization("../../etc/passwd")
+      expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+
+      # The path cannot become acceptable on a later attempt.
+      assert {:cancel, "Invalid video path"} =
                perform_job(VideoTranscoder, args(customization, "../../etc/passwd"))
 
       assert statuses(customization) == %{@field => "failed"}
@@ -236,41 +297,96 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
       assert length(all_enqueued(worker: VideoTranscoder)) == 2
     end
 
-    test "a replacement arriving mid-run snoozes so the next run transcodes it" do
+    test "a replacement before the job starts takes over its args" do
       customization = insert_theme_customization()
 
       {:ok, job} = VideoTranscoder.enqueue(customization.id, @field, "uploads/old.mp4")
 
-      # A replacement upload into the same field cannot insert a job of its
-      # own while this one is pending: uniqueness matches the row and the
-      # field, and only replaces the args, which the running process never
-      # rereads. `job` is the stale in-memory struct that process would hold.
       assert {:ok, %Oban.Job{conflict?: true}} =
                VideoTranscoder.enqueue(customization.id, @field, "uploads/new.mp4")
 
+      assert %{args: %{"video_path" => "uploads/new.mp4"}} = Repo.reload!(job)
+    end
+  end
+
+  # A replacement uploaded while a job encodes gets a job of its own; the
+  # running one, which never rereads its args, must settle nothing for it.
+  describe "a replacement uploaded while a job executes" do
+    setup do
+      customization = insert_theme_customization("uploads/old.mp4")
+      {:ok, old_job} = VideoTranscoder.enqueue(customization.id, @field, "uploads/old.mp4")
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^old_job.id), set: [state: "executing"])
+
+      # What the replacement upload writes, then its own enqueue.
+      put_video!(customization, @field, "uploads/new.mp4")
+      {:ok, new_job} = VideoTranscoder.enqueue(customization.id, @field, "uploads/new.mp4")
+
+      %{customization: customization, old_job: old_job, new_job: new_job}
+    end
+
+    test "is inserted as a second job", %{old_job: old_job, new_job: new_job} do
+      refute new_job.conflict?
+      refute new_job.id == old_job.id
+      assert %{args: %{"video_path" => "uploads/old.mp4"}} = Repo.reload!(old_job)
+    end
+
+    test "the stale run cancels and removes its variants, and the new run completes",
+         %{customization: customization} do
+      old_variants = touch_variants("uploads/old.mp4")
+      stub_all_variants_success()
+
+      assert {:cancel, "Video replaced before its transcode finished"} =
+               perform_job(VideoTranscoder, args(customization, "uploads/old.mp4"))
+
+      refute Enum.any?(old_variants, &File.exists?/1)
+      assert statuses(customization) == %{@field => "pending"}
+
+      stub_all_variants_success()
+
+      assert :ok = perform_job(VideoTranscoder, args(customization, "uploads/new.mp4"))
+
+      updated = Repo.get!(ThemeCustomizationSchema, customization.id)
+
+      assert {updated.settings[@field], updated.video_processing_status} ==
+               {"uploads/new.mp4", %{@field => "completed"}}
+    end
+
+    test "the stale run timing out does not fail the replacement",
+         %{customization: customization} do
       expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
 
       expect(Tymeslot.Media.TranscoderMock, :transcode, fn _src, _out, _opts ->
-        {:error, :source_missing}
+        {:error, :timeout}
       end)
 
-      # Cancelling here would take the replacement's args to the grave; the job
-      # must come back and reread them instead. The fields below are what a
-      # fetched, running job carries: string-keyed args and execution stamps,
-      # which `Oban.insert`'s returned struct does not have.
-      job = %{
-        job
-        | args: args(customization, "uploads/old.mp4"),
-          attempt: 1,
-          attempted_at: DateTime.utc_now(),
-          scheduled_at: DateTime.utc_now()
-      }
+      assert {:cancel, "Video encode timed out"} =
+               perform_job(VideoTranscoder, args(customization, "uploads/old.mp4"))
 
-      assert {:snooze, 1} = perform_job(job)
+      assert statuses(customization) == %{@field => "pending"}
+    end
 
-      # The state stays whatever the replacement upload set; this run must not
-      # report the old video's fate against the new one.
-      refute statuses(customization)[@field] == "failed"
+    test "the stale run failing its final attempt does not fail the replacement",
+         %{customization: customization} do
+      expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+
+      expect(Tymeslot.Media.TranscoderMock, :transcode, fn _src, _out, _opts ->
+        {:error, "ffmpeg exited with status 1"}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(VideoTranscoder, args(customization, "uploads/old.mp4"), attempt: 3)
+
+      assert statuses(customization) == %{@field => "pending"}
+    end
+  end
+
+  defp touch_variants(video_path) do
+    for variant <- Transcoder.derive_variant_paths(video_path) do
+      path = Path.join(Uploads.root(), variant)
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "variant")
+      path
     end
   end
 end

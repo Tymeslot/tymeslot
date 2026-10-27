@@ -20,9 +20,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsDeleteOccurrenceTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
 
   setup :verify_on_exit!
 
@@ -31,7 +31,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsDeleteOccurrenceTest do
     username: "user",
     password: "pass",
     calendar_paths: ["/cal/"],
-    verify_ssl: true,
     provider: :caldav
   }
 

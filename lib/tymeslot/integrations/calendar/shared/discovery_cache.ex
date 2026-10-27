@@ -10,8 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryCache do
   dashboard tabs) hits the provider once rather than once per caller.
 
   Keys are built by `Tymeslot.Integrations.Calendar.Discovery`: a
-  `{provider, "username@host"}` tuple (via
-  `Tymeslot.Integrations.Calendar.Shared.DiscoveryService.build_cache_key/2`)
+  `{provider, actor, digest}` tuple, the digest a hash of the server address,
+  username and password (via
+  `Tymeslot.Integrations.Calendar.Shared.DiscoveryService.build_cache_key/3`),
   for not-yet-persisted credentials, or a `{provider, integration_id}` tuple
   for an already-persisted integration. Only successful (`{:ok, calendars}`)
   results are retained; the caller invalidates transient failures so they

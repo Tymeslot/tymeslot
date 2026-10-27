@@ -17,6 +17,9 @@ defmodule Tymeslot.ThemeCustomizations.Options.Cover do
   sanitised as an uploaded background's is), or `nil` when the stored value
   resolves to nothing.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @behaviour Tymeslot.ThemeCustomizations.OptionGroup
 
   import Ecto.Changeset
@@ -100,12 +103,22 @@ defmodule Tymeslot.ThemeCustomizations.Options.Cover do
   defp validate_upload(changeset) do
     if get_field(changeset, :cover_path),
       do: changeset,
-      else: add_error(changeset, :cover_path, "is required for an uploaded cover")
+      else:
+        add_error(
+          changeset,
+          :cover_path,
+          dgettext_noop("errors", "is required for an uploaded cover")
+        )
   end
 
   defp validate_preset(changeset, id, ids) do
     if id in ids,
       do: changeset,
-      else: add_error(changeset, :cover_value, "must be a valid cover preset")
+      else:
+        add_error(
+          changeset,
+          :cover_value,
+          dgettext_noop("errors", "must be a valid cover preset")
+        )
   end
 end

@@ -63,18 +63,24 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
             href={LinkAccessPolicy.scheduling_path(@profile)}
             target="_blank"
-            class="dashboard-nav-link flex-1 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
+            class="dashboard-nav-link flex-1 min-w-0 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
           >
             <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0 text-white" />
-            <span class="text-white whitespace-nowrap">{dgettext("dashboard_common", "View Page")}</span>
+            <span class="text-white min-w-0 leading-tight wrap-break-word">{dgettext(
+              "dashboard_common",
+              "View Page"
+            )}</span>
           </.link>
           <div
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
-            class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
+            class="flex-1 min-w-0 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
             <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0" />
-            <span class="whitespace-nowrap">{dgettext("dashboard_common", "View Page")}</span>
+            <span class="min-w-0 leading-tight wrap-break-word">{dgettext(
+              "dashboard_common",
+              "View Page"
+            )}</span>
           </div>
 
           <button
@@ -84,7 +90,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             phx-hook="CopyOnClick"
             data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
             data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
-            class="dashboard-nav-link border-2 border-tymeslot-100 hover:border-turquoise-400 hover:translate-x-0 shadow-sm hover:shadow-md group"
+            class="dashboard-nav-link shrink-0 border-2 border-tymeslot-100 hover:border-turquoise-400 hover:translate-x-0 shadow-sm hover:shadow-md group"
             title={dgettext("dashboard_common", "Copy link to clipboard")}
             aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
@@ -98,7 +104,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             id="copy-scheduling-link-disabled"
             type="button"
             aria-disabled="true"
-            class="px-4 py-4 rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 border-2 border-tymeslot-200 cursor-not-allowed opacity-60"
+            class="shrink-0 px-4 py-4 rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 border-2 border-tymeslot-200 cursor-not-allowed opacity-60"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
             aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
@@ -282,6 +288,17 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   # when either is still unconnected. Which of the two is outstanding has to
   # travel with the marker: once one is connected, a badge that only says
   # "something is missing" reads as if the connection never registered.
+  #
+  # A calendar whose credentials were refused outranks both: the setup is done,
+  # but the booking page offers no times until it is reconnected.
+  defp integrations_setup_reminder(%{refused_calendars: [_first | _rest] = names}),
+    do:
+      dgettext(
+        "dashboard_common",
+        "Reconnect %{names}: your booking page offers no times until you do",
+        names: Enum.join(names, ", ")
+      )
+
   defp integrations_setup_reminder(status) do
     missing =
       for {kind, key} <- [calendar: :has_calendar, video: :has_video],

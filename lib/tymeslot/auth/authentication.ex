@@ -6,9 +6,7 @@ defmodule Tymeslot.Auth.Authentication do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth.ErrorFormatter
-  alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Auth.{RateLimit, UserQueries, Validation, Verification}
-  alias Tymeslot.Infrastructure.StructuredLogger
   alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger}
 
   @doc """
@@ -60,8 +58,8 @@ defmodule Tymeslot.Auth.Authentication do
         # "wrong password" (slow bcrypt verify) by measuring response time.
         Password.no_user_verify()
 
-        AccountLogging.log_operation_failure("authentication", email, :not_found)
-
+        # Logged once, as the security event; the reason says the account
+        # does not exist.
         SecurityLogger.log_authentication_attempt(email, false, "user_not_found", %{
           ip_address: opts[:ip],
           user_agent: opts[:user_agent]
@@ -120,18 +118,18 @@ defmodule Tymeslot.Auth.Authentication do
     end
   end
 
-  # Records the attempt against the account lockout tracker and audits the
+  # Records the attempt against the failed-login throttle and audits the
   # moment the account crosses the throttle threshold.
   #
   # `check_auth_rate_limit/2` runs *before* this, as a read-only pre-check
-  # (`AccountLockout.check_lockout_status/1`) that returns an error without
+  # (a count of the failed-login bucket) that returns an error without
   # recording anything once the failure count reaches the throttle threshold
   # (10 in the last hour). Under strictly sequential brute force that
   # short-circuits `authenticate_with_password/3` before this function can
   # record another failure, so the count freezes at the threshold and this
   # emits once per hour, as the 1-hour sliding window ages old attempts out
   # and throttling re-triggers. Throttling is the whole defence by design;
-  # see `Tymeslot.Security.AccountLockout` for why there is no harder tier.
+  # see `Tymeslot.Security.RateLimiter.Auth` for why there is no harder tier.
   #
   # That is not the concurrent case: the pre-check is read-only and separate
   # from the write below, so every request already past the pre-check when
@@ -154,33 +152,16 @@ defmodule Tymeslot.Auth.Authentication do
   end
 
   defp log_auth_attempt(user, :success, opts) do
-    StructuredLogger.log_auth_event(:login_success, user.id, %{
-      email_masked: SecurityLogger.mask_email(user.email),
-      ip_address: opts[:ip],
-      user_agent: opts[:user_agent]
-    })
-
-    AccountLogging.log_operation_success("authentication", user.email, %{user_id: user.id})
-
     SecurityLogger.log_authentication_attempt(user.email, true, "success", %{
+      user_id: user.id,
       ip_address: opts[:ip],
       user_agent: opts[:user_agent]
     })
   end
 
   defp log_auth_attempt(user, reason, opts) do
-    StructuredLogger.log_auth_event(:login_failure, user.id, %{
-      email_masked: SecurityLogger.mask_email(user.email),
-      reason: reason,
-      ip_address: opts[:ip],
-      user_agent: opts[:user_agent]
-    })
-
-    AccountLogging.log_operation_failure("authentication", user.email, reason, %{
-      user_id: user.id
-    })
-
     SecurityLogger.log_authentication_attempt(user.email, false, to_string(reason), %{
+      user_id: user.id,
       ip_address: opts[:ip],
       user_agent: opts[:user_agent]
     })

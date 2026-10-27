@@ -32,7 +32,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UriUtils
@@ -237,8 +237,8 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   # Mirrors `Features.meeting_payments_allowed?/1`'s yes/no decision
   # (`:stripe_required` counts as allowed: the host has the plan but no
   # charges-enabled Connect account yet, and the schema changeset, driven by
-  # `FormMapper.payment_opts/1`'s `host_charges_enabled`, is the authority on
-  # whether a price may actually be persisted without a live account), but
+  # `FormMapper.payment_opts/1`'s `price_settable`, is the authority on
+  # whether a price may actually be persisted), but
   # checks access only once so the denied reason it returns to the caller
   # (rendered into a specific message) reflects the same read.
   defp gate_payment(user_id, %{payment_required: true}) do
@@ -295,7 +295,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
          user_id
        )
        when is_integer(id) do
-    with {:ok, integration} <- CalendarManagement.fetch_integration_for_user(id, user_id),
+    with {:ok, integration} <- Management.fetch_integration_for_user(id, user_id),
          :ok <- validate_target_calendar(target_calendar_id, integration) do
       :ok
     else

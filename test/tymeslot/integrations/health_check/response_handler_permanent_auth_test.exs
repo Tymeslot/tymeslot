@@ -12,12 +12,12 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Workers.EmailWorker
 
-  describe "handle_permanent_auth_failure/3" do
+  describe "handle_check_result/5 permanent-auth fast-path" do
     test "flags video integration for reauth and enqueues the reauth email (not the unhealthy one) on invalid_grant" do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, "Connection test failed: Failed to refresh token: invalid_grant"}
@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       integration =
         insert(:calendar_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :calendar,
                integration,
                {:error, "Token refresh failed: invalid_grant"}
@@ -79,7 +79,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
 
       {:ok, _state} = IntegrationHealthStateQueries.get_or_init(:video, integration.id, user.id)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, "Connection test failed: Failed to refresh token: invalid_grant"}
@@ -106,7 +106,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
           became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour)
         )
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, :unauthorized}
@@ -143,7 +143,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       integration =
         insert(:calendar_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :calendar,
                integration,
                {:error, :unauthorized}
@@ -167,7 +167,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       integration =
         insert(:calendar_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :calendar,
                integration,
                {:error, "Token refresh failed: invalid_grant"}
@@ -186,7 +186,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, :unauthorized}
@@ -204,7 +204,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, :timeout}
@@ -219,7 +219,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, "Rate limited - please try again later"}
@@ -234,7 +234,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:ok, "ok"}
@@ -251,7 +251,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       reason = {:error, "Token refresh failed: invalid_grant"}
 
       for _i <- 1..5 do
-        assert ResponseHandler.handle_permanent_auth_failure(:video, integration, reason) == :ok
+        assert check(:video, integration, reason) == :ok
       end
 
       jobs =
@@ -272,7 +272,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, <<255, 255>>}
@@ -294,7 +294,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, "Permission denied: User not authorized to read this calendar"}
@@ -312,7 +312,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, "Network access from unauthorized origin"}
@@ -327,7 +327,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, "Rate limited (HTTP 429)"}
@@ -345,7 +345,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
-      assert ResponseHandler.handle_permanent_auth_failure(
+      assert check(
                :video,
                integration,
                {:error, "Server error: invalid_grant_period_started"}
@@ -355,5 +355,17 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       assert updated.needs_reauth == false
       refute_enqueued(worker: EmailWorker)
     end
+  end
+
+  # A check whose transition changes nothing, so only the permanent-auth
+  # fast-path can act on the integration.
+  defp check(type, integration, check_result) do
+    ResponseHandler.handle_check_result(
+      type,
+      integration,
+      {:no_change, :healthy, :healthy},
+      Monitor.initial_state(),
+      check_result
+    )
   end
 end

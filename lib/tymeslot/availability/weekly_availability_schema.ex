@@ -2,6 +2,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
   @moduledoc """
   Schema for weekly availability settings per day of week.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -50,7 +51,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
     ])
     |> validate_required([:schedule_id, :day_of_week])
     |> validate_inclusion(:day_of_week, 1..7,
-      message: "must be between 1 (Monday) and 7 (Sunday)"
+      message: dgettext_noop("errors", "must be between 1 (Monday) and 7 (Sunday)")
     )
     |> AvailabilityWindow.normalise_next_day(:weekly_availability_next_day_end_check)
     |> validate_times()
@@ -62,7 +63,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
     if get_field(changeset, :is_available) do
       changeset
       |> validate_required([:start_time, :end_time],
-        message: "are required when day is available"
+        message: dgettext_noop("errors", "are required when day is available")
       )
       |> AvailabilityWindow.validate_window()
     else

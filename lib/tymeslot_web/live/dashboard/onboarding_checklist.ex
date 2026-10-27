@@ -324,7 +324,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     [
       %{
         key: "calendar",
-        auto: :has_calendar,
+        auto: :calendar_ready,
         icon: "hero-calendar-days",
         title: dgettext("onboarding_wizard", "Connect a calendar"),
         description: dgettext("onboarding_wizard", "Sync to avoid double-bookings"),

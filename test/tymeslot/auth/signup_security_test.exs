@@ -114,7 +114,7 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
     setup :enable_recaptcha
 
     test "returns recaptcha_failed when reCAPTCHA is enabled and token is empty" do
-      # An empty token is rejected by RecaptchaHelpers.maybe_verify_signup_token/2
+      # An empty token is rejected by RecaptchaHelpers.verify/3
       params = %{"email" => "recaptcha-fail@example.com", "g-recaptcha-response" => ""}
       assert {:error, :recaptcha_failed, message} = SignupSecurity.gate(params, @meta)
       assert message == "Security verification failed. Please try again."

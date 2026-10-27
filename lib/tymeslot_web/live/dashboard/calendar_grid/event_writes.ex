@@ -28,6 +28,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   the write dropped. Only a grid on screen asks: with the LiveView gone,
   the guardian finishes the write and asks nobody.
 
+  An edit the provider could not take but that was saved to sync later is
+  told about the same way, from the event as the replay will leave it: the
+  organiser is asked, and guests added or removed are owed their emails.
+  `Tymeslot.Meetings.AttendeeNotifications` holds every one of those emails
+  until the replay has reached the calendar.
+
+  A write made with `notify: :membership` (an attendee added or removed,
+  see `EventHandlers.AttendeeManagement`) asks nobody: once the provider has
+  accepted it, the guests it added are invited and the ones it removed are
+  told, and the organiser is told which. A write that failed tells nobody,
+  so no guest is invited to an event they are not on, or told they are off
+  one they are still on. These emails are owed whoever drives the queue,
+  so the guardian sends them too once the LiveView is gone.
+
   ## Surviving the LiveView
 
   A write waiting in the queue lives only in this process. So the queue is
@@ -53,10 +67,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.QueuedWrite
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @doc """
@@ -139,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   """
   @spec series_saving?(Phoenix.LiveView.Socket.t(), map()) :: boolean()
   def series_saving?(socket, event),
-    do: WriteQueue.series_saving?(socket.assigns.event_writes, event)
+    do: CalendarGrid.series_saving?(socket.assigns.event_writes, event)
 
   @doc """
   Whether a write to another event of the series `event` belongs to is
@@ -150,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   """
   @spec series_busy?(Phoenix.LiveView.Socket.t(), map()) :: boolean()
   def series_busy?(socket, event),
-    do: WriteQueue.series_busy?(socket.assigns.event_writes, event)
+    do: CalendarGrid.series_busy?(socket.assigns.event_writes, event)
 
   @doc """
   The queue the grid starts from when it mounts, so that a new edit of an
@@ -222,6 +238,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
       scope
     )
   end
+
+  defp run_effect({:membership_changed, original, updated}, socket),
+    do: AttendeeManagement.membership_written(socket, original, updated)
 
   defp run_effect({:dropped, reason, count}, socket) do
     send(self(), {:flash, {:warning, dropped_message(reason, count)}})

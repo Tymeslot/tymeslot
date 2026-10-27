@@ -19,6 +19,8 @@ defmodule Tymeslot.ThemeCustomizations.Options.Palette do
       derives. Default `:dark`.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
 
   alias Tymeslot.ThemeCustomizations.ContrastTokens
@@ -216,8 +218,15 @@ defmodule Tymeslot.ThemeCustomizations.Options.Palette do
 
       seed ->
         case Colour.cast_hex(seed) do
-          {:ok, hex} -> put_change(changeset, :custom_palette_seed, hex)
-          :error -> add_error(changeset, :custom_palette_seed, "must be a valid hex colour")
+          {:ok, hex} ->
+            put_change(changeset, :custom_palette_seed, hex)
+
+          :error ->
+            add_error(
+              changeset,
+              :custom_palette_seed,
+              dgettext_noop("errors", "must be a hex colour such as #14b8a6")
+            )
         end
     end
   end

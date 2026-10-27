@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.GroupSeatPayloadsTest do
   @moduletag :bookings
 
   import ExUnit.CaptureLog
+  import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
   import Tymeslot.Factory
 
   alias Tymeslot.Emails.AppointmentBuilder
@@ -211,4 +212,15 @@ defmodule Tymeslot.Emails.GroupSeatPayloadsTest do
         details
         | organizer_locale: "en"
       })
+
+  describe "a participant's recipient language" do
+    test "is the booking pages' default when the participant has none", %{
+      participant: participant
+    } do
+      with_config(:tymeslot, :booking_default_locale, "it")
+
+      assert Recipient.from_participant(%{participant | locale: nil}).locale == "it"
+      assert Recipient.from_participant(%{participant | locale: "zz"}).locale == "it"
+    end
+  end
 end

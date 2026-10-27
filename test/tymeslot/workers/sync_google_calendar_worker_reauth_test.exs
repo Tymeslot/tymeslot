@@ -79,6 +79,24 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
       assert reloaded.sync_error =~ "Google rejected the stored credentials"
     end
 
+    test "stores the untranslated reason whatever locale the job runs under" do
+      integration = insert(:calendar_integration, provider: "google", is_active: true)
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :unauthorized, "Token revoked"}
+      end)
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).sync_error ==
+               "Google rejected the stored credentials. Please reconnect the integration."
+    end
+
     test "flags for reconnection when the bootstrap is the call that is refused" do
       integration =
         insert(:calendar_integration,
@@ -123,7 +141,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
   end
 
   describe "sweep filter" do
-    test "stream_all_active skips integrations with needs_reauth: true" do
+    test "list_active_page skips integrations with needs_reauth: true" do
       healthy =
         insert(:calendar_integration,
           provider: "google",
@@ -142,9 +160,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
         )
 
       ids =
-        CalendarIntegrationQueries.stream_all_active(100, [], fn row, acc ->
-          [row.id | acc]
-        end)
+        Enum.map(CalendarIntegrationQueries.list_active_page(0, 100), & &1.id)
 
       assert healthy.id in ids
       refute flagged.id in ids

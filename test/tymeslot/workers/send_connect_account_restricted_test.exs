@@ -1,5 +1,5 @@
 defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :emails
@@ -9,8 +9,18 @@ defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.Workers.SendConnectAccountRestricted
 
-  defp insert_account(attrs \\ %{}) do
-    user = insert(:user, email: "host@example.com", name: "Bob Host")
+  # Swoosh's test adapter posts {:email, ...} to whichever process calls
+  # Mailer.deliver/1, which is the CircuitBreaker GenServer, not the test
+  # process. Pointing the adapter here collects the delivered email instead.
+  # Safe because the module is `async: false`.
+  setup do
+    Application.put_env(:swoosh, :shared_test_process, self())
+    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+    :ok
+  end
+
+  defp insert_account(attrs \\ %{}, user_attrs \\ %{}) do
+    user = insert(:user, Map.merge(%{email: "host@example.com", name: "Bob Host"}, user_attrs))
 
     defaults = %{
       user: user,
@@ -38,6 +48,24 @@ defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
                  "stripe_account_id" => account.stripe_account_id,
                  "disabled_reason" => "requirements.past_due"
                })
+    end
+
+    test "writes the delivered alert in the host's own language" do
+      account = insert_account(%{}, %{locale: "de"})
+
+      assert :ok =
+               perform_job(SendConnectAccountRestricted, %{
+                 "connect_account_id" => account.id,
+                 "user_id" => account.user_id,
+                 "stripe_account_id" => account.stripe_account_id,
+                 "disabled_reason" => "requirements.past_due"
+               })
+
+      assert_received {:email, email}
+      assert email.to == [{"Bob Host", "host@example.com"}]
+      assert email.subject == "Stripe-Konto eingeschränkt: Handlungsbedarf"
+      assert email.text_body =~ "Hallo Bob Host,"
+      refute email.text_body =~ "RESTORE YOUR ACCOUNT"
     end
 
     test "discards when connect_account is missing" do

@@ -10,7 +10,6 @@ defmodule Tymeslot.Slack.SlackQueries do
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Notifications.IntegrationQueries
   alias Tymeslot.Repo
   alias Tymeslot.Slack.{SlackDeliverySchema, SlackIntegrationSchema}
@@ -24,6 +23,19 @@ defmodule Tymeslot.Slack.SlackQueries do
     do: IntegrationQueries.list_for_user(SlackIntegrationSchema, user_id)
 
   @doc """
+  Whether a user other than `user_id` holds a bot token for the Slack
+  workspace `team_id`. Slack issues one bot token per workspace for the app,
+  so every account that connected the same workspace holds the same token.
+  """
+  @spec workspace_token_shared?(String.t(), integer()) :: boolean()
+  def workspace_token_shared?(team_id, user_id) when is_binary(team_id) do
+    SlackIntegrationSchema
+    |> where([s], s.team_id == ^team_id and s.user_id != ^user_id)
+    |> where([s], not is_nil(s.bot_token_encrypted))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Deletes every OAuth-mode integration for the user that has not yet had its
   channel picked — covers both freshly-initialised stubs and abandoned OAuth
   installs from previous attempts. Run before inserting a new stub so the user
@@ -35,6 +47,24 @@ defmodule Tymeslot.Slack.SlackQueries do
     |> where([i], i.user_id == ^user_id)
     |> where([i], i.app_mode == "oauth")
     |> where([i], is_nil(i.channel_id))
+    |> Repo.delete_all()
+  end
+
+  @doc """
+  Deletes OAuth installs never finished by picking a channel and created
+  before `cutoff`, across all users.
+
+  "Never finished" is a row written once and never since: picking a channel
+  writes it, and so does disconnecting a finished integration back to
+  pending (`disconnect/1`), so a user's disconnected integration is kept.
+  """
+  @spec delete_stale_pending_stubs(DateTime.t()) :: {non_neg_integer(), nil | [term()]}
+  def delete_stale_pending_stubs(cutoff) do
+    SlackIntegrationSchema
+    |> where([i], i.app_mode == "oauth")
+    |> where([i], is_nil(i.channel_id))
+    |> where([i], i.updated_at == i.inserted_at)
+    |> where([i], i.inserted_at < ^cutoff)
     |> Repo.delete_all()
   end
 
@@ -59,8 +89,8 @@ defmodule Tymeslot.Slack.SlackQueries do
   @spec create_integration(map()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_integration(attrs) do
-    %SlackIntegrationSchema{}
-    |> SlackIntegrationSchema.changeset(attrs)
+    attrs
+    |> SlackIntegrationSchema.create_changeset()
     |> IntegrationQueries.insert()
   end
 
@@ -76,7 +106,7 @@ defmodule Tymeslot.Slack.SlackQueries do
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_integration(%SlackIntegrationSchema{} = integration, attrs) do
     integration
-    |> SlackIntegrationSchema.changeset(attrs)
+    |> SlackIntegrationSchema.user_changeset(attrs)
     |> IntegrationQueries.update()
   end
 
@@ -145,46 +175,32 @@ defmodule Tymeslot.Slack.SlackQueries do
   # ============================================================================
 
   @spec list_deliveries(integer(), keyword()) :: [SlackDeliverySchema.t()]
-  def list_deliveries(integration_id, opts) do
-    limit = Keyword.get(opts, :limit, 50)
+  def list_deliveries(integration_id, opts),
+    do:
+      IntegrationQueries.list_deliveries(
+        SlackDeliverySchema,
+        :integration_id,
+        integration_id,
+        opts
+      )
 
-    SlackDeliverySchema
-    |> where([d], d.integration_id == ^integration_id)
-    |> order_by([d], desc: d.inserted_at)
-    |> limit(^limit)
-    |> Repo.all()
-  end
-
-  @spec create_delivery(map()) ::
-          {:ok, SlackDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_delivery(attrs) do
-    %SlackDeliverySchema{}
-    |> SlackDeliverySchema.changeset(attrs)
-    |> Repo.insert()
-  end
+  @spec create_delivery(map()) :: {:ok, SlackDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
+  def create_delivery(attrs), do: IntegrationQueries.create_delivery(SlackDeliverySchema, attrs)
 
   @spec get_delivery_stats(integer(), keyword()) :: map()
   def get_delivery_stats(integration_id, opts \\ []) do
-    days_ago = Keyword.get(opts, :days, 7)
-    IntegrationQueries.delivery_stats(SlackDeliverySchema, integration_id, days_ago)
+    IntegrationQueries.delivery_stats(
+      SlackDeliverySchema,
+      :integration_id,
+      integration_id,
+      Keyword.get(opts, :days, 7)
+    )
   end
 
-  @doc """
-  Deletes Slack delivery log rows older than `days`. One row is written per
-  attempt, so this table grows unbounded without pruning. Deletes in bounded
-  batches (see `BatchDeleteQueries`) so a large backlog can't blow past the
-  database timeout in a single transaction. A zero, negative, or non-integer
-  retention is treated as a no-op so a misconfigured value can never wipe the
-  whole table.
-  """
+  @doc "Deletes Slack delivery log rows older than `days`; see `IntegrationQueries.cleanup_old_deliveries/2`."
   @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
-  def cleanup_old_deliveries(days) when is_integer(days) and days > 0 do
-    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
-
-    BatchDeleteQueries.delete_older_than(SlackDeliverySchema, :inserted_at, cutoff)
-  end
-
-  def cleanup_old_deliveries(_days), do: {0, nil}
+  def cleanup_old_deliveries(days),
+    do: IntegrationQueries.cleanup_old_deliveries(SlackDeliverySchema, days)
 
   # ============================================================================
   # Private helpers

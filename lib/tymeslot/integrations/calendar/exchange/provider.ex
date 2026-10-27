@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   A sync window costs two independent EWS reads, and neither subsumes the
   other. **Neither is a `Provider` callback and neither is named like one**:
-  both are called only by `Tymeslot.Workers.SyncExchangeCalendarWorker`, and
+  both are called only by `Tymeslot.Integrations.Calendar.Exchange.SyncCycle`, and
   the names say so on purpose (see the next section).
 
     * `list_busy_intervals/2` asks `GetUserAvailability` when the mailbox is
@@ -127,6 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
+  alias Tymeslot.Integrations.Shared.ProviderConfigHelper
 
   # EWS is credentialed HTTP against a user-nominated host, which is exactly
   # what the CalDAV connection-test bucket meters. A bucket of its own would
@@ -195,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
     with :ok <-
-           ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
+           ProviderConfigHelper.validate_required_fields(config, [:base_url, :username, :password]) do
       # The shared validator rather than a bespoke one: the endpoint is a URL
       # the account owner typed, so it gets the same HTTPS and private-address
       # posture every other credentialed provider's server URL gets, including
@@ -214,12 +215,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   def perform_connection_test(config) do
     case find_folder(config) do
       {:ok, _messages} ->
-        {:ok, dgettext("dashboard_calendar_providers", "Exchange connection successful")}
+        {:ok, dgettext("integrations_calendar", "Exchange connection successful")}
 
       {:error, :not_found} ->
         {:error,
          dgettext(
-           "dashboard_calendar_providers",
+           "integrations_calendar",
            "EWS endpoint not found. It usually ends in /EWS/Exchange.asmx."
          )}
 
@@ -268,7 +269,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @doc """
   Builds one client per selected calendar folder, for the item read.
 
-  Called only by `Tymeslot.Workers.SyncExchangeCalendarWorker`, which pairs it
+  Called only by `Tymeslot.Integrations.Calendar.Exchange.SyncCycle`, which pairs it
   with `list_calendar_items/2`. A selected calendar the discovery named no
   folder id for is dropped rather than carried: a client with no folder id
   does not read nothing, it reads the mailbox's default calendar, so the
@@ -279,7 +280,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   """
   @spec item_client_configs(CalendarIntegrationSchema.t() | map()) :: [ClientConfig.t()]
   def item_client_configs(integration) do
-    config = ClientConfig.new(integration)
+    config = %{
+      ClientConfig.new(integration)
+      | calendar_integration_id: integration_id(integration)
+    }
 
     case selected_calendar_ids(integration) do
       [] -> [%{config | calendar_id: :calendar}]
@@ -345,11 +349,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events_representation, do: :normalised
 
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def convert_events(events), do: events
+
   @doc """
   Lists the raw calendar items falling in the requested range.
 
   A **live** EWS read, called only by
-  `Tymeslot.Workers.SyncExchangeCalendarWorker`. Answers the `t:CalendarItem`
+  `Tymeslot.Integrations.Calendar.Exchange.SyncCycle`. Answers the `t:CalendarItem`
   elements of a batched `GetItem`, which `normalise_events/2` turns into
   `CalendarEvent` structs cached as `display_only` rows. This is the dashboard
   grid's read; availability comes from `list_busy_intervals/2`, and the two
@@ -381,7 +388,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   Lists the mailbox's busy intervals over the requested range.
 
   A **live** EWS read, called only by
-  `Tymeslot.Workers.SyncExchangeCalendarWorker`, whose intervals are cached as
+  `Tymeslot.Integrations.Calendar.Exchange.SyncCycle`, whose intervals are cached as
   the `busy_only` rows `list_events/2` then serves. It is the source of truth
   for availability, and the only read that sees every occurrence
   of a recurring series. It answers plain maps carrying bounds and a busy

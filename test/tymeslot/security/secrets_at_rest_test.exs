@@ -19,6 +19,7 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Polls
+  alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Security.Encryption
@@ -103,17 +104,20 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
       assert id == poll.id
     end
 
-    test "a poll participant's link, handed back when they register again" do
+    test "a poll participant's link, emailed again when they ask again" do
       poll = insert(:poll)
       attrs = %{"name" => "Ada", "email" => "ada@example.com"}
 
-      {:ok, participant} = Voting.register_participant(poll, attrs)
+      {:ok, :sent} = Voting.request_link(poll, attrs)
+      participant = PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com")
 
       assert_encrypted_and_hashed("poll_participants", participant.id, "token", participant.token)
       assert Voting.get_participant(poll, participant.token).id == participant.id
 
-      assert {:ok, again} = Voting.register_participant(poll, attrs)
-      assert again.token == participant.token
+      {:ok, :throttled} = Voting.request_link(poll, attrs)
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").token ==
+               participant.token
     end
 
     test "a guest's RSVP token" do
@@ -145,11 +149,9 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
     end
   end
 
-  # The plain column the value used to live in stays empty, and the encrypted
-  # one opens to the value without containing it.
+  # The encrypted column opens to the value without containing it.
   defp assert_encrypted(table, id, column, value) do
     assert byte_size(value) > 0
-    assert raw(table, id, column) == nil
 
     ciphertext = raw(table, id, "#{column}_encrypted")
     refute ciphertext =~ value
@@ -161,10 +163,9 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
     assert raw(table, id, "#{column}_hash") == Token.hash_token(value)
   end
 
-  # The plain column stays empty, and the hash column holds the token's hash.
+  # The hash column holds the token's hash.
   defp assert_hashed(table, id, column, token) do
     assert byte_size(token) > 0
-    assert raw(table, id, column) == nil
     assert raw(table, id, "#{column}_hash") == Token.hash_token(token)
   end
 

@@ -1,5 +1,5 @@
 defmodule Tymeslot.Workers.SendChargeDisputeOpenedTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :emails
@@ -7,6 +7,16 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpenedTest do
 
   alias Ecto.UUID
   alias Tymeslot.Workers.SendChargeDisputeOpened
+
+  # Swoosh's test adapter posts {:email, ...} to whichever process calls
+  # Mailer.deliver/1, which is the CircuitBreaker GenServer, not the test
+  # process. Pointing the adapter here collects the delivered email instead.
+  # Safe because the module is `async: false`.
+  setup do
+    Application.put_env(:swoosh, :shared_test_process, self())
+    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+    :ok
+  end
 
   defp insert_payment(attrs \\ %{}) do
     defaults = %{
@@ -35,6 +45,23 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpenedTest do
                  "booking_payment_id" => payment.id,
                  "reason" => "fraudulent"
                })
+    end
+
+    test "writes the delivered alert in the host's own language" do
+      host = insert(:user, locale: "de")
+      payment = insert_payment(%{host_user_id: host.id})
+
+      assert :ok =
+               perform_job(SendChargeDisputeOpened, %{
+                 "booking_payment_id" => payment.id,
+                 "reason" => "fraudulent"
+               })
+
+      assert_received {:email, email}
+      assert email.to == [{"Bob Host", "host@example.com"}]
+      assert email.subject == "Stripe-Zahlungsstreitigkeit eröffnet: €50.00"
+      assert email.text_body =~ "Hallo Bob Host,"
+      refute email.text_body =~ "WHAT HAPPENS NEXT"
     end
 
     test "discards when booking_payment is missing" do

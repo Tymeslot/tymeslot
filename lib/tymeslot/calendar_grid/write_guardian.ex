@@ -20,7 +20,8 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   When the LiveView goes down, or the grid is taken off the page while the
   LiveView lives on (`detach/0`), the guardian drives the queue itself: it
   settles the results it already holds and every later one with the same
-  `WriteQueue` functions, starts the writes they release, and ignores what
+  `WriteQueue` functions, starts the writes they release, sends the emails
+  an accepted change of who attends owes the attendees, and ignores what
   is only for the screen. A waiting write is applied to the event as the
   write before it left it, so it is started only once that write has
   answered, exactly as the grid would have done; an edit the provider could
@@ -44,8 +45,9 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   whole event, an older edit landing last would undo the newer one.
 
   So `adopt/2` asks every other guardian of the organiser which events it
-  has writes for, and which series it is writing or moving the whole of,
-  and the new grid's queue waits for those (`WriteQueue.wait_elsewhere/2`). Nothing is taken from the other
+  has writes for, each with the series it belongs to, and which series it
+  is writing or moving the whole of, and the new grid's queue waits for
+  those (`WriteQueue.wait_elsewhere/2`). Nothing is taken from the other
   guardian, which may belong to a tab still open: it, or its LiveView while
   that lives, goes on driving its own queue to the end. It only lends the
   event: once its queue has no write left for it, it releases the event to
@@ -90,6 +92,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   alias Tymeslot.CalendarGrid.WriteResults
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.Meetings.AttendeeNotifications
 
   @registry Tymeslot.CalendarGrid.WriteGuardianRegistry
   @user_registry Tymeslot.CalendarGrid.WriteGuardianUserRegistry
@@ -205,11 +208,11 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
           {lender, lent}
 
         {:error, {_reason, _lender}} ->
-          {lender, []}
+          {lender, %{}}
 
         :timeout ->
           Logger.warning("Calendar grid write guardian did not say what it lends in time")
-          {lender, []}
+          {lender, %{}}
       end
     end
   end
@@ -309,7 +312,8 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
 
   # See "A grid mounted in another LiveView" in the moduledoc.
   def handle_call({:lend, borrower}, _from, state) do
-    keys = WriteQueue.pending_keys(state.queue)
+    lends = WriteQueue.lendable(state.queue)
+    keys = Map.keys(lends)
 
     lent =
       Enum.reduce(keys, state.lent, &Map.update(&2, &1, [borrower], fn bs -> [borrower | bs] end))
@@ -319,7 +323,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
     guardian = keys != [] && whereis(borrower)
     if guardian, do: send(guardian, {:event_writes_lent, self(), keys})
 
-    {:reply, keys, %{state | lent: lent}, timeout(state)}
+    {:reply, lends, %{state | lent: lent}, timeout(state)}
   end
 
   @impl GenServer
@@ -446,14 +450,15 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
 
   defp apply_result(state, message) do
     {queue, effects} = WriteResults.apply_result(state.queue, message)
-    Enum.each(effects, &start_write(&1, state))
+    Enum.each(effects, &carry_out(&1, state))
     release_drained(%{state | queue: queue}, state.queue, [message])
   end
 
-  # Only a write reaches the provider; what else the queue asks for is for
-  # a screen there no longer is. The result goes to the LiveView as well,
-  # as its own writes' do, for a grid it mounts again.
-  defp start_write({:start, write, event}, %{owner: owner, user_id: user_id}) do
+  # A write reaches the provider, and an accepted change of who attends is
+  # owed its emails whether or not anyone is watching; what else the queue
+  # asks for is for a screen there no longer is. A write's result goes to
+  # the LiveView as well, as its own writes' do, for a grid it mounts again.
+  defp carry_out({:start, write, event}, %{owner: owner, user_id: user_id}) do
     tag = QueuedWrite.result_tag(write)
 
     {:ok, _pid} =
@@ -464,5 +469,16 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
     :ok
   end
 
-  defp start_write(_screen_effect, _state), do: :ok
+  # In a task of its own, so that a failure to schedule the emails cannot
+  # take the queue down with the guardian.
+  defp carry_out({:membership_changed, original, updated}, %{user_id: user_id}) do
+    {:ok, _pid} =
+      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+        AttendeeNotifications.membership_changed(original, updated, user_id)
+      end)
+
+    :ok
+  end
+
+  defp carry_out(_screen_effect, _state), do: :ok
 end

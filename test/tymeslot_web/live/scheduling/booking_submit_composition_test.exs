@@ -42,8 +42,10 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
   import Tymeslot.BookingTestHelpers
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -113,7 +115,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
 
     # Simulate the organiser's calendar sprouting an event that covers
     # the just-picked slot between the render and the submit. The fresh
-    # pre-check in `Bookings.Create.execute_with_video_room/3` calls
+    # check in `Bookings.CalendarCheck.enforce/3` calls
     # `Tymeslot.CalendarMock.get_events_for_range_fresh/3`, so we
     # override that stub with an all-day event rooted at the selected
     # date — any 30-minute slot the user could have picked collides.
@@ -165,6 +167,43 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
     # day blocked the just-taken time is gone, so the booker sees a fresh,
     # empty slot list rather than the stale slot they lost the race on.
     assert drained.socket.assigns.available_slots == []
+  end
+
+  # The host's calendar could not be read, so the booking is refused, but not
+  # as a taken slot: every other time would be refused the same way, so
+  # "select a different time" would send the booker round every slot. They
+  # stay on the form, details kept, and are told to try again later.
+  @tag :capture_log
+  test "a calendar adapter that raises on submit → try-later flash, booker stays on the form",
+       %{conn: conn, profile: profile, meeting_type: meeting_type} do
+    view = navigate_to_booking_form(conn, profile, meeting_type)
+
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+      raise "provider adapter blew up"
+    end)
+
+    view
+    |> form("form[phx-submit='submit']", %{
+      "booking" => %{
+        "name" => "Unlucky Una",
+        "email" => "una@example.com",
+        "message" => ""
+      }
+    })
+    |> render_submit()
+
+    assert Process.alive?(view.pid)
+    # Drains the messages the submit queued (the flash and the step change).
+    drained = :sys.get_state(view.pid)
+
+    rendered = render(view)
+    assert rendered =~ "check the host"
+    assert rendered =~ "Please try again in a few minutes."
+    refute rendered =~ "select a different time"
+    refute rendered =~ "Meeting Confirmed"
+    refute drained.socket.assigns.current_state == :schedule
+    assert has_element?(view, "form[phx-submit='submit']")
+    assert Repo.aggregate(MeetingSchema, :count) == 0
   end
 
   @tag :capture_log

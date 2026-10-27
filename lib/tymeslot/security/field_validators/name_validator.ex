@@ -4,11 +4,25 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
 
   Validates name fields with appropriate length limits and
   character restrictions while allowing international names.
+
+  Options:
+
+    * `:required` (default `true`): when `false`, a missing or blank name
+      is valid.
+    * `:min_length` (default 2) and `:max_length` (default 100), counted
+      on the trimmed name.
+
+  An optional display name (the `:full_name` field type in
+  `Tymeslot.Security.InputProcessor`) is `required: false, min_length: 1`.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @name_min_length 2
   @name_max_length 100
-  @invalid_chars_regex ~r/[<>"%;`\\\/\{\}\[\]]/
+  # Control characters too: a name ends up in email headers, where a line
+  # break inside it has no business.
+  @invalid_chars_regex ~r/[<>"%;`\\\/\{\}\[\]\x00-\x1F\x7F]/
 
   @doc """
   Validates name fields with specific error messages.
@@ -41,22 +55,30 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
 
     cond do
       trimmed_name == "" ->
-        {:error, "Name cannot be blank"}
+        if Keyword.get(opts, :required, true),
+          do: {:error, dgettext("errors_input", "Name cannot be blank")},
+          else: :ok
 
       String.length(trimmed_name) < min_length ->
-        {:error, "Name is too short (minimum #{min_length} characters)"}
+        {:error,
+         dgettext("errors_input", "Name is too short (minimum %{min_length} characters)",
+           min_length: min_length
+         )}
 
       String.length(trimmed_name) > max_length ->
-        {:error, "Name is too long (maximum #{max_length} characters)"}
+        {:error,
+         dgettext("errors_input", "Name is too long (maximum %{max_length} characters)",
+           max_length: max_length
+         )}
 
       Regex.match?(@invalid_chars_regex, trimmed_name) ->
-        {:error, "Name contains invalid characters"}
+        {:error, dgettext("errors_input", "Name contains invalid characters")}
 
       all_numbers?(trimmed_name) ->
-        {:error, "Name cannot be only numbers"}
+        {:error, dgettext("errors_input", "Name cannot be only numbers")}
 
       excessive_whitespace?(trimmed_name) ->
-        {:error, "Name contains excessive whitespace"}
+        {:error, dgettext("errors_input", "Name contains excessive whitespace")}
 
       true ->
         :ok
@@ -64,7 +86,7 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
   end
 
   def validate(_name, _opts) do
-    {:error, "Name must be a text value"}
+    {:error, dgettext("errors_input", "Name must be a text value")}
   end
 
   # Private helper functions
@@ -80,7 +102,7 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, "Name is required"}
+      {:error, dgettext("errors_input", "Name is required")}
     else
       :ok
     end

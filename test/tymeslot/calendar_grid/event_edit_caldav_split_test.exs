@@ -25,8 +25,8 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncRequest
   alias Tymeslot.Workers.VideoSyncWorker

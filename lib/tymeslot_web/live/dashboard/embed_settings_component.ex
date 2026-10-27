@@ -309,7 +309,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   defp perform_domain_update(socket, domains_payload, success_message) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_embed_domain_update_rate_limit(user_id) do
+    case RateLimiter.check(:embed_domain_update, user_id) do
       :ok ->
         case Profiles.update_allowed_embed_domains(socket.assigns.profile, domains_payload) do
           {:ok, updated_profile} ->
@@ -329,8 +329,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
                 Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end),
                 "; ",
                 fn
-                  {:allowed_embed_domains, messages} -> Enum.join(messages, ", ")
-                  {field, messages} -> "#{field}: #{Enum.join(messages, ", ")}"
+                  {:allowed_embed_domains, messages} ->
+                    gettext_comment(
+                      "The separator between two problems with the domains entered, " <>
+                        "as in: Invalid domain, Invalid domain format"
+                    )
+
+                    Enum.join(messages, dpgettext("dashboard_embed", "list separator", ", "))
+
+                  {field, messages} ->
+                    "#{field}: #{Enum.join(messages, ", ")}"
                 end
               )
 

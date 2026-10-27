@@ -1,113 +1,39 @@
-defmodule Tymeslot.Infrastructure.ConfigTest.SingleFlagStub do
-  @moduledoc false
-  # A stand-in app-config module in which exactly one boolean flag is true at a
-  # time: the one named in `:stub_flag`. A `Config` delegation wired to the
-  # wrong callback therefore returns `false` and the assertion fails, which a
-  # stub returning the same value for every flag could never catch.
-
-  @behaviour Tymeslot.Infrastructure.AppConfigBehaviour
-
-  @impl Tymeslot.Infrastructure.AppConfigBehaviour
-  @spec registration_enabled?() :: boolean()
-  def registration_enabled?, do: on?(:registration_enabled)
-
-  @impl Tymeslot.Infrastructure.AppConfigBehaviour
-  @spec password_auth_enabled?() :: boolean()
-  def password_auth_enabled?, do: on?(:password_auth_enabled)
-
-  @impl Tymeslot.Infrastructure.AppConfigBehaviour
-  @spec enforce_legal_agreements?() :: boolean()
-  def enforce_legal_agreements?, do: on?(:enforce_legal_agreements)
-
-  @impl Tymeslot.Infrastructure.AppConfigBehaviour
-  @spec logo_links_to_marketing?() :: boolean()
-  def logo_links_to_marketing?, do: on?(:logo_links_to_marketing)
-
-  @impl Tymeslot.Infrastructure.AppConfigBehaviour
-  @spec site_home_path() :: String.t()
-  def site_home_path, do: "/stub-home"
-
-  defp on?(flag), do: Application.get_env(:tymeslot, :stub_flag) == flag
-end
-
 defmodule Tymeslot.Infrastructure.ConfigTest do
-  # async: false — these tests swap the globally configured app-config module
-  # and individual config keys, which every concurrently running test that
-  # reads `Config.*` or `AppConfig.*` would otherwise see.
+  # async: false — these tests swap individual global config keys, which every
+  # concurrently running test that reads `Config.*` would otherwise see.
   use ExUnit.Case, async: false
   @moduletag :infrastructure
 
-  alias Tymeslot.Infrastructure.AppConfig
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Infrastructure.ConfigTest.SingleFlagStub
 
-  describe "app_config_module/0" do
-    test "returns default module when not configured" do
-      assert Config.app_config_module() == AppConfig
+  describe "flags" do
+    test "registration_enabled? reads its key and defaults to on" do
+      refute with_key(:registration_enabled, false, &Config.registration_enabled?/0)
+      assert with_key(:registration_enabled, true, &Config.registration_enabled?/0)
+      assert without_key(:registration_enabled, &Config.registration_enabled?/0)
     end
 
-    test "returns default module when configured module is not loaded" do
-      Application.put_env(:tymeslot, :app_config_module, NonExistentModule)
-      on_exit(fn -> Application.delete_env(:tymeslot, :app_config_module) end)
-
-      assert Config.app_config_module() == AppConfig
+    test "password_auth_enabled? reads its key and defaults to on" do
+      refute with_key(:password_auth_enabled, false, &Config.password_auth_enabled?/0)
+      assert with_key(:password_auth_enabled, true, &Config.password_auth_enabled?/0)
+      assert without_key(:password_auth_enabled, &Config.password_auth_enabled?/0)
     end
-  end
 
-  describe "AppConfig" do
     test "enforce_legal_agreements? reads its key and defaults to off" do
-      assert with_key(:enforce_legal_agreements, true, &AppConfig.enforce_legal_agreements?/0)
-      refute with_key(:enforce_legal_agreements, false, &AppConfig.enforce_legal_agreements?/0)
-      refute without_key(:enforce_legal_agreements, &AppConfig.enforce_legal_agreements?/0)
+      assert with_key(:enforce_legal_agreements, true, &Config.enforce_legal_agreements?/0)
+      refute with_key(:enforce_legal_agreements, false, &Config.enforce_legal_agreements?/0)
+      refute without_key(:enforce_legal_agreements, &Config.enforce_legal_agreements?/0)
     end
 
     test "logo_links_to_marketing? reads its key and defaults to off" do
-      assert with_key(:logo_links_to_marketing, true, &AppConfig.logo_links_to_marketing?/0)
-      refute with_key(:logo_links_to_marketing, false, &AppConfig.logo_links_to_marketing?/0)
-      refute without_key(:logo_links_to_marketing, &AppConfig.logo_links_to_marketing?/0)
+      assert with_key(:logo_links_to_marketing, true, &Config.logo_links_to_marketing?/0)
+      refute with_key(:logo_links_to_marketing, false, &Config.logo_links_to_marketing?/0)
+      refute without_key(:logo_links_to_marketing, &Config.logo_links_to_marketing?/0)
     end
 
     test "site_home_path reads its key and defaults to the dashboard" do
-      assert with_key(:site_home_path, "/elsewhere", &AppConfig.site_home_path/0) == "/elsewhere"
-      assert without_key(:site_home_path, &AppConfig.site_home_path/0) == "/dashboard"
-    end
-  end
-
-  describe "Config delegation" do
-    setup do
-      Application.put_env(:tymeslot, :app_config_module, SingleFlagStub)
-
-      on_exit(fn ->
-        Application.delete_env(:tymeslot, :app_config_module)
-        Application.delete_env(:tymeslot, :stub_flag)
-      end)
-
-      :ok
-    end
-
-    test "enforce_legal_agreements? delegates to the matching callback" do
-      Application.put_env(:tymeslot, :stub_flag, :enforce_legal_agreements)
-
-      assert Config.enforce_legal_agreements?()
-      refute Config.logo_links_to_marketing?()
-    end
-
-    test "logo_links_to_marketing? delegates to the matching callback" do
-      Application.put_env(:tymeslot, :stub_flag, :logo_links_to_marketing)
-
-      assert Config.logo_links_to_marketing?()
-      refute Config.enforce_legal_agreements?()
-    end
-
-    test "registration_enabled? and password_auth_enabled? delegate to their own callbacks" do
-      Application.put_env(:tymeslot, :stub_flag, :registration_enabled)
-
-      assert Config.registration_enabled?()
-      refute Config.password_auth_enabled?()
-    end
-
-    test "site_home_path returns the overlay's path, not Core's default" do
-      assert Config.site_home_path() == "/stub-home"
+      assert with_key(:site_home_path, "/elsewhere", &Config.site_home_path/0) == "/elsewhere"
+      assert without_key(:site_home_path, &Config.site_home_path/0) == "/dashboard"
     end
   end
 

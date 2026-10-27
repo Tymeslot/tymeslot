@@ -85,6 +85,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   # both amber; a closed or absent account is simply off.
   defp status_tone(:ready), do: :success
   defp status_tone(:pending_review), do: :warning
+  defp status_tone(:unsupported_currency), do: :warning
   defp status_tone(:incomplete), do: :warning
   defp status_tone(:restricted), do: :danger
   defp status_tone(_state), do: :neutral
@@ -96,6 +97,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
 
   defp state_title(:ready), do: dgettext("dashboard_payments", "Connected and ready")
   defp state_title(:pending_review), do: dgettext("dashboard_payments", "Pending Stripe review")
+
+  defp state_title(:unsupported_currency),
+    do: dgettext("dashboard_payments", "Currency not supported")
+
   defp state_title(:restricted), do: dgettext("dashboard_payments", "Restricted")
   defp state_title(:deleted), do: dgettext("dashboard_payments", "Disconnected")
   defp state_title(:incomplete), do: dgettext("dashboard_payments", "Finish connecting Stripe")
@@ -106,6 +111,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
 
   defp state_message(_account, :ready),
     do: dgettext("dashboard_payments", "Charges and payouts are enabled.")
+
+  defp state_message(%{default_currency: currency}, :unsupported_currency),
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Payments cannot be taken in your account's currency, %{currency}. Choose a supported currency below to take payments again.",
+        currency: String.upcase(currency)
+      )
 
   defp state_message(_account, :pending_review),
     do:

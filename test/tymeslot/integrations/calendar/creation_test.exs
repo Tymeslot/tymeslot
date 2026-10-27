@@ -6,8 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
   import Mox
   import Tymeslot.Factory
   alias Tymeslot.Integrations.Calendar.Creation
-  alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Profiles.ProfileQueries
 
   setup :verify_on_exit!
@@ -186,6 +185,26 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert Creation.prevalidate_config(attrs) == {:ok, attrs}
     end
 
+    # The provider's own refusal is already in the user's language; it is
+    # shown as it is, not reworded by the English keyword sanitiser.
+    test "shows a refused config in the user's language, untouched" do
+      attrs = %{
+        provider: "caldav",
+        user_id: 1,
+        base_url: "http://localhost:5232",
+        username: "user",
+        password: "pass",
+        calendar_paths: []
+      }
+
+      assert {:error, %{discovery: message}} =
+               Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+                 Creation.prevalidate_config(attrs)
+               end)
+
+      assert message == "Private oder lokale Netzwerkadressen sind nicht zulässig"
+    end
+
     test "skips validation for OAuth providers" do
       attrs = %{
         provider: "google",
@@ -225,55 +244,6 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
 
       # Should skip validation for unknown provider
       assert {:ok, ^attrs} = Creation.prevalidate_config(attrs)
-    end
-  end
-
-  describe "ensure_primary_on_first/3" do
-    setup do
-      user = insert(:user)
-      # The primary calendar is recorded on the profile; without one the
-      # promotion below is a silent no-op.
-      insert(:profile, user: user)
-
-      %{user: user}
-    end
-
-    test "sets first integration as primary", %{user: user} do
-      integration = insert(:calendar_integration, user: user)
-
-      # Simulate this being the first integration (count_before = 0)
-      assert {:ok, primary} = Creation.ensure_primary_on_first(user.id, integration.id, 0)
-      assert primary.id == integration.id
-
-      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == integration.id
-    end
-
-    test "does not set primary if not first integration", %{user: user} do
-      # Create first integration and set as primary
-      integration1 = insert(:calendar_integration, user: user)
-
-      CalendarPrimary.set_primary_calendar_integration(
-        user.id,
-        integration1.id
-      )
-
-      # Create second integration
-      integration2 = insert(:calendar_integration, user: user)
-
-      # Simulate this being the second integration (count_before = 1)
-      assert :ok = Creation.ensure_primary_on_first(user.id, integration2.id, 1)
-
-      # Primary should still be the first integration
-      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == integration1.id
-    end
-
-    test "returns ok when count is greater than zero" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
-
-      assert :ok = Creation.ensure_primary_on_first(user.id, integration.id, 5)
     end
   end
 
@@ -326,7 +296,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert integration.name == "Test Calendar"
       assert integration.base_url == "https://caldav.example.com"
 
-      assert [%{id: id}] = CalendarManagement.list_calendar_integrations(user.id)
+      assert [%{id: id}] = Management.list_calendar_integrations(user.id)
       assert id == integration.id
 
       assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
@@ -336,7 +306,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
     test "reports a missing name against the name field", %{user: user} do
       params = %{
         "name" => "",
-        "provider" => "invalid"
+        "provider" => "caldav"
       }
 
       # The field the error is keyed under is the whole point: the form renders
@@ -345,7 +315,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert Creation.create_with_validation(user.id, params) ==
                {:error, {:form_errors, %{name: "Integration name is required"}}}
 
-      assert CalendarManagement.list_calendar_integrations(user.id) == []
+      assert Management.list_calendar_integrations(user.id) == []
     end
 
     test "reports a malicious URL against the url field", %{user: user} do
@@ -363,7 +333,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
                 {:form_errors,
                  %{url: "Please enter a valid server URL (e.g., https://cloud.example.com)"}}}
 
-      assert CalendarManagement.list_calendar_integrations(user.id) == []
+      assert Management.list_calendar_integrations(user.id) == []
     end
 
     test "surfaces a failed connection probe as a form-level error", %{user: user} do
@@ -389,13 +359,14 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       # `:metadata` is request provenance for the security log, not a
       # rate-limiting key — the only place it shows up is the entry
       # `SecurityLogger.log_blocked_input/3` writes when a field is sanitised.
-      # The username below trips the SQL-injection check, which is what makes
-      # that entry appear and the IP observable.
+      # The name below trips the path-traversal check, which is what makes
+      # that entry appear and the IP observable. (Not the username: a login is
+      # a credential, checked but never rewritten, so it is never sanitised.)
       params = %{
-        "name" => "Test",
+        "name" => "Test ../../etc",
         "provider" => "caldav",
         "url" => "https://example.com",
-        "username" => "admin' OR 1=1 --",
+        "username" => "admin",
         "password" => "pass",
         "calendar_paths" => ""
       }

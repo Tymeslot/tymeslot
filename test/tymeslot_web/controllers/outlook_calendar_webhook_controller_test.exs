@@ -321,7 +321,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
       # exhausted whatever the timing jitter.
       for _i <- 1..1001, do: RateLimit.hit("calendar_push:#{client_ip}", 60_000, 1_000)
 
-      assert {:error, :rate_limited} = RateLimiter.check_calendar_push_rate_limit(client_ip)
+      assert {:error, :rate_limited, _message} = RateLimiter.check(:calendar_push, client_ip)
 
       integration =
         insert(:calendar_integration,

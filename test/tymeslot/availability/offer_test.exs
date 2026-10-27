@@ -5,7 +5,7 @@ defmodule Tymeslot.Availability.OfferTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Availability.Offer
-  alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Availability.Schedules
 
   @moduletag :availability
   @moduletag :unit
@@ -39,7 +39,7 @@ defmodule Tymeslot.Availability.OfferTest do
     end
 
     # The page offers from `config/4` and the submit re-checks against
-    # `Policy.scheduling_config/2`. A rule present in one and not the other is
+    # `Schedules.booking_config/2`. A rule present in one and not the other is
     # how a time comes to be offered and then refused, so the two must carry
     # the same scheduling rules with the same values.
     test "agrees with the submit's scheduling config on every scheduling rule" do
@@ -64,7 +64,7 @@ defmodule Tymeslot.Availability.OfferTest do
         )
 
       offer = Offer.config(schedule, meeting_type, nil, 60)
-      submit = Policy.scheduling_config(user.id, meeting_type)
+      submit = Schedules.booking_config(user.id, meeting_type)
 
       assert Map.drop(offer, [:limit_checker, :duration_minutes]) ==
                Map.drop(submit, [:owner_timezone])

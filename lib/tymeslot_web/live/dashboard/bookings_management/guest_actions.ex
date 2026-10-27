@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
                                                        Phoenix.LiveView.Socket.t())) ::
           Phoenix.LiveView.Socket.t()
   def confirm(socket, meeting, reload) when is_function(reload, 1) do
-    case RateLimiter.check_dashboard_add_guests_rate_limit(socket.assigns.current_user.id) do
+    case RateLimiter.check(:dashboard_add_guests, socket.assigns.current_user.id) do
       {:error, :rate_limited, message} ->
         Flash.error(message)
         socket

@@ -37,33 +37,6 @@ defmodule Tymeslot.Integrations.Calendar.SelectionAndFetchTest do
     end
   end
 
-  describe "update_calendar_selection/2" do
-    test "persists selected calendars" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          calendar_list: [
-            %{"id" => "work", "selected" => false, "path" => "/cal/work"},
-            %{"id" => "team", "selected" => false, "path" => "/cal/team"}
-          ]
-        )
-
-      params = %{
-        "selected_calendars" => ["team"]
-      }
-
-      assert {:ok, updated} = Selection.update_calendar_selection(integration, params)
-
-      assert [{"team", true}, {"work", false}] =
-               updated.calendar_list
-               |> Enum.sort_by(& &1.id)
-               |> Enum.map(&{&1.id, &1.selected})
-    end
-  end
-
   describe "MultiCalendarFetch.list_events_with_selection/4" do
     test "uses only calendars marked as selected" do
       integration = %{

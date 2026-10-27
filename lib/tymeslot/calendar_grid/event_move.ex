@@ -60,14 +60,16 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   occurrence. Exchange has no series-wide write, so its series are refused.
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.CalendarGrid.SeriesTransfer
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -75,11 +77,13 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   require Logger
 
   # Cache columns describing the event itself, copied to the destination row.
+  # Ownership travels too, so the destination row is flagged as the source
+  # was from the start rather than only once a sync has read it back.
   # Everything the source provider owns (etag, raw_ical, provider_event_id,
   # provider_metadata) belongs to the original resource and is left behind.
   @carried_fields ~w(summary description location visibility colour all_day start_date end_date
                      start_at end_at timezone transparency status organiser attendees reminders
-                     attachments links video_link video_integration_id)a
+                     attachments links video_link video_integration_id created_by_tymeslot)a
 
   @type destination :: %{
           required(:integration) => map(),
@@ -156,14 +160,14 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     stored = Occurrence.cached_row(event)
 
     case movable(stored) do
-      :ok -> move_single(user_id, event, destination)
+      :ok -> move_single(user_id, event, stored, destination)
       {:ok, :series} -> SeriesTransfer.move(user_id, stored, destination)
       {:error, _reason} = refused -> refused
     end
   end
 
-  defp move_single(user_id, event, %{integration: integration} = destination) do
-    moved = moved_event(event, integration, Map.get(destination, :calendar_id))
+  defp move_single(user_id, event, stored, %{integration: integration} = destination) do
+    moved = moved_event(event, stored, integration, Map.get(destination, :calendar_id))
 
     with :ok <- ensure_destination(moved),
          {:ok, payload} <- ProviderPayload.from_event(moved),
@@ -191,7 +195,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
           reason: failure_label(kind, reason)
         )
 
-        AvailabilityCache.invalidate_for_user(user_id)
+        Availability.changed(user_id)
         {:ok, %{uid: cached_uid, integration_id: integration_id, source: :unknown}}
     end
   end
@@ -223,7 +227,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
         left -> Map.put(result, :source, left)
       end
 
-    AvailabilityCache.invalidate_for_user(user_id)
+    Availability.changed(user_id)
     {:ok, result}
   end
 
@@ -234,10 +238,18 @@ defmodule Tymeslot.CalendarGrid.EventMove do
 
   # The event as it will exist on the destination. The uid is generated here
   # so that the create and the cache row address the same event.
-  defp moved_event(event, integration, calendar_id) do
+  #
+  # Ownership is read off the cached row, since the event handed in may be an
+  # optimistic copy, and only an explicit `false` makes the event somebody
+  # else's, as in `ProviderPayload`. It decides the uid: the CalDAV and ICS
+  # syncs take any `@tymeslot.com` uid for Tymeslot's, so somebody else's
+  # event must not be given one on its way to a new calendar.
+  defp moved_event(event, stored, integration, calendar_id) do
+    owned? = Map.get(stored, :created_by_tymeslot) != false
+
     %{
-      event
-      | uid: ICalBuilder.generate_uid(),
+      Map.put(event, :created_by_tymeslot, owned?)
+      | uid: ICalBuilder.generate_uid(if(owned?, do: :tymeslot, else: :foreign)),
         calendar_integration_id: integration.id,
         provider: integration.provider,
         provider_calendar_id: destination_calendar_id(integration, calendar_id),
@@ -248,7 +260,8 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   @doc """
   The calendar a move to `integration` writes to: `calendar_id` when the
   organiser chose one, else the integration's booking calendar. `nil` for a
-  CalDAV integration whose discovery left no collection at all.
+  CalDAV integration with no collection to write to: discovery left none at
+  all, every collection is read-only, or none is selected.
   """
   @spec destination_calendar_id(map(), String.t() | nil) :: String.t() | nil
   # The chosen calendar first, for every provider: CalDAV writes now honour
@@ -256,23 +269,26 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   # the row under the booking collection regardless is no longer the truth.
   # `booking_calendar_path/1` resolves nothing when the stored booking calendar
   # id matches no discovered collection, which is the state a rediscovery
-  # leaves behind; the create falls back to the first discovered collection, so
-  # the row follows it rather than being filed under a null the column rejects.
+  # leaves behind; the move then goes to the first writable collection, which
+  # the create is asked for by name, so the row and the event agree. A
+  # destination whose collections are all read-only has nowhere to write to,
+  # and resolves to nil, which refuses the move before anything is written.
   # The "primary" placeholder is only meaningful to the OAuth providers, where
   # it names the account's own calendar.
   def destination_calendar_id(integration, calendar_id) do
     if integration.provider in Calendar.caldav_based_provider_strings() do
       calendar_id || Calendar.booking_calendar_path(integration) ||
-        List.first(integration.calendar_paths)
+        List.first(Calendar.writable_calendar_paths(integration))
     else
-      calendar_id || integration.default_booking_calendar_id || "primary"
+      calendar_id || Defaults.booking_calendar_id(integration)
     end
   end
 
-  # An integration whose discovery left no collection at all has nowhere to
-  # write to. Refusing before the create keeps a destination the cache row
-  # cannot name from accepting the event anyway, which would leave a copy on
-  # the destination while the organiser is told nothing moved.
+  # An integration with no collection to write to (none discovered, every
+  # one read-only, or none selected) has nowhere to put the event. Refusing
+  # before the create keeps a destination the cache row cannot name from
+  # accepting the event anyway, which would leave a copy on the destination
+  # while the organiser is told nothing moved.
   defp ensure_destination(%{provider_calendar_id: nil}), do: {:error, :no_destination_calendar}
   defp ensure_destination(_moved), do: :ok
 
@@ -304,7 +320,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
         provider_calendar_id: created.calendar_id || moved.provider_calendar_id,
         provider_event_id: created.provider_event_id,
         etag: created.etag,
-        synced_at: DateTime.utc_now(:microsecond)
+        synced_at: Clock.utc_now()
       })
 
     {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([row])

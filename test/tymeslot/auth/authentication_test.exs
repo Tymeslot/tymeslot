@@ -63,7 +63,7 @@ defmodule Tymeslot.Auth.AuthenticationTest do
     test "the fresh link is capped per account, and the reply stays the generic failure" do
       password = "ValidPass123!"
       user = insert(:unverified_user, password_hash: Password.hash_password(password))
-      for _i <- 1..5, do: RateLimiter.check_verification_user_rate_limit(user.id)
+      for _i <- 1..5, do: RateLimiter.check(:verification_user, user.id)
 
       assert {:error, :invalid_password, message} =
                Authentication.authenticate_user(user.email, password, ip: "198.51.100.62")
@@ -172,5 +172,28 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       )
 
     message
+  end
+
+  describe "an account whose stored address predates the email format rules" do
+    # Addresses are held to the format rules when entered, not when looked
+    # up: an account created before a rule existed must still sign in.
+    for address <- [~s("legacy"@example.com), "legacy<old@example.com"] do
+      test "#{address} signs in with its password" do
+        password = "ValidPass123!"
+
+        user =
+          insert(:user, email: unquote(address), password_hash: Password.hash_password(password))
+
+        assert {:ok, returned_user, _message} =
+                 Authentication.authenticate_user(unquote(address), password)
+
+        assert returned_user.id == user.id
+      end
+    end
+
+    test "an empty address is still refused before any lookup" do
+      assert {:error, :invalid_input, %{email: _message}} =
+               Authentication.authenticate_user("", "ValidPass123!")
+    end
   end
 end

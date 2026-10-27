@@ -11,7 +11,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data(%{name: "Alice Johnson", email: "alice@example.com"})
       reset_url = "https://example.com/reset/token123"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       assert html =~ "<html"
       assert html =~ "</html>"
@@ -22,7 +22,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data(%{name: "Bob Smith", email: "bob@example.com"})
       reset_url = "https://example.com/reset/token456"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       assert html =~ "Bob Smith"
     end
@@ -31,7 +31,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data(%{name: nil, email: "reset@example.com"})
       reset_url = "https://example.com/reset/token789"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       assert html =~ "Hi there,"
       refute html =~ "Hi reset@example.com"
@@ -41,7 +41,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data()
       reset_url = "https://example.com/reset/unique-reset-token"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       assert html =~ reset_url
     end
@@ -50,7 +50,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data()
       reset_url = "https://example.com/reset/token"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       assert html =~ "Set New Password"
       assert html =~ reset_url
@@ -60,7 +60,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data()
       reset_url = "https://example.com/reset/token"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       assert html =~ "This link is valid for the next 2 hours."
     end
@@ -69,7 +69,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data()
       reset_url = "https://example.com/reset/token"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       # The apostrophe in "didn't" is HTML-escaped, so match either side of it.
       assert html =~ "request this change, your account is still secure"
@@ -81,7 +81,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data(%{name: "Alice Johnson", email: "alice@example.com"})
       reset_url = "https://example.com/reset/token123"
 
-      text = PasswordReset.render_text(user, reset_url)
+      text = PasswordReset.render(user, reset_url).text_body
 
       assert text =~ "Alice Johnson"
       assert text =~ reset_url
@@ -90,7 +90,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
 
     test "uses a neutral greeting when name is nil, never the email address" do
       user = build_user_data(%{name: nil, email: "reset@example.com"})
-      text = PasswordReset.render_text(user, "https://example.com/reset/token")
+      text = PasswordReset.render(user, "https://example.com/reset/token").text_body
 
       assert text =~ "Hi there,"
       refute text =~ "Hi reset@example.com"
@@ -102,7 +102,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       user = build_user_data(%{name: "<img src=x onerror=alert(1)>", email: "test@example.com"})
       reset_url = "https://example.com/reset/token"
 
-      html = PasswordReset.render(user, reset_url)
+      html = PasswordReset.render(user, reset_url).html_body
 
       # The injected markup is neutralised, and the email is still complete.
       assert html =~ reset_url
@@ -119,7 +119,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
     test "PasswordReset.render_text returns a valid binary and preserves URL with malicious name" do
       user = build_user_data(%{name: "<img src=x onerror=alert(1)>", email: "test@example.com"})
       url = "https://example.com/reset/token"
-      text = PasswordReset.render_text(user, url)
+      text = PasswordReset.render(user, url).text_body
 
       assert text =~ "Hi <img src=x onerror=alert(1)>,"
       assert text =~ url

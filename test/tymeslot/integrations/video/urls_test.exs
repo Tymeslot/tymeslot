@@ -16,43 +16,25 @@ defmodule Tymeslot.Integrations.Video.UrlsTest do
       assert Urls.extract_room_id(%{room_data: %{meeting_url: nil}}) == nil
     end
 
-    test "extracts room_id from binary URL" do
-      # Google Meet example
-      assert Urls.extract_room_id("https://meet.google.com/abc-defg-hij") == "abc-defg-hij"
-      # Teams example
-      assert Urls.extract_room_id("https://teams.microsoft.com/l/meetup-join/19%3ameeting_test") ==
-               "19%3ameeting_test"
-    end
-
-    test "returns nil for invalid input" do
+    test "returns nil for anything but a meeting context" do
+      assert Urls.extract_room_id("https://meet.google.com/abc-defg-hij") == nil
       assert Urls.extract_room_id(nil) == nil
       assert Urls.extract_room_id(123) == nil
     end
   end
 
   describe "extract_room_id/2" do
-    test "parses by the named provider's rules rather than guessing from the URL" do
-      # MiroTalk's "/join/" pattern claims this link and is listed first, so
-      # the URL-only function answers with its last path segment. The custom
-      # provider, which actually issued it, derives the id from the whole URL.
+    test "parses by the named provider's rules" do
+      # The custom provider derives the id from the whole URL, so a link whose
+      # path ends in a plausible room name still yields its digest.
       url = "https://whereby.com/join/team-standup"
 
-      assert Urls.extract_room_id(url) == "team-standup"
       assert Urls.extract_room_id(url, :custom) == "176c39fdfe37cdea"
     end
 
     test "returns nil for a non-binary URL" do
       assert Urls.extract_room_id(nil, :custom) == nil
       assert Urls.extract_room_id(%{room_data: %{room_id: "room123"}}, :custom) == nil
-    end
-  end
-
-  describe "valid_meeting_url?/1" do
-    test "validates supported video URLs" do
-      assert Urls.valid_meeting_url?("https://meet.google.com/abc-defg-hij")
-      assert Urls.valid_meeting_url?("https://teams.microsoft.com/l/meetup-join/test")
-      refute Urls.valid_meeting_url?("https://example.com")
-      refute Urls.valid_meeting_url?(nil)
     end
   end
 end

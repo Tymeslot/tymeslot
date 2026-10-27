@@ -3,6 +3,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
   @moduletag :auth
 
   import Tymeslot.Factory, only: [insert: 2]
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
   import Tymeslot.Test.OAuthProviderStub
 
   alias Phoenix.Flash
@@ -10,34 +11,13 @@ defmodule TymeslotWeb.OAuthControllerTest do
   alias Plug.Test
   alias Req.Test, as: ReqTest
   alias Tymeslot.Auth.Session
-  alias Tymeslot.Infrastructure.DashboardCache
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup do
     original_social_auth = Application.get_env(:tymeslot, :social_auth)
 
-    try do
-      :meck.unload(RateLimiter)
-    rescue
-      _other -> :ok
-    end
-
-    :meck.new(RateLimiter, [:passthrough])
-
-    # Ensure dashboard cache is running for invalidate_integration_status
-    case Process.whereis(DashboardCache) do
-      nil -> DashboardCache.start_link([])
-      _pid -> :ok
-    end
-
     on_exit(fn ->
-      try do
-        :meck.unload(RateLimiter)
-      rescue
-        _other -> :ok
-      end
-
       if is_nil(original_social_auth) do
         Application.delete_env(:tymeslot, :social_auth)
       else
@@ -84,10 +64,8 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "handles rate limited initiation", %{conn: conn} do
       Application.put_env(:tymeslot, :social_auth, github_enabled: true)
-
-      :meck.expect(RateLimiter, :check_oauth_initiation_rate_limit, fn _ip ->
-        {:error, :rate_limited, "Too many attempts"}
-      end)
+      conn = with_own_address(conn)
+      exhaust_limit!(:oauth_initiation, ClientIP.get(conn))
 
       conn = get(conn, ~p"/auth/github")
       assert redirected_to(conn) == "/auth/login"
@@ -261,9 +239,8 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "handles rate limited callback", %{conn: conn} do
-      :meck.expect(RateLimiter, :check_oauth_callback_rate_limit, fn _ip ->
-        {:error, :rate_limited, "Too many attempts"}
-      end)
+      conn = with_own_address(conn)
+      exhaust_limit!(:oauth_callback, ClientIP.get(conn))
 
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
       assert redirected_to(conn) == "/auth/login"
@@ -338,9 +315,10 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "rejects a callback for an unknown provider before the rate limit or callback handler",
          %{conn: conn} do
-      :meck.expect(RateLimiter, :check_oauth_callback_rate_limit, fn _ip ->
-        flunk("an unknown provider must be rejected before rate limiting")
-      end)
+      # With the callback budget spent, only a provider check made first can
+      # answer with the unsupported-provider error rather than the refusal.
+      conn = with_own_address(conn)
+      exhaust_limit!(:oauth_callback, ClientIP.get(conn))
 
       conn =
         get(conn, "/auth/unsupported/callback", %{"code" => "code", "state" => "state"})
@@ -391,5 +369,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert event.provider == "github"
       assert event.email_masked == "n***@example.com"
     end
+  end
+
+  # An address of the test's own, so the bucket it exhausts is charged by no
+  # other test.
+  defp with_own_address(conn) do
+    n = System.unique_integer([:positive])
+    %{conn | remote_ip: {10, 78, div(rem(n, 62_500), 250), rem(n, 250) + 1}}
   end
 end

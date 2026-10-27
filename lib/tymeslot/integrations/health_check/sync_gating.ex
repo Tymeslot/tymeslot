@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGating do
   Returns the set of integration IDs of the given type whose health state is
   marked as having enough sustained hard failures that periodic sync should
   be skipped until the user reauthorises. The set is intended to be used as
-  a filter against the output of `stream_all_active` / `list_all_active`
+  a filter against the output of `list_active_page` / `list_all_active`
   in the fallback sweep.
   """
   @spec paused_integration_ids(integration_type()) :: MapSet.t(integer())

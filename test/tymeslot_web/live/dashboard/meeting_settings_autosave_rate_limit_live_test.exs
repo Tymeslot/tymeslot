@@ -33,12 +33,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsAutosaveRateLimitLiveTest do
       # LiveView. The bucket is keyed "meeting_type_autosave:#{user_id}" with a
       # limit of 600 per 30 minutes (1 800 000 ms).
       for _i <- 1..600 do
-        assert :ok = RateLimiter.check_meeting_type_autosave_rate_limit(user.id)
+        assert :ok = RateLimiter.check(:meeting_type_autosave, user.id)
       end
 
       # The 601st call must be denied — confirming the bucket is exhausted.
       assert {:error, :rate_limited, _message} =
-               RateLimiter.check_meeting_type_autosave_rate_limit(user.id)
+               RateLimiter.check(:meeting_type_autosave, user.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 
@@ -65,11 +65,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsAutosaveRateLimitLiveTest do
          %{conn: conn, user: user} do
       # The create submit shares the manual write bucket: 60 per 30 minutes.
       for _i <- 1..60 do
-        assert :ok = RateLimiter.check_meeting_type_write_rate_limit(user.id)
+        assert :ok = RateLimiter.check(:meeting_type_write, user.id)
       end
 
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_meeting_type_write_rate_limit(user.id)
+               RateLimiter.check(:meeting_type_write, user.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
       view |> element("button", "Add Meeting Type") |> render_click()

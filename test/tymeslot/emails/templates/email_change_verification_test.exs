@@ -12,7 +12,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "carol.new@example.com"
       verification_url = "https://example.com/verify-email-change/token123"
 
-      html = EmailChangeVerification.render(user, new_email, verification_url)
+      html = EmailChangeVerification.render(user, new_email, verification_url).html_body
 
       assert String.starts_with?(html, "<!doctype html>")
       assert html =~ "Hi Carol White"
@@ -24,7 +24,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "david.new@example.com"
       verification_url = "https://example.com/verify-email-change/token456"
 
-      html = EmailChangeVerification.render(user, new_email, verification_url)
+      html = EmailChangeVerification.render(user, new_email, verification_url).html_body
 
       assert html =~ "David Brown"
     end
@@ -34,7 +34,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "newemail@example.com"
       verification_url = "https://example.com/verify-email-change/token"
 
-      html = EmailChangeVerification.render(user, new_email, verification_url)
+      html = EmailChangeVerification.render(user, new_email, verification_url).html_body
 
       assert html =~ new_email
     end
@@ -44,7 +44,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "new@example.com"
       verification_url = "https://example.com/verify-email-change/unique-token"
 
-      html = EmailChangeVerification.render(user, new_email, verification_url)
+      html = EmailChangeVerification.render(user, new_email, verification_url).html_body
 
       assert html =~ verification_url
     end
@@ -54,7 +54,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "new@example.com"
       verification_url = "https://example.com/verify-email-change/token"
 
-      html = EmailChangeVerification.render(user, new_email, verification_url)
+      html = EmailChangeVerification.render(user, new_email, verification_url).html_body
 
       assert html =~ "Verify New Email"
       assert html =~ verification_url
@@ -65,7 +65,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "new@example.com"
       verification_url = "https://example.com/verify-email-change/token"
 
-      html = EmailChangeVerification.render(user, new_email, verification_url)
+      html = EmailChangeVerification.render(user, new_email, verification_url).html_body
 
       assert html =~ "You can safely ignore this email"
     end
@@ -77,7 +77,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "carol.new@example.com"
       verification_url = "https://example.com/verify-email-change/token123"
 
-      text = EmailChangeVerification.render_text(user, new_email, verification_url)
+      text = EmailChangeVerification.render(user, new_email, verification_url).text_body
 
       assert text =~ "Carol White"
       assert text =~ new_email
@@ -92,7 +92,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       new_email = "user+test@example.com"
       verification_url = "https://example.com/verify/token"
 
-      html = EmailChangeVerification.render(user, new_email, verification_url)
+      html = EmailChangeVerification.render(user, new_email, verification_url).html_body
 
       assert html =~ new_email
       assert html =~ verification_url
@@ -108,7 +108,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
     test "EmailChangeVerification.render_text returns a valid binary and preserves URL with malicious name" do
       user = build_user_data(%{name: "<b>Bold</b>", email: "test@example.com"})
       url = "https://example.com/verify/token"
-      text = EmailChangeVerification.render_text(user, "new@example.com", url)
+      text = EmailChangeVerification.render(user, "new@example.com", url).text_body
 
       # Plain text is not HTML: the tags survive as literal characters without
       # displacing the verification URL.

@@ -17,27 +17,42 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
   end
 
   @doc """
-  Gets all theme customizations for a profile.
+  The customisation of `theme_id` for `profile_id`, locked `FOR UPDATE` until
+  the surrounding transaction ends; `nil` when there is none.
   """
-  @spec get_all_by_profile_id(integer()) :: [ThemeCustomizationSchema.t()]
-  def get_all_by_profile_id(profile_id) do
-    ThemeCustomizationSchema
-    |> where([tc], tc.profile_id == ^profile_id)
-    |> Repo.all()
+  @spec lock_by_profile_and_theme(integer(), String.t()) :: ThemeCustomizationSchema.t() | nil
+  def lock_by_profile_and_theme(profile_id, theme_id) do
+    Repo.one(
+      from(c in ThemeCustomizationSchema,
+        where: c.profile_id == ^profile_id and c.theme_id == ^theme_id,
+        lock: "FOR UPDATE"
+      )
+    )
   end
 
   @doc """
-  Creates a theme customization.
+  Creates a theme customization, or returns `{:ok, :exists}` without writing
+  anything when the profile already has one for the theme (another request
+  created it first).
   """
-  @spec create(map()) :: {:ok, ThemeCustomizationSchema.t()} | {:error, Ecto.Changeset.t()}
+  @spec create(map()) ::
+          {:ok, ThemeCustomizationSchema.t() | :exists} | {:error, Ecto.Changeset.t()}
   def create(attrs) do
-    %ThemeCustomizationSchema{}
-    |> ThemeCustomizationSchema.changeset(attrs)
-    |> Repo.insert()
+    inserted =
+      %ThemeCustomizationSchema{}
+      |> ThemeCustomizationSchema.changeset(attrs)
+      |> Repo.insert(on_conflict: :nothing, conflict_target: [:profile_id, :theme_id])
+
+    case inserted do
+      {:ok, %ThemeCustomizationSchema{id: nil}} -> {:ok, :exists}
+      result -> result
+    end
   end
 
   @doc """
-  Updates a theme customization.
+  Updates a theme customization. Callers hold the row's lock
+  (`lock_by_profile_and_theme/2`), since the changeset rebuilds the whole
+  settings map from `customization`.
   """
   @spec update(ThemeCustomizationSchema.t(), map()) ::
           {:ok, ThemeCustomizationSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -45,15 +60,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
     customization
     |> ThemeCustomizationSchema.changeset(attrs)
     |> Repo.update()
-  end
-
-  @doc """
-  Deletes a theme customization.
-  """
-  @spec delete(ThemeCustomizationSchema.t()) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete(%ThemeCustomizationSchema{} = customization) do
-    Repo.delete(customization)
   end
 
   @doc """
@@ -100,6 +106,42 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
     case Repo.update_all(query, []) do
       {1, [customization]} -> {:ok, customization}
       {0, []} -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Records the processing state of the video in `field`, as
+  `update_video_processing_status/3` does, but only while `video_path` is
+  still the video that field holds. A transcode of a video that has since
+  been replaced or removed must not report its outcome against the row.
+
+  Returns `{:error, :replaced}` when the field no longer holds that video, or
+  the customisation no longer exists.
+  """
+  @spec update_video_processing_status_for(integer(), String.t(), String.t(), String.t()) ::
+          :ok | {:error, :replaced}
+  def update_video_processing_status_for(id, field, video_path, status)
+      when is_binary(field) and is_binary(video_path) and status in @video_processing_states do
+    query =
+      from(c in ThemeCustomizationSchema,
+        where: c.id == ^id and fragment("?->>?", c.settings, ^field) == ^video_path,
+        update: [
+          set: [
+            video_processing_status:
+              fragment(
+                "? || jsonb_build_object(?::text, ?::text)",
+                c.video_processing_status,
+                ^field,
+                ^status
+              ),
+            updated_at: ^DateTime.utc_now(:second)
+          ]
+        ]
+      )
+
+    case Repo.update_all(query, []) do
+      {1, _rows} -> :ok
+      {0, _rows} -> {:error, :replaced}
     end
   end
 end

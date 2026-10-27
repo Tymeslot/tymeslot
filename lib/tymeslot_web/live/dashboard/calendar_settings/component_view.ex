@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
     ~H"""
-    <div class="space-y-12">
+    <div id="calendar-settings-panel" class="space-y-12">
       <%!-- The hub's tab names the panel, so it carries no title of its own.
            With nothing connected, the empty state below carries the action. --%>
       <div :if={@integrations != []} class="flex justify-end">
@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
               is_refreshing={@is_refreshing}
               myself={@myself}
               health_states={@health_states}
+              stuck_changes={@stuck_changes}
             />
           <% end %>
         </div>
@@ -87,6 +88,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
         id="calendar-selection"
         show={@managing_calendar_id != nil}
         integration={Enum.find(@integrations, &(&1.id == @managing_calendar_id))}
+        booking_calendar_ids={Map.get(@booking_calendar_ids, @managing_calendar_id, [])}
         target={@myself}
         on_cancel={JS.push("close_manage_calendars", target: @myself)}
       />
