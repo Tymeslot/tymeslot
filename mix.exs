@@ -88,7 +88,7 @@ defmodule Tymeslot.MixProject do
   # Specifies which paths to compile per environment. `dev_support/tooling`
   # (the precommit gate, test selection and other dev-only Mix tasks) is never
   # compiled into a release.
-  defp elixirc_paths(:dev), do: ["lib", "dev/support", "dev_support/tooling"]
+  defp elixirc_paths(:dev), do: ["lib", "dev_support/dev_calendar", "dev_support/tooling"]
   defp elixirc_paths(:test), do: ["lib", "test/support", "dev_support/tooling"]
   defp elixirc_paths(:prod), do: ["lib"]
   defp elixirc_paths(_), do: ["lib"]

@@ -2,7 +2,7 @@ defmodule Tymeslot.Dev.Calendar do
   @moduledoc """
   Interactive development calendar stub.
 
-  Compiled only in `:dev` (see the `dev/support` entry in `elixirc_paths/1` in
+  Compiled only in `:dev` (see the `dev_support/dev_calendar` entry in `elixirc_paths/1` in
   `mix.exs`) and never bundled into release builds. Opt in by setting
   `DEV_CALENDAR=1` (starts with a realistic recurring weekly pattern) or
   `DEV_EMPTY_CALENDAR=1` (starts empty — every slot free); both wire it in via
