@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.AwaitingPayment do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   attr :checkout_url, :string, required: true
   attr :class, :string, default: nil
 
@@ -32,13 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.AwaitingPayment do
     >
       <div class="awaiting-payment-card">
         <div class="awaiting-payment-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M14 5l7 7m0 0l-7 7m7-7H3"
-            />
-          </svg>
+          <.icon name="hero-arrow-right" />
         </div>
         <h1 class="awaiting-payment-heading">
           {dgettext("booking", "Complete your payment in the new tab")}

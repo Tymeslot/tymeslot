@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
   """
   use Phoenix.Component
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   attr :indicator, :atom, required: true, values: [:radio, :check]
 
   attr :input_type, :string,
@@ -55,17 +57,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
         class={["custom-question-option-indicator", "is-#{@indicator}"]}
         aria-hidden="true"
       >
-        <svg
-          :if={@indicator == :check}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="3"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="4 12 10 18 20 6" />
-        </svg>
+        <.icon :if={@indicator == :check} name="hero-check" class="stroke-3" />
       </span>
       <span class="custom-question-option-label">{render_slot(@inner_block)}</span>
     </label>

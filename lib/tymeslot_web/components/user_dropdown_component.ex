@@ -47,22 +47,13 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
             />
           </div>
           <span class="text-tymeslot-800 font-black hidden sm:inline">{@truncated_name}</span>
-          <svg
+          <.icon
+            name="hero-chevron-down"
             class={[
               "w-5 h-5 text-tymeslot-400 transition-transform duration-300",
               if(@dropdown_open, do: "rotate-180", else: "")
             ]}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
+          />
         </:trigger>
         <:panel>
           <div class="py-2" role="none">

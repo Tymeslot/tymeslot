@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Page do
   """
   use Phoenix.Component
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
   attr :theme_tokens, :any, default: nil
@@ -53,28 +55,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Page do
     ~H"""
     <div class="payment-page-badge success-badge">
       <div class={["success-badge-inner", @status == :waiting && "success-badge-inner--pending"]}>
-        <svg
-          class="success-icon"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            :if={@status == :confirmed}
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="3"
-            d="M5 13l4 4L19 7"
-          />
-          <path
-            :if={@status == :waiting}
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="3"
-            d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <.icon :if={@status == :confirmed} name="hero-check" class="success-icon stroke-3" />
+        <.icon :if={@status == :waiting} name="hero-clock" class="success-icon stroke-3" />
       </div>
     </div>
     """

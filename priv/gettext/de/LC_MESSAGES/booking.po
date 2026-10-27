@@ -874,6 +874,8 @@ msgstr "Erneut versuchen"
 msgid "Your last action could not be completed. Please try again."
 msgstr "Ihre letzte Aktion konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
@@ -889,6 +891,8 @@ msgstr "Nächste Woche"
 msgid "No times available"
 msgstr "Keine Zeiten verfügbar"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
 #, elixir-autogen, elixir-format
@@ -901,11 +905,13 @@ msgid "Jump to first available"
 msgstr "Zum ersten freien Termin"
 
 #: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Next month"
 msgstr "Nächster Monat"
 
 #: lib/tymeslot_web/live/scheduling/calendar_navigation.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Previous month"
 msgstr "Vorheriger Monat"

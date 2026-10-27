@@ -84,7 +84,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                       variant={:secondary}
                       class="flex-1"
                     >
-                      <span class="custom-question-cta-nowrap">← {dgettext("booking", "Back")}</span>
+                      <span class="custom-question-cta-nowrap">
+                        <.icon name="hero-arrow-left" class="inline-icon" />
+                        {dgettext("booking", "Back")}
+                      </span>
                     </.action_button>
 
                     <.action_button
@@ -96,9 +99,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                     >
                       <span class="custom-question-cta-nowrap">
                         <%= if @last? do %>
-                          {dgettext("booking", "Continue")} →
+                          {dgettext("booking", "Continue")}
+                          <.icon name="hero-arrow-right" class="inline-icon" />
                         <% else %>
-                          {dgettext("booking", "Next")} →
+                          {dgettext("booking", "Next")}
+                          <.icon name="hero-arrow-right" class="inline-icon" />
                         <% end %>
                       </span>
                     </.action_button>

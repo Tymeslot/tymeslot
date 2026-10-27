@@ -89,7 +89,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
                 data-testid="back-step"
                 data-intent="back"
               >
-                ← {dgettext("booking", "Back")}
+                <.icon name="hero-arrow-left" class="inline-icon" />
+                {dgettext("booking", "Back")}
               </button>
               <button
                 type="button"
@@ -100,7 +101,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
                 data-intent="continue"
                 disabled={is_nil(@chosen)}
               >
-                {dgettext("booking", "Next")} →
+                {dgettext("booking", "Next")}
+                <.icon name="hero-arrow-right" class="inline-icon" />
               </button>
             </div>
           </div>

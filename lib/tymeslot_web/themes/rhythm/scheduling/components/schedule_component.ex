@@ -64,11 +64,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       <.timezone_flag
                         timezone={@user_timezone}
                         class="timezone-flag"
-                        fallback_icon="🌐"
+                        fallback_icon="hero-globe-alt"
                       />
                       <span class="timezone-text">{Timezones.format(@user_timezone)}</span>
                     </div>
-                    <div class="timezone-arrow">▼</div>
+                    <.icon name="hero-chevron-down" class="timezone-arrow" />
                   </:trigger>
                 </TimezonePicker.timezone_picker>
               </div>
@@ -85,16 +85,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               <div class="calendar-section calendar-section-wrapper">
                 <div class="calendar-header">
                   <button
-                    class="calendar-nav-button phx-click-loading:animate-pulse"
+                    class="calendar-nav-button phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                     phx-click="prev_week"
+                    aria-label={dgettext("booking", "Previous week")}
                     phx-target={@myself}
                     data-intent="earlier"
-                    phx-disable-with="..."
                     disabled={
                       CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)
                     }
                   >
-                    ←
+                    <.icon name="hero-arrow-left" class="inline-icon stroke-2" />
                   </button>
                   <h3 class="calendar-month-year">
                     {LocalizationHelpers.get_week_display(@current_week_start)}
@@ -102,23 +102,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                   <div class="cluster cluster-xs">
                     <%= if @availability_status == :error do %>
                       <div class="calendar-error-inline">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
+                        <.icon name="hero-exclamation-triangle" />
                         {dgettext("booking", "Service slow")}
                       </div>
                     <% end %>
                     <button
-                      class="calendar-nav-button phx-click-loading:animate-pulse"
+                      class="calendar-nav-button phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                       phx-click="next_week"
+                      aria-label={dgettext("booking", "Next week")}
                       phx-target={@myself}
                       data-intent="later"
-                      phx-disable-with="..."
                       disabled={
                         CalendarNavigation.next_week_disabled?(
                           @current_week_start,
@@ -127,7 +120,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         )
                       }
                     >
-                      →
+                      <.icon name="hero-arrow-right" class="inline-icon stroke-2" />
                     </button>
                   </div>
                 </div>
@@ -183,7 +176,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 data-testid="back-step"
                 data-intent="back"
               >
-                ← {dgettext("booking", "Back")}
+                <.icon name="hero-arrow-left" class="inline-icon" />
+                {dgettext("booking", "Back")}
               </button>
               <button
                 class={
@@ -195,7 +189,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 data-intent="continue"
                 disabled={is_nil(@selected_date) or is_nil(@selected_time)}
               >
-                {dgettext("booking", "Next")} →
+                {dgettext("booking", "Next")}
+                <.icon name="hero-arrow-right" class="inline-icon" />
               </button>
             </div>
           </div>

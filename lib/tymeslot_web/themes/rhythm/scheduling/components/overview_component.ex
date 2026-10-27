@@ -126,7 +126,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 data-intent="continue"
                 disabled={is_nil(@selected_duration)}
               >
-                {dgettext("booking", "Next")} →
+                {dgettext("booking", "Next")}
+                <.icon name="hero-arrow-right" class="inline-icon" />
               </button>
             </div>
           </div>
