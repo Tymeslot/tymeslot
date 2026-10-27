@@ -149,6 +149,28 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
       }
     end
 
+    test "a completed subscription checkout hands its session to the subscription manager",
+         %{conn: conn} do
+      test_pid = self()
+
+      expect(SubscriptionManagerMock, :handle_checkout_completed, fn session ->
+        send(test_pid, {:checkout_completed, session})
+        {:ok, %PaymentTransactionSchema{}}
+      end)
+
+      body = StripeWebhookFixtures.body("checkout.session.completed")
+      signature = StripeWebhookFixtures.signature(body, @platform_secret)
+
+      assert conn |> post_signed("/webhooks/stripe", body, signature) |> response(200) == ""
+
+      assert_received {:checkout_completed, session}
+      assert session["id"] == "cs_test_a1SfixtureCheckoutSession"
+      assert session["mode"] == "subscription"
+      assert session["customer"] == "cus_fixtureCustomer"
+      assert session["subscription"] == "sub_1SfixtureSubscription"
+      assert session["metadata"]["user_id"] == "0"
+    end
+
     test "a body altered after signing is still rejected", %{conn: conn} do
       body = StripeWebhookFixtures.body("charge.refunded")
       signature = StripeWebhookFixtures.signature(body, @platform_secret)
