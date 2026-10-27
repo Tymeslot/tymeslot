@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
 
   use ExUnit.Case, async: false
 
+  import TymeslotWeb.Test.SocketHelpers
+
   @moduletag :plugs
   @moduletag :infrastructure
 
@@ -113,12 +115,6 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
       assert correlation_b != correlation_a
       assert Logger.metadata()[:correlation_id] == correlation_b
     end
-  end
-
-  defp build_socket(assigns \\ %{}) do
-    %Socket{
-      assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns)
-    }
   end
 
   # A connected socket has a non-nil transport_pid, which is what

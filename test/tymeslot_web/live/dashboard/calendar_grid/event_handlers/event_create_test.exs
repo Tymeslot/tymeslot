@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
   import Mox
   import Tymeslot.Factory
+  import TymeslotWeb.Test.SocketHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
@@ -371,12 +372,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
     }
 
     if warning, do: Map.put(base, :warning, warning), else: base
-  end
-
-  defp build_socket do
-    %Phoenix.LiveView.Socket{
-      assigns: %{__changed__: %{}, flash: %{}}
-    }
   end
 
   # Socket for the save handler: a timed event being created on `integration_id`,

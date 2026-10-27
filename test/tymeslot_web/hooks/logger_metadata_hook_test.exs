@@ -3,18 +3,14 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
 
   use ExUnit.Case, async: true
 
+  import TymeslotWeb.Test.SocketHelpers
+
   @moduletag :hooks
   @moduletag :infrastructure
 
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Infrastructure.CorrelationId
   alias TymeslotWeb.Hooks.LoggerMetadataHook
-
-  defp build_socket(assigns \\ %{}) do
-    %Socket{
-      assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns)
-    }
-  end
 
   # A connected socket has a non-nil transport_pid, which is what
   # Phoenix.LiveView.connected?/1 checks internally.
