@@ -154,7 +154,6 @@ defmodule Tymeslot.MixProject do
       {:logger_json, "~> 7.0"},
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},
-      {:nimble_parsec, "~> 1.4"},
       {:ex_image_info, "~> 1.0"},
       # libvips through vix, which ships prebuilt binaries: re-encodes uploaded
       # images so their metadata (EXIF location, capture time, device) is never
