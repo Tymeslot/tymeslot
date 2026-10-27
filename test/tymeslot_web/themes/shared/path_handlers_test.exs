@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.Context
   alias TymeslotWeb.Themes.Shared.Journey
-  alias TymeslotWeb.Themes.Shared.Journey.Navigators.{Continuous, Paged, Transcript}
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.{Continuous, Transcript}
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
   describe "build_path_with_locale/2" do
@@ -160,23 +160,33 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
     # A paged journey's switcher shows on its first moment only, before any
     # choice; a choice left behind by going back to it is not carried.
-    test "carries no choice on a paged journey" do
-      for {navigator, live_action} <- [{Paged, :overview}, {Paged, :schedule}] do
-        socket = %Phoenix.LiveView.Socket{
-          assigns: %{
-            username_context: "johndoe",
-            live_action: live_action,
-            journey: %Journey{navigator: navigator, moments: [], outcomes: %{}},
-            duration: "30min",
-            selected_duration: "30min",
-            selected_date: "2027-03-12",
-            selected_time: "9:00 AM",
-            user_timezone: "America/New_York"
-          }
+    # A paged journey does not move on by itself, so the moment on screen
+    # rides along, and the page mounted from the URL resumes on it.
+    test "carries the choices and the moment on screen on a paged journey" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :overview,
+          journey: classic_journey(),
+          current_state: :booking,
+          selected_duration: "30min",
+          selected_date: "2027-03-12",
+          selected_time: "9:00 AM",
+          chosen_length_minutes: 45,
+          user_timezone: "America/New_York"
         }
+      }
 
-        assert URI.parse(PathHandlers.build_path_with_locale(socket, "de")).query == "locale=de"
-      end
+      assert URI.decode_query(URI.parse(PathHandlers.build_path_with_locale(socket, "de")).query) ==
+               %{
+                 "locale" => "de",
+                 "duration" => "30-minutes",
+                 "date" => "2027-03-12",
+                 "time" => "9:00 AM",
+                 "minutes" => "45",
+                 "visitor_timezone" => "America/New_York",
+                 "step" => "booking"
+               }
     end
 
     test "carries the choices on a page that opens its moments by itself" do
@@ -241,6 +251,99 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
       assert PathHandlers.build_path_with_locale(socket, "de") == "/johndoe/30-minutes?locale=de"
     end
+  end
+
+  describe "choices_query/1" do
+    # The page's own query (an embed's parameters, a tracking tag) stays; the
+    # choices it arrived with give way to the ones made since.
+    test "replaces the arrival's choices with the current ones and keeps the rest" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          live_action: :schedule,
+          journey: classic_journey(),
+          current_state: :schedule,
+          page_query_params: %{
+            "embed" => "1",
+            "utm_source" => "newsletter",
+            "date" => "2027-03-01",
+            "time" => "2:00 PM",
+            "step" => "booking"
+          },
+          selected_date: "2027-03-12",
+          selected_time: nil
+        }
+      }
+
+      assert PathHandlers.choices_query(socket) == %{
+               "embed" => "1",
+               "utm_source" => "newsletter",
+               "date" => "2027-03-12",
+               "step" => "schedule"
+             }
+    end
+
+    # A reload of the confirmation must not land on the details for the slot
+    # just booked.
+    test "carries no choice on an outcome" do
+      for outcome <- [:confirmation, :awaiting_payment] do
+        socket = %Phoenix.LiveView.Socket{
+          assigns: %{
+            live_action: :overview,
+            journey: classic_journey(),
+            current_state: outcome,
+            page_query_params: %{"embed" => "1", "step" => "booking", "minutes" => "45"},
+            selected_duration: "30min",
+            selected_date: "2027-03-12",
+            selected_time: "9:00 AM",
+            chosen_length_minutes: 45,
+            user_timezone: "America/New_York"
+          }
+        }
+
+        assert PathHandlers.choices_query(socket) == %{"embed" => "1"}, "on #{outcome}"
+      end
+    end
+  end
+
+  describe "restart_path/2" do
+    # A fresh booking keeps the meeting type, never the last booking's slot.
+    test "drops the slot the URL carried and keeps the page's own query" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          page_query_params: %{
+            "embed" => "1",
+            "duration" => "30-minutes",
+            "date" => "2027-03-12",
+            "time" => "9:00 AM",
+            "minutes" => "45",
+            "step" => "booking",
+            "reschedule_meeting_uid" => "abc"
+          }
+        }
+      }
+
+      path = PathHandlers.restart_path(socket)
+
+      assert URI.parse(path).path == "/johndoe"
+
+      assert URI.decode_query(URI.parse(path).query) == %{
+               "embed" => "1",
+               "duration" => "30-minutes"
+             }
+    end
+  end
+
+  defp classic_journey do
+    Journey.new(
+      Journey.classic(%{
+        overview: Overview,
+        schedule: Schedule,
+        questions: Questions,
+        booking: Booking,
+        confirmation: Confirmation
+      })
+    )
   end
 
   describe "organizer_scheduling_path/1" do
