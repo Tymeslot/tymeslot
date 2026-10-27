@@ -10,6 +10,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
   @moduletag :onboarding
 
   import Mox
+  import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
 
   setup :verify_on_exit!
@@ -173,6 +174,99 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       assert has_element?(view, ".onboarding-step-title", "Connect your calendar")
       assert has_element?(view, ".onboarding-provider-cards")
+    end
+
+    test "skipping again from there leads straight back to the share step", %{view: view} do
+      assert_push_event view, "ts:analytics", %{
+        name: "onboarding_step_completed",
+        props: %{step: "connect_calendar"}
+      }
+
+      assert_push_event view, "ts:analytics", %{
+        name: "share_step_viewed",
+        props: %{returned: false}
+      }
+
+      view |> element("#onboarding-return-to-calendar") |> render_click()
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
+
+      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
+      assert has_element?(view, "#onboarding-page-offline-warning")
+
+      assert_push_event view, "ts:analytics", %{
+        name: "share_step_viewed",
+        props: %{page_live: false, returned: true}
+      }
+
+      # The host already completed the calendar step once.
+      refute_push_event view, "ts:analytics", %{
+        name: "onboarding_step_completed",
+        props: %{step: "connect_calendar"}
+      }
+    end
+  end
+
+  describe "share step opened directly by URL" do
+    setup %{conn: conn} do
+      {conn, user} = onboarding_conn(conn)
+      insert(:calendar_integration, user: user)
+      %{conn: conn}
+    end
+
+    # The disconnected render cannot tell yet whether the page is live, so it
+    # must not show the offline variant that a live page then snaps away from.
+    test "a live page never first renders as offline", %{conn: conn} do
+      doc = conn |> get("/onboarding/ready") |> html_response(200) |> Floki.parse_document!()
+
+      assert [_copy_button] = Floki.find(doc, "button#onboarding-copy-booking-url")
+      assert Floki.find(doc, "#onboarding-page-offline-warning") == []
+      refute Floki.text(doc) =~ "only goes live once a calendar is connected"
+
+      {:ok, view, _html} = live(conn, "/onboarding/ready")
+      assert has_element?(view, "button#onboarding-copy-booking-url:not([disabled])")
+      refute has_element?(view, "#onboarding-page-offline-warning")
+    end
+
+    # The calendar provider sends a host who left the share step back here,
+    # with the flag in the return path.
+    test "connecting from the share step leads straight back to it, now live",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/onboarding/connect_calendar?return=share")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
+      assert has_element?(view, "a#onboarding-share-email")
+
+      assert_push_event view, "ts:analytics", %{
+        name: "share_step_viewed",
+        props: %{page_live: true, returned: true}
+      }
+
+      refute_push_event view, "ts:analytics", %{name: "onboarding_step_completed"}
+    end
+
+    test "connecting without coming from the share step continues as usual",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/onboarding/connect_calendar")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      refute has_element?(view, ".onboarding-step-title", "Share your booking page")
+
+      assert_push_event view, "ts:analytics", %{
+        name: "onboarding_step_completed",
+        props: %{step: "connect_calendar"}
+      }
+    end
+
+    test "reloading the step does not count another view", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/onboarding/ready")
+
+      assert has_element?(view, "a#onboarding-share-email")
+      refute_push_event view, "ts:analytics", %{name: "share_step_viewed"}
     end
   end
 

@@ -259,9 +259,12 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @doc """
   Returns the step description, given whether the booking page is live. Only
   the final step reads differently: it cannot ask the host to share a page
-  that refuses visitors.
+  that refuses visitors, and says nothing while that is not known yet (`nil`,
+  on the disconnected render).
   """
-  @spec step_description(step(), boolean()) :: String.t()
+  @spec step_description(step(), boolean() | nil) :: String.t()
+  def step_description(:ready, nil), do: ""
+
   def step_description(:ready, false),
     do:
       dgettext(

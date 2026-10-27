@@ -35,7 +35,9 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   * `booking_url` - The user's full booking URL string
   * `page_live` - Whether the booking page accepts visitors. When it does not
     (no bookable calendar), every share action is greyed out and a warning
-    explains why, with a way back to the calendar step.
+    explains why, with a way back to the calendar step. `nil` on the
+    disconnected render, where it is not known yet: the actions stay greyed
+    out without a warning, so a live page never first renders as offline.
   """
   attr :booking_url, :string, required: true
   attr :page_live, :boolean, required: true
@@ -46,7 +48,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
 
     ~H"""
     <div class="space-y-6">
-      <.info_box :if={!@page_live} variant={:warning}>
+      <.info_box :if={@page_live == false} variant={:warning}>
         <div id="onboarding-page-offline-warning" class="space-y-3">
           <p class="font-semibold">
             {dgettext("onboarding_wizard", "Your booking page isn't live yet")}
@@ -69,7 +71,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
       </.info_box>
 
       <%!-- Booking URL display --%>
-      <div class={["onboarding-url-display", !@page_live && "opacity-60"]}>
+      <div class={["onboarding-url-display", @page_live == false && "opacity-60"]}>
         <.icon name="hero-link" class="w-5 h-5 text-tymeslot-400 shrink-0" />
         <span class="truncate">{@booking_url}</span>
       </div>
@@ -79,7 +81,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
         icon="hero-clipboard-document"
         size={:lg}
         class="w-full"
-        disabled={!@page_live}
+        disabled={@page_live != true}
         phx-hook="CopyOnClick"
         phx-click="share_booking_link"
         phx-value-channel="copy"

@@ -108,29 +108,59 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     end
   end
 
-  defp advance_step(socket, step) do
-    next = StepConfig.next_step(step, socket.assigns.steps) || step
+  # A host sent back from the share step to connect a calendar has already
+  # answered every step after it, so the calendar step leads straight back to
+  # the share step, and is not counted as completed a second time.
+  defp advance_step(socket, step, props \\ %{}) do
+    returning? = step == :connect_calendar and socket.assigns.returning_to_share
+
+    next =
+      if returning?, do: :ready, else: StepConfig.next_step(step, socket.assigns.steps) || step
 
     socket
     |> Component.assign(:current_step, next)
-    |> Analytics.push("onboarding_step_completed", %{step: to_string(step)})
+    |> then(fn socket ->
+      if returning?,
+        do: socket,
+        else:
+          Analytics.push(
+            socket,
+            "onboarding_step_completed",
+            Map.put(props, :step, to_string(step))
+          )
+    end)
     |> LiveView.clear_flash()
-    |> then(&if(next == :ready, do: assign_booking_page_live(&1), else: &1))
+    |> then(&if(next == :ready, do: enter_share_step(&1), else: &1))
+  end
+
+  # Records which variant of the share step the host sees. Reloading
+  # `/onboarding/ready` does not count as a view; arriving back from the
+  # calendar step does, flagged `returned`, since whether that fixed the page
+  # is what it measures.
+  defp enter_share_step(socket) do
+    returned? = socket.assigns.returning_to_share
+
+    socket =
+      socket
+      |> assign_booking_page_live()
+      |> Component.assign(:returning_to_share, false)
+
+    Analytics.push(socket, "share_step_viewed", %{
+      page_live: socket.assigns.booking_page_live,
+      returned: returned?
+    })
   end
 
   @doc """
   Checks whether the booking page is actually live, with the same rule the
-  public page applies, and records which variant of the share step the host
-  sees. Without a bookable calendar the page refuses visitors, so the share
-  step greys out its actions instead of sending people to a dead link.
+  public page applies. Without a bookable calendar the page refuses visitors,
+  so the share step greys out its actions instead of sending people to a dead
+  link.
   """
   @spec assign_booking_page_live(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_booking_page_live(socket) do
     live? = LinkAccessPolicy.check_public_readiness(socket.assigns.profile) == {:ok, :ready}
-
-    socket
-    |> Component.assign(:booking_page_live, live?)
-    |> Analytics.push("share_step_viewed", %{page_live: live?})
+    Component.assign(socket, :booking_page_live, live?)
   end
 
   @doc """
@@ -142,7 +172,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   def handle_return_to_calendar_step(socket) do
     {:noreply,
      socket
-     |> Component.assign(current_step: :connect_calendar, calendar_choice: nil)
+     |> Component.assign(
+       current_step: :connect_calendar,
+       calendar_choice: nil,
+       returning_to_share: true
+     )
      |> LiveView.clear_flash()}
   end
 
@@ -224,15 +258,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     {:noreply,
      socket
      |> Component.assign(:show_skip_calendar_modal, false)
-     |> Component.assign(
-       :current_step,
-       StepConfig.next_step(:connect_calendar, socket.assigns.steps)
-     )
-     |> Analytics.push("onboarding_step_completed", %{
-       step: "connect_calendar",
-       skipped: true
-     })
-     |> LiveView.clear_flash()}
+     |> advance_step(:connect_calendar, %{skipped: true})}
   end
 
   @doc """

@@ -49,9 +49,11 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_params(%{"step" => step}, _uri, socket) do
+  def handle_params(%{"step" => step} = params, _uri, socket) do
     if StepConfig.valid_step?(step) do
       step_atom = String.to_existing_atom(step)
+      # Set by the OAuth return path of a host sent back from the share step.
+      socket = assign(socket, :returning_to_share, params["return"] == "share")
 
       # During the disconnected (static) render the calendar list has not been
       # loaded yet, so `socket.assigns.steps` is always the no-calendar sequence
