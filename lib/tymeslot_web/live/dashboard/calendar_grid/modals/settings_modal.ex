@@ -24,15 +24,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
 
       <div class="space-y-5">
         <%!-- First day of week --%>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_settings", "First day of week")}
-            </p>
-            <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_settings", "Start weeks on Monday or Sunday")}
-            </p>
-          </div>
+        <.preference_row>
+          <:label>{dgettext("dashboard_calendar_settings", "First day of week")}</:label>
+          <:description>
+            {dgettext("dashboard_calendar_settings", "Start weeks on Monday or Sunday")}
+          </:description>
           <.segmented_control
             id="week-start-toggle"
             size={:sm}
@@ -45,18 +41,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             <:option value={:monday} label={dgettext("dashboard_calendar_settings", "Mon")} />
             <:option value={:sunday} label={dgettext("dashboard_calendar_settings", "Sun")} />
           </.segmented_control>
-        </div>
+        </.preference_row>
 
         <%!-- Time format --%>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_settings", "Time format")}
-            </p>
-            <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_settings", "12-hour or 24-hour clock")}
-            </p>
-          </div>
+        <.preference_row>
+          <:label>{dgettext("dashboard_calendar_settings", "Time format")}</:label>
+          <:description>
+            {dgettext("dashboard_calendar_settings", "12-hour or 24-hour clock")}
+          </:description>
           <.segmented_control
             id="time-format-toggle"
             size={:sm}
@@ -69,18 +61,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             <:option value={:"12h"} label={dgettext("dashboard_calendar_settings", "12h")} />
             <:option value={:"24h"} label={dgettext("dashboard_calendar_settings", "24h")} />
           </.segmented_control>
-        </div>
+        </.preference_row>
 
         <%!-- Default view --%>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_settings", "Default view")}
-            </p>
-            <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_settings", "Also switches the current view")}
-            </p>
-          </div>
+        <.preference_row>
+          <:label>{dgettext("dashboard_calendar_settings", "Default view")}</:label>
+          <:description>
+            {dgettext("dashboard_calendar_settings", "Also switches the current view")}
+          </:description>
           <.segmented_control
             id="default-view-toggle"
             size={:sm}
@@ -94,18 +82,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             <:option value={:week} label={dgettext("dashboard_calendar_settings", "Week")} />
             <:option value={:month} label={dgettext("dashboard_calendar_settings", "Month")} />
           </.segmented_control>
-        </div>
+        </.preference_row>
 
         <%!-- Show week numbers --%>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_settings", "Week numbers")}
-            </p>
-            <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_settings", "Show ISO week numbers in month view")}
-            </p>
-          </div>
+        <.preference_row>
+          <:label>{dgettext("dashboard_calendar_settings", "Week numbers")}</:label>
+          <:description>
+            {dgettext("dashboard_calendar_settings", "Show ISO week numbers in month view")}
+          </:description>
           <StatusSwitch.status_switch
             id="week-numbers-switch"
             checked={@preferences.show_week_numbers}
@@ -113,18 +97,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             target={@myself}
             size={:small}
           />
-        </div>
+        </.preference_row>
 
         <%!-- Show weekends --%>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_settings", "Show weekends")}
-            </p>
-            <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_settings", "Display Saturday and Sunday in week view")}
-            </p>
-          </div>
+        <.preference_row>
+          <:label>{dgettext("dashboard_calendar_settings", "Show weekends")}</:label>
+          <:description>
+            {dgettext("dashboard_calendar_settings", "Display Saturday and Sunday in week view")}
+          </:description>
           <StatusSwitch.status_switch
             id="weekends-switch"
             checked={@preferences.show_weekends}
@@ -132,21 +112,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             target={@myself}
             size={:small}
           />
-        </div>
+        </.preference_row>
 
         <%!-- Desktop reminders --%>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_settings", "Desktop reminders")}
-            </p>
-            <p class="text-token-xs text-tymeslot-400">
-              {dgettext(
-                "dashboard_calendar_settings",
-                "Show browser notifications before events while Tymeslot is open"
-              )}
-            </p>
-          </div>
+        <.preference_row>
+          <:label>{dgettext("dashboard_calendar_settings", "Desktop reminders")}</:label>
+          <:description>
+            {dgettext(
+              "dashboard_calendar_settings",
+              "Show browser notifications before events while Tymeslot is open"
+            )}
+          </:description>
           <StatusSwitch.status_switch
             id="desktop-reminders-switch"
             checked={@preferences.desktop_reminders_enabled}
@@ -154,9 +130,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             target={@myself}
             size={:small}
           />
-        </div>
+        </.preference_row>
       </div>
     </.modal>
+    """
+  end
+
+  slot :label, required: true
+  slot :description, required: true
+  slot :inner_block, required: true, doc: "The row's control"
+
+  # The text column takes the remaining width and wraps (`min-w-0`); the
+  # control keeps its natural size (`shrink-0`), so a long description wraps
+  # beside it instead of running underneath it.
+  defp preference_row(assigns) do
+    ~H"""
+    <div class="flex items-center justify-between gap-4" data-testid="preference-row">
+      <div class="min-w-0 flex-1">
+        <p class="text-token-sm font-medium text-tymeslot-700">{render_slot(@label)}</p>
+        <p class="text-token-xs text-tymeslot-400">{render_slot(@description)}</p>
+      </div>
+      <div class="shrink-0" data-testid="preference-control">{render_slot(@inner_block)}</div>
+    </div>
     """
   end
 

@@ -349,16 +349,6 @@ msgstr "Так"
 msgid "You're All Set!"
 msgstr "Усе готово!"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking a %{duration} meeting"
-msgstr "Ви бронюєте зустріч на %{duration}"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking a %{duration} meeting with %{name}"
-msgstr "Ви бронюєте зустріч на %{duration} з %{name}"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Your Name"
@@ -502,7 +492,7 @@ msgstr "Не потрібно додавати власну електронну
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
-msgstr "guest@example.com"
+msgstr "hist@example.com"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
@@ -852,9 +842,9 @@ msgstr "Інше місце"
 #, elixir-autogen, elixir-format
 msgid "%{count} spot left"
 msgid_plural "%{count} spots left"
-msgstr[0] "Залишилось %{count} місце"
-msgstr[1] "Залишилось %{count} місця"
-msgstr[2] "Залишилось %{count} місць"
+msgstr[0] "%{count} вільне місце"
+msgstr[1] "%{count} вільні місця"
+msgstr[2] "%{count} вільних місць"
 
 #: lib/tymeslot_web/themes/shared/components/seat_badge.ex
 #, elixir-autogen, elixir-format
@@ -968,3 +958,28 @@ msgstr "Завтра"
 #, elixir-autogen, elixir-format
 msgid "More times"
 msgstr "Інші варіанти часу"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid"
+msgstr "Оплачено"
+
+#: lib/tymeslot_web/themes/shared/components/meeting_price.ex
+#, elixir-autogen, elixir-format
+msgid "Price:"
+msgstr "Ціна:"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{duration}"
+msgstr "Ви бронюєте зустріч на %{duration}"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{duration} with %{name}"
+msgstr "Ви бронюєте зустріч на %{duration} з %{name}"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid %{amount}"
+msgstr "Оплачено %{amount}"

@@ -142,6 +142,25 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   def settle(socket), do: socket
 
   @doc """
+  Resumes on the moment the URL names (`params["step"]`), through the
+  navigator's `resume/4`; the socket unchanged without one, without a
+  `step`, or on a page already navigating elsewhere.
+  """
+  @spec resume(Socket.t(), map()) :: Socket.t()
+  def resume(
+        %Socket{redirected: nil, assigns: %{journey: %Journey{navigator: navigator} = journey}} =
+          socket,
+        %{"step" => step} = params
+      )
+      when is_binary(step) do
+    if Code.ensure_loaded?(navigator) and function_exported?(navigator, :resume, 4),
+      do: navigator.resume(journey, socket, step, params),
+      else: socket
+  end
+
+  def resume(socket, _params), do: socket
+
+  @doc """
   Starts the booking again, in place: the confirmation's "Schedule another
   meeting". It keeps the meeting type and forgets every fact depending on
   it (the time, the answers, the booking just made). A booker who came
@@ -156,7 +175,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # the booking just made: kept, the schedule step would reopen the calendar
   # on them, with a time that is no longer free. The answers are the last
   # booker's, and the booking's `meeting_uid` would leave the attendee
-  # known, so the next booking's details moment would open as done. A
+  # known, so the next booking's details moment would open as done; what
+  # its payment took is that booking's too (`:paid_payment`). A
   # reschedule still named in the URL is patched out of it, to the route the
   # booking starts again on, so a reload does not start the move over.
   @spec restart(Socket.t()) :: Socket.t()
@@ -170,7 +190,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     |> forget_payment_wait()
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
-    |> assign(selected_date: nil, selected_time: nil)
+    |> assign(selected_date: nil, selected_time: nil, paid_payment: nil)
     |> assign(:journey_opened, MapSet.new())
     |> transition_to(opening, %{})
     |> ReschedulePin.drop_from_url(route)

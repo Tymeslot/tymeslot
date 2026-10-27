@@ -133,6 +133,28 @@ defmodule Tymeslot.MeetingPaymentsTest do
     end
   end
 
+  describe "charge_currency/1" do
+    # Stored prices are hundredths: in a zero-decimal currency 4500 would read
+    # as ¥4,500, a hundred times the price, so a currency checkout cannot
+    # charge has no price to show.
+    test "is a supported or a legacy two-decimal currency, and nil for any other" do
+      for {currency, expected} <- [{"eur", "eur"}, {"ron", "ron"}, {"jpy", nil}, {nil, nil}] do
+        user = insert(:user)
+        insert(:connect_account, user: user, default_currency: currency, charges_enabled: true)
+
+        assert MeetingPayments.charge_currency(user.id) == expected, inspect(currency)
+      end
+    end
+
+    test "is nil while the account cannot take charges, or there is none" do
+      user = insert(:user)
+      assert MeetingPayments.charge_currency(user.id) == nil
+
+      insert(:connect_account, user: user, default_currency: "eur", charges_enabled: false)
+      assert MeetingPayments.charge_currency(user.id) == nil
+    end
+  end
+
   describe "connect_display_state/1" do
     test "maps a missing account to :not_connected" do
       assert MeetingPayments.connect_display_state(nil) == :not_connected

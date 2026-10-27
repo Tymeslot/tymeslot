@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content schedule-slide">
@@ -46,6 +46,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 length_minutes={ChosenLength.minutes(assigns)}
                 meeting_type={@meeting_type}
                 selected_duration={@selected_duration}
+                host_currency={@host_currency}
+                show_price={!@is_rescheduling}
+                locale={@locale}
               />
               <div class="timezone-selector-container">
                 <%!-- Visual label only: it names no control (the trigger below carries

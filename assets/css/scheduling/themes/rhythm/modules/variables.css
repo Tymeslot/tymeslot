@@ -238,14 +238,9 @@
   --poll-option-line: rgba(255, 255, 255, 0.22);
   --poll-option-selected-surface: var(--theme-primary-tint);
 
-  /* Payment return pages (shared/components/payment-pages.css). They have
-     no video background container, so the page itself carries the
-     background the container shows behind its media. */
-  --payment-page-background: var(--theme-background);
+  /* Payment return pages (shared/components/payment-pages.css). The card is
+     the scheduling box, which sizes itself. */
   --payment-page-max-width: 36rem;
-  --payment-card-surface: rgba(0, 0, 0, var(--box-opacity));
-  --payment-card-line: var(--border-subtle);
-  --payment-card-radius: var(--radius-2xl);
   --payment-heading-ink: #ffffff;
   --payment-body-ink: rgba(255, 255, 255, 0.9);
   --payment-link-radius: var(--radius-md);

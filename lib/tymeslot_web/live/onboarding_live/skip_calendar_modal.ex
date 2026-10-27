@@ -48,7 +48,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
       <p class="mt-3 text-tymeslot-500 text-token-base leading-relaxed">
         {dgettext(
           "onboarding_wizard",
-          "Without a connected calendar you'll have to manage clashes yourself. You can still carry on and connect one later from your dashboard."
+          "Without a connected calendar your booking page stays offline, so nobody can book you yet. You can still carry on and connect one later from your dashboard."
         )}
       </p>
 

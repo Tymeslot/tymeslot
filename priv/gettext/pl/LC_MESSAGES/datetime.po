@@ -13,16 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} hours"
-msgstr "%{count} godz."
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} minutes"
-msgstr "%{count} min"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr "%{date} o %{time}"
 
@@ -40,11 +30,6 @@ msgstr "%{day} %{month} %{year} o %{time} %{timezone}"
 #, elixir-autogen, elixir-format
 msgid "%{hour_text} %{minute_text}"
 msgstr "%{hour_text} %{minute_text}"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{minutes} minutes"
-msgstr "%{minutes} min"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -90,16 +75,6 @@ msgstr "do %{years} r. naprzód"
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
 msgstr "do 1 dnia naprzód"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "1 hour"
-msgstr "1 godz."
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "1 minute"
-msgstr "1 min"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -270,3 +245,19 @@ msgstr "środa"
 #, elixir-autogen, elixir-format
 msgid "same day only"
 msgstr "tylko tego samego dnia"
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} godz."
+msgstr[1] "%{count} godz."
+msgstr[2] "%{count} godz."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} min"
+msgstr[1] "%{count} min"
+msgstr[2] "%{count} min"

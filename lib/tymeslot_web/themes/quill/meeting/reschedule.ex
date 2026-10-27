@@ -78,6 +78,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
 
                 <.action_button
                   type="button"
+                  data-testid="reschedule-continue"
                   phx-click={JS.navigate(PathHandlers.organizer_scheduling_path(assigns))}
                   variant={:primary}
                 >

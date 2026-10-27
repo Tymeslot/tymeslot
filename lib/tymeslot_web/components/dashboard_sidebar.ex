@@ -288,6 +288,17 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   # when either is still unconnected. Which of the two is outstanding has to
   # travel with the marker: once one is connected, a badge that only says
   # "something is missing" reads as if the connection never registered.
+  #
+  # A calendar whose credentials were refused outranks both: the setup is done,
+  # but the booking page offers no times until it is reconnected.
+  defp integrations_setup_reminder(%{refused_calendars: [_first | _rest] = names}),
+    do:
+      dgettext(
+        "dashboard_common",
+        "Reconnect %{names}: your booking page offers no times until you do",
+        names: Enum.join(names, ", ")
+      )
+
   defp integrations_setup_reminder(status) do
     missing =
       for {kind, key} <- [calendar: :has_calendar, video: :has_video],

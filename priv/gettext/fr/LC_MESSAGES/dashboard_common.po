@@ -358,3 +358,20 @@ msgstr "Avec"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
+msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
+msgstr[0] "L’intégration %{names} a refusé les identifiants que Tymeslot conserve pour elle : votre page de réservation ne propose donc aucun créneau. Reconnectez-la pour recevoir de nouveau des réservations."
+msgstr[1] "Les intégrations %{names} ont refusé les identifiants que Tymeslot conserve pour elles : votre page de réservation ne propose donc aucun créneau. Reconnectez-les pour recevoir de nouveau des réservations."
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Reconnecter"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect %{names}: your booking page offers no times until you do"
+msgstr "Reconnectez %{names} : d’ici là, votre page de réservation ne propose aucun créneau"

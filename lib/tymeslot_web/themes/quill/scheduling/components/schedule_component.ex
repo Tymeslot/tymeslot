@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
@@ -97,11 +98,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
         <div class="stack">
           <div class="schedule-content-area flex-1 flex items-start justify-center">
             <div class="w-full min-h-0">
-              <.glass_morphism_card class="booker-card calendar-card">
+              <.glass_morphism_card class="booker-card calendar-card" data-testid="booker-card">
                 <div class="schedule-card-body min-h-0">
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
-                    <div class="flex-1 min-w-0">
+                    <div class="schedule-title-area">
                       <h1 class="section-header schedule-title">
                         {dgettext("booking", "Select a Date & Time")}
                       </h1>
@@ -122,6 +123,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       </p>
 
                       <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
+                      <MeetingPrice.hint
+                        :if={!@is_rescheduling}
+                        meeting_type={@meeting_type}
+                        currency={@host_currency}
+                        locale={@locale}
+                        class="mt-2"
+                      />
 
                       <GroupSession.seat_move_notice
                         from={assigns[:reschedule_seat_from]}

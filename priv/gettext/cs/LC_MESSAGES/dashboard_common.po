@@ -358,3 +358,21 @@ msgstr "S kým"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
+msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
+msgstr[0] "Integrace %{names} odmítla přihlašovací údaje, které pro ni Tymeslot uchovává, a vaše rezervační stránka proto nenabízí žádné termíny. Připojte ji znovu, abyste mohli opět přijímat rezervace."
+msgstr[1] "Integrace %{names} odmítly přihlašovací údaje, které pro ně Tymeslot uchovává, a vaše rezervační stránka proto nenabízí žádné termíny. Připojte je znovu, abyste mohli opět přijímat rezervace."
+msgstr[2] "Integrace %{names} odmítly přihlašovací údaje, které pro ně Tymeslot uchovává, a vaše rezervační stránka proto nenabízí žádné termíny. Připojte je znovu, abyste mohli opět přijímat rezervace."
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Připojit znovu"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect %{names}: your booking page offers no times until you do"
+msgstr "Připojte znovu %{names}: do té doby vaše rezervační stránka nenabízí žádné termíny"

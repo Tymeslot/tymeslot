@@ -82,6 +82,9 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       step_data: %{},
       show_skip_modal: false,
       show_skip_calendar_modal: false,
+      # Unknown until the connected render checks the calendars.
+      booking_page_live: nil,
+      returning_to_share: false,
       show_theme_preview: false,
       theme_preview_url: nil,
       timezone_options: Timezones.all_options(),

@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       view |> element("[phx-click='duplicate_schedule']") |> render_click()
 
-      assert render(view) =~ "date overrides were not copied"
+      assert render(view) =~ "extra available times for specific dates were not copied"
     end
   end
 

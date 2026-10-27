@@ -358,3 +358,20 @@ msgstr "Mit"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
+msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
+msgstr[0] "Die Integration %{names} hat die Anmeldedaten abgelehnt, die Tymeslot dafür gespeichert hat. Deshalb bietet Ihre Buchungsseite keine Zeiten an. Verbinden Sie sie erneut, um wieder Buchungen anzunehmen."
+msgstr[1] "Die Integrationen %{names} haben die Anmeldedaten abgelehnt, die Tymeslot dafür gespeichert hat. Deshalb bietet Ihre Buchungsseite keine Zeiten an. Verbinden Sie sie erneut, um wieder Buchungen anzunehmen."
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Erneut verbinden"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect %{names}: your booking page offers no times until you do"
+msgstr "Verbinden Sie %{names} erneut: Bis dahin bietet Ihre Buchungsseite keine Zeiten an"

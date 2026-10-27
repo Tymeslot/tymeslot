@@ -505,37 +505,22 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   # Internal helpers
 
-  defp format_minutes(1), do: dgettext("datetime", "1 minute")
+  defp format_minutes(minutes) when minutes < 60, do: minute_text(minutes)
 
-  defp format_minutes(minutes) when minutes < 60,
-    do: dgettext("datetime", "%{minutes} minutes", minutes: minutes)
+  defp format_minutes(minutes) when rem(minutes, 60) == 0, do: hour_text(div(minutes, 60))
 
-  defp format_minutes(60), do: dgettext("datetime", "1 hour")
-
-  defp format_minutes(minutes) when rem(minutes, 60) == 0 do
-    hours = div(minutes, 60)
-    dgettext("datetime", "%{count} hours", count: hours)
-  end
-
+  # Hours and minutes each take the plural form of the number they show
   defp format_minutes(minutes) do
-    hours = div(minutes, 60)
-    mins = rem(minutes, 60)
-
-    hour_text =
-      if hours == 1,
-        do: dgettext("datetime", "1 hour"),
-        else: dgettext("datetime", "%{count} hours", count: hours)
-
-    minute_text =
-      if mins == 1,
-        do: dgettext("datetime", "1 minute"),
-        else: dgettext("datetime", "%{count} minutes", count: mins)
-
     dgettext("datetime", "%{hour_text} %{minute_text}",
-      hour_text: hour_text,
-      minute_text: minute_text
+      hour_text: hour_text(div(minutes, 60)),
+      minute_text: minute_text(rem(minutes, 60))
     )
   end
+
+  defp hour_text(hours), do: dngettext("datetime", "%{count} hour", "%{count} hours", hours)
+
+  defp minute_text(minutes),
+    do: dngettext("datetime", "%{count} minute", "%{count} minutes", minutes)
 
   defp parse_date(date) when is_binary(date), do: Date.from_iso8601(date)
 
