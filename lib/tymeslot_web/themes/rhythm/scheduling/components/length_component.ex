@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
               meeting_type={@meeting_type}
               currency={@host_currency}
               locale={@locale}
+              class="mt-2"
             />
 
             <div class="duration-grid">

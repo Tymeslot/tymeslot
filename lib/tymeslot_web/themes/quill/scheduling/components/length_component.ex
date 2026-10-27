@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                   meeting_type={@meeting_type}
                   currency={@host_currency}
                   locale={@locale}
-                  class="mt-2"
+                  class="mt-2 mb-2"
                 />
 
                 <%!-- Its own list class: the overview's width tiers key on
