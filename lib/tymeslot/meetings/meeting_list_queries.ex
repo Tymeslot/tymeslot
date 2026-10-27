@@ -82,7 +82,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp live_participants_preload do
     from(p in ParticipantSchema,
       where: is_nil(p.cancelled_at),
-      order_by: [asc: p.inserted_at]
+      order_by: [asc: p.inserted_at, asc: p.id]
     )
   end
 
@@ -385,7 +385,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
       join: m in Meeting,
       on: m.id == p.meeting_id,
       where: is_nil(p.cancelled_at) or m.status == "cancelled",
-      order_by: [asc: p.inserted_at]
+      order_by: [asc: p.inserted_at, asc: p.id]
     )
   end
 end
