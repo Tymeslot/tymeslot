@@ -197,6 +197,54 @@ defmodule TymeslotWeb.Live.Scheduling.ApprovalBookingJourneyTest do
     assert confirmation.subject =~ ~r/confirmed/i
   end
 
+  # A type offering several lengths, requested at one that is not its own: the
+  # hour asked for is the one the host approves, and the one the attendee's
+  # confirmation states.
+  @tag :capture_log
+  test "a request at a length not the type's own keeps it through approval",
+       %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
+    meeting_type |> Changeset.change(extra_lengths_minutes: [60]) |> Repo.update!()
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
+
+    BookingDriver.book(view,
+      meeting_type: "quick-chat",
+      length: 60,
+      attendee: %{name: "Ada Lovelace", email: "ada@example.com"}
+    )
+
+    requested = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
+    assert requested.status == "awaiting_approval"
+    assert requested.duration == 60
+    assert DateTime.diff(requested.end_time, requested.start_time, :minute) == 60
+
+    drain()
+    assert_receive {:calendar_create, :tentative}
+
+    request_email = email_to(drain_mailbox(), user.email)
+    [_match, token] = Regex.run(~r{/meeting-request/([^"'\s<]+)}, request_email.html_body)
+
+    {:ok, request_view, _html} = live(build_conn(), "/meeting-request/#{token}")
+    request_view |> element("[data-testid='approve-request']") |> render_click()
+
+    drain()
+
+    confirmed = Repo.reload!(requested)
+    assert confirmed.status == "confirmed"
+    assert confirmed.duration == 60
+    assert confirmed.start_time == requested.start_time
+    assert confirmed.end_time == requested.end_time
+
+    confirmation = email_to(drain_mailbox(), "ada@example.com")
+    assert confirmation.subject =~ ~r/confirmed/i
+    assert confirmation.text_body =~ "Duration: 1 hour"
+    assert confirmation.html_body =~ "1 hour"
+
+    # The calendar file the attendee adds ends at the hour's end.
+    [ics] = Enum.filter(confirmation.attachments, &String.ends_with?(&1.filename, ".ics"))
+    assert ics.data =~ "DTEND:#{Calendar.strftime(confirmed.end_time, "%Y%m%dT%H%M%SZ")}"
+  end
+
   # -- helpers ---------------------------------------------------------------
 
   # Runs the booking queues until a pass runs nothing, since one job enqueues

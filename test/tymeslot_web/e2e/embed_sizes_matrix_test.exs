@@ -73,6 +73,47 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
+  feature "length step fits without horizontal overflow in both themes",
+          %{session: session} do
+    # A type offering several lengths asks for one between the overview and
+    # the schedule, a step with a layout of its own.
+    # The onboarded organiser has types of their own, so the one with several
+    # lengths is picked by its slug rather than as the first card.
+    {profile, slug} = create_user_with_several_lengths()
+
+    for theme <- ThemeTestMatrix.all(), width <- @widths, reduce: session do
+      acc ->
+        acc
+        |> resize_window(width, @height)
+        |> visit("/#{profile.username}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> pick_first("[data-testid='duration-option'][data-duration='#{slug}']")
+        |> assert_has(css("[data-testid='next-step']:not([disabled])"))
+        |> click_next_step()
+        |> assert_has(css("[data-testid='length-step']"))
+        |> assert_has(css("[data-testid='length-option']", count: 3))
+        |> assert_no_horizontal_overflow("#{theme.name} length width=#{width}px")
+    end
+  end
+
+  feature "length step keeps its actions reachable on wide-short viewports (both themes)",
+          %{session: session} do
+    {profile, slug} = create_user_with_several_lengths()
+
+    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
+      acc ->
+        context = "#{theme.name} length #{width}x#{height}"
+
+        acc
+        |> resize_window(width, height)
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> assert_has(css("[data-testid='length-step']"))
+        |> assert_no_horizontal_overflow(context)
+        |> assert_cta_reachable(context)
+    end
+  end
+
   feature "overview stays operable with introductory text at its length caps (both themes)",
           %{session: session} do
     # An organiser may fill the heading and both welcome lines to the character
@@ -272,21 +313,26 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     {profile, slug}
   end
 
-  defp create_user_with_meeting_type do
+  defp create_user_with_meeting_type(attrs \\ %{}) do
     user = create_onboarded_user()
     profile = Profiles.get_profile(user.id)
     insert(:calendar_integration, user_id: user.id, user: user)
 
     {:ok, meeting_type} =
-      MeetingTypes.create_meeting_type(%{
+      %{
         user_id: user.id,
         name: "Sizes Matrix Meeting",
         duration_minutes: 30,
         is_active: true
-      })
+      }
+      |> Map.merge(attrs)
+      |> MeetingTypes.create_meeting_type()
 
     {profile, Slugs.to_slug(meeting_type)}
   end
+
+  defp create_user_with_several_lengths,
+    do: create_user_with_meeting_type(%{extra_lengths_minutes: [60, 15]})
 
   # A fixed-date group type held at one venue, with `count` sessions planned
   # two days apart from tomorrow.
