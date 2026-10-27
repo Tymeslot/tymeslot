@@ -80,8 +80,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Should now be at ready step
-      html = render(view)
-      assert html =~ "all set"
+      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
 
       # Step 7: Ready -> Complete onboarding
       view
@@ -404,7 +403,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       end)
 
       html = render(view)
-      assert html =~ "all set"
+      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
 
       # The button is wired to the clipboard hook and carries the booking URL.
       assert has_element?(
@@ -412,10 +411,24 @@ defmodule TymeslotWeb.OnboardingLiveTest do
                "button#onboarding-copy-booking-url[phx-hook='CopyOnClick'][data-copy-text]"
              )
 
-      # Icon-only, so it needs an accessible name, not just a tooltip.
+      # Copying is the step's primary action, labelled in text, and reports
+      # itself to the server since the copy itself never leaves the browser.
       assert has_element?(
                view,
-               "button#onboarding-copy-booking-url[aria-label='Copy booking link']"
+               "button#onboarding-copy-booking-url.action-button--primary",
+               "Copy booking link"
+             )
+
+      assert has_element?(
+               view,
+               "button#onboarding-copy-booking-url[phx-click='share_booking_link'][phx-value-channel='copy']"
+             )
+
+      # Finishing stays available but gives way to the share actions.
+      assert has_element?(
+               view,
+               "button.action-button--secondary[phx-click='next_step']",
+               "Go to dashboard"
              )
 
       button_html = view |> element("#onboarding-copy-booking-url") |> render()

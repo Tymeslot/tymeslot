@@ -76,7 +76,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       assert has_element?(
                view,
                ".onboarding-step-description",
-               "Your account is ready. Head to your dashboard to start scheduling."
+               "Your link is ready, but the page only goes live once a calendar is connected."
              )
 
       assert has_element?(view, "button[phx-click='next_step']", "Go to dashboard")

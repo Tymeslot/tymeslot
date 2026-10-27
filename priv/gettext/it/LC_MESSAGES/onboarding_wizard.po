@@ -209,6 +209,7 @@ msgid "Connect Google, Outlook, or CalDAV calendars to prevent double-bookings a
 msgstr "Collega i calendari Google, Outlook o CalDAV per evitare automaticamente le doppie prenotazioni."
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
@@ -536,6 +537,7 @@ msgid "Share this link so people can book time with you. Choose something short 
 msgstr "Condividi questo link così le persone possono prenotare del tempo con te. Scegline uno breve e facile da ricordare."
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Share your booking page"
 msgstr "Condividi la tua pagina di prenotazione"
@@ -650,21 +652,6 @@ msgstr "Con %{notice} di preavviso, nessuno può prenotare una fascia oraria che
 #, elixir-autogen, elixir-format
 msgid "With no minimum notice, someone can book a slot that starts any time from now."
 msgstr "Senza preavviso minimo, qualcuno può prenotare una fascia oraria che inizia in qualsiasi momento a partire da adesso."
-
-#: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Without a connected calendar you'll have to manage clashes yourself. You can still carry on and connect one later from your dashboard."
-msgstr "Senza un calendario collegato dovrai gestire tu stesso le sovrapposizioni. Puoi comunque proseguire e collegarne uno più tardi dalla tua dashboard."
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "You're all set!"
-msgstr "È tutto pronto!"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Your account is ready. Head to your dashboard to start scheduling."
-msgstr "Il tuo account è pronto. Vai alla tua dashboard per iniziare a pianificare."
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -888,3 +875,53 @@ msgstr "Mostra tutti i temi"
 #, elixir-autogen, elixir-format
 msgid "Which of these sounds like you?"
 msgstr "Quale di queste descrizioni ti rispecchia?"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Book a time with me"
+msgstr "Prenota un appuntamento con me"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "Email"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Or send it straight away"
+msgstr "Oppure invialo subito"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "You can book a time with me here: %{url}"
+msgstr "Puoi prenotare un appuntamento con me qui: %{url}"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your page is live. Send the link to one person who might book with you now."
+msgstr "La tua pagina è online. Invia subito il link a una persona che potrebbe prenotare con te."
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Goes live once a calendar is connected"
+msgstr "Online appena colleghi un calendario"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one now, or later from Integrations on your dashboard."
+msgstr "Nessun calendario funzionante è collegato, quindi chi apre il tuo link vedrà che la pagina non è disponibile. Collegane uno ora, oppure più tardi da Integrazioni nella tua dashboard."
+
+#: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Without a connected calendar your booking page stays offline, so nobody can book you yet. You can still carry on and connect one later from your dashboard."
+msgstr "Senza un calendario collegato la tua pagina di prenotazione resta offline, quindi nessuno può ancora prenotare con te. Puoi comunque proseguire e collegarne uno più tardi dalla tua dashboard."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page isn't live yet"
+msgstr "La tua pagina di prenotazione non è ancora online"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your link is ready, but the page only goes live once a calendar is connected."
+msgstr "Il tuo link è pronto, ma la pagina sarà online solo dopo aver collegato un calendario."
