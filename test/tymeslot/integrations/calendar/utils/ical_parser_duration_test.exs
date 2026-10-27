@@ -45,6 +45,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserDurationTest do
       assert event.end_time == ~D[2030-01-17]
     end
 
+    test "counts a time-only DURATION of several days in whole days on an all-day event" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:allday-hours@example.com
+      DTSTART;VALUE=DATE:20300115
+      DURATION:PT48H
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.end_time == ~D[2030-01-17]
+    end
+
     # RFC 5545 §3.3.6: days are nominal. 2030-03-31 is the EU spring-forward
     # date, so 09:00 CET plus a day is 09:00 CEST, 23 elapsed hours later.
     test "adds a DURATION's days in DTSTART's wall clock across a DST change" do
