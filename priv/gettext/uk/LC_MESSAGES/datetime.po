@@ -13,16 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} hours"
-msgstr "%{count} год"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} minutes"
-msgstr "%{count} хв"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr "%{date} о %{time}"
 
@@ -40,11 +30,6 @@ msgstr "%{day} %{month} %{year} о %{time} %{timezone}"
 #, elixir-autogen, elixir-format
 msgid "%{hour_text} %{minute_text}"
 msgstr "%{hour_text} %{minute_text}"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{minutes} minutes"
-msgstr "%{minutes} хв"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -90,16 +75,6 @@ msgstr "%{years} р."
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
 msgstr "1 день"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "1 hour"
-msgstr "1 год"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "1 minute"
-msgstr "1 хв"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -270,3 +245,19 @@ msgstr "Середа"
 #, elixir-autogen, elixir-format
 msgid "same day only"
 msgstr "лише поточний день"
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} год"
+msgstr[1] "%{count} год"
+msgstr[2] "%{count} год"
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} хв"
+msgstr[1] "%{count} хв"
+msgstr[2] "%{count} хв"

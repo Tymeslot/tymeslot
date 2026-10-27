@@ -274,6 +274,31 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
   end
 
+  describe "format_duration/1" do
+    test "names a length in hours and minutes" do
+      assert LocalizationHelpers.format_duration(1) == "1 minute"
+      assert LocalizationHelpers.format_duration(30) == "30 minutes"
+      assert LocalizationHelpers.format_duration(60) == "1 hour"
+      assert LocalizationHelpers.format_duration(120) == "2 hours"
+      assert LocalizationHelpers.format_duration(61) == "1 hour 1 minute"
+      assert LocalizationHelpers.format_duration(150) == "2 hours 30 minutes"
+      assert LocalizationHelpers.format_duration("45min") == "45 minutes"
+    end
+
+    test "declines each part of a Czech length by the number it shows" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "cs")
+
+      assert LocalizationHelpers.format_duration(1) == "1 minuta"
+      assert LocalizationHelpers.format_duration(2) == "2 minuty"
+      assert LocalizationHelpers.format_duration(30) == "30 minut"
+      assert LocalizationHelpers.format_duration(60) == "1 hodina"
+      assert LocalizationHelpers.format_duration(180) == "3 hodiny"
+      assert LocalizationHelpers.format_duration(300) == "5 hodin"
+      assert LocalizationHelpers.format_duration(63) == "1 hodina 3 minuty"
+      assert LocalizationHelpers.format_duration(305) == "5 hodin 5 minut"
+    end
+  end
+
   describe "weekday_headings/1" do
     test "starts on the week start it is given" do
       assert LocalizationHelpers.weekday_headings(:monday) == ~w(Mon Tue Wed Thu Fri Sat Sun)
