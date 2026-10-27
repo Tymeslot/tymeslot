@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   attr :should_show_branding, :boolean, default: false
   attr :show_language_switcher, :boolean, default: nil
   attr :owner_preview, :boolean, default: false
+  attr :refused_calendars, :list, default: []
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
 
   attr :show_extensions, :boolean,
@@ -73,6 +74,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
             language_dropdown_open={@language_dropdown_open}
             show_language_switcher={@show_language_switcher}
             owner_preview={@owner_preview}
+            refused_calendars={@refused_calendars}
           />
           {render_slot(@inner_block)}
         </div>

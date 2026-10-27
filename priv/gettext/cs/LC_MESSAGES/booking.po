@@ -594,7 +594,6 @@ msgstr[1] "%{hour}, %{count} dostupné časy"
 msgstr[2] "%{hour}, %{count} dostupných časů"
 
 #: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#: lib/tymeslot_web/live/scheduling/week_slots.ex
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."
 msgstr "Termíny se nepodařilo načíst. Zkuste to prosím znovu."
@@ -977,3 +976,16 @@ msgstr "Rezervujete si schůzku (%{duration}) s hostitelem %{name}"
 #, elixir-autogen, elixir-format
 msgid "Paid %{amount}"
 msgstr "Zaplaceno %{amount}"
+
+#: lib/tymeslot_web/themes/shared/components/calendar_refused_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Připojit znovu"
+
+#: lib/tymeslot_web/themes/shared/components/calendar_refused_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar %{names} needs reconnecting. Until you do, visitors see no times here."
+msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors see no times here."
+msgstr[0] "Váš kalendář %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu neuvidí žádné termíny."
+msgstr[1] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu neuvidí žádné termíny."
+msgstr[2] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu neuvidí žádné termíny."

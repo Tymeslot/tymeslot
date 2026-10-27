@@ -593,7 +593,6 @@ msgstr[0] "%{hour}, %{count} horaire disponible"
 msgstr[1] "%{hour}, %{count} horaires disponibles"
 
 #: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#: lib/tymeslot_web/live/scheduling/week_slots.ex
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."
 msgstr "Impossible de charger les créneaux. Veuillez réessayer."
@@ -971,3 +970,15 @@ msgstr "Vous réservez une réunion de %{duration} avec %{name}"
 #, elixir-autogen, elixir-format
 msgid "Paid %{amount}"
 msgstr "Montant payé : %{amount}"
+
+#: lib/tymeslot_web/themes/shared/components/calendar_refused_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Reconnecter"
+
+#: lib/tymeslot_web/themes/shared/components/calendar_refused_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar %{names} needs reconnecting. Until you do, visitors see no times here."
+msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors see no times here."
+msgstr[0] "Votre calendrier %{names} doit être reconnecté. Tant que ce n'est pas fait, les visiteurs ne voient aucun horaire ici."
+msgstr[1] "Vos calendriers %{names} doivent être reconnectés. Tant que ce n'est pas fait, les visiteurs ne voient aucun horaire ici."

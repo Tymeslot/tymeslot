@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1]
 
+  alias Tymeslot.Integrations.Calendar
+
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
     CalendarHelpers,
@@ -67,7 +69,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
 
     # Verify an owner-preview token now that the organiser (and so the page
     # owner's user id) is resolved. Gates simulate-vs-persist downstream.
-    socket = assign_owner_preview(socket, params)
+    socket =
+      socket
+      |> assign_owner_preview(params)
+      |> assign_refused_calendars()
 
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
@@ -183,6 +188,32 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     socket
     |> assign(:owner_preview, socket.assigns[:owner_preview] || verified_token != nil)
     |> assign(:preview_token, socket.assigns[:preview_token] || verified_token)
+  end
+
+  # The calendars whose credentials were refused, by name, for the page's own
+  # organiser alone: they read every slot fetch as failing until they
+  # reconnect, and the guest copy says nothing they could act on. The owner is
+  # whoever the signed session says is signed in as them, or holds a verified
+  # preview token, never anything a query parameter claims; anyone else gets
+  # `[]` without a lookup. Read once, on the connected mount.
+  defp assign_refused_calendars(socket) do
+    assign(socket, :refused_calendars, refused_calendars(socket))
+  end
+
+  defp refused_calendars(socket) do
+    organizer_user_id = socket.assigns[:organizer_user_id]
+
+    owner_viewing? =
+      is_integer(organizer_user_id) and
+        (socket.assigns[:owner_preview] == true or
+           socket.assigns[:viewer_user_id] == organizer_user_id)
+
+    with true <- owner_viewing? and connected?(socket),
+         {:credentials_refused, names} <- Calendar.booking_page_health(organizer_user_id) do
+      names
+    else
+      _taking_bookings_or_not_the_owner -> []
+    end
   end
 
   # The token itself is kept, not just the boolean it produced, because a locale

@@ -33,7 +33,9 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
   session referrer) is captured before spawning the Task. The signed-in
   viewer's id arrives in the session as `"viewer_user_id"`, resolved by the
   router from the request's current user, so an organiser's visit to their
-  own booking page can be skipped without a lookup here. The
+  own booking page can be skipped without a lookup here. It is also
+  assigned as `:viewer_user_id`, so the booking page can tell its own
+  organiser what only they can fix. The
   database lookups for user and meeting-type context run inside the
   Task, off the mount path.
   """
@@ -61,10 +63,15 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
           {:cont, Phoenix.LiveView.Socket.t()}
   def on_mount(:default, params, session, socket) do
     referrer = session[@scheduling_referrer_session_key]
-    socket = assign(socket, :scheduling_referrer, referrer)
+    viewer_user_id = session[@viewer_user_id_session_key]
+
+    socket =
+      socket
+      |> assign(:scheduling_referrer, referrer)
+      |> assign(:viewer_user_id, viewer_user_id)
 
     if connected?(socket) and Analytics.enabled?() do
-      {:cont, track_connected(socket, params, referrer, session[@viewer_user_id_session_key])}
+      {:cont, track_connected(socket, params, referrer, viewer_user_id)}
     else
       {:cont, socket}
     end
