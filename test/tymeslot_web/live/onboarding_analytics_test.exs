@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.OnboardingAnalyticsTest do
   @moduledoc """
   Verifies the onboarding funnel emits anonymous `onboarding_step_completed`
-  analytics events on the reliable (non-redirecting) success paths, and that
-  the payloads never carry user-identifying props.
+  analytics events on the reliable (non-redirecting) success paths, that each
+  share action on the final step emits `booking_link_shared` with its channel,
+  and that the payloads never carry user-identifying props.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -68,6 +69,126 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       refute Map.has_key?(props, :user_id)
       refute Map.has_key?(props, :username)
       refute Map.has_key?(props, :email)
+    end
+  end
+
+  describe "share step with a live booking page" do
+    setup %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      view |> goto_choose_theme() |> advance_to_share_step()
+      %{view: view}
+    end
+
+    test "records that the host saw the live variant", %{view: view} do
+      assert_push_event view, "ts:analytics", %{
+        name: "share_step_viewed",
+        props: %{page_live: true}
+      }
+
+      refute has_element?(view, "#onboarding-page-offline-warning")
+    end
+
+    for {selector, channel} <- [
+          {"button#onboarding-copy-booking-url", "copy"},
+          {"a#onboarding-share-email", "email"},
+          {"a#onboarding-share-whatsapp", "whatsapp"},
+          {"a#onboarding-share-linkedin", "linkedin"}
+        ] do
+      test "the #{channel} action pushes a share event with its channel", %{view: view} do
+        view |> element(unquote(selector)) |> render_click()
+
+        assert_push_event view, "ts:analytics", %{
+          name: "booking_link_shared",
+          props: %{channel: unquote(channel)}
+        }
+      end
+    end
+
+    test "a channel the step does not offer is dropped", %{view: view} do
+      render_click(view, "share_booking_link", %{"channel" => "user@example.com"})
+
+      refute_push_event view, "ts:analytics", %{name: "booking_link_shared"}
+    end
+
+    test "share links carry the booking URL and open safely", %{view: view} do
+      email = view |> element("a#onboarding-share-email") |> render()
+      assert email =~ ~s(href="mailto:?subject=Book%20a%20time%20with%20me&amp;body=)
+      assert email =~ "%2Fada"
+
+      whatsapp = view |> element("a#onboarding-share-whatsapp") |> render()
+
+      assert whatsapp =~
+               ~s(href="https://wa.me/?text=You%20can%20book%20a%20time%20with%20me%20here%3A%20)
+
+      assert whatsapp =~ ~s(rel="noopener noreferrer")
+      assert whatsapp =~ ~s(target="_blank")
+
+      linkedin = view |> element("a#onboarding-share-linkedin") |> render()
+      assert linkedin =~ "https://www.linkedin.com/sharing/share-offsite/?url=http"
+      assert linkedin =~ "%2Fada"
+      assert linkedin =~ ~s(rel="noopener noreferrer")
+    end
+  end
+
+  describe "share step without a connected calendar" do
+    setup %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view |> navigate_to_scheduling_steps() |> advance_to_share_step()
+      %{view: view}
+    end
+
+    test "records that the host saw the offline variant", %{view: view} do
+      assert_push_event view, "ts:analytics", %{
+        name: "share_step_viewed",
+        props: %{page_live: false}
+      }
+    end
+
+    test "warns that the page is not live and greys out every share action", %{view: view} do
+      assert has_element?(
+               view,
+               "#onboarding-page-offline-warning",
+               "Your booking page isn't live yet"
+             )
+
+      assert has_element?(
+               view,
+               ".onboarding-step-description",
+               "Your link is ready, but the page only goes live once a calendar is connected."
+             )
+
+      assert has_element?(view, "button#onboarding-copy-booking-url[disabled]")
+
+      for channel <- ~w(email whatsapp linkedin) do
+        assert has_element?(view, "button#onboarding-share-#{channel}[disabled]")
+        refute has_element?(view, "a#onboarding-share-#{channel}")
+      end
+
+      # Finishing stays possible: the host can connect a calendar later.
+      assert has_element?(view, "button[phx-click='next_step']", "Go to dashboard")
+    end
+
+    test "the warning takes the host back to the calendar step", %{view: view} do
+      view |> element("#onboarding-return-to-calendar") |> render_click()
+
+      assert has_element?(view, ".onboarding-step-title", "Connect your calendar")
+      assert has_element?(view, ".onboarding-provider-cards")
+    end
+  end
+
+  # Clicks Continue until the share step, so each describe can reach it from
+  # wherever its own setup leaves the wizard.
+  defp advance_to_share_step(view, attempts_left \\ 6) do
+    cond do
+      has_element?(view, ".onboarding-step-title", "Share your booking page") ->
+        view
+
+      attempts_left == 0 ->
+        flunk("never reached the share step")
+
+      true ->
+        view |> element("button[phx-click='next_step']") |> render_click()
+        advance_to_share_step(view, attempts_left - 1)
     end
   end
 end

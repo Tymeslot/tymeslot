@@ -60,10 +60,21 @@ defmodule TymeslotWeb.OnboardingLive do
       # `/onboarding/choose_theme` before the socket connects. Defer the
       # membership check until the connected render, where `mount/3` has run
       # with the real calendar list and `steps` reflects it.
-      if !connected?(socket) or step_atom in socket.assigns.steps do
-        {:noreply, assign(socket, :current_step, step_atom)}
-      else
-        {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
+      cond do
+        not connected?(socket) ->
+          {:noreply, assign(socket, :current_step, step_atom)}
+
+        step_atom == :ready ->
+          {:noreply,
+           socket
+           |> assign(:current_step, :ready)
+           |> NavigationHandlers.assign_booking_page_live()}
+
+        step_atom in socket.assigns.steps ->
+          {:noreply, assign(socket, :current_step, step_atom)}
+
+        true ->
+          {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
       end
     else
       {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
@@ -82,6 +93,7 @@ defmodule TymeslotWeb.OnboardingLive do
       current_step={@current_step}
       steps={@steps}
       show_skip_modal={@show_skip_modal}
+      booking_page_live={@booking_page_live}
       next_disabled={
         @current_step == :connect_calendar and is_nil(@calendar_choice) and
           @connected_calendars == []
@@ -107,6 +119,7 @@ defmodule TymeslotWeb.OnboardingLive do
           min_advance_hours={policy_value(@availability_schedule, :min_advance_hours)}
           calendar_connected={@connected_calendars != [] or @calendar_choice not in [nil, "skip"]}
           booking_host={booking_host()}
+          booking_page_live={@booking_page_live}
         />
       </:preview>
       <%= case @current_step do %>
@@ -163,7 +176,7 @@ defmodule TymeslotWeb.OnboardingLive do
             custom_input_mode={@custom_input_mode}
           />
         <% :ready -> %>
-          <ReadyStep.ready_step booking_url={@booking_url} />
+          <ReadyStep.ready_step booking_url={@booking_url} page_live={@booking_page_live} />
       <% end %>
     </OnboardingLayout.onboarding_layout>
 
@@ -188,6 +201,14 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   def handle_event("next_step", _params, socket) do
     NavigationHandlers.handle_next_step(socket)
+  end
+
+  def handle_event("return_to_calendar_step", _params, socket) do
+    NavigationHandlers.handle_return_to_calendar_step(socket)
+  end
+
+  def handle_event("share_booking_link", params, socket) do
+    NavigationHandlers.handle_share_booking_link(socket, params["channel"])
   end
 
   def handle_event("previous_step", _params, socket) do

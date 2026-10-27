@@ -14,12 +14,14 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Phoenix.LiveView
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
+  alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
+  alias TymeslotWeb.OnboardingLive.ReadyStep
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   # The fields each preference step edits, keyed as in `form_errors`.
@@ -28,6 +30,22 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     booking_window: [:advance_booking_days],
     minimum_notice: [:min_advance_hours]
   }
+
+  @doc """
+  Records that the host shared their booking link from the final step.
+
+  The channel comes from the client, so anything outside the step's own
+  channels is dropped rather than reported.
+  """
+  @spec handle_share_booking_link(Phoenix.LiveView.Socket.t(), term()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_share_booking_link(socket, channel) do
+    if channel in ReadyStep.share_channels() do
+      {:noreply, Analytics.push(socket, "booking_link_shared", %{channel: channel})}
+    else
+      {:noreply, socket}
+    end
+  end
 
   @doc """
   Handles the next step navigation event.
@@ -97,6 +115,35 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     |> Component.assign(:current_step, next)
     |> Analytics.push("onboarding_step_completed", %{step: to_string(step)})
     |> LiveView.clear_flash()
+    |> then(&if(next == :ready, do: assign_booking_page_live(&1), else: &1))
+  end
+
+  @doc """
+  Checks whether the booking page is actually live, with the same rule the
+  public page applies, and records which variant of the share step the host
+  sees. Without a bookable calendar the page refuses visitors, so the share
+  step greys out its actions instead of sending people to a dead link.
+  """
+  @spec assign_booking_page_live(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_booking_page_live(socket) do
+    live? = LinkAccessPolicy.check_public_readiness(socket.assigns.profile) == {:ok, :ready}
+
+    socket
+    |> Component.assign(:booking_page_live, live?)
+    |> Analytics.push("share_step_viewed", %{page_live: live?})
+  end
+
+  @doc """
+  Takes the host from the share step back to the calendar step, so a page
+  that is not live yet can be fixed without leaving onboarding.
+  """
+  @spec handle_return_to_calendar_step(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_return_to_calendar_step(socket) do
+    {:noreply,
+     socket
+     |> Component.assign(current_step: :connect_calendar, calendar_choice: nil)
+     |> LiveView.clear_flash()}
   end
 
   @doc """
