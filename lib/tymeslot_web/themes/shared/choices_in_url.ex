@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.ChoicesInUrl do
   """
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [push_patch: 2]
+  import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -79,7 +79,18 @@ defmodule TymeslotWeb.Themes.Shared.ChoicesInUrl do
 
       socket
       |> assign(:own_patch_query, query)
+      |> keep_flash()
       |> push_patch(to: to, replace: true)
     end
+  end
+
+  # A patch keeps only the flash set in the same callback, and clears the
+  # rest as a navigation would. The page's own patch is no navigation: its
+  # first one comes as the page connects, so a flash the page arrived with
+  # would vanish before the visitor could read it.
+  defp keep_flash(socket) do
+    Enum.reduce(socket.assigns.flash, socket, fn {key, message}, acc ->
+      put_flash(acc, key, message)
+    end)
   end
 end
