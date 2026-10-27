@@ -143,12 +143,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   @doc """
   Resumes on the moment the URL names (`params["step"]`), through the
-  navigator's `resume/4`; the socket unchanged without one, or without a
-  `step`.
+  navigator's `resume/4`; the socket unchanged without one, without a
+  `step`, or on a page already navigating elsewhere.
   """
   @spec resume(Socket.t(), map()) :: Socket.t()
   def resume(
-        %Socket{assigns: %{journey: %Journey{navigator: navigator} = journey}} = socket,
+        %Socket{redirected: nil, assigns: %{journey: %Journey{navigator: navigator} = journey}} =
+          socket,
         %{"step" => step} = params
       )
       when is_binary(step) do

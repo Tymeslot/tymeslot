@@ -159,7 +159,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
         |> ThemeUtils.assign_theme_with_preview(params)
         |> assign_owner_preview(params)
         |> Runtime.transition_to(initial_state, params)
-        |> resume(params)
+        |> Runtime.resume(params)
 
       if socket.redirected do
         {:noreply, socket}
@@ -290,9 +290,6 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       socket
     end
   end
-
-  defp resume(%{redirected: nil} = socket, params), do: Runtime.resume(socket, params)
-  defp resume(socket, _params), do: socket
 
   # The moment, or outcome, the route opens on: the journey's navigator
   # decides (`Navigator.entry/3`). `SchedulingLive` assigns the journey
