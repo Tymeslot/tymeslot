@@ -93,7 +93,8 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     skip_calendar: {:show_skip_calendar_modal, :skip_calendar_modal_data},
     theme_preview: {:show_theme_preview_modal, :theme_preview_modal_data},
     disconnect: {:show_disconnect_modal, :disconnect_modal_data},
-    refund: {:show_refund_modal, :refund_modal_data}
+    refund: {:show_refund_modal, :refund_modal_data},
+    withdrawal: {:show_withdrawal_modal, :withdrawal_modal_data}
   }
 
   defp resolve_keys(k) when is_atom(k) do
