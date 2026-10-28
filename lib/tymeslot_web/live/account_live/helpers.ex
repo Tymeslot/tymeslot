@@ -10,6 +10,7 @@ defmodule TymeslotWeb.AccountLive.Helpers do
 
   alias Tymeslot.Auth
   alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Hooks.ModalHook
 
   # Provider constants
   @email_provider "email"
@@ -26,9 +27,8 @@ defmodule TymeslotWeb.AccountLive.Helpers do
     |> assign(:show_password_form, false)
     |> assign(:saving_email, false)
     |> assign(:saving_password, false)
-    |> assign(:show_delete_modal, false)
+    |> ModalHook.mount_modal(delete: false)
     |> assign(:delete_errors, %{})
-    |> assign(:deletion_date, "")
     |> assign(:deletion_grace_days, Auth.account_deletion_grace_days())
     |> assign(
       :deletion_confirmation,

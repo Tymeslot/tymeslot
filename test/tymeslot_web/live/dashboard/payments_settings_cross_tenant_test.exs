@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
 
     * `open_refund_modal` takes an id from the client, so another host's id
       and a malformed one must both leave the modal shut without crashing.
-    * `submit_refund` must read the payment from `@refund_modal_payment` rather
+    * `submit_refund` must read the payment from `@refund_modal_data` rather
       than from params. The form posts a `payment_id` the handler deliberately
       ignores, and a refactor that "simplifies" the handler into trusting it
       would refund whichever payment the client names, as long as its owner

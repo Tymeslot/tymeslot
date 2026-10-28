@@ -111,6 +111,7 @@
                "lib/tymeslot/profiles/avatars/fallback.ex"
              ]
            ]},
+          {CredoChecks.UseModalHook, []},
           {CredoChecks.UseColorScale, [priority: :low]},
           {CredoChecks.NoArbitraryHexColors, [priority: :low]},
           {CredoChecks.RequireDashboardPage, [priority: :low]},

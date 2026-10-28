@@ -60,6 +60,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   @health_timeout 6_000
 
   @impl Phoenix.LiveComponent
+  def mount(socket) do
+    {:ok, ModalHook.mount_modal(socket, delete: false, cancel: false)}
+  end
+
+  @impl Phoenix.LiveComponent
   def update(%{poll_created: true}, socket) do
     # The child form persisted a poll: refresh the list and close the form.
     {:ok, socket |> assign(:show_form, false) |> load_polls()}
@@ -117,9 +122,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
      |> assign_new(:slot_errors, fn -> %{} end)
      |> assign_new(:winning_slot_id, fn -> nil end)
      |> assign_new(:meeting_types, fn -> [] end)
-     |> assign_new(:show_cancel_modal, fn -> false end)
      |> assign_new(:confirming_slot, fn -> nil end)
-     |> assign_new(:show_delete_modal, fn -> false end)
      |> assign_new(:expanded_slots, fn -> MapSet.new() end)
      |> assign_new(:editing_details?, fn -> false end)
      |> load_polls()}
@@ -374,12 +377,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("request_delete_poll", _params, socket) do
-    {:noreply, assign(socket, :show_delete_modal, true)}
+    {:noreply, ModalHook.show_modal(socket, :delete)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("close_delete_poll_modal", _params, socket) do
-    {:noreply, assign(socket, :show_delete_modal, false)}
+    {:noreply, ModalHook.hide_modal(socket, :delete)}
   end
 
   @impl Phoenix.LiveComponent
@@ -395,24 +398,24 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
         Flash.error(dgettext("dashboard_polls", "Couldn't delete this poll. Please try again."))
 
         {:noreply,
-         socket |> assign(:show_delete_modal, false) |> reload_selected(refresh_health: false)}
+         socket |> ModalHook.hide_modal(:delete) |> reload_selected(refresh_health: false)}
     end
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("request_cancel_poll", _params, socket) do
-    {:noreply, assign(socket, :show_cancel_modal, true)}
+    {:noreply, ModalHook.show_modal(socket, :cancel)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("close_cancel_poll_modal", _params, socket) do
-    {:noreply, assign(socket, :show_cancel_modal, false)}
+    {:noreply, ModalHook.hide_modal(socket, :cancel)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_poll", _params, socket) do
     poll_id = socket.assigns.selected_poll_id
-    socket = assign(socket, :show_cancel_modal, false)
+    socket = ModalHook.hide_modal(socket, :cancel)
     user_id = socket.assigns.current_user.id
 
     case Polls.cancel_poll(poll_id, user_id) do
@@ -549,7 +552,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   defp clear_selection(socket) do
     if prev = socket.assigns[:selected_poll_id], do: Polls.unsubscribe(prev)
 
-    assign(socket,
+    socket
+    |> ModalHook.hide_modal(:delete)
+    |> ModalHook.hide_modal(:cancel)
+    |> assign(
       selected_poll_id: nil,
       selected_poll: nil,
       tallies: %{},
@@ -557,8 +563,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       slot_health_loading: false,
       slot_errors: %{},
       winning_slot_id: nil,
-      show_cancel_modal: false,
-      show_delete_modal: false,
       confirming_slot: nil,
       expanded_slots: MapSet.new(),
       editing_details?: false,

@@ -7,7 +7,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   use TymeslotWeb, :verified_routes
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
   alias Tymeslot.Auth
@@ -15,6 +15,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias TymeslotWeb.AccountLive.Helpers
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Helpers.DeletionDate
+  alias TymeslotWeb.Hooks.ModalHook
 
   # Provider constants
   @social_provider_default "social"
@@ -114,15 +115,13 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     due_at = Auth.account_deletion_due_at(DateTime.utc_now())
 
     {:noreply,
-     assign(socket,
-       show_delete_modal: true,
-       delete_errors: %{},
-       deletion_date: DeletionDate.format(due_at, socket.assigns.current_user)
-     )}
+     socket
+     |> ModalHook.show_modal(:delete, DeletionDate.format(due_at, socket.assigns.current_user))
+     |> assign(:delete_errors, %{})}
   end
 
   def handle_event("close_delete_account_modal", _params, socket) do
-    {:noreply, assign(socket, show_delete_modal: false, delete_errors: %{})}
+    {:noreply, socket |> ModalHook.hide_modal(:delete) |> assign(:delete_errors, %{})}
   end
 
   def handle_event("request_account_deletion", %{"delete_account" => params}, socket) do

@@ -190,8 +190,8 @@ defmodule TymeslotWeb.OnboardingLive do
 
     <%!-- Real booking-page preview --%>
     <ThemePreviewModal.theme_preview_modal
-      show={@show_theme_preview}
-      url={@theme_preview_url}
+      show={@show_theme_preview_modal}
+      url={@theme_preview_modal_data}
     />
     """
   end

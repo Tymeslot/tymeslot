@@ -594,6 +594,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       assert reloaded.slug != "strategy-session"
     end
 
+    test "cancelling the booking link modal discards the draft for the next open", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = insert(:meeting_type, user: user, name: "Strategy Session")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view |> element("[phx-click='open_slug_modal']") |> render_click()
+
+      view
+      |> form("#booking-link-modal form", %{"slug" => "abandoned-draft"})
+      |> render_change()
+
+      view |> element("#booking-link-modal button", "Cancel") |> render_click()
+      view |> element("[phx-click='open_slug_modal']") |> render_click()
+
+      assert has_element?(view, "#booking-link-modal input[name=slug][value='strategy-session']")
+
+      view |> element("#booking-link-modal button", "Save link") |> render_click()
+
+      refute Repo.reload!(meeting_type).slug == "abandoned-draft"
+    end
+
     test "a booking link already taken by another type is rejected", %{conn: conn, user: user} do
       _taken = insert(:meeting_type, user: user, name: "Coffee Chat")
       other = insert(:meeting_type, user: user, name: "Other Session")

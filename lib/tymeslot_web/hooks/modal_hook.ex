@@ -86,7 +86,15 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     telegram_delete: {:show_telegram_delete_modal, :telegram_delete_modal_data},
     telegram_deliveries: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data},
     slack_delete: {:show_slack_delete_modal, :slack_delete_modal_data},
-    slack_deliveries: {:show_slack_deliveries_modal, :slack_deliveries_modal_data}
+    slack_deliveries: {:show_slack_deliveries_modal, :slack_deliveries_modal_data},
+    slug: {:show_slug_modal, :slug_modal_data},
+    cancel: {:show_cancel_modal, :cancel_modal_data},
+    skip: {:show_skip_modal, :skip_modal_data},
+    skip_calendar: {:show_skip_calendar_modal, :skip_calendar_modal_data},
+    theme_preview: {:show_theme_preview_modal, :theme_preview_modal_data},
+    disconnect: {:show_disconnect_modal, :disconnect_modal_data},
+    refund: {:show_refund_modal, :refund_modal_data},
+    withdrawal: {:show_withdrawal_modal, :withdrawal_modal_data}
   }
 
   defp resolve_keys(k) when is_atom(k) do
