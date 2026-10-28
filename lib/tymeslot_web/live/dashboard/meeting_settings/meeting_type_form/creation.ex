@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   alias TymeslotWeb.Helpers.ContextErrors
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   # The Details fields the create submit posts. Each input already reports its
   # value through a debounced phx-change, but a click on "Create" can arrive
@@ -45,22 +46,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
     user = socket.assigns.current_user
 
     case RateLimiter.check(:meeting_type_write, user.id) do
-      :ok ->
-        socket = merge_posted_details(socket, posted_params)
-
-        socket.assigns
-        |> Submission.build_params()
-        |> Submission.persist(Helpers.get_security_metadata(socket), nil, user)
-        |> apply_result(socket)
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        socket
-
+      # The editor has no other way to say why "Create" did nothing.
       {:error, :invalid_user_id} ->
         Flash.error(error_message(:invalid_user_id))
         socket
+
+      check ->
+        RateLimit.with_rate_limit(check, socket, fn -> create(socket, user, posted_params) end,
+          reply: :socket
+        )
     end
+  end
+
+  defp create(socket, user, posted_params) do
+    socket = merge_posted_details(socket, posted_params)
+
+    socket.assigns
+    |> Submission.build_params()
+    |> Submission.persist(Helpers.get_security_metadata(socket), nil, user)
+    |> apply_result(socket)
   end
 
   defp merge_posted_details(socket, posted_params) do

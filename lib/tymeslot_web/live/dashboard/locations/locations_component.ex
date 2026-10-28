@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   alias Tymeslot.Venues.VenueSchema
   alias TymeslotWeb.Dashboard.Locations.{DeleteVenueModal, VenueCard, VenueFormModal}
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   require Logger
 
@@ -177,17 +178,11 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   # rewrites every meeting type offering it. Refused, the form or the
   # confirmation stays open, so the organiser can try again.
   defp with_write_limit(socket, write) do
-    case RateLimiter.check(:meeting_type_write, socket.assigns.current_user.id) do
-      :ok ->
-        write.()
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      {:error, :invalid_user_id} ->
-        {:noreply, socket}
-    end
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_type_write, socket.assigns.current_user.id),
+      socket,
+      write
+    )
   end
 
   @impl Phoenix.LiveComponent

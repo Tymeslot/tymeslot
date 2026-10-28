@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Shared.PollDeadlineTimer
+  alias TymeslotWeb.Live.Shared.RateLimit
   alias TymeslotWeb.Themes.Shared.PollVotingComponents
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -123,7 +124,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         poll_id: socket.assigns.poll.id
       })
 
-      with_rate_limit(socket, :poll_register, fn socket ->
+      with_poll_limit(socket, :poll_register, fn socket ->
         {:noreply, assign(socket, link_request: :sent)}
       end)
     else
@@ -133,7 +134,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   def handle_poll_event("cast_votes", %{"votes" => votes_map} = params, socket)
       when is_map(votes_map) do
-    with_rate_limit(socket, :poll_vote, fn socket ->
+    with_poll_limit(socket, :poll_vote, fn socket ->
       cast_votes_for(socket, votes_map, params["name"])
     end)
   end
@@ -152,7 +153,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   def handle_poll_event(_event, _params, socket), do: {:noreply, socket}
 
   defp register_participant(socket, params) do
-    with_rate_limit(socket, :poll_register, fn socket ->
+    with_poll_limit(socket, :poll_register, fn socket ->
       case verify_recaptcha(socket, params) do
         :ok -> do_register(socket, params)
         {:error, message} -> {:noreply, put_flash(socket, :error, message)}
@@ -229,19 +230,15 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   # --- Rate limiting ---
 
-  defp with_rate_limit(socket, limit, fun) do
-    case RateLimiter.check(limit, client_ip(socket)) do
-      :ok ->
-        fun.(socket)
-
-      {:error, :rate_limited, _message} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           dgettext("booking_polls", "Too many attempts. Please wait a moment and try again.")
-         )}
-    end
+  defp with_poll_limit(socket, limit, fun) do
+    RateLimit.with_rate_limit(
+      RateLimiter.check(limit, client_ip(socket)),
+      socket,
+      fn -> fun.(socket) end,
+      message:
+        dgettext("booking_polls", "Too many attempts. Please wait a moment and try again."),
+      flash: :socket
+    )
   end
 
   defp client_ip(socket), do: ClientIP.get(socket)

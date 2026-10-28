@@ -32,6 +32,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Live.Shared.RateLimit
   alias TymeslotWeb.MeetingRequestLive.View
 
   @impl Phoenix.LiveView
@@ -157,17 +158,14 @@ defmodule TymeslotWeb.MeetingRequestLive do
   defp answer(socket, nil, _action, _success_state), do: socket
 
   defp answer(socket, meeting, action, success_state) do
-    case RateLimiter.check(:meeting_approval, ClientIP.get(socket)) do
-      :ok ->
-        apply_answer(socket, meeting, action, success_state)
-
-      {:error, :rate_limited, _message} ->
-        put_flash(
-          socket,
-          :error,
-          dgettext("booking_manage", "Too many attempts. Try again in a moment.")
-        )
-    end
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_approval, ClientIP.get(socket)),
+      socket,
+      fn -> apply_answer(socket, meeting, action, success_state) end,
+      message: dgettext("booking_manage", "Too many attempts. Try again in a moment."),
+      flash: :socket,
+      reply: :socket
+    )
   end
 
   # The meeting in the assigns was read once, when the page connected, and the

@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @spec handle_create(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -96,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
     user_id = socket.assigns.current_user.id
     bot_mode = Telegram.form_bot_mode(mode, socket.assigns.telegram_form_data)
 
-    AutomationHelpers.with_rate_limit(
+    RateLimit.with_rate_limit(
       RateLimiter.check(:webhook_write, user_id),
       socket,
       fn ->

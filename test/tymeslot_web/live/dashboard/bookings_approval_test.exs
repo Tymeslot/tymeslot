@@ -13,11 +13,13 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
   @moduletag :live
   @moduletag :bookings
   @moduletag :meetings
 
+  alias Plug.HTML
   alias Plug.Test
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
@@ -401,6 +403,48 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       assert render(view) =~ "reached the limit"
       assert reload(meeting).status == "awaiting_approval"
+    end
+
+    test "switching the filter is refused once the per-host limit is exhausted",
+         %{conn: conn, user: user} do
+      held_meeting(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      message = exhaust_limit!(:meeting_filter, user.id)
+
+      render_click(element(view, "button", "Requests"))
+
+      html = render(view)
+      assert html =~ HTML.html_escape(message)
+      # Still on the upcoming tab, which does not list a held request.
+      refute html =~ "Alex Guest"
+    end
+
+    test "cancelling is refused once the per-host limit is exhausted", %{conn: conn, user: user} do
+      meeting = held_meeting(user, %{status: "confirmed"})
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      push_to_component(view, "show_cancel_modal", %{"id" => meeting.id})
+
+      message = exhaust_limit!(:dashboard_cancel, user.id)
+
+      push_to_component(view, "confirm_cancel_meeting", %{})
+
+      assert render(view) =~ HTML.html_escape(message)
+      assert reload(meeting).status == "confirmed"
+    end
+
+    test "asking to reschedule is refused once the per-host limit is exhausted",
+         %{conn: conn, user: user} do
+      meeting = held_meeting(user, %{status: "confirmed"})
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      push_to_component(view, "show_reschedule_modal", %{"id" => meeting.id})
+
+      message = exhaust_limit!(:dashboard_reschedule, user.id)
+
+      push_to_component(view, "confirm_reschedule_request", %{})
+
+      assert render(view) =~ HTML.html_escape(message)
+      assert reload(meeting).status == "confirmed"
     end
   end
 

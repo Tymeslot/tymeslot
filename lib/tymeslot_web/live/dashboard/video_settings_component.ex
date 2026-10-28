@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -177,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_event("reconnect_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
+    RateLimit.with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
       case FormInput.integration_id(id) do
         nil ->
           {:noreply, socket}
@@ -205,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
+    RateLimit.with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
       case FormInput.integration_id(id) do
         nil ->
           {:noreply, socket}
@@ -513,7 +514,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp add_validated_integration(provider, validated_params, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
+    RateLimit.with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
       handle_create_result(
         Video.create_integration(user_id, provider, FormInput.to_atom_keys(validated_params)),
         provider,
@@ -565,13 +566,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp blank?(nil), do: true
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(_value), do: false
-
-  defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
-    notify_parent({:flash, {:error, message}})
-    {:noreply, socket}
-  end
-
-  defp with_rate_limit(:ok, _socket, action), do: action.()
 
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id

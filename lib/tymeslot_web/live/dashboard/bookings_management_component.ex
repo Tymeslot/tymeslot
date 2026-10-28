@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   require Refusal
   require Logger
@@ -119,33 +120,28 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("filter_meetings", %{"filter" => filter}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:meeting_filter, user_id) do
-      :ok ->
-        case validate_filter(filter) do
-          {:ok, validated_filter} ->
-            :telemetry.execute(
-              [:tymeslot, :dashboard, :meetings, :filter],
-              %{},
-              %{user_id: user_id, filter: validated_filter}
-            )
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_filter, user_id), socket, fn ->
+      case validate_filter(filter) do
+        {:ok, validated_filter} ->
+          :telemetry.execute(
+            [:tymeslot, :dashboard, :meetings, :filter],
+            %{},
+            %{user_id: user_id, filter: validated_filter}
+          )
 
-            {:noreply,
-             socket
-             |> assign(:filter, validated_filter)
-             |> assign(:focus, nil)
-             |> assign(:next_cursor, nil)
-             |> assign(:has_more, false)
-             |> assign(:loading, true)
-             |> load_meetings()}
+          {:noreply,
+           socket
+           |> assign(:filter, validated_filter)
+           |> assign(:focus, nil)
+           |> assign(:next_cursor, nil)
+           |> assign(:has_more, false)
+           |> assign(:loading, true)
+           |> load_meetings()}
 
-          {:error, _errors} ->
-            {:noreply, socket}
-        end
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-    end
+        {:error, _errors} ->
+          {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket) do
@@ -187,16 +183,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("confirm_cancel_meeting", params, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:dashboard_cancel, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      :ok ->
-        ModalHook.with_modal_data(socket, :cancel_meeting, fn meeting ->
-          do_cancel_meeting(socket, meeting, params)
-        end)
-    end
+    RateLimit.with_rate_limit(RateLimiter.check(:dashboard_cancel, user_id), socket, fn ->
+      ModalHook.with_modal_data(socket, :cancel_meeting, fn meeting ->
+        do_cancel_meeting(socket, meeting, params)
+      end)
+    end)
   end
 
   def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket),
@@ -209,16 +200,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("confirm_reschedule_request", _params, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:dashboard_reschedule, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      :ok ->
-        ModalHook.with_modal_data(socket, :reschedule_request, fn meeting ->
-          {:noreply, RescheduleRequest.send(socket, meeting, &load_meetings/1)}
-        end)
-    end
+    RateLimit.with_rate_limit(RateLimiter.check(:dashboard_reschedule, user_id), socket, fn ->
+      ModalHook.with_modal_data(socket, :reschedule_request, fn meeting ->
+        {:noreply, RescheduleRequest.send(socket, meeting, &load_meetings/1)}
+      end)
+    end)
   end
 
   def handle_event("dismiss_calendar_sync_banner", %{"id" => meeting_id}, socket) do
@@ -305,19 +291,18 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   # Gated on the same per-answer limiter the emailed link uses, so this is
   # not the one write handler in the module a click loop can drive unbounded.
   def handle_event("approve_request", %{"id" => _id} = params, socket) do
-    case RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)) do
-      :ok ->
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      socket,
+      fn ->
         RequestActions.answer(socket, params, &Approval.approve/1,
           success:
             dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
           failure: dgettext("dashboard_bookings", "That request could not be approved."),
           reload: &load_meetings/1
         )
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-    end
+      end
+    )
   end
 
   def handle_event("show_decline_modal", %{"id" => _id} = params, socket) do
@@ -362,8 +347,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("confirm_decline_request", params, socket) do
-    case RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)) do
-      :ok ->
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      socket,
+      fn ->
         reason = sanitize_decline_reason(Map.get(params, "reason"))
 
         ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
@@ -375,11 +362,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
             reload: &load_meetings/1
           )
         end)
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-    end
+      end
+    )
   end
 
   # The other half of `RequestActions.answer/4`'s `start_async/3` call: the

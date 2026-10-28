@@ -13,8 +13,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
   import Phoenix.LiveViewTest
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
   alias Ecto.Changeset
+  alias Plug.HTML
   alias Plug.Test
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Meetings.MeetingQueries
@@ -107,6 +109,25 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
     assert moved.calendar_sync_status == nil
     refute has_element?(view, "[phx-click=show_calendar_move_modal]")
     refute render(view) =~ "rescheduled in your external calendar"
+  end
+
+  test "a confirm past the reschedule limit says so and leaves the booking", %{
+    conn: conn,
+    user: user,
+    meeting: meeting
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+    view |> element("[phx-click=show_calendar_move_modal]") |> render_click()
+
+    message = exhaust_limit!(:dashboard_reschedule, user.id)
+    view |> element("[data-testid=confirm-calendar-move]") |> render_click()
+
+    html = render(view)
+    assert html =~ HTML.html_escape(message)
+    refute html =~ "Booking moved to"
+    {:ok, unmoved} = MeetingQueries.get_meeting(meeting.id)
+    assert unmoved.start_time == meeting.start_time
+    assert unmoved.calendar_sync_status == "externally_modified"
   end
 
   test "a confirm refused after the modal opened says why and leaves the booking", %{

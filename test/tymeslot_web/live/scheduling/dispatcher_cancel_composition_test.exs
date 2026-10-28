@@ -31,9 +31,11 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Plug.HTML
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -171,6 +173,33 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
 
     # Meeting must NOT be cancelled — otherwise a rate-limited attacker
     # is still succeeding, which defeats the limiter.
+    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+  end
+
+  @tag :capture_log
+  test "keep-click when the rate limit is exhausted flashes the limiter's message and does not show the kept state",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        organizer_name: user.name,
+        attendee_timezone: profile.timezone,
+        status: "confirmed"
+      )
+
+    {:ok, view, _html} =
+      live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+    client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip] || "unknown"
+    refusal = exhaust_limit!(:meeting_keep, client_ip)
+
+    view |> element("[data-testid='keep-meeting']") |> render_click()
+
+    rendered = render(view)
+    assert rendered =~ HTML.html_escape(refusal)
+    refute rendered =~ "still scheduled as planned"
+    assert has_element?(view, "[data-testid='cancel-meeting']")
     assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
   end
 

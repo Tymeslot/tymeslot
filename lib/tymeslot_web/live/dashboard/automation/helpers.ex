@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @doc """
   Toggles an event in the list of selected events.
@@ -274,22 +275,6 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   end
 
   @doc """
-  Executes `action` if the rate limit check passes; otherwise sends an error flash
-  and returns `{:noreply, socket}`.
-  """
-  @spec with_rate_limit(
-          :ok | {:error, :rate_limited, String.t()},
-          Phoenix.LiveView.Socket.t(),
-          (-> {:noreply, Phoenix.LiveView.Socket.t()})
-        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def with_rate_limit({:error, :rate_limited, message}, socket, _action) do
-    Flash.error(message)
-    {:noreply, socket}
-  end
-
-  def with_rate_limit(:ok, _socket, action), do: action.()
-
-  @doc """
   Runs a rate-limited test action: checks the rate limit, sets a loading key,
   fetches the entity, calls test_fn, and clears the loading key on completion.
   `get_fn` receives the socket and returns `{:ok, entity} | {:error, reason}`.
@@ -307,44 +292,39 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   def do_rate_limited_test(socket, id, testing_key, get_fn, test_fn, {success_msg, not_found_msg}) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:webhook_test, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
+    RateLimit.with_rate_limit(RateLimiter.check(:webhook_test, user_id), socket, fn ->
+      entity_id = parse_id(id)
+      socket = assign(socket, testing_key, entity_id)
 
-      :ok ->
-        entity_id = parse_id(id)
-        socket = assign(socket, testing_key, entity_id)
+      case get_fn.(socket) do
+        {:ok, entity} ->
+          case test_fn.(entity) do
+            :ok ->
+              Flash.info(success_msg)
+              {:noreply, assign(socket, testing_key, nil)}
 
-        case get_fn.(socket) do
-          {:ok, entity} ->
-            case test_fn.(entity) do
-              :ok ->
-                Flash.info(success_msg)
-                {:noreply, assign(socket, testing_key, nil)}
+            # The test reads the entity again, scoped to the acting user, so
+            # it can still find it gone (deleted in another tab, say).
+            {:error, :not_found} ->
+              Flash.error(not_found_msg)
+              {:noreply, assign(socket, testing_key, nil)}
 
-              # The test reads the entity again, scoped to the acting user, so
-              # it can still find it gone (deleted in another tab, say).
-              {:error, :not_found} ->
-                Flash.error(not_found_msg)
-                {:noreply, assign(socket, testing_key, nil)}
+            {:error, reason} when is_atom(reason) ->
+              {:noreply,
+               socket |> handle_feature_access_error(reason) |> assign(testing_key, nil)}
 
-              {:error, reason} when is_atom(reason) ->
-                {:noreply,
-                 socket |> handle_feature_access_error(reason) |> assign(testing_key, nil)}
+            {:error, reason} ->
+              Flash.error(
+                dgettext("dashboard_automation", "Test failed: %{reason}", reason: reason)
+              )
 
-              {:error, reason} ->
-                Flash.error(
-                  dgettext("dashboard_automation", "Test failed: %{reason}", reason: reason)
-                )
+              {:noreply, assign(socket, testing_key, nil)}
+          end
 
-                {:noreply, assign(socket, testing_key, nil)}
-            end
-
-          {:error, _reason} ->
-            Flash.error(not_found_msg)
-            {:noreply, assign(socket, testing_key, nil)}
-        end
-    end
+        {:error, _reason} ->
+          Flash.error(not_found_msg)
+          {:noreply, assign(socket, testing_key, nil)}
+      end
+    end)
   end
 end

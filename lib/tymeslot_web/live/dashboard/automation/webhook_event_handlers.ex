@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @spec handle_show_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -89,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
   def handle_create(%{"webhook" => params}, socket) do
     user_id = socket.assigns.current_user.id
 
-    AutomationHelpers.with_rate_limit(
+    RateLimit.with_rate_limit(
       RateLimiter.check(:webhook_write, user_id),
       socket,
       fn ->
@@ -121,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
       webhook ->
         user_id = socket.assigns.current_user.id
 
-        AutomationHelpers.with_rate_limit(
+        RateLimit.with_rate_limit(
           RateLimiter.check(:webhook_write, user_id),
           socket,
           fn ->
@@ -269,14 +270,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
   def handle_regenerate_token(_params, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:webhook_token_regen, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      :ok ->
-        do_regenerate_token(socket)
-    end
+    RateLimit.with_rate_limit(RateLimiter.check(:webhook_token_regen, user_id), socket, fn ->
+      do_regenerate_token(socket)
+    end)
   end
 
   @spec handle_hide_deliveries(map(), Phoenix.LiveView.Socket.t()) ::

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorComponent
-  alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -40,17 +40,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
   def handle_event("save", %{"venue" => params}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:meeting_type_write, user_id) do
-      :ok ->
-        create(socket, user_id, params)
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      {:error, :invalid_user_id} ->
-        {:noreply, socket}
-    end
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+      create(socket, user_id, params)
+    end)
   end
 
   defp create(socket, user_id, params) do

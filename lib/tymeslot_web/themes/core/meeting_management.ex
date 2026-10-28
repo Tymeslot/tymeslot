@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
+  alias TymeslotWeb.Live.Shared.RateLimit
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
   @doc """
@@ -109,8 +110,10 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
       meeting = socket.assigns[:meeting]
       client_ip = ClientIP.get(socket)
 
-      case RateLimiter.check(:meeting_cancel, client_ip) do
-        :ok ->
+      RateLimit.with_rate_limit(
+        RateLimiter.check(:meeting_cancel, client_ip),
+        socket,
+        fn ->
           case Meetings.cancel_meeting(meeting) do
             {:ok, _result} ->
               cancel_confirmed_url = build_cancel_confirmed_url(socket, meeting)
@@ -124,10 +127,9 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
 
               {:noreply, put_flash(socket, :error, cancel_error_message(reason))}
           end
-
-        {:error, :rate_limited, message} ->
-          {:noreply, put_flash(socket, :error, message)}
-      end
+        end,
+        flash: :socket
+      )
     else
       {:noreply, socket}
     end
@@ -137,13 +139,12 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     if socket.assigns[:live_action] == :cancel do
       client_ip = ClientIP.get(socket)
 
-      case RateLimiter.check(:meeting_keep, client_ip) do
-        :ok ->
-          {:noreply, assign(socket, :meeting_kept, true)}
-
-        {:error, :rate_limited, message} ->
-          {:noreply, put_flash(socket, :error, message)}
-      end
+      RateLimit.with_rate_limit(
+        RateLimiter.check(:meeting_keep, client_ip),
+        socket,
+        fn -> {:noreply, assign(socket, :meeting_kept, true)} end,
+        flash: :socket
+      )
     else
       {:noreply, socket}
     end

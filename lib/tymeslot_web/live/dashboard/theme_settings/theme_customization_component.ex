@@ -18,10 +18,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  require Logger
-
   alias Phoenix.LiveView.Socket
-  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
@@ -29,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Panels
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @typedoc "Customization applied to the theme"
   @type customization_t :: Tymeslot.ThemeCustomizations.ThemeCustomizationSchema.t()
@@ -159,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     panel = socket.assigns.panels[group.key]
     {event, action, metadata} = panel.telemetry(group, field, value)
 
-    with_rate_limit(socket, action, fn ->
+    with_customization_limit(socket, action, fn ->
       case ThemeCustomizations.apply_option(
              socket.assigns.profile.id,
              socket.assigns.theme_id,
@@ -215,54 +213,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   defp upload_field(_theme_id, _params), do: nil
 
-  # Rate limiting helper that validates user_id and checks rate limit before executing operation
-  @spec with_rate_limit(Socket.t(), String.t(), (-> {:noreply, Socket.t()})) ::
+  # Every theme edit shares one limit; a refusal is also counted per action.
+  @spec with_customization_limit(Socket.t(), String.t(), (-> {:noreply, Socket.t()})) ::
           {:noreply, Socket.t()}
-  defp with_rate_limit(socket, action, operation) do
-    user_id = socket.assigns.profile.user_id
-    profile_id = socket.assigns.profile.id
+  defp with_customization_limit(socket, action, operation) do
+    check = RateLimiter.check(:theme_customization, socket.assigns.profile.user_id)
 
-    # Validate user_id before proceeding
-    if is_nil(user_id) or not is_integer(user_id) or user_id <= 0 do
-      Logger.error("Invalid user_id in theme customization",
-        user_id: LogFormat.reason(user_id),
-        profile_id: profile_id
-      )
+    if match?({:error, :rate_limited, _message}, check),
+      do: emit_telemetry(:rate_limited, socket, %{action: action})
 
-      Flash.error(
-        dgettext(
-          "dashboard_appearance",
-          "An error occurred. Please refresh the page and try again."
-        )
-      )
-
-      {:noreply, socket}
-    else
-      case RateLimiter.check(:theme_customization, user_id) do
-        :ok ->
-          operation.()
-
-        {:error, :rate_limited, message} ->
-          emit_telemetry(:rate_limited, socket, %{action: action})
-          Flash.error(message)
-          {:noreply, socket}
-
-        {:error, :invalid_user_id} ->
-          Logger.error("Rate limiter rejected invalid user_id",
-            user_id: LogFormat.reason(user_id),
-            profile_id: profile_id
-          )
-
-          Flash.error(
-            dgettext(
-              "dashboard_appearance",
-              "An error occurred. Please refresh the page and try again."
-            )
-          )
-
-          {:noreply, socket}
-      end
-    end
+    RateLimit.with_rate_limit(check, socket, operation)
   end
 
   # Emit telemetry events for monitoring and metrics

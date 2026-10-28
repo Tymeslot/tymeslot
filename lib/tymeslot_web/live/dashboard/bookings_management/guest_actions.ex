@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   require Logger
 
@@ -173,12 +174,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
                                                        Phoenix.LiveView.Socket.t())) ::
           Phoenix.LiveView.Socket.t()
   def confirm(socket, meeting, reload) when is_function(reload, 1) do
-    case RateLimiter.check(:dashboard_add_guests, socket.assigns.current_user.id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        socket
-
-      :ok ->
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:dashboard_add_guests, socket.assigns.current_user.id),
+      socket,
+      fn ->
         staged = staged(socket)
 
         socket
@@ -187,7 +186,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
         |> assign(:add_guests_existing, [])
         |> invite(meeting, staged)
         |> reload.()
-    end
+      end,
+      reply: :socket
+    )
   end
 
   @doc """
