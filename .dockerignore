@@ -59,6 +59,9 @@ yarn-error.log*
 priv/static/assets/
 priv/static/cache_manifest.json
 
+# README marketing media, kept in git for GitHub rendering, not served at runtime
+priv/static/images/readme/
+
 # Development and debug scripts
 debug_*.exs
 test_*.exs

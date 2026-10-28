@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://tymeslot.app?utm_source=github&utm_medium=readme&utm_campaign=core">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/ab7528d6-af12-4ca2-8232-2b96fdd620cd" />
+      <source media="(prefers-color-scheme: dark)" srcset="./priv/static/images/readme/logo-dark.svg" />
       <img src="./priv/static/images/brand/logo-with-text.svg" alt="Tymeslot" height="76" />
     </picture>
   </a>
@@ -78,21 +78,21 @@ https://github.com/user-attachments/assets/f7fdf4cc-5e47-4de5-9312-e3da01e9ce5f
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="https://github.com/user-attachments/assets/4d820cef-2221-417a-bdb1-6d831c80bacd" alt="A guest picks a time on a Tymeslot booking page" width="100%" />
+      <img src="./priv/static/images/readme/booking.gif" alt="A guest picks a time on a Tymeslot booking page" width="100%" />
       <b>A booking page guests finish.</b> Pick a time, confirm, done. No account, their language, their time zone.
     </td>
     <td width="50%" valign="top">
-      <img src="https://github.com/user-attachments/assets/4c7aae79-6eeb-40e6-b308-9f33e28b87ad" alt="Switching booking-page colour palettes" width="100%" />
+      <img src="./priv/static/images/readme/themes.gif" alt="Switching booking-page colour palettes" width="100%" />
       <b>Your look.</b> Two themes, custom colours and backgrounds, white-label.
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="https://github.com/user-attachments/assets/e08a7310-eefc-4458-9aec-fc8f62df3f72" alt="Tymeslot booking widget embedded on a company website" width="100%" />
+      <img src="./priv/static/images/readme/embed.gif" alt="Tymeslot booking widget embedded on a company website" width="100%" />
       <b>On your website.</b> Inline, popup or floating button, signed and domain-locked.
     </td>
     <td valign="top">
-      <img src="https://github.com/user-attachments/assets/22c83fa1-1267-4d66-bf52-f1bdda26aa5a" alt="Starting Tymeslot with one docker run command" width="100%" />
+      <img src="./priv/static/images/readme/selfhost.gif" alt="Starting Tymeslot with one docker run command" width="100%" />
       <b>Your server.</b> One container, Postgres included. Or Cloudron, Railway, or our cloud.
     </td>
   </tr>
