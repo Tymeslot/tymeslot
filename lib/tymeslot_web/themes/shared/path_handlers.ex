@@ -110,8 +110,10 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # as `duration` on the overview route (a type the overview does not list
   # is never taken from it), and a meeting type's own link names its type in
   # the path. A time no longer free is dropped on arrival, as a deep link's
-  # is. The day and time are wall clock in the visitor's timezone, so that
-  # goes too (`visitor_timezone`, which the mount prefers to the browser's).
+  # is. The day and time are wall clock in the visitor's timezone, so a zone
+  # the visitor chose over their browser's goes too (`visitor_timezone`,
+  # which the mount prefers to the browser's); their browser's own zone is
+  # left out, since every browser reports its own again on connect.
   # A paged journey shows one moment at a time and does not move on by
   # itself, so the moment on screen goes as `step` (`Navigators.Paged`
   # resumes on it). The answers and the details are not carried: the
@@ -127,10 +129,17 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
       |> maybe_put_query_param("duration", overview_choice(assigns))
       |> maybe_put_query_param("date", assigns[:selected_date])
       |> maybe_put_query_param("time", assigns[:selected_date] && assigns[:selected_time])
-      |> maybe_put_query_param("visitor_timezone", assigns[:user_timezone])
+      |> maybe_put_query_param("visitor_timezone", chosen_timezone(assigns))
       |> maybe_put_query_param("step", paged_moment(assigns))
     end
   end
+
+  # Not the zone the browser reported, which every browser reports again on
+  # connect, so that a link copied from the address bar shows its next reader
+  # times in their own zone. Before the browser has reported one, the zone
+  # goes as it is.
+  defp chosen_timezone(%{user_timezone: zone, browser_timezone: zone}), do: nil
+  defp chosen_timezone(assigns), do: assigns[:user_timezone]
 
   defp paged_moment(%{journey: journey, current_state: state}) when is_atom(state) do
     if not Reveal.journey?(journey) and Journey.moment(journey, state),

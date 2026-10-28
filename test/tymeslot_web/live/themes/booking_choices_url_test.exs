@@ -208,4 +208,56 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
       assert assigns.entered_via_overview
     end
   end
+
+  describe "the visitor's timezone" do
+    # A link copied from the address bar and sent on must show its reader
+    # times in their own zone, not the sender's.
+    test "is left out of the URL while it is the browser's own", %{conn: conn} do
+      %{profile: profile} = seed_organiser("1", "url-zone-own")
+
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"timezone" => "Europe/Berlin"})
+        |> live(~p"/#{profile.username}")
+
+      BookingDriver.book(view, meeting_type: "quick-chat", until: :attendee)
+      assert live_assigns(view).user_timezone == "Europe/Berlin"
+
+      url = BookingTestHelpers.last_patched_url(view)
+      assert query(url)["date"]
+      refute Map.has_key?(query(url), "visitor_timezone")
+
+      {:ok, reader, _html} =
+        build_conn()
+        |> put_connect_params(%{"timezone" => "Asia/Tokyo"})
+        |> live(url)
+
+      assert live_assigns(reader).user_timezone == "Asia/Tokyo"
+    end
+
+    test "goes in the URL once the visitor chooses another, and wins on a remount", %{
+      conn: conn
+    } do
+      %{profile: profile} = seed_organiser("1", "url-zone-chosen")
+
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"timezone" => "Europe/Berlin"})
+        |> live(~p"/#{profile.username}")
+
+      BookingDriver.book(view, meeting_type: "quick-chat", until: :attendee)
+      send(view.pid, {:step_event, :booking, :change_timezone, "America/New_York"})
+      Eventually.eventually(fn -> live_assigns(view).user_timezone == "America/New_York" end)
+
+      url = BookingTestHelpers.last_patched_url(view)
+      assert query(url)["visitor_timezone"] == "America/New_York"
+
+      {:ok, remounted, _html} =
+        build_conn()
+        |> put_connect_params(%{"timezone" => "Europe/Berlin"})
+        |> live(url)
+
+      assert live_assigns(remounted).user_timezone == "America/New_York"
+    end
+  end
 end
