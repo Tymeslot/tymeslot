@@ -64,7 +64,7 @@ defmodule Tymeslot.Availability.BookabilityOverrideQueries do
     uids
     |> Enum.uniq()
     |> Enum.chunk_every(@chunk_size)
-    |> Enum.sum_by(fn chunk ->
+    |> Enum.reduce(0, fn chunk, total ->
       {count, _rows} =
         Repo.delete_all(
           from(o in BookabilityOverrideSchema,
@@ -74,7 +74,7 @@ defmodule Tymeslot.Availability.BookabilityOverrideQueries do
           )
         )
 
-      count
+      total + count
     end)
   end
 

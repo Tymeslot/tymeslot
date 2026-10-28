@@ -511,8 +511,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   defp delete_where_in(calendar_integration_id, field, values) do
     values
     |> Enum.chunk_every(@upsert_chunk_size)
-    |> Enum.sum_by(fn chunk ->
-      delete_rows(calendar_integration_id, dynamic([e], field(e, ^field) in ^chunk))
+    |> Enum.reduce(0, fn chunk, total ->
+      total + delete_rows(calendar_integration_id, dynamic([e], field(e, ^field) in ^chunk))
     end)
   end
 

@@ -235,7 +235,7 @@ defmodule Tymeslot.Availability.DateOverridesTest do
       assert :ok = DateOverrides.delete(host.profile_id, host.schedule_id, host.saturday)
       assert {:ok, nil} = DateOverrides.get(host.profile_id, host.schedule_id, host.saturday)
 
-      assert [_, _] =
+      assert [_first, _second] =
                AvailabilityOverrideQueries.list_extra_on(host.schedule_id, host.saturday)
     end
 

@@ -86,7 +86,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Icons do
   end
 
   @spec fetch(String.t()) :: {:ok, IconSource.icon()} | :error
-  defp fetch("hero-" <> _rest = name), do: Heroicons.fetch(name)
-  defp fetch(name) when is_binary(name), do: CustomIcons.fetch(name)
+  defp fetch(name) when is_binary(name) do
+    if String.starts_with?(name, "hero-"),
+      do: Heroicons.fetch(name),
+      else: CustomIcons.fetch(name)
+  end
+
   defp fetch(_name), do: :error
 end

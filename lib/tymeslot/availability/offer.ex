@@ -34,8 +34,6 @@ defmodule Tymeslot.Availability.Offer do
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Scheduling.{RescheduleContext, SeatMoveContext}
 
-  @max_range_days Range.max_range_days()
-
   @typedoc """
   What a booking page is showing, and to whom.
 
@@ -128,7 +126,7 @@ defmodule Tymeslot.Availability.Offer do
   demo provider, as `slots_for_date/3` does.
 
   Returns `{:error, :invalid_range}` when `end_date` is before `start_date`,
-  `{:error, :range_too_long}` for a range of more than #{@max_range_days} days,
+  `{:error, :range_too_long}` for a range of more than 42 days (`Range.max_range_days/0`),
   and `{:error, reason}` when the organiser's calendar cannot be read.
   """
   @spec slots_for_range(request(), Date.t(), Date.t(), String.t() | integer() | nil) ::

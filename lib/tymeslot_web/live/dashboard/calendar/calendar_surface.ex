@@ -78,12 +78,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # which month the mini month shows.
   @menu_events ~w(calendar:toggle_menu calendar:close_menu calendar:mini_shift)
 
-  # `calendar:*` events, `send_update/3` actions and `start_async/3` names of
-  # the power layer, all answered by `PowerEvents`.
-  @power_events PowerEvents.events()
-  @power_updates PowerEvents.update_actions()
-  @power_async PowerEvents.async_keys()
-
   @refresh_actions ReloadQueue.refresh_actions()
 
   # What each prompt can send; the module that acts on it parses it again.
@@ -211,9 +205,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :event_writes_released, release: release}, socket),
     do: {:ok, Writes.resume(socket, release)}
 
-  def update(%{action: action} = message, socket) when action in @power_updates,
-    do: {:ok, PowerEvents.update(message, socket)}
-
   # Meeting mode's answer, through the dashboard (see `PanelMeeting`); the
   # booking it made shows after the reload.
   def update(%{action: :ad_hoc_meeting_created}, socket),
@@ -221,8 +212,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def update(%{action: :ad_hoc_meeting_failed}, socket), do: {:ok, PanelMeeting.failed(socket)}
 
-  # An action this surface has no clause for is ignored.
-  def update(%{action: _other}, socket), do: {:ok, socket}
+  # The power layer's actions go to `PowerEvents`; any other action this
+  # surface has no clause for is ignored. Its lists are read at run time, so
+  # the surface does not recompile with every module the power layer uses.
+  def update(%{action: action} = message, socket) do
+    if action in PowerEvents.update_actions(),
+      do: {:ok, PowerEvents.update(message, socket)},
+      else: {:ok, socket}
+  end
 
   def update(assigns, socket),
     do:
@@ -525,9 +522,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event(event, params, socket) when event in @view_events,
     do: ViewEvents.handle(event, params, socket)
 
-  def handle_event(event, params, socket) when event in @power_events,
-    do: PowerEvents.handle(event, params, socket)
-
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}
 
@@ -603,12 +597,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       else: {:noreply, push_event(socket, "calendar:preview-closed", %{})}
   end
 
+  # Every other event is the power layer's (`PowerEvents.events/0`), read at
+  # run time for the reason given above `update/2`'s last action clause.
+  def handle_event(event, params, socket), do: PowerEvents.handle(event, params, socket)
+
   # Work run off this process (`start_async/3`): the import's file plan (see
   # `PowerEvents`), a request's answer and the bookable layer's load (see
   # `SurfaceBookingEvents`).
   @impl Phoenix.LiveComponent
-  def handle_async(key, result, socket) when key in @power_async,
-    do: PowerEvents.async(key, result, socket)
-
-  def handle_async(key, result, socket), do: SurfaceBookingEvents.async(key, result, socket)
+  def handle_async(key, result, socket) do
+    if key in PowerEvents.async_keys(),
+      do: PowerEvents.async(key, result, socket),
+      else: SurfaceBookingEvents.async(key, result, socket)
+  end
 end

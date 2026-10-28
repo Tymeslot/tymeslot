@@ -71,7 +71,7 @@ defmodule Tymeslot.CalendarGrid.Period do
   month or agenda), else the week. A phone shows a week as three days
   (`for_viewport/2`) without the stored value changing.
   """
-  @spec default_view(String.t() | nil) :: view()
+  @spec default_view(String.t() | nil) :: :day | :week | :month | :agenda
   def default_view("day"), do: :day
   def default_view("month"), do: :month
   def default_view("agenda"), do: :agenda

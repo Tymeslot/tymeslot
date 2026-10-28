@@ -113,9 +113,9 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
 
     WeeklyAvailabilitySchema
     |> where([wa], wa.schedule_id == ^schedule_id and wa.day_of_week == ^day_of_week)
+    |> preload([wa], breaks: ^breaks_query)
     |> lock("FOR UPDATE")
     |> Repo.one()
-    |> Repo.preload(breaks: breaks_query)
   end
 
   @doc """
