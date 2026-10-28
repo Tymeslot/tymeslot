@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
@@ -32,15 +33,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content booking-slide">
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
+                length_minutes={ChosenLength.minutes(assigns)}
                 meeting_type={@meeting_type}
                 selected_duration={@duration}
+                host_currency={@host_currency}
+                show_price={!@is_rescheduling}
+                locale={@locale}
               />
             </div>
 
@@ -68,7 +73,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     <div class="summary-label">
                       {BookingText.duration_label(%{
                         meeting_type: @meeting_type,
-                        duration: @selected_duration
+                        duration: @selected_duration,
+                        chosen_length_minutes: ChosenLength.minutes(assigns)
                       })} {dgettext(
                         "booking",
                         "meeting"
@@ -137,7 +143,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 data-intent="back"
                 disabled={@submitting}
               >
-                ← {dgettext("booking", "Back")}
+                <.icon name="hero-arrow-left" class="inline-icon" />
+                {dgettext("booking", "Back")}
               </button>
               <button
                 type="submit"
@@ -148,28 +155,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
               >
                 <%= if @submitting do %>
-                  <svg
-                    class="loading-spinner icon-sm"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="loading-spinner-track"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    >
-                    </circle>
-                    <path
-                      class="loading-spinner-path"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    >
-                    </path>
-                  </svg>
+                  <.spinner class="loading-spinner icon-sm" />
                   <span>{dgettext("booking", "Verifying...")}</span>
                 <% else %>
                   {submit_label(@is_rescheduling, @meeting_type)}

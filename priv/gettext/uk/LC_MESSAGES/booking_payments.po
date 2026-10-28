@@ -110,3 +110,8 @@ msgstr "Це бронювання не було прийнято, тож вон�
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. You can return and try again at any time."
 msgstr "Бронювання не підтверджено. Ви можете повернутися та спробувати знову будь-коли."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Paid: %{amount}"
+msgstr "Оплачено: %{amount}"

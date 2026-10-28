@@ -314,6 +314,37 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Like `delete_poll_jobs/2`, but only the jobs whose args also contain
+  `args_match`, e.g. one action's.
+  """
+  @spec delete_poll_jobs_matching(term(), module(), map()) :: {non_neg_integer(), nil}
+  def delete_poll_jobs_matching(poll_id, worker_module, args_match) do
+    delete_pending_jobs(worker_module, Map.put(args_match, "poll_id", poll_id), queue: "emails")
+  end
+
+  @doc """
+  Deletes a poll's deadline reminders scheduled by v1.30.0 and earlier, which
+  carry no `deadline_at`, while they are still waiting for their time. Their
+  uniqueness ignores the deadline, so a reminder scheduled now for the same
+  time would not be recognised as theirs and both would go out.
+
+  Only `scheduled` jobs, the ones still in the future: one already due or
+  retrying has no replacement to defer to, since a reminder whose time has
+  passed is not scheduled again.
+  """
+  @spec delete_legacy_poll_reminders(term(), module()) :: {non_neg_integer(), nil}
+  def delete_legacy_poll_reminders(poll_id, worker_module) do
+    args_match = %{"action" => "send_poll_deadline_reminders", "poll_id" => poll_id}
+
+    Job
+    |> where([j], j.worker == ^normalize_worker_name(worker_module))
+    |> where([j], j.queue == "emails" and j.state == "scheduled")
+    |> where([j], fragment("? @> ?::jsonb", j.args, type(^args_match, :map)))
+    |> where([j], not fragment("jsonb_exists(?, 'deadline_at')", j.args))
+    |> Repo.delete_all()
+  end
+
+  @doc """
   Deletes every job still waiting to run whose args name `user_id` or one of
   `meeting_ids`, on any queue and for any worker. Run once an account has
   been deleted: nothing queued for it may run later, and no reminder may keep

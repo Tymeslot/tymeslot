@@ -18,6 +18,7 @@ defmodule TymeslotWeb.AccountRestoreController do
 
   alias Tymeslot.Auth
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Calendar
   alias TymeslotWeb.AccountRestoreHTML
   alias TymeslotWeb.Helpers.DeletionDate
 
@@ -42,16 +43,8 @@ defmodule TymeslotWeb.AccountRestoreController do
 
   defp restore_user(conn, user) do
     case Auth.restore_account(user) do
-      {:ok, _restored} ->
-        conn
-        |> put_flash(
-          :info,
-          dgettext(
-            "auth",
-            "Welcome back. Your account has been restored and will not be deleted."
-          )
-        )
-        |> to_dashboard()
+      {:ok, restored} ->
+        after_restore(conn, Calendar.booking_page_health(restored.id))
 
       {:error, :not_pending} ->
         to_dashboard(conn)
@@ -66,6 +59,33 @@ defmodule TymeslotWeb.AccountRestoreController do
           dgettext("auth", "Your account could not be restored. Please try again.")
         )
     end
+  end
+
+  # Credentials refused while the account waited (often revoked by the owner on
+  # their way out) leave the booking page offering no times, and the reconnect
+  # email went out before the restore, so the restore lands on the fix.
+  defp after_restore(conn, {:credentials_refused, names}) do
+    conn
+    |> put_flash(
+      :error,
+      dngettext(
+        "auth",
+        "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings.",
+        "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings.",
+        length(names),
+        names: Enum.join(names, ", ")
+      )
+    )
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
+  end
+
+  defp after_restore(conn, _health) do
+    conn
+    |> put_flash(
+      :info,
+      dgettext("auth", "Welcome back. Your account has been restored and will not be deleted.")
+    )
+    |> to_dashboard()
   end
 
   defp render_page(conn, user, error \\ nil) do

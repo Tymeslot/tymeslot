@@ -11,10 +11,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -31,7 +33,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content confirmation-slide">
@@ -46,34 +48,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       "success-badge-inner",
                       ApprovalDisplay.awaiting_approval?(assigns) && "success-badge-inner--pending"
                     ]}>
-                      <svg
+                      <.icon
                         :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                        class="success-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <svg
+                        name="hero-check"
+                        class="success-icon stroke-3"
+                      />
+                      <.icon
                         :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                        class="success-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                        name="hero-clock"
+                        class="success-icon stroke-3"
+                      />
                     </div>
                   </div>
 
@@ -100,7 +84,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                   <span class="ticket-badge">
                     {dgettext("booking", "%{minutes} min",
-                      minutes: Offer.duration_minutes(@meeting_type, @duration)
+                      minutes:
+                        Offer.duration_minutes(
+                          @meeting_type,
+                          @duration,
+                          ChosenLength.minutes(assigns)
+                        )
                     )}
                   </span>
                 </div>
@@ -166,6 +155,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
                   </div>
 
+                  <div
+                    :if={MeetingPrice.paid_price(assigns[:paid_payment], @locale)}
+                    class="ticket-row"
+                    data-testid="confirmation-paid"
+                  >
+                    <div class="ticket-icon">
+                      <.icon name="hero-credit-card" class="hero-icon hero-icon--md" />
+                    </div>
+                    <div class="ticket-info">
+                      <span class="ticket-value">{MeetingPrice.paid_price(@paid_payment, @locale)}</span>
+                      <span class="ticket-sublabel">{dgettext("booking", "Paid")}</span>
+                    </div>
+                  </div>
+
                   <div :if={@guest_emails not in [nil, []]} class="ticket-row">
                     <div class="ticket-icon">
                       <.icon name="hero-user-group" class="hero-icon hero-icon--md" />
@@ -179,14 +182,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
                 <div class="ticket-footer">
                   <div class="email-confirmation">
-                    <svg class="email-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <.icon name="hero-envelope" class="email-icon" />
                     <span>{dgettext("booking", "Sent to")} <strong>{@email}</strong></span>
                   </div>
                 </div>

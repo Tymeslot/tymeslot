@@ -17,6 +17,7 @@ defmodule Tymeslot.Bookings.Errors do
 
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Integrations.Calendar
 
   require Refusal
 
@@ -29,6 +30,7 @@ defmodule Tymeslot.Bookings.Errors do
           | :meeting_type_not_found
           | :slot_taken
           | :availability_unverifiable
+          | :host_calendar_disconnected
           | :booking_limit_reached
           | :organizer_required
           | :booking_failed
@@ -120,6 +122,31 @@ defmodule Tymeslot.Bookings.Errors do
   # was recorded, with its exception, by `Meetings.Scheduling` where it was
   # raised.
   @not_reported [:validation_error, :database_error]
+
+  @doc """
+  Classifies a failed read of the organiser's availability, as
+  `classify_error/1` does, but tells a refused calendar apart from a
+  transient failure: when the read was unverifiable and one of the
+  organiser's calendars is flagged `needs_reauth`
+  (`Tymeslot.Integrations.Calendar.booking_page_health/1`), the result is
+  `:host_calendar_disconnected`. That calendar fails every read until the
+  organiser reconnects it, so the booker must not be told to try again in a
+  few minutes. The health is looked up only on that path, never for a read
+  that succeeded or failed for another reason.
+  """
+  @spec classify_availability_error(term(), pos_integer() | nil) :: classified_error()
+  def classify_availability_error(reason, nil), do: classify_error(reason)
+
+  def classify_availability_error(reason, organizer_user_id) when is_integer(organizer_user_id) do
+    with :availability_unverifiable <- classify_error(reason),
+         {:credentials_refused, _names} <- Calendar.booking_page_health(organizer_user_id) do
+      :host_calendar_disconnected
+    else
+      :taking_bookings -> :availability_unverifiable
+      :no_calendar -> :availability_unverifiable
+      classified -> classified
+    end
+  end
 
   @doc """
   Classifies a failure from creating a booking's meeting, as

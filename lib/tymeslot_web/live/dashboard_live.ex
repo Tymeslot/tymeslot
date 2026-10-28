@@ -171,7 +171,10 @@ defmodule TymeslotWeb.DashboardLive do
         else: socket
 
     socket = if connected?(socket), do: AgendaRefresh.load(socket), else: socket
-    AgendaRefresh.reschedule(socket)
+
+    socket
+    |> AgendaRefresh.reschedule()
+    |> PollEventHandlers.keep_deadline_timer(action)
   end
 
   # Whether focus mode is on, read once per process (the dead render too, so
@@ -450,6 +453,12 @@ defmodule TymeslotWeb.DashboardLive do
 
   def handle_info({:poll_slot_health, poll_id, health}, socket),
     do: PollEventHandlers.handle_poll_slot_health(poll_id, health, socket)
+
+  def handle_info({:poll_deadline_reached, poll_id}, socket),
+    do: PollEventHandlers.handle_poll_deadline_reached(poll_id, socket)
+
+  def handle_info({:poll_deadline_next, deadline}, socket),
+    do: PollEventHandlers.handle_poll_deadline_next(deadline, socket)
 
   def handle_info(:agenda_tick, socket) do
     {:noreply, socket |> AgendaRefresh.reschedule() |> AgendaRefresh.refresh()}

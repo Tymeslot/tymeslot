@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.Dashboard.PollsTest do
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :polls
   @moduletag :live
@@ -10,12 +11,15 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
   alias Ecto.Changeset
   alias Tymeslot.Polls
   alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
 
-  # A host with a profile but no calendar integration and no username: the
+  # A host with a profile, a username and a calendar integration: the
   # baseline for list/create/validation tests.
   defp setup_host(_context) do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    profile = insert(:profile, user: user)
+    profile = insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user, provider: "debug")
     {:ok, conn: log_in(build_conn(), user), user: user, profile: profile}
   end
 
@@ -140,6 +144,91 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       assert length(poll.time_slots) == 2
     end
 
+    test "invites the people listed with the poll", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{
+          "title" => "Launch planning",
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00"},
+          "invitees" => "Grace Hopper <grace@example.com>, ada@example.com"
+        }
+      })
+      |> render_submit()
+
+      assert [poll] = Polls.list_polls(user.id)
+
+      assert poll.participants |> Enum.map(& &1.email) |> Enum.sort() ==
+               ["ada@example.com", "grace@example.com"]
+
+      for participant <- poll.participants do
+        assert_enqueued(
+          worker: EmailWorker,
+          args: %{"action" => "send_poll_invitation", "participant_id" => participant.id}
+        )
+      end
+    end
+
+    test "names the entries that are not addresses and creates nothing", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      html =
+        view
+        |> form("form[phx-submit='create_poll']", %{
+          "poll" => %{
+            "title" => "Launch planning",
+            "duration" => "30",
+            "timezone" => "Europe/Tallinn",
+            "slots" => %{"0" => "#{date}T09:00"},
+            "invitees" => "ada@example.com, not-an-address"
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "Not valid email addresses: not-an-address"
+      assert Polls.list_polls(user.id) == []
+    end
+
+    test "names the invitee names that can't be used and creates nothing", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{
+          "title" => "Launch planning",
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00"},
+          "invitees" => "ada@example.com, A <a@example.com>"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-invitees']", "These names can't be used: A")
+      assert Polls.list_polls(user.id) == []
+    end
+
     test "warns about a candidate time inside time off without refusing the poll", %{
       conn: conn,
       user: user,
@@ -225,6 +314,61 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       assert has_element?(view, "form[phx-submit='create_poll']", "darf nicht leer sein")
       assert Polls.list_polls(user.id) == []
+    end
+  end
+
+  # ===========================================================================
+  # Updates on new votes
+  # ===========================================================================
+
+  describe "Updates on new votes" do
+    setup :setup_host
+
+    test "are on for a new poll unless the host unticks them", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      for {title, notify} <- [{"With updates", nil}, {"Quiet", "false"}] do
+        view |> element("button", "New poll") |> render_click()
+        view |> element("button", "Add time") |> render_click()
+
+        params =
+          %{
+            "title" => title,
+            "duration" => "30",
+            "timezone" => "Europe/Tallinn",
+            "slots" => %{"0" => "#{date}T09:00"}
+          }
+
+        params = if notify, do: Map.put(params, "notify_on_vote", notify), else: params
+
+        view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_submit()
+      end
+
+      polls = Map.new(Polls.list_polls(user.id), &{&1.title, &1.notify_on_vote})
+      assert polls == %{"With updates" => true, "Quiet" => false}
+    end
+
+    test "can be turned off while editing an open poll", %{conn: conn, user: user} do
+      TestMocks.setup_calendar_mocks(events: [])
+      poll = insert(:poll, user: user, status: :open, notify_on_vote: true, meeting_type_id: nil)
+      insert(:poll_time_slot, poll: poll)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view
+      |> element("button[phx-click='select_poll'][phx-value-id='#{poll.id}']")
+      |> render_click()
+
+      view |> element("[data-testid='poll-edit-details']") |> render_click()
+
+      view
+      |> form("[data-testid='poll-details-form']",
+        poll: %{title: poll.title, notify_on_vote: "false"}
+      )
+      |> render_submit()
+
+      assert {:ok, %{notify_on_vote: false}} = Polls.get_poll_for_host(poll.id, user.id)
     end
   end
 

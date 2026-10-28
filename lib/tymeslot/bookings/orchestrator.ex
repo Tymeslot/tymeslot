@@ -81,7 +81,9 @@ defmodule Tymeslot.Bookings.Orchestrator do
   end
 
   @doc """
-  Fetches a meeting by UID and validates it is eligible for rescheduling.
+  Fetches a meeting by UID and validates it is eligible for rescheduling by
+  its booker: one its host manages is refused with `:managed_by_host`, as
+  the reschedule it would start can only be refused on submit.
 
   The `organizer_user_id` is required. The lookup is scoped to that owner,
   preventing IDOR pre-fill of attendee PII from the public booking form.
@@ -92,7 +94,8 @@ defmodule Tymeslot.Bookings.Orchestrator do
       when is_integer(organizer_user_id) do
     with {:ok, meeting} <-
            MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
-         :ok <- Policy.can_reschedule_meeting?(meeting) do
+         :ok <- Policy.can_reschedule_meeting?(meeting),
+         :ok <- Policy.can_booker_move_meeting?(meeting) do
       {:ok, meeting}
     else
       {:error, :not_found} -> {:error, :meeting_not_found}

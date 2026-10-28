@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
 
   alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
 
   attr :integration, :map, required: true
@@ -49,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
       notice={notice(@status, @integration, @paused)}
       notice_tone={notice_tone(@status, @paused)}
     >
-      <:icon><IconComponents.icon name={:slack} class="w-6 h-6" /></:icon>
+      <:icon><.icon name="brand-slack" class="w-6 h-6" /></:icon>
       <:last_activity :if={@status != :pending_oauth && @integration.last_triggered_at}>
         {dgettext("dashboard_automation_chat", "Last triggered: %{time}",
           time: AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format)

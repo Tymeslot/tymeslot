@@ -11,3 +11,9 @@
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
+
+/* The smaller spinner beside the week label while availability loads. */
+.spinner--sm {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}

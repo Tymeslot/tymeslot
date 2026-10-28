@@ -44,6 +44,17 @@ defmodule TymeslotWeb.Live.Scheduling.StepIndicatorNavigationTest do
   # draws none must still offer no step.
   defp renders_indicator?(view), do: has_element?(view, ".step-item-wrapper .step-circle")
 
+  # The shipped themes that draw the indicator. Pinned rather than read off
+  # the page, so the offered-step assertions below cannot go quiet by every
+  # theme dropping it.
+  @themes_with_indicator ["1"]
+
+  # A theme dropped from the matrix would otherwise take its indicator
+  # assertions with it unnoticed.
+  test "every theme expected to draw the step indicator is a shipped theme" do
+    assert @themes_with_indicator -- ThemeTestMatrix.ids() == []
+  end
+
   for theme <- ThemeTestMatrix.all() do
     @theme theme
 
@@ -66,11 +77,14 @@ defmodule TymeslotWeb.Live.Scheduling.StepIndicatorNavigationTest do
 
         refute has_element?(view, offered(1))
 
-        if renders_indicator?(view) do
+        if @theme.id in @themes_with_indicator do
           # The schedule behind the form is still offered: only the overview
           # is refused.
+          assert renders_indicator?(view)
           assert has_element?(view, offered(2))
           assert has_element?(view, "[aria-current='step']")
+        else
+          refute renders_indicator?(view)
         end
       end
 

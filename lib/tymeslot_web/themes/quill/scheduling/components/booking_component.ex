@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -30,7 +31,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+    assigns =
+      assign(assigns,
+        navigable_steps: Runtime.navigable_steps(assigns),
+        step_numbers: Runtime.step_numbers(assigns)
+      )
+
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
@@ -38,6 +44,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
+        step_numbers={@step_numbers}
         current_step={3}
         slug={@duration}
         username_context={@username_context}
@@ -45,7 +52,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
         <div class="stack">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
             <div class="w-full">
-              <.glass_morphism_card class="booker-card booking-form-card">
+              <.glass_morphism_card class="booker-card booking-form-card" data-testid="booker-card">
                 <div class="booking-card-body">
                   <h1 class="section-header booking-heading booking-heading-wrapper">
                     {dgettext("booking", "Enter Your Details")}
@@ -53,12 +60,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>
-                      {dgettext("booking", "You're booking a %{duration} meeting with %{name}",
+                      {dgettext("booking", "You're booking %{duration} with %{name}",
                         duration: BookingText.duration_label(assigns),
                         name: get_organizer_name(@organizer_profile, @username_context)
                       )}
                     <% else %>
-                      {dgettext("booking", "You're booking a %{duration} meeting",
+                      {dgettext("booking", "You're booking %{duration}",
                         duration: BookingText.duration_label(assigns)
                       )}
                     <% end %>
@@ -78,6 +85,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   >
                     {@next_day_end}
                   </p>
+
+                  <MeetingPrice.hint
+                    :if={!@is_rescheduling}
+                    meeting_type={@meeting_type}
+                    currency={@host_currency}
+                    locale={@locale}
+                  />
 
                   <LocationField.location_field
                     :if={BookingLocation.choice_required?(assigns)}
@@ -135,9 +149,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-intent="back"
                       variant={:secondary}
                       disabled={@submitting}
-                      class="flex-1"
+                      class="flex-1 gap-2"
                     >
-                      ← {dgettext("booking", "Back")}
+                      <.icon name="hero-arrow-left" class="inline-icon" />
+                      {dgettext("booking", "Back")}
                     </.action_button>
 
                     <.loading_button

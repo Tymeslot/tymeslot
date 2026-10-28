@@ -439,11 +439,6 @@ msgstr "Tymeslot більше не може використовувати ва�
 
 #: lib/tymeslot/emails/templates/integration_reauth_required.ex
 #, elixir-autogen, elixir-format
-msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Your existing bookings are not affected."
-msgstr "Tymeslot більше не може використовувати вашу інтеграцію %{integration} і не зможе, доки ви її не заміните. Причину вказано вище. Наявних бронювань це не стосується."
-
-#: lib/tymeslot/emails/templates/integration_reauth_required.ex
-#, elixir-autogen, elixir-format
 msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you update it. The reason is shown above. Your existing bookings are not affected."
 msgstr "Tymeslot більше не може використовувати вашу інтеграцію %{integration} і не зможе, доки ви не оновите її налаштування. Причину вказано вище. Наявних бронювань це не стосується."
 
@@ -548,3 +543,13 @@ msgstr "Ваш календар відмовився додати цю поді�
 #, elixir-autogen, elixir-format
 msgid "Your calendar service could not be reached or did not answer properly, even after several attempts."
 msgstr "Ваш календарний сервіс був недоступний або не відповів належним чином навіть після кількох спроб."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected."
+msgstr "Tymeslot більше не може використовувати вашу інтеграцію %{integration} і не зможе, доки ви її не перепідключите. Причину вказано вище. До того часу ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань, бо Tymeslot не пропонує час, який не може звірити з цим календарем або внести до нього. Наявних бронювань це не стосується."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected."
+msgstr "Tymeslot більше не може використовувати вашу інтеграцію %{integration} і не зможе, доки ви її не заміните. Причину вказано вище. До того часу ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань, бо Tymeslot не пропонує час, який не може звірити з цим календарем або внести до нього. Наявних бронювань це не стосується."

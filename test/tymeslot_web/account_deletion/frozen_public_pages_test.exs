@@ -21,7 +21,6 @@ defmodule TymeslotWeb.AccountDeletion.FrozenPublicPagesTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
@@ -199,17 +198,15 @@ defmodule TymeslotWeb.AccountDeletion.FrozenPublicPagesTest do
         |> render_submit()
 
       assert html =~ "Voting has closed for this poll."
-      assert PollParticipantQueries.count_for_poll(poll.id) == 0
+      refute Repo.get_by(PollParticipantSchema, poll_id: poll.id)
     end
 
+    # Votes are cast from a participant's own link, so the page is opened
+    # through one before the freeze.
     test "takes no votes from a page opened before the freeze",
-         %{user: user, poll: poll, slot: slot, view: view} do
-      view
-      |> form("form[data-testid='poll-register-form']", %{
-        "name" => "Grace",
-        "email" => "grace@example.com"
-      })
-      |> render_submit()
+         %{conn: conn, user: user, poll: poll, slot: slot, path: path} do
+      participant = insert(:poll_participant, poll: poll, name: "Grace")
+      {:ok, view, _html} = live(conn, path <> "?p=" <> participant.token)
 
       freeze(user)
 

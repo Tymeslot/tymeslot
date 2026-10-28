@@ -13,8 +13,10 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
       back to `settle/3`;
     * `{:show, event}`: show `event` on the grid in place of its row;
     * `:reload`: reload the grid's events;
-    * `{:membership_changed, original_event, updated_event}`: email the
-      guests an accepted write made with `:membership` added or removed;
+    * `{:membership_changed, original_event, updated_event}`: tell the
+      guests a write made with `:membership` added or removed, once
+      accepted or saved to sync later, from the event as it found it and
+      left it;
     * `{:dropped, :series_write | :series_move, count}`: tell the organiser
       that `count` changes were not applied.
 
@@ -542,11 +544,13 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     Enum.reduce(held, acc, fn {event, write}, acc -> submit(acc, event, write) end)
   end
 
-  # What an accepted write made with `notify` asks of the driver (`update/5`).
-  defp notified(acc, %{kind: :update, notify: :membership}, before, {:ok, updated}),
-    do: emit(acc, {:membership_changed, before, updated})
-
-  defp notified(acc, _write, _before, _outcome), do: acc
+  # What a write made with `notify` asks of the driver (`update/5`).
+  defp notified(acc, write, before, outcome) do
+    case QueuedWrite.attendee_effect(write, before, outcome) do
+      nil -> acc
+      effect -> emit(acc, effect)
+    end
+  end
 
   defp advance(acc, key, chain, outcome) do
     cond do

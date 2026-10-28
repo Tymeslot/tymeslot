@@ -105,6 +105,13 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
     LineFolder.unfold_lines(body)
   end
 
+  # Flushes the offline queue and answers the lines of the document it wrote.
+  defp replayed_lines(integration) do
+    capture_put()
+    assert :ok = OfflineQueue.flush(integration, @caldav_client)
+    put_lines()
+  end
+
   defp contains_block?(lines, block),
     do: Enum.any?(Enum.chunk_every(lines, length(block), 1, :discard), &(&1 == block))
 
@@ -195,11 +202,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
       assert {:ok, _updated} = EventEdit.queue_for_retry(user.id, event, %{summary: "Renamed"})
       assert Repo.reload!(event).sync_state == "locally_modified"
 
-      capture_put()
-
-      assert :ok = OfflineQueue.flush(integration, @caldav_client)
-
-      lines = put_lines()
+      lines = replayed_lines(integration)
       assert "SUMMARY:Renamed" in lines
       assert contains_block?(lines, @stored_alarm)
       assert Repo.reload!(event).sync_state == "synced"
@@ -230,6 +233,15 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
       "END:VALARM"
     ]
 
+    # An alarm no reminder can express, so the sync reads nothing from it.
+    @end_alarm [
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "TRIGGER;RELATED=END:-PT5M",
+      "DESCRIPTION:Wrap up",
+      "END:VALARM"
+    ]
+
     @read_ical """
     BEGIN:VCALENDAR\r
     VERSION:2.0\r
@@ -242,6 +254,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
     SUMMARY:Board meeting\r
     #{Enum.join(@email_alarm, "\r\n")}\r
     #{Enum.join(@display_alarm, "\r\n")}\r
+    #{Enum.join(@end_alarm, "\r\n")}\r
     END:VEVENT\r
     END:VCALENDAR\r
     """
@@ -302,11 +315,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
       event: event
     } do
       assert {:ok, _updated} = EventEdit.queue_for_retry(user.id, event, %{summary: "Renamed"})
-      capture_put()
-
-      assert :ok = OfflineQueue.flush(integration, @caldav_client)
-
-      lines = put_lines()
+      lines = replayed_lines(integration)
       assert "SUMMARY:Renamed" in lines
       assert contains_block?(lines, @email_alarm)
       assert contains_block?(lines, @display_alarm)
@@ -322,13 +331,99 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
                  reminders: [%{method: :popup, minutes_before: 10}]
                })
 
+      lines = replayed_lines(integration)
+      assert "TRIGGER:-PT10M" in lines
+      refute contains_block?(lines, @email_alarm)
+      refute contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @end_alarm)
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 2
+    end
+
+    test "a replayed removal of every reminder removes their alarms alone", %{
+      user: user,
+      integration: integration,
+      event: event
+    } do
+      assert {:ok, _updated} = EventEdit.queue_for_retry(user.id, event, %{reminders: []})
+      lines = replayed_lines(integration)
+      refute contains_block?(lines, @email_alarm)
+      refute contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @end_alarm)
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 1
+
+      row = Repo.reload!(event)
+      assert row.sync_state == "synced"
+      refute row.sync_reminders_changed
+    end
+
+    test "a removal of every reminder is still replayed after a rename queued behind it", %{
+      user: user,
+      integration: integration,
+      event: event
+    } do
+      assert {:ok, removed} = EventEdit.queue_for_retry(user.id, event, %{reminders: []})
+      assert {:ok, _renamed} = EventEdit.queue_for_retry(user.id, removed, %{summary: "Renamed"})
+      lines = replayed_lines(integration)
+      assert "SUMMARY:Renamed" in lines
+      refute contains_block?(lines, @email_alarm)
+      refute contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @end_alarm)
+    end
+
+    test "adding a reminder keeps every stored alarm exactly as the server wrote it", %{
+      user: user,
+      event: event
+    } do
       capture_put()
 
-      assert :ok = OfflineQueue.flush(integration, @caldav_client)
+      assert {:ok, _updated} =
+               EventEdit.update_event(user.id, event, %{
+                 reminders: @read_reminders ++ [%{method: :popup, minutes_before: 10}]
+               })
 
       lines = put_lines()
+      assert contains_block?(lines, @email_alarm)
+      assert contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @end_alarm)
       assert "TRIGGER:-PT10M" in lines
-      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 1
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 4
+    end
+
+    test "removing the pop-up reminder removes its alarm alone", %{user: user, event: event} do
+      capture_put()
+
+      assert {:ok, _updated} =
+               EventEdit.update_event(user.id, event, %{
+                 reminders: [%{method: :email, minutes_before: 30}]
+               })
+
+      lines = put_lines()
+      refute contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @email_alarm)
+      assert contains_block?(lines, @end_alarm)
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 2
+    end
+
+    test "moving the email alert keeps it addressed to the recipient the client chose", %{
+      user: user,
+      event: event
+    } do
+      capture_put()
+
+      assert {:ok, _updated} =
+               EventEdit.update_event(user.id, event, %{
+                 reminders: [%{method: :email, minutes_before: 60}]
+               })
+
+      assert contains_block?(put_lines(), [
+               "BEGIN:VALARM",
+               "TRIGGER:-PT60M",
+               "ACTION:EMAIL",
+               "SUMMARY:Board meeting",
+               "DESCRIPTION:Reminder",
+               "ATTENDEE:mailto:host@example.com",
+               "END:VALARM"
+             ])
     end
   end
 
@@ -414,11 +509,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
       event: event
     } do
       assert {:ok, _updated} = EventEdit.queue_for_retry(user.id, event, %{summary: "Renamed"})
-      capture_put()
-
-      assert :ok = OfflineQueue.flush(integration, @caldav_client)
-
-      lines = put_lines()
+      lines = replayed_lines(integration)
       assert "SUMMARY:Renamed" in lines
       assert contains_block?(lines, @email_alarm)
       assert contains_block?(lines, @display_alarm)
@@ -436,11 +527,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
                  reminders: [%{method: :popup, minutes_before: 10}]
                })
 
-      capture_put()
-
-      assert :ok = OfflineQueue.flush(integration, @caldav_client)
-
-      lines = put_lines()
+      lines = replayed_lines(integration)
       assert "TRIGGER:-PT10M" in lines
       refute contains_block?(lines, @email_alarm)
       refute contains_block?(lines, @display_alarm)

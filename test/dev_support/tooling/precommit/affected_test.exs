@@ -16,6 +16,7 @@ defmodule Tymeslot.Precommit.AffectedTest do
     {"credo", ~w[credo --strict], :dev},
     {"sobelow", ~w[sobelow], :dev},
     {"deps.audit", ~w[deps.audit], :dev},
+    {"hex.audit", ~w[hex.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"workflows", ~w[actionlint], :dev},
     {"css tokens", ~w[css.check_tokens], :dev},
@@ -84,6 +85,7 @@ defmodule Tymeslot.Precommit.AffectedTest do
                {"deps.unlock", "mix.exs and mix.lock unchanged"},
                {"sobelow", "no web, config, auth or upload code changed"},
                {"deps.audit", "mix.exs and mix.lock unchanged"},
+               {"hex.audit", "reads the live Hex registry; the full gate runs it"},
                {"migrations", "no migration changed"},
                {"workflows", "no workflow changed"},
                {"css tokens", "no booking-theme CSS changed"},
@@ -113,6 +115,15 @@ defmodule Tymeslot.Precommit.AffectedTest do
         ran = names(Affected.select(@steps, [path], index()))
         assert Enum.filter(ran, &(&1 in expected)) == expected, "#{path} ran #{inspect(ran)}"
       end
+    end
+
+    test "hex.audit is left to the full gate, whatever the diff touches" do
+      diff = ["mix.exs", "mix.lock", "lib/tymeslot/payments/stripe.ex"]
+      narrowed = Affected.select(@steps, diff, index())
+
+      refute "hex.audit" in names(narrowed)
+
+      assert {"hex.audit", "reads the live Hex registry; the full gate runs it"} in narrowed.skipped
     end
 
     test "a docs-only diff runs nothing" do

@@ -130,20 +130,6 @@ defmodule TymeslotWeb.Components.ContainersTest do
       assert length(String.split(html, "<svg")) == 2
       assert html =~ "text-white"
     end
-
-    test "still draws raw svg children when no icon is given" do
-      assigns = %{}
-
-      html =
-        rendered_to_string(~H"""
-        <Containers.icon_badge>
-          <path d="M0 0" />
-        </Containers.icon_badge>
-        """)
-
-      assert html =~ "<svg"
-      assert html =~ "<path"
-    end
   end
 
   describe "detail_line" do

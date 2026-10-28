@@ -9,10 +9,6 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
   @registry Tymeslot.Infrastructure.CircuitBreakerRegistry
 
-  # Use a generous window/sleep ratio (4×) to avoid timing-sensitive flakes in CI.
-  @time_window_ms 50
-  @sleep_ms 200
-
   defp via_name(key \\ nil) do
     key = key || "cb_test_#{System.unique_integer([:positive])}"
     {:via, Registry, {@registry, key}}
@@ -26,6 +22,16 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
     name
   end
+
+  # The breaker measures time with System.monotonic_time/1, so rather than
+  # sleeping past a window the tests move its recorded timestamps into the past.
+  defp long_ago, do: System.monotonic_time(:millisecond) - 120_000
+
+  defp expire_time_window(name),
+    do: :sys.replace_state(name, &%{&1 | window_start: long_ago()})
+
+  defp expire_recovery_timeout(name),
+    do: :sys.replace_state(name, &%{&1 | last_failure_time: long_ago()})
 
   describe "closed state" do
     test "successful calls return {:ok, result}" do
@@ -130,13 +136,12 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
     test "failures outside time window don't count toward threshold" do
       name =
-        start_breaker(config: %{failure_threshold: 3, time_window: @time_window_ms})
+        start_breaker(config: %{failure_threshold: 3, time_window: 60_000})
 
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
-      # Wait well past the window before the third failure
-      Process.sleep(@sleep_ms)
+      expire_time_window(name)
 
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
@@ -186,8 +191,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
         )
 
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
-      long_ago = System.monotonic_time(:millisecond) - 120_000
-      :sys.replace_state(name, &%{&1 | last_failure_time: long_ago})
+      expire_recovery_timeout(name)
 
       parent = self()
 
@@ -216,8 +220,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     end
 
     test "is false once the round has stalled, as a call would start a new one", %{name: name} do
-      long_ago = System.monotonic_time(:millisecond) - 120_000
-      :sys.replace_state(name, &%{&1 | half_open_started_at: long_ago})
+      :sys.replace_state(name, &%{&1 | half_open_started_at: long_ago()})
 
       refute CircuitBreaker.refusing?(name)
       assert {:ok, :probed} = CircuitBreaker.call(name, fn -> {:ok, :probed} end)
@@ -238,7 +241,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
         start_breaker(
           config: %{
             failure_threshold: 1,
-            recovery_timeout: @time_window_ms,
+            recovery_timeout: 60_000,
             half_open_requests: 1
           }
         )
@@ -246,8 +249,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
-      # Wait well past the recovery timeout
-      Process.sleep(@sleep_ms)
+      expire_recovery_timeout(name)
 
       # Next call should go through (half-open)
       assert {:ok, :recovered} = CircuitBreaker.call(name, fn -> {:ok, :recovered} end)
@@ -261,7 +263,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
         start_breaker(
           config: %{
             failure_threshold: 1,
-            recovery_timeout: @time_window_ms,
+            recovery_timeout: 60_000,
             half_open_requests: 2
           }
         )
@@ -270,7 +272,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
-      Process.sleep(@sleep_ms)
+      expire_recovery_timeout(name)
 
       # First half-open success
       assert {:ok, :ok1} = CircuitBreaker.call(name, fn -> {:ok, :ok1} end)
@@ -285,7 +287,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
         start_breaker(
           config: %{
             failure_threshold: 1,
-            recovery_timeout: @time_window_ms,
+            recovery_timeout: 60_000,
             half_open_requests: 2
           }
         )
@@ -293,7 +295,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
-      Process.sleep(@sleep_ms)
+      expire_recovery_timeout(name)
 
       # A local, non-provider error must not permanently burn one of the
       # round's two grants — otherwise only one success is ever reachable
@@ -312,7 +314,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
         start_breaker(
           config: %{
             failure_threshold: 1,
-            recovery_timeout: @time_window_ms,
+            recovery_timeout: 60_000,
             half_open_requests: 3
           }
         )
@@ -320,7 +322,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
-      Process.sleep(@sleep_ms)
+      expire_recovery_timeout(name)
 
       # Fail in half-open
       assert {:provider_error, :fail_again} =
@@ -482,7 +484,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
       start_under_own_supervisor(breaker_name, %{
         failure_threshold: 1,
-        recovery_timeout: @time_window_ms,
+        recovery_timeout: 60_000,
         half_open_requests: 3
       })
 

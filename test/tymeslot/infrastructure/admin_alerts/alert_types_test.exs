@@ -408,6 +408,20 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
       assert msg =~ "meeting 99"
     end
+
+    test ":recipient_email_rejected names the masked recipients beside the identifier" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced",
+          meeting_id: 99,
+          recipients_masked: "g***@example.com"
+        })
+
+      assert msg ==
+               "Recipient permanently undeliverable, email discarded " <>
+                 "(meeting 99, to g***@example.com): bounced"
+    end
   end
 
   describe "format_message/2 — fallback" do

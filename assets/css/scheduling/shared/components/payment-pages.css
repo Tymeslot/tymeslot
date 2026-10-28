@@ -1,32 +1,28 @@
-/* Payment return pages (processing, cancelled): structure shared; the card,
-   ink and link treatment come from each theme's --payment-* tokens. */
+/* Payment return pages (processing, cancelled): structure shared. Each
+   theme draws them inside its booking page's own wrapper, so the background,
+   palette and language switcher are the booking page's, and around its own
+   card (Quill's glass card, Rhythm's scheduling box); the ink and link
+   treatment come from each theme's --payment-* tokens. */
 
-/* Full-viewport centred wrapper — replaces min-h-screen flex items-center
-   justify-center px-4 py-8 on the theme's root wrapper. A theme whose
-   booking page paints its background on an element these pages do not
-   render sets --payment-page-background to the same background. */
+/* Centres the card in the wrapper's content area, as the booking card sits;
+   the side gutters are the theme's step container's. */
 .payment-page-layout {
-  background: var(--payment-page-background, none);
   display: flex;
-  align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: var(--space-lg) var(--space-md);
+  width: 100%;
+  margin-block: auto;
+  padding-block: var(--space-lg);
 }
 
-/* Inner width constraint — replaces w-full max-w-* */
+/* Inner width constraint */
 .payment-page-inner {
   width: 100%;
   max-width: var(--payment-page-max-width);
 }
 
-/* Card surface — replaces the inline style that set background, border and
-   border-radius directly. */
-.payment-page-card {
-  background: var(--payment-card-surface);
-  border: var(--border-width-thin) solid var(--payment-card-line);
-  border-radius: var(--payment-card-radius);
+/* The confirmation step's badge, centred above the heading. */
+.payment-page-badge {
+  margin: 0 auto var(--space-md);
 }
 
 /* Card body padding — replaces p-8 text-center */

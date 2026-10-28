@@ -77,6 +77,10 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           phx-hook="ScrollReset"
           data-action={@current_action}
         >
+          <.refused_calendar_notice
+            names={Map.get(@integration_status, :refused_calendars, [])}
+            current_action={@current_action}
+          />
           <%= if @full_width do %>
             <main class="flex-1 flex flex-col min-h-0">{render_slot(@inner_block)}</main>
           <% else %>
@@ -86,6 +90,39 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           <% end %>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  # Shown on every dashboard page while a calendar's credentials stay refused,
+  # because the booking page offers no times until it is reconnected and the
+  # owner may never open the integrations page on their own. That page carries
+  # its own attention banner, so the notice stays off it.
+  attr :names, :list, required: true
+  attr :current_action, :atom, required: true
+
+  defp refused_calendar_notice(assigns) do
+    ~H"""
+    <div
+      :if={@names != [] and @current_action != :integrations}
+      id="refused-calendar-notice"
+      class="max-w-7xl mx-auto px-4 lg:px-8 pt-4"
+    >
+      <.info_box variant={:error}>
+        {dngettext(
+          "dashboard_common",
+          "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings.",
+          "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings.",
+          length(@names),
+          names: Enum.join(@names, ", ")
+        )}
+        <.link
+          navigate={~p"/dashboard/integrations?tab=calendars"}
+          class="font-semibold underline hover:no-underline"
+        >
+          {dgettext("dashboard_common", "Reconnect")}
+        </.link>
+      </.info_box>
     </div>
     """
   end

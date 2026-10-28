@@ -466,12 +466,12 @@ msgstr "Evento annullato"
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "NOTE FROM THE ORGANISER:"
-msgstr "NOTA DALL’ORGANIZZATORE:"
+msgstr "NOTA DALL'ORGANIZZATORE:"
 
 #: lib/tymeslot/emails/shared/meeting/notes.ex
 #, elixir-autogen, elixir-format
 msgid "Note from the organiser"
-msgstr "Nota dall’organizzatore"
+msgstr "Nota dall'organizzatore"
 
 #: lib/tymeslot/bookings/booking_title.ex
 #, elixir-autogen, elixir-format
@@ -536,3 +536,13 @@ msgstr "Durata:"
 #, elixir-autogen, elixir-format
 msgid "Scheduled with %{brand}: %{url}"
 msgstr "Pianificato con %{brand}: %{url}"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "GUESTS:"
+msgstr "OSPITI:"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Ospiti"

@@ -54,6 +54,40 @@ defmodule Tymeslot.Utils.DateTimeUtils.Duration do
   end
 
   @doc """
+  Parses an RFC 5545 duration (§3.3.6) that must not be negative into its
+  nominal and exact parts: whole days (weeks counted as seven), and the
+  seconds of its time part. Days are nominal, so a caller adds them to a
+  calendar date or a wall-clock time and only then the seconds as elapsed
+  time; across a DST change `P1D` is one calendar day, not 24 hours.
+
+  ## Examples
+
+      iex> Tymeslot.Utils.DateTimeUtils.Duration.parse_nominal("P1W1DT2H")
+      {:ok, {8, 7200}}
+
+      iex> Tymeslot.Utils.DateTimeUtils.Duration.parse_nominal("-P1D")
+      {:error, "Negative duration"}
+  """
+  @spec parse_nominal(String.t()) ::
+          {:ok, {days :: non_neg_integer(), seconds :: non_neg_integer()}}
+          | {:error, String.t()}
+  def parse_nominal(duration_str) when is_binary(duration_str) do
+    with {:ok, _seconds} <- parse(duration_str) do
+      [_match, _sign | captures] = Regex.run(@dur_value, duration_str)
+
+      [weeks, days, hours, minutes, seconds] =
+        captures
+        |> Enum.concat(List.duplicate("", 5 - length(captures)))
+        |> Enum.map(fn
+          "" -> 0
+          value -> String.to_integer(value)
+        end)
+
+      {:ok, {weeks * 7 + days, hours * 3600 + minutes * 60 + seconds}}
+    end
+  end
+
+  @doc """
   Parses a meeting length in minutes as booking links and forms write it:
   `"30min"`, `"45 minutes"`, `"60"`. The inverse of `format_for_url/1`.
 

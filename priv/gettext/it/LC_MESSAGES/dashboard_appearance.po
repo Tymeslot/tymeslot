@@ -315,7 +315,7 @@ msgstr "Caricamento non riuscito"
 #: lib/tymeslot/theme_customizations/assets.ex
 #, elixir-autogen, elixir-format
 msgid "Video processing is unavailable on this server because ffmpeg is not installed. Install ffmpeg or use a background image instead."
-msgstr "L’elaborazione video non è disponibile su questo server perché ffmpeg non è installato. Installa ffmpeg oppure usa un’immagine di sfondo."
+msgstr "L'elaborazione video non è disponibile su questo server perché ffmpeg non è installato. Installa ffmpeg oppure usa un'immagine di sfondo."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
 #, elixir-autogen, elixir-format

@@ -740,3 +740,13 @@ msgstr "Evento «%{title}» aggiunto."
 #, elixir-autogen, elixir-format
 msgid "Couldn't confirm the save. Check your calendar."
 msgstr "Impossibile confermare il salvataggio. Controlla il tuo calendario."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{email}. They will be invited once the change has synced to your calendar."
+msgstr "Hai aggiunto %{email}. L'invito partirà non appena la modifica sarà sincronizzata con il tuo calendario."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{email}. They will be told once the change has synced to your calendar."
+msgstr "Hai rimosso %{email}. L'avviso partirà non appena la modifica sarà sincronizzata con il tuo calendario."

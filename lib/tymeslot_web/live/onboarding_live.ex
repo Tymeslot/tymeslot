@@ -49,9 +49,16 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_params(%{"step" => step}, _uri, socket) do
+  def handle_params(%{"step" => step} = params, _uri, socket) do
     if StepConfig.valid_step?(step) do
       step_atom = String.to_existing_atom(step)
+      # Set by the OAuth return path of a host sent back from the share step;
+      # `theme` when that host has not seen the theme step yet.
+      socket =
+        assign(socket,
+          returning_to_share: params["return"] in ["share", "theme"],
+          theme_unseen: params["return"] == "theme"
+        )
 
       # During the disconnected (static) render the calendar list has not been
       # loaded yet, so `socket.assigns.steps` is always the no-calendar sequence
@@ -60,10 +67,21 @@ defmodule TymeslotWeb.OnboardingLive do
       # `/onboarding/choose_theme` before the socket connects. Defer the
       # membership check until the connected render, where `mount/3` has run
       # with the real calendar list and `steps` reflects it.
-      if !connected?(socket) or step_atom in socket.assigns.steps do
-        {:noreply, assign(socket, :current_step, step_atom)}
-      else
-        {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
+      cond do
+        not connected?(socket) ->
+          {:noreply, assign(socket, :current_step, step_atom)}
+
+        step_atom == :ready ->
+          {:noreply,
+           socket
+           |> assign(:current_step, :ready)
+           |> NavigationHandlers.assign_booking_page_live()}
+
+        step_atom in socket.assigns.steps ->
+          {:noreply, assign(socket, :current_step, step_atom)}
+
+        true ->
+          {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
       end
     else
       {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
@@ -82,6 +100,7 @@ defmodule TymeslotWeb.OnboardingLive do
       current_step={@current_step}
       steps={@steps}
       show_skip_modal={@show_skip_modal}
+      booking_page_live={@booking_page_live}
       next_disabled={
         @current_step == :connect_calendar and is_nil(@calendar_choice) and
           @connected_calendars == []
@@ -107,6 +126,7 @@ defmodule TymeslotWeb.OnboardingLive do
           min_advance_hours={policy_value(@availability_schedule, :min_advance_hours)}
           calendar_connected={@connected_calendars != [] or @calendar_choice not in [nil, "skip"]}
           booking_host={booking_host()}
+          booking_page_live={@booking_page_live}
         />
       </:preview>
       <%= case @current_step do %>
@@ -163,7 +183,7 @@ defmodule TymeslotWeb.OnboardingLive do
             custom_input_mode={@custom_input_mode}
           />
         <% :ready -> %>
-          <ReadyStep.ready_step booking_url={@booking_url} />
+          <ReadyStep.ready_step booking_url={@booking_url} page_live={@booking_page_live} />
       <% end %>
     </OnboardingLayout.onboarding_layout>
 
@@ -175,8 +195,8 @@ defmodule TymeslotWeb.OnboardingLive do
 
     <%!-- Real booking-page preview --%>
     <ThemePreviewModal.theme_preview_modal
-      show={@show_theme_preview}
-      url={@theme_preview_url}
+      show={@show_theme_preview_modal}
+      url={@theme_preview_modal_data}
     />
     """
   end
@@ -188,6 +208,14 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   def handle_event("next_step", _params, socket) do
     NavigationHandlers.handle_next_step(socket)
+  end
+
+  def handle_event("return_to_calendar_step", _params, socket) do
+    NavigationHandlers.handle_return_to_calendar_step(socket)
+  end
+
+  def handle_event("share_booking_link", params, socket) do
+    NavigationHandlers.handle_share_booking_link(socket, params["channel"])
   end
 
   def handle_event("previous_step", _params, socket) do

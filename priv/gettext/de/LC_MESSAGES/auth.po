@@ -967,3 +967,10 @@ msgstr "E-Mail-Adresse"
 #, elixir-autogen, elixir-format
 msgid "%{provider} authentication failed - missing authorisation code or security token."
 msgstr "%{provider}-Authentifizierung fehlgeschlagen – Autorisierungscode oder Sicherheitstoken fehlt."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "Willkommen zurück. Ihr Konto wurde wiederhergestellt, aber die Integration %{names} muss erneut verbunden werden. Solange Sie sie nicht erneut verbinden, bietet Ihre Buchungsseite möglicherweise keine Zeiten an und nimmt keine Buchungen entgegen."
+msgstr[1] "Willkommen zurück. Ihr Konto wurde wiederhergestellt, aber die Integrationen %{names} müssen erneut verbunden werden. Solange Sie sie nicht erneut verbinden, bietet Ihre Buchungsseite möglicherweise keine Zeiten an und nimmt keine Buchungen entgegen."

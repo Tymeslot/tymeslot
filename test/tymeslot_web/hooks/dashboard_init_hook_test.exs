@@ -4,30 +4,22 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
   @moduletag :utils
 
   import Tymeslot.Factory
+  import TymeslotWeb.Test.SocketHelpers
 
-  alias Phoenix.LiveView.Socket
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias TymeslotWeb.Hooks.DashboardInitHook
 
-  defp build_socket(assigns \\ %{}) do
-    %Socket{
-      assigns: Map.merge(%{__changed__: %{}}, assigns),
-      endpoint: TymeslotWeb.Endpoint,
-      transport_pid: self()
-    }
-  end
-
   describe "on_mount/4" do
     test "continues when user is not present (handled by auth hooks)" do
-      socket = build_socket()
+      socket = build_socket(%{}, connected: true)
       assert {:cont, ^socket} = DashboardInitHook.on_mount(:default, %{}, %{}, socket)
     end
 
     test "redirects to onboarding if onboarding is not completed" do
       user = insert(:user, onboarding_completed_at: nil)
-      socket = build_socket(%{current_user: user})
+      socket = build_socket(%{current_user: user}, connected: true)
 
       assert {:halt, socket} = DashboardInitHook.on_mount(:default, %{}, %{}, socket)
       assert socket.redirected == {:redirect, %{to: "/onboarding", status: 302}}
@@ -36,7 +28,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
     test "assigns profile and integration status when onboarding is completed" do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())
       profile = insert(:profile, user: user)
-      socket = build_socket(%{current_user: user})
+      socket = build_socket(%{current_user: user}, connected: true)
 
       assert {:cont, updated_socket} = DashboardInitHook.on_mount(:default, %{}, %{}, socket)
       assert updated_socket.assigns.profile.id == profile.id
@@ -47,7 +39,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
     test "creates a missing profile rather than assigning an unsaved one" do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())
       # No profile inserted
-      socket = build_socket(%{current_user: user})
+      socket = build_socket(%{current_user: user}, connected: true)
 
       assert {:cont, updated_socket} = DashboardInitHook.on_mount(:default, %{}, %{}, socket)
 
@@ -61,8 +53,8 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
       Repo.delete!(user)
 
       for socket <- [
-            build_socket(%{current_user: user}),
-            %{build_socket(%{current_user: user}) | transport_pid: nil}
+            build_socket(%{current_user: user}, connected: true),
+            build_socket(%{current_user: user}, connected: false)
           ] do
         assert {:halt, halted} = DashboardInitHook.on_mount(:default, %{}, %{}, socket)
         assert halted.redirected == {:redirect, %{to: "/auth/login", status: 302}}

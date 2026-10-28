@@ -6,6 +6,13 @@ defmodule TymeslotWeb.StepNavigation do
   in `navigable_steps`, the steps a click would actually move to
   (`Journey.Runtime.navigable_steps/1`); every other step is plain,
   non-interactive markup.
+
+  The four steps shown are not always the journey's steps one for one: the
+  length choice of a meeting type offering several is a step of the journey
+  shown under "Duration". A click therefore sends the journey's number of
+  the moment a step stands for (`step_numbers`, from
+  `Journey.Runtime.step_numbers/1`), which is the step's own number when
+  there is none.
   """
 
   use Phoenix.Component
@@ -20,8 +27,18 @@ defmodule TymeslotWeb.StepNavigation do
     default: [],
     doc: "the step numbers a click would move to; no other step is clickable"
 
+  attr :step_numbers, :map,
+    default: %{},
+    doc: "the journey's step number of each moment, by moment key"
+
   @spec step_indicator(map()) :: Phoenix.LiveView.Rendered.t()
   def step_indicator(assigns) do
+    assigns =
+      assign(assigns,
+        schedule_target: target(assigns.step_numbers, [:schedule], 2),
+        details_target: target(assigns.step_numbers, [:questions, :booking], 3)
+      )
+
     ~H"""
     <div class={"step-indicator-container flex items-center space-x-3 sm:space-x-4 md:space-x-6 #{@class}"}>
       <.step_item
@@ -37,7 +54,8 @@ defmodule TymeslotWeb.StepNavigation do
         step={2}
         current_step={@current_step}
         label={dgettext("onboarding", "Date & Time")}
-        clickable={(@current_step > 2 && @slug != nil) and 2 in @navigable_steps}
+        target={@schedule_target}
+        clickable={(@current_step > 2 && @slug != nil) and @schedule_target in @navigable_steps}
       />
 
       <div class={"step-connector " <> connector_class(2, @current_step)}></div>
@@ -46,7 +64,8 @@ defmodule TymeslotWeb.StepNavigation do
         step={3}
         current_step={@current_step}
         label={dgettext("onboarding", "Details")}
-        clickable={(@current_step > 3 && @slug != nil) and 3 in @navigable_steps}
+        target={@details_target}
+        clickable={(@current_step > 3 && @slug != nil) and @details_target in @navigable_steps}
       />
 
       <div class={"step-connector " <> connector_class(3, @current_step)}></div>
@@ -65,6 +84,7 @@ defmodule TymeslotWeb.StepNavigation do
   attr :current_step, :integer, required: true
   attr :label, :string, required: true
   attr :clickable, :boolean, default: false
+  attr :target, :integer, default: nil, doc: "the step a click sends; the step itself if nil"
 
   @spec step_item(map()) :: Phoenix.LiveView.Rendered.t()
   defp step_item(assigns) do
@@ -77,7 +97,7 @@ defmodule TymeslotWeb.StepNavigation do
         <button
           type="button"
           phx-click="navigate_to_step"
-          phx-value-step={@step}
+          phx-value-step={@target || @step}
           class="flex flex-col items-center group"
         >
           <div class={"step-circle step-circle--clickable " <> step_class(@step, @current_step) <> " cursor-pointer hover:scale-125 transform transition-all"}>
@@ -126,4 +146,8 @@ defmodule TymeslotWeb.StepNavigation do
   defp step_label_class(_step, _current) do
     "step-label--upcoming text-white/80 drop-shadow-md"
   end
+
+  # The journey's number of the first of `moments` it numbers, or `default`.
+  defp target(step_numbers, moments, default),
+    do: Enum.find_value(moments, default, &Map.get(step_numbers, &1))
 end

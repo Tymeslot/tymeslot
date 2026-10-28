@@ -4,6 +4,7 @@ defmodule Tymeslot.Factory do
   """
 
   use ExMachina.Ecto, repo: Tymeslot.Repo
+  use Tymeslot.Factory.VideoIntegrationFactories
 
   alias Ecto.UUID
   alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
@@ -14,7 +15,6 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
@@ -303,28 +303,6 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec video_integration_factory() :: Tymeslot.Integrations.Video.VideoIntegrationSchema.t()
-  def video_integration_factory do
-    api_key = sequence(:api_key, &"api_key_#{&1}")
-
-    %VideoIntegrationSchema{
-      name: sequence(:video_name, &"Video #{&1}"),
-      provider: "mirotalk",
-      base_url: "https://video.example.com",
-      api_key_encrypted: Encryption.encrypt(api_key),
-      tenant_id_encrypted: Encryption.encrypt("test-tenant-id"),
-      client_id_encrypted: Encryption.encrypt("test-client-id"),
-      client_secret_encrypted: Encryption.encrypt("test-client-secret"),
-      teams_user_id_encrypted: Encryption.encrypt("test-teams-user-id"),
-      access_token_encrypted: Encryption.encrypt("test-access-token"),
-      refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
-      provider_account_id: sequence(:video_account_id, &"video-account-#{&1}"),
-      is_active: true,
-      settings: %{},
-      user: build(:user)
-    }
-  end
-
   @spec availability_schedule_factory() ::
           Tymeslot.Availability.AvailabilityScheduleSchema.t()
   def availability_schedule_factory do
@@ -579,13 +557,29 @@ defmodule Tymeslot.Factory do
     }
   end
 
+  # Someone the host invited, unless the test says otherwise: confirmed at once
+  # and still owing a vote, which is the participant nearly every test wants.
+  # The app confirms anyone else only when they vote, so a confirmed
+  # participant always has `invited_at` or `voted_at`:
+  #
+  #   * `confirmed_at: nil` (with a `link_sent_at`) is a pending link request,
+  #     never invited either;
+  #   * `invited_at: nil` with a `voted_at` is someone who asked for their link
+  #     and voted;
+  #   * `invited_at: nil` alone is a participant from before confirmation, whom
+  #     the confirmation migration confirmed without a vote. Only legacy rows
+  #     have that shape; say so where a test builds one.
   @spec poll_participant_factory(map()) :: Tymeslot.Polls.PollParticipantSchema.t()
   def poll_participant_factory(attrs) do
+    confirmed_at = Map.get(attrs, :confirmed_at, DateTime.utc_now(:second))
+
     %PollParticipantSchema{
       name: sequence(:poll_participant_name, &"Participant #{&1}"),
       email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
       token: Token.generate(24),
       locale: "en",
+      confirmed_at: confirmed_at,
+      invited_at: confirmed_at,
       poll: build(:poll)
     }
     |> merge_attributes(attrs)

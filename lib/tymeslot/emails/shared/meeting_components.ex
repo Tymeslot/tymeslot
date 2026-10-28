@@ -15,7 +15,8 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   - `Meeting.ActionsBar` — the reschedule / cancel link row
     (`meeting_actions_bar/2`, and `actions_section/4` with its heading).
   - `Meeting.Attendee` — the organiser-facing attendee table
-    (`attendee_info_section/2`) and the attendee-message callout
+    (`attendee_info_section/2`, or the guests of a meeting nobody booked
+    through `counterpart_section/2`) and the attendee-message callout
     (`attendee_message_box/2`).
   - `Meeting.Notes` — the organiser-note callout for guest-facing emails
     (`organizer_note_box/2`).
@@ -43,6 +44,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   defdelegate actions_section(intent, title, actions, opts), to: ActionsBar
 
   defdelegate attendee_info_section(intent, attendee), to: Attendee
+  defdelegate counterpart_section(intent, details), to: Attendee
   defdelegate attendee_message_box(intent, message), to: Attendee
   defdelegate organizer_note_box(intent, note), to: Notes
 

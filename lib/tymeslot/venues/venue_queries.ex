@@ -28,7 +28,7 @@ defmodule Tymeslot.Venues.VenueQueries do
 
     case highest do
       nil -> 0
-      highest -> highest + 1
+      highest when is_integer(highest) -> highest + 1
     end
   end
 

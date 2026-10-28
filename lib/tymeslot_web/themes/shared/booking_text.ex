@@ -35,9 +35,11 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Components.PaymentHelpers
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.Voice
 
@@ -106,12 +108,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   @spec default_greeting(String.t() | nil, theme_key() | nil) :: String.t() | nil
   def default_greeting(name, theme_key \\ nil)
   def default_greeting(nil, _theme_key), do: nil
-
-  def default_greeting(name, theme_key) do
-    Voice.line(Voice.of(theme_key), :greeting, %{name: name}, fn ->
-      dgettext("booking", "Hi! I'm %{name}.", name: name)
-    end)
-  end
+  def default_greeting(name, theme_key), do: voiced_greeting(name, theme_key)
 
   @doc """
   A greeting to start the organiser off with when they switch the customisation
@@ -125,7 +122,13 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   @spec seed_greeting(String.t() | nil, theme_key() | nil) :: String.t()
   def seed_greeting(name, theme_key \\ nil)
   def seed_greeting(nil, _theme_key), do: dgettext("booking", "Hi there!")
-  def seed_greeting(name, theme_key), do: default_greeting(name, theme_key)
+  def seed_greeting(name, theme_key), do: voiced_greeting(name, theme_key)
+
+  defp voiced_greeting(name, theme_key) do
+    Voice.line(Voice.of(theme_key), :greeting, %{name: name}, fn ->
+      dgettext("booking", "Hi! I'm %{name}.", name: name)
+    end)
+  end
 
   @doc """
   The instruction shown when the organiser has not supplied one.
@@ -142,16 +145,21 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   @doc """
   The meeting's length as a step shows it: the meeting type's own duration
-  when the page has resolved one, otherwise the duration selected in the URL
-  (`:duration`, e.g. `"30-minutes"`).
+  when the page has resolved one, or the length the booking is for when the
+  type offers several (`ChosenLength.minutes/1`), otherwise the duration
+  selected in the URL (`:duration`, e.g. `"30-minutes"`).
 
-  Takes a map with `:meeting_type` and `:duration`, so a step component can
-  pass its assigns straight through; a component whose selected duration lives
-  under another key builds the map itself.
+  Takes a map with `:meeting_type` and `:duration`, and the length assigns, so
+  a step component can pass its assigns straight through; a component whose
+  selected duration lives under another key builds the map itself.
   """
   @spec duration_label(map()) :: String.t()
-  def duration_label(%{meeting_type: %{duration_minutes: minutes}}),
-    do: LocalizationHelpers.format_duration(minutes)
+  def duration_label(%{meeting_type: %{duration_minutes: minutes} = meeting_type} = assigns)
+      when is_integer(minutes),
+      do:
+        LocalizationHelpers.format_duration(
+          Offer.duration_minutes(meeting_type, nil, ChosenLength.minutes(assigns))
+        )
 
   def duration_label(assigns),
     do: LocalizationHelpers.format_duration(Map.get(assigns, :duration))

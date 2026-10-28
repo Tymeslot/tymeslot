@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
@@ -32,14 +34,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                 <div class="confirmation-header-section">
                   <div class="success-badge">
                     <div class="success-badge-inner">
-                      <svg class="success-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+                      <.icon name="hero-check" class="success-icon stroke-3" />
                     </div>
                   </div>
 
@@ -55,14 +50,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                 <div class="meeting-ticket">
                   <div class="ticket-body">
                     <div class="email-confirmation">
-                      <svg class="email-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <.icon name="hero-envelope" class="email-icon" />
                       <span>
                         <strong>{dgettext(
                           "booking_manage",

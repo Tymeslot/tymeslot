@@ -36,7 +36,11 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   The host's booking limits are enforced in the same transaction. Pass
   `enforce_booking_limits: false` (host-created ad-hoc bookings) to skip
-  them; conflict checking always runs.
+  them; conflict checking always runs. The new time is padded with the
+  buffers of the schedule its meeting type is booked against before
+  meetings are counted; pass `buffers: false` to count only the meetings
+  overlapping the time itself, for a time the organiser chose rather than a
+  booker (a poll they confirmed).
 
   ## Examples
 
@@ -118,7 +122,8 @@ defmodule Tymeslot.Meetings.Scheduling do
             end_time: end_time,
             organizer_user_id: organizer_user_id,
             meeting_type_id: meeting_type_id,
-            exclude_uid: exclude_uid
+            exclude_uid: exclude_uid,
+            buffered?: Keyword.get(opts, :buffers, true)
           },
           build_limit_check(organizer_user_id, start_time, meeting_type_id, exclude_uid, opts),
           fn -> persist_fn.(attrs) end,
@@ -148,6 +153,13 @@ defmodule Tymeslot.Meetings.Scheduling do
   `locked_attrs:`, a function of the same locked row returning a map, for
   changes derived from the row's current values (a counter to advance, say);
   they are merged over `attrs`.
+
+  The organiser's booking limits are enforced as on creation; pass
+  `enforce_booking_limits: false` to skip them. The new time is padded with
+  the buffers of the schedule its meeting type is booked against before
+  meetings are counted; pass `buffers: false` to count only the meetings
+  overlapping the time itself, for a time the organiser chose rather than a
+  booker.
 
   ## Examples
 
@@ -189,7 +201,8 @@ defmodule Tymeslot.Meetings.Scheduling do
             end_time: end_time,
             organizer_user_id: meeting.organizer_user_id,
             meeting_type_id: meeting.meeting_type_id,
-            exclude_uid: meeting.uid
+            exclude_uid: meeting.uid,
+            buffered?: Keyword.get(opts, :buffers, true)
           },
           build_limit_check(
             meeting.organizer_user_id,
@@ -261,13 +274,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   # count and any row the write locks: see
   # `MeetingConflictQueries.lock_organizer_schedule/1`.
   defp conflict_checked_transaction(slot, limit_check, write_fn, log_conflict_fn) do
-    {buffered_start, buffered_end} =
-      compute_buffered_window(
-        slot.start_time,
-        slot.end_time,
-        slot.organizer_user_id,
-        slot.meeting_type_id
-      )
+    {buffered_start, buffered_end} = conflict_window(slot)
 
     Repo.transaction(fn ->
       :ok = MeetingConflictQueries.lock_organizer_schedule(slot.organizer_user_id)
@@ -345,10 +352,14 @@ defmodule Tymeslot.Meetings.Scheduling do
   end
 
   # The new meeting is padded, never the meetings it is checked against: an
-  # existing meeting's own buffers are not re-applied.
-  defp compute_buffered_window(start_time, end_time, organizer_user_id, meeting_type_id) do
-    {buffer_before, buffer_after} = buffers(organizer_user_id, meeting_type_id)
-    TimeRange.add_buffer(start_time, end_time, buffer_before, buffer_after)
+  # existing meeting's own buffers are not re-applied. A time the organiser
+  # chose themselves (`buffers: false`) is checked as it stands. The
+  # reinstate slot carries no `buffered?` key and is always padded.
+  defp conflict_window(%{buffered?: false} = slot), do: {slot.start_time, slot.end_time}
+
+  defp conflict_window(slot) do
+    {buffer_before, buffer_after} = buffers(slot.organizer_user_id, slot.meeting_type_id)
+    TimeRange.add_buffer(slot.start_time, slot.end_time, buffer_before, buffer_after)
   end
 
   defp create_meeting_in_transaction(attrs) do

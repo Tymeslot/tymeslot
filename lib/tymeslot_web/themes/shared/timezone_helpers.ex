@@ -15,7 +15,9 @@ defmodule TymeslotWeb.Themes.Shared.TimezoneHelpers do
   alias Tymeslot.Timezones
 
   @doc """
-  Assigns `:user_timezone`, the timezone every time on the page is shown in.
+  Assigns `:user_timezone`, the timezone every time on the page is shown in,
+  and `:browser_timezone`, the valid zone the browser reported on connect
+  (`nil` before then), which tells a zone the visitor chose from their own.
 
   A zone a language switch carried (`visitor_timezone`, the one the visitor was
   seeing times in) wins. Otherwise the zone the booker's browser reported when
@@ -30,27 +32,34 @@ defmodule TymeslotWeb.Themes.Shared.TimezoneHelpers do
   """
   @spec assign_user_timezone(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_user_timezone(socket, params) do
+    browser_timezone = valid_timezone(get_connect_params(socket)["timezone"])
+
     requested =
-      carried_timezone(params) || get_connect_params(socket)["timezone"] || params["timezone"] ||
+      carried_timezone(params) || browser_timezone || params["timezone"] ||
         Profiles.get_default_timezone()
 
     normalized = Timezones.normalize(requested)
 
     timezone = if Timezones.valid?(normalized), do: normalized, else: fallback_timezone()
 
-    assign(socket, :user_timezone, timezone)
+    socket
+    |> assign(:user_timezone, timezone)
+    |> assign(:browser_timezone, browser_timezone)
   end
 
   # The timezone the visitor was seeing times in before a language switch
   # (`PathHandlers` carries it with the chosen day and time, which are wall
   # clock in that zone). It wins over the browser's, as the visitor's own
   # choice did before the redirect; one that is not a valid zone is ignored.
-  defp carried_timezone(%{"visitor_timezone" => timezone}) when is_binary(timezone) do
+  defp carried_timezone(%{"visitor_timezone" => timezone}), do: valid_timezone(timezone)
+  defp carried_timezone(_params), do: nil
+
+  defp valid_timezone(timezone) when is_binary(timezone) do
     normalized = Timezones.normalize(timezone)
     if Timezones.valid?(normalized), do: normalized
   end
 
-  defp carried_timezone(_params), do: nil
+  defp valid_timezone(_timezone), do: nil
 
   defp fallback_timezone do
     default = Profiles.get_default_timezone()

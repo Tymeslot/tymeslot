@@ -390,8 +390,12 @@
      tighter padding must move the chevron too, or the time runs under it. */
   padding-left: 0.5rem;
   padding-right: 1.625rem;
-  background-position: right 0.5rem center;
-  background-size: 1rem;
+}
+
+.day-hours-inline .select-chevron {
+  right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 /* Focus mode on the calendar (CalendarFocus), from lg up where the menu

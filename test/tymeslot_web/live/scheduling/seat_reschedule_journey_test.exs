@@ -180,6 +180,44 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
       assert [%{id: still_moved_id}] = live_participants("mover@example.com")
       assert still_moved_id == moved.id
     end
+
+    # A reconnect mounts the page again from the URL it patched itself to
+    # (`ChoicesInUrl`). The seat token is part of that URL: lost from a patch,
+    # the remounted page books the participant a second seat and leaves the
+    # old one in place.
+    @tag :capture_log
+    test "a reconnect on the details still moves the seat", %{
+      conn: conn,
+      profile: profile,
+      seat: seat
+    } do
+      token = seat.management_token
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}/group-session?reschedule_seat_token=#{token}&timezone=UTC"
+        )
+
+      view = walk_from_schedule_to_booking_form(view, "UTC")
+      url = last_patched_url(view)
+
+      assert %{"reschedule_seat_token" => ^token, "step" => "booking"} =
+               url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      {:ok, view, _html} = live(build_conn(), url)
+      assert has_element?(view, "form[phx-submit='submit']")
+
+      submit_booking(view, "Moving Participant", "mover@example.com")
+
+      wait_until(fn ->
+        match?({:ok, %{cancelled_at: %DateTime{}}}, ParticipantQueries.get(seat.id))
+      end)
+
+      assert [moved] = live_participants("mover@example.com")
+      assert moved.id != seat.id
+      assert moved.meeting_id != seat.meeting_id
+    end
   end
 
   describe "a seat link already used" do

@@ -134,8 +134,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
     >
       <.provider_icon provider={@provider.provider} size="medium" class="shrink-0" />
       <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-1.5">
-          <h4 class="truncate text-token-sm font-semibold text-tymeslot-800">{@provider.title}</h4>
+        <%!-- The title wraps rather than truncates, and the badge wraps onto
+             its own line when the two do not fit side by side. --%>
+        <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <h4 class="min-w-0 break-words text-token-sm font-semibold text-tymeslot-800">
+            {@provider.title}
+          </h4>
           <span
             :if={@provider.connected?}
             class="shrink-0 rounded-token-sm bg-turquoise-50 px-1.5 py-0.5 text-token-2xs font-semibold text-turquoise-700"

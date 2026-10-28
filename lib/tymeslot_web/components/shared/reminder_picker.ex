@@ -9,6 +9,9 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   control: the two lead times most reminders use as one-click buttons, and a
   custom value with its unit for anything else.
 
+  Polls, whose reminders run days before a deadline rather than minutes
+  before a meeting, pass their own `presets`.
+
   The owning LiveComponent keeps the picker's state (the list, the custom
   input's value and unit, whether the custom row is open, the last error and
   confirmation) and receives the picker's events through `phx-target`. Event
@@ -51,12 +54,20 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   attr :reminder_confirmation, :string, default: nil
   attr :extra_errors, :list, default: []
   attr :event_prefix, :string, default: ""
+
+  attr :presets, :list,
+    default: nil,
+    doc:
+      "The one-click lead times, as `%{value:, unit:}` maps; 30 minutes and an hour when omitted."
+
   attr :myself, :any, required: true
 
   @spec reminder_picker(map()) :: Phoenix.LiveView.Rendered.t()
   def reminder_picker(assigns) do
     assigns =
-      assign(assigns, :limit_reached?, length(assigns.reminders) >= assigns.max_reminders)
+      assigns
+      |> assign(:limit_reached?, length(assigns.reminders) >= assigns.max_reminders)
+      |> assign(:presets, assigns.presets || default_presets())
 
     ~H"""
     <section class="space-y-2">
@@ -96,42 +107,24 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
 
       <div class="mt-4 space-y-3">
         <div class="flex flex-wrap items-center gap-2">
-          <%!-- Quick add buttons --%>
-          <%= unless Enum.any?(@reminders, &(&1.value == 30 and &1.unit == "minutes")) do %>
-            <button
-              type="button"
-              phx-click={
-                JS.push(@event_prefix <> "add_quick_reminder",
-                  value: %{amount: 30, unit: "minutes"},
-                  target: @myself
-                )
-              }
-              data-testid="reminder-preset-30-minutes"
-              disabled={@limit_reached?}
-              title={limit_title(@limit_reached?, @max_reminders)}
-              class="btn-tag-selector btn-tag-selector-turquoise"
-            >
-              + {dgettext("common", "30 min. before")}
-            </button>
-          <% end %>
-
-          <%= unless Enum.any?(@reminders, &(&1.value == 60 and &1.unit == "minutes") or (&1.value == 1 and &1.unit == "hours")) do %>
-            <button
-              type="button"
-              phx-click={
-                JS.push(@event_prefix <> "add_quick_reminder",
-                  value: %{amount: 60, unit: "minutes"},
-                  target: @myself
-                )
-              }
-              data-testid="reminder-preset-60-minutes"
-              disabled={@limit_reached?}
-              title={limit_title(@limit_reached?, @max_reminders)}
-              class="btn-tag-selector btn-tag-selector-turquoise"
-            >
-              + {dgettext("common", "1 hour before")}
-            </button>
-          <% end %>
+          <%!-- Quick add buttons, one per preset not yet held --%>
+          <button
+            :for={preset <- @presets}
+            :if={not held?(@reminders, preset)}
+            type="button"
+            phx-click={
+              JS.push(@event_prefix <> "add_quick_reminder",
+                value: %{amount: preset.value, unit: preset.unit},
+                target: @myself
+              )
+            }
+            data-testid={"reminder-preset-#{preset.value}-#{preset.unit}"}
+            disabled={@limit_reached?}
+            title={limit_title(@limit_reached?, @max_reminders)}
+            class="btn-tag-selector btn-tag-selector-turquoise"
+          >
+            + {preset_label(preset)}
+          </button>
 
           <button
             type="button"
@@ -152,8 +145,9 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
           </button>
 
           <%= if @reminder_confirmation do %>
-            <span class="text-token-sm text-turquoise-600 font-bold">
-              ✓ {@reminder_confirmation}
+            <span class="inline-flex items-center gap-1 text-token-sm text-turquoise-600 font-bold">
+              <.icon name="hero-check-mini" class="w-4 h-4" />
+              {@reminder_confirmation}
             </span>
           <% end %>
         </div>
@@ -178,25 +172,31 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 phx-change={@event_prefix <> "update_reminder_input"}
                 phx-target={@myself}
               />
-              <select
-                name="reminder[unit]"
-                class="input py-1.5 px-3 w-28 text-token-sm"
-                phx-change={@event_prefix <> "update_reminder_input"}
-                phx-target={@myself}
-              >
-                <%!-- A select element ignores a value attribute; the chosen unit has to
+              <div class="relative w-28">
+                <select
+                  name="reminder[unit]"
+                  class="input py-1.5 pl-3 pr-10 w-full text-token-sm"
+                  phx-change={@event_prefix <> "update_reminder_input"}
+                  phx-target={@myself}
+                >
+                  <%!-- A select element ignores a value attribute; the chosen unit has to
                       be marked on its option, or a re-render snaps it back to
                       the first one. --%>
-                <option value="minutes" selected={@new_reminder_unit == "minutes"}>
-                  {dgettext("common", "Minutes")}
-                </option>
-                <option value="hours" selected={@new_reminder_unit == "hours"}>
-                  {dgettext("common", "Hours")}
-                </option>
-                <option value="days" selected={@new_reminder_unit == "days"}>
-                  {dgettext("common", "Days")}
-                </option>
-              </select>
+                  <option value="minutes" selected={@new_reminder_unit == "minutes"}>
+                    {dgettext("common", "Minutes")}
+                  </option>
+                  <option value="hours" selected={@new_reminder_unit == "hours"}>
+                    {dgettext("common", "Hours")}
+                  </option>
+                  <option value="days" selected={@new_reminder_unit == "days"}>
+                    {dgettext("common", "Days")}
+                  </option>
+                </select>
+                <.icon
+                  name="hero-chevron-down"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 stroke-[2.5] text-tymeslot-500 pointer-events-none"
+                />
+              </div>
             </div>
             <.action_button
               size={:sm}
@@ -273,6 +273,28 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   end
 
   # --- Private helpers ---
+
+  # What most meeting reminders use. Their labels predate the presets and keep
+  # their own wording.
+  defp default_presets,
+    do: [%{value: 30, unit: "minutes"}, %{value: 60, unit: "minutes"}]
+
+  defp preset_label(%{value: 30, unit: "minutes"}), do: dgettext("common", "30 min. before")
+  defp preset_label(%{value: 60, unit: "minutes"}), do: dgettext("common", "1 hour before")
+
+  defp preset_label(preset),
+    do: dgettext("common", "%{label} before", label: reminder_label(preset))
+
+  # A preset is held when a reminder with the same lead time is, however it is
+  # written: 60 minutes and 1 hour are the same reminder.
+  defp held?(reminders, preset) do
+    seconds = MeetingTypeReminders.reminder_interval_seconds(preset.value, preset.unit)
+
+    Enum.any?(
+      reminders,
+      &(MeetingTypeReminders.reminder_interval_seconds(&1.value, &1.unit) == seconds)
+    )
+  end
 
   defp policy_message(:too_many) do
     dngettext(

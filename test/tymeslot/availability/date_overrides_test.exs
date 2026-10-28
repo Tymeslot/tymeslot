@@ -13,9 +13,11 @@ defmodule Tymeslot.Availability.DateOverridesTest do
   import Tymeslot.AvailabilityTestHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.DateOverrides
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.Repo
   alias Tymeslot.Test.ClockHelpers
   alias Tymeslot.TestMocks
 
@@ -201,6 +203,40 @@ defmodule Tymeslot.Availability.DateOverridesTest do
 
       assert {:ok, nil} = DateOverrides.get(host.profile_id, host.schedule_id, host.saturday)
       assert :ok = DateOverrides.delete(host.profile_id, host.schedule_id, host.saturday)
+    end
+
+    test "leave the date's extra times alone", host do
+      for start <- [~T[07:00:00], ~T[19:00:00]] do
+        {:ok, _extra} =
+          AvailabilityOverrideQueries.create_override(%{
+            schedule_id: host.schedule_id,
+            date: host.saturday,
+            override_type: "extra_hours",
+            start_time: start,
+            end_time: Time.add(start, 3600)
+          })
+      end
+
+      {:ok, _override} =
+        DateOverrides.upsert(
+          host.profile_id,
+          host.schedule_id,
+          custom(host.saturday, ~T[10:00:00], ~T[12:00:00])
+        )
+
+      assert {:ok, %{override_type: "custom_hours"}} =
+               Repo.transaction(fn ->
+                 {:ok, locked} =
+                   DateOverrides.lock(host.profile_id, host.schedule_id, host.saturday)
+
+                 locked
+               end)
+
+      assert :ok = DateOverrides.delete(host.profile_id, host.schedule_id, host.saturday)
+      assert {:ok, nil} = DateOverrides.get(host.profile_id, host.schedule_id, host.saturday)
+
+      assert [_, _] =
+               AvailabilityOverrideQueries.list_extra_on(host.schedule_id, host.saturday)
     end
 
     test "neither reads nor deletes through another profile", host do

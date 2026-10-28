@@ -26,6 +26,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.AvatarHandlers
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -63,6 +64,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     )
     |> assign_form_data(profile)
     |> Component.assign(initial_ui_state())
+    |> ModalHook.mount_modal(skip: false, skip_calendar: false, theme_preview: false)
     |> Component.assign(
       steps: StepConfig.steps(connected_calendars != []),
       connected_calendars: connected_calendars,
@@ -80,10 +82,11 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     [
       current_step: :welcome,
       step_data: %{},
-      show_skip_modal: false,
-      show_skip_calendar_modal: false,
-      show_theme_preview: false,
-      theme_preview_url: nil,
+      # Unknown until the connected render checks the calendars.
+      booking_page_live: nil,
+      returning_to_share: false,
+      # Whether that host skipped the calendar, and so never saw the theme step.
+      theme_unseen: false,
       timezone_options: Timezones.all_options(),
       timezone_dropdown_open: false,
       timezone_search: "",

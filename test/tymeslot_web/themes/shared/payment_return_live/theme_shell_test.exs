@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
   One pair of LiveViews serves the payment return pages for every theme. For
   each theme in the matrix: Stripe's return URLs route to the shared pages,
   and a paid booking lands on pages that load that theme's own stylesheet
-  and class, never another theme's; the processing page turns from pending
+  and class, never another theme's, and draw their card inside the booking
+  page's own shell, in its palette; the processing page turns from pending
   to confirmed inside that shell, and the cancelled page offers the way back
   to the booking page.
   """
@@ -24,7 +25,6 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
-  alias TymeslotWeb.Themes.Core.Registry
   alias TymeslotWeb.Themes.Shared.PaymentReturnLive.{Cancelled, Processing}
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -32,20 +32,6 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
            {:ok, key} = Catalog.id_to_key(id)
            {id, Atom.to_string(key)}
          end)
-
-  # The themes without a `page_shell:`: they render their payment pages
-  # through their own `<Theme>.Payment.Processing`, beside the theme module
-  # (see `TymeslotWeb.Themes.Core.Theme`); a theme with one takes the
-  # default pages.
-  @own_payment_card for id <- ThemeTestMatrix.registered_ids(),
-                        {:ok, %{module: module}} = Registry.get_theme_by_id(id),
-                        module
-                        |> Module.split()
-                        |> Enum.drop(-1)
-                        |> Kernel.++(["Payment", "Processing"])
-                        |> Module.concat()
-                        |> Code.ensure_loaded?(),
-                        do: id
 
   test "the matrix is not empty" do
     assert ThemeTestMatrix.registered_ids() != []
@@ -188,46 +174,50 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
         end
       end
 
-      if ThemeTestMatrix.fetch!(theme_id).fixture do
-        test "a locale change keeps the attendee on the payment page",
-             %{conn: conn, meeting: meeting} do
-          path = "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
-          {:ok, view, html} = live(conn, path)
+      test "both connected pages sit in the booking page's shell, in its card",
+           %{conn: conn, meeting: meeting} do
+        processing =
+          "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
 
-          assert html =~ ~s(id="language-switcher-dropdown")
+        cancelled = "/themes/#{unquote(slug)}/payment-cancelled/#{meeting.id}"
 
-          assert {:error, {:redirect, %{to: to}}} =
-                   render_click(view, "change_locale", %{"locale" => "de"})
+        for {path, page} <- [{processing, "processing"}, {cancelled, "cancelled"}] do
+          {:ok, view, _html} = live(conn, path)
+          shell = "[data-testid='#{unquote(slug)}-payment-#{page}']"
 
-          assert to ==
-                   "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}" <>
-                     "?locale=de&session_id=cs_TEST"
+          assert has_element?(view, "[data-booker-root] #{shell}")
+          assert has_element?(view, "[data-booker-root] .booker-card h1")
         end
-      else
-        if theme_id in @own_payment_card do
-          test "without a customisation the theme's own payment card writes no style block",
-               %{conn: conn, meeting: meeting} do
-            {:ok, _view, html} =
-              live(
-                conn,
-                "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
-              )
+      end
 
-            refute html =~ ":root:root"
-          end
-        else
-          test "without a customisation the default pages carry the theme's defaults",
-               %{conn: conn, meeting: meeting} do
-            {:ok, _view, html} =
-              live(
-                conn,
-                "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
-              )
+      test "without a customisation both pages carry the theme's defaults",
+           %{conn: conn, meeting: meeting} do
+        defaults = ThemeCustomizations.tokens(unquote(theme_id), nil).vars["--theme-primary"]
 
-            defaults = ThemeCustomizations.tokens(unquote(theme_id), nil).vars["--theme-primary"]
-            assert_primary(html, defaults)
-          end
+        processing =
+          "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+
+        cancelled = "/themes/#{unquote(slug)}/payment-cancelled/#{meeting.id}"
+
+        for path <- [processing, cancelled] do
+          {:ok, _view, html} = live(conn, path)
+          assert_primary(html, defaults)
         end
+      end
+
+      test "a locale change keeps the attendee on the payment page",
+           %{conn: conn, meeting: meeting} do
+        path = "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+        {:ok, view, html} = live(conn, path)
+
+        assert html =~ ~s(id="language-switcher-dropdown")
+
+        assert {:error, {:redirect, %{to: to}}} =
+                 render_click(view, "change_locale", %{"locale" => "de"})
+
+        assert to ==
+                 "/themes/#{unquote(slug)}/payment-processing/#{meeting.id}" <>
+                   "?locale=de&session_id=cs_TEST"
       end
     end
   end

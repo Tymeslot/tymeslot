@@ -115,6 +115,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
     base = %{
       id: "overview-step",
       locale: "en",
+      host_currency: nil,
       username_context: "hostuser",
       organizer_profile: build(:profile, full_name: "Sarah Rodriguez"),
       meeting_types: [build(:meeting_type, name: "Discovery Call", duration_minutes: 20)],

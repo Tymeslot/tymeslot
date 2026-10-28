@@ -13,11 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "Continue to vote"
-msgstr "Продовжити голосування"
-
-#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
-#, elixir-autogen, elixir-format
 msgid "If need be"
 msgstr "Якщо необхідно"
 
@@ -40,11 +35,6 @@ msgstr "Одну з ваших відповідей не розпізнано. �
 #, elixir-autogen, elixir-format
 msgid "Please check your name and email, then try again."
 msgstr "Перевірте своє ім'я та електронну пошту й спробуйте ще раз."
-
-#: lib/tymeslot_web/themes/core/poll_voting.ex
-#, elixir-autogen, elixir-format
-msgid "Please register before voting."
-msgstr "Зареєструйтеся, перш ніж голосувати."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
@@ -111,20 +101,10 @@ msgstr "Голосування в цьому опитуванні заверше
 msgid "Voting has closed. Here are the final responses."
 msgstr "Голосування завершено. Ось остаточні відповіді."
 
-#: lib/tymeslot_web/themes/core/poll_voting.ex
-#, elixir-autogen, elixir-format
-msgid "We couldn't find your registration. Please register again."
-msgstr "Не вдалося знайти вашу реєстрацію. Зареєструйтеся ще раз."
-
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr "Так"
-
-#: lib/tymeslot_web/themes/core/poll_voting.ex
-#, elixir-autogen, elixir-format
-msgid "You're registered. Your responses are saved as you vote."
-msgstr "Вас зареєстровано. Ваші відповіді зберігаються під час голосування."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
@@ -140,3 +120,118 @@ msgstr "Ваше ім'я"
 #, elixir-autogen, elixir-format
 msgid "Your responses have been saved."
 msgstr "Ваші відповіді збережено."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Email me my voting link"
+msgstr "Надіслати посилання для голосування"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your name and email and we'll send you a personal link to vote with. Voted before? Enter the same email to get your link again."
+msgstr "Введіть своє ім'я та електронну пошту, і ми надішлемо вам особисте посилання для голосування. Уже голосували? Введіть ту саму адресу, щоб отримати посилання ще раз."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing there after a few minutes? Check your spam folder."
+msgstr "Через кілька хвилин нічого немає? Перевірте папку «Спам»."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please open the personal voting link we emailed you to vote."
+msgstr "Щоб проголосувати, відкрийте особисте посилання, яке ми надіслали вам електронною поштою."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Save your responses to confirm your email address. They count from then on."
+msgstr "Збережіть відповіді, щоб підтвердити свою електронну адресу. Відтоді вони враховуватимуться."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks, your responses count now. We've emailed you a copy with your personal link."
+msgstr "Дякуємо, ваші відповіді тепер враховано. Ми надіслали вам електронною поштою копію з особистим посиланням."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This is your personal link. Please don't share it: anyone who has it can change your responses."
+msgstr "Це ваше особисте посилання. Не діліться ним: будь-хто, хто його має, може змінити ваші відповіді."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is receiving a lot of requests right now. Please try again later."
+msgstr "Зараз це опитування отримує дуже багато запитів. Спробуйте пізніше."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "This voting link is no longer valid. Please ask for a new one on the poll's page."
+msgstr "Це посилання для голосування більше недійсне. Попросіть нове на сторінці опитування."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your name, then save your responses again."
+msgstr "Введіть своє ім'я, а потім збережіть відповіді ще раз."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "New"
+msgstr "Нове"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
+msgstr "Ця адреса вже додана до опитування, а посилання для голосування надіслали на неї кілька хвилин тому. Перевірте цю поштову скриньку, зокрема папку зі спамом."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This address is already on the poll; we've sent its voting link again."
+msgstr "Ця адреса вже додана до опитування; ми повторно надіслали на неї посилання для голосування."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
+msgstr "Ми надіслали особисте посилання для голосування на вказану адресу. Відкрийте його, щоб проголосувати; ваші відповіді буде враховано, щойно ви збережете їх там."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "You're voting with your personal link."
+msgstr "Ви голосуєте через своє особисте посилання."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your email address."
+msgstr "Введіть свою адресу електронної пошти."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your name."
+msgstr "Введіть своє ім'я."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only. Use the personal link from your email to vote."
+msgstr "Це опитування лише за запрошеннями. Щоб проголосувати, скористайтеся особистим посиланням із листа."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Too many emails to this address recently; try again later."
+msgstr "На цю адресу нещодавно надіслано забагато листів. Спробуйте пізніше."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only, and voting has closed."
+msgstr "Це опитування лише за запрошенням, і голосування завершено."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This personal voting link isn't valid or no longer works."
+msgstr "Це особисте посилання для голосування недійсне або більше не працює."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an answer for at least one time, then save."
+msgstr "Виберіть відповідь хоча б для одного варіанта часу, а потім збережіть."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting arranged through this poll has been cancelled."
+msgstr "Зустріч, призначену через це опитування, скасовано."

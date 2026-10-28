@@ -19,7 +19,6 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.RoomCreationErrorQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
@@ -55,7 +54,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "refuses the same account twice without contacting the server", %{user: user} do
-      insert_talk_integration(user)
+      insert(:talk_video_integration, user: user)
 
       assert {:error, :duplicate_integration} =
                Video.create_integration(user.id, :nextcloud_talk, %{
@@ -69,7 +68,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     test "refuses the same account written with a capitalised host and its default port", %{
       user: user
     } do
-      insert_talk_integration(user)
+      insert(:talk_video_integration, user: user)
 
       assert {:error, :duplicate_integration} =
                Video.create_integration(user.id, :nextcloud_talk, %{
@@ -167,7 +166,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
       end
 
       test "an edit to a login that #{right} is refused and keeps the stored one", %{user: user} do
-        integration = insert_talk_integration(user)
+        integration = insert(:talk_video_integration, user: user)
 
         expect_capabilities(
           @server,
@@ -193,7 +192,9 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
   describe "update_integration/3" do
     test "a new app password is proven and clears the reconnect flag", %{user: user} do
-      integration = insert_talk_integration(user, needs_reauth: true, client_secret: "Revoked")
+      integration =
+        insert(:talk_video_integration, user: user, needs_reauth: true, app_password: "Revoked")
+
       expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
 
       assert {:ok, updated} =
@@ -206,7 +207,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a proven edit clears a recorded room creation refusal", %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
       RoomCreationErrorQueries.record(integration.id, :password_required)
       expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
 
@@ -220,7 +221,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a rename keeps a recorded room creation refusal", %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
       RoomCreationErrorQueries.record(integration.id, :password_required)
 
       assert {:ok, _renamed} =
@@ -234,14 +235,16 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     # never reached their conversations, so the proven reconnect sends every
     # upcoming one again. Ended meetings are the clean-up's.
     test "a proven reconnect queues a room sync for each upcoming meeting", %{user: user} do
-      integration = insert_talk_integration(user, needs_reauth: true, client_secret: "Revoked")
+      integration =
+        insert(:talk_video_integration, user: user, needs_reauth: true, app_password: "Revoked")
+
       upcoming = insert_meeting_with_room(integration, 2)
       running = insert_meeting_with_room(integration, 0)
       insert_meeting_with_room(integration, -2)
       cancelled = insert_meeting_with_room(integration, 3, status: "cancelled")
 
       insert_meeting_with_room(
-        insert_talk_integration(user, base_url: "https://b.example.com"),
+        insert(:talk_video_integration, user: user, base_url: "https://b.example.com"),
         4
       )
 
@@ -259,7 +262,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     test "a proven reconnect clears a flag set while the app password was being proven", %{
       user: user
     } do
-      integration = insert_talk_integration(user, client_secret: "Old")
+      integration = insert(:talk_video_integration, user: user, app_password: "Old")
+
       meeting = insert_meeting_with_room(integration, 2)
 
       # The flag is set while the server is being asked, which takes two
@@ -283,7 +287,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     test "a proven new app password on a connected integration queues no room update", %{
       user: user
     } do
-      integration = insert_talk_integration(user, client_secret: "Old")
+      integration = insert(:talk_video_integration, user: user, app_password: "Old")
+
       insert_meeting_with_room(integration, 2)
       expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
 
@@ -294,7 +299,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a refused app password leaves the stored one and the flag in place", %{user: user} do
-      integration = insert_talk_integration(user, needs_reauth: true)
+      integration = insert(:talk_video_integration, user: user, needs_reauth: true)
+
       insert_meeting_with_room(integration, 2)
 
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
@@ -311,7 +317,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a refused new app password leaves an unflagged integration unflagged", %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 401, body: ""}}
@@ -325,7 +331,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a new app password is proven and saved without the spaces around it", %{user: user} do
-      integration = insert_talk_integration(user, client_secret: "Revoked")
+      integration = insert(:talk_video_integration, user: user, app_password: "Revoked")
+
       expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
 
       assert {:ok, _updated} =
@@ -342,7 +349,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     test "an app password that is not text is refused without contacting the server", %{
       user: user
     } do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
       assert {:error, "App password is required"} =
                Video.update_integration(user.id, integration.id, %{
@@ -355,7 +362,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     # the organiser enters the new server with the app password again, and the
     # server proves it. That proof is the reconnect.
     test "a proven new server address clears the reconnect flag", %{user: user} do
-      integration = insert_talk_integration(user, needs_reauth: true)
+      integration = insert(:talk_video_integration, user: user, needs_reauth: true)
 
       expect_capabilities(
         "https://talk.example.org",
@@ -382,7 +389,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
         ] do
       test "a new server #{label} without the app password is refused without contacting either server",
            %{user: user} do
-        integration = insert_talk_integration(user, needs_reauth: true)
+        integration = insert(:talk_video_integration, user: user, needs_reauth: true)
 
         assert {:error, {:secret_required, message}} =
                  Video.update_integration(user.id, integration.id, %{
@@ -400,7 +407,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     test "a new subfolder on the same server keeps the stored app password and is proven", %{
       user: user
     } do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
       expect_capabilities(
         @server <> "/nextcloud",
@@ -420,9 +427,10 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
     test "a server and login already connected in another integration are refused without contacting the server",
          %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
-      insert_talk_integration(user,
+      insert(:talk_video_integration,
+        user: user,
         base_url: "https://talk.example.org",
         is_active: false
       )
@@ -438,7 +446,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a submitted account key is ignored", %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
       assert {:ok, updated} =
                Video.update_integration(user.id, integration.id, %{
@@ -451,7 +459,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
     test "a new server address is proven with the app password entered again and moves the account key",
          %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
       expect_capabilities(
         "https://talk.example.org",
@@ -471,7 +479,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a new login name is proven, moves the account key and clears the flag", %{user: user} do
-      integration = insert_talk_integration(user, needs_reauth: true)
+      integration = insert(:talk_video_integration, user: user, needs_reauth: true)
+
       expect_capabilities(@server, "olivia", "New-App-Password", talk_capabilities())
 
       assert {:ok, updated} =
@@ -488,7 +497,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a blank app password keeps the stored one and makes no server call", %{user: user} do
-      integration = insert_talk_integration(user, needs_reauth: true)
+      integration = insert(:talk_video_integration, user: user, needs_reauth: true)
+
       insert_meeting_with_room(integration, 2)
 
       assert {:ok, updated} =
@@ -511,7 +521,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     test "the stored credentials resubmitted unchanged make no server call and keep the flag", %{
       user: user
     } do
-      integration = insert_talk_integration(user, needs_reauth: true)
+      integration = insert(:talk_video_integration, user: user, needs_reauth: true)
 
       assert {:ok, updated} =
                Video.update_integration(user.id, integration.id, %{
@@ -526,7 +536,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a blank server address is refused without contacting the server", %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
       assert {:error, "Base URL is required"} =
                Video.update_integration(user.id, integration.id, %{
@@ -539,7 +549,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     test "a rename alone makes no server call", %{user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user)
 
       assert {:ok, %{name: "Renamed"}} =
                Video.update_integration(user.id, integration.id, %{name: "Renamed"})
@@ -550,23 +560,6 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
   # whatever was typed into the app password field.
   defp dialog_attrs(app_password) do
     %{name: "Team Talk", base_url: @server, client_id: "organiser", client_secret: app_password}
-  end
-
-  defp insert_talk_integration(user, overrides \\ []) do
-    server = Keyword.get(overrides, :base_url, @server)
-
-    insert(:video_integration,
-      user: user,
-      name: "Team Talk",
-      provider: "nextcloud_talk",
-      base_url: server,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted:
-        Encryption.encrypt(Keyword.get(overrides, :client_secret, @app_password)),
-      provider_account_id: server <> "||organiser",
-      needs_reauth: Keyword.get(overrides, :needs_reauth, false),
-      is_active: Keyword.get(overrides, :is_active, true)
-    )
   end
 
   # A meeting holding a conversation of `integration`, starting `offset_days`

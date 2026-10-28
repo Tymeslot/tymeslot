@@ -25,6 +25,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
@@ -73,6 +74,17 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
 
     %{user: user, calendar: calendar, teams: insert_teams(user, @account)}
   end
+
+  @planning %{
+    uid: "040000008200E00074C5B7101A82E008-existing",
+    provider: "outlook",
+    provider_event_id: @grid_event_id,
+    provider_calendar_id: "outlook-calendar-1",
+    summary: "Planning",
+    description: "Agenda",
+    start_at: ~U[2030-06-01 09:00:00.000000Z],
+    end_at: ~U[2030-06-01 10:00:00.000000Z]
+  }
 
   describe "creating an Outlook event with Teams from the calendar's own account" do
     test "writes one event and attaches the meeting to it", ctx do
@@ -137,7 +149,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
 
   describe "choosing Teams from the calendar's own account for an existing Outlook event" do
     test "attaches the meeting to the event and caches its link", ctx do
-      event = insert_event(ctx.calendar)
+      event = insert_event(ctx.calendar, @planning)
       expect(Tymeslot.CalendarMock, :update_event, 0, fn _uid, _payload, _context -> :ok end)
 
       assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, ctx.teams.id)
@@ -154,7 +166,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       zoom = insert(:video_integration, user: ctx.user, provider: "zoom")
 
       event =
-        insert_event(ctx.calendar, %{
+        insert_event(ctx.calendar, @planning, %{
           description: "Agenda\n\nJoin video call: #{@zoom_url}",
           video_link: @zoom_url,
           video_integration_id: zoom.id
@@ -180,7 +192,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       zoom = insert(:video_integration, user: ctx.user, provider: "zoom")
 
       event =
-        insert_event(ctx.calendar, %{
+        insert_event(ctx.calendar, @planning, %{
           description: "Agenda\n\nJoin video call: #{@zoom_url}",
           video_link: @zoom_url,
           video_integration_id: zoom.id
@@ -205,7 +217,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
     end
 
     test "gives the meeting its own event while the Outlook event's id is unknown", ctx do
-      event = insert_event(ctx.calendar, %{provider_event_id: nil})
+      event = insert_event(ctx.calendar, @planning, %{provider_event_id: nil})
       expect_update()
 
       assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, ctx.teams.id)
@@ -219,7 +231,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
   describe "choosing Teams from another account for an existing Outlook event" do
     test "gives the meeting an event of its own, linked from the description", ctx do
       other = insert_teams(ctx.user, "entra-oid-other")
-      event = insert_event(ctx.calendar)
+      event = insert_event(ctx.calendar, @planning)
       expect_update()
 
       assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, other.id)
@@ -234,7 +246,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
   describe "an Outlook event whose Teams meeting is attached to it" do
     setup ctx do
       event =
-        insert_event(ctx.calendar, %{
+        insert_event(ctx.calendar, @planning, %{
           video_link: join_url(@grid_event_id),
           video_integration_id: ctx.teams.id
         })
@@ -342,24 +354,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       send(test_pid, {:update, payload})
       :ok
     end)
-  end
-
-  defp insert_event(calendar, attrs \\ %{}) do
-    defaults = %{
-      calendar_integration: calendar,
-      uid: "040000008200E00074C5B7101A82E008-existing",
-      provider: "outlook",
-      provider_event_id: @grid_event_id,
-      provider_calendar_id: "outlook-calendar-1",
-      summary: "Planning",
-      description: "Agenda",
-      start_at: ~U[2030-06-01 09:00:00.000000Z],
-      end_at: ~U[2030-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   defp reload(event) do

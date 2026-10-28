@@ -51,6 +51,22 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerAlertTest do
     refute_receive {:send_alert, :circuit_breaker_open, _payload}, 50
   end
 
+  test "the alert names the transport failure behind a calendar client's :network_error" do
+    name = start_breaker(:alert_dns_breaker)
+
+    dns_failure = fn ->
+      {:error, :network_error, "Network error: %Req.TransportError{reason: :nxdomain}"}
+    end
+
+    CircuitBreaker.call(name, dns_failure)
+    CircuitBreaker.call(name, dns_failure)
+
+    assert_receive {:send_alert, :circuit_breaker_open, payload}
+
+    assert AlertTypes.format_message(:circuit_breaker_open, payload) ==
+             "Circuit breaker alert_dns_breaker opened after 2 failures (last error: network_error (nxdomain))"
+  end
+
   test "reopening the breaker within the hour raises an alert that deduplicates with the first" do
     name = start_breaker(:alert_reopen_breaker)
 

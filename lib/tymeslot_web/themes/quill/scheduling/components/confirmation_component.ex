@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -31,13 +32,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+    assigns =
+      assign(assigns,
+        navigable_steps: Runtime.navigable_steps(assigns),
+        step_numbers: Runtime.step_numbers(assigns)
+      )
 
     ~H"""
     <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
+        step_numbers={@step_numbers}
         current_step={4}
         slug={@duration}
         username_context={@username_context}
@@ -45,7 +51,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
         <div class="stack">
           <div class="confirmation-outer flex-1 flex items-center justify-center">
             <div class="w-full confirmation-container">
-              <.glass_morphism_card class="booker-card">
+              <.glass_morphism_card class="booker-card" data-testid="booker-card">
                 <div class="confirmation-content">
                   <div class="confirmation-heading-row flex items-center">
                     <div class="shrink-0">
@@ -54,43 +60,23 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           "confirmation-badge rounded-full flex items-center justify-center",
                           ApprovalDisplay.awaiting_approval?(assigns) && "confirmation-badge--pending"
                         ]}>
-                          <svg
+                          <.icon
                             :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                            class="confirmation-badge-icon text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="3"
-                            viewBox="0 0 24 24"
-                          >
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                          <svg
+                            name="hero-check"
+                            class="confirmation-badge-icon text-white stroke-3"
+                          />
+                          <.icon
                             :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                            class="confirmation-badge-icon text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="3"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
+                            name="hero-clock"
+                            class="confirmation-badge-icon text-white stroke-3"
+                          />
                         </div>
                         <div class={[
                           "confirmation-badge-dot absolute rounded-full flex items-center justify-center",
                           ApprovalDisplay.awaiting_approval?(assigns) &&
                             "confirmation-badge-dot--pending"
                         ]}>
-                          <svg
-                            class="confirmation-badge-dot-icon text-white"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                          </svg>
+                          <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon text-white" />
                         </div>
                       </div>
                     </div>
@@ -143,17 +129,22 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       } />
                     </div>
 
+                    <div
+                      :if={MeetingPrice.paid_price(assigns[:paid_payment], @locale)}
+                      class="confirmation-border-top mt-3 pt-3 border-t"
+                    >
+                      <div class="confirmation-email-row" data-testid="confirmation-paid">
+                        <div class="confirmation-icon-wrapper rounded-full">
+                          <.icon name="hero-credit-card" class="confirmation-email-link w-4 h-4" />
+                        </div>
+                        <.paid_line amount={MeetingPrice.paid_price(@paid_payment, @locale)} />
+                      </div>
+                    </div>
+
                     <div class="confirmation-border-top mt-3 pt-3 border-t">
                       <div class="confirmation-email-row">
                         <div class="confirmation-icon-wrapper rounded-full">
-                          <svg
-                            class="confirmation-email-link w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                          </svg>
+                          <.icon name="hero-envelope-mini" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
                           {if ApprovalDisplay.awaiting_approval?(assigns),
@@ -172,13 +163,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     >
                       <div class="confirmation-email-row">
                         <div class="confirmation-icon-wrapper rounded-full">
-                          <svg
-                            class="confirmation-email-link w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                          </svg>
+                          <.icon name="hero-users-mini" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
                           {dgettext("booking", "Guests")}:
@@ -305,6 +290,35 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   end
 
   # ========== PRIVATE HELPERS ==========
+
+  # Placeholder for the amount while the paid line is translated: a private-use
+  # character no translation contains.
+  @amount_marker "\u{E000}"
+
+  # The paid line is one msgid, so a language can put the amount wherever its
+  # grammar wants it; the translation is then split around the amount so the
+  # amount keeps its own emphasis.
+  attr :amount, :string, required: true
+
+  defp paid_line(assigns) do
+    {before, rest} = split_paid_line()
+    assigns = assign(assigns, before: before, rest: rest)
+
+    ~H"""
+    <p class="text-sm text-white">
+      {@before}<span class="confirmation-email-link font-semibold">{@amount}</span>{@rest}
+    </p>
+    """
+  end
+
+  defp split_paid_line do
+    line = dgettext("booking", "Paid %{amount}", amount: @amount_marker)
+
+    case String.split(line, @amount_marker, parts: 2) do
+      [before, rest] -> {before, rest}
+      [line] -> {line <> " ", ""}
+    end
+  end
 
   # A held request is not a confirmed meeting, and this screen is the last thing
   # an invitee sees before the emails arrive, so the heading changes too, not

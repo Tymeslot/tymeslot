@@ -339,9 +339,6 @@
 
   /* Payment return pages (shared/components/payment-pages.css) */
   --payment-page-max-width: 42rem;
-  --payment-card-surface: var(--surface-very-light);
-  --payment-card-line: var(--border-light);
-  --payment-card-radius: var(--radius-xl);
   --payment-heading-ink: var(--text-opacity-high);
   --payment-body-ink: var(--text-opacity-medium-high);
   --payment-link-radius: var(--button-radius-sm);

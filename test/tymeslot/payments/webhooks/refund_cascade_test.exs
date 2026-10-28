@@ -21,9 +21,9 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
   end
 
   defmodule CapturingTemplate do
-    @spec refund_processed_email(map(), integer(), String.t(), boolean()) :: Swoosh.Email.t()
-    def refund_processed_email(user, refund_amount_cents, currency, revoked?) do
-      send(self(), {:refund_email, user.id, refund_amount_cents, currency, revoked?})
+    @spec refund_processed_email(map(), integer(), String.t(), String.t()) :: Swoosh.Email.t()
+    def refund_processed_email(user, refund_amount_cents, currency, access) do
+      send(self(), {:refund_email, user.id, refund_amount_cents, currency, access})
 
       Email.new(
         to: user.email,
@@ -165,7 +165,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       # Email quotes this refund's amount and says access was revoked
       # The notice goes out from a job.
       Oban.drain_queue(queue: :emails)
-      assert_received {:refund_email, ^user_id, 10_000, "eur", true}
+      assert_received {:refund_email, ^user_id, 10_000, "eur", "revoked"}
     end
 
     test "partial refund below threshold does NOT revoke access but still notifies" do
@@ -186,7 +186,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       # Email is sent without revocation copy, quoting this refund's amount
       # The notice goes out from a job.
       Oban.drain_queue(queue: :emails)
-      assert_received {:refund_email, ^user_id, 5_000, "eur", false}
+      assert_received {:refund_email, ^user_id, 5_000, "eur", "partial"}
     end
 
     test "a refund the app already announced revokes without a second email" do
@@ -240,7 +240,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
 
       Oban.drain_queue(queue: :emails)
       user_id = user.id
-      assert_received {:refund_email, ^user_id, 5_000, "eur", false}
+      assert_received {:refund_email, ^user_id, 5_000, "eur", "partial"}
     end
 
     test "an earlier announced refund on the payload does not silence a later one" do
@@ -389,6 +389,34 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     # The hand-off above only queues the revocation; the email must not
     # promise access ends when the refund is not for the subscription the
     # customer holds now.
+    test "a full refund of an ended subscription's charge tells the user nothing live changed" do
+      user = insert(:user)
+      customer_id = "cus_#{System.unique_integer([:positive])}"
+
+      insert(:payment_transaction,
+        user: user,
+        status: "canceled",
+        stripe_customer_id: customer_id,
+        subscription_id: "sub_ended"
+      )
+
+      {:ok, _invoice} =
+        SubscriptionInvoiceQueries.upsert(%{
+          stripe_invoice_id: "in_ended",
+          subscription_id: "sub_ended"
+        })
+
+      charge = refunded_charge(customer_id, 10_000, 10_000, "in_ended")
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      user_id = user.id
+      # The notice goes out from a job.
+      Oban.drain_queue(queue: :emails)
+      assert_received {:refund_email, ^user_id, 10_000, "eur", "unaffected"}
+    end
+
     test "a full refund of a charge with no invoice does not tell the user access ended" do
       {user, customer_id} = linked_subscription()
 
@@ -400,7 +428,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       user_id = user.id
       # The notice goes out from a job.
       Oban.drain_queue(queue: :emails)
-      assert_received {:refund_email, ^user_id, 10_000, "eur", false}
+      assert_received {:refund_email, ^user_id, 10_000, "eur", "unaffected"}
     end
 
     test "a full refund of an earlier subscription's charge does not tell the user access ended" do
@@ -420,7 +448,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       user_id = user.id
       # The notice goes out from a job.
       Oban.drain_queue(queue: :emails)
-      assert_received {:refund_email, ^user_id, 10_000, "eur", false}
+      assert_received {:refund_email, ^user_id, 10_000, "eur", "unaffected"}
     end
 
     # Invoices are recorded only from when recording began. A customer who
@@ -451,7 +479,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       user_id = user.id
       # The notice goes out from a job; the current subscription carries on.
       Oban.drain_queue(queue: :emails)
-      assert_received {:refund_email, ^user_id, 10_000, "eur", false}
+      assert_received {:refund_email, ^user_id, 10_000, "eur", "unaffected"}
     end
 
     # From API version 2025-03-31.basil a charge no longer names its
@@ -490,7 +518,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       user_id = user.id
       # The notice goes out from a job.
       Oban.drain_queue(queue: :emails)
-      assert_received {:refund_email, ^user_id, 10_000, "eur", true}
+      assert_received {:refund_email, ^user_id, 10_000, "eur", "revoked"}
     end
 
     test "a failed Stripe lookup retries the delivery instead of guessing the subscription" do

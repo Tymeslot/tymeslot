@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1]
 
+  alias Tymeslot.Integrations.Calendar
+
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
     CalendarHelpers,
@@ -21,6 +23,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   }
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Themes.Shared.ChoicesInUrl
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -65,7 +69,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
 
     # Verify an owner-preview token now that the organiser (and so the page
     # owner's user id) is resolved. Gates simulate-vs-persist downstream.
-    socket = assign_owner_preview(socket, params)
+    socket =
+      socket
+      |> assign_owner_preview(params)
+      |> assign_refused_calendars()
 
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
@@ -121,6 +128,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   On the payment wait (`:awaiting_payment`) it applies nothing: a client may
   patch this socket to any URL the page serves, and only the payment webhook
   (`:paid`, `:expired`) ends the wait. A reload is a fresh mount, not this.
+
+  Nor does it apply the page's own patch (`ChoicesInUrl`), which carries the
+  choices the socket already holds: entered again, the route would send the
+  visitor back to its first moment after every choice.
+
+  A URL naming a moment of a paged journey (`step`, which `ChoicesInUrl`
+  writes) resumes on it, when the choices the URL carries reach it
+  (`Runtime.resume/2`).
   """
   @spec handle_scheduling_params(Phoenix.LiveView.Socket.t(), map()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -128,6 +143,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     do: {:noreply, socket}
 
   def handle_scheduling_params(socket, params) do
+    if ChoicesInUrl.own_patch?(socket, params) do
+      {:noreply, assign(socket, :page_query_params, PathHandlers.query_params(params))}
+    else
+      apply_params(ChoicesInUrl.forget(socket), params)
+    end
+  end
+
+  defp apply_params(socket, params) do
     initial_state = entry(socket)
     socket = handle_param_updates(socket, params)
 
@@ -141,6 +164,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
         |> ThemeUtils.assign_theme_with_preview(params)
         |> assign_owner_preview(params)
         |> Runtime.transition_to(initial_state, params)
+        |> Runtime.resume(params)
 
       if socket.redirected do
         {:noreply, socket}
@@ -164,6 +188,32 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     socket
     |> assign(:owner_preview, socket.assigns[:owner_preview] || verified_token != nil)
     |> assign(:preview_token, socket.assigns[:preview_token] || verified_token)
+  end
+
+  # The calendars whose credentials were refused, by name, for the page's own
+  # organiser alone: they read every slot fetch as failing until they
+  # reconnect, and the guest copy says nothing they could act on. The owner is
+  # whoever the signed session says is signed in as them, or holds a verified
+  # preview token, never anything a query parameter claims; anyone else gets
+  # `[]` without a lookup. Read once, on the connected mount.
+  defp assign_refused_calendars(socket) do
+    assign(socket, :refused_calendars, refused_calendars(socket))
+  end
+
+  defp refused_calendars(socket) do
+    organizer_user_id = socket.assigns[:organizer_user_id]
+
+    owner_viewing? =
+      is_integer(organizer_user_id) and
+        (socket.assigns[:owner_preview] == true or
+           socket.assigns[:viewer_user_id] == organizer_user_id)
+
+    with true <- owner_viewing? and connected?(socket),
+         {:credentials_refused, names} <- Calendar.booking_page_health(organizer_user_id) do
+      names
+    else
+      _taking_bookings_or_not_the_owner -> []
+    end
   end
 
   # The token itself is kept, not just the boolean it produced, because a locale
@@ -202,6 +252,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     |> assign_reschedule_uid(params)
     |> reload_reschedule(seat_token)
     |> assign_rescheduling(params)
+    |> ChosenLength.from_params(params)
     |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
     |> SeatMoveLink.leave_if_spent(seat_token)

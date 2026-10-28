@@ -110,17 +110,24 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   instance's own sender, where the header would add nothing.
   """
   @spec put_reply_to(Swoosh.Email.t(), String.t() | nil, String.t() | nil) :: Swoosh.Email.t()
-  def put_reply_to(email, name, address) when is_binary(address) do
-    address = String.trim(address)
-
-    cond do
-      address == "" -> email
-      same_address?(address, fetch_from_email()) -> email
-      true -> reply_to(email, {Sanitise.sanitize_for_header(name), address})
-    end
+  def put_reply_to(email, name, address) do
+    if replies_reach?(address),
+      do: reply_to(email, {Sanitise.sanitize_for_header(name), String.trim(address)}),
+      else: email
   end
 
-  def put_reply_to(email, _name, _address), do: email
+  @doc """
+  Whether `put_reply_to/3` sets `Reply-To` for `address`, so that a reply
+  reaches that person. A template that tells the reader to reply asks this
+  first, since without the header a reply goes to the sending mailbox.
+  """
+  @spec replies_reach?(String.t() | nil) :: boolean()
+  def replies_reach?(address) when is_binary(address) do
+    address = String.trim(address)
+    address != "" and not same_address?(address, fetch_from_email())
+  end
+
+  def replies_reach?(_address), do: false
 
   defp same_address?(address, from),
     do: String.downcase(address) == String.downcase(String.trim(from))

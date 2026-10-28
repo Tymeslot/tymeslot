@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -206,10 +207,12 @@ defmodule Tymeslot.Bookings.Cancel do
   Returns :ok or {:error, reason}
   """
   @spec validate_cancellation(Meeting.t(), keyword()) ::
-          :ok | {:error, Policy.cancel_refusal() | :group_meeting_not_cancellable}
+          :ok
+          | {:error, Policy.cancel_refusal() | :group_meeting_not_cancellable | :managed_by_host}
   def validate_cancellation(meeting, opts \\ []) do
-    with :ok <- Policy.can_cancel_meeting?(meeting) do
-      refuse_group_meeting(meeting, opts)
+    with :ok <- Policy.can_cancel_meeting?(meeting),
+         :ok <- refuse_group_meeting(meeting, opts) do
+      refuse_host_managed(meeting, opts)
     end
   end
 
@@ -232,6 +235,17 @@ defmodule Tymeslot.Bookings.Cancel do
   defp refuse_group_meeting(meeting, opts) do
     if Meetings.group?(meeting) and Keyword.get(opts, :caller) != :organizer do
       {:error, :group_meeting_not_cancellable}
+    else
+      :ok
+    end
+  end
+
+  # A meeting confirmed from a poll has no booker who may cancel it for
+  # everyone: only the host may, from their dashboard. Each invitee answers
+  # for themselves with the RSVP links in their invitation.
+  defp refuse_host_managed(meeting, opts) do
+    if HostManaged.managed?(meeting) and Keyword.get(opts, :caller) != :organizer do
+      {:error, :managed_by_host}
     else
       :ok
     end

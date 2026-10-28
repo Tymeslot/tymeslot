@@ -13,6 +13,7 @@ defmodule TymeslotWeb.AccountDeletion.AccountDeletionJourneyTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Phoenix.Flash
   alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -331,6 +332,32 @@ defmodule TymeslotWeb.AccountDeletion.AccountDeletionJourneyTest do
     # The account works again: the dashboard opens and the booking page is back.
     assert restored |> recycle() |> get(~p"/dashboard") |> html_response(200)
     assert build_conn() |> get("/second-thoughts") |> html_response(200)
+  end
+
+  # Credentials revoked on the way out leave the booking page offering no
+  # times, and the reconnect email went out before the restore. The restore
+  # lands on the fix rather than on a dashboard that looks healthy.
+  test "restoring with a calendar whose credentials were refused lands on reconnecting it",
+       %{conn: conn} do
+    with_config(:tymeslot, :account_deletion_grace_days, 14)
+    user = host("revoked-on-the-way-out")
+    insert(:calendar_integration, user: user, provider: "apple", name: "Family iCloud")
+
+    assert {:error, {:redirect, %{to: "/auth/login"}}} = request_deletion(conn, user)
+
+    Repo.update_all(from(c in CalendarIntegrationSchema, where: c.user_id == ^user.id),
+      set: [needs_reauth: true]
+    )
+
+    page = user |> sign_in() |> recycle() |> get(~p"/auth/restore")
+    restored = page |> recycle() |> post(~p"/auth/restore")
+
+    assert redirected_to(restored) == "/dashboard/integrations?tab=calendars"
+    assert Flash.get(restored.assigns.flash, :error) =~ "Family iCloud needs reconnecting"
+    assert Repo.get(UserSchema, user.id).deletion_scheduled_at == nil
+
+    {:ok, _view, html} = restored |> recycle() |> live(~p"/dashboard/integrations?tab=calendars")
+    assert html =~ "Family iCloud needs reconnecting. Until you reconnect it"
   end
 
   test "the only admin who can sign in is told to promote another first", %{conn: conn} do

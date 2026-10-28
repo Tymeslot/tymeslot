@@ -969,3 +969,11 @@ msgstr "Адреса електронної пошти"
 #, elixir-autogen, elixir-format
 msgid "%{provider} authentication failed - missing authorisation code or security token."
 msgstr "Помилка автентифікації через %{provider}: відсутній код авторизації або токен безпеки."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "З поверненням. Ваш обліковий запис відновлено, але інтеграцію %{names} потрібно перепідключити. Доки ви її не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."
+msgstr[1] "З поверненням. Ваш обліковий запис відновлено, але інтеграції %{names} потрібно перепідключити. Доки ви їх не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."
+msgstr[2] "З поверненням. Ваш обліковий запис відновлено, але інтеграції %{names} потрібно перепідключити. Доки ви їх не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."

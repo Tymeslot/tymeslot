@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   `Shared.CustomQuestions.Events`.
 
   The canonical events: `select_duration`, `next_step` (overview);
+  `select_length`, `next_step`, `back_step` (length);
   `select_date`, `select_time`, `toggle_hour`, `change_timezone`,
   `search_timezone`, `toggle_timezone_dropdown`, `close_timezone_dropdown`,
   `prev_month`, `next_month`, `prev_week`, `next_week`, `load_week`, `select_slot`, `first_available_week`, `back_step`,
@@ -117,6 +118,7 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   end
 
   defp message("select_duration", %{"duration" => duration}), do: {:select_duration, duration}
+  defp message("select_length", %{"minutes" => minutes}), do: {:select_length, minutes}
   defp message("next_step", _params), do: {:next_step, nil}
   defp message("back_step", _params), do: {:back_step, nil}
   defp message("select_date", %{"date" => date}), do: {:select_date, date}

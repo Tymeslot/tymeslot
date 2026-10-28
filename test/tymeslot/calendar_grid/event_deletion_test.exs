@@ -18,6 +18,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
   import Ecto.Query, only: [select: 3, where: 3]
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventDeletion
@@ -42,23 +43,6 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     %{user: user, caldav: caldav}
   end
 
-  defp insert_event(integration, attrs \\ %{}) do
-    defaults = %{
-      calendar_integration: integration,
-      uid: "event-#{System.unique_integer([:positive])}",
-      summary: "Design review",
-      provider: integration.provider,
-      provider_calendar_id: "/cal/",
-      provider_event_id: "/cal/design-review.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
-  end
-
   defp expect_delete(result) do
     test_pid = self()
 
@@ -68,12 +52,20 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     end)
   end
 
+  @design_review %{
+    summary: "Design review",
+    provider_calendar_id: "/cal/",
+    provider_event_id: "/cal/design-review.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z]
+  }
+
   describe "delete_event/3 when the calendar deletes the event" do
     test "addresses the event by its provider id and removes the cached row", %{
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav)
+      event = insert_event(caldav, @design_review)
       expect_delete(:ok)
 
       assert {:ok, result} = Changes.delete_event(user.id, event)
@@ -95,7 +87,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     end
 
     test "invalidates the organiser's cached availability", %{user: user, caldav: caldav} do
-      event = insert_event(caldav)
+      event = insert_event(caldav, @design_review)
       expect_delete(:ok)
 
       key = AvailabilityCache.booking_window_events_key(user.id)
@@ -106,7 +98,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     end
 
     test "addresses an event without a provider id by its uid", %{user: user, caldav: caldav} do
-      event = insert_event(caldav, %{provider_event_id: nil})
+      event = insert_event(caldav, @design_review, %{provider_event_id: nil})
       expect_delete(:ok)
 
       assert {:ok, _result} = Changes.delete_event(user.id, event)
@@ -119,7 +111,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav)
+      event = insert_event(caldav, @design_review)
 
       meeting =
         insert(:meeting,
@@ -140,7 +132,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
     test "cancels the meeting the event was booked as", %{user: user, caldav: caldav} do
       TestMocks.setup_email_mocks()
-      event = insert_event(caldav)
+      event = insert_event(caldav, @design_review)
 
       meeting =
         insert(:meeting,
@@ -165,7 +157,8 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, %{attendees: [%{"email" => "guest@example.com"}]})
+      event =
+        insert_event(caldav, @design_review, %{attendees: [%{"email" => "guest@example.com"}]})
 
       insert(:meeting,
         organizer_user: user,
@@ -182,7 +175,8 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, %{attendees: [%{"email" => "guest@example.com"}]})
+      event =
+        insert_event(caldav, @design_review, %{attendees: [%{"email" => "guest@example.com"}]})
 
       assert EventDeletion.notice(user.id, event) == {:notifies, {:attendees, 1}}
     end
@@ -190,7 +184,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
   describe "delete_event/3 when the calendar refuses the delete" do
     test "queues a CalDAV delete for the next sync", %{user: user, caldav: caldav} do
-      event = insert_event(caldav)
+      event = insert_event(caldav, @design_review)
       expect_delete({:error, :network_error})
       key = AvailabilityCache.booking_window_events_key(user.id)
       :ok = AvailabilityCache.put(key, :stale)
@@ -208,7 +202,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     end
 
     test "does not queue a delete a retry cannot recover", %{user: user, caldav: caldav} do
-      event = insert_event(caldav)
+      event = insert_event(caldav, @design_review)
       expect_delete({:error, :unauthorized})
 
       assert {:error, %{reason: :unauthorized, retry: :not_queued}} =
@@ -219,7 +213,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     end
 
     test "leaves the linked meeting alone", %{user: user, caldav: caldav} do
-      event = insert_event(caldav)
+      event = insert_event(caldav, @design_review)
 
       meeting =
         insert(:meeting,
@@ -237,7 +231,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
     test "keeps the event on a calendar without an offline queue", %{user: user} do
       google = insert(:calendar_integration, user: user, provider: "google")
-      event = insert_event(google, %{provider_calendar_id: "primary"})
+      event = insert_event(google, @design_review, %{provider_calendar_id: "primary"})
       expect_delete({:error, :network_error})
 
       assert {:error, %{reason: :network_error, retry: :not_queued}} =
@@ -250,37 +244,39 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
   describe "deletion_scopes/1" do
     test "a one-off event is deleted on its own", %{caldav: caldav} do
-      assert Changes.deletion_scopes(insert_event(caldav)) == {:ok, :single}
+      assert Changes.deletion_scopes(insert_event(caldav, @design_review)) == {:ok, :single}
     end
 
     test "an occurrence of a Google series takes a scope", %{user: user} do
       google = insert(:calendar_integration, user: user, provider: "google")
-      event = insert_event(google, google_occurrence("series-1", "20260601T090000Z"))
+
+      event =
+        insert_event(google, @design_review, google_occurrence("series-1", "20260601T090000Z"))
 
       assert Changes.deletion_scopes(event) == {:ok, :series}
     end
 
     test "an occurrence of a CalDAV series takes a scope", %{caldav: caldav} do
-      event = insert_event(caldav, caldav_occurrence("20260601T090000"))
+      event = insert_event(caldav, @design_review, caldav_occurrence("20260601T090000"))
 
       assert Changes.deletion_scopes(event) == {:ok, :series}
     end
 
     test "an occurrence edited on its own takes a scope", %{caldav: caldav} do
-      event = insert_event(caldav, caldav_override("20260602T090000"))
+      event = insert_event(caldav, @design_review, caldav_override("20260602T090000"))
 
       assert Changes.deletion_scopes(event) == {:ok, :series}
     end
 
     test "an occurrence of an Exchange series cannot be deleted", %{user: user} do
       exchange = insert(:calendar_integration, user: user, provider: "exchange")
-      event = insert_event(exchange, exchange_occurrence())
+      event = insert_event(exchange, @design_review, exchange_occurrence())
 
       assert Changes.deletion_scopes(event) == {:error, :recurring_event}
     end
 
     test "reads the series from the cached row when handed only the address", %{caldav: caldav} do
-      event = insert_event(caldav, caldav_occurrence("20260601T090000"))
+      event = insert_event(caldav, @design_review, caldav_occurrence("20260601T090000"))
       address = %{uid: event.uid, calendar_integration_id: caldav.id}
 
       assert Changes.deletion_scopes(address) == {:ok, :series}
@@ -294,9 +290,19 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
         %{
           integration: integration,
-          first: insert_event(integration, google_occurrence("series-1", "20260601T090000Z")),
-          second: insert_event(integration, google_occurrence("series-1", "20260608T090000Z")),
-          unrelated: insert_event(integration, %{provider_event_id: "one-off"})
+          first:
+            insert_event(
+              integration,
+              @design_review,
+              google_occurrence("series-1", "20260601T090000Z")
+            ),
+          second:
+            insert_event(
+              integration,
+              @design_review,
+              google_occurrence("series-1", "20260608T090000Z")
+            ),
+          unrelated: insert_event(integration, @design_review, %{provider_event_id: "one-off"})
         }
       end
 
@@ -324,7 +330,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
         first: first,
         unrelated: unrelated
       } do
-        insert_event(integration, %{
+        insert_event(integration, @design_review, %{
           provider_event_id: "series-1",
           recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"
         })
@@ -346,7 +352,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
         unrelated: unrelated
       } do
         master =
-          insert_event(integration, %{
+          insert_event(integration, @design_review, %{
             provider_event_id: "series-1",
             recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"
           })
@@ -364,7 +370,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
         integration: integration
       } do
         master =
-          insert_event(integration, %{
+          insert_event(integration, @design_review, %{
             provider_event_id: "series-1",
             recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"
           })
@@ -380,7 +386,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, %{recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"})
+      event = insert_event(caldav, @design_review, %{recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"})
 
       assert {:error, %{reason: :unaddressable_occurrence, retry: :not_queued}} =
                Changes.delete_event(user.id, event, :occurrence)
@@ -391,7 +397,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     # The queue replays a delete as a DELETE of the whole resource, which would
     # take every occurrence with the one the organiser meant.
     test "a failed delete is not queued", %{user: user, caldav: caldav} do
-      event = insert_event(caldav, caldav_occurrence("20260601T090000"))
+      event = insert_event(caldav, @design_review, caldav_occurrence("20260601T090000"))
       expect_delete({:error, :network_error})
 
       assert {:error, %{reason: :network_error, retry: :not_queued}} =
@@ -405,7 +411,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, caldav_occurrence("20260601T090000"))
+      event = insert_event(caldav, @design_review, caldav_occurrence("20260601T090000"))
       expect_delete({:error, :network_error})
 
       assert {:error, %{reason: :network_error, retry: :not_queued}} =
@@ -418,7 +424,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     # The occurrence shares its href with the whole series, so a meeting
     # matched by it would be cancelled although the series stands.
     test "leaves a meeting matched by the series' href alone", %{user: user, caldav: caldav} do
-      event = insert_event(caldav, caldav_occurrence("20260601T090000"))
+      event = insert_event(caldav, @design_review, caldav_occurrence("20260601T090000"))
 
       meeting =
         insert(:meeting,
@@ -438,7 +444,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
   describe "delete_event/3 on the video rooms of a series" do
     test ":series deletes the room recorded for the series", %{user: user, caldav: caldav} do
-      event = insert_event(caldav, caldav_occurrence("20260602T090000"))
+      event = insert_event(caldav, @design_review, caldav_occurrence("20260602T090000"))
       room = insert_room(user, caldav, "weekly-standup", event.provider_event_id)
       expect_delete(:ok)
 
@@ -456,7 +462,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, caldav_override("20260602T090000"))
+      event = insert_event(caldav, @design_review, caldav_override("20260602T090000"))
       insert_room(user, caldav, "weekly-standup", event.provider_event_id)
       expect_delete({:ok, %{document: "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"}})
 
@@ -480,7 +486,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
   describe "delete_event/3 on an occurrence of an Exchange series" do
     setup %{user: user} do
       exchange = insert(:calendar_integration, user: user, provider: "exchange")
-      %{exchange: exchange, event: insert_event(exchange, exchange_occurrence())}
+      %{exchange: exchange, event: insert_event(exchange, @design_review, exchange_occurrence())}
     end
 
     for scope <- [:occurrence, :series] do
@@ -501,8 +507,13 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
   describe "delete_event/3 when a series delete fails" do
     test "a Google series delete is not queued and keeps every row", %{user: user} do
       google = insert(:calendar_integration, user: user, provider: "google")
-      first = insert_event(google, google_occurrence("series-1", "20260601T090000Z"))
-      second = insert_event(google, google_occurrence("series-1", "20260608T090000Z"))
+
+      first =
+        insert_event(google, @design_review, google_occurrence("series-1", "20260601T090000Z"))
+
+      second =
+        insert_event(google, @design_review, google_occurrence("series-1", "20260608T090000Z"))
+
       expect_delete({:error, :network_error})
 
       assert {:error, %{reason: :network_error, retry: :not_queued}} =

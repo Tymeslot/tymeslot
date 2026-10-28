@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.NextDayEndComponentTes
     %{
       id: "step",
       locale: "en",
+      host_currency: nil,
       duration: "#{duration}min",
       meeting_type: meeting_type,
       selected_date: "2027-06-14",

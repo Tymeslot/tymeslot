@@ -21,5 +21,11 @@
   # `:xmerl` is left out of the PLT (`plt_ignore_apps` in mix.exs), so its SAX
   # parser is invisible to Dialyzer. It ships with OTP and is a runtime
   # dependency of sweet_xml, so the call resolves in every build.
-  {"lib/tymeslot/integrations/calendar/utils/safe_xml.ex", :unknown_function}
+  {"lib/tymeslot/integrations/calendar/utils/safe_xml.ex", :unknown_function},
+
+  # `determine_bundle/1` validates its result against an allowlist that names
+  # more bundles than the function can return, so OTP 28 reports the membership
+  # test as never true. The check is deliberate defence-in-depth for bundles
+  # added later; see the comment above `@allowed_bundles`.
+  {"lib/tymeslot_web/hooks/route_bundle_hook.ex", :exact_compare}
 ]

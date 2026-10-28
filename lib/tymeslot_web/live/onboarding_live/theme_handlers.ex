@@ -19,6 +19,7 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Spec
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -98,18 +99,13 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   def handle_preview_booking_page(socket) do
     case ensure_preview_username(socket) do
       {:ok, socket, username} ->
-        {:noreply,
-         socket
-         |> Component.assign(
-           :theme_preview_url,
-           # Standalone, not `embed=1`: `preview=true` pins CSP
-           # `frame-ancestors 'self'` so it frames same-origin, and standalone
-           # keeps the video background and fills the frame to full height, so
-           # the modal shows the page exactly as invitees see it rather than a
-           # chrome-stripped, video-less card.
-           PreviewMode.owner_url(username, socket.assigns.profile.user_id)
-         )
-         |> Component.assign(:show_theme_preview, true)}
+        # Standalone, not `embed=1`: `preview=true` pins CSP
+        # `frame-ancestors 'self'` so it frames same-origin, and standalone
+        # keeps the video background and fills the frame to full height, so
+        # the modal shows the page exactly as invitees see it rather than a
+        # chrome-stripped, video-less card.
+        url = PreviewMode.owner_url(username, socket.assigns.profile.user_id)
+        {:noreply, ModalHook.show_modal(socket, :theme_preview, url)}
 
       {:error, socket} ->
         {:noreply,
@@ -128,10 +124,7 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   """
   @spec handle_close_theme_preview(LiveView.Socket.t()) :: {:noreply, LiveView.Socket.t()}
   def handle_close_theme_preview(socket) do
-    {:noreply,
-     socket
-     |> Component.assign(:show_theme_preview, false)
-     |> Component.assign(:theme_preview_url, nil)}
+    {:noreply, ModalHook.hide_modal(socket, :theme_preview)}
   end
 
   @doc """

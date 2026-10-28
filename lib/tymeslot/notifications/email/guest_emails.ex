@@ -97,15 +97,21 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
 
   As with `Tymeslot.Workers.DeliveryClaims`, a node stopping between the claim
   and the send loses that one invitation rather than risking two.
+
+  `appointment_details` is the payload for `meeting` as given; a guest with a
+  language and timezone of their own is invited in those
+  (`GuestNotifications.with_inviter_details/4`).
   """
   @spec send_to_guests([GuestSchema.t()], MeetingSchema.t(), map(), module()) :: [term()]
   def send_to_guests(guests, meeting, appointment_details, email_service) do
-    Enum.map(guests, fn guest ->
+    guests
+    |> GuestNotifications.with_inviter_details(meeting, appointment_details)
+    |> Enum.map(fn {guest, guest_view_details} ->
       claimed_at = DateTime.utc_now(:second)
 
       case GuestQueries.claim_confirmation(guest, claimed_at) do
         :claimed ->
-          send_claimed(guest, claimed_at, meeting, appointment_details, email_service)
+          send_claimed(guest, claimed_at, meeting, guest_view_details, email_service)
 
         :already_claimed ->
           {:ok, :already_sent}
@@ -135,8 +141,9 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
   not reached. Failures are logged and never change the caller's result.
 
   A group-booking guest is reminded from their own participant's view of the
-  meeting (`GuestNotifications.with_inviter_details/4`); `appointment_details`
-  serves every other guest.
+  meeting, and a guest with a language and timezone of their own in those
+  (`GuestNotifications.with_inviter_details/4`); `appointment_details` serves
+  every other guest.
   """
   @spec send_reminders(MeetingSchema.t(), map(), term(), term()) :: :ok
   def send_reminders(meeting, appointment_details, reminder_value, reminder_unit) do
@@ -146,10 +153,11 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
 
     meeting.id
     |> GuestQueries.list_for_reminder(value, unit)
-    |> GuestNotifications.with_inviter_details(meeting, appointment_details, %{
-      value: value,
-      unit: unit
-    })
+    |> GuestNotifications.with_inviter_details(
+      meeting,
+      appointment_details,
+      &AppointmentBuilder.from_meeting(&1, %{value: value, unit: unit})
+    )
     |> Enum.each(fn {guest, owner_details} ->
       details = GuestNotifications.guest_details(owner_details, guest)
 

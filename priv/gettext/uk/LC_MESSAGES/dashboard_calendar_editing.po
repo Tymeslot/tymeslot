@@ -742,3 +742,13 @@ msgstr "Подію «%{title}» додано."
 #, elixir-autogen, elixir-format
 msgid "Couldn't confirm the save. Check your calendar."
 msgstr "Не вдалося підтвердити збереження. Перевірте свій календар."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{email}. They will be invited once the change has synced to your calendar."
+msgstr "Додано %{email}. Запрошення буде надіслано, щойно зміну синхронізовано з вашим календарем."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{email}. They will be told once the change has synced to your calendar."
+msgstr "Видалено %{email}. Сповіщення буде надіслано, щойно зміну синхронізовано з вашим календарем."

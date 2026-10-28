@@ -742,3 +742,13 @@ msgstr "Událost „%{title}“ byla přidána."
 #, elixir-autogen, elixir-format
 msgid "Couldn't confirm the save. Check your calendar."
 msgstr "Uložení se nepodařilo ověřit. Zkontrolujte svůj kalendář."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{email}. They will be invited once the change has synced to your calendar."
+msgstr "Adresa %{email} byla přidána. Pozvánka bude odeslána, jakmile se změna synchronizuje s vaším kalendářem."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{email}. They will be told once the change has synced to your calendar."
+msgstr "Adresa %{email} byla odebrána. Oznámení bude odesláno, jakmile se změna synchronizuje s vaším kalendářem."

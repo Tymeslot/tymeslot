@@ -88,11 +88,6 @@ msgstr "L’heure de fin doit être postérieure à l’heure de début"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to create appointment. Please try again."
-msgstr "Échec de la création du rendez-vous. Veuillez réessayer."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to create meeting"
 msgstr "Échec de la création de la réunion"
 
@@ -119,7 +114,7 @@ msgstr "Date/heure invalide"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting duration selected"
-msgstr "Durée de rendez-vous sélectionnée invalide"
+msgstr "Durée de réunion sélectionnée invalide"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -149,7 +144,7 @@ msgstr "Veuillez sélectionner une date et une heure"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration"
-msgstr "Veuillez sélectionner une durée de rendez-vous"
+msgstr "Veuillez sélectionner une durée de réunion"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -233,6 +228,11 @@ msgstr "Vous ne pouvez pas réserver plus de %{days} jours à l’avance"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
+msgstr "Cette réunion a été fixée par un sondage : seul son organisateur peut la déplacer. Si le nouvel horaire ne vous convient pas, répondez à votre invitation."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
 msgid "The reminders for this meeting are not valid"
 msgstr "Les rappels de cette réunion ne sont pas valides"
 
@@ -240,3 +240,13 @@ msgstr "Les rappels de cette réunion ne sont pas valides"
 #, elixir-autogen, elixir-format
 msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
 msgstr "Une date fixe se déplace depuis son type de réunion, avec toutes les personnes qui l’ont réservée"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting. Please try again."
+msgstr "Échec de la création de la réunion. Veuillez réessayer."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page can't show times right now."
+msgstr "Cette page de réservation ne peut pas afficher d'horaires pour le moment."

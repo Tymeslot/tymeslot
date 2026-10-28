@@ -108,7 +108,8 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
 
   @doc """
   Sends a page whose URL names a booking the rules no longer let be moved
-  (cancelled, completed, expired, under way or over) on to a fresh booking,
+  (cancelled, completed, expired, under way or over), or one its booker may
+  not move (one its host manages), on to a fresh booking,
   telling the visitor why, rather than letting them fill in a form whose
   submit can only be refused. The manage page's reschedule link refuses the
   same bookings at mount. Reads the refusal `load_context/1` found; a page

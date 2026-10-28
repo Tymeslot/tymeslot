@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
 
   alias Tymeslot.Meetings.Approval
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PaymentReturn
 
@@ -76,6 +77,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
           stage={:after}
           class="mt-4"
         />
+        <.paid_line payment={@payment} />
         <p :if={PaymentReturn.approval_deadline_text(@meeting)} class="payment-page-body">
           <%= if Approval.refunds_on_release?(@meeting) do %>
             <.with_date
@@ -154,6 +156,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
             }
           />
         </p>
+        <.paid_line payment={@payment} />
     <% end %>
     """
   end
@@ -179,9 +182,32 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
     """
   end
 
-  # A sentence's date or time is drawn in its own `payment-page-date` span,
-  # which a theme can keep on one line: the message is translated with a
-  # marker in the placeholder's place, then split around it. A translation
+  attr :payment, :any, required: true
+
+  # What the booker paid, once the payment has gone through: the amount the
+  # payment row took, in the guest's locale. Nothing for a payment without an
+  # amount.
+  defp paid_line(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :amount,
+        MeetingPrice.paid_price(assigns.payment, Gettext.get_locale(TymeslotWeb.Gettext))
+      )
+
+    ~H"""
+    <p :if={@amount} class="payment-page-body" data-testid="payment-paid-amount">
+      <.with_date
+        date={@amount}
+        text={dgettext("booking_payments", "Paid: %{amount}", amount: date_marker())}
+      />
+    </p>
+    """
+  end
+
+  # A sentence's date, time or amount is drawn in its own `payment-page-date`
+  # span, which a theme can keep on one line: the message is translated with
+  # a marker in the placeholder's place, then split around it. A translation
   # that dropped the placeholder is shown as it is.
   @date_marker "\uE000"
 

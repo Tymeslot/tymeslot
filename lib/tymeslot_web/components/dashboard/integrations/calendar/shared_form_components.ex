@@ -192,28 +192,82 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     do: dgettext("dashboard_calendar_providers", "Password / App Password")
 
   @doc """
-  Guidance telling a Nextcloud user where to create an app password.
+  Guidance telling the user where to create the app password their provider
+  insists on: Nextcloud and mailbox.org once two-factor authentication is on,
+  iCloud always. Renders nothing for a provider that takes an ordinary login.
 
-  Shown by both the Nextcloud connect form and the CalDAV reconnect modal, so
-  the two cannot drift apart.
+  Shown by both the connect form and the CalDAV reconnect modal, so the two
+  cannot drift apart. iCloud adds a line to each: on connecting, that revoking
+  the password disconnects Tymeslot; on reconnecting, that a revoked password
+  will not work again, which is the usual reason an iCloud calendar needs
+  reconnecting at all.
   """
-  @spec nextcloud_app_password_hint(map()) :: Phoenix.LiveView.Rendered.t()
-  def nextcloud_app_password_hint(assigns) do
+  attr :provider, :any, required: true, doc: "provider key, as an atom or a string"
+  attr :reconnecting, :boolean, default: false
+
+  @spec app_password_hint(map()) :: Phoenix.LiveView.Rendered.t()
+  def app_password_hint(assigns) do
+    assigns = assign(assigns, :provider, to_string(assigns.provider))
+
     ~H"""
-    <p class="text-sm text-tymeslot-600 leading-relaxed">
-      {raw(
-        dgettext(
-          "dashboard_calendar_providers",
-          "Create an app password in Nextcloud under %{location} and enter it below together with your login name. A login password stops working here once two-factor authentication is switched on.",
-          location:
-            ~s(<span class="font-semibold">) <>
-              dgettext("dashboard_calendar_providers", "Personal settings → Security") <>
-              ~s(</span>)
-        )
-      )}
-    </p>
+    <div :if={@provider in ~w(nextcloud mailbox_org apple)} class="space-y-2">
+      <p class="text-sm text-tymeslot-600 leading-relaxed">{raw(app_password_where(@provider))}</p>
+      <p :if={@provider == "apple"} class="text-sm text-tymeslot-600 leading-relaxed">
+        {apple_password_lifetime(@reconnecting)}
+      </p>
+    </div>
     """
   end
+
+  defp app_password_where("nextcloud"),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Create an app password in Nextcloud under %{location} and enter it below together with your login name. A login password stops working here once two-factor authentication is switched on.",
+        location: bold(dgettext("dashboard_calendar_providers", "Personal settings → Security"))
+      )
+
+  defp app_password_where("mailbox_org"),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password.",
+        location: bold(dgettext("dashboard_calendar_providers", "Settings → Security"))
+      )
+
+  defp app_password_where("apple"),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email.",
+        app_specific_password:
+          bold(dgettext("dashboard_calendar_providers", "app-specific password")),
+        link:
+          ~s(<a href="https://appleid.apple.com" target="_blank" rel="noopener noreferrer" class="font-semibold text-turquoise-600 hover:text-turquoise-700 underline">appleid.apple.com</a>),
+        location:
+          bold(
+            dgettext(
+              "dashboard_calendar_providers",
+              "Sign-In and Security → App-Specific Passwords"
+            )
+          )
+      )
+
+  defp apple_password_lifetime(false),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Keep this password for as long as you use Tymeslot. Revoking it, or changing your Apple ID password, disconnects iCloud, and your booking page offers no times until you reconnect."
+      )
+
+  defp apple_password_lifetime(true),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "If you revoked the old app-specific password or changed your Apple ID password since connecting, the old one will not work again: generate a new one and enter it here."
+      )
+
+  defp bold(text), do: ~s(<span class="font-semibold">) <> text <> ~s(</span>)
 
   attr :form_errors, :map, required: true
   attr :suggested_name, :string, required: true

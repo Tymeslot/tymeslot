@@ -11,6 +11,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
@@ -40,16 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
           data-value="true"
         />
         <span class="custom-question-yes-no-icon" aria-hidden="true">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="4 12 10 18 20 6" />
-          </svg>
+          <.icon name="hero-check" class="stroke-[2.5]" />
         </span>
         <span class="custom-question-yes-no-label">{dgettext("booking", "Yes")}</span>
       </label>
@@ -73,17 +66,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
           data-value="false"
         />
         <span class="custom-question-yes-no-icon" aria-hidden="true">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="6" y1="6" x2="18" y2="18" />
-            <line x1="18" y1="6" x2="6" y2="18" />
-          </svg>
+          <.icon name="hero-x-mark" class="stroke-[2.5]" />
         </span>
         <span class="custom-question-yes-no-label">{dgettext("booking", "No")}</span>
       </label>

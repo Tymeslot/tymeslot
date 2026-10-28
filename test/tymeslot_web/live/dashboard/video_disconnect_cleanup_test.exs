@@ -20,7 +20,6 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
 
   @day 86_400
@@ -46,6 +45,9 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
     |> element("##{modal_id} input[type='checkbox'][name='delete_rooms']")
     |> render_click()
   end
+
+  # Every test in this module gives its Talk integration a server of its own,
+  # so no test's calls reach another test's per-host circuit breaker.
 
   test "the modal reports how many bookings the cleanup would affect", %{
     conn: conn,
@@ -109,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
   test "a Talk integration whose meetings have all ended still offers to delete their conversations",
        %{conn: conn, user: user} do
     host = "modal-ended.example.com"
-    integration = insert_talk_integration(user, host)
+    integration = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
     ended =
       for {offset, room_id} <- [{-2 * @day, "ended001"}, {-3 * @day, "ended002"}] do
@@ -149,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
   test "a Talk conversation made with a calendar grid event is counted and deleted on disconnect",
        %{conn: conn, user: user} do
     host = "modal-grid.example.com"
-    integration = insert_talk_integration(user, host)
+    integration = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
     calendar = insert(:calendar_integration, user: user)
 
     {:ok, room} =
@@ -315,21 +317,6 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
     assert {:ok, pending} = VideoIntegrationQueries.get(integration.id)
     assert pending.deleted_at
     assert VideoIntegrationQueries.list_all_for_user(user.id) == []
-  end
-
-  # Each test gets its own server, so no test's calls reach another test's
-  # per-host circuit breaker.
-  defp insert_talk_integration(user, host) do
-    base_url = "https://" <> host
-
-    insert(:video_integration,
-      user: user,
-      provider: "nextcloud_talk",
-      base_url: base_url,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-      provider_account_id: base_url <> "||organiser"
-    )
   end
 
   defp talk_ocs(data),

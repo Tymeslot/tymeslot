@@ -135,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
     refresh_expiring_tokens()
   end
 
-  @spec refresh_expiring_tokens() :: :ok | {:error, term()}
+  @spec refresh_expiring_tokens() :: :ok
   defp refresh_expiring_tokens do
     threshold = DateTime.add(DateTime.utc_now(), @refresh_threshold_hours, :hour)
 

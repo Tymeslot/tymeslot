@@ -97,6 +97,21 @@
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
           {CredoChecks.UseCoreModal, []},
+          {CredoChecks.NoInlineSvg,
+           [
+             # Artwork, not icons: the icon renderer itself, the loading
+             # spinner, a chart drawn from data, and generated avatar images.
+             allowed_files: [
+               "lib/tymeslot_web/components/core_components/icons.ex",
+               "lib/tymeslot_web/components/core_components/feedback.ex",
+               # The one remaining <svg> is inside a `<script nomodule>` JS string
+               # (the "browser not supported" page), which cannot render a component.
+               "lib/tymeslot_web/components/layouts.ex",
+               "lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex",
+               "lib/tymeslot/profiles/avatars/fallback.ex"
+             ]
+           ]},
+          {CredoChecks.UseModalHook, []},
           {CredoChecks.UseColorScale, [priority: :low]},
           {CredoChecks.NoArbitraryHexColors, [priority: :low]},
           {CredoChecks.RequireDashboardPage, [priority: :low]},
@@ -173,12 +188,10 @@
           # A suite stays green whether or not its tests assert anything, so
           # these are the checks least likely to be noticed missing.
           #
-          # exit_status: 0 means they report without failing the build. The
-          # first run found 1000 findings across 283 files, which is a backlog
-          # to work through deliberately, not something to fix under a red
-          # gate. Drop exit_status per check as each one reaches zero; that
-          # ratchet is the point, and a check left reporting forever is just
-          # noise nobody reads.
+          # All five gate the build. The first run found 1000 findings across
+          # 283 files, so they started out reporting under exit_status: 0
+          # while that backlog was worked through; each now stands at zero,
+          # and the gate keeps it there.
           #
           # UnusedLiveViewAssign and AvoidSocketAssignsInTest are deliberately
           # absent: both are structurally wrong for this codebase rather than
@@ -189,11 +202,11 @@
           # user-observable output, but 201 of its 218 findings were in unit
           # tests of socket-transformer functions, where socket.assigns is
           # the return value and there is no rendered output to assert on.
-          {Jump.CredoChecks.VacuousTest, [priority: :low, exit_status: 0]},
-          {Jump.CredoChecks.TestHasNoAssertions, [priority: :low, exit_status: 0]},
-          {Jump.CredoChecks.WeakAssertion, [priority: :low, exit_status: 0]},
-          {Jump.CredoChecks.ConditionalAssertion, [priority: :low, exit_status: 0]},
-          {Jump.CredoChecks.AssertElementSelectorCanNeverFail, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.VacuousTest, [priority: :low]},
+          {Jump.CredoChecks.TestHasNoAssertions, [priority: :low]},
+          {Jump.CredoChecks.WeakAssertion, [priority: :low]},
+          {Jump.CredoChecks.ConditionalAssertion, [priority: :low]},
+          {Jump.CredoChecks.AssertElementSelectorCanNeverFail, [priority: :low]},
 
           # A field set on the struct before change/cast is not a change: it
           # skips validation and an update silently drops it. Gating, since
@@ -202,6 +215,11 @@
           # legitimate fixture there, and nothing in a test is persisted
           # through that path.
           {Jump.CredoChecks.AvoidModifyingStructBeforeChangeset, [files: %{excluded: ["test/"]}]},
+
+          # ~w splits on whitespace after interpolation, so an interpolated
+          # value containing a space silently becomes several list items.
+          # Gating, since neither repo had an occurrence when it was enabled.
+          {Jump.CredoChecks.NoWordSigilInterpolation, []},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)

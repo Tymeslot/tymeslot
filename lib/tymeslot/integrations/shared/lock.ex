@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
   @doc """
   Starts the lock manager.
   """
-  @spec start_link(list()) :: {:ok, pid()} | {:error, any()}
+  @spec start_link(list()) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end

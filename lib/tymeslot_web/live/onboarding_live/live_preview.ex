@@ -51,6 +51,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   attr :advance_booking_days, :integer, default: nil
   attr :min_advance_hours, :integer, default: nil
   attr :calendar_connected, :boolean, default: false
+  attr :booking_page_live, :boolean, default: true
   attr :booking_host, :string, required: true
 
   @spec live_preview(map()) :: Phoenix.LiveView.Rendered.t()
@@ -242,6 +243,9 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       hours: assigns.min_advance_hours || 0
     )
   end
+
+  defp caption(%{current_step: :ready, booking_page_live: false}),
+    do: dgettext("onboarding_wizard", "Goes live once a calendar is connected")
 
   defp caption(%{current_step: :ready} = assigns) do
     dgettext("onboarding_wizard", "You're all set - %{link} is live",

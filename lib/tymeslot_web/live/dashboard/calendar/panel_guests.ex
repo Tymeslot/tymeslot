@@ -268,7 +268,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   `original_event`, the event as the write found it, and `updated_event`, as
   it left it, then tells the organiser: the toast names whom it invited or
   removed, and a warning says when an email could not be sent. Only now,
-  so nothing is claimed for a write the calendar refused.
+  so nothing is claimed for a write the calendar refused. A write saved to
+  sync later has its emails held until the replay reaches the calendar, and
+  the toast says so.
   """
   @spec membership_written(socket(), map(), map()) :: socket()
   def membership_written(socket, original_event, updated_event) do
@@ -283,15 +285,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
     now = emails(updated_event)
 
     socket
-    |> told(added, now -- before, &invited_toast/1, &invitation_failed/0)
-    |> told(removed, before -- now, &removed_toast/1, &cancellation_failed/0)
+    |> told(added, now -- before, &invited_toast/2, &invitation_failed/0)
+    |> told(removed, before -- now, &removed_toast/2, &cancellation_failed/0)
   end
 
   # Gates refuse guests of an event someone else organises before any write
-  # (`EditGuard.guest_update/3`), so a membership email is `:sent`, `:noop`
-  # or failed here.
-  defp told(socket, {:ok, :sent}, [_first | _rest] = changed, toast, _failed),
-    do: Toast.show(socket, toast.(Enum.join(changed, ", ")))
+  # (`EditGuard.guest_update/3`), so a membership email is `:sent`,
+  # `:after_sync`, `:noop` or failed here.
+  defp told(socket, {:ok, sent}, [_first | _rest] = changed, toast, _failed)
+       when sent in [:sent, :after_sync],
+       do: Toast.show(socket, toast.(Enum.join(changed, ", "), sent))
 
   defp told(socket, {:error, _reason}, _changed, _toast, failed),
     do: flash(socket, {:warning, failed.()})
@@ -306,11 +309,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       |> Enum.reject(&is_nil/1)
       |> Enum.uniq()
 
-  defp invited_toast(emails),
+  defp invited_toast(emails, :sent),
     do: dgettext("dashboard_calendar_editing", "Invited %{email}.", email: emails)
 
-  defp removed_toast(emails),
+  defp invited_toast(emails, :after_sync),
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "Added %{email}. They will be invited once the change has synced to your calendar.",
+        email: emails
+      )
+
+  defp removed_toast(emails, :sent),
     do: dgettext("dashboard_calendar_editing", "Removed %{email}.", email: emails)
+
+  defp removed_toast(emails, :after_sync),
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "Removed %{email}. They will be told once the change has synced to your calendar.",
+        email: emails
+      )
 
   defp invitation_failed,
     do:

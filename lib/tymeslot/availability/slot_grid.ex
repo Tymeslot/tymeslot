@@ -87,11 +87,20 @@ defmodule Tymeslot.Availability.SlotGrid do
     end
   end
 
+  # A break blocks clock time for every weekly window, not only its own, but
+  # not an extra available time: one placed over a weekly break opens it for
+  # that day. Time off closes both.
   defp available_time(windows, time_off) do
-    windows
-    |> Enum.map(&{&1.start_dt, &1.end_dt})
-    |> Intervals.subtract(Enum.flat_map(windows, & &1.breaks) ++ time_off)
+    {extra, weekly} = Enum.split_with(windows, &Map.get(&1, :extra, false))
+
+    weekly
+    |> spans()
+    |> Intervals.subtract(Enum.flat_map(weekly, & &1.breaks))
+    |> Enum.concat(spans(extra))
+    |> Intervals.subtract(time_off)
   end
+
+  defp spans(windows), do: Enum.map(windows, &{&1.start_dt, &1.end_dt})
 
   # Each window's grid starts that fall within the booker's day, as instants,
   # sorted. The day is `[day_start, next_day_start)`: the instants whose date

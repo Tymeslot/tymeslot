@@ -69,6 +69,37 @@ defmodule TymeslotWeb.Live.Themes.DefaultPagesJourneyTest do
   end
 
   @tag :capture_log
+  test "cancelling emails the cancellation to both the host and the attendee", %{
+    conn: conn,
+    profile: p,
+    meeting: m
+  } do
+    # The real emails, rendered and handed to the Swoosh test adapter.
+    stub_with(Tymeslot.EmailServiceMock, Tymeslot.Emails.EmailService)
+    Application.put_env(:swoosh, :shared_test_process, self())
+    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+
+    {:ok, view, _html} = live(conn, "/#{p.username}/meeting/#{m.uid}/cancel")
+
+    {:error, {:redirect, _redirect}} =
+      view |> element("[data-testid='cancel-meeting']") |> render_click()
+
+    assert %{failure: 0} = Oban.drain_queue(queue: :emails, with_recursion: true)
+
+    host_email = m.organizer_email
+    attendee_email = m.attendee_email
+
+    assert_received {:email, %Swoosh.Email{to: [{_name, ^host_email}]} = to_host}
+    assert_received {:email, %Swoosh.Email{to: [{_name, ^attendee_email}]} = to_attendee}
+    refute_received {:email, _another}
+
+    assert to_host.subject =~ ~r/^Meeting Cancelled - .+ with #{Regex.escape(m.attendee_name)}$/
+
+    assert to_attendee.subject =~
+             ~r/^Meeting Cancelled - .+ with #{Regex.escape(m.organizer_name)}$/
+  end
+
+  @tag :capture_log
   test "keeping the meeting shows the kept state and changes nothing", %{
     conn: conn,
     profile: p,

@@ -15,6 +15,8 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   @typep integration_status :: %{
            has_calendar: boolean(),
+           calendar_ready: boolean(),
+           refused_calendars: [String.t()],
            has_video: boolean(),
            has_meeting_types: boolean()
          }
@@ -25,25 +27,38 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   """
   @spec default_integration_status() :: integration_status()
   def default_integration_status,
-    do: %{has_calendar: false, has_video: false, has_meeting_types: false}
+    do: %{
+      has_calendar: false,
+      calendar_ready: false,
+      refused_calendars: [],
+      has_video: false,
+      has_meeting_types: false
+    }
 
   @doc """
   Whether the user has set up each part the dashboard nudges them towards: a
   calendar a booking can be written to, a video integration, an active
   meeting type.
 
+  `has_calendar` says only that such a calendar is connected (polls gate on
+  it). `calendar_ready` says the booking page can actually offer times, which
+  it cannot while any calendar's credentials are refused; those calendars are
+  named in `refused_calendars`. See `Calendar.booking_page_health/1`.
+
   Read fresh every time rather than cached, so a change made anywhere (another
   tab, a background job, a reconnect) shows on the next mount or refresh
-  without any writer having to announce it. Each part is one indexed EXISTS
-  query.
+  without any writer having to announce it. Each part is one or two small
+  indexed queries on the user's own rows.
   """
   @spec get_integration_status(integer()) :: integration_status()
   def get_integration_status(user_id) when is_integer(user_id) do
-    %{
-      has_calendar: Calendar.has_bookable_integration?(user_id),
-      has_video: Video.has_active_integration?(user_id),
-      has_meeting_types: MeetingTypes.has_active_meeting_types?(user_id)
-    }
+    Map.merge(
+      calendar_status(Calendar.booking_page_health(user_id), user_id),
+      %{
+        has_video: Video.has_active_integration?(user_id),
+        has_meeting_types: MeetingTypes.has_active_meeting_types?(user_id)
+      }
+    )
   rescue
     # The status only decides which set-up reminders the sidebar shows, so a
     # database that cannot answer leaves the dashboard up with the defaults
@@ -59,6 +74,21 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   @spec get_integration_status(nil | any()) :: integration_status()
   def get_integration_status(_user_id), do: default_integration_status()
+
+  defp calendar_status(:taking_bookings, _user_id),
+    do: %{has_calendar: true, calendar_ready: true, refused_calendars: []}
+
+  defp calendar_status(:no_calendar, _user_id),
+    do: %{has_calendar: false, calendar_ready: false, refused_calendars: []}
+
+  # A refused calendar may sit beside a healthy one, so whether one is
+  # connected at all is still its own question.
+  defp calendar_status({:credentials_refused, names}, user_id),
+    do: %{
+      has_calendar: Calendar.has_bookable_integration?(user_id),
+      calendar_ready: false,
+      refused_calendars: names
+    }
 
   @doc """
   Gather meeting settings data for a user (meeting types and video integrations).

@@ -31,8 +31,8 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   @typedoc "A normalised failure reason."
   @type reason :: atom() | String.t() | term()
 
-  @typedoc "An Oban `perform/1` return value."
-  @type result :: :ok | {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
+  @typedoc "The Oban `perform/1` return value for a failed attempt."
+  @type result :: {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
 
   # Rate-limit snoozes grow with each execution but never exceed five minutes;
   # beyond that the recovery policy is the better instrument.

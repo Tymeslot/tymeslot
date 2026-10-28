@@ -18,8 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   `DTSTART`, ...). A key the payload does not carry leaves its property alone;
   a key it carries with an empty value deletes the property, so clearing a
   field in the grid clears it on the server too. Reminders are the one
-  subcomponent: supplying `:reminders` replaces the event's `VALARM` blocks,
-  omitting the key keeps them.
+  subcomponent; see *Reminders* below.
 
   ## What is left alone
 
@@ -65,6 +64,29 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
       the owner the server added, loses the duplicate. An event someone else
       organised keeps the line naming its organiser.
 
+  ## Reminders
+
+  A payload that carries `:reminders` states the complete new list, and like
+  the attendee list it is merged into the stored `VALARM` blocks rather than
+  written over them. A reminder holds only a method and a lead time before
+  the start, so an alarm rebuilt from one would lose whatever else it says
+  (an email alarm's recipients, an `AUDIO` attachment, `ACKNOWLEDGED`, `X-`
+  properties). Each stored alarm is read the way the sync reads it
+  (`ICalNormaliser.alarm_reminder/1`):
+
+    * An alarm a reminder cannot express (a `RELATED=END` or absolute
+      trigger, one after the start) is never in the list, so it cannot have
+      been removed from it, and is kept verbatim.
+    * An alarm whose reading is still in the list keeps its stored block
+      verbatim, each reminder in the list claiming one alarm. Because the
+      reading is the sync's own, an alarm it reads approximately (an `AUDIO`
+      alarm read as a pop-up, a lead time in seconds rounded to minutes)
+      still matches the reminder the sync made of it.
+    * An alarm whose reading is gone from the list is removed.
+    * A reminder no stored alarm claims is appended as a new alarm.
+
+  A payload without the key keeps every alarm.
+
   Tymeslot's own block, told apart by the `X-TYMESLOT-ATTENDEES` marker
   `build_simple_event/3` emits beside it or by the absence of any `ATTENDEE`
   at all, also has its `CONTACT` lines rewritten. In `:contact` mode such a
@@ -82,6 +104,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
   alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @doc """
   Applies the property changes `event_data` describes to `raw_ical`.
@@ -232,7 +256,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     kept = Enum.reject(properties, &MapSet.member?(replaced, ContentLines.property_name(&1)))
     added = Enum.flat_map(entries, fn {_names, lines} -> content_lines(lines) end)
 
-    kept ++ added ++ patched_alarms(alarms, patch_set.event_data)
+    kept ++ added ++ patched_alarms(alarms, properties, patch_set.event_data)
   end
 
   # Both spellings are always replaced in a block of Tymeslot's own, never just
@@ -375,13 +399,73 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   defp marked_ours?(properties),
     do: Enum.any?(properties, &(ContentLines.property_name(&1) == "X-TYMESLOT-ATTENDEES"))
 
-  defp patched_alarms(alarms, event_data) do
-    if Map.has_key?(event_data, :reminders) do
-      event_data |> Alarms.build_reminders() |> content_lines()
-    else
-      Enum.concat(alarms)
+  defp patched_alarms(alarms, properties, event_data) do
+    case Map.fetch(event_data, :reminders) do
+      {:ok, reminders} ->
+        wanted = Enum.map(List.wrap(reminders), &{reminder_key(&1), &1})
+        {kept, unclaimed} = Enum.flat_map_reduce(alarms, wanted, &claim_alarm/2)
+
+        added =
+          Alarms.build_reminders(
+            %{reminders: Enum.map(unclaimed, &elem(&1, 1))},
+            alarm_email(alarms, properties, event_data)
+          )
+
+        Enum.concat(kept) ++ content_lines(added)
+
+      :error ->
+        Enum.concat(alarms)
     end
   end
+
+  # See the moduledoc's *Reminders*. A reminder is compared by the `ACTION`
+  # it is written with, so an SMS reminder, written as a DISPLAY alarm, is
+  # the pop-up the sync reads back.
+  defp claim_alarm(alarm, wanted) do
+    case ICalNormaliser.alarm_reminder(alarm) do
+      nil ->
+        {[alarm], wanted}
+
+      reminder ->
+        case List.keytake(wanted, reminder_key(reminder), 0) do
+          {_claimed, unclaimed} -> {[alarm], unclaimed}
+          nil -> {[], wanted}
+        end
+    end
+  end
+
+  defp reminder_key(reminder),
+    do: {Reminder.ical_action(Reminder.method(reminder)), Reminder.minutes_before(reminder)}
+
+  # An EMAIL alarm must name its recipient and subject, which a reminder does
+  # not hold, so they come from the stored document: the recipient of an
+  # email alarm it already carries (the address the user chose in their
+  # client), else the organiser, and the event's title. The stored `SUMMARY`
+  # is still escaped, as the alarm's must be.
+  defp alarm_email(alarms, properties, event_data) do
+    %{
+      recipient:
+        Enum.find_value(alarms, &email_alarm_recipient/1) ||
+          Map.get(event_data, :organizer_email) ||
+          stored_address(ContentLines.find("ORGANIZER", properties)),
+      summary:
+        if(Map.has_key?(event_data, :summary),
+          do: Format.escape_text(event_data.summary),
+          else: stored_value(ContentLines.find("SUMMARY", properties))
+        )
+    }
+  end
+
+  defp email_alarm_recipient(alarm) do
+    if String.upcase(stored_value(ContentLines.find("ACTION", alarm))) == "EMAIL",
+      do: stored_address(ContentLines.find("ATTENDEE", alarm))
+  end
+
+  defp stored_address(nil), do: nil
+  defp stored_address(line), do: line_address(line)
+
+  defp stored_value(nil), do: ""
+  defp stored_value(line), do: line |> ContentLines.split_value() |> elem(1)
 
   # VALARM is the only subcomponent a VEVENT may contain. Its own DESCRIPTION,
   # SUMMARY and DURATION lines must never be read as the event's, so the blocks

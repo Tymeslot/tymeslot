@@ -77,7 +77,6 @@
 .organizer-name,
 .meeting-duration,
 .tz-picker__option-offset,
-.timezone-arrow,
 .help-text,
 .email-confirmation {
   font-size: var(--theme-font-size-sm);

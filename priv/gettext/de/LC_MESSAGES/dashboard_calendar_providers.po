@@ -221,12 +221,12 @@ msgstr "Server-URL"
 msgid "Session expired. Please start the reconnect process again."
 msgstr "Sitzung abgelaufen. Bitte starten Sie das erneute Verbinden noch einmal."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Settings → Security"
 msgstr "Einstellungen → Sicherheit"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
 msgstr "Anmelden und Sicherheit → App-spezifische Passwörter"
@@ -276,7 +276,7 @@ msgstr "Unbenannter Kalender"
 msgid "Username"
 msgstr "Nutzername"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
 msgstr "App-spezifisches Passwort"
@@ -341,12 +341,12 @@ msgstr "https://mail.example.com"
 msgid "https://radicale.example.com:5232"
 msgstr "https://radicale.example.com:5232"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password."
 msgstr "Wenn Sie die Zwei-Faktor-Authentifizierung aktiviert haben, generieren Sie unter %{location} auf mailbox.org ein anwendungsspezifisches Passwort und verwenden Sie dieses hier anstelle Ihres regulären Passworts."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr "iCloud akzeptiert Ihr Apple-ID-Passwort hier nicht. Erstellen Sie auf %{link} unter %{location} ein %{app_specific_password} und geben Sie es dann unten zusammen mit Ihrer Apple-ID-E-Mail-Adresse ein."
@@ -631,3 +631,13 @@ msgstr "Jeden Termin als belegt werten"
 msgid "Holiday and school-holiday calendars mark their events as free, so they would block nothing. With this on, every event in the feed blocks the time, however it is marked."
 msgstr ""
 "Feiertags- und Ferienkalender markieren ihre Einträge als frei, dadurch würden sie nichts blockieren. Ist dies aktiv, blockiert jeder Eintrag im Feed die Zeit, egal wie er markiert ist."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "If you revoked the old app-specific password or changed your Apple ID password since connecting, the old one will not work again: generate a new one and enter it here."
+msgstr "Falls Sie das alte App-spezifische Passwort seit dem Verbinden widerrufen oder Ihr Apple-ID-Passwort geändert haben, funktioniert das alte nicht mehr: Erstellen Sie ein neues und geben Sie es hier ein."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Keep this password for as long as you use Tymeslot. Revoking it, or changing your Apple ID password, disconnects iCloud, and your booking page offers no times until you reconnect."
+msgstr "Behalten Sie dieses Passwort, solange Sie Tymeslot nutzen. Wenn Sie es widerrufen oder Ihr Apple-ID-Passwort ändern, wird iCloud getrennt, und Ihre Buchungsseite bietet keine Zeiten an, bis Sie iCloud erneut verbinden."

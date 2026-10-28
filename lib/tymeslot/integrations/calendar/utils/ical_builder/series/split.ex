@@ -19,7 +19,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
-  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
@@ -42,7 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
           {:ok, halves()} | :first_occurrence | {:error, term()}
   def split(document, key, changes, timezone, mode) do
     components = Document.components(document)
-    uid = Format.generate_uid()
+    uid = Uid.successor(document)
 
     with {:ok, plan} <- plan(components, key, timezone),
          :ok <- ensure_countable(plan),

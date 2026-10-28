@@ -71,6 +71,10 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   `:start_at`, `:end_at`, and optionally `:all_day`. A recurring event's
   video is handed on to the occurrences its first sync caches
   (`SeriesCarry.series_created/1`).
+
+  The row is marked as Tymeslot's own: the organiser just created it here, and
+  a move before the first sync reads ownership off this row
+  (`Tymeslot.CalendarGrid.EventMove`).
   """
   @spec cache(map()) :: :ok
   def cache(attrs) do
@@ -140,6 +144,7 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
     now = Clock.utc_now()
 
     attrs
+    |> Map.put(:created_by_tymeslot, true)
     |> Map.update(:start_at, nil, &to_usec/1)
     |> Map.update(:end_at, nil, &to_usec/1)
     |> Map.put_new(:synced_at, now)

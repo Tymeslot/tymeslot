@@ -139,6 +139,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesSplitTest do
       assert "DTEND;TZID=Europe/Berlin:20260126T103000" in master
     end
 
+    test "of somebody else's series is not marked as Tymeslot's" do
+      {_head, _tail, uid} = split!(berlin_document(), @split_key)
+
+      refute String.ends_with?(uid, "@tymeslot.com")
+    end
+
+    test "of Tymeslot's own series stays Tymeslot's" do
+      document =
+        String.replace(berlin_document(), "UID:weekly-sync@example.com", "UID:sync@tymeslot.com")
+
+      {_head, _tail, uid} = split!(document, @split_key)
+
+      assert String.ends_with?(uid, "@tymeslot.com")
+      refute uid == "sync@tymeslot.com"
+    end
+
     test "a COUNT of ten split at the fourth leaves seven, excluded occurrences counted" do
       {_head, tail, _uid} = split!(berlin_document(), @split_key)
 

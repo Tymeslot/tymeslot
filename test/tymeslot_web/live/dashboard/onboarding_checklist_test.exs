@@ -9,8 +9,18 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
   alias Tymeslot.Onboarding
   alias TymeslotWeb.Dashboard.OnboardingChecklist
 
-  @no_integrations %{has_meeting_types: true, has_calendar: false, has_video: false}
-  @all_integrations %{has_meeting_types: true, has_calendar: true, has_video: true}
+  @no_integrations %{
+    has_meeting_types: true,
+    has_calendar: false,
+    calendar_ready: false,
+    has_video: false
+  }
+  @all_integrations %{
+    has_meeting_types: true,
+    has_calendar: true,
+    calendar_ready: true,
+    has_video: true
+  }
 
   defp user(attrs \\ %{}) do
     Map.merge(%{dashboard_setup_done_items: [], dashboard_setup_dismissed_at: nil}, attrs)
@@ -97,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
     test "auto-completes an item backed by real state and drops its call-to-action" do
       html =
         render_component(&OnboardingChecklist.onboarding_checklist/1,
-          integration_status: %{@no_integrations | has_calendar: true},
+          integration_status: %{@no_integrations | has_calendar: true, calendar_ready: true},
           current_user: user(),
           profile: profile()
         )

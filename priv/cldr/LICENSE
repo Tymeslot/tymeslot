@@ -1,8 +1,18 @@
 windowsZones.xml in this directory is an unmodified copy of
 common/supplemental/windowsZones.xml from the Unicode Common Locale Data
 Repository (CLDR), release 47 (mapTimezones typeVersion 2021a,
-otherVersion 7e11800), https://cldr.unicode.org/. It is distributed
-under the Unicode License v3, reproduced below.
+otherVersion 7e11800), https://cldr.unicode.org/.
+
+place_names/<locale>.json hold the localised city and country names of
+the time zone picker, taken from the same CLDR release (exemplarCity in
+main/<locale>/timeZoneNames.json, territory names in
+main/<locale>/territories.json). The cities that CLDR does not name,
+because the picker shows a capital rather than the city its zone is
+named after (Valletta for Europe/Malta), were translated by hand, and
+Kyiv is spelt after the Ukrainian name where CLDR keeps the older
+Kiev or Kiew.
+
+Both are distributed under the Unicode License v3, reproduced below.
 
 UNICODE LICENSE V3
 

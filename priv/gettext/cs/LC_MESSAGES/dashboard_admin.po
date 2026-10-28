@@ -796,3 +796,73 @@ msgstr "Nastaveno proměnnou prostředí %{variable}. Chcete-li hodnotu změnit 
 #, elixir-autogen, elixir-format
 msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to send no alert emails."
 msgstr "E-mailová adresa, která dostává upozornění pro správce, když je přepínač výše zapnutý. Ponechte prázdné a žádná upozornění se e-mailem odesílat nebudou."
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Alerts email you when something breaks on this install. Share what they catch on GitHub, so it gets fixed for everyone."
+msgstr "Upozornění vám přijdou e-mailem, když na této instalaci něco selže. Sdílejte na GitHubu, co zachytí, ať se to opraví pro všechny."
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Become a sponsor"
+msgstr "Stát se sponzorem"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Open an issue"
+msgstr "Nahlásit problém"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Report what you find"
+msgstr "Nahlaste, co najdete"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Set up alerts"
+msgstr "Nastavit upozornění"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Sponsor development"
+msgstr "Sponzorujte vývoj"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Sponsorship pays for the time that goes into new features and fixes."
+msgstr "Sponzorství financuje čas, který jde do nových funkcí a oprav."
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Star on GitHub"
+msgstr "Hvězdička na GitHubu"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Star us on GitHub"
+msgstr "Dejte nám hvězdičku na GitHubu"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Stars help other self-hosters find the project."
+msgstr "Hvězdičky pomáhají projekt najít i dalším, kdo si aplikaci provozují sami."
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Support Tymeslot"
+msgstr "Podpořte Tymeslot"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on admin alerts"
+msgstr "Zapněte upozornění pro správce"
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot is free to self-host. If it is useful to you, here are three ways to help it grow."
+msgstr "Tymeslot si můžete zdarma provozovat sami. Pokud vám je užitečný, tady jsou tři způsoby, jak mu pomoci růst."
+
+#: lib/tymeslot_web/live/admin_live/components/support_box.ex
+#, elixir-autogen, elixir-format
+msgid "When an admin alert arrives, share it as a GitHub issue (redacting anything sensitive), so it gets fixed for everyone."
+msgstr "Když dorazí upozornění pro správce, nahlaste ho na GitHubu jako problém (citlivé údaje předtím odstraňte), ať se to opraví pro všechny."

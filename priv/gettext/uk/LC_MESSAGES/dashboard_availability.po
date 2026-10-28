@@ -27,6 +27,7 @@ msgid "%{day} hours updated"
 msgstr "Години на %{day} оновлено"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Додати"
@@ -120,6 +121,7 @@ msgid "Failed to update availability"
 msgstr "Не вдалося оновити доступність"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "З"
@@ -557,11 +559,6 @@ msgstr "Не приймати бронювання в %{day}"
 msgid "Take bookings on %{day}"
 msgstr "Приймати бронювання в %{day}"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule duplicated. Its date overrides were not copied."
-msgstr "Розклад продубльовано. Його винятки за датами не скопійовано."
-
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "Used by %{meeting_types}, and by every meeting type that has no schedule of its own."
@@ -878,6 +875,81 @@ msgstr "Видалити перерву"
 #, elixir-autogen, elixir-format
 msgid "Delete schedule"
 msgstr "Видалити розклад"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{from}–%{to}"
+msgstr "%{from}–%{to}"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "A schedule can hold up to %{count} extra times."
+msgstr "Розклад може містити до %{count} додаткових проміжків часу."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Дата"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Dates you can be booked besides your weekly hours, such as office hours once a month. With every weekday switched off, only these are offered. They apply to the meeting types using this schedule; past dates are removed automatically."
+msgstr "Дні, коли вас можна забронювати понад тижневий розклад, наприклад години прийому раз на місяць. Якщо всі дні тижня вимкнено, пропонуються лише вони. Вони діють для типів зустрічей із цим розкладом; минулі дні видаляються автоматично."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a date, a from and a to time."
+msgstr "Введіть дату, час початку й час завершення."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a from time before the to time."
+msgstr "Час початку має бути раніше за час завершення."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra available times"
+msgstr "Додаткова доступність"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra time added"
+msgstr "Додатковий час додано"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra time removed"
+msgstr "Додатковий час видалено"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "No extra times added."
+msgstr "Додаткового часу немає."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Remove this time"
+msgstr "Видалити цей час"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated. Its extra available times for specific dates were not copied."
+msgstr "Розклад продубльовано. Його додаткову доступність у конкретні дні не скопійовано."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "The date must be today or later."
+msgstr "Дата має бути сьогодні або пізніше."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "This time overlaps another extra time on that date."
+msgstr "Цей час перетинається з іншим додатковим часом у цей день."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "To"
+msgstr "До"
 
 #: lib/tymeslot/availability/policy_validation.ex
 #, elixir-autogen, elixir-format

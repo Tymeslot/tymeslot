@@ -32,7 +32,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   }
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series
   alias Tymeslot.Utils.UriUtils
 
@@ -172,7 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   end
 
   defp copy(document) do
-    uid = Format.generate_uid()
+    uid = Series.successor_uid(document)
 
     case Series.reuid(document, uid) do
       {:ok, copy} -> {:ok, %{tail: copy, tail_uid: uid}}

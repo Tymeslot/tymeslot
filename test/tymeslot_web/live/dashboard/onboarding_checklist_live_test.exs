@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Onboarding
   alias Tymeslot.Repo
@@ -26,6 +27,49 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     assert has_element?(view, "[data-testid=onboarding-checklist]")
+  end
+
+  # A refused calendar is still connected, but the booking page offers no
+  # times until it is reconnected, so the dashboard must stop calling it done.
+  describe "a calendar whose credentials were refused" do
+    setup %{conn: conn} do
+      {conn, user} = log_in_fresh_host(conn)
+      %{conn: conn, user: user}
+    end
+
+    test "un-ticks the calendar item and says so on every page", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, provider: "apple", name: "iCloud")
+
+      calendar_cta =
+        "[data-testid=onboarding-checklist] a[href='/dashboard/integrations?tab=calendars']"
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+      refute has_element?(view, calendar_cta)
+      refute has_element?(view, "#refused-calendar-notice")
+
+      Repo.update!(Changeset.change(integration, needs_reauth: true))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+      assert has_element?(view, calendar_cta)
+
+      assert view |> element("#refused-calendar-notice") |> render() =~
+               "iCloud needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      assert has_element?(
+               view,
+               "#refused-calendar-notice a[href='/dashboard/integrations?tab=calendars']"
+             )
+    end
+
+    test "leaves the notice off the integrations page, which has its own banner",
+         %{conn: conn, user: user} do
+      insert(:calendar_integration, user: user, provider: "apple", needs_reauth: true)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations")
+      refute has_element?(view, "#refused-calendar-notice")
+    end
   end
 
   test "ticking an item greys it out immediately and persists", %{conn: conn} do

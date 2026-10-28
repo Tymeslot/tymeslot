@@ -133,10 +133,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     Management.flag_for_reconnection(
       integration,
-      dgettext_noop(
-        "integrations_calendar",
-        "CalDAV server rejected the stored credentials. Please reconnect the integration."
-      ),
+      rejected_credentials_reason(integration.provider),
       @credentials_rejected
     )
   end
@@ -274,4 +271,30 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # the status the owner-facing sentence leaves out.
   defp refusal({:unexpected_status, status}), do: "HTTP #{status}"
   defp refusal(reason), do: CalDAVErrors.describe_error(reason)
+
+  # The provider rejects stored credentials for a reason the owner can act on
+  # only once they know it. iCloud and Nextcloud only ever hold an app
+  # password here, which is revoked by hand or with a change of the account
+  # password, so the reason can name the likely cause; for any other server
+  # it cannot be told apart from a changed login.
+  defp rejected_credentials_reason("apple"),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
+        "iCloud refused the stored app-specific password. It was most likely revoked, or your Apple ID password was changed, which revokes every app-specific password. Generate a new one and reconnect."
+      )
+
+  defp rejected_credentials_reason("nextcloud"),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
+        "Nextcloud refused the stored app password. It was most likely revoked, or the account password was changed. Create a new app password and reconnect."
+      )
+
+  defp rejected_credentials_reason(_provider),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
+        "CalDAV server rejected the stored credentials. Please reconnect the integration."
+      )
 end

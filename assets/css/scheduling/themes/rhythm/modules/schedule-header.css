@@ -124,6 +124,8 @@
 }
 
 .timezone-arrow {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
   color: var(--theme-text-secondary);
   flex-shrink: 0;
   transition: transform var(--transition-normal);
@@ -161,6 +163,13 @@
     gap: var(--space-xs);
   }
 
+  /* Back in the flow so the stacked header puts the trigger under the
+     organiser: pinned to the corner, a long zone covers the organiser's name. */
+  .timezone-selector-container {
+    position: static;
+    align-self: flex-start;
+    max-width: 100%;
+  }
 }
 
 /* Tablet mid-range: stack header, keep trigger normal */

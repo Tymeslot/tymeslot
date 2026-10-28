@@ -7,6 +7,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
   alias Tymeslot.Mailer.HealthCheck
   alias Tymeslot.Mailer.SMTPConfig
   alias Tymeslot.Test.FakeSmtpRelay
+  alias Tymeslot.Test.LogCapture
 
   describe "validate_startup_config/1 for SMTP" do
     test "validates complete and valid SMTP configuration" do
@@ -28,12 +29,18 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
         ]
       ]
 
-      # Structure validation passes, but connection test fails in CI (no real SMTP
-      # server). capture_log prevents the expected error from leaking into concurrent
-      # async tests that assert log == "".
+      # Structure validation passes, so the connection probe runs and fails in CI
+      # (no real SMTP server). The failure's reason is the probe's, which a
+      # structure error never reaches. capture_log keeps the expected error out
+      # of concurrent async tests that assert log == "".
+      LogCapture.attach()
+
       capture_log(fn ->
         assert :ok = HealthCheck.validate_startup_config(config)
       end)
+
+      event = LogCapture.await_log("Mailer configuration validation failed")
+      assert event.meta.reason =~ "Cannot connect to smtp.example.com:587"
     end
 
     test "accepts a relay that needs no login" do
@@ -217,14 +224,26 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
   describe "validate_startup_config/1 for other adapters" do
     test "passes validation for Test adapter" do
       config = [adapter: Swoosh.Adapters.Test]
+      dev_adapter_logs_at_info()
 
-      assert :ok = HealthCheck.validate_startup_config(config)
+      log =
+        capture_log([level: :info], fn ->
+          assert :ok = HealthCheck.validate_startup_config(config)
+        end)
+
+      assert log =~ "development adapter; no validation needed"
     end
 
     test "passes validation for Local adapter" do
       config = [adapter: Swoosh.Adapters.Local]
+      dev_adapter_logs_at_info()
 
-      assert :ok = HealthCheck.validate_startup_config(config)
+      log =
+        capture_log([level: :info], fn ->
+          assert :ok = HealthCheck.validate_startup_config(config)
+        end)
+
+      assert log =~ "development adapter; no validation needed"
     end
 
     test "logs error but returns :ok when adapter is not configured" do
@@ -432,5 +451,13 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
       assert log =~ "Mailer configuration validation failed"
       assert log =~ "SMTP"
     end
+  end
+
+  # The test env pins the primary level at :warning, where the dev-adapter line
+  # is never emitted. Lowering only HealthCheck's own level keeps concurrent
+  # async tests' output unchanged; nothing else calls validate_startup_config/1.
+  defp dev_adapter_logs_at_info do
+    Logger.put_module_level(HealthCheck, :info)
+    on_exit(fn -> Logger.delete_module_level(HealthCheck) end)
   end
 end

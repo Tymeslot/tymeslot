@@ -1,10 +1,12 @@
 defmodule Tymeslot.Timezones.Data do
   @moduledoc """
   Timezone data aggregated from curated city lists.
-  Builds all lookup maps and search indexes at compile time for O(1) access.
+  Builds all lookup maps and search indexes at compile time for O(1) access,
+  one set per locale with place names (`PlaceNames`); the functions that return
+  labels answer in the current Gettext locale.
   """
 
-  alias Tymeslot.Timezones.{CountryCodes, Formatting, WindowsZones}
+  alias Tymeslot.Timezones.{CountryCodes, Formatting, PlaceNames, WindowsZones}
 
   alias Tymeslot.Timezones.Cities.{
     Africa,
@@ -27,6 +29,10 @@ defmodule Tymeslot.Timezones.Data do
     "beijing" => "Asia/Shanghai",
     "peking" => "Asia/Shanghai",
     "cape town" => "Africa/Johannesburg",
+    # No language in the list spells it Kiev or Kiew any more, but people
+    # still type those.
+    "kiev" => "Europe/Kyiv",
+    "kiew" => "Europe/Kyiv",
     # Départements et collectivités d'outre-mer : la façon dont un agent les
     # nomme (« la Réunion », « les Antilles ») ou les numérote ne correspond à
     # aucun libellé de la liste, qui porte le chef-lieu.
@@ -76,71 +82,127 @@ defmodule Tymeslot.Timezones.Data do
   }
 
   # Aggregate all city entries from continent modules.
-  @all_entries (
-                 entries =
-                   Americas.cities() ++
-                     Europe.cities() ++
-                     Asia.cities() ++
-                     Africa.cities() ++
-                     Oceania.cities()
+  @english_entries (
+                     entries =
+                       Americas.cities() ++
+                         Europe.cities() ++
+                         Asia.cities() ++
+                         Africa.cities() ++
+                         Oceania.cities()
 
-                 Enum.map(entries, fn {tz_id, city, country_name, country_code} ->
-                   %{
-                     timezone_id: tz_id,
-                     label: "#{city}, #{country_name}",
-                     country_alpha3: CountryCodes.to_alpha3(country_code),
-                     city: city,
-                     country_name: country_name,
-                     country_code: country_code
-                   }
-                 end)
-               )
+                     Enum.map(entries, fn {tz_id, city, country_name, country_code} ->
+                       %{
+                         timezone_id: tz_id,
+                         label: "#{city}, #{country_name}",
+                         country_alpha3: CountryCodes.to_alpha3(country_code),
+                         city: city,
+                         country_name: country_name,
+                         country_code: country_code
+                       }
+                     end)
+                   )
 
-  # Options list sorted alphabetically by label
-  @options @all_entries
-           |> Enum.sort_by(& &1.label)
-           |> Enum.map(fn e -> {e.label, e.timezone_id} end)
+  # The same entries once per locale, labelled in its language. Everything a
+  # request reads is built here for every locale, so the language is chosen
+  # when the request asks, never fixed by whichever compiled first.
+  @entries_by_locale Map.new(["en" | PlaceNames.locales()], fn locale ->
+                       {locale,
+                        Enum.map(@english_entries, fn entry ->
+                          city = PlaceNames.city(locale, entry.timezone_id) || entry.city
+
+                          country =
+                            PlaceNames.country(locale, entry.country_code) || entry.country_name
+
+                          Map.merge(entry, %{
+                            label: "#{city}, #{country}",
+                            local_country: country,
+                            english_label: entry.label
+                          })
+                        end)}
+                     end)
+
+  # Keys and queries are both folded without diacritics: a French prospect
+  # types « Réunion » where the English list says "Reunion", and a German
+  # types "Sao Paulo" where theirs says "São Paulo".
+  fold = fn text ->
+    text
+    |> String.downcase()
+    |> String.normalize(:nfd)
+    |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
+  end
+
+  # Ukrainian keeps Ґ, Є, І, Ї and Й as letters of their own, placed beside
+  # Г, Е and И; by code point Є and І would follow Я, and folding would merge
+  # Ї into І and Й into И. Its labels sort by each letter's place in the
+  # alphabet; any other character sorts by its folded form, ahead of letters.
+  uk_rank =
+    "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя"
+    |> String.graphemes()
+    |> Enum.with_index()
+    |> Map.new()
+
+  sort_key = fn
+    "uk", label ->
+      label
+      |> String.downcase()
+      |> String.graphemes()
+      |> Enum.map(fn char ->
+        case Map.fetch(uk_rank, char) do
+          {:ok, rank} -> {1, rank}
+          :error -> {0, fold.(char)}
+        end
+      end)
+
+    _locale, label ->
+      fold.(label)
+  end
+
+  # Options list sorted alphabetically by label, accents ignored, so that
+  # "Österreich" sorts among the O's rather than after "Zypern".
+  @options_by_locale Map.new(@entries_by_locale, fn {locale, entries} ->
+                       {locale,
+                        entries
+                        |> Enum.sort_by(&sort_key.(locale, &1.label))
+                        |> Enum.map(fn e -> {e.label, e.timezone_id} end)}
+                     end)
 
   # Lookup maps
-  @timezone_to_country Map.new(@all_entries, fn e -> {e.timezone_id, e.country_alpha3} end)
-  @timezone_to_label Map.new(@all_entries, fn e -> {e.timezone_id, e.label} end)
+  @timezone_to_country Map.new(@english_entries, fn e -> {e.timezone_id, e.country_alpha3} end)
 
-  # Search index: lowercase label → entry, plus aliases
-  @search_index (
-                  entry_by_id = Map.new(@all_entries, fn e -> {e.timezone_id, e} end)
-
-                  # Les clés sont repliées sans diacritiques : un prospect français tape
-                  # « Réunion » ou « Pointe-à-Pitre », et la liste, elle, est écrite sans
-                  # accents (« Sao Paulo », « Reunion »). Sans ce repli, la recherche ne
-                  # renvoyait rien pour ces deux saisies.
-                  plier = fn texte ->
-                    texte
-                    |> String.downcase()
-                    |> String.normalize(:nfd)
-                    |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
-                  end
-
-                  label_index =
-                    Enum.flat_map(@all_entries, fn entry ->
-                      # Index both "city, country" and "country" separately
-                      Enum.uniq([
-                        {String.downcase(entry.label), entry},
-                        {String.downcase(entry.country_name), entry},
-                        {plier.(entry.label), entry},
-                        {plier.(entry.country_name), entry}
-                      ])
+  @labels_by_locale Map.new(@entries_by_locale, fn {locale, entries} ->
+                      {locale, Map.new(entries, fn e -> {e.timezone_id, e.label} end)}
                     end)
 
-                  alias_index =
-                    Enum.flat_map(@search_aliases, fn {alias_name, tz_id} ->
-                      case Map.get(entry_by_id, tz_id) do
-                        nil -> []
-                        entry -> [{alias_name, entry}]
-                      end
-                    end)
+  # Search index per locale: folded key → entry. Each entry answers to its
+  # label and country in the locale, to the English ones (so a habit formed
+  # on the English list keeps working) and to its IANA id; then the aliases.
+  @search_index_by_locale Map.new(@entries_by_locale, fn {locale, entries} ->
+                            entry_by_id = Map.new(entries, fn e -> {e.timezone_id, e} end)
 
-                  label_index ++ alias_index
-                )
+                            label_index =
+                              Enum.flat_map(entries, fn entry ->
+                                [
+                                  entry.label,
+                                  entry.local_country,
+                                  entry.english_label,
+                                  entry.country_name,
+                                  entry.timezone_id
+                                ]
+                                |> Enum.map(fold)
+                                |> Enum.uniq()
+                                |> Enum.map(&{&1, entry})
+                              end)
+
+                            alias_index =
+                              Enum.flat_map(@search_aliases, fn {alias_name, tz_id} ->
+                                case Map.get(entry_by_id, tz_id) do
+                                  nil -> []
+                                  entry -> [{alias_name, entry}]
+                                end
+                              end)
+
+                            {locale, label_index ++ alias_index}
+                          end)
 
   # Popular timezones shown when the dropdown opens without a search term.
   # Ordered by rough west-to-east sweep so the UTC offsets feel natural.
@@ -169,30 +231,41 @@ defmodule Tymeslot.Timezones.Data do
 
   # Labels and ids only: an offset depends on the date it is read on, so it is
   # added when the list is asked for, never baked in when the module compiles.
-  @popular_pairs (
-                   options_map = Map.new(@options, fn {_label, tz_id} = opt -> {tz_id, opt} end)
+  @popular_pairs_by_locale Map.new(@options_by_locale, fn {locale, options} ->
+                             options_map =
+                               Map.new(options, fn {_label, tz_id} = opt -> {tz_id, opt} end)
 
-                   popular = Enum.flat_map(@popular_ids, &List.wrap(Map.get(options_map, &1)))
+                             popular =
+                               Enum.flat_map(@popular_ids, &List.wrap(Map.get(options_map, &1)))
 
-                   rest =
-                     Enum.reject(@options, fn {_label, tz_id} ->
-                       MapSet.member?(@popular_set, tz_id)
-                     end)
+                             rest =
+                               Enum.reject(options, fn {_label, tz_id} ->
+                                 MapSet.member?(@popular_set, tz_id)
+                               end)
 
-                   popular ++ rest
-                 )
+                             {locale, popular ++ rest}
+                           end)
 
+  @doc """
+  Every offered zone as `{label, id}`, labelled in the current Gettext locale.
+  """
   @spec all_options() :: [{String.t(), String.t()}]
-  def all_options, do: @options
+  def all_options, do: Map.fetch!(@options_by_locale, locale())
 
+  @doc """
+  The zones matching `term`, as `{label, id, offset}` and labelled in the
+  current Gettext locale. A term matches a city or country in that locale or in
+  English, an IANA id, or a common alternate name; accents are ignored.
+  """
   @spec search(String.t()) :: [{String.t(), String.t(), String.t()}]
-  def search(""), do: Enum.map(@popular_pairs, &with_offset/1)
+  def search(""), do: Enum.map(Map.fetch!(@popular_pairs_by_locale, locale()), &with_offset/1)
 
   def search(term) do
-    search_lower = fold_diacritics(term)
+    search_folded = fold_diacritics(term)
 
-    @search_index
-    |> Enum.filter(fn {key, _entry} -> String.contains?(key, search_lower) end)
+    @search_index_by_locale
+    |> Map.fetch!(locale())
+    |> Enum.filter(fn {key, _entry} -> String.contains?(key, search_folded) end)
     |> Enum.uniq_by(fn {_key, entry} -> entry.timezone_id end)
     |> Enum.take(50)
     |> Enum.map(fn {_key, entry} -> with_offset({entry.label, entry.timezone_id}) end)
@@ -200,12 +273,19 @@ defmodule Tymeslot.Timezones.Data do
 
   defp with_offset({label, tz_id}), do: {label, tz_id, Formatting.utc_offset(tz_id)}
 
-  # Même repli que celui appliqué aux clés de l'index, au moment de la construction.
-  defp fold_diacritics(texte) do
-    texte
+  # The fold the index keys were built with.
+  defp fold_diacritics(text) do
+    text
     |> String.downcase()
     |> String.normalize(:nfd)
     |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
+  end
+
+  # The request's language when it has place names, English otherwise (the
+  # pseudo-locale among them).
+  defp locale do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    if Map.has_key?(@labels_by_locale, locale), do: locale, else: "en"
   end
 
   @spec country_code(String.t()) :: atom() | nil
@@ -215,9 +295,15 @@ defmodule Tymeslot.Timezones.Data do
 
   def country_code(_other), do: nil
 
+  @doc """
+  The zone's "City, Country" label in the current Gettext locale; a valid zone
+  with no entry falls back to its city segment.
+  """
   @spec display_name(String.t()) :: String.t()
   def display_name(timezone_id) when is_binary(timezone_id) do
-    Map.get_lazy(@timezone_to_label, timezone_id, fn ->
+    @labels_by_locale
+    |> Map.fetch!(locale())
+    |> Map.get_lazy(timezone_id, fn ->
       timezone_id
       |> String.split("/")
       |> List.last()

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 200" fill="none">
+  <defs>
+    <linearGradient id="logoFlow1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#14b8a6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="logoFlow2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="logoFlow3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2dd4bf;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#22d3ee;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2dd4bf;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#22d3ee;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Logo icon on left (scaled and positioned) -->
+  <g transform="translate(100, 100)">
+    <!-- Top flow -->
+    <path d="M -40 -40 L -5 -40 Q 8 -40 8 -27 L 8 -23 Q 8 -10 -5 -10 L -15 -10 Q -25 -10 -25 -20 L -25 -30 Q -25 -40 -15 -40 Z" 
+          fill="url(#logoFlow1)"/>
+    
+    <!-- Middle flow -->
+    <path d="M -20 -5 Q -32 -5 -32 7 L -32 13 Q -32 25 -20 25 L 15 25 Q 28 25 28 12 L 28 8 Q 28 -5 15 -5 Z" 
+          fill="url(#logoFlow2)"/>
+    
+    <!-- Bottom flow -->
+    <path d="M 15 30 Q 28 30 28 43 L 28 47 Q 28 60 15 60 L -35 60 Q -48 60 -48 47 L -48 43 Q -48 30 -35 30 Z" 
+          fill="url(#logoFlow3)"/>
+    
+    <!-- Center point -->
+    <circle cx="0" cy="10" r="8" fill="url(#logoFlow2)" opacity="0.3"/>
+    <circle cx="0" cy="10" r="5" fill="url(#logoFlow2)"/>
+  </g>
+  
+  <!-- Text: Tymeslot -->
+  <text x="165" y="110" 
+        dominant-baseline="central"
+        font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" 
+        font-size="82" 
+        font-weight="900" 
+        fill="url(#textGrad)"
+        letter-spacing="-0.03em">Tymeslot</text>
+</svg>

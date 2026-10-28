@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
 
   alias Tymeslot.Webhooks.DeliveryStatus
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers
 
   attr :webhook, :map, required: true
@@ -42,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
       notice={notice(@webhook, @paused)}
       notice_tone={(@paused && :neutral) || :danger}
     >
-      <:icon><IconComponents.icon name={:webhook} class="w-6 h-6" /></:icon>
+      <:icon><.icon name="hero-link" class="w-6 h-6" /></:icon>
       <:last_activity :if={@webhook.last_triggered_at}>
         {dgettext("dashboard_automation", "Last triggered: %{time}",
           time: Helpers.format_datetime(@webhook.last_triggered_at, @time_format)

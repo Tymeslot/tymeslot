@@ -101,8 +101,12 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
       relay = FakeSmtpRelay.start(rcpt_reply: @unknown_user)
       use_relay(relay)
 
-      assert {:error, {:recipient_rejected, {:send, {:permanent_failure, _host, message}}}} =
-               Delivery.deliver(email("Dead address"), breaker: breaker)
+      assert {:error,
+              {:recipient_rejected,
+               %{
+                 reason: {:send, {:permanent_failure, _host, message}},
+                 recipients_masked: "g***@example.com"
+               }}} = Delivery.deliver(email("Dead address"), breaker: breaker)
 
       assert message =~ "5.1.1"
     end

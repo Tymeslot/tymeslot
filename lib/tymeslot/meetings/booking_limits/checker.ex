@@ -37,17 +37,17 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
         end_date,
         opts \\ []
       ) do
-    with_context(
-      organizer_user_id,
-      profile_settings,
-      meeting_type,
-      start_date,
-      end_date,
-      opts,
-      fn context ->
-        &BookingLimits.slot_blocked?(context, &1)
-      end
-    )
+    case load_context(
+           organizer_user_id,
+           profile_settings,
+           meeting_type,
+           start_date,
+           end_date,
+           opts
+         ) do
+      nil -> nil
+      context -> &BookingLimits.slot_blocked?(context, &1)
+    end
   end
 
   defp host_date_range(start_date, end_date, host_timezone, opts) do
@@ -78,30 +78,21 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
     host_timezone = host_timezone(profile_settings)
     day = BookingLimits.day_key(start_time, host_timezone)
 
-    case with_context(
-           organizer_user_id,
-           profile_settings,
-           meeting_type,
-           day,
-           day,
-           opts,
-           fn context ->
-             BookingLimits.check_booking_allowed(context, start_time)
-           end
-         ) do
+    case load_context(organizer_user_id, profile_settings, meeting_type, day, day, opts) do
       nil -> :ok
-      result -> result
+      context -> BookingLimits.check_booking_allowed(context, start_time)
     end
   end
 
-  defp with_context(
+  # The limits context for the given host dates, or `nil` when no cap is
+  # configured (in which case the database is never queried).
+  defp load_context(
          organizer_user_id,
          profile_settings,
          meeting_type,
          start_date,
          end_date,
-         opts,
-         fun
+         opts
        ) do
     limits = BookingLimits.limits_for(profile_settings, meeting_type)
 
@@ -121,7 +112,7 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
           Keyword.take(opts, [:exclude_uid])
         )
 
-      fun.(BookingLimits.build_context(limits, host_timezone, week_start, rows))
+      BookingLimits.build_context(limits, host_timezone, week_start, rows)
     end
   end
 

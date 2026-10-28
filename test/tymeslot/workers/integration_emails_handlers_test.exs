@@ -459,6 +459,28 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmailsTest do
                )
     end
 
+    test "discards for an account pending deletion" do
+      # A leaving owner who revoked access is not asked to reconnect it.
+      user =
+        insert(:user, deletion_scheduled_at: DateTime.add(DateTime.utc_now(:second), 7, :day))
+
+      integration =
+        insert(:calendar_integration, user: user, provider: "google", needs_reauth: true)
+
+      assert {:discard, "Account pending deletion" = reason} =
+               EmailHandlers.execute_email_action(
+                 "send_integration_reauth_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => integration.id,
+                   "integration_type" => "calendar"
+                 }
+               )
+
+      # An expected end of the job, so it is not recorded as an error.
+      assert EmailHandlers.expected_discard?(reason)
+    end
+
     test "discards when the user or integration is missing" do
       assert {:discard, "User or integration not found"} =
                EmailHandlers.execute_email_action(

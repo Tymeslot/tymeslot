@@ -23,7 +23,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
 
   @room_path "/ocs/v2.php/apps/spreed/api/v4/room"
@@ -41,7 +40,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       user: user,
       calendar: calendar
     } do
-      talk = insert_talk_integration(user, "record.example.com")
+      talk = insert(:talk_video_integration, user: user, base_url: "https://record.example.com")
 
       assert :ok =
                EventVideoRooms.record(context(:nextcloud_talk, "rec00001"), %{
@@ -89,7 +88,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       user: user,
       calendar: calendar
     } do
-      talk = insert_talk_integration(user, "adopted.example.com")
+      talk = insert(:talk_video_integration, user: user, base_url: "https://adopted.example.com")
       grid_event = event(user, talk, calendar)
 
       assert :ok = EventVideoRooms.record(context(:nextcloud_talk, "adop0001"), grid_event)
@@ -513,7 +512,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       Repo.delete!(Repo.get!(VideoIntegrationSchema, room.video_integration_id))
       assert %{video_integration_id: nil, provider: "nextcloud_talk"} = Repo.reload!(room)
 
-      _reconnected = insert_talk_integration(user, host)
+      _reconnected = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
       expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
         assert url == "https://#{host}#{@room_path}/reco0001"
@@ -598,7 +597,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       )
 
   defp insert_room(user, calendar, host, room_id, uid, attrs \\ []) do
-    talk = insert_talk_integration(user, host)
+    talk = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
     {:ok, room} =
       EventVideoRoomQueries.insert(
@@ -618,19 +617,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       )
 
     room
-  end
-
-  defp insert_talk_integration(user, host) do
-    base_url = "https://" <> host
-
-    insert(:video_integration,
-      user: user,
-      provider: "nextcloud_talk",
-      base_url: base_url,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-      provider_account_id: base_url <> "||organiser"
-    )
   end
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})

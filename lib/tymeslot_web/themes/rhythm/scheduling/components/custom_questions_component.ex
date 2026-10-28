@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
     assigns = Events.assign_render_state(assigns)
 
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale}>
+    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
@@ -75,7 +75,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
                 phx-target={@myself}
                 data-intent="back"
               >
-                <span class="custom-question-cta-nowrap">← {dgettext("booking", "Back")}</span>
+                <span class="custom-question-cta-nowrap">
+                  <.icon name="hero-arrow-left" class="inline-icon" />
+                  {dgettext("booking", "Back")}
+                </span>
               </button>
 
               <button
@@ -87,9 +90,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
               >
                 <span class="custom-question-cta-nowrap">
                   <%= if @last? do %>
-                    {dgettext("booking", "Continue")} →
+                    {dgettext("booking", "Continue")}
+                    <.icon name="hero-arrow-right" class="inline-icon" />
                   <% else %>
-                    {dgettext("booking", "Next")} →
+                    {dgettext("booking", "Next")}
+                    <.icon name="hero-arrow-right" class="inline-icon" />
                   <% end %>
                 </span>
               </button>

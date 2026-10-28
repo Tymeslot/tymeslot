@@ -110,3 +110,8 @@ msgstr "Diese Buchung wurde nicht angenommen und findet daher nicht statt. Ihre 
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. You can return and try again at any time."
 msgstr "Ihre Buchung wurde nicht bestätigt. Sie können jederzeit zurückkehren und es erneut versuchen."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Paid: %{amount}"
+msgstr "Bezahlt: %{amount}"

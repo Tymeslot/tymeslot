@@ -232,12 +232,12 @@ msgstr "Ce que la personne voit dans la liste des lieux."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Where this meeting is held. Add a second location and bookers will be asked to choose."
-msgstr "Où ce rendez-vous se déroule. Ajoutez un deuxième lieu et les personnes qui réservent devront choisir."
+msgstr "Où se tient cette réunion. Ajoutez un deuxième lieu et les personnes qui réservent devront choisir."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
-msgstr "Où se tient ce rendez-vous. Les réservations de groupe utilisent un seul lieu, fixé à l'avance, afin que tout le monde se retrouve au même endroit pour un créneau."
+msgstr "Où se tient cette réunion. Les réservations de groupe utilisent un seul lieu, fixé à l’avance, afin que tout le monde se retrouve au même endroit pour un créneau."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format

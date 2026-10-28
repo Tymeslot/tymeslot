@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Analytics.SaltSchema
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlowSchema
   alias Tymeslot.Payments.Webhooks.StripeEventSchema
@@ -436,6 +437,34 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
       assert :ok = perform_job(DataRetentionWorker, %{})
 
       assert Repo.all(from(s in SaltSchema, select: s.date)) == [today]
+    end
+  end
+
+  describe "perform/1 - past extra available times" do
+    test "deletes extra times before yesterday, keeps yesterday's and later ones" do
+      today = ~D[2031-03-10]
+      freeze_clock(DateTime.new!(today, ~T[04:00:00], "Etc/UTC"))
+      schedule = insert(:availability_schedule)
+
+      for date <- [~D[2031-02-01], ~D[2031-03-08], ~D[2031-03-09], today, ~D[2031-04-01]] do
+        insert(:availability_override,
+          schedule: schedule,
+          date: date,
+          override_type: "extra_hours",
+          start_time: ~T[09:00:00],
+          end_time: ~T[10:00:00]
+        )
+      end
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.all(
+               from(o in AvailabilityOverrideSchema,
+                 where: o.schedule_id == ^schedule.id,
+                 select: o.date,
+                 order_by: o.date
+               )
+             ) == [~D[2031-03-09], today, ~D[2031-04-01]]
     end
   end
 

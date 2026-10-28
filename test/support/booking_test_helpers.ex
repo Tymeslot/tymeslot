@@ -192,6 +192,29 @@ defmodule Tymeslot.BookingTestHelpers do
     view
   end
 
+  @doc """
+  The URL a booking page last patched itself to, which is what its address
+  bar holds and so what a reconnect mounts again from
+  (`TymeslotWeb.Themes.Shared.ChoicesInUrl`). Every patch is a message to the
+  test process, so the last one drained is the current URL; fails when the
+  page never patched.
+  """
+  @spec last_patched_url(Phoenix.LiveViewTest.View.t()) :: String.t()
+  def last_patched_url(view), do: last_patched_url(view, nil)
+
+  defp last_patched_url(view, last) do
+    case next_patch(view) do
+      nil -> last || flunk("the page never patched its URL")
+      to -> last_patched_url(view, to)
+    end
+  end
+
+  defp next_patch(view) do
+    assert_patch(view, 0)
+  rescue
+    ArgumentError -> nil
+  end
+
   # A page that chose the meeting type itself (an organiser's only type,
   # defaulted) renders no choice: the type it holds is the one to book.
   defp first_meeting_type(view) do

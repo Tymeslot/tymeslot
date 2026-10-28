@@ -57,13 +57,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           optional(:location) => String.t()
         }
 
-  @doc """
-  Generates a unique identifier for an event.
-
-  The UID follows the format: `{random-hex}@tymeslot.com`
-  """
-  @spec generate_uid() :: String.t()
-  defdelegate generate_uid(), to: Format
+  @doc "See `Format.generate_uid/1`."
+  @spec generate_uid(:tymeslot | :foreign) :: String.t()
+  defdelegate generate_uid(origin \\ :tymeslot), to: Format
 
   @doc """
   Formats a DateTime for iCalendar format.

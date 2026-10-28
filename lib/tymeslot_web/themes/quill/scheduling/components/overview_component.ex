@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
@@ -32,6 +33,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   attr :selected, :boolean, default: false
   attr :requires_approval, :boolean, default: false
   attr :meeting_type, :any, default: nil
+  attr :currency, :string, default: nil
+  attr :show_price, :boolean, default: true
+  attr :locale, :string, required: true
   attr :target, :any, default: nil
 
   defp duration_card(assigns) do
@@ -46,7 +50,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       data-value={@duration}
       class={"duration-card w-full rounded-xl cursor-pointer #{if @selected, do: "duration-card--selected", else: "duration-card--unselected"}"}
     >
-      <div class="flex items-center justify-between">
+      <%!-- The gap keeps the duration badge clear of the icon, which a range
+            such as "15–120 min" would otherwise run into. --%>
+      <div class="flex items-center justify-between gap-4">
         <div class="text-left flex-1">
           <div class="flex items-start justify-between gap-2 mb-1">
             <h3 class="duration-card-title font-bold flex-1">
@@ -61,6 +67,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
             {@description}
           </p>
           <GroupSession.hint meeting_type={@meeting_type} />
+          <MeetingPrice.hint
+            :if={@show_price}
+            meeting_type={@meeting_type}
+            currency={@currency}
+            locale={@locale}
+          />
         </div>
         <%= if @icon != "none" do %>
           <%= if String.starts_with?(@icon, "hero-") do %>
@@ -86,7 +98,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       >
         <div class="overview-content-area flex items-start justify-center">
           <div class="w-full">
-            <.glass_morphism_card class="booker-card">
+            <.glass_morphism_card class="booker-card" data-testid="booker-card">
               <div class="overview-card-body">
                 <div class="overview-layout">
                   <div class="overview-avatar-section">
@@ -139,12 +151,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                           <.duration_card
                             duration={slug}
                             title={meeting_type.name}
-                            badge={LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
+                            badge={LocalizationHelpers.format_length_badge(meeting_type)}
                             description={meeting_type.description}
                             icon={meeting_type.icon || "hero-clock"}
                             selected={assigns[:selected_duration] == slug}
                             requires_approval={Approval.required?(meeting_type)}
                             meeting_type={meeting_type}
+                            currency={@host_currency}
+                            show_price={!assigns[:is_rescheduling]}
+                            locale={@locale}
                             target={@myself}
                           />
                         <% end %>
@@ -162,9 +177,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                           unless assigns[:selected_duration],
                             do: dgettext("booking", "Please select a meeting duration first")
                         }
-                        class="w-full"
+                        class="w-full gap-2"
                       >
-                        {dgettext("booking", "Next")} →
+                        {dgettext("booking", "Next")}
+                        <.icon name="hero-arrow-right" class="inline-icon" />
                       </.action_button>
                     </div>
                   </div>

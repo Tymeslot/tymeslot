@@ -19,7 +19,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
   alias Plug.Test
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
 
@@ -64,7 +63,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
       conn: conn,
       user: user
     } do
-      integration = insert_talk_integration(user, room_creation_error: :password_required)
+      integration =
+        insert(:talk_video_integration,
+          user: user,
+          base_url: @server,
+          room_creation_error: :password_required
+        )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
@@ -89,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
       conn: conn,
       user: user
     } do
-      insert_talk_integration(user)
+      insert(:talk_video_integration, user: user, base_url: @server)
 
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
@@ -101,7 +105,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
       conn: conn,
       user: user
     } do
-      insert_talk_integration(user,
+      insert(:talk_video_integration,
+        user: user,
+        base_url: @server,
         needs_reauth: true,
         sync_error:
           "Nextcloud refused the app password. Edit this integration and enter a new app password.",
@@ -123,24 +129,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
     |> render_click()
 
     view
-  end
-
-  defp insert_talk_integration(user, overrides \\ []) do
-    insert(
-      :video_integration,
-      Keyword.merge(
-        [
-          user: user,
-          name: "Team Talk",
-          provider: "nextcloud_talk",
-          base_url: @server,
-          client_id_encrypted: Encryption.encrypt("organiser"),
-          client_secret_encrypted: Encryption.encrypt(@app_password),
-          provider_account_id: @server <> "||organiser"
-        ],
-        overrides
-      )
-    )
   end
 
   # A Talk 25.0.0 server's capabilities, with the account's conversation rights

@@ -1,7 +1,8 @@
 defmodule Tymeslot.Bookings.Policy do
   @moduledoc """
   The booking rules: whether a meeting can still be cancelled, rescheduled or
-  asked to move, and whether a booking may bring guests.
+  asked to move, whether its booker may move it at all, and whether a booking
+  may bring guests.
 
   The verdict predicates read the system clock (`Tymeslot.Clock`) and log
   their blocked branches. The scheduling policy a booking time is checked
@@ -10,6 +11,7 @@ defmodule Tymeslot.Bookings.Policy do
   `Tymeslot.Bookings.MeetingLinks`.
   """
   alias Tymeslot.Clock
+  alias Tymeslot.Meetings.HostManaged
 
   require Logger
 
@@ -40,6 +42,7 @@ defmodule Tymeslot.Bookings.Policy do
           :cancelled | :completed | :expired | :awaiting_approval | :started | :past | :planned
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
+  @type booker_move_refusal :: :managed_by_host
 
   @doc """
   Determines if a meeting can be cancelled.
@@ -137,16 +140,52 @@ defmodule Tymeslot.Bookings.Policy do
   has no reschedule action until they have approved it — voiding the slot
   here would leave a request that still reads as approvable pointing at
   time that no longer holds.
+
+  A meeting confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed?/1`) has
+  nobody to ask for a new time: its host picks one with
+  `Tymeslot.Bookings.HostMove.move/3`, so a request is refused with
+  `:managed_by_host`.
   """
-  @spec can_request_reschedule?(meeting_record()) :: :ok | {:error, reschedule_refusal()}
-  def can_request_reschedule?(%{status: "awaiting_approval"}) do
-    {:error, {:not_reschedulable, :awaiting_approval}}
+  @spec can_request_reschedule?(meeting_record()) ::
+          :ok | {:error, reschedule_refusal() | booker_move_refusal()}
+  def can_request_reschedule?(%{status: "awaiting_approval"} = meeting) do
+    with :ok <- can_booker_move_meeting?(meeting) do
+      {:error, {:not_reschedulable, :awaiting_approval}}
+    end
   end
 
   # A fixed date moves from its meeting type, keeping everyone booked on it.
   def can_request_reschedule?(%{planned: true}), do: {:error, {:not_reschedulable, :planned}}
 
-  def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
+  def can_request_reschedule?(meeting) do
+    with :ok <- can_booker_move_meeting?(meeting) do
+      can_reschedule_meeting?(meeting)
+    end
+  end
+
+  @doc """
+  Whether the host may change `meeting`'s time from the dashboard: by moving
+  it themselves when they manage it (`can_reschedule_meeting?/1`), otherwise
+  by asking its attendee for a new time (`can_request_reschedule?/1`).
+  """
+  @spec can_host_change_time?(meeting_record()) ::
+          :ok | {:error, reschedule_refusal() | booker_move_refusal()}
+  def can_host_change_time?(meeting) do
+    if HostManaged.managed?(meeting),
+      do: can_reschedule_meeting?(meeting),
+      else: can_request_reschedule?(meeting)
+  end
+
+  @doc """
+  Whether the booker may move `meeting` themselves. A meeting confirmed from
+  a poll (`Tymeslot.Meetings.HostManaged.managed?/1`) has no booker: only its host
+  moves it (`Tymeslot.Bookings.HostMove`). The flag never changes, so the
+  answer needs no repeating under the meeting's lock.
+  """
+  @spec can_booker_move_meeting?(map()) :: :ok | {:error, booker_move_refusal()}
+  def can_booker_move_meeting?(meeting) do
+    if HostManaged.managed?(meeting), do: {:error, :managed_by_host}, else: :ok
+  end
 
   @doc """
   Checks if a meeting is currently happening.

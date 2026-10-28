@@ -12,6 +12,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.ExtraAvailability
   alias Tymeslot.Availability.Intervals
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Availability.TimeOffPeriodQueries
@@ -37,13 +38,15 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   @typedoc """
   One owner date's window as instants in the owner's zone, with its breaks
-  resolved and clipped to it.
+  resolved and clipped to it. `extra` marks an extra available time, which
+  the weekly breaks do not close.
   """
   @type owner_window :: %{
           required(:date) => Date.t(),
           required(:start_dt) => DateTime.t(),
           required(:end_dt) => DateTime.t(),
-          required(:breaks) => [Intervals.t()]
+          required(:breaks) => [Intervals.t()],
+          optional(:extra) => true
         }
 
   @doc """
@@ -52,6 +55,10 @@ defmodule Tymeslot.Availability.BusinessHours do
   that is closed, names no hours, or holds hours that are not a valid window
   contributes nothing. Time off is not applied here; see
   `time_off_intervals/4`.
+
+  Extra available times (`Tymeslot.Availability.ExtraAvailability`) are
+  windows of their own beside the day's hours, so a date may have several,
+  and they open a date the weekly pattern leaves closed. They carry no breaks.
 
   Each window's weekly breaks are resolved against the weekly row they belong
   to and clipped to the window in effect, so a break left outside its hours
@@ -65,10 +72,26 @@ defmodule Tymeslot.Availability.BusinessHours do
         ) :: [owner_window()]
   def owner_windows(dates, schedule_id, owner_timezone, config) do
     Enum.flat_map(dates, fn date ->
-      case opening(date, schedule_id, config) do
-        %{} = window -> [resolve_window(date, window, schedule_id, owner_timezone, config)]
-        _closed -> []
-      end
+      regular =
+        case opening(date, schedule_id, config) do
+          %{} = window -> [resolve_window(date, window, schedule_id, owner_timezone, config)]
+          _closed -> []
+        end
+
+      regular ++ extra_windows(date, schedule_id, owner_timezone, config)
+    end)
+  end
+
+  defp extra_windows(_date, nil, _owner_timezone, _config), do: []
+
+  defp extra_windows(date, schedule_id, owner_timezone, config) do
+    date
+    |> ExtraAvailability.windows_on(schedule_id, config)
+    |> Enum.map(&window_of/1)
+    |> Enum.filter(&Window.valid?(&1.start_time, &1.end_time, &1.ends_next_day))
+    |> Enum.map(fn window ->
+      {start_dt, end_dt} = Window.resolve(window, date, owner_timezone)
+      %{date: date, start_dt: start_dt, end_dt: end_dt, breaks: [], extra: true}
     end)
   end
 
@@ -224,8 +247,13 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   # Data lookup — uses preloaded collections when available, falls back to DB queries
 
+  # Extra times add to a date rather than replace its hours, and a date may
+  # hold several; they are read by `extra_windows/4` instead.
   defp lookup_override(date, schedule_id, %{overrides: overrides}) when is_list(overrides) do
-    Enum.find(overrides, &(&1.date == date and &1.schedule_id == schedule_id))
+    Enum.find(
+      overrides,
+      &(&1.date == date and &1.schedule_id == schedule_id and &1.override_type != "extra_hours")
+    )
   end
 
   defp lookup_override(date, schedule_id, _config) do

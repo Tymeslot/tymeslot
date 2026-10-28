@@ -41,10 +41,6 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       |> assign(hours_errors: %{}, refused_hours: %{})
       |> assign_new(:show_add_break_form, fn -> nil end)
       |> assign_new(:open_menu_day, fn -> nil end)
-      |> assign_new(:show_delete_break_modal, fn -> false end)
-      |> assign_new(:show_clear_day_modal, fn -> false end)
-      |> assign_new(:delete_break_modal_data, fn -> nil end)
-      |> assign_new(:clear_day_modal_data, fn -> nil end)
 
     {:ok, socket}
   end

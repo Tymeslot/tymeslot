@@ -82,11 +82,10 @@
   }
 
   /* Select Dropdowns */
+  /* The chevron is an `<.icon>` overlaid by `<.input type="select">`; bg-none
+     drops the one the forms plugin paints on every select. */
   select.input {
-    @apply cursor-pointer pr-10 bg-no-repeat transition-all;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 1rem center;
-    background-size: 1.25rem;
+    @apply cursor-pointer pr-10 bg-none transition-all;
   }
 
   /* Range slider — dark background variant (used on marketing calculator) */

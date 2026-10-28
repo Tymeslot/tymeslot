@@ -121,17 +121,26 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
   def valid_email?(_other), do: false
 
   @doc """
-  Logs one `:error` when admin alerts are enabled but no valid recipient is
-  configured, so that every alert email would be dropped. Logs nothing
-  otherwise. Never raises.
+  Checks the admin alert configuration and logs what would stop alerts
+  arriving. Never raises.
 
-  Called at boot, once DB-backed settings have been applied, and after each
-  admin settings save.
+    * Logs one `:error` when admin alerts are enabled but no valid recipient
+      is configured, so that every alert email would be dropped.
+    * Logs one `:warning` when the recipient is also the email from address or
+      the contact recipient: a mail provider suppressing that address would
+      then block the alert that reports the suppression.
+
+  Logs nothing otherwise. Called at boot, once DB-backed settings have been
+  applied, and after each admin settings save.
   """
   @spec check_config() :: :ok
   def check_config do
-    if enabled?() and not valid_email?(recipient()) do
-      log_missing_recipient()
+    recipient = recipient()
+
+    cond do
+      not enabled?() -> :ok
+      not valid_email?(recipient) -> log_missing_recipient()
+      true -> warn_if_shared(recipient)
     end
 
     :ok
@@ -151,6 +160,35 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
       metadata
     )
   end
+
+  defp warn_if_shared(recipient) do
+    case shared_roles(recipient) do
+      [] -> :ok
+      roles -> log_shared_recipient(roles)
+    end
+  end
+
+  defp log_shared_recipient(roles) do
+    Logger.warning(
+      "The admin alert recipient is also the #{Enum.join(roles, " and the ")}, so a mail " <>
+        "provider suppressing that address would also block the alert reporting it: set " <>
+        "ADMIN_ALERT_EMAIL to a mailbox on a different domain and mail provider"
+    )
+  end
+
+  # The other jobs the alert recipient's address does, as named in the warning.
+  defp shared_roles(recipient) do
+    email_config = Application.get_env(:tymeslot, :email, [])
+
+    [from_email: "email from address", contact_recipient: "contact recipient"]
+    |> Enum.filter(fn {key, _role} -> same_address?(recipient, email_config[key]) end)
+    |> Enum.map(fn {_key, role} -> role end)
+  end
+
+  defp same_address?(a, b) when is_binary(b), do: normalise_address(a) == normalise_address(b)
+  defp same_address?(_a, _b), do: false
+
+  defp normalise_address(address), do: address |> String.trim() |> String.downcase()
 
   @doc """
   Whether admin alert emails are switched on (`:admin_alerts_enabled`).

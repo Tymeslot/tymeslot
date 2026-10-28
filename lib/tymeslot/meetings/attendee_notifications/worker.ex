@@ -23,6 +23,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   inside a `Repo.transaction/1` so a failing step rolls back and the next
   Oban retry sees the same starting state.
 
+  ## Changes saved to sync later
+
+  An edit made while a CalDAV server could not be reached is saved on the
+  cached row and replayed on a later sync. Until that replay succeeds the
+  job does not run: it snoozes (`ReplayWait`), so the attendees hear about
+  the change once the calendar holds it, and hear about it once, diffed
+  against the baseline as usual, however many edits were saved meanwhile.
+
   ## Deletes
 
   Only updates come through here. A deleted event has no row left to re-read,
@@ -45,6 +53,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
+  alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
   alias Tymeslot.Repo
 
   require Logger
@@ -60,9 +69,22 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     :ok
   end
 
-  def perform(%Oban.Job{args: %{"event_id" => id, "kind" => kind, "action" => action}}) do
-    txn_result = Repo.transaction(fn -> do_run(id, kind, action) end)
-    handle_result(txn_result, id, kind, action)
+  def perform(%Oban.Job{args: %{"event_id" => id, "kind" => kind, "action" => action}} = job) do
+    if awaiting_replay?(id, kind) do
+      ReplayWait.wait(job)
+    else
+      txn_result = Repo.transaction(fn -> do_run(id, kind, action) end)
+      handle_result(txn_result, id, kind, action)
+    end
+  end
+
+  # See "Changes saved to sync later" in the moduledoc. A missing event is
+  # left to `run/3`, which reports it.
+  defp awaiting_replay?(id, kind) do
+    case load_event(id, kind) do
+      {:ok, event} -> ReplayWait.awaiting_replay?(event)
+      {:error, :not_found} -> false
+    end
   end
 
   defp do_run(id, kind, action) do

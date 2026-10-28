@@ -147,19 +147,10 @@ defmodule TymeslotWeb.Layouts do
     ~H"""
     <noscript>
       <div style="position: fixed; top: 0; left: 0; width: 100%; z-index: 999999; background: #be123c; color: white; padding: 12px 24px; text-align: center; font-family: system-ui, -apple-system, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-        <svg
+        <.icon
+          name="hero-exclamation-triangle"
           style="width: 20px; height: 20px; flex-shrink: 0; color: #fecdd3;"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
+        />
         <span style="font-weight: 500; font-size: 14px; line-height: 1.4;">
           <strong style="text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em; margin-right: 8px; color: #fecdd3;">
             {dgettext("common", "JavaScript Disabled")}

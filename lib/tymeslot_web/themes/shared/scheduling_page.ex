@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       journey={assigns[:journey]}
       organizer_user_id={@organizer_user_id}
       owner_preview={assigns[:owner_preview]}
+      refused_calendars={assigns[:refused_calendars] || []}
       should_show_branding={assigns[:should_show_branding]}
       {Map.take(assigns, [:demo_mode])}
     >

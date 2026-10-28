@@ -95,6 +95,27 @@ defmodule Tymeslot.Integrations.Calendar do
       )
 
   @doc """
+  Whether the user's booking page can offer times, judged by their calendars:
+
+    * `:taking_bookings`: a writable calendar is connected and none refused.
+    * `{:credentials_refused, names}`: an active integration is flagged
+      `needs_reauth`. The availability read fails closed on a calendar it
+      cannot read, so the page offers no times until each is reconnected;
+      not every flag stops the read, so the copy says it *may*.
+    * `:no_calendar`: nothing a booking can be written to is connected.
+
+  Poll creation gates on `has_bookable_integration?/1` instead, on purpose.
+  """
+  @spec booking_page_health(user_id()) ::
+          :taking_bookings | :no_calendar | {:credentials_refused, [String.t()]}
+  def booking_page_health(user_id) when is_integer(user_id) do
+    case CalendarIntegrationQueries.active_needing_reauth_names(user_id) do
+      [] -> if has_bookable_integration?(user_id), do: :taking_bookings, else: :no_calendar
+      names -> {:credentials_refused, names}
+    end
+  end
+
+  @doc """
   Lists calendar integrations for a user and annotates the primary one.
   """
   @spec list_integrations(user_id()) :: [integration()]
@@ -439,10 +460,9 @@ defmodule Tymeslot.Integrations.Calendar do
   Discovers fresh calendars from the provider and updates the database.
   Sends {:calendar_list_refreshed, component_id, integration_id, calendars} back to the caller.
   """
-  @spec refresh_calendar_list_async(integration_id(), user_id(), String.t()) :: {:ok, pid()}
-  def refresh_calendar_list_async(integration_id, user_id, component_id) do
-    Workflows.refresh_calendar_list_async(integration_id, user_id, component_id)
-  end
+  @spec refresh_calendar_list_async(integration_id(), user_id(), String.t()) ::
+          DynamicSupervisor.on_start_child()
+  defdelegate refresh_calendar_list_async(integration_id, user_id, component_id), to: Workflows
 
   @doc """
   Starts a Google or Outlook calendar OAuth flow and returns the

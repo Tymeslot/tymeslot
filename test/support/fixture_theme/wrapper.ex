@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
   attr :should_show_branding, :boolean, default: false
   attr :show_language_switcher, :boolean, default: nil
   attr :owner_preview, :boolean, default: false
+  attr :refused_calendars, :list, default: []
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
   slot :inner_block, required: true
 
@@ -49,6 +50,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
         language_dropdown_open={@language_dropdown_open}
         show_language_switcher={@show_language_switcher}
         owner_preview={@owner_preview}
+        refused_calendars={@refused_calendars}
       />
       <img :if={@cover} src={@cover.src} alt="" data-testid="theme-cover" />
       <img :if={@logo} src={@logo.src} alt="" data-testid="theme-logo" />

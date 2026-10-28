@@ -27,6 +27,7 @@ msgid "%{day} hours updated"
 msgstr "Zeiten für %{day} aktualisiert"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Hinzufügen"
@@ -120,6 +121,7 @@ msgid "Failed to update availability"
 msgstr "Verfügbarkeit konnte nicht aktualisiert werden"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "Von"
@@ -558,11 +560,6 @@ msgstr "Buchungen am %{day} deaktivieren"
 msgid "Take bookings on %{day}"
 msgstr "Buchungen am %{day} aktivieren"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule duplicated. Its date overrides were not copied."
-msgstr "Zeitplan dupliziert. Seine Datumsausnahmen wurden nicht kopiert."
-
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "Used by %{meeting_types}, and by every meeting type that has no schedule of its own."
@@ -876,6 +873,81 @@ msgstr "Pause löschen"
 #, elixir-autogen, elixir-format
 msgid "Delete schedule"
 msgstr "Zeitplan löschen"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{from}–%{to}"
+msgstr "%{from}–%{to}"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "A schedule can hold up to %{count} extra times."
+msgstr "Ein Zeitplan kann bis zu %{count} zusätzliche Zeiten enthalten."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Datum"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Dates you can be booked besides your weekly hours, such as office hours once a month. With every weekday switched off, only these are offered. They apply to the meeting types using this schedule; past dates are removed automatically."
+msgstr "Tage, an denen Sie zusätzlich zu Ihren wöchentlichen Zeiten gebucht werden können, etwa eine Sprechstunde einmal im Monat. Sind alle Wochentage ausgeschaltet, werden nur diese angeboten. Sie gelten für die Termintypen mit diesem Zeitplan; vergangene Tage werden automatisch entfernt."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a date, a from and a to time."
+msgstr "Geben Sie ein Datum, eine Von- und eine Bis-Zeit ein."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a from time before the to time."
+msgstr "Die Von-Zeit muss vor der Bis-Zeit liegen."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra available times"
+msgstr "Zusätzliche Verfügbarkeiten"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra time added"
+msgstr "Zusätzliche Zeit hinzugefügt"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Extra time removed"
+msgstr "Zusätzliche Zeit entfernt"
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "No extra times added."
+msgstr "Keine zusätzlichen Zeiten eingetragen."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "Remove this time"
+msgstr "Diese Zeit entfernen"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated. Its extra available times for specific dates were not copied."
+msgstr "Zeitplan dupliziert. Seine zusätzlichen Verfügbarkeiten an bestimmten Tagen wurden nicht übernommen."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "The date must be today or later."
+msgstr "Das Datum muss heute oder später sein."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "This time overlaps another extra time on that date."
+msgstr "Diese Zeit überschneidet sich mit einer anderen zusätzlichen Zeit an diesem Tag."
+
+#: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
+#, elixir-autogen, elixir-format
+msgid "To"
+msgstr "Bis"
 
 #: lib/tymeslot/availability/policy_validation.ex
 #, elixir-autogen, elixir-format

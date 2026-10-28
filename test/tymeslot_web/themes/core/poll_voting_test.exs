@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
   alias Ecto.UUID
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Voting
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Themes.Core.PollVoting
 
@@ -36,6 +37,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert socket.assigns.voting_open == true
       assert map_size(socket.assigns.tallies) == 1
       assert socket.assigns.participant == nil
+      refute socket.assigns.invalid_link
     end
 
     test "resolves the ?p= token to the poll's participant" do
@@ -46,6 +48,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => participant.token})
 
       assert socket.assigns.participant.id == participant.id
+      refute socket.assigns.invalid_link
     end
 
     test "ignores a token that belongs to a different poll" do
@@ -57,6 +60,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => other_participant.token})
 
       assert socket.assigns.participant == nil
+      assert socket.assigns.invalid_link
     end
 
     test "ignores an unknown token" do
@@ -66,10 +70,32 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => "does-not-exist"})
 
       assert socket.assigns.participant == nil
+      assert socket.assigns.invalid_link
     end
   end
 
   describe "handle_poll_event/3" do
+    test "register on an invite-only poll flashes where the link is and registers nobody" do
+      poll = insert(:poll, invite_only: true)
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+
+      client_ip = "invite-only-test-#{System.unique_integer([:positive])}"
+      socket = socket(%{poll: poll, participant: nil, client_ip: client_ip})
+
+      assert {:noreply, updated} =
+               PollVoting.handle_poll_event(
+                 "register_participant",
+                 %{"name" => "Mallory", "email" => "mallory@example.com"},
+                 socket
+               )
+
+      assert flash(updated, :error) =~ "personal link from your email"
+      # The socket helper's base assigns carry no `link_request`, so read
+      # it with the access syntax: a successful request would have set it.
+      assert updated.assigns[:link_request] == nil
+      assert Polls.count_unconfirmed(poll) == 0
+    end
+
     test "unknown event returns the socket unchanged" do
       socket = socket(%{poll: :sentinel})
 
@@ -91,7 +117,21 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
                PollVoting.handle_poll_event("cast_votes", %{"votes" => nil}, socket)
     end
 
-    test "cast_votes without a registered participant flashes and does not crash" do
+    test "cast_votes with nothing ticked asks for an answer and saves nothing" do
+      poll = insert(:poll)
+      insert(:poll_time_slot, poll: poll)
+      participant = insert(:poll_participant, poll: poll)
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+      socket = socket(%{poll: poll, participant: participant})
+
+      # A form with no answer ticked submits no `votes` key at all.
+      assert {:noreply, updated} = PollVoting.handle_poll_event("cast_votes", %{}, socket)
+
+      assert flash(updated, :error) =~ "Choose an answer for at least one time"
+      assert Repo.reload!(participant).voted_at == nil
+    end
+
+    test "cast_votes without a participant's link flashes and does not crash" do
       poll = insert(:poll)
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
       socket = socket(%{poll: poll, participant: nil})
@@ -99,13 +139,13 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert {:noreply, updated} =
                PollVoting.handle_poll_event("cast_votes", %{"votes" => %{}}, socket)
 
-      assert flash(updated, :error) =~ "register"
+      assert flash(updated, :error) =~ "personal voting link"
     end
 
-    test "cast_votes saves responses and reloads tallies for a registered participant" do
+    test "cast_votes saves responses and reloads tallies for a returning participant" do
       poll = insert(:poll)
       slot = insert(:poll_time_slot, poll: poll)
-      participant = insert(:poll_participant, poll: poll)
+      participant = insert(:poll_participant, poll: poll, voted_at: DateTime.utc_now(:second))
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
       socket = socket(%{poll: poll, participant: participant})
 

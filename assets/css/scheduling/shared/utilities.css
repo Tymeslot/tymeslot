@@ -16,6 +16,16 @@
   }
 }
 
+/* An icon set in a line of text (a button's arrow, a nav arrow): the size of
+   the text around it, sitting on its baseline like the glyph it replaced. */
+.inline-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
 /* Two-Tier Hour Picker: count badge on the hour toggle */
 .slot-list__hour-count {
   font-size: var(--theme-font-size-xs);

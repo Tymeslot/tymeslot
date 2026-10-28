@@ -275,7 +275,11 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   defp item_cta(assigns) do
     ~H"""
     <.action_link patch={@item.path} size={:sm} class={cta_class() <> " group"}>
-      {@item.cta} <span class="group-hover:translate-x-0.5 transition-transform">→</span>
+      {@item.cta}
+      <.icon
+        name="hero-arrow-right"
+        class="inline-block w-4 h-4 align-text-bottom group-hover:translate-x-0.5 transition-transform"
+      />
     </.action_link>
     """
   end
@@ -324,7 +328,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     [
       %{
         key: "calendar",
-        auto: :has_calendar,
+        auto: :calendar_ready,
         icon: "hero-calendar-days",
         title: dgettext("onboarding_wizard", "Connect a calendar"),
         description: dgettext("onboarding_wizard", "Sync to avoid double-bookings"),

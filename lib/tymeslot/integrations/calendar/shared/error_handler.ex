@@ -120,13 +120,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   # surface and the discovery path, which classifies rather than sanitises,
   # cannot describe the same failure differently.
   def sanitize_error_message(:tls_error, provider) do
-    ErrorMessages.specific_message(:tls_error, provider)
+    specific_message(:tls_error, provider)
   end
 
   # Discovery refuses a server address that is, or resolves to, a private one
   # with this reason; the owner has to know it was the address.
   def sanitize_error_message(:private_address, provider) do
-    ErrorMessages.specific_message(:private_address, provider)
+    specific_message(:private_address, provider)
   end
 
   def sanitize_error_message(:forbidden, :mailbox_org) do
@@ -187,11 +187,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   end
 
   def sanitize_error_message(:response_too_large, provider) do
-    ErrorMessages.specific_message(:response_too_large, provider)
+    specific_message(:response_too_large, provider)
   end
 
   def sanitize_error_message(:refused, provider) do
-    ErrorMessages.specific_message(:refused, provider)
+    specific_message(:refused, provider)
   end
 
   def sanitize_error_message(:network_error, _provider) do
@@ -320,5 +320,20 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   rescue
     exception ->
       {:error, classify_and_format(exception, provider, context)}
+  end
+
+  # Every reason sent here has its own copy in `ErrorMessages`, so the fallback
+  # is never reached; it keeps the result a string should one be removed there.
+  defp specific_message(reason, provider) do
+    case ErrorMessages.specific_message(reason, provider) do
+      nil ->
+        dgettext(
+          "integrations_calendar",
+          "An error occurred while communicating with the calendar service."
+        )
+
+      message ->
+        message
+    end
   end
 end

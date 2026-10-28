@@ -70,6 +70,6 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersAdHocTest do
              )
 
     assert Flash.get(updated.assigns.flash, :error) ==
-             "Failed to create appointment. Please try again."
+             "Failed to create meeting. Please try again."
   end
 end

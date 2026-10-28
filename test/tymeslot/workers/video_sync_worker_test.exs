@@ -49,7 +49,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   describe "perform/1 — update" do
     test "PATCHes the Zoom meeting with the meeting's current times" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -80,7 +80,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       on_exit(fn -> VideoCircuitBreaker.reset(:zoom) end)
 
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -102,7 +102,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       %{user: user} = create_user_with_profile()
 
       integration =
-        insert_zoom_integration(user)
+        insert(:zoom_video_integration, user: user)
         |> Changeset.change(%{
           oauth_scope: "meeting:write:meeting meeting:delete:meeting"
         })
@@ -126,7 +126,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
     test "discards instead of retrying when Zoom rejects the PATCH with 4711" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -160,7 +160,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   describe "perform/1 — delete" do
     test "DELETEs the Zoom meeting" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -181,7 +181,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
     test "treats a 404 as already-synced success" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -201,7 +201,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
     test "discards instead of retrying when the grant lacks the delete scope" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -235,7 +235,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       %{user: user} = create_user_with_profile()
       # The user disconnected Zoom and reconnected it: a fresh integration row
       # with valid credentials for the same provider.
-      insert_zoom_integration(user)
+      insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -257,7 +257,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
     test "updates through a reconnected integration on reschedule" do
       %{user: user} = create_user_with_profile()
-      insert_zoom_integration(user)
+      insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -319,7 +319,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   describe "perform/1 — room bookkeeping" do
     test "clears the room id and its join links once the provider delete succeeds" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -355,7 +355,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
     # would recreate it on the organiser's calendar.
     test "leaves a cancelled booking's calendar event alone" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -381,7 +381,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
     test "keeps the room id after an update so reschedules stay syncable" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -596,25 +596,6 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       })
 
     %{meeting: meeting, integration: integration}
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting",
-      provider_account_id: nil
-    )
   end
 
   # A refusal Talk itself worded: a 403 whose body is not the OCS envelope

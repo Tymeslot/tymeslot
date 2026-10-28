@@ -4,7 +4,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
 
   attr :integration, :map, required: true
@@ -53,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
       notice={notice(@status, @integration, @paused)}
       notice_tone={notice_tone(@status, @paused)}
     >
-      <:icon><IconComponents.icon name={:telegram} class="w-6 h-6" /></:icon>
+      <:icon><.icon name="brand-telegram" class="w-6 h-6" /></:icon>
       <:last_activity :if={@status != :pending_link && @integration.last_triggered_at}>
         {dgettext("dashboard_automation_chat", "Last triggered: %{time}",
           time: AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format)

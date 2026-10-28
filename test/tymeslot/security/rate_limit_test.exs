@@ -175,5 +175,126 @@ defmodule Tymeslot.Security.RateLimitTest do
     end
   end
 
+  describe "take/3" do
+    test "charges every hit at once when they fit", %{key: key, t0: t0} do
+      assert RateLimit.take([{key, 60_000, 5}], 3, t0) == :ok
+      assert RateLimit.get(key, 60_000) == 3
+    end
+
+    test "fills a bucket to exactly its limit, and refuses one more", %{key: key, t0: t0} do
+      assert RateLimit.take([{key, 60_000, 5}], 5, t0) == :ok
+      assert RateLimit.take([{key, 60_000, 5}], 1, t0) == {:deny, 0}
+      assert RateLimit.get(key, 60_000) == 5
+    end
+
+    test "refuses whole and charges nothing when they do not all fit", %{key: key, t0: t0} do
+      :ok = RateLimit.take([{key, 60_000, 5}], 3, t0)
+
+      assert RateLimit.take([{key, 60_000, 5}], 3, t0) == {:deny, 2}
+      assert RateLimit.get(key, 60_000) == 3
+    end
+
+    test "a refused take leaves every bucket as it was", %{key: key, t0: t0} do
+      other = key <> ":day"
+      buckets = [{key, 60_000, 5}, {other, 86_400_000, 2}]
+      :ok = RateLimit.take(buckets, 1, t0)
+      rows_before = {RateLimit.entries(key), RateLimit.entries(other)}
+
+      assert RateLimit.take(buckets, 2, t0) == {:deny, 1}
+
+      assert RateLimit.available(buckets, t0) == 1
+      assert {RateLimit.entries(key), RateLimit.entries(other)} == rows_before
+    end
+
+    test "one full bucket refuses for all of them, naming the tightest room", %{
+      key: key,
+      t0: t0
+    } do
+      wide = key <> ":wide"
+      tight = key <> ":tight"
+      :ok = RateLimit.take([{tight, 60_000, 3}], 2, t0)
+
+      assert RateLimit.take([{wide, 60_000, 10}, {tight, 60_000, 3}], 2, t0) == {:deny, 1}
+      assert RateLimit.get(wide, 60_000) == 0
+      assert RateLimit.get(tight, 60_000) == 2
+    end
+
+    test "taking nothing charges nothing", %{key: key, t0: t0} do
+      assert RateLimit.take([{key, 60_000, 5}], 0, t0) == :ok
+      assert RateLimit.get(key, 60_000) == 0
+    end
+
+    test "hits taken stop counting one window later", %{key: key, t0: t0} do
+      :ok = RateLimit.take([{key, 1_000, 2}], 2, t0)
+
+      assert RateLimit.take([{key, 1_000, 2}], 1, t0 + @second - 1) == {:deny, 0}
+      assert RateLimit.take([{key, 1_000, 2}], 2, t0 + @second) == :ok
+    end
+
+    # Another take's rows landing between this take's check and its insert,
+    # staged without timing: the bucket is named twice, so the take's check
+    # sees room for one in each, and its own second row then plays the
+    # racer's, leaving the bucket over its limit once both are in.
+    test "a take that finds the bucket overfilled after its insert withdraws its rows", %{
+      key: key,
+      t0: t0
+    } do
+      :ok = RateLimit.take([{key, 60_000, 3}], 2, t0)
+
+      assert RateLimit.take([{key, 60_000, 3}, {key, 60_000, 3}], 1, t0) == {:deny, 0}
+      assert RateLimit.get(key, 60_000) == 2
+      assert RateLimit.take([{key, 60_000, 3}], 1, t0) == :ok
+    end
+
+    test "takers racing for the last unit never overfill the bucket", %{key: key, t0: t0} do
+      for round <- 1..25 do
+        bucket = {"#{key}:#{round}", 60_000, 1}
+        test_pid = self()
+
+        racers =
+          for _racer <- 1..8 do
+            spawn_link(fn ->
+              receive do
+                :go -> send(test_pid, {:took, self(), RateLimit.take([bucket], 1, t0)})
+              end
+            end)
+          end
+
+        Enum.each(racers, &send(&1, :go))
+
+        results =
+          for racer <- racers do
+            assert_receive {:took, ^racer, result}, 1_000
+            result
+          end
+
+        assert Enum.count(results, &(&1 == :ok)) <= 1
+        assert Enum.reject(results, &(&1 in [:ok, {:deny, 0}])) == []
+        assert RateLimit.get(elem(bucket, 0), 60_000) == Enum.count(results, &(&1 == :ok))
+      end
+    end
+  end
+
+  describe "available/2" do
+    test "is the room in the tightest bucket, and charges nothing", %{key: key, t0: t0} do
+      wide = key <> ":wide"
+      tight = key <> ":tight"
+      :ok = RateLimit.take([{tight, 60_000, 3}], 2, t0)
+
+      assert RateLimit.available([{wide, 60_000, 10}, {tight, 60_000, 3}], t0) == 1
+      assert RateLimit.get(wide, 60_000) == 0
+      assert RateLimit.get(tight, 60_000) == 2
+    end
+
+    test "is zero, not negative, for a bucket a flood pushed past its limit", %{
+      key: key,
+      t0: t0
+    } do
+      for _i <- 1..3, do: RateLimit.hit(key, 60_000, 1, t0)
+
+      assert RateLimit.available([{key, 60_000, 1}], t0) == 0
+    end
+  end
+
   defp now, do: RateLimit.now()
 end

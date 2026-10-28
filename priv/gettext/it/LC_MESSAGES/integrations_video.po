@@ -488,7 +488,7 @@ msgstr "Questo utente Nextcloud non può usare Talk. Nelle impostazioni di ammin
 #: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL redirects too many times"
-msgstr "L’URL reindirizza troppe volte"
+msgstr "L'URL reindirizza troppe volte"
 
 #: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format

@@ -815,7 +815,7 @@ msgstr "La password deve contenere almeno una lettera maiuscola"
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "If an account exists with this email address, password reset instructions have been sent."
-msgstr "Se esiste un account con questo indirizzo e-mail, le istruzioni per reimpostare la password sono state inviate."
+msgstr "Se esiste un account con questo indirizzo email, le istruzioni per reimpostare la password sono state inviate."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
@@ -967,3 +967,10 @@ msgstr "Indirizzo email"
 #, elixir-autogen, elixir-format
 msgid "%{provider} authentication failed - missing authorisation code or security token."
 msgstr "Autenticazione %{provider} non riuscita: codice di autorizzazione o token di sicurezza mancante."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "Ti diamo il bentornato. Il tuo account è stato ripristinato, ma l'integrazione %{names} va ricollegata. Finché non la ricolleghi, la tua pagina di prenotazione potrebbe non offrire fasce orarie né ricevere prenotazioni."
+msgstr[1] "Ti diamo il bentornato. Il tuo account è stato ripristinato, ma le integrazioni %{names} vanno ricollegate. Finché non le ricolleghi, la tua pagina di prenotazione potrebbe non offrire fasce orarie né ricevere prenotazioni."

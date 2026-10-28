@@ -106,9 +106,9 @@ defmodule Tymeslot.Emails.Shared.Styles.BrandPalette do
   """
   @spec family() :: family()
   def family do
-    case Branding.accent() do
+    case derive(Branding.accent()) do
+      %{} = family -> family
       nil -> Branding.stock_family()
-      seed -> derive(seed) || Branding.stock_family()
     end
   end
 

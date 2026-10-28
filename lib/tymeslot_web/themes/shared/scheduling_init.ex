@@ -80,6 +80,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign_new(:organizer_profile, fn -> nil end)
     |> assign_new(:organizer_user_id, fn -> nil end)
     |> assign(:selected_duration, nil)
+    # The length the booker picked when the meeting type offers several
+    # (`Tymeslot.MeetingTypes.Lengths`); nil means the type's own duration.
+    |> assign(:chosen_length_minutes, nil)
     |> assign(:selected_date, nil)
     |> assign(:selected_time, nil)
     |> assign(:available_slots, [])

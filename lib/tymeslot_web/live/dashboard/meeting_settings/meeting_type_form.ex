@@ -26,6 +26,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     GroupRules,
     GuestLimit,
     Init,
+    LengthsField,
+    LengthsHandlers,
     SessionHandlers,
     SlotIntervalField,
     Validation
@@ -45,6 +47,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - venues: the organiser's saved venues, for in-person locations
   # - parent_myself: phx-target for parent events (cancel, done, visibility)
   # - current_user: used for security metadata in validation
+
+  # The further lengths' events, all handled by `LengthsHandlers`.
+  @lengths_events LengthsHandlers.events()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -165,6 +170,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     socket = sync_slot_interval_mode(socket, params)
     params = drop_interval_mode_sentinel(params)
 
+    # An input-level change posts one further duration as `%{"<index>" => value}`;
+    # it is folded into the full list before merging, so the other entries
+    # survive.
+    params = LengthsField.fold_params(params, socket.assigns.form_data || %{})
+
     # Merge incoming params into existing form data to prevent wiping other fields
     new_data = Map.merge(socket.assigns.form_data || %{}, params)
 
@@ -195,6 +205,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(form_data: updated_data, form_errors: updated_errors)
      |> Autosave.maybe_run()}
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @lengths_events,
+    do: {:noreply, LengthsHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("select_icon", %{"icon" => icon}, socket) do

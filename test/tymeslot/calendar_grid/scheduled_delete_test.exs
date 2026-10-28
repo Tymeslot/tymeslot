@@ -249,6 +249,13 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
   end
 
   describe "running a delete directly" do
+    # A 404 counts as already gone only once no writable calendar of the
+    # account has the event (`Tymeslot.Integrations.Calendar.Events`).
+    setup do
+      stub(Tymeslot.CalendarMock, :fetch_event, fn _ref, _context -> {:error, :not_found} end)
+      :ok
+    end
+
     defp run_delete(user, event, attempt, opts \\ []) do
       meta = Keyword.get(opts, :meta, %{})
       scope = Keyword.get(opts, :scope, :occurrence)

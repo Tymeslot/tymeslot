@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   alias TymeslotWeb.CustomInputModeHelper
 
   alias TymeslotWeb.Dashboard.Availability.{
+    ExtraAvailabilityCard,
     ListComponent,
     PolicyCard,
     ScheduleSwitcher,
@@ -335,14 +336,15 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     end
   end
 
-  # A copy carries the hours, breaks and rules but not the date overrides, which
-  # name specific calendar days. Said only when the source actually had some, so
-  # the ordinary duplicate stays a one-word confirmation.
+  # A copy carries the hours, breaks and rules but not what names specific
+  # calendar days: the extra available times and any other date overrides.
+  # Said only when the source actually had some, so the ordinary duplicate
+  # stays a one-word confirmation.
   defp duplicate_message(source) do
     if Schedules.has_overrides?(source.id) do
       dgettext(
         "dashboard_availability",
-        "Schedule duplicated. Its date overrides were not copied."
+        "Schedule duplicated. Its extra available times for specific dates were not copied."
       )
     else
       dgettext("dashboard_availability", "Schedule duplicated")
@@ -512,6 +514,16 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
             form_errors={@form_errors}
             client_ip={@client_ip}
             user_agent={@user_agent}
+          />
+
+          <%!-- Inside the panel: the times belong to the selected schedule. --%>
+          <.live_component
+            :if={@selected_schedule}
+            module={ExtraAvailabilityCard}
+            id={"availability-extra-#{@selected_schedule.id}"}
+            schedule={@selected_schedule}
+            profile={@profile}
+            time_format={@time_format}
           />
 
           <PolicyCard.policy_card

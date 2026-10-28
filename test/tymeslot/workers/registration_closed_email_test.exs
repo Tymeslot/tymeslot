@@ -206,7 +206,10 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
           name: "Ada Lovelace",
           email: "ada@example.com",
           company: "Analytical Engines",
-          custom_field_answers: %{"diet" => "Vegetarian"}
+          custom_field_answers: %{"diet" => "Vegetarian"},
+          # Signed up first: sign-up times are kept to the second, so two
+          # inserted in the same second would list in either order.
+          inserted_at: DateTime.add(DateTime.utc_now(:second), -60)
         )
 
       Repo.insert!(%GuestSchema{

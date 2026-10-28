@@ -49,12 +49,24 @@ jobs:
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
-      - uses: actions/cache@v5
+      # Restore the cache verify.yml saves on every push to main, and never
+      # save one: a run that goes red skips the save, so a cache of this job's
+      # own was never written and every night started cold. A cold start
+      # recompiles mjml, whose precompiled NIF download from GitHub releases
+      # fails intermittently (`header_too_long` from :httpc), and that killed
+      # whole runs before a single test ran. The path list must match
+      # verify.yml's exactly: it is part of the cache version, so a different
+      # list never matches. restore-keys takes the newest entry for this
+      # lockfile whatever commit saved it.
+      - uses: actions/cache/restore@v5
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}
+            priv/plts
+          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}-
       - run: mix deps.get
       # One `mix test` per tag, so a failure names the suite that broke instead
       # of one opaque red step. `!cancelled()` keeps the later suites reporting

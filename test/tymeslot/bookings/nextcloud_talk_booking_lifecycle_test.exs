@@ -32,7 +32,6 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
@@ -70,7 +69,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "creates the conversation for a booking, moves it with a reschedule and deletes it on cancellation",
        %{user: user} do
     server = server("lifecycle")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     meeting_type = insert_meeting_type(user, integration, "Talk consultation")
     start_time = booking_start(3)
 
@@ -170,7 +169,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "a room job that stopped waiting before Nextcloud answered adopts that conversation on its retry",
        %{user: user} do
     server = server("late-answer")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     booked = book(user, integration, booking_start(3))
 
     # Nextcloud creates the conversation, but its answer never arrives in time.
@@ -192,7 +191,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "a conversation adopted after a reschedule moves its lobby to the booking's new start",
        %{user: user} do
     server = server("late-answer-moved")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     booked = book(user, integration, booking_start(3))
     made = create_without_answer(server)
 
@@ -234,7 +233,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     test "the daily clean-up settles a conversation a week after its meeting when Nextcloud #{outcome}",
          %{user: user} do
       server = server("cleanup-#{unquote(status)}")
-      integration = insert_talk_integration(user, server)
+      integration = insert(:talk_video_integration, user: user, base_url: server)
       meeting = book_with_conversation(user, integration, server)
 
       # A booking that took place: it ended eight days ago.
@@ -259,7 +258,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "the daily clean-up leaves the conversation of a meeting that ended within the week",
        %{user: user} do
     server = server("recent")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     meeting = book_with_conversation(user, integration, server)
     held = move_into_past(meeting, 6)
 
@@ -273,7 +272,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "a reschedule while Nextcloud throttles Tymeslot waits and then moves the conversation",
        %{user: user} do
     server = server("throttled")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     meeting = book_with_conversation(user, integration, server)
     new_start = DateTime.add(meeting.start_time, 1, :day)
 
@@ -307,7 +306,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "a reschedule the account may no longer apply is dropped without renaming",
        %{user: user} do
     server = server("forbidden")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     meeting = book_with_conversation(user, integration, server)
     new_start = DateTime.add(meeting.start_time, 1, :day)
 
@@ -330,7 +329,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "a refused app password stops every later request until the integration is reconnected, which deletes a cancelled booking's conversation",
        %{user: user} do
     server = server("refused")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     meeting = book_with_conversation(user, integration, server)
     new_start = DateTime.add(meeting.start_time, 1, :day)
 
@@ -381,7 +380,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   test "a reschedule made while the app password was refused reaches the conversation once the organiser reconnects",
        %{user: user} do
     server = server("reconnected")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     meeting = book_with_conversation(user, integration, server)
     new_start = DateTime.add(meeting.start_time, -1, :day)
 
@@ -625,21 +624,4 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   # Each test gets its own server, so no test's calls reach another test's
   # per-host circuit breaker.
   defp server(name), do: "https://#{name}.talk.example.com"
-
-  defp insert_talk_integration(user, server) do
-    insert(:video_integration,
-      user: user,
-      name: "Nextcloud Talk",
-      provider: "nextcloud_talk",
-      base_url: server,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: nil,
-      refresh_token_encrypted: nil,
-      client_id_encrypted: Encryption.encrypt(@login),
-      client_secret_encrypted: Encryption.encrypt(@app_password),
-      provider_account_id: server <> "||" <> @login
-    )
-  end
 end

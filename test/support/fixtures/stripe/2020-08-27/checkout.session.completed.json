@@ -1,0 +1,93 @@
+{
+  "id": "evt_1SfixtureCheckoutCompleted",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1757160000,
+  "data": {
+    "object": {
+      "id": "cs_test_a1SfixtureCheckoutSession",
+      "object": "checkout.session",
+      "after_expiration": null,
+      "allow_promotion_codes": true,
+      "amount_subtotal": 900,
+      "amount_total": 900,
+      "automatic_tax": {
+        "enabled": true,
+        "status": "complete"
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://tymeslot.app/dashboard/subscription?checkout=cancelled",
+      "client_reference_id": null,
+      "consent": null,
+      "consent_collection": null,
+      "created": 1757159700,
+      "currency": "eur",
+      "custom_text": {
+        "shipping_address": null,
+        "submit": null
+      },
+      "customer": "cus_fixtureCustomer",
+      "customer_creation": "always",
+      "customer_details": {
+        "address": {
+          "city": null,
+          "country": "DE",
+          "line1": null,
+          "line2": null,
+          "postal_code": null,
+          "state": null
+        },
+        "email": "customer@example.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": []
+      },
+      "customer_email": "customer@example.com",
+      "expires_at": 1757246100,
+      "invoice": "in_1SfixtureFirstInvoice",
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "product_identifier": "pro",
+        "user_id": "0"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_options": null,
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "paid",
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [],
+      "shipping_rate": null,
+      "status": "complete",
+      "submit_type": null,
+      "subscription": "sub_1SfixtureSubscription",
+      "success_url": "https://tymeslot.app/dashboard/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "url": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.completed"
+}

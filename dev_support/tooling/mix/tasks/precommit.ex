@@ -108,6 +108,11 @@ defmodule Mix.Tasks.Precommit do
     {"credo", ~w[credo --strict], :dev},
     {"sobelow", ~w[sobelow], :dev},
     {"deps.audit", ~w[deps.audit], :dev},
+    # mix_audit reads the advisory database frozen into its own release, so a
+    # newly published advisory stays invisible to it until mix_audit ships
+    # again. hex.audit asks the live Hex registry instead. Its answer changes
+    # without any file here changing, so `--affected` never runs it.
+    {"hex.audit", ~w[hex.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"workflows", ~w[actionlint], :dev},
     # The booking-theme CSS rules, colour literals included. Nothing else
@@ -145,26 +150,11 @@ defmodule Mix.Tasks.Precommit do
 
       Runner.run(narrowed.steps, fail_fast?,
         skipped: narrowed.skipped,
-        suite_plan: suite_plan(narrowed.suite)
+        suite_plan: CpuBudget.planner(narrowed.suite)
       )
     else
       if opts[:base], do: Mix.raise("--base only applies together with --affected")
-      Runner.run(@steps, fail_fast?, suite_plan: &CpuBudget.suite_plan/0)
+      Runner.run(@steps, fail_fast?, suite_plan: CpuBudget.planner(nil))
     end
   end
-
-  # A selection is partitioned like the full suite, since it can still be
-  # thousands of tests, but never into more partitions than it has files: `mix
-  # test --partitions` deals files out one per partition in turn, and a
-  # partition dealt none exits 1.
-  defp suite_plan(%{scope: :selection, files: files}) do
-    fn ->
-      case CpuBudget.suite_plan() do
-        %{partitions: count} = plan -> %{plan | partitions: min(count, length(files))}
-        nil -> nil
-      end
-    end
-  end
-
-  defp suite_plan(_suite), do: &CpuBudget.suite_plan/0
 end

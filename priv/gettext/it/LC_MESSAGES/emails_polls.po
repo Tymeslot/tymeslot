@@ -97,11 +97,15 @@ msgid "Voting closed"
 msgstr "Votazioni chiuse"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes"
 msgstr "Le votazioni si chiudono"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes:"
 msgstr "Le votazioni si chiudono:"
@@ -120,3 +124,281 @@ msgstr "Le votazioni su %{title} sono chiuse"
 #, elixir-autogen, elixir-format
 msgid "Your vote is needed"
 msgstr "Serve il tuo voto"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} is looking for a time for %{title}."
+msgstr "%{host} sta cercando un orario per %{title}."
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Change My Responses"
+msgstr "Modifica le mie risposte"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Change your responses:"
+msgstr "Modifica le tue risposte:"
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Didn't ask for this? Then you can ignore this email. Nothing is recorded unless the link is used."
+msgstr "Non l'hai richiesto? Puoi ignorare questa email. Non viene registrato nulla finché il link non viene usato."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Here is your link to vote on %{title} for %{host}. Your responses count once you save them through it."
+msgstr "Ecco il tuo link per votare su %{title} per %{host}. Le tue risposte vengono conteggiate non appena le salvi tramite questo link."
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "If need be"
+msgstr "Se necessario"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "No"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "No answer"
+msgstr "Nessuna risposta"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Poll"
+msgstr "Sondaggio"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks for voting"
+msgstr "Grazie per aver votato"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it."
+msgstr "Questo link è solo tuo: chiunque lo abbia può modificare le tue risposte, quindi non condividerlo."
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it. Keep this email to come back later."
+msgstr "Questo link è solo tuo: chiunque lo abbia può modificare le tue risposte, quindi non condividerlo. Conserva questa email per tornare più tardi."
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Vote Now"
+msgstr "Vota ora"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Vote here:"
+msgstr "Vota qui:"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Sì"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your email address is confirmed and your responses to %{title} count now. You can change them with the link below until voting closes."
+msgstr "Il tuo indirizzo email è confermato e le tue risposte a %{title} ora vengono conteggiate. Puoi modificarle con il link qui sotto fino alla chiusura delle votazioni."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your link to vote on \"%{title}\""
+msgstr "Il tuo link per votare su \"%{title}\""
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your link to vote on %{title}"
+msgstr "Il tuo link per votare su %{title}"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses"
+msgstr "Le tue risposte"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses to \"%{title}\""
+msgstr "Le tue risposte a \"%{title}\""
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses to %{title}"
+msgstr "Le tue risposte a %{title}"
+
+#: lib/tymeslot/emails/templates/poll_vote_receipt.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses to %{title} count now."
+msgstr "Le tue risposte a %{title} ora vengono conteggiate."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your voting link"
+msgstr "Il tuo link di voto"
+
+#: lib/tymeslot/emails/templates/poll_vote_digest.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} new response on %{title}"
+msgid_plural "%{count} new responses on %{title}"
+msgstr[0] "%{count} nuova risposta a %{title}"
+msgstr[1] "%{count} nuove risposte a %{title}"
+
+#: lib/tymeslot/emails/shared/poll_standings.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person has voted so far."
+msgid_plural "%{count} people have voted so far."
+msgstr[0] "Finora ha votato %{count} persona."
+msgstr[1] "Finora hanno votato %{count} persone."
+
+#: lib/tymeslot/emails/shared/poll_standings.ex
+#, elixir-autogen, elixir-format
+msgid "%{time}: %{yes} yes, %{if_need_be} if need be, %{no} no"
+msgstr "%{time}: Sì %{yes}, Se necessario %{if_need_be}, No %{no}"
+
+#: lib/tymeslot/emails/shared/poll_standings.ex
+#, elixir-autogen, elixir-format
+msgid "Current standings"
+msgstr "Situazione attuale"
+
+#: lib/tymeslot/emails/templates/poll_vote_digest.ex
+#, elixir-autogen, elixir-format
+msgid "New responses"
+msgstr "Nuove risposte"
+
+#: lib/tymeslot/emails/templates/poll_vote_digest.ex
+#, elixir-autogen, elixir-format
+msgid "New responses on \"%{title}\""
+msgstr "Nuove risposte a \"%{title}\""
+
+#: lib/tymeslot/emails/templates/poll_vote_digest.ex
+#, elixir-autogen, elixir-format
+msgid "Responses from: %{names}"
+msgstr "Risposte da: %{names}"
+
+#: lib/tymeslot/emails/templates/poll_vote_digest.ex
+#, elixir-autogen, elixir-format
+msgid "View Results"
+msgstr "Vedi i risultati"
+
+#: lib/tymeslot/emails/templates/poll_vote_digest.ex
+#, elixir-autogen, elixir-format
+msgid "View the results:"
+msgstr "Vedi i risultati:"
+
+#: lib/tymeslot/emails/templates/poll_vote_digest.ex
+#, elixir-autogen, elixir-format
+msgid "You get these updates, at most one every 15 minutes, because they are on for this poll. You can turn them off when you edit the poll."
+msgstr "Ricevi questi aggiornamenti, al massimo uno ogni 15 minuti, perché sono attivi per questo sondaggio. Puoi disattivarli modificando il sondaggio."
+
+#: lib/tymeslot/emails/shared/poll_standings.ex
+#, elixir-autogen, elixir-format
+msgid "most votes"
+msgstr "più voti"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} invites you to vote on \"%{title}\""
+msgstr "%{host} ti invita a votare su \"%{title}\""
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} would like to know which of these times suit you. Open your personal link, mark each time, and save."
+msgstr "%{host} vorrebbe sapere quali di questi orari ti vanno bene. Apri il tuo link personale, indica una risposta per ogni orario e salva."
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Help pick a time"
+msgstr "Aiuta a scegliere un orario"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the host"
+msgstr "Messaggio dell'organizzatore"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Proposed times"
+msgstr "Orari proposti"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} added times to the poll. Your earlier responses are kept; please answer the new times too."
+msgstr "%{host} ha aggiunto degli orari al sondaggio. Le tue risposte precedenti restano valide; rispondi anche ai nuovi orari."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} has been cancelled"
+msgstr "%{title} è stato annullato"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "Answer the New Times"
+msgstr "Rispondi ai nuovi orari"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times"
+msgstr "Nuovi orari"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times for %{title}"
+msgstr "Nuovi orari per %{title}"
+
+#: lib/tymeslot/emails/templates/poll_new_times.ex
+#, elixir-autogen, elixir-format
+msgid "New times to vote on in \"%{title}\""
+msgstr "Nuovi orari da votare in \"%{title}\""
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "No time will be picked."
+msgstr "Non verrà scelto alcun orario."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled"
+msgstr "Sondaggio annullato"
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "Poll cancelled: \"%{title}\""
+msgstr "Sondaggio annullato: \"%{title}\""
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses."
+msgstr "%{host} ha annullato il sondaggio %{title}, quindi non verrà fissato alcun incontro. Grazie per le tue risposte."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "If you have questions, just reply to this email; your reply goes straight to %{host}."
+msgstr "Per qualsiasi domanda, rispondi semplicemente a questa email: la risposta arriva direttamente a %{host}."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Didn't ask for this? Then you can ignore this email. Your saved responses stay as they are."
+msgstr "Non l'hai richiesto? Puoi ignorare questa email. Le risposte che hai salvato restano invariate."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
+msgstr "Ecco di nuovo il tuo link per votare su %{title} per %{host}. Le risposte che hai già salvato vengono conteggiate e puoi modificarle in qualsiasi momento tramite questo link."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
+msgstr "%{host} ha annullato il sondaggio %{title}, quindi non verrà fissato alcun incontro."

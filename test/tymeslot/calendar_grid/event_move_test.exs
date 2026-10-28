@@ -15,6 +15,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.CalendarGrid.Changes
@@ -48,35 +49,26 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     %{user: user, source: source, destination: destination}
   end
 
-  defp insert_event(integration, attrs \\ %{}) do
-    defaults = %{
-      calendar_integration: integration,
-      uid: "event-#{System.unique_integer([:positive])}",
-      summary: "Design review",
-      description: "Agenda\n\nJoin video call: https://video.example.com/room",
-      location: "Room 4",
-      provider: integration.provider,
-      provider_calendar_id: "/src/",
-      provider_event_id: "/src/design-review.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      attendees: @attendees,
-      reminders: @reminders,
-      colour: "tomato",
-      transparency: "transparent",
-      visibility: "private",
-      etag: "\"etag-1\"",
-      raw_ical: "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n",
-      video_link: "https://video.example.com/room",
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
-  end
+  @design_review %{
+    summary: "Design review",
+    description: "Agenda\n\nJoin video call: https://video.example.com/room",
+    location: "Room 4",
+    provider_calendar_id: "/src/",
+    provider_event_id: "/src/design-review.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z],
+    attendees: @attendees,
+    reminders: @reminders,
+    colour: "tomato",
+    transparency: "transparent",
+    visibility: "private",
+    etag: "\"etag-1\"",
+    raw_ical: "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n",
+    video_link: "https://video.example.com/room"
+  }
 
   defp insert_all_day_event(integration) do
-    insert_event(integration, %{
+    insert_event(integration, @design_review, %{
       all_day: true,
       start_at: nil,
       end_at: nil,
@@ -167,6 +159,9 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     assert integration_id == destination.id
     assert_received {:series_write, :put, put_url}
     assert put_url == "https://calendar.example.com/dest/home/#{uid}.ics"
+    # The series copied is somebody else's (`standup@example.com`), and the
+    # CalDAV sync reads ownership off the uid alone.
+    refute String.ends_with?(uid, "@tymeslot.com")
     assert_received {:series_write, :delete, "https://calendar.example.com/src/" <> _resource}
   end
 
@@ -180,7 +175,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
       expect_delete(:ok)
 
@@ -205,7 +200,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
       expect_delete(:ok)
 
@@ -247,7 +242,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       destination: destination
     } do
       video = insert(:video_integration, user: user)
-      event = insert_event(source, %{video_integration_id: video.id})
+      event = insert_event(source, @design_review, %{video_integration_id: video.id})
       expect_create(&created/1)
       expect_delete(:ok)
 
@@ -273,7 +268,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
       expect_delete(:ok)
 
@@ -306,7 +301,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         })
         |> Repo.update!()
 
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
       expect_delete(:ok)
 
@@ -326,7 +321,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         |> Changeset.change(%{calendar_paths: [], calendar_list: []})
         |> Repo.update!()
 
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
 
       assert {:error, :no_destination_calendar} = move(user, event, destination)
 
@@ -339,7 +334,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source
     } do
       google = insert(:calendar_integration, user: user, provider: "google")
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
 
       expect_create(fn _payload ->
         {:ok, CreatedEvent.from_provider_event(%{uid: "google-event-id"})}
@@ -360,7 +355,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
       expect_delete(:ok)
 
@@ -378,7 +373,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(fn _payload -> {:error, :server_error} end)
       refute_delete()
 
@@ -399,7 +394,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
       expect_delete({:error, :network_error})
 
@@ -417,7 +412,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
       expect_delete({:error, :unauthorized})
 
@@ -432,7 +427,13 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       destination: destination
     } do
       google = insert(:calendar_integration, user: user, provider: "google")
-      event = insert_event(google, %{provider_calendar_id: "primary", provider_event_id: "g-1"})
+
+      event =
+        insert_event(google, @design_review, %{
+          provider_calendar_id: "primary",
+          provider_event_id: "g-1"
+        })
+
       expect_create(&created/1)
       expect_delete({:error, :server_error})
 
@@ -458,7 +459,12 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         source: source,
         destination: destination
       } do
-        event = insert_event(source, Map.put(unquote(attrs), :raw_ical, @series_resource))
+        event =
+          insert_event(
+            source,
+            @design_review,
+            Map.put(unquote(attrs), :raw_ical, @series_resource)
+          )
 
         expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
           {:ok, CreatedEvent.new("never")}
@@ -597,7 +603,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source, %{all_day: true, start_at: nil, end_at: nil})
+      event = insert_event(source, @design_review, %{all_day: true, start_at: nil, end_at: nil})
 
       expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
         {:ok, CreatedEvent.new("never")}

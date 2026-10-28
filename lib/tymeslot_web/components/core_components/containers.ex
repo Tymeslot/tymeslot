@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
 
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
-  alias TymeslotWeb.Components.Icons.IconComponents
 
   # ========== CARDS & CONTAINERS ==========
 
@@ -172,12 +171,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   Renders a glass-morphism card container.
   """
   attr :class, :string, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   @spec glass_morphism_card(map()) :: Phoenix.LiveView.Rendered.t()
   def glass_morphism_card(assigns) do
     ~H"""
-    <div class={["glass-morphism-card", @class]}>
+    <div class={["glass-morphism-card", @class]} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -205,17 +205,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
 
   @doc """
   Renders an icon badge with gradient background.
-
-  Accepts either a `hero-…` icon name via the `icon` attribute, rendered
-  through `<.icon>`, or raw SVG child markup (e.g. `<path>`) via the default
-  slot, drawn inside the badge's own `<svg>` wrapper. `<.icon>` renders a
-  complete `<svg>` of its own, so it must never be passed as slot content —
-  that nests one `<svg>` inside another.
   """
   attr :size, :atom, default: :medium, values: [:small, :medium, :large]
-  attr :icon, :string, default: nil, doc: "A `hero-…` icon name, rendered via `<.icon>`"
+  attr :icon, :string, required: true, doc: "An icon name, rendered via `<.icon>`"
   attr :class, :string, default: ""
-  slot :inner_block, doc: "Raw SVG children (e.g. `<path>`), used when `icon` is not given"
 
   @spec icon_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def icon_badge(assigns) do
@@ -240,17 +233,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
       "mx-auto flex items-center justify-center #{@size_classes} rounded-token-3xl mb-6 bg-linear-to-br from-turquoise-600 to-cyan-600 shadow-xl shadow-turquoise-500/20 border-4 border-white transform transition-transform hover:scale-110",
       @class
     ]}>
-      <Icons.icon :if={@icon} name={@icon} class={"#{@icon_size} text-white"} />
-      <svg
-        :if={!@icon}
-        class={"#{@icon_size} text-white"}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        stroke-width="2.5"
-      >
-        {render_slot(@inner_block)}
-      </svg>
+      <Icons.icon name={@icon} class={"#{@icon_size} text-white"} />
     </div>
     """
   end
@@ -286,9 +269,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   The saving indicator sits in a status region that is always rendered, so a
   screen reader announces "Saving changes..." when it appears.
   """
-  attr :icon, :any,
-    default: nil,
-    doc: "A `hero-…` icon name (string) or a brand-mark atom (e.g. `:webhook`)"
+  attr :icon, :string, default: nil, doc: "An icon name for `<.icon>`"
 
   attr :title, :string, default: nil
   attr :count, :integer, default: nil
@@ -342,20 +323,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     """
   end
 
-  # Hero icons arrive as `hero-…` strings; the few brand marks with no Heroicon
-  # equivalent (e.g. `:webhook`) arrive as atoms.
-  attr :icon, :any, required: true
+  attr :icon, :string, required: true
   attr :class, :string, required: true
-
-  defp section_icon(%{icon: icon} = assigns) when is_binary(icon) do
-    ~H"""
-    <Icons.icon name={@icon} class={@class} />
-    """
-  end
 
   defp section_icon(assigns) do
     ~H"""
-    <IconComponents.icon name={@icon} class={@class} />
+    <Icons.icon name={@icon} class={@class} />
     """
   end
 

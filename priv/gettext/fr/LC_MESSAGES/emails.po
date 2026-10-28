@@ -541,3 +541,13 @@ msgstr "Durée :"
 #, elixir-autogen, elixir-format
 msgid "Scheduled with %{brand}: %{url}"
 msgstr "Planifié avec %{brand} : %{url}"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "GUESTS:"
+msgstr "INVITÉS :"
+
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Invités"

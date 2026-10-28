@@ -26,6 +26,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   # delivery failures are recorded.
   @gone "User or integration not found"
   @reauth_resolved "Integration no longer needs reauth"
+  @deletion_pending "Account pending deletion"
   @room_error_cleared "Room creation error no longer recorded"
   @user_gone "User not found"
   @event_gone "Event or user not found"
@@ -42,6 +43,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
       reason in [
         @gone,
         @reauth_resolved,
+        @deletion_pending,
         @room_error_cleared,
         @user_gone,
         @event_gone,
@@ -119,6 +121,20 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     )
 
     {:discard, @reauth_resolved}
+  end
+
+  # A refusal while the account waits to be deleted is often the owner
+  # revoking access on their way out, and every path that flags (a sync, a
+  # webhook, the token refresh) ends here. A restore lands on the fix instead
+  # (`AccountRestoreController`), so nothing is lost by staying quiet.
+  defp send_reauth_notification(%{deletion_scheduled_at: %DateTime{}} = user, integration, type) do
+    Logger.info("Account pending deletion, discarding reauth notification",
+      user_id: user.id,
+      integration_id: integration.id,
+      type: type
+    )
+
+    {:discard, @deletion_pending}
   end
 
   defp send_reauth_notification(user, integration, integration_type) do
@@ -350,7 +366,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   # separately (`DeliveryClaims`): a job the Oban lifeline rescues part-way
   # through re-mails nobody it already reached.
   @spec handle_event_update_notification(%{String.t() => term()}, DeliveryClaims.job_id()) ::
-          :ok | {:error, term()} | {:discard, String.t()}
+          :ok | {:discard, String.t()}
   def handle_event_update_notification(
         %{"event_uid" => event_uid, "integration_id" => integration_id} = args,
         job_id

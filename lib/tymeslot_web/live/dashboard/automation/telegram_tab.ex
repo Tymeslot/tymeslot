@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.TelegramCard
 
   attr :integrations, :list, required: true
@@ -90,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
           )
         }
       >
-        <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+        <:graphic><.icon name="brand-telegram" class="w-10 h-10" /></:graphic>
         <:action>
           <.action_button
             disabled={@paused}

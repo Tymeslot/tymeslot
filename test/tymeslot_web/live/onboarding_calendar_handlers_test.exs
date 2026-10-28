@@ -194,6 +194,35 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
 
       refute url =~ "login_hint="
     end
+
+    # This host skipped the calendar, so the way back runs through the theme
+    # step they have not seen.
+    test "returns a host who came from the share step to it", %{conn: conn} do
+      original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
+
+      Application.put_env(
+        :tymeslot,
+        :google_calendar_oauth_helper,
+        TymeslotWeb.OnboardingLive.CalendarHandlersTest.GoogleHelperHintStub
+      )
+
+      on_exit(fn ->
+        if original do
+          Application.put_env(:tymeslot, :google_calendar_oauth_helper, original)
+        else
+          Application.delete_env(:tymeslot, :google_calendar_oauth_helper)
+        end
+      end)
+
+      {conn, _user} = onboarding_conn(conn)
+      {:ok, view, _html} = live(conn, "/onboarding/ready")
+      view |> element("#onboarding-return-to-calendar") |> render_click()
+
+      assert {:error, {:redirect, %{to: url}}} = continue_with_google(view)
+
+      assert URI.decode_query(URI.parse(url).query)["return_to"] ==
+               "/onboarding/connect_calendar?return=theme"
+    end
   end
 
   describe "featured Google card" do

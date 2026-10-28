@@ -117,6 +117,9 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   def handle_info({:poll_updated, _poll_id} = msg, socket),
     do: PollVoting.handle_poll_info(msg, socket)
 
+  def handle_info({:poll_deadline_reached, _poll_id} = msg, socket),
+    do: PollVoting.handle_poll_info(msg, socket)
+
   def handle_info(msg, socket) do
     theme_id = socket.assigns[:theme_id] || Registry.default_theme_id()
     delegate_to_theme(theme_id, :handle_info, [msg, socket])
@@ -289,7 +292,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     <div class="min-h-screen bg-tymeslot-100 flex items-center justify-center">
       <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
         <div class="text-center">
-          <div class="text-red-500 text-6xl mb-4">⚠️</div>
+          <.icon name="hero-exclamation-triangle" class="w-16 h-16 mx-auto mb-4 text-red-500" />
           <h1 class="theme-error-title text-xl font-bold text-tymeslot-900 mb-2">
             {dgettext("booking", "Something went wrong")}
           </h1>

@@ -89,6 +89,37 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequiredTest do
     end
   end
 
+  # A calendar the availability read cannot reach empties the booking page,
+  # which is the cost the owner most needs to hear; a video integration does
+  # not, so its email must not claim it.
+  describe "what a refused calendar costs" do
+    test "an iCloud calendar's email names the likely cause and says the booking page offers no times" do
+      calendar =
+        integration(
+          provider: "apple",
+          sync_error:
+            "iCloud refused the stored app-specific password. It was most likely revoked, or your Apple ID password was changed, which revokes every app-specific password. Generate a new one and reconnect."
+        )
+
+      text = IntegrationReauthRequired.render(@user, calendar, :calendar).text_body
+
+      assert text =~ "your Apple ID password was changed"
+      assert text =~ "Until then your booking page may not offer times or take bookings"
+    end
+
+    test "a calendar subscription's email says the booking page offers no times" do
+      text = IntegrationReauthRequired.render(@user, ics_integration(), :calendar).text_body
+
+      assert text =~ "Until then your booking page may not offer times or take bookings"
+    end
+
+    test "a video integration's email does not mention the booking page" do
+      text = IntegrationReauthRequired.render(@user, integration(), :video).text_body
+
+      refute text =~ "booking page"
+    end
+  end
+
   describe "render/3 for a calendar subscription" do
     test "asks the owner to remove the subscription and subscribe again, since its row has no Reconnect button" do
       html = IntegrationReauthRequired.render(@user, ics_integration(), :calendar).html_body

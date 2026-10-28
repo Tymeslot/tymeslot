@@ -1,5 +1,7 @@
 /* ==========================================================================
-   Preview notice: the "bookings made here are simulated" banner
+   Preview notice: the "bookings made here are simulated" banner, and the
+   organiser's refused-calendar notice (CalendarRefusedNotice), which shares
+   its look and adds a Reconnect link
 
    Matches the shared component (TymeslotWeb.Themes.Shared.Components.
    PreviewNotice), which renders unconditionally in the theme wrapper and is
@@ -41,4 +43,10 @@
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
+}
+
+.preview-notice-link {
+  color: inherit;
+  text-decoration: underline;
+  white-space: nowrap;
 }

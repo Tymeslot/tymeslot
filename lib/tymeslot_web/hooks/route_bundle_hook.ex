@@ -41,11 +41,9 @@ defmodule TymeslotWeb.Hooks.RouteBundleHook do
   # bundle wired into the case below is validated against the allowlist
   # automatically. OTP 28's dialyzer flags the resulting never-true comparisons as
   # `:exact_compare`; the redundancy is intentional defence-in-depth, so the
-  # allowlist must not be narrowed to silence it. dialyxir 1.4.7 cannot pretty-print
-  # the `:exact_compare` subtype nor filter it via .dialyzer_ignore.exs, so we
-  # suppress it at the engine level here.
+  # allowlist must not be narrowed to silence it. The warning is filtered in
+  # .dialyzer_ignore.exs.
   @allowed_bundles ~w(auth dashboard public)
-  @dialyzer {:nowarn_function, determine_bundle: 1}
   defp determine_bundle(view_module) do
     bundle =
       case view_module do

@@ -4,7 +4,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
   notifications.
 
   The only module in the codebase permitted to enqueue
-  `Tymeslot.Meetings.AttendeeNotifications.Worker` jobs. Every call site that
+  `Tymeslot.Meetings.AttendeeNotifications.Worker` jobs, and the
+  `MembershipWorker` jobs that hold a change of who attends until a change
+  saved to sync later has reached the calendar. Every call site that
   wants to notify attendees of a change goes through `schedule_update/2`;
   repeated calls within the debounce window replace the scheduled job's
   `scheduled_at` so a burst of edits collapses into one notification per
@@ -30,6 +32,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
   """
 
   alias Tymeslot.Meetings.AttendeeNotifications.DispatcherQueries
+  alias Tymeslot.Meetings.AttendeeNotifications.MembershipWorker
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
 
   @debounce_seconds 120
@@ -53,6 +56,42 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
              keys: [:event_id, :kind, :action]
            ],
            replace: [scheduled: [:scheduled_at]]
+         )
+         |> Oban.insert() do
+      {:ok, _job} -> {:ok, :scheduled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Holds the emails of a change of who attends the event `uid` of the
+  integration `integration_id` until the change saved to sync later has
+  reached the calendar (see `MembershipWorker`). `attendees_before` is who
+  attended before it, and the invitations and cancellations are worked out
+  from them and the event as the replay left it.
+
+  One job per event: a later change saved before the replay joins the
+  waiting job, which keeps the attendees from before the first, so that the
+  emails tell the guests about every saved change at once.
+  """
+  @spec schedule_membership(integer, String.t(), [map], pos_integer) ::
+          {:ok, :scheduled} | {:error, term}
+  def schedule_membership(integration_id, uid, attendees_before, owner_user_id)
+      when is_integer(integration_id) and is_binary(uid) do
+    args = %{
+      "calendar_integration_id" => integration_id,
+      "uid" => uid,
+      "attendees_before" => attendees_before,
+      "owner_user_id" => owner_user_id
+    }
+
+    case args
+         |> MembershipWorker.new(
+           unique: [
+             period: :infinity,
+             states: [:available, :scheduled, :retryable],
+             keys: [:calendar_integration_id, :uid]
+           ]
          )
          |> Oban.insert() do
       {:ok, _job} -> {:ok, :scheduled}

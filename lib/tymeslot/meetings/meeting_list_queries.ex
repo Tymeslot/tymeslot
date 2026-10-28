@@ -82,7 +82,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp live_participants_preload do
     from(p in ParticipantSchema,
       where: is_nil(p.cancelled_at),
-      order_by: [asc: p.inserted_at]
+      order_by: [asc: p.inserted_at, asc: p.id]
     )
   end
 
@@ -288,9 +288,15 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   """
   @spec preload_live_participants(Meeting.t()) :: Meeting.t()
   @spec preload_live_participants([Meeting.t()]) :: [Meeting.t()]
-  def preload_live_participants(meeting_or_meetings),
-    do:
+  def preload_live_participants(meeting_or_meetings) do
+    preloaded =
       Repo.preload(meeting_or_meetings, [participants: live_participants_preload()], force: true)
+
+    # Matched to rule out the `nil` that `Repo.preload/3` returns for a `nil`.
+    case preloaded do
+      loaded when is_list(loaded) or is_struct(loaded, Meeting) -> loaded
+    end
+  end
 
   @doc """
   Like `preload_live_participants/1`, with the guests whose invitation still
@@ -476,7 +482,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
       join: m in Meeting,
       on: m.id == p.meeting_id,
       where: is_nil(p.cancelled_at) or m.status == "cancelled",
-      order_by: [asc: p.inserted_at]
+      order_by: [asc: p.inserted_at, asc: p.id]
     )
   end
 end

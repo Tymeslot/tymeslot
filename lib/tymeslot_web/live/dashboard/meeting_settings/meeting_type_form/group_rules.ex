@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
   group bookings on, and how the form explains it.
 
   The rules themselves belong to the domain: the meeting-type changeset
-  refuses a group type that requires payment or approval or whose location
-  is not fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`), and
+  refuses a group type that requires payment or approval, offers more than
+  one length, or whose location is not fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`), and
   `Tymeslot.MeetingTypes.FormValidation` refuses enabling group bookings
   without plan access. This module asks the same questions of the form's
   unsaved state, so the toggle can be disabled with a reason instead of
@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
 
   @typedoc "Why group bookings cannot be turned on right now."
   @type blocker ::
-          :plan | :payment | :approval | {:location, GroupLocationRule.reason()}
+          :plan | :payment | :approval | :lengths | {:location, GroupLocationRule.reason()}
 
   @doc """
   The first reason group bookings cannot be turned on, or nil when nothing
@@ -39,10 +39,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
       assigns.requires_approval ->
         :approval
 
+      # Everyone in a group slot shares one meeting, so its length cannot be
+      # each booker's choice (`Tymeslot.MeetingTypes.Lengths`).
+      extra_lengths(assigns) != [] ->
+        :lengths
+
       true ->
         location_blocker(assigns.locations)
     end
   end
+
+  defp extra_lengths(%{extra_lengths: extras}) when is_list(extras), do: extras
+  defp extra_lengths(%{form_data: %{"extra_lengths" => extras}}) when is_list(extras), do: extras
+  defp extra_lengths(_assigns), do: []
 
   defp location_blocker(locations) do
     case GroupLocationRule.check(locations) do

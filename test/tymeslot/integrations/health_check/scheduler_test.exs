@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
   import Tymeslot.Factory
   import Tymeslot.Test.ClockHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.HealthCheck.Scheduler
   alias Tymeslot.Workers.IntegrationHealthWorker
 
@@ -39,6 +40,45 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
 
       # Should have at least some variation (not all the same)
       assert results |> Enum.uniq() |> length() > 1
+    end
+  end
+
+  # A leaving owner may already have revoked what Tymeslot holds; probing it
+  # would flag the integration and email them about an account they are
+  # leaving. A restore puts the integrations back on the next sweep.
+  describe "schedule_all/1 with an account pending deletion" do
+    test "checks no integration of that account until it is restored" do
+      leaving =
+        insert(:user, deletion_scheduled_at: DateTime.add(DateTime.utc_now(:second), 86_400))
+
+      calendar = insert(:calendar_integration, user: leaving, provider: "caldav", is_active: true)
+      video = insert(:video_integration, user: leaving, is_active: true)
+      staying = insert(:calendar_integration, provider: "caldav", is_active: true)
+
+      assert :ok = Scheduler.schedule_all(force: true)
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => staying.id}
+      )
+
+      refute_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => calendar.id}
+      )
+
+      refute_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "video", "integration_id" => video.id}
+      )
+
+      Repo.update!(Changeset.change(leaving, deletion_scheduled_at: nil))
+      assert :ok = Scheduler.schedule_all(force: true)
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "calendar", "integration_id" => calendar.id}
+      )
     end
   end
 

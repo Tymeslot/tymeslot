@@ -92,6 +92,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           sync_last_attempt_at: DateTime.t() | nil,
           sync_last_error: String.t() | nil,
           sync_deferred_since: DateTime.t() | nil,
+          sync_reminders_changed: boolean(),
           created_by_tymeslot: boolean(),
           ical_sequence: integer(),
           last_notified_state: map(),
@@ -173,6 +174,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     # When a replay of the queued change first went unanswered, for as long
     # as every replay since has; `nil` otherwise. See `OfflineQueue`.
     field :sync_deferred_since, :utc_datetime_usec
+    # Whether the queued change edits the reminders, so the replay sends them
+    # even when it removed every one. See `OfflineQueue`.
+    field :sync_reminders_changed, :boolean, default: false
 
     # Notification tracking
     field :ical_sequence, :integer, default: 0
@@ -224,6 +228,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     :sync_last_attempt_at,
     :sync_last_error,
     :sync_deferred_since,
+    :sync_reminders_changed,
     :created_by_tymeslot,
     :ical_sequence,
     :last_notified_state,

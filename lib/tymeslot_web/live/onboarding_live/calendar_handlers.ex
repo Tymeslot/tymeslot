@@ -32,7 +32,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
 
     opts =
       maybe_put_login_hint(
-        [return_to: ~p"/onboarding/connect_calendar"],
+        [return_to: oauth_return_path(socket)],
         Auth.google_signup_login_hint(user)
       )
 
@@ -45,6 +45,17 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     end
   end
 
+  # A host sent back from the share step keeps that through the provider's
+  # redirect, so connecting still leads straight back to the share step (by
+  # way of the theme step for a host who has not seen it).
+  defp oauth_return_path(%{assigns: %{returning_to_share: true, theme_unseen: true}}),
+    do: ~p"/onboarding/connect_calendar?#{[return: "theme"]}"
+
+  defp oauth_return_path(%{assigns: %{returning_to_share: true}}),
+    do: ~p"/onboarding/connect_calendar?#{[return: "share"]}"
+
+  defp oauth_return_path(_socket), do: ~p"/onboarding/connect_calendar"
+
   defp maybe_put_login_hint(opts, nil), do: opts
   defp maybe_put_login_hint(opts, email), do: Keyword.put(opts, :login_hint, email)
 
@@ -56,7 +67,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   def handle_connect_outlook(socket) do
     user_id = socket.assigns.current_user.id
 
-    case Calendar.initiate_oauth(:outlook, user_id, return_to: ~p"/onboarding/connect_calendar") do
+    case Calendar.initiate_oauth(:outlook, user_id, return_to: oauth_return_path(socket)) do
       {:ok, url} ->
         {:noreply, LiveView.redirect(socket, external: url)}
 

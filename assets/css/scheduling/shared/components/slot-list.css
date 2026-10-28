@@ -50,10 +50,13 @@
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
   /* Labels are translated, and some outgrow a narrow slot button: they wrap
-     inside it rather than spill past its edge. */
+     inside it rather than spill past its edge. The slot buttons keep their
+     time on one line (white-space: nowrap), which the badge would inherit. */
   max-width: 100%;
   text-align: center;
+  white-space: normal;
   overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .seat-badge.seat-green {

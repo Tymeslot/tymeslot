@@ -110,3 +110,8 @@ msgstr "Este agendamento não foi aceito, então ele não vai acontecer. Seu pag
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. You can return and try again at any time."
 msgstr "Seu agendamento não está confirmado. Você pode voltar e tentar de novo quando quiser."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Paid: %{amount}"
+msgstr "Pago: %{amount}"

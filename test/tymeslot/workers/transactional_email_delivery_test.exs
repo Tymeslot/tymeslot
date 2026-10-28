@@ -128,6 +128,20 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
     assert payload.summary =~ "Recipient permanently undeliverable"
   end
 
+  # The provider's own message cannot be relied on to name the address, so
+  # the alert carries it, masked, beside the provider's reason.
+  test "names the masked recipient in the rejection alert" do
+    capture_admin_alerts()
+    setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
+
+    TransactionalEmailDelivery.deliver(valid_email(), job(), "failed", meeting_id: 7)
+
+    assert_receive {:send_alert, :recipient_email_rejected, payload}
+    assert payload.recipients_masked == "r***@example.com"
+    assert payload.reason_message =~ "422"
+    refute payload.reason_message =~ "recipients_masked"
+  end
+
   test "retries an ordinary transport failure" do
     setup_config(:tymeslot, :test_delivery_error, :econnrefused)
 

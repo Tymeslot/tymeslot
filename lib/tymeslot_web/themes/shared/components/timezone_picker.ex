@@ -77,7 +77,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.TimezonePicker do
               phx-target={@target}
             >
               <div class="tz-picker__option-content">
-                <.timezone_flag timezone={value} class="tz-picker__option-flag" fallback_icon="🌐" />
+                <.timezone_flag
+                  timezone={value}
+                  class="tz-picker__option-flag"
+                  fallback_icon="hero-globe-alt"
+                />
                 <div class="tz-picker__option-text">
                   <div class="tz-picker__option-label">{label}</div>
                   <div class="tz-picker__option-offset">{offset}</div>

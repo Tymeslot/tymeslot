@@ -247,7 +247,7 @@ defmodule Tymeslot.Notifications.IntegrationQueriesTest do
       test "answers a zero success rate when there are no deliveries" do
         owner = insert(unquote(owner_factory))
 
-        assert %{total: 0, success_rate: 0.0} =
+        assert %{total: 0, success_rate: +0.0} =
                  IntegrationQueries.delivery_stats(
                    unquote(schema),
                    unquote(foreign_key),

@@ -16,12 +16,12 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   `build!/2` checks either while the theme compiles; at run time the theme
   builds the same literal with `new/1`.
 
-  The facts are `facts/0`: the four shipped ones, plus any fact module listed
+  The facts are `facts/0`: the five shipped ones, plus any fact module listed
   in `config :tymeslot, :extra_booking_facts` (read at compile time; empty in
   every shipped build).
   """
 
-  alias TymeslotWeb.Themes.Shared.Journey.Facts.{Answers, Attendee, MeetingType, Slot}
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.{Answers, Attendee, Length, MeetingType, Slot}
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
 
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   @outcome_keys [:confirmation, :awaiting_payment]
   @navigator_callbacks [entry: 3, visible: 2, continue: 2, back: 2, go_to: 3]
 
-  @doc "The fact modules by key: the shipped four and `:extra_booking_facts`."
+  @doc "The fact modules by key: the shipped five and `:extra_booking_facts`."
   @spec facts() :: %{atom() => module()}
   def facts, do: merge_facts!(shipped_facts(), @extra_facts)
 
@@ -55,7 +55,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   # function returning the module's name, `SchedulingLive`'s
   # `journey_module/0`).
   defp shipped_facts,
-    do: %{meeting_type: MeetingType, slot: Slot, answers: Answers, attendee: Attendee}
+    do: %{
+      meeting_type: MeetingType,
+      length: Length,
+      slot: Slot,
+      answers: Answers,
+      attendee: Attendee
+    }
 
   # Public (and undocumented) so a test can hand it a clashing module.
   @doc false
@@ -103,20 +109,27 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
 
   @doc """
   The options of the classic journey for a `steps:` map: `Navigators.Paged`
-  over `overview` (the meeting type), `schedule` (the slot), `questions` (the
-  answers, shown only when the meeting type has questions) and `booking` (the
-  attendee), ending on the theme's confirmation or the shared payment wait.
+  over `overview` (the meeting type), `length` (the length, shown only when
+  the meeting type offers several, and only for a theme with a `length`
+  step), `schedule` (the slot), `questions` (the answers, shown only when the
+  meeting type has questions) and `booking` (the attendee), ending on the
+  theme's confirmation or the shared payment wait.
   """
   @spec classic(%{atom() => module()}) :: keyword()
   def classic(steps) do
+    length_moments =
+      if steps[:length], do: [{:length, collects: [:length], component: steps.length}], else: []
+
     [
       navigator: Paged,
-      moments: [
-        {:overview, collects: [:meeting_type], component: steps.overview},
-        {:schedule, collects: [:slot], component: steps.schedule},
-        {:questions, collects: [:answers], component: steps.questions},
-        {:booking, collects: [:attendee], component: steps.booking}
-      ],
+      moments:
+        [{:overview, collects: [:meeting_type], component: steps.overview}] ++
+          length_moments ++
+          [
+            {:schedule, collects: [:slot], component: steps.schedule},
+            {:questions, collects: [:answers], component: steps.questions},
+            {:booking, collects: [:attendee], component: steps.booking}
+          ],
       outcomes: %{confirmation: steps.confirmation, awaiting_payment: :shared}
     ]
   end

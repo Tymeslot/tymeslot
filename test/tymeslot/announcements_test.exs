@@ -42,6 +42,33 @@ defmodule Tymeslot.ExpiringTestCatalog do
   end
 end
 
+defmodule Tymeslot.FuturePublishedTestCatalog do
+  @moduledoc false
+  # Fixture catalog with one entry that is not yet published and one that is.
+
+  alias Tymeslot.Announcements.Announcement
+
+  @spec list() :: [Announcement.t()]
+  def list do
+    [
+      %Announcement{
+        key: "not_yet_published",
+        title: "Soon",
+        body: "Publishes far in the future",
+        published_at: ~U[2099-01-01 00:00:00Z],
+        expires_at: nil
+      },
+      %Announcement{
+        key: "already_published",
+        title: "Now",
+        body: "Published long ago",
+        published_at: DateTime.add(~U[2099-01-01 00:00:00Z], -100 * 365, :day),
+        expires_at: nil
+      }
+    ]
+  end
+end
+
 defmodule Tymeslot.AllExpiredTestCatalog do
   @moduledoc false
   # Fixture catalog whose every entry has already expired — used to verify
@@ -78,6 +105,7 @@ defmodule Tymeslot.AnnouncementsTest do
   alias Tymeslot.Announcements.UserSeenAnnouncementSchema
   alias Tymeslot.AnnouncementsTestCatalog
   alias Tymeslot.ExpiringTestCatalog
+  alias Tymeslot.FuturePublishedTestCatalog
   alias Tymeslot.RaisingTestCatalog
   alias Tymeslot.Repo
 
@@ -280,6 +308,23 @@ defmodule Tymeslot.AnnouncementsTest do
       assert "live_entry" in keys
       assert "evergreen_entry" in keys
       refute "expired_entry" in keys
+    end
+  end
+
+  describe "Announcements.list_for/1 publication date" do
+    setup do
+      previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
+      Application.put_env(:tymeslot, :announcement_catalogs, [FuturePublishedTestCatalog])
+      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, previous) end)
+      :ok
+    end
+
+    test "hides an announcement whose published_at is still in the future" do
+      user = insert(:user, inserted_at: ~N[1990-01-01 00:00:00])
+
+      keys = user |> Announcements.list_for() |> Enum.map(& &1.key)
+
+      assert keys == ["already_published"]
     end
   end
 

@@ -23,6 +23,7 @@ defmodule Tymeslot.Meetings.Recipient do
   """
 
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
@@ -146,6 +147,27 @@ defmodule Tymeslot.Meetings.Recipient do
       calendar_uid: recipient.calendar_uid,
       ical_sequence: recipient.ical_sequence
     }
+  end
+
+  @doc """
+  The meeting as one of its guests reads it: in the guest's own language and
+  timezone where they have one, and in the attendee's otherwise.
+
+  Only a guest who came with a language and timezone carries them (a poll
+  participant the host confirmed the meeting for); a guest added on an
+  ordinary booking has neither and reads the meeting exactly as its attendee
+  does. `meeting` may already be a participant's view (`as_seen_by/2`), for a
+  group-booking guest, whose fallback is then that participant's.
+
+  Every guest email is built from this view, so this is the one place a
+  guest's language and timezone are resolved.
+  """
+  @spec as_seen_by_guest(MeetingSchema.t(), GuestSchema.t()) :: MeetingSchema.t()
+  def as_seen_by_guest(%MeetingSchema{} = meeting, %GuestSchema{} = guest) do
+    struct!(meeting,
+      attendee_locale: guest.locale || meeting.attendee_locale,
+      attendee_timezone: guest.timezone || meeting.attendee_timezone
+    )
   end
 
   @doc """

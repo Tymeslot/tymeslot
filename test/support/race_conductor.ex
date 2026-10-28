@@ -136,6 +136,43 @@ defmodule Tymeslot.Test.RaceConductor do
   @spec advisory_lock() :: (map() -> boolean())
   def advisory_lock, do: &(&1[:query] =~ "pg_advisory_xact_lock")
 
+  @doc """
+  A `hold` for `arm/2` that tells `test_pid` `{:parked, pid}` and parks the
+  calling process until it receives `:release`. For a race conducted by hand
+  rather than through `race/1`: one contender parked here while the test
+  starts another and asks `await_finished_or_blocked/2` how far it got.
+  """
+  @spec park_here(pid()) :: (term() -> {:ok, :released})
+  def park_here(test_pid) do
+    fn _arg ->
+      send(test_pid, {:parked, self()})
+
+      receive do
+        :release -> {:ok, :released}
+      end
+    end
+  end
+
+  @doc """
+  Waits until `task`, a contender running on its own connection, has
+  finished or is waiting on a database lock. Returns `{:finished, result}`
+  or `:blocked`. Await a blocked task once whatever holds the lock is
+  released.
+  """
+  @spec await_finished_or_blocked(Task.t(), pos_integer()) :: {:finished, term()} | :blocked
+  def await_finished_or_blocked(task, timeout_ms \\ 30_000),
+    do: await_progress(task, System.monotonic_time(:millisecond) + timeout_ms)
+
+  defp await_progress(task, deadline) do
+    if System.monotonic_time(:millisecond) > deadline,
+      do: flunk("the contender neither finished nor blocked")
+
+    case Task.yield(task, 10) do
+      {:ok, result} -> {:finished, result}
+      nil -> if lock_waiters() > 0, do: :blocked, else: await_progress(task, deadline)
+    end
+  end
+
   defp maybe_park(metadata) do
     with {hold, match, _must_park} <- Process.get(@park_key),
          true <- match.(metadata) do

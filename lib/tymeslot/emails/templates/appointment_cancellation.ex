@@ -203,7 +203,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       meeting_details = TemplateHelper.organizer_meeting_details(appointment_details)
 
       mjml_content = """
-      #{Text.centered_text(dgettext("emails_booking_changes", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
+      #{Text.centered_text(organizer_cancelled_line(appointment_details), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, organizer_locale(appointment_details))}
 
@@ -211,7 +211,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
       #{RefundNotice.html(refund_notice)}
 
-      #{Text.system_footer_note(dgettext("emails_booking_changes", "The attendee has been notified of the cancellation."))}
+      #{Text.system_footer_note(organizer_notified_line(appointment_details))}
       """
 
       organizer_details =
@@ -219,10 +219,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
           intent: @intent,
           eyebrow: dgettext("emails_booking_changes", "Cancelled"),
           stage_title: dgettext("emails_booking_changes", "Meeting cancelled"),
-          stage_subtitle:
-            dgettext("emails_booking_changes", "with %{name}",
-              name: appointment_details.attendee_name
-            )
+          stage_subtitle: organizer_stage_subtitle(appointment_details)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -234,13 +231,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
         appointment_details.attendee_email
       )
       |> subject(
-        dgettext("emails_booking_changes", "Meeting Cancelled - %{date} with %{name}",
-          date:
-            Formatting.format_date_short(
-              meeting_details.date,
-              organizer_locale(appointment_details)
-            ),
-          name: appointment_details.attendee_name
+        organizer_subject(
+          appointment_details,
+          Formatting.format_date_short(
+            meeting_details.date,
+            organizer_locale(appointment_details)
+          )
         )
       )
       |> html_body(html_body)
@@ -416,12 +412,53 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     """
     #{dgettext("emails_booking_changes", "Meeting Cancelled")}
 
-    #{dgettext("emails_booking_changes", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name)}
+    #{organizer_cancelled_line(appointment_details)}
 
     #{dgettext("emails_booking_changes", "CANCELLED APPOINTMENT DETAILS:")}
     #{meeting_details}#{attendee_info}#{custom_answers}#{RefundNotice.text(refund_notice)}
 
-    #{dgettext("emails_booking_changes", "The attendee has been notified of the cancellation.")}
+    #{organizer_notified_line(appointment_details)}
     """
+  end
+
+  # A meeting the host manages is named after itself and told to its guests:
+  # nobody booked it (`AppointmentBuilder.organizer_copy/2`).
+  defp organizer_cancelled_line(%{host_managed: true} = appointment_details) do
+    dgettext("emails_booking_changes", "%{title} has been cancelled.",
+      title: appointment_details.attendee_name
+    )
+  end
+
+  defp organizer_cancelled_line(appointment_details) do
+    dgettext("emails_booking_changes", "The appointment with %{name} has been cancelled.",
+      name: appointment_details.attendee_name
+    )
+  end
+
+  defp organizer_notified_line(%{host_managed: true}),
+    do: dgettext("emails_booking_changes", "Your guests have been notified of the cancellation.")
+
+  defp organizer_notified_line(_appointment_details),
+    do: dgettext("emails_booking_changes", "The attendee has been notified of the cancellation.")
+
+  defp organizer_stage_subtitle(%{host_managed: true} = appointment_details),
+    do: appointment_details.attendee_name
+
+  defp organizer_stage_subtitle(appointment_details) do
+    dgettext("emails_booking_changes", "with %{name}", name: appointment_details.attendee_name)
+  end
+
+  defp organizer_subject(%{host_managed: true} = appointment_details, date) do
+    dgettext("emails_booking_changes", "Meeting Cancelled - %{date}: %{title}",
+      date: date,
+      title: appointment_details.attendee_name
+    )
+  end
+
+  defp organizer_subject(appointment_details, date) do
+    dgettext("emails_booking_changes", "Meeting Cancelled - %{date} with %{name}",
+      date: date,
+      name: appointment_details.attendee_name
+    )
   end
 end

@@ -105,7 +105,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
   # credentials were typed in, and they are replaced from the Edit dialog.
   defp fix(integration, :video, provider, name) do
     if VideoProviderConfig.oauth_provider?(integration.provider),
-      do: reconnect_fix(provider, name),
+      do: reconnect_fix(:video, provider, name),
       else: edit_fix(provider, name)
   end
 
@@ -114,23 +114,18 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
   defp fix(integration, :calendar, provider, name) do
     if CalendarProviderConfig.subscription?(integration.provider),
       do: subscription_fix(provider, name),
-      else: reconnect_fix(provider, name)
+      else: reconnect_fix(:calendar, provider, name)
   end
 
-  defp fix(_integration, _kind, provider, name), do: reconnect_fix(provider, name)
+  defp fix(_integration, kind, provider, name), do: reconnect_fix(kind, provider, name)
 
   # The owner is not told again while the integration stays flagged: the reauth
   # email goes out when the flag is set, and the unhealthy email is withheld
   # from a flagged integration. Each fix says so with its own verb, in whole
   # sentences so that each translates as one.
-  defp reconnect_fix(provider, name) do
+  defp reconnect_fix(kind, provider, name) do
     %{
-      happening:
-        dgettext(
-          "emails_integrations",
-          "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Your existing bookings are not affected.",
-          integration: name
-        ),
+      happening: reconnect_happening(kind, name),
       steps: [
         dgettext("emails_integrations", "Open your integration settings"),
         row_step(dgettext("emails_integrations", "Reconnect"), provider),
@@ -146,6 +141,24 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
         )
     }
   end
+
+  # A calendar the availability read cannot reach makes the whole booking page
+  # fail closed, which is the cost the owner most needs to hear about.
+  defp reconnect_happening(:calendar, name),
+    do:
+      dgettext(
+        "emails_integrations",
+        "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected.",
+        integration: name
+      )
+
+  defp reconnect_happening(_kind, name),
+    do:
+      dgettext(
+        "emails_integrations",
+        "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Your existing bookings are not affected.",
+        integration: name
+      )
 
   defp edit_fix(provider, name) do
     %{
@@ -177,7 +190,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
       happening:
         dgettext(
           "emails_integrations",
-          "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Your existing bookings are not affected.",
+          "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected.",
           integration: name
         ),
       steps: [

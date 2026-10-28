@@ -196,7 +196,16 @@ defmodule Tymeslot.Emails.DeliveryTest do
     } do
       setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
 
-      assert {:error, {:recipient_rejected, @suppressed_recipient}} =
+      assert {:error, {:recipient_rejected, %{reason: @suppressed_recipient}}} =
+               Delivery.deliver(valid_email(), breaker: breaker)
+    end
+
+    # The provider's reason cannot be relied on to name the address: Postmark
+    # has answered "Found inactive addresses: ." with the list left empty.
+    test "names the masked recipients the provider refused", %{breaker: breaker} do
+      setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
+
+      assert {:error, {:recipient_rejected, %{recipients_masked: "r***@example.com"}}} =
                Delivery.deliver(valid_email(), breaker: breaker)
     end
 

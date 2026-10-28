@@ -102,9 +102,12 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   """
   @spec request_budget_ms(atom(), keyword()) :: pos_integer()
   def request_budget_ms(method, options \\ []) when is_atom(method) do
-    Keyword.get(options, :pool_timeout, @default_pool_timeout_ms) +
-      connect_timeout_ms(options) + response_timeout_ms(method, options)
+    finite_ms(Keyword.get(options, :pool_timeout, @default_pool_timeout_ms)) +
+      finite_ms(connect_timeout_ms(options)) + finite_ms(response_timeout_ms(method, options))
   end
+
+  # Only finite timeouts add up to a budget; an `:infinity` has none to give.
+  defp finite_ms(ms) when is_integer(ms) and ms >= 0, do: ms
 
   defp connect_timeout_ms(options) do
     options

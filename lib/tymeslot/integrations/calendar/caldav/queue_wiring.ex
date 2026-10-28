@@ -169,8 +169,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
     }
     |> Map.merge(ownership_attrs(meeting, action))
     |> Map.merge(content_attrs(event_data))
+    |> Map.merge(reminders_change_attrs(event_data))
     |> Map.merge(timing_attrs(event_data))
   end
+
+  # The row holds the reminders a change left, not whether it changed them,
+  # and an empty list cannot say which: a row cached before the sync read
+  # alarms holds none whatever its document says. So a change that carries
+  # reminders marks the row, and the replay sends them even when it removed
+  # every one (`OfflineQueue`). A change without them leaves the mark alone:
+  # a rename queued behind a reminder edit that has not reached the server
+  # yet must not hide it. A successful replay clears it
+  # (`QueueQueries.mark_synced/3`).
+  defp reminders_change_attrs(%{reminders: _reminders}), do: %{sync_reminders_changed: true}
+  defp reminders_change_attrs(_event_data), do: %{}
 
   # A meeting's event is a booking, and an event the grid is creating is
   # Tymeslot's own, so both are marked. Any other grid write is about an

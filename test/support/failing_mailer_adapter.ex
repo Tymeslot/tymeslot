@@ -24,6 +24,7 @@ defmodule Tymeslot.Test.FailingMailerAdapter do
     case error_for(email) do
       :raise -> raise "mailer adapter crashed"
       :exit -> exit(:mailer_adapter_exited)
+      :ok -> {:ok, %{id: "delivered"}}
       reason -> {:error, reason}
     end
   end
@@ -31,7 +32,7 @@ defmodule Tymeslot.Test.FailingMailerAdapter do
   # `:test_delivery_error` is one reason for every email, or a map from a
   # recipient address to its reason (`:raise` raises in the adapter, which the
   # circuit breaker turns into an error; `:exit` exits, which it does not, so
-  # the whole run crashes), with
+  # the whole run crashes; `:ok` delivers), with
   # `:default` for the rest.
   defp error_for(email) do
     case Application.get_env(:tymeslot, :test_delivery_error, @default_error) do

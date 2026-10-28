@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SlotIntervalField
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
   alias TymeslotWeb.Helpers.ContextErrors
@@ -33,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   # The Details fields the create submit posts. Each input already reports its
   # value through a debounced phx-change, but a click on "Create" can arrive
   # before the last of those, so the posted values win.
-  @detail_fields ~w(name duration slot_interval description)
+  @detail_fields ~w(name duration extra_lengths slot_interval description)
 
   @doc """
   Creates the meeting type from the form's current state, merged with the
@@ -65,6 +66,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   defp merge_posted_details(socket, posted_params) do
     posted =
       posted_params
+      |> LengthsField.fold_params(socket.assigns.form_data)
       |> Map.take(@detail_fields)
       |> drop_interval_mode_sentinel()
 

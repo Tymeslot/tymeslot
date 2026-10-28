@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.30.0",
+      version: "1.33.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -43,7 +43,7 @@ defmodule Tymeslot.MixProject do
         plt_ignore_apps: [:xmerl],
         plt_core_path: "priv/plts",
         plt_local_path: "priv/plts",
-        flags: [:error_handling]
+        flags: [:error_handling, :missing_return, :extra_return]
       ],
       releases: [
         tymeslot: [
@@ -88,7 +88,7 @@ defmodule Tymeslot.MixProject do
   # Specifies which paths to compile per environment. `dev_support/tooling`
   # (the precommit gate, test selection and other dev-only Mix tasks) is never
   # compiled into a release.
-  defp elixirc_paths(:dev), do: ["lib", "dev/support", "dev_support/tooling"]
+  defp elixirc_paths(:dev), do: ["lib", "dev_support/dev_calendar", "dev_support/tooling"]
   defp elixirc_paths(:test), do: ["lib", "test/support", "dev_support/tooling"]
   defp elixirc_paths(:prod), do: ["lib"]
   defp elixirc_paths(_), do: ["lib"]
@@ -149,13 +149,11 @@ defmodule Tymeslot.MixProject do
       {:gen_smtp, "~> 1.2"},
       {:castore, "~> 1.0"},
       {:mjml, "~> 6.0"},
-      {:nodejs, "~> 3.0"},
       {:oban, "~> 2.20"},
       {:error_tracker, "~> 0.9"},
       {:logger_json, "~> 7.0"},
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},
-      {:nimble_parsec, "~> 1.4"},
       {:ex_image_info, "~> 1.0"},
       # libvips through vix, which ships prebuilt binaries: re-encodes uploaded
       # images so their metadata (EXIF location, capture time, device) is never

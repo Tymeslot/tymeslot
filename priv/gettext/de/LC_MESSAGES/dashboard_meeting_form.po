@@ -97,7 +97,7 @@ msgstr "Beschreibung (optional)"
 msgid "Done"
 msgstr "Fertig"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Dauer (Minuten)"
@@ -113,7 +113,7 @@ msgstr "Die Dauer muss eine gültige Zahl sein"
 msgid "Each guest is emailed a confirmation with their own link to accept or decline. You'll see every guest's response on your dashboard."
 msgstr "Jeder Gast erhält eine Bestätigung per E-Mail mit einem eigenen Link zum Annehmen oder Ablehnen. Sie sehen die Antwort jedes Gastes in Ihrem Dashboard."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Geben Sie eine Dauer zwischen %{min} und %{max} Minuten ein"
@@ -921,7 +921,7 @@ msgid "A time shows how many spots are left, such as \"3 spots left\", only once
 msgstr "Ein Zeitfenster zeigt erst dann an, wie viele Plätze noch frei sind (etwa „3 Plätze frei“), wenn nur noch wenige übrig sind."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
+#, elixir-autogen
 msgid "Last spots"
 msgstr "Letzte Plätze"
 

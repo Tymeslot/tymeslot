@@ -969,3 +969,11 @@ msgstr "E-mailová adresa"
 #, elixir-autogen, elixir-format
 msgid "%{provider} authentication failed - missing authorisation code or security token."
 msgstr "Ověření přes %{provider} se nezdařilo – chybí autorizační kód nebo bezpečnostní token."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "Vítejte zpět. Váš účet byl obnoven, ale integraci %{names} je potřeba připojit znovu. Dokud ji znovu nepřipojíte, vaše rezervační stránka nemusí nabízet termíny ani přijímat rezervace."
+msgstr[1] "Vítejte zpět. Váš účet byl obnoven, ale integrace %{names} je potřeba připojit znovu. Dokud je znovu nepřipojíte, vaše rezervační stránka nemusí nabízet termíny ani přijímat rezervace."
+msgstr[2] "Vítejte zpět. Váš účet byl obnoven, ale integrace %{names} je potřeba připojit znovu. Dokud je znovu nepřipojíte, vaše rezervační stránka nemusí nabízet termíny ani přijímat rezervace."

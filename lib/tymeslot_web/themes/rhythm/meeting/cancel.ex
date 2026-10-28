@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   alias Phoenix.LiveView.JS
@@ -39,19 +41,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <%= if @meeting_kept do %>
                     <div class="success-badge success-badge--transparent">
                       <div class="success-badge-inner success-badge-inner--success">
-                        <svg
-                          class="success-icon"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <.icon name="hero-check-circle" class="success-icon stroke-2" />
                       </div>
                     </div>
 
@@ -68,19 +58,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <% else %>
                     <div class="success-badge success-badge--transparent">
                       <div class="success-badge-inner success-badge-inner--danger">
-                        <svg
-                          class="success-icon"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
+                        <.icon name="hero-x-mark" class="success-icon stroke-2" />
                       </div>
                     </div>
 
@@ -114,19 +92,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <%= if @meeting_kept do %>
                     <div class="ticket-footer">
                       <div class="email-confirmation">
-                        <svg
-                          class="email-icon email-icon--success"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <.icon name="hero-check-circle" class="email-icon email-icon--success" />
                         <span>{dgettext(
                           "booking_manage",
                           "We look forward to seeing you at the scheduled time."
@@ -136,14 +102,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <% else %>
                     <div class="ticket-footer">
                       <div class="email-confirmation">
-                        <svg class="email-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
+                        <.icon name="hero-exclamation-triangle" class="email-icon" />
                         <span>{dgettext(
                           "booking_manage",
                           "A cancellation email will be sent to all participants"

@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
 
   alias Tymeslot.Locales
   alias TymeslotWeb.Layouts
+  alias TymeslotWeb.Themes.Shared.Components.CalendarRefusedNotice
   alias TymeslotWeb.Themes.Shared.ThemeStyle
 
   import TymeslotWeb.Components.LanguageSwitcher, only: [language_switcher: 1]
@@ -61,8 +62,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
   attr :show_language_switcher, :boolean, default: false
   attr :owner_preview, :boolean, default: false
 
+  attr :refused_calendars, :list,
+    default: [],
+    doc: "names of the organiser's refused calendars, given only when the organiser is viewing"
+
   @doc """
-  The owner-preview notice and the language switcher. The switcher renders
+  The owner-preview notice, the organiser's refused-calendar notice and the
+  language switcher. The switcher renders
   only when the page has a locale and tracks its dropdown; a page that
   decided not to show it keeps the container, hidden.
   """
@@ -70,6 +76,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
   def chrome(assigns) do
     ~H"""
     <.banner owner_preview={@owner_preview} />
+    <CalendarRefusedNotice.notice names={@refused_calendars} />
     <%= if @locale && @language_dropdown_open != nil do %>
       <div class={[
         @language_class,

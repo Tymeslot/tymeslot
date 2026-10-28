@@ -29,6 +29,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     )
   end
 
+  # A calendar whose credentials were refused stays unreadable until the
+  # organiser reconnects it, so this promises no recovery, and names neither
+  # the provider nor the calendar to a public visitor.
+  def message(:host_calendar_disconnected) do
+    dgettext("booking_errors", "This booking page can't show times right now.")
+  end
+
   def message(:booking_limit_reached) do
     dgettext(
       "booking_errors",
@@ -100,6 +107,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     dgettext(
       "booking_errors",
       "This is a group booking, so each participant moves their own spot from their confirmation email."
+    )
+  end
+
+  def message(:managed_by_host) do
+    dgettext(
+      "booking_errors",
+      "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
     )
   end
 
@@ -235,6 +249,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   defp unrecognised_message do
-    dgettext("booking_errors", "Failed to create appointment. Please try again.")
+    dgettext("booking_errors", "Failed to create meeting. Please try again.")
   end
 end

@@ -303,17 +303,18 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   def delete_deliveries([]), do: 0
 
   def delete_deliveries(meeting_ids) do
-    {webhooks, _rows} =
-      Repo.delete_all(from(d in WebhookDeliverySchema, where: d.meeting_id in ^meeting_ids))
-
-    {slack, _rows} =
-      Repo.delete_all(from(d in SlackDeliverySchema, where: d.meeting_id in ^meeting_ids))
-
-    {telegram, _rows} =
-      Repo.delete_all(from(d in TelegramDeliverySchema, where: d.meeting_id in ^meeting_ids))
+    webhooks = delete_rows(from(d in WebhookDeliverySchema, where: d.meeting_id in ^meeting_ids))
+    slack = delete_rows(from(d in SlackDeliverySchema, where: d.meeting_id in ^meeting_ids))
+    telegram = delete_rows(from(d in TelegramDeliverySchema, where: d.meeting_id in ^meeting_ids))
 
     webhooks + slack + telegram
   end
+
+  # The guard is what tells Dialyzer the count is an integer: the Repo's own
+  # `delete_all` return carries no type for it.
+  defp delete_rows(query), do: deleted_count(Repo.delete_all(query))
+
+  defp deleted_count({count, _rows}) when is_integer(count), do: count
 
   defp select_rows(query, {:ids, ids}), do: where(query, [r], r.id in ^ids)
   defp select_rows(query, {:meetings, ids}), do: where(query, [r], r.meeting_id in ^ids)
