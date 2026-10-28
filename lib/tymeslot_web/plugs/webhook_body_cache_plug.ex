@@ -32,7 +32,8 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlug do
   Custom body reader that caches the raw body for webhook paths.
   This should be used in Plug.Parsers configuration.
   """
-  @spec read_body(Plug.Conn.t(), keyword()) :: {:ok, binary(), Plug.Conn.t()} | {:error, any()}
+  @spec read_body(Plug.Conn.t(), keyword()) ::
+          {:ok, binary(), Plug.Conn.t()} | {:more, binary(), Plug.Conn.t()} | {:error, any()}
   def read_body(conn, opts) do
     case Conn.read_body(conn, opts) do
       {:ok, body, conn} ->

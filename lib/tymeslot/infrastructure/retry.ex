@@ -70,7 +70,7 @@ defmodule Tymeslot.Infrastructure.Retry do
   @spec delay(pos_integer(), opts()) :: non_neg_integer()
   def delay(attempt, opts) do
     opts = Keyword.merge(@default_opts, opts)
-    capped = min(round(opts[:initial_delay] * :math.pow(2, attempt - 1)), opts[:max_delay])
+    capped = round(min(opts[:initial_delay] * :math.pow(2, attempt - 1), opts[:max_delay]))
     spread = round(capped * opts[:jitter])
 
     if spread > 0,

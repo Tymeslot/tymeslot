@@ -108,12 +108,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   @spec default_greeting(String.t() | nil, theme_key() | nil) :: String.t() | nil
   def default_greeting(name, theme_key \\ nil)
   def default_greeting(nil, _theme_key), do: nil
-
-  def default_greeting(name, theme_key) do
-    Voice.line(Voice.of(theme_key), :greeting, %{name: name}, fn ->
-      dgettext("booking", "Hi! I'm %{name}.", name: name)
-    end)
-  end
+  def default_greeting(name, theme_key), do: voiced_greeting(name, theme_key)
 
   @doc """
   A greeting to start the organiser off with when they switch the customisation
@@ -127,7 +122,13 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   @spec seed_greeting(String.t() | nil, theme_key() | nil) :: String.t()
   def seed_greeting(name, theme_key \\ nil)
   def seed_greeting(nil, _theme_key), do: dgettext("booking", "Hi there!")
-  def seed_greeting(name, theme_key), do: default_greeting(name, theme_key)
+  def seed_greeting(name, theme_key), do: voiced_greeting(name, theme_key)
+
+  defp voiced_greeting(name, theme_key) do
+    Voice.line(Voice.of(theme_key), :greeting, %{name: name}, fn ->
+      dgettext("booking", "Hi! I'm %{name}.", name: name)
+    end)
+  end
 
   @doc """
   The instruction shown when the organiser has not supplied one.

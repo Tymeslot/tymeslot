@@ -93,7 +93,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   health, and an unreadable 403 counted as `:malformed_response` would let
   one account's refusal open the breaker every account shares.
   """
-  @spec with_error_object(binary(), (String.t(), map() -> result())) :: result()
+  @spec with_error_object(binary(), (String.t(), map() -> {:error, atom(), String.t()})) ::
+          {:error, atom(), String.t()}
   def with_error_object(body, fun) do
     case Jason.decode(body) do
       {:ok, decoded} ->

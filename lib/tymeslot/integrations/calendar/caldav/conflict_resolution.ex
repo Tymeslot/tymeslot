@@ -30,7 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConflictResolution do
 
   @type t :: :fail | :keep_server | :keep_local
 
-  @spec default() :: t()
+  @spec default() :: :fail
   def default, do: :fail
 
   @spec valid?(term()) :: boolean()

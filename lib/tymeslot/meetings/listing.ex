@@ -55,8 +55,12 @@ defmodule Tymeslot.Meetings.Listing do
   @spec list_user_meeting(integer(), term()) :: {:ok, CursorPage.t()}
   def list_user_meeting(user_id, meeting_id) when is_binary(meeting_id) do
     case UUID.cast(String.trim(meeting_id)) do
-      {:ok, id} -> list_organizer_meetings_cursor_page(user_id, id: id, per_page: 1)
-      :error -> {:ok, %CursorPage{items: [], page_size: 1}}
+      {:ok, id} ->
+        items = list_organizer_meetings_internal(user_id, id: id, per_page: 1)
+        {:ok, build_cursor_page(items, 1)}
+
+      :error ->
+        {:ok, %CursorPage{items: [], page_size: 1}}
     end
   end
 
