@@ -361,18 +361,18 @@ msgstr "%{date}, %{time}"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex
 #, elixir-autogen, elixir-format
-msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
-msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
-msgstr[0] "Інтеграція %{names} відхилила облікові дані, збережені в Tymeslot, тому ваша сторінка бронювання не пропонує жодного слота. Перепідключіть її, щоб знову приймати бронювання."
-msgstr[1] "Інтеграції %{names} відхилили облікові дані, збережені в Tymeslot, тому ваша сторінка бронювання не пропонує жодного слота. Перепідключіть їх, щоб знову приймати бронювання."
-msgstr[2] "Інтеграції %{names} відхилили облікові дані, збережені в Tymeslot, тому ваша сторінка бронювання не пропонує жодного слота. Перепідключіть їх, щоб знову приймати бронювання."
-
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Перепідключити"
 
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "Інтеграцію %{names} потрібно перепідключити. Доки ви її не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."
+msgstr[1] "Інтеграції %{names} потрібно перепідключити. Доки ви їх не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."
+msgstr[2] "Інтеграції %{names} потрібно перепідключити. Доки ви їх не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."
+
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
-msgid "Reconnect %{names}: your booking page offers no times until you do"
-msgstr "Перепідключіть %{names}: доти ваша сторінка бронювання не пропонує жодного слота"
+msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
+msgstr "Перепідключіть %{names}: доти ваша сторінка бронювання може не приймати бронювань"

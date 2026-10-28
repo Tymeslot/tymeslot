@@ -357,18 +357,18 @@ msgstr "%{date}, %{time}"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex
 #, elixir-autogen, elixir-format
-msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
-msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
-msgstr[0] "Integracja %{names} odrzuciła dane logowania zapisane w Tymeslot, więc strona rezerwacji nie oferuje żadnych terminów. Połącz ją ponownie, aby znów przyjmować rezerwacje."
-msgstr[1] "Integracje %{names} odrzuciły dane logowania zapisane w Tymeslot, więc strona rezerwacji nie oferuje żadnych terminów. Połącz je ponownie, aby znów przyjmować rezerwacje."
-msgstr[2] "Integracje %{names} odrzuciły dane logowania zapisane w Tymeslot, więc strona rezerwacji nie oferuje żadnych terminów. Połącz je ponownie, aby znów przyjmować rezerwacje."
-
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Połącz ponownie"
 
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "Integracja %{names} wymaga ponownego połączenia. Dopóki nie połączysz jej ponownie, strona rezerwacji może nie oferować terminów ani przyjmować rezerwacji."
+msgstr[1] "Integracje %{names} wymagają ponownego połączenia. Dopóki nie połączysz ich ponownie, strona rezerwacji może nie oferować terminów ani przyjmować rezerwacji."
+msgstr[2] "Integracje %{names} wymagają ponownego połączenia. Dopóki nie połączysz ich ponownie, strona rezerwacji może nie oferować terminów ani przyjmować rezerwacji."
+
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
-msgid "Reconnect %{names}: your booking page offers no times until you do"
-msgstr "Połącz ponownie %{names}: do tego czasu strona rezerwacji nie oferuje żadnych terminów"
+msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
+msgstr "Połącz ponownie %{names}: do tego czasu strona rezerwacji może nie przyjmować rezerwacji"

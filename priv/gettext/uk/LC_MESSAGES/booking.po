@@ -990,8 +990,8 @@ msgstr "Перепідключити"
 
 #: lib/tymeslot_web/themes/shared/components/calendar_refused_notice.ex
 #, elixir-autogen, elixir-format
-msgid "Your calendar %{names} needs reconnecting. Until you do, visitors see no times here."
-msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors see no times here."
-msgstr[0] "Ваш календар %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі не бачать тут доступного часу."
-msgstr[1] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі не бачать тут доступного часу."
-msgstr[2] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі не бачать тут доступного часу."
+msgid "Your calendar %{names} needs reconnecting. Until you do, visitors may see no times here."
+msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors may see no times here."
+msgstr[0] "Ваш календар %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."
+msgstr[1] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."
+msgstr[2] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."

@@ -361,17 +361,17 @@ msgstr "%{date}, %{time}"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex
 #, elixir-autogen, elixir-format
-msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
-msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
-msgstr[0] "L’intégration %{names} a refusé les identifiants que Tymeslot conserve pour elle : votre page de réservation ne propose donc aucun créneau. Reconnectez-la pour recevoir de nouveau des réservations."
-msgstr[1] "Les intégrations %{names} ont refusé les identifiants que Tymeslot conserve pour elles : votre page de réservation ne propose donc aucun créneau. Reconnectez-les pour recevoir de nouveau des réservations."
-
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Reconnecter"
 
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "L’intégration %{names} doit être reconnectée. Tant que vous ne l’aurez pas reconnectée, votre page de réservation pourrait ne proposer aucun créneau ni recevoir de réservations."
+msgstr[1] "Les intégrations %{names} doivent être reconnectées. Tant que vous ne les aurez pas reconnectées, votre page de réservation pourrait ne proposer aucun créneau ni recevoir de réservations."
+
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
-msgid "Reconnect %{names}: your booking page offers no times until you do"
-msgstr "Reconnectez %{names} : d’ici là, votre page de réservation ne propose aucun créneau"
+msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
+msgstr "Reconnectez %{names} : d’ici là, votre page de réservation pourrait ne pas recevoir de réservations"

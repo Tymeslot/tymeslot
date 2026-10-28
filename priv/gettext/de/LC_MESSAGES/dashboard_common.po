@@ -361,17 +361,17 @@ msgstr "%{date}, %{time}"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex
 #, elixir-autogen, elixir-format
-msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
-msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
-msgstr[0] "Die Integration %{names} hat die Anmeldedaten abgelehnt, die Tymeslot dafür gespeichert hat. Deshalb bietet Ihre Buchungsseite keine Zeiten an. Verbinden Sie sie erneut, um wieder Buchungen anzunehmen."
-msgstr[1] "Die Integrationen %{names} haben die Anmeldedaten abgelehnt, die Tymeslot dafür gespeichert hat. Deshalb bietet Ihre Buchungsseite keine Zeiten an. Verbinden Sie sie erneut, um wieder Buchungen anzunehmen."
-
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Erneut verbinden"
 
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "Die Integration %{names} muss erneut verbunden werden. Solange Sie sie nicht erneut verbinden, bietet Ihre Buchungsseite möglicherweise keine Zeiten an und nimmt keine Buchungen entgegen."
+msgstr[1] "Die Integrationen %{names} müssen erneut verbunden werden. Solange Sie sie nicht erneut verbinden, bietet Ihre Buchungsseite möglicherweise keine Zeiten an und nimmt keine Buchungen entgegen."
+
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
-msgid "Reconnect %{names}: your booking page offers no times until you do"
-msgstr "Verbinden Sie %{names} erneut: Bis dahin bietet Ihre Buchungsseite keine Zeiten an"
+msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
+msgstr "Verbinden Sie %{names} erneut: Bis dahin nimmt Ihre Buchungsseite möglicherweise keine Buchungen an"

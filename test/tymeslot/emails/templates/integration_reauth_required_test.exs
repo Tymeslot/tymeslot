@@ -104,13 +104,13 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequiredTest do
       text = IntegrationReauthRequired.render(@user, calendar, :calendar).text_body
 
       assert text =~ "your Apple ID password was changed"
-      assert text =~ "Until then your booking page offers no times"
+      assert text =~ "Until then your booking page may not offer times or take bookings"
     end
 
     test "a calendar subscription's email says the booking page offers no times" do
       text = IntegrationReauthRequired.render(@user, ics_integration(), :calendar).text_body
 
-      assert text =~ "Until then your booking page offers no times"
+      assert text =~ "Until then your booking page may not offer times or take bookings"
     end
 
     test "a video integration's email does not mention the booking page" do

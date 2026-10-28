@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Themes.Shared.Components.CalendarRefusedNotice do
   @moduledoc """
   Tells the organiser, on their own booking page, that a calendar of theirs
-  refused its credentials, that visitors see no times until it is
+  is flagged for reconnection, that visitors may see no times until it is
   reconnected, and where to reconnect it.
 
   A guest on the same page is told only that times cannot be shown
@@ -42,8 +42,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.CalendarRefusedNotice do
       <span class="preview-notice-text">
         {dngettext(
           "booking",
-          "Your calendar %{names} needs reconnecting. Until you do, visitors see no times here.",
-          "Your calendars %{names} need reconnecting. Until you do, visitors see no times here.",
+          "Your calendar %{names} needs reconnecting. Until you do, visitors may see no times here.",
+          "Your calendars %{names} need reconnecting. Until you do, visitors may see no times here.",
           length(@names),
           names: Enum.join(@names, ", ")
         )}

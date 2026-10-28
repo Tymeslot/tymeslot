@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
       assert has_element?(view, calendar_cta)
 
       assert view |> element("#refused-calendar-notice") |> render() =~
-               "iCloud refused the credentials Tymeslot holds for it, so your booking page is offering no times."
+               "iCloud needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 

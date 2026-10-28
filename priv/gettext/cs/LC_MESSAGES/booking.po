@@ -990,8 +990,8 @@ msgstr "Připojit znovu"
 
 #: lib/tymeslot_web/themes/shared/components/calendar_refused_notice.ex
 #, elixir-autogen, elixir-format
-msgid "Your calendar %{names} needs reconnecting. Until you do, visitors see no times here."
-msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors see no times here."
-msgstr[0] "Váš kalendář %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu neuvidí žádné termíny."
-msgstr[1] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu neuvidí žádné termíny."
-msgstr[2] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu neuvidí žádné termíny."
+msgid "Your calendar %{names} needs reconnecting. Until you do, visitors may see no times here."
+msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors may see no times here."
+msgstr[0] "Váš kalendář %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
+msgstr[1] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
+msgstr[2] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."

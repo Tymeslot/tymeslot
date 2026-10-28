@@ -70,8 +70,8 @@ defmodule TymeslotWeb.AccountRestoreController do
       :error,
       dngettext(
         "auth",
-        "Welcome back. Your account has been restored, but %{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again.",
-        "Welcome back. Your account has been restored, but %{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again.",
+        "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings.",
+        "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings.",
         length(names),
         names: Enum.join(names, ", ")
       )

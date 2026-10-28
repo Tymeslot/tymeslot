@@ -546,10 +546,10 @@ msgstr "Vaše kalendářová služba nebyla dostupná nebo neodpověděla správ
 
 #: lib/tymeslot/emails/templates/integration_reauth_required.ex
 #, elixir-autogen, elixir-format
-msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Until then your booking page offers no times, because Tymeslot will not offer a time it cannot check against this calendar. Your existing bookings are not affected."
-msgstr "Tymeslot už nemůže používat vaši integraci %{integration} a nebude to možné, dokud ji znovu nepřipojíte. Důvod je uvedený výše. Do té doby vaše rezervační stránka nenabízí žádné termíny, protože Tymeslot nenabídne termín, který nemůže ověřit v tomto kalendáři. Vašich stávajících rezervací se to netýká."
+msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected."
+msgstr "Tymeslot už nemůže používat vaši integraci %{integration} a nebude to možné, dokud ji znovu nepřipojíte. Důvod je uvedený výše. Do té doby vaše rezervační stránka nemusí nabízet termíny ani přijímat rezervace, protože Tymeslot nenabídne termín, který nemůže ověřit v tomto kalendáři ani do něj zapsat. Vašich stávajících rezervací se to netýká."
 
 #: lib/tymeslot/emails/templates/integration_reauth_required.ex
 #, elixir-autogen, elixir-format
-msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Until then your booking page offers no times, because Tymeslot will not offer a time it cannot check against this calendar. Your existing bookings are not affected."
-msgstr "Tymeslot už nemůže používat vaši integraci %{integration} a nebude to možné, dokud ji nenahradíte. Důvod je uvedený výše. Do té doby vaše rezervační stránka nenabízí žádné termíny, protože Tymeslot nenabídne termín, který nemůže ověřit v tomto kalendáři. Vašich stávajících rezervací se to netýká."
+msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected."
+msgstr "Tymeslot už nemůže používat vaši integraci %{integration} a nebude to možné, dokud ji nenahradíte. Důvod je uvedený výše. Do té doby vaše rezervační stránka nemusí nabízet termíny ani přijímat rezervace, protože Tymeslot nenabídne termín, který nemůže ověřit v tomto kalendáři ani do něj zapsat. Vašich stávajících rezervací se to netýká."

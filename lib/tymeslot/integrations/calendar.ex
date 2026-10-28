@@ -100,7 +100,8 @@ defmodule Tymeslot.Integrations.Calendar do
     * `:taking_bookings`: a writable calendar is connected and none refused.
     * `{:credentials_refused, names}`: an active integration is flagged
       `needs_reauth`. The availability read fails closed on a calendar it
-      cannot read, so the page offers no times until each is reconnected.
+      cannot read, so the page offers no times until each is reconnected;
+      not every flag stops the read, so the copy says it *may*.
     * `:no_calendar`: nothing a booking can be written to is connected.
 
   Poll creation gates on `has_bookable_integration?/1` instead, on purpose.

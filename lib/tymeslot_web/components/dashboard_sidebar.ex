@@ -295,7 +295,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     do:
       dgettext(
         "dashboard_common",
-        "Reconnect %{names}: your booking page offers no times until you do",
+        "Reconnect %{names}: until you do, your booking page may not take bookings",
         names: Enum.join(names, ", ")
       )
 

@@ -969,8 +969,8 @@ msgstr "Logowanie przez konto %{provider} nie powiodło się – brak kodu autor
 
 #: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
 #, elixir-autogen, elixir-format
-msgid "Welcome back. Your account has been restored, but %{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
-msgid_plural "Welcome back. Your account has been restored, but %{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
-msgstr[0] "Witaj z powrotem. Konto zostało przywrócone, ale integracja %{names} odrzuciła dane logowania zapisane w Tymeslot, więc strona rezerwacji nie oferuje żadnych terminów. Połącz ją ponownie, aby znów przyjmować rezerwacje."
-msgstr[1] "Witaj z powrotem. Konto zostało przywrócone, ale integracje %{names} odrzuciły dane logowania zapisane w Tymeslot, więc strona rezerwacji nie oferuje żadnych terminów. Połącz je ponownie, aby znów przyjmować rezerwacje."
-msgstr[2] "Witaj z powrotem. Konto zostało przywrócone, ale integracje %{names} odrzuciły dane logowania zapisane w Tymeslot, więc strona rezerwacji nie oferuje żadnych terminów. Połącz je ponownie, aby znów przyjmować rezerwacje."
+msgid "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "Witaj z powrotem. Konto zostało przywrócone, ale integracja %{names} wymaga ponownego połączenia. Dopóki nie połączysz jej ponownie, strona rezerwacji może nie oferować terminów ani przyjmować rezerwacji."
+msgstr[1] "Witaj z powrotem. Konto zostało przywrócone, ale integracje %{names} wymagają ponownego połączenia. Dopóki nie połączysz ich ponownie, strona rezerwacji może nie oferować terminów ani przyjmować rezerwacji."
+msgstr[2] "Witaj z powrotem. Konto zostało przywrócone, ale integracje %{names} wymagają ponownego połączenia. Dopóki nie połączysz ich ponownie, strona rezerwacji może nie oferować terminów ani przyjmować rezerwacji."

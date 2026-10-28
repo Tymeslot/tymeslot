@@ -361,17 +361,17 @@ msgstr "%{date}, %{time}"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex
 #, elixir-autogen, elixir-format
-msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
-msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
-msgstr[0] "L'integrazione %{names} ha rifiutato le credenziali salvate in Tymeslot, quindi la tua pagina di prenotazione non offre alcuna fascia oraria. Ricollegala per ricevere di nuovo prenotazioni."
-msgstr[1] "Le integrazioni %{names} hanno rifiutato le credenziali salvate in Tymeslot, quindi la tua pagina di prenotazione non offre alcuna fascia oraria. Ricollegale per ricevere di nuovo prenotazioni."
-
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Ricollega"
 
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] "L'integrazione %{names} va ricollegata. Finché non la ricolleghi, la tua pagina di prenotazione potrebbe non offrire fasce orarie né ricevere prenotazioni."
+msgstr[1] "Le integrazioni %{names} vanno ricollegate. Finché non le ricolleghi, la tua pagina di prenotazione potrebbe non offrire fasce orarie né ricevere prenotazioni."
+
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
-msgid "Reconnect %{names}: your booking page offers no times until you do"
-msgstr "Ricollega %{names}: fino ad allora la tua pagina di prenotazione non offre alcuna fascia oraria"
+msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
+msgstr "Ricollega %{names}: fino ad allora la tua pagina di prenotazione potrebbe non ricevere prenotazioni"
