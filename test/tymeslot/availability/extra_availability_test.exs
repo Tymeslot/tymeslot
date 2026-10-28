@@ -174,6 +174,80 @@ defmodule Tymeslot.Availability.ExtraAvailabilityTest do
     end
   end
 
+  describe "an extra time over a weekly break" do
+    setup %{schedule: schedule} do
+      monday_hours =
+        insert(:weekly_availability,
+          schedule: schedule,
+          day_of_week: 1,
+          is_available: true,
+          start_time: ~T[09:00:00],
+          end_time: ~T[17:00:00]
+        )
+
+      insert(:availability_break,
+        weekly_availability: monday_hours,
+        start_time: ~T[12:00:00],
+        end_time: ~T[13:00:00]
+      )
+
+      :ok
+    end
+
+    test "opens the break on its date only", %{schedule: schedule} do
+      {:ok, _lunch} = add(schedule, @monday, ~T[12:00:00], ~T[13:00:00])
+
+      every_half_hour = for h <- 9..16, m <- [0, 30], do: Time.new!(h, m, 0)
+      no_lunch = every_half_hour -- [~T[12:00:00], ~T[12:30:00]]
+
+      assert utc_times(schedule, @monday) == every_half_hour
+      assert utc_times(schedule, Date.add(@monday, 7)) == no_lunch
+      assert utc_times(schedule, Date.add(@monday, -7)) == no_lunch
+    end
+
+    test "opens only the part of the break it covers", %{schedule: schedule} do
+      {:ok, _half} = add(schedule, @monday, ~T[12:00:00], ~T[12:30:00])
+
+      times = utc_times(schedule, @monday)
+
+      assert ~T[12:00:00] in times
+      refute ~T[12:30:00] in times
+    end
+  end
+
+  describe "across timezones" do
+    test "an owner ahead of UTC offers a booker behind it the times on their previous date",
+         %{schedule: schedule} do
+      # Saturday 09:00 to 10:00 in Tokyo is Friday 17:00 to 18:00 in Los Angeles.
+      {:ok, _extra} = add(schedule, @saturday, ~T[09:00:00], ~T[10:00:00])
+
+      assert starts(schedule, ~D[2030-04-05], "Asia/Tokyo", "America/Los_Angeles") ==
+               [~U[2030-04-06 00:00:00Z], ~U[2030-04-06 00:30:00Z]]
+
+      assert starts(schedule, @saturday, "Asia/Tokyo", "America/Los_Angeles") == []
+    end
+
+    test "an extra time on the owner's spring-forward date runs real hours",
+         %{schedule: schedule} do
+      # Warsaw skips 02:00 to 03:00 on 2030-03-31: 01:00 to 04:00 is two hours.
+      dst_day = ~D[2030-03-31]
+
+      {:ok, _extra} =
+        ExtraAvailability.add(
+          schedule,
+          %{date: dst_day, start_time: ~T[01:00:00], end_time: ~T[04:00:00]},
+          ~D[2030-03-01]
+        )
+
+      assert starts(schedule, dst_day, "Europe/Warsaw", "Europe/Warsaw") == [
+               ~U[2030-03-31 00:00:00Z],
+               ~U[2030-03-31 00:30:00Z],
+               ~U[2030-03-31 01:00:00Z],
+               ~U[2030-03-31 01:30:00Z]
+             ]
+    end
+  end
+
   defp add(schedule, date, from, to),
     do: ExtraAvailability.add(schedule, %{date: date, start_time: from, end_time: to}, @today)
 
@@ -191,5 +265,18 @@ defmodule Tymeslot.Availability.ExtraAvailabilityTest do
     [date]
     |> BusinessHours.owner_windows(schedule.id, "Etc/UTC", %{})
     |> Enum.map(&{DateTime.to_time(&1.start_dt), DateTime.to_time(&1.end_dt)})
+  end
+
+  defp utc_times(schedule, date) do
+    schedule |> starts(date, "Etc/UTC", "Etc/UTC") |> Enum.map(&DateTime.to_time/1)
+  end
+
+  defp starts(schedule, date, owner_timezone, booker_timezone) do
+    config = %{schedule_id: schedule.id, slot_interval_minutes: 30}
+
+    {:ok, starts} =
+      SlotGrid.starts_for_date(date, 30, owner_timezone, booker_timezone, config)
+
+    Enum.map(starts, &DateTime.shift_zone!(&1, "Etc/UTC"))
   end
 end

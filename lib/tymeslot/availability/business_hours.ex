@@ -38,13 +38,15 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   @typedoc """
   One owner date's window as instants in the owner's zone, with its breaks
-  resolved and clipped to it.
+  resolved and clipped to it. `extra` marks an extra available time, which
+  the weekly breaks do not close.
   """
   @type owner_window :: %{
           required(:date) => Date.t(),
           required(:start_dt) => DateTime.t(),
           required(:end_dt) => DateTime.t(),
-          required(:breaks) => [Intervals.t()]
+          required(:breaks) => [Intervals.t()],
+          optional(:extra) => true
         }
 
   @doc """
@@ -89,7 +91,7 @@ defmodule Tymeslot.Availability.BusinessHours do
     |> Enum.filter(&Window.valid?(&1.start_time, &1.end_time, &1.ends_next_day))
     |> Enum.map(fn window ->
       {start_dt, end_dt} = Window.resolve(window, date, owner_timezone)
-      %{date: date, start_dt: start_dt, end_dt: end_dt, breaks: []}
+      %{date: date, start_dt: start_dt, end_dt: end_dt, breaks: [], extra: true}
     end)
   end
 
