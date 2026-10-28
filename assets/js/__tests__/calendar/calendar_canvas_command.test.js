@@ -487,4 +487,12 @@ describe("the hook's own rows", () => {
     press(input, "Enter");
     expect(pushes(hook, "calendar:goto")).toEqual([{ view: "month", date: "2026-10-14" }]);
   });
+
+  test("a view command from a week without today opens the week's first day", () => {
+    const { el, hook, input } = mount();
+    el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21" } }));
+    typeIn(input, "agenda");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:goto").at(-1)).toEqual({ view: "agenda", date: "2026-10-19" });
+  });
 });

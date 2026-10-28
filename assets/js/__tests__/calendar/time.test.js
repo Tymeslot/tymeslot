@@ -24,6 +24,7 @@ import {
   periodDays,
   segmentsForDay,
   shiftPeriod,
+  viewSwitchAnchor,
 } from "../../calendar/time.js";
 
 const range = (from, n) => Array.from({ length: n }, (_, k) => addDays(from, k));
@@ -210,5 +211,35 @@ describe("month and agenda mirror Period", () => {
 
   test("only day, three days and week are time grids", () => {
     expect(["day", "three_day", "week", "month", "agenda"].filter(isTimeGrid)).toEqual(["day", "three_day", "week"]);
+  });
+});
+
+describe("viewSwitchAnchor mirrors Period.view_switch_anchor/4", () => {
+  test("a week hands over today when today is in it", () => {
+    expect(viewSwitchAnchor("week", "2026-10-16", "2026-10-14", "monday")).toBe("2026-10-14");
+  });
+
+  test("a week without today hands over its first day, mid-week anchor or not", () => {
+    expect(viewSwitchAnchor("week", "2026-10-21", "2026-10-14", "monday")).toBe("2026-10-19");
+    expect(viewSwitchAnchor("week", "2026-10-21", "2026-10-14", "sunday")).toBe("2026-10-18");
+  });
+
+  test("a week's first day follows the week start", () => {
+    expect(viewSwitchAnchor("week", "2026-10-18", "2026-10-01", "sunday")).toBe("2026-10-18");
+    expect(viewSwitchAnchor("week", "2026-10-18", "2026-10-01", "monday")).toBe("2026-10-12");
+  });
+
+  test("a month hands over today when today is one of its own days", () => {
+    expect(viewSwitchAnchor("month", "2026-10-20", "2026-10-14", "monday")).toBe("2026-10-14");
+  });
+
+  test("a month without today hands over its first, even when its grid shows today", () => {
+    expect(viewSwitchAnchor("month", "2026-11-14", "2026-10-28", "monday")).toBe("2026-11-01");
+  });
+
+  test("the views that start at their date keep it", () => {
+    for (const view of ["day", "three_day", "agenda"]) {
+      expect(viewSwitchAnchor(view, "2026-10-21", "2026-10-14", "monday")).toBe("2026-10-21");
+    }
   });
 });

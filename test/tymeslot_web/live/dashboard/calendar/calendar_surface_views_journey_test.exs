@@ -102,6 +102,44 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceViewsJourneyTest do
     end
   end
 
+  describe "switching view" do
+    test "starts the next view at the week or month shown, today when it is in it", %{
+      conn: conn
+    } do
+      %{conn: conn} = owner(conn)
+
+      # Today is Wednesday 14 October. Next week lands on Wednesday 21st.
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-14")
+      assert %{view: "week"} = ready(lv, %{"phone" => false})
+      lv |> element("#calendar-next") |> render_click()
+      assert_patch(lv, "/dashboard/calendar?view=week&date=2026-10-21")
+
+      # 1. Day opens the Monday of the week shown, not the next Wednesday.
+      lv |> element("#calendar-view-day") |> render_click()
+      assert_patch(lv, "/dashboard/calendar?view=day&date=2026-10-19")
+
+      # 2. A view that starts at its date hands it on as it is.
+      lv |> element("#calendar-view-month") |> render_click()
+      assert_patch(lv, "/dashboard/calendar?view=month&date=2026-10-19")
+
+      # 3. A month holding today hands over today.
+      lv |> element("#calendar-view-three_day") |> render_click()
+      assert_patch(lv, "/dashboard/calendar?view=three_day&date=2026-10-14")
+
+      # 4. A month without today hands over its first, though its grid shows today.
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=month&date=2026-11-14")
+      assert %{view: "month"} = ready(lv, %{"phone" => false})
+      lv |> element("#calendar-view-agenda") |> render_click()
+      assert_patch(lv, "/dashboard/calendar?view=agenda&date=2026-11-01")
+
+      # 5. A week holding today hands over today.
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-16")
+      assert %{view: "week"} = ready(lv, %{"phone" => false})
+      lv |> element("#calendar-view-three_day") |> render_click()
+      assert_patch(lv, "/dashboard/calendar?view=three_day&date=2026-10-14")
+    end
+  end
+
   describe "agenda" do
     test "scrolls four weeks at a time to its end, and hidden calendars stay hidden", %{
       conn: conn

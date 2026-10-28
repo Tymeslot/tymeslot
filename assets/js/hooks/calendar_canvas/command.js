@@ -284,7 +284,7 @@ export const CommandMixin = {
     const from = this.periodFrom();
     switch (run.type) {
       case "view":
-        return this.leaveForGrid(() => from.view !== run.view && this.gotoPeriod(run.view, from.date));
+        return this.leaveForGrid(() => from.view !== run.view && this.switchView(run.view, from));
       case "key":
         // T and J/K move the grid; the rest (F, ?, the digits) leave focus where it was.
         if ("tjk".includes(run.key)) return this.leaveForGrid(() => POWER_KEYS[run.key](this));

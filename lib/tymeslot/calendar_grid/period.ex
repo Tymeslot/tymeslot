@@ -128,6 +128,29 @@ defmodule Tymeslot.CalendarGrid.Period do
   def shift(view, date, direction), do: Date.add(date, direction * Map.fetch!(@steps, view))
 
   @doc """
+  The date to open another view at, switching from `view` at `date`. Every
+  view shares one date, but a week and a month show the period around it
+  while the other views start from it, and stepping by a week or a month
+  can leave the date part-way through. A week or a month therefore hands
+  over `today` when today is one of its days (a month's own days, not the
+  neighbours its grid shows), else its first day; the other views keep the
+  date. `viewSwitchAnchor` in `assets/js/calendar/time.js` mirrors it.
+  """
+  @spec view_switch_anchor(view(), Date.t(), Date.t(), week_start()) :: Date.t()
+  def view_switch_anchor(:week, date, today, week_start) do
+    first = Date.beginning_of_week(date, week_start)
+    today_or_first(Date.range(first, Date.add(first, 6)), today)
+  end
+
+  def view_switch_anchor(:month, date, today, _week_start),
+    do: today_or_first(Date.range(Date.beginning_of_month(date), Date.end_of_month(date)), today)
+
+  def view_switch_anchor(_view, date, _today, _week_start), do: date
+
+  defp today_or_first(%Date.Range{first: first} = period, today),
+    do: if(today in period, do: today, else: first)
+
+  @doc """
   The days the surface loads events for: from the first day of the previous
   period to the last day of the next, contiguous even when weekends are
   hidden, so a step either way renders from data already in the browser. A

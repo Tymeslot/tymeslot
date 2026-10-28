@@ -23,7 +23,8 @@
  * `this.scrollTop`) waits for the return to a time view.
  *
  * D, X, W, M and A switch views anywhere on the page but a text field, a
- * dialog or a modal. M on a focused event belongs to the event: the
+ * dialog or a modal; `switchView` opens the next view at the week or month
+ * shown (today when it is in it, else the first day), as the toolbar does. M on a focused event belongs to the event: the
  * keyboard move (keys.js) where it can move, nothing where it cannot.
  */
 import { agendaDays, agendaGroups } from "../../calendar/agenda.js";
@@ -33,7 +34,7 @@ import { renderAgenda } from "../../calendar/render_agenda.js";
 import { renderMonth } from "../../calendar/render_month.js";
 import { renderWeekStrip } from "../../calendar/render_strip.js";
 import { dateLabel, renderGrid, renderSkeleton } from "../../calendar/render.js";
-import { AGENDA_MAX_DAYS, MINUTES_PER_DAY, addDays, isTimeGrid, isoFromDay, periodDays } from "../../calendar/time.js";
+import { AGENDA_MAX_DAYS, MINUTES_PER_DAY, addDays, isTimeGrid, isoFromDay, periodDays, viewSwitchAnchor } from "../../calendar/time.js";
 import { metricsFor } from "../../calendar/viewport.js";
 import { MODALS, TYPING } from "./keys.js";
 
@@ -247,6 +248,15 @@ export const ViewsMixin = {
     this.pushEventTo(this.el, "calendar:goto", { view, date });
   },
 
+  // Another view, from the period shown (`from`, the pending one if any). A
+  // week or a month hands over today or its first day (viewSwitchAnchor); a
+  // phone's month keeps the day picked in it.
+  switchView(view, from) {
+    const today = isoFromDay(Math.floor(this.nowMinute() / MINUTES_PER_DAY));
+    const keep = this.phone && from.view === "month";
+    this.gotoPeriod(view, keep ? from.date : viewSwitchAnchor(from.view, from.date, today, this.settings.week_start));
+  },
+
   // The days quick create looks in for the next free time: the period in a
   // time view, else the view's date and the six days after it.
   createDays() {
@@ -265,6 +275,6 @@ export const ViewsMixin = {
     e.preventDefault();
     const from = this.pending ?? { view: this.view, date: this.date };
     if (from.view === view) return;
-    this.gotoPeriod(view, from.date);
+    this.switchView(view, from);
   },
 };

@@ -248,4 +248,45 @@ defmodule Tymeslot.CalendarGrid.PeriodTest do
                [40, 41, 42, 43, 44, 45]
     end
   end
+
+  describe "view_switch_anchor/4" do
+    test "a week hands over today when today is in it" do
+      assert Period.view_switch_anchor(:week, ~D[2026-10-16], ~D[2026-10-14], :monday) ==
+               ~D[2026-10-14]
+    end
+
+    test "a week without today hands over its first day, mid-week anchor or not" do
+      assert Period.view_switch_anchor(:week, ~D[2026-10-21], ~D[2026-10-14], :monday) ==
+               ~D[2026-10-19]
+
+      assert Period.view_switch_anchor(:week, ~D[2026-10-21], ~D[2026-10-14], :sunday) ==
+               ~D[2026-10-18]
+    end
+
+    test "a week's first day follows the week start: Sunday 18th opens its own Sunday week" do
+      assert Period.view_switch_anchor(:week, ~D[2026-10-18], ~D[2026-10-01], :sunday) ==
+               ~D[2026-10-18]
+
+      assert Period.view_switch_anchor(:week, ~D[2026-10-18], ~D[2026-10-01], :monday) ==
+               ~D[2026-10-12]
+    end
+
+    test "a month hands over today when today is one of its own days" do
+      assert Period.view_switch_anchor(:month, ~D[2026-10-20], ~D[2026-10-14], :monday) ==
+               ~D[2026-10-14]
+    end
+
+    test "a month without today hands over its first, even when its grid shows today" do
+      # The November grid starts on 26 October; today there is not November's.
+      assert Period.view_switch_anchor(:month, ~D[2026-11-14], ~D[2026-10-28], :monday) ==
+               ~D[2026-11-01]
+    end
+
+    test "the views that start at their date keep it" do
+      for view <- [:day, :three_day, :agenda] do
+        assert Period.view_switch_anchor(view, ~D[2026-10-21], ~D[2026-10-14], :monday) ==
+                 ~D[2026-10-21]
+      end
+    end
+  end
 end

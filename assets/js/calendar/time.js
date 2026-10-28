@@ -7,10 +7,11 @@
  * browser's own zone never enters the picture. Day numbers are the same idea
  * at day resolution.
  *
- * `periodDays` and `shiftPeriod` mirror Tymeslot.CalendarGrid.Period so the
- * hook can draw the next period before the server answers: a month is the
- * six weeks of `monthMatrix` and steps by a calendar month with the day
- * clamped; an agenda is AGENDA_DAYS days from its date.
+ * `periodDays`, `shiftPeriod` and `viewSwitchAnchor` mirror
+ * Tymeslot.CalendarGrid.Period so the hook can draw the next period before
+ * the server answers: a month is the six weeks of `monthMatrix` and steps
+ * by a calendar month with the day clamped; an agenda is AGENDA_DAYS days
+ * from its date.
  */
 export const MINUTES_PER_DAY = 1440;
 export const NIGHT_END = 420; // 07:00, where the folded night strip ends
@@ -86,6 +87,27 @@ export function periodDays(view, iso, weekStart, showWeekends) {
     .map((k) => first + k)
     .filter((d) => showWeekends || isoWeekday(d) < 6)
     .map(isoFromDay);
+}
+
+// The date another view opens at, switching from `view` at `iso`, as
+// Period.view_switch_anchor/4: a week or a month hands over `today` when it is
+// one of its days (a month's own, not its grid's neighbours), else its first
+// day; the other views keep their date.
+export function viewSwitchAnchor(view, iso, today, weekStart) {
+  let first;
+  let last;
+  if (view === "week") {
+    first = weekStartOf(dayNumber(iso), weekStart);
+    last = first + 6;
+  } else if (view === "month") {
+    const [year, month] = iso.slice(0, 7).split("-").map(Number);
+    first = dayNumber(`${iso.slice(0, 7)}-01`);
+    last = first + new Date(Date.UTC(year, month, 0)).getUTCDate() - 1;
+  } else {
+    return iso;
+  }
+  const day = dayNumber(today);
+  return day >= first && day <= last ? today : isoFromDay(first);
 }
 
 // A calendar month on, keeping the day where the month has it, else its last

@@ -5,7 +5,7 @@
  * the time grid. Today is Wednesday 14 October 2026.
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { block, event, mountHook, payload, pushes, settings, unmountAll } from "./canvas_harness.js";
+import { block, event, mockViewport, mountHook, payload, pushes, settings, unmountAll } from "./canvas_harness.js";
 import { formatWall } from "../../calendar/time.js";
 
 const press = (target, key, extra = {}) => target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra }));
@@ -465,5 +465,57 @@ describe("view letters, more cases", () => {
     document.body.appendChild(editable);
     press(editable, "d");
     expect(pushes(hook, "calendar:goto")).toEqual([]);
+  });
+});
+
+describe("view letters start the next view at the period shown", () => {
+  const nextWeek = () => payload({ date: "2026-10-21", range: { from: "2026-10-12", to: "2026-11-01" } });
+
+  test.each([
+    ["d", "day"],
+    ["x", "three_day"],
+    ["a", "agenda"],
+  ])("%s from a week without today opens its first day", (key, view) => {
+    const { hook } = mountHook(nextWeek());
+    press(document.body, key);
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view, date: "2026-10-19" }]);
+  });
+
+  test("from a week holding today, today, wherever in the week the date sits", () => {
+    const { hook } = mountHook(payload({ date: "2026-10-16" }));
+    press(document.body, "d");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "day", date: "2026-10-14" }]);
+  });
+
+  test("from a month without today, its first day, though its grid shows today", () => {
+    const { hook } = mountHook(monthPayload({ date: "2026-11-14", range: { from: "2026-09-28", to: "2027-01-11" } }));
+    press(document.body, "d");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "day", date: "2026-11-01" }]);
+  });
+
+  test("from a month holding today, today", () => {
+    const { hook } = mountHook(monthPayload({ date: "2026-10-27" }));
+    press(document.body, "x");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "three_day", date: "2026-10-14" }]);
+  });
+
+  test("a step taken before the server answers counts: the pending week is the one shown", () => {
+    const { el, hook } = mountHook();
+    el.dispatchEvent(new CustomEvent("calendar:navigate", { detail: { view: "week", date: "2026-10-21" } }));
+    press(document.body, "d");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "day", date: "2026-10-19" }]);
+  });
+
+  test("from a day, three days or an agenda the date stays", () => {
+    const { hook } = mountHook(payload({ view: "day", date: "2026-10-22" }));
+    press(document.body, "w");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "week", date: "2026-10-22" }]);
+  });
+
+  test("on a phone a month keeps the day picked in it", () => {
+    mockViewport(true);
+    const { hook } = mountHook(monthPayload({ date: "2026-11-14", range: { from: "2026-09-28", to: "2027-01-11" } }));
+    press(document.body, "a");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "agenda", date: "2026-11-14" }]);
   });
 });

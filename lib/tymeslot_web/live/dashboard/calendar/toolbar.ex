@@ -197,7 +197,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
             type="button"
             id={"calendar-view-#{view}"}
             aria-pressed={to_string(view == @view)}
-            phx-click={Navigation.js(view, @date, from: {@view, @date})}
+            phx-click={
+              Navigation.js(
+                view,
+                Period.view_switch_anchor(@view, @date, @today, @week_start),
+                from: {@view, @date}
+              )
+            }
             class={[
               "inline-flex items-center whitespace-nowrap rounded-token-md px-3 py-1 text-token-sm font-semibold transition-colors",
               "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400",
