@@ -471,23 +471,27 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   defp automation_tabs(telegram_enabled, slack_enabled) do
     Enum.filter(
       [
-        %{id: :webhooks, label: dgettext("dashboard_automation", "Webhooks"), icon: :webhook},
+        %{id: :webhooks, label: dgettext("dashboard_automation", "Webhooks"), icon: "hero-link"},
         telegram_tab(telegram_enabled),
         slack_enabled &&
-          %{id: :slack, label: dgettext("dashboard_automation", "Slack"), icon: :slack}
+          %{id: :slack, label: dgettext("dashboard_automation", "Slack"), icon: "brand-slack"}
       ],
       & &1
     )
   end
 
   defp telegram_tab(true),
-    do: %{id: :telegram, label: dgettext("dashboard_automation", "Telegram"), icon: :telegram}
+    do: %{
+      id: :telegram,
+      label: dgettext("dashboard_automation", "Telegram"),
+      icon: "brand-telegram"
+    }
 
   defp telegram_tab(false),
     do: %{
       id: :telegram,
       label: dgettext("dashboard_automation", "Telegram"),
-      icon: :telegram,
+      icon: "brand-telegram",
       disabled: true,
       badge: dgettext("dashboard_automation_chat", "Disabled")
     }

@@ -149,9 +149,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-intent="back"
                       variant={:secondary}
                       disabled={@submitting}
-                      class="flex-1"
+                      class="flex-1 gap-2"
                     >
-                      ← {dgettext("booking", "Back")}
+                      <.icon name="hero-arrow-left" class="inline-icon" />
+                      {dgettext("booking", "Back")}
                     </.action_button>
 
                     <.loading_button

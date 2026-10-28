@@ -97,6 +97,20 @@
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
           {CredoChecks.UseCoreModal, []},
+          {CredoChecks.NoInlineSvg,
+           [
+             # Artwork, not icons: the icon renderer itself, the loading
+             # spinner, a chart drawn from data, and generated avatar images.
+             allowed_files: [
+               "lib/tymeslot_web/components/core_components/icons.ex",
+               "lib/tymeslot_web/components/core_components/feedback.ex",
+               # The one remaining <svg> is inside a `<script nomodule>` JS string
+               # (the "browser not supported" page), which cannot render a component.
+               "lib/tymeslot_web/components/layouts.ex",
+               "lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex",
+               "lib/tymeslot/profiles/avatars/fallback.ex"
+             ]
+           ]},
           {CredoChecks.UseColorScale, [priority: :low]},
           {CredoChecks.NoArbitraryHexColors, [priority: :low]},
           {CredoChecks.RequireDashboardPage, [priority: :low]},

@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
     <div class="space-y-8">
       <%!-- Toolbar --%>
       <.section_header
-        icon={:webhook}
+        icon="hero-link"
         title={
           if @mode == :create,
             do: dgettext("dashboard_automation", "Create Webhook"),

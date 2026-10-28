@@ -32,19 +32,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
             <div class="p-8">
               <div class="text-center">
                 <div class="mx-auto mb-4 w-16 h-16">
-                  <svg
-                    class="w-16 h-16 meeting-page-icon--success"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <.icon name="hero-check" class="w-16 h-16 meeting-page-icon--success" />
                 </div>
 
                 <h1 class="text-3xl font-bold mb-2 meeting-page-title">
@@ -55,19 +43,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                 </p>
 
                 <div class="mb-8 p-4 rounded-lg flex items-start gap-3 meeting-page-notice meeting-page-notice--success">
-                  <svg
+                  <.icon
+                    name="hero-envelope"
                     class="w-5 h-5 shrink-0 mt-0.5 meeting-page-icon--success"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
+                  />
                   <div class="text-sm meeting-page-muted">
                     <strong>{dgettext(
                       "booking_manage",

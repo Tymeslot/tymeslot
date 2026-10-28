@@ -72,19 +72,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   defp loading_spinner(assigns) do
     ~H"""
     <%= if @show do %>
-      <svg
-        class="animate-spin h-4 w-4 text-white opacity-60"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        />
-      </svg>
+      <.spinner class="spinner--sm text-white opacity-60" />
     <% end %>
     """
   end
@@ -182,17 +170,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           <div class="weekly-nav-row">
                             <button
                               phx-click="prev_week"
+                              aria-label={dgettext("booking", "Previous week")}
                               phx-target={@myself}
-                              phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.prev_week_disabled?(
                                   @current_week_start,
                                   @user_timezone
                                 )
                               }
-                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                             >
-                              ←
+                              <.icon name="hero-arrow-left" class="inline-icon stroke-2" />
                             </button>
                             <div class="weekly-nav-label">
                               <div class="text-xs font-semibold text-white">
@@ -202,8 +190,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             </div>
                             <button
                               phx-click="next_week"
+                              aria-label={dgettext("booking", "Next week")}
                               phx-target={@myself}
-                              phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.next_week_disabled?(
                                   @current_week_start,
@@ -211,9 +199,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                   @booking_window_days
                                 )
                               }
-                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                             >
-                              →
+                              <.icon name="hero-arrow-right" class="inline-icon stroke-2" />
                             </button>
                           </div>
                           <div class="week-day-strip">
@@ -248,27 +236,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             <div class="calendar-nav-cluster">
                               <%= if @availability_status == :error do %>
                                 <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
-                                  <svg
-                                    class="w-3 h-3"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      stroke-linecap="round"
-                                      stroke-linejoin="round"
-                                      stroke-width="2"
-                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                    />
-                                  </svg>
+                                  <.icon name="hero-exclamation-triangle" class="w-3 h-3" />
                                   {dgettext("booking", "Calendar is loading slowly")}
                                 </div>
                               <% end %>
                               <button
                                 phx-click="prev_month"
+                                aria-label={dgettext("booking", "Previous month")}
                                 phx-target={@myself}
                                 data-intent="earlier"
-                                phx-disable-with="..."
                                 disabled={
                                   CalendarNavigation.prev_month_disabled?(
                                     @current_year,
@@ -276,9 +252,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                     @user_timezone
                                   )
                                 }
-                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                               >
-                                ←
+                                <.icon name="hero-arrow-left" class="inline-icon stroke-2" />
                               </button>
                               <div class="calendar-month-label font-semibold text-white">
                                 {LocalizationHelpers.get_month_year_display(
@@ -288,9 +264,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               </div>
                               <button
                                 phx-click="next_month"
+                                aria-label={dgettext("booking", "Next month")}
                                 phx-target={@myself}
                                 data-intent="later"
-                                phx-disable-with="..."
                                 disabled={
                                   CalendarNavigation.next_month_disabled?(
                                     @current_year,
@@ -299,9 +275,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                     @booking_window_days
                                   )
                                 }
-                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                               >
-                                →
+                                <.icon name="hero-arrow-right" class="inline-icon stroke-2" />
                               </button>
                             </div>
                           </div>
@@ -363,21 +339,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                              state. --%>
                           <div class="h-full flex items-center justify-center">
                             <div class="text-center p-4">
-                              <svg
+                              <.icon
+                                name="hero-no-symbol"
                                 class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                >
-                                </path>
-                              </svg>
+                              />
                               <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
                                 {dgettext("booking", "This date is fully booked")}
                               </p>
@@ -400,9 +365,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       data-testid="back-step"
                       data-intent="back"
                       variant={:secondary}
-                      class="flex-1"
+                      class="flex-1 gap-2"
                     >
-                      ← {dgettext("booking", "Back")}
+                      <.icon name="hero-arrow-left" class="inline-icon" />
+                      {dgettext("booking", "Back")}
                     </.action_button>
 
                     <.action_button
@@ -411,9 +377,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       data-testid="next-step"
                       data-intent="continue"
                       disabled={!(@selected_date && @selected_time)}
-                      class="flex-1"
+                      class="flex-1 gap-2"
                     >
-                      {dgettext("booking", "Next Step")} →
+                      {dgettext("booking", "Next Step")}
+                      <.icon name="hero-arrow-right" class="inline-icon" />
                     </.action_button>
                   </div>
                 </div>
@@ -439,14 +406,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
            own accessible name), so it must not be a <label> element. --%>
       <div class="timezone-label">
         <div class="timezone-label-content">
-          <svg class="timezone-label-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <.icon name="hero-clock" class="timezone-label-icon" />
           {dgettext("booking", "Your timezone")}
         </div>
       </div>
@@ -459,7 +419,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
         <:trigger>
           <div class="timezone-trigger-row">
             <div class="timezone-trigger-info">
-              <.timezone_flag timezone={@user_timezone} class="timezone-flag" fallback_icon="🌐" />
+              <.timezone_flag
+                timezone={@user_timezone}
+                class="timezone-flag"
+                fallback_icon="hero-globe-alt"
+              />
               <div class="timezone-trigger-text">
                 <div class="timezone-name">
                   {Timezones.format(@user_timezone)}
@@ -475,19 +439,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
               <div class="timezone-offset-badge">
                 {Timezones.utc_offset(@user_timezone)}
               </div>
-              <svg
+              <.icon
+                name="hero-chevron-down"
                 class={["timezone-chevron", @timezone_dropdown_open && "open"]}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              />
             </div>
           </div>
         </:trigger>

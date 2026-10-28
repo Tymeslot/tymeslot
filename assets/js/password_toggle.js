@@ -86,21 +86,11 @@ const PasswordToggle = {
 
 function updateRequirement(element, isValid) {
   if (!element) return;
-  const icon = element.querySelector('svg');
-  if (isValid) {
-    element.classList.remove('text-gray-500');
-    element.classList.add('text-green-500');
-    if (icon) {
-      icon.innerHTML =
-        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
-    }
-  } else {
-    element.classList.remove('text-green-500');
-    element.classList.add('text-gray-500');
-    if (icon) {
-      icon.innerHTML = '<circle cx="12" cy="12" r="10" stroke-width="2"/>';
-    }
-  }
+  // Both icons are rendered server-side; this only toggles which one shows.
+  element.querySelector('[data-rule-met]')?.classList.toggle('hidden', !isValid);
+  element.querySelector('[data-rule-unmet]')?.classList.toggle('hidden', isValid);
+  element.classList.toggle('text-gray-500', !isValid);
+  element.classList.toggle('text-green-500', isValid);
 }
 
 export { PasswordToggle };

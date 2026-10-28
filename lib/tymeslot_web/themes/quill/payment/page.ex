@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Page do
   """
   use Phoenix.Component
 
-  use TymeslotWeb.Components.CoreComponents, only: [glass_morphism_card: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [glass_morphism_card: 1, icon: 1]
 
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
 
@@ -61,27 +61,16 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Page do
       "payment-page-badge confirmation-badge rounded-full flex items-center justify-center",
       @status == :waiting && "confirmation-badge--pending"
     ]}>
-      <svg
-        class="confirmation-badge-icon text-white"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="3"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          :if={@status == :confirmed}
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M5 13l4 4L19 7"
-        />
-        <path
-          :if={@status == :waiting}
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <.icon
+        :if={@status == :confirmed}
+        name="hero-check"
+        class="confirmation-badge-icon text-white stroke-3"
+      />
+      <.icon
+        :if={@status == :waiting}
+        name="hero-clock"
+        class="confirmation-badge-icon text-white stroke-3"
+      />
     </div>
     """
   end

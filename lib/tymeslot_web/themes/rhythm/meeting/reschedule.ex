@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   alias Phoenix.LiveView.JS
@@ -37,14 +39,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                 <div class="confirmation-header-section">
                   <div class="success-badge">
                     <div class="success-badge-inner success-badge-inner--info">
-                      <svg class="success-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
+                      <.icon name="hero-arrow-path" class="success-icon stroke-2" />
                     </div>
                   </div>
 
@@ -93,20 +88,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                     type="button"
                   >
                     <span>{dgettext("booking_manage", "Go to Calendar")}</span>
-                    <svg
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      class="icon-sm"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      >
-                      </path>
-                    </svg>
+                    <.icon name="hero-calendar" class="icon-sm" />
                   </button>
                 </div>
               </div>

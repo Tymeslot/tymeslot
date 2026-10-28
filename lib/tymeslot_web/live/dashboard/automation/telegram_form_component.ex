@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Telegram
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.EventSubscriptions
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -268,7 +267,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
         )
       }
     >
-      <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+      <:graphic><.icon name="brand-telegram" class="w-10 h-10" /></:graphic>
       <:action>
         <.action_button phx-click="refresh_telegram_link" phx-target={@parent_component}>
           {dgettext("dashboard_automation_chat", "Generate New Link")}
@@ -292,10 +291,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
         )
       }
     >
-      <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
+      <:graphic><.icon name="brand-telegram" class="w-10 h-10" /></:graphic>
       <:action :if={@deep_link}>
         <.action_link href={@deep_link} target="_blank" rel="noopener noreferrer">
-          <IconComponents.icon name={:telegram} class="w-5 h-5" />
+          <.icon name="brand-telegram" class="w-5 h-5" />
           {dgettext("dashboard_automation_chat", "Open in Telegram")}
         </.action_link>
       </:action>
