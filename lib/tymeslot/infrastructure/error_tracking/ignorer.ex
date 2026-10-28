@@ -5,7 +5,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   `Tymeslot.Infrastructure.ErrorTracking.ClientError` (the same exception
   raised in a job or any other process is tracked), and events no
   `handle_event/3` clause matches, by the rule in
-  `Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent`. Last, it drops the
+  `Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent`, and requests whose
+  client closed the connection before the response was sent, by the rule in
+  `Tymeslot.Infrastructure.ErrorTracking.ClientClosure`. Last, it drops the
   occurrences of one error beyond the per-minute cap of
   `Tymeslot.Infrastructure.ErrorTracking.Throttle`; asked last, so ignored
   noise never uses up an error's allowance.
@@ -18,6 +20,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
 
   @behaviour ErrorTracker.Ignorer
 
+  alias Tymeslot.Infrastructure.ErrorTracking.ClientClosure
   alias Tymeslot.Infrastructure.ErrorTracking.ClientError
   alias Tymeslot.Infrastructure.ErrorTracking.Throttle
   alias Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent
@@ -29,6 +32,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   def ignore?(error, context) do
     ClientError.client_error_kind?(error.kind, context) or
       UnmatchedEvent.error?(error.kind, error.reason) or
+      ClientClosure.error?(error.kind, error.reason, context) or
       not Throttle.allow?(error.fingerprint)
   rescue
     exception ->
