@@ -43,6 +43,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
       reason in [
         @gone,
         @reauth_resolved,
+        @deletion_pending,
         @room_error_cleared,
         @user_gone,
         @event_gone,

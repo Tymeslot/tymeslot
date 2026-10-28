@@ -467,7 +467,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmailsTest do
       integration =
         insert(:calendar_integration, user: user, provider: "google", needs_reauth: true)
 
-      assert {:discard, "Account pending deletion"} =
+      assert {:discard, "Account pending deletion" = reason} =
                EmailHandlers.execute_email_action(
                  "send_integration_reauth_notification",
                  %{
@@ -476,6 +476,9 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmailsTest do
                    "integration_type" => "calendar"
                  }
                )
+
+      # An expected end of the job, so it is not recorded as an error.
+      assert EmailHandlers.expected_discard?(reason)
     end
 
     test "discards when the user or integration is missing" do
