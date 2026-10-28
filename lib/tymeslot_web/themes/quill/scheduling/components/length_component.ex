@@ -94,9 +94,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                     data-testid="back-step"
                     data-intent="back"
                     variant={:secondary}
-                    class="flex-1"
+                    class="flex-1 gap-2"
                   >
-                    ← {dgettext("booking", "Back")}
+                    <.icon name="hero-arrow-left" class="inline-icon" />
+                    {dgettext("booking", "Back")}
                   </.action_button>
                   <.action_button
                     phx-click="next_step"
@@ -108,9 +109,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                       if is_nil(@chosen),
                         do: dgettext("booking", "Please select a meeting duration first")
                     }
-                    class="flex-1"
+                    class="flex-1 gap-2"
                   >
-                    {dgettext("booking", "Next")} →
+                    {dgettext("booking", "Next")}
+                    <.icon name="hero-arrow-right" class="inline-icon" />
                   </.action_button>
                 </div>
               </div>

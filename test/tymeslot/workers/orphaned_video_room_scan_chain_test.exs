@@ -20,7 +20,6 @@ defmodule Tymeslot.Workers.OrphanedVideoRoomScanChainTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.OrphanedVideoRoomScanWorker
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
@@ -29,7 +28,7 @@ defmodule Tymeslot.Workers.OrphanedVideoRoomScanChainTest do
 
   test "a cancelled meeting's leftover room is deleted on the provider and cleared" do
     %{user: user} = create_user_with_profile()
-    integration = insert_zoom_integration(user)
+    integration = insert(:zoom_video_integration, user: user)
     now = DateTime.utc_now(:second)
 
     orphan =
@@ -73,24 +72,5 @@ defmodule Tymeslot.Workers.OrphanedVideoRoomScanChainTest do
     Repo.delete!(job)
     assert :ok = perform_job(OrphanedVideoRoomScanWorker, %{})
     refute_enqueued(worker: VideoSyncWorker, args: %{"meeting_id" => orphan.id})
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting",
-      provider_account_id: nil
-    )
   end
 end

@@ -22,6 +22,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   attr :guest_emails, :list, required: true
   attr :guest_input, :string, default: ""
   attr :guest_error, :string, default: nil
@@ -51,7 +53,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
               aria-label={dgettext("booking", "Close")}
               data-testid="guest-close"
             >
-              ×
+              <.icon name="hero-x-mark" class="w-3.5 h-3.5 stroke-2" />
             </button>
           </div>
         </div>
@@ -68,7 +70,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
               phx-target={@target}
               aria-label={dgettext("booking", "Remove guest %{email}", email: email)}
             >
-              ×
+              <.icon name="hero-x-mark" class="w-3.5 h-3.5 stroke-2" />
             </button>
           </li>
         </ul>

@@ -21,13 +21,13 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -36,6 +36,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
   @zoom_url "https://us02web.zoom.us/j/86360699337?pwd=secret"
   @new_url "https://video.example.com/join/room-123"
 
+  # A grant without the update scope; the factory's Zoom holds all three.
+  @zoom_scope "meeting:write:meeting meeting:delete:meeting"
+
   setup do
     user = insert(:user)
 
@@ -43,12 +46,26 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
       insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
 
     mirotalk = insert(:video_integration, user: user, provider: "mirotalk")
-    %{user: user, caldav: caldav, mirotalk: mirotalk, zoom: insert_zoom_integration(user)}
+
+    %{
+      user: user,
+      caldav: caldav,
+      mirotalk: mirotalk,
+      zoom: insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
+    }
   end
+
+  @design_review %{
+    summary: "Design review",
+    provider_calendar_id: "/cal/",
+    provider_event_id: "/cal/design-review.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z]
+  }
 
   describe "changing a grid event's video" do
     test "queues the delete of a replaced Zoom room by its meeting id", ctx do
-      event = insert_event(ctx.caldav, video(ctx.zoom, @zoom_url))
+      event = insert_event(ctx.caldav, @design_review, video(ctx.zoom, @zoom_url))
       replace_video(ctx, event)
 
       assert_enqueued(
@@ -68,7 +85,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
         ] do
       test "queues nothing for a replaced #{provider} room, and logs only a fingerprint", ctx do
         old = insert(:video_integration, user: ctx.user, provider: unquote(provider))
-        event = insert_event(ctx.caldav, video(old, unquote(link)))
+        event = insert_event(ctx.caldav, @design_review, video(old, unquote(link)))
 
         log_event =
           LogCapture.with_capture([logger_level: :info], fn ->
@@ -85,7 +102,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
     test "queues the delete of a recorded room by its record, not by its link", ctx do
       talk = insert(:video_integration, user: ctx.user, provider: "nextcloud_talk")
       link = "https://cloud.example.com/call/talktoken1"
-      event = insert_event(ctx.caldav, video(talk, link))
+      event = insert_event(ctx.caldav, @design_review, video(talk, link))
 
       {:ok, room} =
         EventVideoRoomQueries.insert(%{
@@ -110,7 +127,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
 
   describe "deleting a grid event" do
     test "queues the delete of its Zoom room once the calendar has deleted it", ctx do
-      event = insert_event(ctx.caldav, video(ctx.zoom, @zoom_url))
+      event = insert_event(ctx.caldav, @design_review, video(ctx.zoom, @zoom_url))
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, address(event))
@@ -122,7 +139,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
     end
 
     test "queues nothing while the delete is only queued for the next sync", ctx do
-      event = insert_event(ctx.caldav, video(ctx.zoom, @zoom_url))
+      event = insert_event(ctx.caldav, @design_review, video(ctx.zoom, @zoom_url))
 
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :network_error}
@@ -149,7 +166,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
     # copy sharing one Zoom meeting, and the organiser is told to delete the
     # original themselves.
     test "deleting the original a move left behind keeps the moved copy's meeting", ctx do
-      original = insert_event(ctx.caldav, video(ctx.zoom, @zoom_url))
+      original = insert_event(ctx.caldav, @design_review, video(ctx.zoom, @zoom_url))
 
       expect(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
         {:ok, CreatedEvent.new(payload.uid)}
@@ -179,8 +196,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
     end
 
     test "changing the video on one of them keeps the other's meeting", ctx do
-      event = insert_event(ctx.caldav, video(ctx.zoom, @zoom_url))
-      _other = insert_event(ctx.destination, video(ctx.zoom, @zoom_url))
+      event = insert_event(ctx.caldav, @design_review, video(ctx.zoom, @zoom_url))
+      _other = insert_event(ctx.destination, @design_review, video(ctx.zoom, @zoom_url))
 
       replace_video(ctx, event)
 
@@ -252,34 +269,4 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
       provider_event_id: event.provider_event_id,
       provider_calendar_id: event.provider_calendar_id
     }
-
-  defp insert_event(integration, attrs) do
-    defaults = %{
-      calendar_integration: integration,
-      uid: "event-#{System.unique_integer([:positive])}",
-      summary: "Design review",
-      provider: integration.provider,
-      provider_calendar_id: "/cal/",
-      provider_event_id: "/cal/design-review-#{System.unique_integer([:positive])}.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:delete:meeting"
-    )
-  end
 end

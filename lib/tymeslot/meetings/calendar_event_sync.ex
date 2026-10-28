@@ -15,12 +15,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   - sending an error notification to the calendar owner on persistent create
     failures, and on an update the provider can neither apply nor recover.
 
-  Each entry point returns a tagged tuple that the calling Oban worker
+  Each entry point returns a result that the calling Oban worker
   (`Tymeslot.Workers.CalendarEventWorker`) maps to a retry/error outcome:
 
     * `:ok`
     * `{:error, error_type}` — an error category the worker classifies for retry
-    * `{:discard, reason}` — the operation can never succeed
 
   The worker owns the *when* (Oban dispatch, timeouts, backoff, retry
   classification); this module owns the *what*. Persistence always flows through
@@ -70,7 +69,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   The `attempt` count is used only to decide whether a persistent failure should
   trigger an owner notification.
   """
-  @spec create(term(), pos_integer()) :: :ok | {:error, term()} | {:discard, term()}
+  @spec create(term(), pos_integer()) :: :ok | {:error, term()}
   def create(meeting_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
@@ -334,12 +333,12 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   # until inbound sync drops it the grid would show it beside the booking.
   defp delete_replaced_event(meeting, event_id) do
     case CalendarEvents.delete_event(event_id, meeting) do
-      result when result in [:ok, {:error, :not_found}] ->
+      {:error, reason} = error when reason != :not_found ->
+        error
+
+      _deleted ->
         Logger.info("Replaced calendar event deleted", meeting_id: meeting.id)
         CalendarEventCache.forget(meeting, event_id)
-
-      error ->
-        error
     end
   end
 
@@ -448,17 +447,18 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   defp delete_event_for_meeting(meeting, meeting_id) do
     case CalendarEvents.delete_event(calendar_event_identifier(meeting), meeting) do
-      :ok ->
-        Logger.info("Calendar event deleted successfully", meeting_id: meeting_id)
-        :ok
-
       {:error, :not_found} ->
         # Event already deleted, consider it success
         Logger.info("Calendar event already deleted", meeting_id: meeting_id)
         :ok
 
-      error ->
+      {:error, _reason} = error ->
         error
+
+      # `:ok`; the `{:ok, _}` form only answers a single-occurrence delete.
+      _deleted ->
+        Logger.info("Calendar event deleted successfully", meeting_id: meeting_id)
+        :ok
     end
   end
 

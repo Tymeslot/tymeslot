@@ -174,6 +174,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           </div>
         <% end %>
 
+        <%!-- Chevron for the native select, whose own arrow `appearance-none` hides --%>
+        <TymeslotWeb.Components.CoreComponents.Icons.icon
+          :if={@type == "select"}
+          name="hero-chevron-down"
+          class="select-chevron absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 stroke-[2.5] text-tymeslot-500 pointer-events-none"
+        />
+
         {render_slot(@inner_block)}
       </div>
 
@@ -404,14 +411,17 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           data-password-pattern={rule.pattern}
           class="flex items-center text-tymeslot-600 font-medium"
         >
-          <svg
+          <%!-- Both states are rendered; password_toggle.js shows one as the rule is met --%>
+          <TymeslotWeb.Components.CoreComponents.Icons.icon
+            name="circle"
+            data-rule-unmet
             class="w-3.5 h-3.5 mr-1.5 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="12" cy="12" r="10" stroke-width="2.5" />
-          </svg>
+          />
+          <TymeslotWeb.Components.CoreComponents.Icons.icon
+            name="hero-check"
+            data-rule-met
+            class="hidden w-3.5 h-3.5 mr-1.5 shrink-0 stroke-2"
+          />
           <span class="text-xs">{password_rule_label(rule.key)}</span>
         </li>
       </ul>

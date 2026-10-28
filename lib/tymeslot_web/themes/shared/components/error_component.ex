@@ -28,13 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ErrorComponent do
     <div class="readiness-notice-container" data-testid="readiness-notice">
       <div class="readiness-notice-card">
         <div class="readiness-notice-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M12 2a10 10 0 100 20 10 10 0 000-20z"
-            />
-          </svg>
+          <.icon name="hero-no-symbol" />
         </div>
         <h1 class="readiness-notice-heading">
           {dgettext("errors", "We can't show this scheduling page yet")}

@@ -353,11 +353,11 @@ defmodule TymeslotWeb.AccountDeletion.AccountDeletionJourneyTest do
     restored = page |> recycle() |> post(~p"/auth/restore")
 
     assert redirected_to(restored) == "/dashboard/integrations?tab=calendars"
-    assert Flash.get(restored.assigns.flash, :error) =~ "Family iCloud refused"
+    assert Flash.get(restored.assigns.flash, :error) =~ "Family iCloud needs reconnecting"
     assert Repo.get(UserSchema, user.id).deletion_scheduled_at == nil
 
     {:ok, _view, html} = restored |> recycle() |> live(~p"/dashboard/integrations?tab=calendars")
-    assert html =~ "Family iCloud refused the credentials Tymeslot holds for it"
+    assert html =~ "Family iCloud needs reconnecting. Until you reconnect it"
   end
 
   test "the only admin who can sign in is told to promote another first", %{conn: conn} do

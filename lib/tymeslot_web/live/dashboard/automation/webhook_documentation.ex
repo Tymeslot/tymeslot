@@ -80,27 +80,15 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
             </h3>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 ml-5">
-            <%= for {event, icon_path} <- [
-              {"meeting.created", "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
-              {"meeting.cancelled", "M6 18L18 6M6 6l12 12"},
-              {"meeting.rescheduled", "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"}
+            <%= for {event, icon_name} <- [
+              {"meeting.created", "hero-calendar"},
+              {"meeting.cancelled", "hero-x-mark"},
+              {"meeting.rescheduled", "hero-arrow-path"}
             ] do %>
               <div class="p-4 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 hover:shadow-md transition-all">
                 <div class="flex items-center gap-2 mb-2">
                   <div class="p-1.5 bg-turquoise-50 rounded-token-lg">
-                    <svg
-                      class="w-4 h-4 text-turquoise-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d={icon_path}
-                      />
-                    </svg>
+                    <.icon name={icon_name} class="w-4 h-4 text-turquoise-600" />
                   </div>
                   <code class="text-token-sm font-black text-tymeslot-900">{event}</code>
                 </div>

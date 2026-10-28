@@ -52,8 +52,13 @@ defmodule TymeslotWeb.OnboardingLive do
   def handle_params(%{"step" => step} = params, _uri, socket) do
     if StepConfig.valid_step?(step) do
       step_atom = String.to_existing_atom(step)
-      # Set by the OAuth return path of a host sent back from the share step.
-      socket = assign(socket, :returning_to_share, params["return"] == "share")
+      # Set by the OAuth return path of a host sent back from the share step;
+      # `theme` when that host has not seen the theme step yet.
+      socket =
+        assign(socket,
+          returning_to_share: params["return"] in ["share", "theme"],
+          theme_unseen: params["return"] == "theme"
+        )
 
       # During the disconnected (static) render the calendar list has not been
       # loaded yet, so `socket.assigns.steps` is always the no-calendar sequence
@@ -190,8 +195,8 @@ defmodule TymeslotWeb.OnboardingLive do
 
     <%!-- Real booking-page preview --%>
     <ThemePreviewModal.theme_preview_modal
-      show={@show_theme_preview}
-      url={@theme_preview_url}
+      show={@show_theme_preview_modal}
+      url={@theme_preview_modal_data}
     />
     """
   end

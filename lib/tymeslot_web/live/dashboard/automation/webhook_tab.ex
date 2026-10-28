@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.WebhookCard
   alias TymeslotWeb.Dashboard.Automation.WebhookDocumentation
 
@@ -75,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
           )
         }
       >
-        <:graphic><IconComponents.icon name={:webhook} class="w-10 h-10" /></:graphic>
+        <:graphic><.icon name="hero-link" class="w-10 h-10" /></:graphic>
         <:action>
           <.action_button
             disabled={@paused}

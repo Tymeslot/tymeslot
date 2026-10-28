@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
   import Plug.Conn
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Plug.Test
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
@@ -49,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
     calendar: calendar
   } do
     video = custom_video_integration(user)
-    event = insert_event(calendar, description: "Agenda")
+    event = insert_event(calendar, planning(), description: "Agenda")
 
     test_pid = self()
 
@@ -83,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
     video = custom_video_integration(user)
 
     event =
-      insert_event(calendar,
+      insert_event(calendar, planning(),
         video_integration_id: video.id,
         video_link: "https://meet.example.com/abc",
         description: "Agenda\n\nJoin video call: https://meet.example.com/abc"
@@ -121,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
         {:ok, %Req.Response{status: 400, body: @password_required}}
     end)
 
-    event = insert_event(calendar, description: "Agenda")
+    event = insert_event(calendar, planning(), description: "Agenda")
 
     lv = open_event(conn, event)
 
@@ -159,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
         {:ok, %Req.Response{status: 201, body: ocs(%{"token" => "pick0001"})}}
     end)
 
-    event = insert_event(calendar, description: "Agenda")
+    event = insert_event(calendar, planning(), description: "Agenda")
 
     lv = open_event(conn, event)
 
@@ -181,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
     video = custom_video_integration(user)
 
     event =
-      insert_event(calendar,
+      insert_event(calendar, planning(),
         video_integration_id: video.id,
         video_link: "https://meet.example.com/abc",
         description: "Agenda\n\nJoin video call: https://meet.example.com/abc"
@@ -210,21 +211,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
 
   defp picker_button(id), do: ~s|button[phx-value-video_integration_id="#{id}"]|
 
-  defp insert_event(calendar, attrs) do
-    today = Date.utc_today()
-
-    insert(
-      :provider_calendar_event,
-      Enum.into(attrs, %{
-        calendar_integration: calendar,
-        summary: "Planning",
-        location: "",
-        attendees: [],
-        all_day: false,
-        start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
-        end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC")
-      })
-    )
+  # The calendar is CalDAV; the event keeps the factory's Google provider.
+  defp planning do
+    %{
+      provider: "google",
+      summary: "Planning",
+      location: "",
+      attendees: [],
+      start_at: today_at(~T[10:00:00]),
+      end_at: today_at(~T[11:00:00])
+    }
   end
 
   # A templated link needs no provider round trip, so a room is made from the

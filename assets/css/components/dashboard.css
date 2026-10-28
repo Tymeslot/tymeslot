@@ -410,12 +410,16 @@
    on .input, so the shared component keeps one shape everywhere else. */
 .day-hours-inline .input {
   @apply w-auto rounded-token-xl py-1 text-sm;
-  /* The shared select style reserves pr-10 for the chevron it paints as a
-     background image. Tightening the padding here has to move the chevron with
-     it, or the time runs underneath the arrow. */
+  /* The shared select style reserves pr-10 for the chevron icon overlaid on
+     it. Tightening the padding here has to move the chevron with it, or the
+     time runs underneath the arrow. */
   padding-left: 0.5rem;
   padding-right: 1.625rem;
-  background-position: right 0.5rem center;
-  background-size: 1rem;
+}
+
+.day-hours-inline .select-chevron {
+  right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
 }
 

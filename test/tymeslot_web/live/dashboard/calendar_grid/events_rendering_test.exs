@@ -22,7 +22,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
     test "renders event title in grid", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "My Test Meeting",
         start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -57,7 +58,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       start_at = DateTime.new!(today, ~T[10:00:00], "Etc/UTC")
       end_at = DateTime.new!(today, ~T[11:00:00], "Etc/UTC")
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Work Meeting",
         start_at: start_at,
         end_at: end_at,
@@ -67,7 +69,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
         provider_event_id: selected_path <> "work-evt.ics"
       })
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Personal Errand",
         start_at: start_at,
         end_at: end_at,
@@ -86,7 +89,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
     test "all-day event appears in banner row", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "All Day Conference",
         start_date: Date.utc_today(),
         end_date: Date.add(Date.utc_today(), 1),
@@ -113,7 +117,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       tomorrow = Date.add(today, 1)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Company Offsite",
           start_date: today,
           # end_date is exclusive, so this covers today and tomorrow.
@@ -147,7 +152,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       midnight_tomorrow = DateTime.new!(tomorrow, ~T[00:00:00], "Etc/UTC")
 
       for summary <- ["All Day One", "All Day Two", "All Day Three"] do
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: summary,
           start_date: today,
           end_date: tomorrow,
@@ -172,7 +178,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       end_utc = DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC")
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Clickable Event",
           start_at: start_utc,
           end_at: end_utc,
@@ -196,7 +203,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Off-site Meetup",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -213,7 +221,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Planning Session",
           start_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC"),
@@ -230,7 +239,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
@@ -254,7 +264,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Anonymous Meeting",
           start_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
@@ -273,7 +284,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Close Me",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -294,7 +306,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
     test "re-renders events when :calendar_events_updated is broadcast", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Live Update Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -304,7 +317,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
       assert html =~ "Live Update Event"
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "New Live Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -331,7 +345,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
       refute html =~ "Synced Event"
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Synced Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[17:00:00], "Etc/UTC"),
@@ -354,7 +369,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: nil,
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -373,7 +389,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "No Description Event",
           description: nil,
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
@@ -391,7 +408,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Solo Meeting",
           start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[17:00:00], "Etc/UTC"),
@@ -404,9 +422,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "Solo Meeting"
     end
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

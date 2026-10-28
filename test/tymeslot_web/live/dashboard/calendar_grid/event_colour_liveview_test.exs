@@ -30,7 +30,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
       today = Date.utc_today()
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Design Review",
           start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
@@ -107,7 +108,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
       today = Date.utc_today()
 
       coloured =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Already Coloured",
           start_at: DateTime.new!(today, ~T[12:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[13:00:00], "Etc/UTC"),
@@ -139,9 +141,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
     |> Floki.parse_document!()
     |> Floki.find(~s(button[phx-value-colour][aria-pressed="true"]))
     |> Enum.flat_map(&Floki.attribute(&1, "phx-value-colour"))
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

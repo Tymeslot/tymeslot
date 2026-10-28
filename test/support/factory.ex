@@ -4,6 +4,7 @@ defmodule Tymeslot.Factory do
   """
 
   use ExMachina.Ecto, repo: Tymeslot.Repo
+  use Tymeslot.Factory.VideoIntegrationFactories
 
   alias Ecto.UUID
   alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
@@ -14,7 +15,6 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
@@ -300,28 +300,6 @@ defmodule Tymeslot.Factory do
       last_notified_state: %{},
       video_link: nil,
       calendar_integration: build(:calendar_integration)
-    }
-  end
-
-  @spec video_integration_factory() :: Tymeslot.Integrations.Video.VideoIntegrationSchema.t()
-  def video_integration_factory do
-    api_key = sequence(:api_key, &"api_key_#{&1}")
-
-    %VideoIntegrationSchema{
-      name: sequence(:video_name, &"Video #{&1}"),
-      provider: "mirotalk",
-      base_url: "https://video.example.com",
-      api_key_encrypted: Encryption.encrypt(api_key),
-      tenant_id_encrypted: Encryption.encrypt("test-tenant-id"),
-      client_id_encrypted: Encryption.encrypt("test-client-id"),
-      client_secret_encrypted: Encryption.encrypt("test-client-secret"),
-      teams_user_id_encrypted: Encryption.encrypt("test-teams-user-id"),
-      access_token_encrypted: Encryption.encrypt("test-access-token"),
-      refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
-      provider_account_id: sequence(:video_account_id, &"video-account-#{&1}"),
-      is_active: true,
-      settings: %{},
-      user: build(:user)
     }
   end
 

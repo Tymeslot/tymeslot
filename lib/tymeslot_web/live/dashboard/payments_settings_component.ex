@@ -43,9 +43,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   def mount(socket) do
     {:ok,
      socket
-     |> assign(:refund_modal_payment, nil)
+     |> ModalHook.mount_modal(refund: false, disconnect: false)
      |> assign(:refund_submitting, false)
-     |> assign(:disconnect_modal_open, false)
      |> assign(:connect_account, nil)
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
@@ -104,13 +103,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       </div>
 
       <.refund_modal
-        payment={@refund_modal_payment}
+        payment={@refund_modal_data}
         submitting={@refund_submitting}
         myself={@myself}
       />
 
       <.disconnect_modal
-        open={@disconnect_modal_open}
+        open={@show_disconnect_modal}
         pending_count={@pending_payments_count}
         outstanding_refunds={@outstanding_refunds_summary}
         myself={@myself}
@@ -143,16 +142,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("open_disconnect_modal", _params, socket) do
-    {:noreply, assign(socket, :disconnect_modal_open, true)}
+    {:noreply, ModalHook.show_modal(socket, :disconnect)}
   end
 
   def handle_event("close_disconnect_modal", _params, socket) do
-    {:noreply, assign(socket, :disconnect_modal_open, false)}
+    {:noreply, ModalHook.hide_modal(socket, :disconnect)}
   end
 
   def handle_event("disconnect", _params, socket) do
     user = socket.assigns.current_user
-    socket = assign(socket, :disconnect_modal_open, false)
+    socket = ModalHook.hide_modal(socket, :disconnect)
 
     case MeetingPayments.disconnect(user) do
       {:ok, result} ->
@@ -186,25 +185,22 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   def handle_event("close_refund_modal", _params, socket) do
     {:noreply,
      socket
-     |> assign(:refund_modal_payment, nil)
+     |> ModalHook.hide_modal(:refund)
      |> assign(:refund_submitting, false)}
   end
 
   # The payment always comes from the open modal, never from params: the form
   # posts a `payment_id` this handler deliberately ignores.
-  def handle_event("submit_refund", _params, %{assigns: %{refund_modal_payment: nil}} = socket),
-    do: {:noreply, socket}
-
   def handle_event("submit_refund", params, socket) do
-    %{refund_modal_payment: payment, current_user: user} = socket.assigns
-
-    # Re-fetch to pick up concurrent changes (e.g. a refund issued from another
-    # tab) before parsing the amount, so "full" means the balance left now.
-    # The refund itself re-checks ownership and re-validates under the row lock.
-    case MeetingPayments.get_payment_for_host(payment.id, user.id) do
-      {:ok, fresh_payment} -> do_submit_refund(socket, fresh_payment, params)
-      {:error, :not_found} -> {:noreply, socket}
-    end
+    ModalHook.with_modal_data(socket, :refund, fn payment ->
+      # Re-fetch to pick up concurrent changes (e.g. a refund issued from another
+      # tab) before parsing the amount, so "full" means the balance left now.
+      # The refund itself re-checks ownership and re-validates under the row lock.
+      case MeetingPayments.get_payment_for_host(payment.id, socket.assigns.current_user.id) do
+        {:ok, fresh_payment} -> do_submit_refund(socket, fresh_payment, params)
+        {:error, :not_found} -> {:noreply, socket}
+      end
+    end)
   end
 
   # ── Private orchestration ─────────────────────────────────────────
@@ -247,7 +243,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   defp open_refund_modal(socket, payment) do
     if MeetingPayments.refundable?(payment) do
-      {:noreply, assign(socket, :refund_modal_payment, payment)}
+      {:noreply, ModalHook.show_modal(socket, :refund, payment)}
     else
       Flash.error(
         dgettext(
@@ -334,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
     {:noreply,
      socket
-     |> assign(:refund_modal_payment, nil)
+     |> ModalHook.hide_modal(:refund)
      |> assign(:refund_submitting, false)
      |> assign_payments_state(socket.assigns.current_user)}
   end

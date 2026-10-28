@@ -43,7 +43,11 @@ defmodule Tymeslot.Meetings.ApprovalToken do
 
   @doc "How long an issued token stays verifiable, in seconds."
   @spec max_age() :: pos_integer()
-  def max_age, do: SignedToken.max_age(:meeting_approval)
+  def max_age do
+    case SignedToken.max_age(:meeting_approval) do
+      seconds when is_integer(seconds) -> seconds
+    end
+  end
 
   @doc """
   Signs a token identifying one booking request and the host who owns it.

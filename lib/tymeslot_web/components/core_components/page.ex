@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Page do
   this inside its own root element rather than as it.
   """
   attr :title, :string, required: true
-  attr :icon, :any, default: nil, doc: "A `hero-…` icon name or a brand-mark atom"
+  attr :icon, :string, default: nil, doc: "An icon name for `<.icon>`"
   attr :saving, :boolean, default: false
   attr :class, :any, default: nil, doc: "Layout classes only"
   attr :rest, :global

@@ -76,7 +76,10 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
               class="text-turquoise-600 hover:text-turquoise-700 font-bold text-token-sm transition-colors flex items-center gap-1 group shrink-0 -my-3 -mx-2 py-3 px-2 rounded-token-md"
             >
               {dgettext("dashboard_home", "View calendar")}
-              <span class="group-hover:translate-x-1 transition-transform">→</span>
+              <.icon
+                name="hero-arrow-right"
+                class="w-4 h-4 group-hover:translate-x-1 transition-transform"
+              />
             </.link>
           </:actions>
 

@@ -45,7 +45,7 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
 
     case result do
       nil -> 0
-      max_order -> max_order + 1
+      max_order when is_integer(max_order) -> max_order + 1
     end
   end
 

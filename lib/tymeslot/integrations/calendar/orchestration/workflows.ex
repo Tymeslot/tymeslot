@@ -25,7 +25,8 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   the caller, where `calendars` is a `[CalendarEntry.t()]` — the same shape as
   `integration.calendar_list` — so every consumer sees one shape regardless of path.
   """
-  @spec refresh_calendar_list_async(integration_id(), user_id(), String.t()) :: {:ok, pid()}
+  @spec refresh_calendar_list_async(integration_id(), user_id(), String.t()) ::
+          DynamicSupervisor.on_start_child()
   def refresh_calendar_list_async(integration_id, user_id, component_id) do
     parent = self()
 

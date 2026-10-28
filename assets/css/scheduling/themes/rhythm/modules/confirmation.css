@@ -84,7 +84,6 @@
   width: var(--icon-lg);
   height: var(--icon-lg);
   color: white;
-  stroke-width: 3;
 }
 
 @keyframes success-bounce {

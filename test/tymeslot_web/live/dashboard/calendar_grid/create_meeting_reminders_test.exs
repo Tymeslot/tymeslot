@@ -41,16 +41,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingRemindersTest do
 
   # Creation runs in a supervised task, so the row appears a moment after the
   # event returns.
-  defp created_meeting(tries \\ 50) do
-    case Repo.one(MeetingSchema) do
-      nil when tries > 0 ->
-        Process.sleep(20)
-        created_meeting(tries - 1)
-
-      meeting ->
-        meeting
-    end
-  end
+  defp created_meeting, do: eventually(fn -> Repo.one(MeetingSchema) end, timeout: 5_000)
 
   # The picker's own controls, driven the way the host does: the preset
   # buttons post through `JS.push`, the custom row through the form it sits in.

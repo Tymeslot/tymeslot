@@ -37,14 +37,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
            own accessible name), so it must not be a <label> element. --%>
       <div :if={@show_label} class="label">
         <div class="flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <.icon name="hero-clock" class="w-4 h-4" />
           {dgettext("common", "Your Timezone")}
         </div>
       </div>
@@ -89,19 +82,10 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                 <div class="text-sm px-3 py-1.5 rounded-full bg-tymeslot-100 text-tymeslot-700 font-medium">
                   {get_timezone_offset(Profiles.timezone(@profile))}
                 </div>
-                <svg
+                <.icon
+                  name="hero-chevron-down"
                   class={"w-4 h-4 transition-transform duration-200 text-tymeslot-500 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                />
               </div>
             </div>
           </div>

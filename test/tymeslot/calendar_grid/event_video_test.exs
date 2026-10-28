@@ -25,12 +25,12 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -59,13 +59,32 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
     %{user: user, integration: integration, video_integration: video_integration}
   end
 
+  @weekly_sync %{
+    summary: "Weekly sync",
+    description: "Agenda",
+    provider: "google",
+    provider_calendar_id: "team-calendar",
+    provider_event_id: "/cal/weekly-sync.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z],
+    reminders: @reminders,
+    recurrence_rule: @rrule,
+    recurring_event_id: "series-1",
+    colour: "tomato",
+    video_link: nil,
+    video_integration_id: nil
+  }
+
+  # A grant without the update scope; the factory's Zoom holds all three.
+  @zoom_scope "meeting:write:meeting meeting:delete:meeting"
+
   describe "change_event_video/3 choosing a video integration" do
     test "saves the new link and integration on the row and keeps its other columns", %{
       user: user,
       integration: integration,
       video_integration: video_integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
       stub_room_created()
       expect_provider_update(:ok)
 
@@ -86,7 +105,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       integration: integration,
       video_integration: video_integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
       stub_room_created()
       expect_provider_update(:ok)
 
@@ -107,7 +126,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       video_integration: video_integration
     } do
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           description: "Agenda\n\nJoin video call: #{@old_url}",
           video_link: @old_url
         })
@@ -132,7 +151,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
         insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
 
       event =
-        insert_event(caldav, %{
+        insert_event(caldav, @weekly_sync, %{
           provider: "caldav",
           recurrence_rule: nil,
           recurring_event_id: nil
@@ -154,7 +173,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       integration: integration,
       video_integration: video_integration
     } do
-      event = insert_event(integration, %{video_link: @old_url})
+      event = insert_event(integration, @weekly_sync, %{video_link: @old_url})
       stub_room_created()
       expect_provider_update({:error, :unauthorized})
 
@@ -171,7 +190,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       integration: integration,
       video_integration: video_integration
     } do
-      event = insert_event(integration, %{video_link: @old_url})
+      event = insert_event(integration, @weekly_sync, %{video_link: @old_url})
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"room_id" => "room-123"})}}
@@ -191,7 +210,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       integration: integration,
       video_integration: video_integration
     } do
-      event = insert_event(integration, %{video_link: @old_url})
+      event = insert_event(integration, @weekly_sync, %{video_link: @old_url})
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 500, body: "down"}}
@@ -218,7 +237,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
           custom_meeting_url: "https://meet.example.com/{{meeting_id}}"
         )
 
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
       expect_provider_update(:ok)
 
       assert {:ok, url} = CalendarGrid.change_event_video(user.id, event, video_integration.id)
@@ -232,7 +251,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       integration: integration
     } do
       foreign = insert(:video_integration, user: insert(:user), provider: "mirotalk")
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
 
       assert {:error, :not_found} = CalendarGrid.change_event_video(user.id, event, foreign.id)
 
@@ -257,7 +276,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       switched_off =
         insert(:video_integration, user: user, provider: "mirotalk", is_active: false)
 
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
 
       assert {:error, :not_found} =
                CalendarGrid.change_event_video(user.id, event, disconnected.id)
@@ -274,7 +293,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       video_integration: video_integration
     } do
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           video_link: @old_url,
           video_integration_id: video_integration.id
         })
@@ -289,7 +308,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       video_integration: video_integration
     } do
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           video_link: nil,
           video_integration_id: video_integration.id
         })
@@ -309,7 +328,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
 
       assert {:ok, :unchanged} = CalendarGrid.change_event_video(user.id, event, nil)
     end
@@ -320,7 +339,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       video_integration: video_integration
     } do
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           description: "Agenda\n\nJoin video call: #{@old_url}",
           video_link: @old_url,
           video_integration_id: video_integration.id
@@ -343,11 +362,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       user: user,
       integration: integration
     } do
-      zoom = insert_zoom_integration(user)
+      zoom = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
       zoom_url = "https://zoom.us/j/86360699337"
 
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           description: "Join video call: #{zoom_url}",
           video_link: zoom_url,
           video_integration_id: zoom.id
@@ -381,7 +400,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       user: user,
       integration: integration
     } do
-      zoom = insert_zoom_integration(user)
+      zoom = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       # A Nextcloud Talk link. Its host contains "talk.", which MiroTalk's URL
       # patterns used to claim, so the room id came back as MiroTalk's last
@@ -390,7 +409,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       link = "https://talk.example.org/call/abc123"
 
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           description: "Join video call: #{link}",
           video_link: link,
           video_integration_id: zoom.id
@@ -419,7 +438,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       custom = insert_custom_integration(user)
 
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           description: "Join video call: #{@custom_url}",
           video_link: @custom_url,
           video_integration_id: custom.id
@@ -438,29 +457,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       assert meta.room_ref == Redactor.fingerprint(@custom_url)
       refute_enqueued(worker: VideoSyncWorker)
     end
-  end
-
-  defp insert_event(integration, attrs \\ %{}) do
-    defaults = %{
-      calendar_integration: integration,
-      summary: "Weekly sync",
-      description: "Agenda",
-      provider: "google",
-      provider_calendar_id: "team-calendar",
-      provider_event_id: "/cal/weekly-sync.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      reminders: @reminders,
-      recurrence_rule: @rrule,
-      recurring_event_id: "series-1",
-      colour: "tomato",
-      video_link: nil,
-      video_integration_id: nil,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   defp reload(event) do
@@ -492,25 +488,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       provider: "custom",
       base_url: nil,
       custom_meeting_url: @custom_url
-    )
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:delete:meeting",
-      provider_account_id: nil
     )
   end
 end

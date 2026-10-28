@@ -19,7 +19,6 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
   alias Tymeslot.ZoomOAuthHelperMock
@@ -31,10 +30,13 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
     on_exit(fn -> VideoCircuitBreaker.reset(:zoom) end)
   end
 
+  # A grant without the update scope; the factory's Zoom holds all three.
+  @zoom_scope "meeting:write:meeting meeting:delete:meeting"
+
   describe "when the provider's circuit breaker is open" do
     test "snoozes instead of purging while attempts remain" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       insert_meeting_for_user(user, %{
         video_integration_id: integration.id,
@@ -61,7 +63,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
 
     test "purges on the last attempt rather than snoozing forever" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting_a =
         insert_meeting_for_user(user, %{
@@ -104,7 +106,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
 
     test "purges once the budget is spent in snoozes rather than attempts" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       insert_meeting_for_user(user, %{
         start_offset: 86_400,
@@ -146,7 +148,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
 
     test "drains every page in one run, then purges" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
       insert_meetings(user, integration, 2)
 
       {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
@@ -166,7 +168,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
 
     test "snoozes once a run has drained its pages, keeping the row" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
       insert_meetings(user, integration, 11)
 
       {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
@@ -188,7 +190,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
     # its OAuth credentials for good.
     test "purges a full page of refused deletes on the last attempt" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
       insert_meetings(user, integration, 1)
 
       {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
@@ -218,7 +220,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
 
     test "purges on the last attempt while pages are still draining" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
       insert_meetings(user, integration, 11)
 
       {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
@@ -264,24 +266,5 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
     end)
 
     assert %{status: :open} = VideoCircuitBreaker.status(:zoom)
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:delete:meeting",
-      provider_account_id: nil
-    )
   end
 end

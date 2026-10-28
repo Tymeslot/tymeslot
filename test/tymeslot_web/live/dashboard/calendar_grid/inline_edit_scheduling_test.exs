@@ -33,7 +33,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       today = Date.utc_today()
 
       timed_event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Sprint Review",
           start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
@@ -41,7 +42,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
         })
 
       all_day_event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Company Offsite",
           start_at: nil,
           end_at: nil,
@@ -107,7 +109,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       today = Date.utc_today()
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Sprint Review",
           start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
@@ -135,7 +138,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       # Reminders live in a JSONB column, so a synced reminder comes back
       # string-keyed however it was written.
       stored =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Quarterly Planning",
           start_at: DateTime.new!(today, ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[15:00:00], "Etc/UTC"),
@@ -199,7 +203,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       today = Date.utc_today()
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Standup",
           start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[10:15:00], "Etc/UTC"),
@@ -253,7 +258,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       today = Date.utc_today()
 
       recurring =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Recurring standup",
           start_at: DateTime.new!(today, ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[09:15:00], "Etc/UTC"),
@@ -282,9 +288,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       # the change rather than writing immediately.
       assert html =~ "confirm_recurrence_scope"
     end
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

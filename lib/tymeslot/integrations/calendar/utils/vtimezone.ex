@@ -58,9 +58,13 @@ defmodule Tymeslot.Integrations.Calendar.VTimezone do
   def to_utc(%__MODULE__{} = vtz, %NaiveDateTime{} = naive) do
     offset = offset_seconds(vtz, naive)
 
-    naive
-    |> NaiveDateTime.add(-offset, :second)
-    |> DateTime.from_naive("Etc/UTC")
+    # UTC has no gaps or ambiguities, so the conversion cannot fail.
+    utc =
+      naive
+      |> NaiveDateTime.add(-offset, :second)
+      |> DateTime.from_naive!("Etc/UTC")
+
+    {:ok, utc}
   end
 
   # --- offset resolution -----------------------------------------------------

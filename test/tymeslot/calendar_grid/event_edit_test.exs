@@ -17,6 +17,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -50,38 +51,31 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
     %{user: user, integration: integration}
   end
 
-  defp insert_event(integration, attrs) do
-    defaults = %{
-      calendar_integration: integration,
-      uid: "event-#{System.unique_integer([:positive])}",
-      summary: "Weekly sync",
-      description: "Agenda",
-      location: "Room 4",
-      provider: "google",
-      provider_calendar_id: "team-calendar",
-      provider_event_id: "/cal/weekly-sync.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      attendees: @attendees,
-      reminders: @reminders,
-      recurrence_rule: @rrule,
-      recurrence_exceptions: [~D[2026-06-08]],
-      colour: "tomato",
-      transparency: "transparent",
-      visibility: "private",
-      etag: "\"etag-1\"",
-      raw_ical: @raw_ical,
-      video_link: "https://video.example.com/room",
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
-  end
+  @weekly_sync %{
+    summary: "Weekly sync",
+    description: "Agenda",
+    location: "Room 4",
+    provider: "google",
+    provider_calendar_id: "team-calendar",
+    provider_event_id: "/cal/weekly-sync.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z],
+    attendees: @attendees,
+    reminders: @reminders,
+    recurrence_rule: @rrule,
+    recurrence_exceptions: [~D[2026-06-08]],
+    colour: "tomato",
+    transparency: "transparent",
+    visibility: "private",
+    etag: "\"etag-1\"",
+    raw_ical: @raw_ical,
+    video_link: "https://video.example.com/room"
+  }
 
   defp insert_all_day_event(integration, attrs \\ %{}) do
     insert_event(
       integration,
+      @weekly_sync,
       Map.merge(
         %{
           all_day: true,
@@ -127,7 +121,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
         integration: integration
       } do
         changes = unquote(changes)
-        event = insert_event(integration, %{})
+        event = insert_event(integration, @weekly_sync, %{})
         expect_provider_update()
 
         assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, changes)
@@ -176,7 +170,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{raw_ical: nil, etag: nil})
+      event = insert_event(integration, @weekly_sync, %{raw_ical: nil, etag: nil})
       expect_provider_update()
 
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
@@ -190,7 +184,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{})
+      event = insert_event(integration, @weekly_sync, %{})
       expect_provider_update()
 
       # What the grid hands over is whatever it last assigned, which may be an
@@ -211,7 +205,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{})
+      event = insert_event(integration, @weekly_sync, %{})
       expect_provider_update()
 
       changes = %{all_day: true, start_date: ~D[2026-06-01], end_date: ~D[2026-06-02]}
@@ -276,7 +270,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
 
     test "an event on the placeholder \"primary\" calendar leaves the calendar to the provider",
          %{user: user, integration: integration} do
-      event = insert_event(integration, %{provider_calendar_id: "primary"})
+      event = insert_event(integration, @weekly_sync, %{provider_calendar_id: "primary"})
       expect_provider_update()
 
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
@@ -287,7 +281,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{status: "declined"})
+      event = insert_event(integration, @weekly_sync, %{status: "declined"})
       expect_provider_update()
 
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
@@ -300,7 +294,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{recurrence_rule: @timed_rrule})
+      event = insert_event(integration, @weekly_sync, %{recurrence_rule: @timed_rrule})
       expect_provider_update()
 
       changes = %{all_day: true, start_date: ~D[2026-06-01], end_date: ~D[2026-06-02]}
@@ -360,7 +354,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       integration: integration
     } do
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;UNTIL=20270101T075959Z"
         })
 
@@ -406,7 +400,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       # unrelated edit still goes through, untouched, rather than being
       # rewritten or refused.
       odd_rule = "FREQ=WEEKLY;BYDAY=MO;UNTIL=20260501"
-      event = insert_event(integration, %{recurrence_rule: odd_rule})
+      event = insert_event(integration, @weekly_sync, %{recurrence_rule: odd_rule})
       expect_provider_update()
 
       assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
@@ -420,7 +414,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       expect_provider_update()
       expect_provider_update()
 
-      timed = insert_event(integration, %{})
+      timed = insert_event(integration, @weekly_sync, %{})
       all_day = insert_all_day_event(integration)
 
       {:ok, _updated} = CalendarGrid.update_event(user.id, timed, %{summary: "Renamed"})
@@ -493,7 +487,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{recurring_event_id: "series-1"})
+      event = insert_event(integration, @weekly_sync, %{recurring_event_id: "series-1"})
       expect_provider_update()
 
       assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
@@ -514,7 +508,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{})
+      event = insert_event(integration, @weekly_sync, %{})
       expect_provider_update()
 
       key = AvailabilityCache.booking_window_events_key(user.id)
@@ -533,7 +527,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
         insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
 
       event =
-        insert_event(integration, %{
+        insert_event(integration, @weekly_sync, %{
           provider: "caldav",
           recurrence_rule: nil,
           recurring_event_id: nil
@@ -563,7 +557,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{})
+      event = insert_event(integration, @weekly_sync, %{})
       expect_provider_update({:error, :unauthorized})
 
       assert {:error, %{reason: :unauthorized, retry: :not_queued}} =
@@ -578,7 +572,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user
     } do
       google = insert(:calendar_integration, user: user, provider: "google")
-      event = insert_event(google, %{provider: "google"})
+      event = insert_event(google, @weekly_sync, %{provider: "google"})
       expect_provider_update({:error, :server_error})
 
       assert {:error, %{reason: :server_error, retry: :not_queued}} =
@@ -595,7 +589,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{})
+      event = insert_event(integration, @weekly_sync, %{})
 
       assert_raise ArgumentError, ~r/:etag/, fn ->
         CalendarGrid.update_event(user.id, event, %{summary: "Renamed", etag: "forged"})
@@ -606,7 +600,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{})
+      event = insert_event(integration, @weekly_sync, %{})
 
       assert {:error, %{reason: :invalid_timing, retry: :not_queued}} =
                CalendarGrid.update_event(user.id, event, %{all_day: true})

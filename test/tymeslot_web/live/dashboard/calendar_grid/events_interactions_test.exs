@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Recurring Meeting",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -176,7 +177,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
     test "hides events when integration is toggled off", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Hidden Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -214,7 +216,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Moveable Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -257,7 +260,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       today = Date.utc_today()
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "All Day Conf",
           provider: "caldav",
           all_day: true,
@@ -325,7 +329,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       today = Date.utc_today()
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Private Event",
           start_at: DateTime.new!(today, ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
@@ -363,7 +368,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       # at noon, so "12:00 PM" only appears in the rendered HTML AFTER the resize
       # is applied.
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Resizable Event",
           start_at: DateTime.new!(today, ~T[06:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[07:00:00], "Etc/UTC"),
@@ -460,9 +466,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         assert render(lv) =~ "Invalid calendar selected"
       end)
     end
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

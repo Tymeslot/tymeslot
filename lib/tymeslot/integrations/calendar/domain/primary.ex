@@ -62,10 +62,11 @@ defmodule Tymeslot.Integrations.Calendar.Primary do
   @doc """
   Discovers the calendars of an integration just connected through OAuth
   (Google, Outlook) and picks its default booking calendar. Falls back to
-  returning the integration unchanged if discovery fails.
+  returning the integration unchanged if discovery fails; an error is only
+  returned when storing the discovered list fails.
   """
   @spec discover_and_configure_calendars(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()}
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :not_found}
   def discover_and_configure_calendars(integration) do
     case Discovery.discover_calendars_for_integration(integration) do
       {:ok, calendars} ->

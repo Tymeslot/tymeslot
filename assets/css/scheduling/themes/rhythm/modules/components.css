@@ -38,14 +38,6 @@ span.tz-picker__option-flag {
 
 /* .loading-spinner and @keyframes spin — in shared/utilities.css */
 
-.loading-spinner-track {
-  opacity: 0.25;
-}
-
-.loading-spinner-path {
-  opacity: 0.75;
-}
-
 /* ============================================
    CALENDAR ERROR STATES
    ============================================ */

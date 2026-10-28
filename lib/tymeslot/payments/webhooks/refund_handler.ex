@@ -278,11 +278,16 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
       _amount_other ->
         # Fall back to summing individual refunds
-        refunds = get_refunds(charge)
+        charge
+        |> get_refunds()
+        |> Enum.reduce(0, &(refund_amount(&1) + &2))
+    end
+  end
 
-        refunds
-        |> Enum.map(&(MapKeys.get(&1, :amount) || 0))
-        |> Enum.sum()
+  defp refund_amount(refund) do
+    case MapKeys.get(refund, :amount) do
+      amount when is_integer(amount) and amount > 0 -> amount
+      _amount_other -> 0
     end
   end
 

@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
           # read is said to be that, so the booker knows retrying may not
           # help; the reason itself is in the log line above, where the
           # person who can act on it will look.
-          |> assign(:calendar_error, slot_fetch_error_message(reason))
+          |> assign(:calendar_error, slot_fetch_error_message(socket, reason))
 
         {:error, socket}
     end
@@ -177,11 +177,21 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
   # A host calendar that could not be read gets its own message, the one the
   # submit shows for the same failure: every date would fail the same way, so
-  # the booker is told to come back rather than to keep picking dates.
-  defp slot_fetch_error_message(reason) do
-    case Errors.classify_error(reason) do
-      :availability_unverifiable -> BookingErrorMessage.message(:availability_unverifiable)
-      _other -> dgettext("booking", "No time slots could be loaded. Please try again.")
+  # the booker is told to come back rather than to keep picking dates. One
+  # whose credentials were refused will not come back by itself, so its
+  # message promises nothing.
+  @doc """
+  The booker-facing message for a failed availability read on the page of the
+  organiser `socket` holds. Shared by the day's slot fetch and the week view.
+  """
+  @spec slot_fetch_error_message(Phoenix.LiveView.Socket.t(), term()) :: String.t()
+  def slot_fetch_error_message(socket, reason) do
+    case Errors.classify_availability_error(reason, socket.assigns[:organizer_user_id]) do
+      unreadable when unreadable in [:availability_unverifiable, :host_calendar_disconnected] ->
+        BookingErrorMessage.message(unreadable)
+
+      _other ->
+        dgettext("booking", "No time slots could be loaded. Please try again.")
     end
   end
 end

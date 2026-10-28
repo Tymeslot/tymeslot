@@ -101,8 +101,8 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       <.info_box variant={:error}>
         {dngettext(
           "dashboard_common",
-          "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again.",
-          "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again.",
+          "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings.",
+          "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings.",
           length(@names),
           names: Enum.join(@names, ", ")
         )}

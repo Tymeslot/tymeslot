@@ -227,8 +227,12 @@ defmodule Tymeslot.Availability.Offer do
   def duration_minutes(meeting_type, fallback, chosen \\ nil)
 
   def duration_minutes(%{duration_minutes: minutes} = meeting_type, _fallback, chosen)
-      when is_integer(minutes),
-      do: Lengths.resolve(meeting_type, chosen)
+      when is_integer(minutes) do
+    case Lengths.resolve(meeting_type, chosen) do
+      resolved when is_integer(resolved) -> resolved
+      nil -> minutes
+    end
+  end
 
   def duration_minutes(_meeting_type, fallback, _chosen), do: bounded_duration(fallback)
 

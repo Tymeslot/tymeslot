@@ -245,3 +245,8 @@ msgstr "Una data fissa si sposta dal suo tipo di riunione, insieme a tutti quell
 #, elixir-autogen, elixir-format
 msgid "Failed to create meeting. Please try again."
 msgstr "Impossibile creare la riunione. Riprova."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page can't show times right now."
+msgstr "Questa pagina di prenotazione non può mostrare gli orari al momento."

@@ -18,6 +18,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
@@ -97,7 +98,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       "skip" ->
         # Don't advance immediately: Tymeslot only makes sense with a calendar
         # connected, so nudge the user to reconsider before proceeding.
-        {:noreply, Component.assign(socket, :show_skip_calendar_modal, true)}
+        {:noreply, ModalHook.show_modal(socket, :skip_calendar)}
 
       _none ->
         if socket.assigns.connected_calendars == [] do
@@ -110,12 +111,18 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   # A host sent back from the share step to connect a calendar has already
   # answered every step after it, so the calendar step leads straight back to
-  # the share step, and is not counted as completed a second time.
+  # the share step, and is not counted as completed a second time. The one
+  # exception is the theme step, which only a host with a calendar sees: one
+  # who skipped the calendar first meets it now, on the way back.
   defp advance_step(socket, step, props \\ %{}) do
     returning? = step == :connect_calendar and socket.assigns.returning_to_share
 
     next =
-      if returning?, do: :ready, else: StepConfig.next_step(step, socket.assigns.steps) || step
+      cond do
+        returning? -> return_step(socket.assigns)
+        step == :choose_theme and socket.assigns.returning_to_share -> :ready
+        true -> StepConfig.next_step(step, socket.assigns.steps) || step
+      end
 
     socket
     |> Component.assign(:current_step, next)
@@ -137,13 +144,18 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   # `/onboarding/ready` does not count as a view; arriving back from the
   # calendar step does, flagged `returned`, since whether that fixed the page
   # is what it measures.
+  defp return_step(%{theme_unseen: true, steps: steps}),
+    do: if(:choose_theme in steps, do: :choose_theme, else: :ready)
+
+  defp return_step(_assigns), do: :ready
+
   defp enter_share_step(socket) do
     returned? = socket.assigns.returning_to_share
 
     socket =
       socket
       |> assign_booking_page_live()
-      |> Component.assign(:returning_to_share, false)
+      |> Component.assign(returning_to_share: false, theme_unseen: false)
 
     Analytics.push(socket, "share_step_viewed", %{
       page_live: socket.assigns.booking_page_live,
@@ -175,7 +187,8 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
      |> Component.assign(
        current_step: :connect_calendar,
        calendar_choice: nil,
-       returning_to_share: true
+       returning_to_share: true,
+       theme_unseen: :choose_theme not in socket.assigns.steps
      )
      |> LiveView.clear_flash()}
   end
@@ -235,7 +248,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_show_skip_modal(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_show_skip_modal(socket) do
-    {:noreply, Component.assign(socket, :show_skip_modal, true)}
+    {:noreply, ModalHook.show_modal(socket, :skip)}
   end
 
   @doc """
@@ -244,7 +257,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_hide_skip_modal(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_hide_skip_modal(socket) do
-    {:noreply, Component.assign(socket, :show_skip_modal, false)}
+    {:noreply, ModalHook.hide_modal(socket, :skip)}
   end
 
   @doc """
@@ -257,7 +270,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   def handle_confirm_skip_calendar(socket) do
     {:noreply,
      socket
-     |> Component.assign(:show_skip_calendar_modal, false)
+     |> ModalHook.hide_modal(:skip_calendar)
      |> advance_step(:connect_calendar, %{skipped: true})}
   end
 
@@ -267,7 +280,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_hide_skip_calendar_modal(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_hide_skip_calendar_modal(socket) do
-    {:noreply, Component.assign(socket, :show_skip_calendar_modal, false)}
+    {:noreply, ModalHook.hide_modal(socket, :skip_calendar)}
   end
 
   @doc """

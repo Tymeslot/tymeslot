@@ -34,7 +34,8 @@ defmodule Tymeslot.Workers.SnoozePolicy do
   bump.
   """
   @spec executions(Oban.Job.t()) :: pos_integer()
-  def executions(%Oban.Job{attempt: attempt, meta: meta}), do: attempt + snoozes(meta)
+  def executions(%Oban.Job{attempt: attempt, meta: meta}) when is_integer(attempt),
+    do: attempt + snoozes(meta)
 
   # Oban writes an integer, but `meta` is a JSONB map a caller may also set, so
   # an unusable value counts as no snoozes rather than crashing the job.

@@ -217,11 +217,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
         limit: ^limits.occurrences,
         select: r.id
 
-    {deleted, _rows} = Repo.delete_all(from o in Occurrence, where: o.id in subquery(doomed))
-    total = total + deleted
+    case Repo.delete_all(from o in Occurrence, where: o.id in subquery(doomed)) do
+      {deleted, _rows} when is_integer(deleted) and deleted < limits.occurrences ->
+        total + deleted
 
-    if deleted < limits.occurrences,
-      do: total,
-      else: delete_ranked_out(error_ids, limits, total)
+      {deleted, _rows} when is_integer(deleted) ->
+        delete_ranked_out(error_ids, limits, total + deleted)
+    end
   end
 end

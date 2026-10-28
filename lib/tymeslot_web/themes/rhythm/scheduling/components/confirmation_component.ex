@@ -48,34 +48,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       "success-badge-inner",
                       ApprovalDisplay.awaiting_approval?(assigns) && "success-badge-inner--pending"
                     ]}>
-                      <svg
+                      <.icon
                         :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                        class="success-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <svg
+                        name="hero-check"
+                        class="success-icon stroke-3"
+                      />
+                      <.icon
                         :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                        class="success-icon"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                        name="hero-clock"
+                        class="success-icon stroke-3"
+                      />
                     </div>
                   </div>
 
@@ -200,14 +182,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
                 <div class="ticket-footer">
                   <div class="email-confirmation">
-                    <svg class="email-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <.icon name="hero-envelope" class="email-icon" />
                     <span>{dgettext("booking", "Sent to")} <strong>{@email}</strong></span>
                   </div>
                 </div>

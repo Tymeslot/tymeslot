@@ -48,16 +48,16 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
   @typedoc "The reschedule emails' options (`Events.meeting_rescheduled/3`)."
   @type reschedule_opts :: [moved_by: :host]
 
-  @type t ::
-          :none
-          | :created
-          | {:rescheduled, previous_times(), DateTime.t(), reschedule_opts()}
+  @typedoc "A reschedule's announcement: where the meeting was, and where it went."
+  @type rescheduled :: {:rescheduled, previous_times(), DateTime.t(), reschedule_opts()}
+
+  @type t :: :none | :created | rescheduled()
 
   @doc """
   The reschedule announcement for a meeting moved from `original` to `updated`.
   `opts` are passed on to the reschedule emails (`moved_by: :host`).
   """
-  @spec rescheduled(MeetingSchema.t(), MeetingSchema.t(), reschedule_opts()) :: t()
+  @spec rescheduled(MeetingSchema.t(), MeetingSchema.t(), reschedule_opts()) :: rescheduled()
   def rescheduled(
         %MeetingSchema{start_time: start_time},
         %MeetingSchema{} = original,

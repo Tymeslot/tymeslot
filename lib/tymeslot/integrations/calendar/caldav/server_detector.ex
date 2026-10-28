@@ -66,15 +66,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   def detect_from_url(url) when is_binary(url) do
     url_lower = String.downcase(url)
 
-    # Phase 1: Hostname-based detection (most reliable)
-    # Hostname matches are explicit and unambiguous
-    case detect_by_hostname(url_lower) do
-      nil ->
-        # Phase 2: Path-based detection with explicit exclusions
-        detect_by_path(url, url_lower) || :generic
-
-      server_type ->
-        server_type
+    # Phase 1: hostname-based detection (most reliable; hostname matches are
+    # explicit and unambiguous). Phase 2: path-based detection with explicit
+    # exclusions. Anything unrecognised by both is generic CalDAV.
+    with nil <- detect_by_hostname(url_lower),
+         nil <- detect_by_path(url, url_lower) do
+      :generic
     end
   end
 
@@ -84,7 +81,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   Hostname detection is the most reliable method as hostnames are
   typically unique to each server type.
   """
-  @spec detect_by_hostname(String.t()) :: server_type() | nil
+  @spec detect_by_hostname(String.t()) ::
+          :radicale
+          | :nextcloud
+          | :owncloud
+          | :baikal
+          | :sabredav
+          | :zimbra
+          | :mailbox_org
+          | :apple
+          | :cpanel
+          | nil
   def detect_by_hostname(url_lower) when is_binary(url_lower) do
     cond do
       String.contains?(url_lower, "radicale") -> :radicale
@@ -108,7 +115,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
 
   Each path pattern includes exclusions to avoid conflicts between similar patterns.
   """
-  @spec detect_by_path(String.t(), String.t()) :: server_type() | nil
+  @spec detect_by_path(String.t(), String.t()) ::
+          :radicale
+          | :nextcloud
+          | :owncloud
+          | :baikal
+          | :baikal_legacy
+          | :sabredav
+          | :zimbra
+          | :open_xchange
+          | :cpanel
+          | nil
   def detect_by_path(url, url_lower) when is_binary(url) and is_binary(url_lower) do
     cond do
       # Radicale: port 5232 is highly specific (exact match only)

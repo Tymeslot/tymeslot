@@ -128,7 +128,12 @@ defmodule Tymeslot.Polls do
   @doc "Fetches a poll by id scoped to its owner."
   @spec get_poll_for_host(Ecto.UUID.t(), integer()) ::
           {:ok, PollSchema.t()} | {:error, :not_found}
-  def get_poll_for_host(id, user_id), do: with_poll(id, user_id, &{:ok, &1})
+  def get_poll_for_host(id, user_id) do
+    case PollQueries.get_for_user(id, user_id) do
+      nil -> {:error, :not_found}
+      poll -> {:ok, poll}
+    end
+  end
 
   @doc "Lists the user's polls, newest first."
   @spec list_polls(integer()) :: [PollSchema.t()]
@@ -239,15 +244,18 @@ defmodule Tymeslot.Polls do
   """
   @spec delete_poll(Ecto.UUID.t(), integer()) :: :ok | {:error, :not_found | :still_open}
   def delete_poll(id, user_id) do
-    with_poll(id, user_id, fn
-      %{status: :open} ->
+    case get_poll_for_host(id, user_id) do
+      {:ok, %{status: :open}} ->
         {:error, :still_open}
 
-      poll ->
+      {:ok, poll} ->
         {:ok, _deleted} = PollQueries.delete(poll)
         broadcast_update(poll.id)
         :ok
-    end)
+
+      {:error, :not_found} = error ->
+        error
+    end
   end
 
   @doc """
@@ -606,13 +614,6 @@ defmodule Tymeslot.Polls do
       Voting.notify_host_if_all_voted(poll)
     else
       EmailScheduler.cancel_poll_reminders(poll.id)
-    end
-  end
-
-  defp with_poll(id, user_id, fun) do
-    case PollQueries.get_for_user(id, user_id) do
-      nil -> {:error, :not_found}
-      poll -> fun.(poll)
     end
   end
 

@@ -27,8 +27,6 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlots do
   `:week_slots_loading` and `:week_slots_error`.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [cancel_async: 2, start_async: 3]
 
@@ -38,6 +36,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlots do
   alias Tymeslot.Infrastructure.Tasks
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+  alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
 
   require Logger
 
@@ -165,14 +164,15 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlots do
   defp apply_result(socket, {:ok, {:error, reason}}), do: failed(socket, reason)
   defp apply_result(socket, {:exit, reason}), do: failed(socket, reason)
 
-  # Says nothing about why, like the day's slot fetch: the booker can act on
-  # "try again", and the reason is in the log for whoever can act on it.
+  # Worded as the day's slot fetch words it: no provider or parser, and a
+  # host calendar that could not be read is said to be that. The reason
+  # itself is in the log for whoever can act on it.
   defp failed(socket, reason) do
     Logger.warning("Week slot fetch failed", reason: LogFormat.reason(reason))
 
     assign(socket,
       week_slots_loading: false,
-      week_slots_error: dgettext("booking", "No time slots could be loaded. Please try again.")
+      week_slots_error: SlotFetchingHandlerComponent.slot_fetch_error_message(socket, reason)
     )
   end
 

@@ -23,6 +23,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Joken.Signer
   alias Tymeslot.CalendarGrid
@@ -61,12 +62,28 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
   # Jitsi server enforcing tokens refuses everybody the event reaches, the
   # organiser included, so the link published here carries a token instead —
   # one that names nobody and confers no moderator rights.
+  @weekly_sync %{
+    summary: "Weekly sync",
+    description: "Agenda",
+    provider: "google",
+    provider_calendar_id: "team-calendar",
+    provider_event_id: "/cal/weekly-sync.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z],
+    reminders: @reminders,
+    recurrence_rule: @rrule,
+    recurring_event_id: "series-1",
+    colour: "tomato",
+    video_link: nil,
+    video_integration_id: nil
+  }
+
   describe "change_event_video/3 on a provider whose links carry a token" do
     test "publishes a tokenised link in the description and on the cached row", %{
       user: user,
       integration: integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
       jitsi = insert_jitsi_integration(user)
       expect_provider_update(:ok)
 
@@ -85,7 +102,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
       jitsi = insert_jitsi_integration(user)
       expect_provider_update(:ok)
 
@@ -133,7 +150,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
       room: room
     } do
       event =
-        insert_event(integration, %{description: "Agenda\n\nJoin video call: #{@talk_url}"})
+        insert_event(integration, @weekly_sync, %{
+          description: "Agenda\n\nJoin video call: #{@talk_url}"
+        })
 
       assert {:ok, :unchanged} = CalendarGrid.change_event_video(user.id, event, talk.id)
 
@@ -168,7 +187,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
           ends_at: ~U[2026-12-01 10:00:00Z]
         })
 
-      event = insert_event(integration)
+      event = insert_event(integration, @weekly_sync)
 
       stub_room_created()
       expect_provider_update(:ok)
@@ -233,29 +252,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
 
       assert EventVideo.put_join_link(description, "https://old.example/a", nil) == description
     end
-  end
-
-  defp insert_event(integration, attrs \\ %{}) do
-    defaults = %{
-      calendar_integration: integration,
-      summary: "Weekly sync",
-      description: "Agenda",
-      provider: "google",
-      provider_calendar_id: "team-calendar",
-      provider_event_id: "/cal/weekly-sync.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      reminders: @reminders,
-      recurrence_rule: @rrule,
-      recurring_event_id: "series-1",
-      colour: "tomato",
-      video_link: nil,
-      video_integration_id: nil,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   defp reload(event) do

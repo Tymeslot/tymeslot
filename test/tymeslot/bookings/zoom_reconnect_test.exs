@@ -23,7 +23,6 @@ defmodule Tymeslot.Bookings.ZoomReconnectTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
@@ -31,6 +30,8 @@ defmodule Tymeslot.Bookings.ZoomReconnectTest do
   @account_id "zoom-account-1"
   @room_id "123456789"
   @full_scope "meeting:write:meeting meeting:update:meeting meeting:delete:meeting"
+  # The grant from before Tymeslot asked for the update scope.
+  @pre_update_scope "meeting:write:meeting meeting:delete:meeting"
 
   setup :verify_on_exit!
 
@@ -49,7 +50,13 @@ defmodule Tymeslot.Bookings.ZoomReconnectTest do
       ] do
     test "a reschedule made while Zoom needed reconnecting reaches the meeting after #{path}" do
       %{user: user} = create_always_bookable_profile()
-      integration = insert_zoom_integration(user)
+
+      integration =
+        insert(:zoom_video_integration,
+          user: user,
+          oauth_scope: @pre_update_scope,
+          provider_account_id: @account_id
+        )
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -113,7 +120,13 @@ defmodule Tymeslot.Bookings.ZoomReconnectTest do
 
   test "reconnecting an integration that was not flagged sends the meeting nothing" do
     %{user: user} = create_always_bookable_profile()
-    integration = insert_zoom_integration(user, oauth_scope: @full_scope)
+
+    integration =
+      insert(:zoom_video_integration,
+        user: user,
+        oauth_scope: @full_scope,
+        provider_account_id: @account_id
+      )
 
     insert_meeting_for_user(user, %{
       video_integration_id: integration.id,
@@ -132,30 +145,5 @@ defmodule Tymeslot.Bookings.ZoomReconnectTest do
              )
 
     refute_enqueued(worker: VideoSyncWorker)
-  end
-
-  defp insert_zoom_integration(user, overrides \\ []) do
-    insert(
-      :video_integration,
-      Keyword.merge(
-        [
-          user: user,
-          name: "Zoom",
-          provider: "zoom",
-          base_url: nil,
-          api_key_encrypted: nil,
-          tenant_id_encrypted: nil,
-          client_id_encrypted: nil,
-          client_secret_encrypted: nil,
-          teams_user_id_encrypted: nil,
-          access_token_encrypted: Encryption.encrypt("old-access-token"),
-          refresh_token_encrypted: Encryption.encrypt("old-refresh-token"),
-          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-          oauth_scope: "meeting:write:meeting meeting:delete:meeting",
-          provider_account_id: @account_id
-        ],
-        overrides
-      )
-    )
   end
 end

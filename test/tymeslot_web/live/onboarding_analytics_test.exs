@@ -248,6 +248,24 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       refute_push_event view, "ts:analytics", %{name: "onboarding_step_completed"}
     end
 
+    # A host who skipped the calendar never saw the theme step, which only a
+    # host with a calendar is shown.
+    test "connecting from the share step, having skipped the calendar, shows the theme step first",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/onboarding/connect_calendar?return=theme")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+      assert has_element?(view, ".onboarding-step-title", "Choose your theme")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
+
+      assert_push_event view, "ts:analytics", %{
+        name: "share_step_viewed",
+        props: %{returned: true}
+      }
+    end
+
     test "connecting without coming from the share step continues as usual",
          %{conn: conn} do
       {:ok, view, _html} = live(conn, "/onboarding/connect_calendar")

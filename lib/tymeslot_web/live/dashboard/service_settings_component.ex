@@ -34,11 +34,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:custom_questions_allowed, true)
      |> assign(:group_bookings_allowed, true)
      |> assign(:payments_accepted, true)
-     |> assign(:show_slug_modal, false)
-     |> assign(:slug_modal_type, nil)
      |> assign(:slug_draft, "")
      |> assign(:delete_sign_ups, {0, 0})
-     |> ModalHook.mount_modal(delete_meeting_type: false)}
+     |> ModalHook.mount_modal(delete_meeting_type: false, slug: false)}
   end
 
   @impl Phoenix.LiveComponent
@@ -200,8 +198,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       type ->
         {:noreply,
          socket
-         |> assign(:show_slug_modal, true)
-         |> assign(:slug_modal_type, type)
+         |> ModalHook.show_modal(:slug, type)
          |> assign(:slug_draft, MeetingTypes.effective_slug(type))}
     end
   end
@@ -222,8 +219,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   def handle_event("confirm_slug_change", _params, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_confirm_slug_change(socket, user_id)
+    ModalHook.with_modal_data(socket, :slug, fn type ->
+      with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+        do_confirm_slug_change(socket, type, user_id)
+      end)
     end)
   end
 
@@ -351,9 +350,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
-  defp do_confirm_slug_change(socket, user_id) do
-    type = socket.assigns.slug_modal_type
-
+  defp do_confirm_slug_change(socket, type, user_id) do
     case MeetingTypes.update_slug(type, socket.assigns.slug_draft) do
       {:ok, _updated} ->
         send(self(), {:meeting_type_changed})
@@ -405,8 +402,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   defp hide_slug_modal(socket) do
     socket
-    |> assign(:show_slug_modal, false)
-    |> assign(:slug_modal_type, nil)
+    |> ModalHook.hide_modal(:slug)
     |> assign(:slug_draft, "")
   end
 

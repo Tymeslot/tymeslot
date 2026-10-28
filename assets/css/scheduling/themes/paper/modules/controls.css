@@ -224,10 +224,6 @@
   animation: paper-spin 0.8s linear infinite;
 }
 
-.paper-spinner__track {
-  opacity: 0.25;
-}
-
 @keyframes paper-spin {
   to {
     transform: rotate(360deg);

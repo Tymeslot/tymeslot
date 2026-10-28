@@ -132,7 +132,7 @@ defmodule Tymeslot.TestAffected.Selection do
   defp walk_up("test", _index), do: nil
   defp walk_up(".", _index), do: nil
 
-  defp walk_up(dir, index) do
+  defp walk_up(dir, index) when is_binary(dir) do
     cond do
       # `test/tymeslot` or `test/tymeslot_web` is not a mirror of anything, it
       # is most of the suite. Widening honestly beats a selection that only

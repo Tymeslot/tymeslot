@@ -145,8 +145,8 @@ defmodule Tymeslot.Emails.Branding do
   @spec configured_logo_relative_path() :: String.t() | nil
   defp configured_logo_relative_path do
     case AppSettings.get(:email_logo_path) do
+      relative when is_binary(relative) -> if logo_on_disk?(relative), do: relative, else: nil
       nil -> nil
-      relative -> if logo_on_disk?(relative), do: relative, else: nil
     end
   end
 

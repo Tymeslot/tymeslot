@@ -12,7 +12,10 @@ defmodule Tymeslot.Emails.Shared.PollHost do
 
   @spec display_name(PollSchema.t()) :: String.t()
   def display_name(%PollSchema{user: %{profile: %ProfileSchema{} = profile}}) do
-    Profiles.display_name(profile) || MjmlEmail.fetch_from_name()
+    case Profiles.display_name(profile) do
+      name when is_binary(name) -> name
+      nil -> MjmlEmail.fetch_from_name()
+    end
   end
 
   def display_name(%PollSchema{user: %{name: name}}) when is_binary(name) and name != "",

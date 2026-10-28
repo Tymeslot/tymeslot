@@ -26,7 +26,6 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -45,6 +44,9 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     with_config(:tymeslot, :video_room_retention_days, 7)
     %{user: create_user_with_profile().user}
   end
+
+  # Every test in this module gives its Talk integration a server of its own,
+  # so no test's calls reach another test's per-host circuit breaker.
 
   test "deletes a Talk room once its meeting ended more than the retention period ago", %{
     user: user
@@ -108,7 +110,8 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   end
 
   test "deletes a room its own healthy integration can still reach", %{user: user} do
-    integration = insert_talk_integration(user, "healthy.example.com")
+    integration =
+      insert(:talk_video_integration, user: user, base_url: "https://healthy.example.com")
 
     due =
       insert_ended(user, 8, "nextcloud_talk", "healthy1", video_integration_id: integration.id)
@@ -121,7 +124,12 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   # The provider refuses locally while the integration awaits reconnection, so
   # queueing its rooms would only log a refusal every night for a month.
   test "skips rooms whose integration is waiting to be reconnected", %{user: user} do
-    integration = insert_talk_integration(user, "flagged.example.com", needs_reauth: true)
+    integration =
+      insert(:talk_video_integration,
+        user: user,
+        base_url: "https://flagged.example.com",
+        needs_reauth: true
+      )
 
     flagged =
       insert_ended(user, 8, "nextcloud_talk", "flagged1", video_integration_id: integration.id)
@@ -135,7 +143,11 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   # every delete queued here would be refused against a row about to go.
   test "skips rooms whose integration is being disconnected", %{user: user} do
     integration =
-      insert_talk_integration(user, "leaving.example.com", deleted_at: DateTime.utc_now(:second))
+      insert(:talk_video_integration,
+        user: user,
+        base_url: "https://leaving.example.com",
+        deleted_at: DateTime.utc_now(:second)
+      )
 
     leaving =
       insert_ended(user, 8, "nextcloud_talk", "leaving1", video_integration_id: integration.id)
@@ -147,7 +159,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
 
   test "a deleted conversation is cleared and not queued again the next night", %{user: user} do
     host = "journey.example.com"
-    integration = insert_talk_integration(user, host)
+    integration = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
     due =
       insert_ended(user, 8, "nextcloud_talk", "journey1", video_integration_id: integration.id)
@@ -173,7 +185,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
       user: user
     } do
       host = "grid-journey.example.com"
-      talk = insert_talk_integration(user, host)
+      talk = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
       calendar =
         insert(:calendar_integration,
@@ -264,7 +276,13 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     test "keeps a grid event's conversation when the calendar has moved the event later", %{
       user: user
     } do
-      room = insert_event_room(user, insert_talk_integration(user, "grid-moved.example.com"), 8)
+      room =
+        insert_event_room(
+          user,
+          insert(:talk_video_integration, user: user, base_url: "https://grid-moved.example.com"),
+          8
+        )
+
       {:ok, loaded} = CalendarGrid.get_event_video_room(room.id)
       new_start = DateTime.add(DateTime.utc_now(:second), @day, :second)
 
@@ -284,7 +302,12 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     test "deletes a grid event's conversation whose event is gone from a synced calendar", %{
       user: user
     } do
-      room = insert_event_room(user, insert_talk_integration(user, "grid-gone.example.com"), 8)
+      room =
+        insert_event_room(
+          user,
+          insert(:talk_video_integration, user: user, base_url: "https://grid-gone.example.com"),
+          8
+        )
 
       assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
 
@@ -294,7 +317,9 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     # As for meetings: disconnected without deleting its rooms, the
     # integration's rooms stay reachable through a reconnected one.
     test "deletes a grid event's conversation whose integration link is gone", %{user: user} do
-      talk = insert_talk_integration(user, "grid-unlinked.example.com")
+      talk =
+        insert(:talk_video_integration, user: user, base_url: "https://grid-unlinked.example.com")
+
       room = insert_event_room(user, talk, 8)
       Repo.delete!(talk)
 
@@ -304,7 +329,15 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     end
 
     test "keeps a grid event's conversation within the retention period", %{user: user} do
-      room = insert_event_room(user, insert_talk_integration(user, "grid-recent.example.com"), 6)
+      room =
+        insert_event_room(
+          user,
+          insert(:talk_video_integration,
+            user: user,
+            base_url: "https://grid-recent.example.com"
+          ),
+          6
+        )
 
       assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
 
@@ -312,7 +345,12 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     end
 
     test "gives up on a grid event's conversation a month after it fell due", %{user: user} do
-      room = insert_event_room(user, insert_talk_integration(user, "grid-stale.example.com"), 40)
+      room =
+        insert_event_room(
+          user,
+          insert(:talk_video_integration, user: user, base_url: "https://grid-stale.example.com"),
+          40
+        )
 
       assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
 
@@ -320,7 +358,9 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     end
 
     test "never deletes the conversation of a series with no end", %{user: user} do
-      talk = insert_talk_integration(user, "grid-series.example.com")
+      talk =
+        insert(:talk_video_integration, user: user, base_url: "https://grid-series.example.com")
+
       room = insert_event_room(user, talk, 8, ends_at: nil)
 
       assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
@@ -331,7 +371,13 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     test "skips a grid event's conversation whose integration is waiting to be reconnected", %{
       user: user
     } do
-      talk = insert_talk_integration(user, "grid-flagged.example.com", needs_reauth: true)
+      talk =
+        insert(:talk_video_integration,
+          user: user,
+          base_url: "https://grid-flagged.example.com",
+          needs_reauth: true
+        )
+
       room = insert_event_room(user, talk, 8)
 
       assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
@@ -343,7 +389,9 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
       user: user
     } do
       talk =
-        insert_talk_integration(user, "grid-leaving.example.com",
+        insert(:talk_video_integration,
+          user: user,
+          base_url: "https://grid-leaving.example.com",
           deleted_at: DateTime.utc_now(:second)
         )
 
@@ -437,24 +485,6 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
         },
         Map.new(attrs)
       )
-    )
-  end
-
-  # Each test gets its own server, so no test's calls reach another test's
-  # per-host circuit breaker.
-  defp insert_talk_integration(user, host, attrs \\ []) do
-    base_url = "https://" <> host
-
-    insert(
-      :video_integration,
-      [
-        user: user,
-        provider: "nextcloud_talk",
-        base_url: base_url,
-        client_id_encrypted: Encryption.encrypt("organiser"),
-        client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-        provider_account_id: base_url <> "||organiser"
-      ] ++ attrs
     )
   end
 

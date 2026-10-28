@@ -17,7 +17,6 @@ defmodule Tymeslot.Bookings.CancelTest do
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -32,6 +31,9 @@ defmodule Tymeslot.Bookings.CancelTest do
     TestMocks.setup_email_mocks()
     :ok
   end
+
+  # A grant without the update scope; the factory's Zoom holds all three.
+  @zoom_scope "meeting:write:meeting meeting:delete:meeting"
 
   describe "execute/1 with meeting UID" do
     test "successfully cancels a future meeting" do
@@ -381,7 +383,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   describe "Zoom video room cleanup" do
     test "enqueues a video-sync delete job that calls the Zoom REST API" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -417,7 +419,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
     test "still cancels successfully and the job retries when Zoom delete fails" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -454,7 +456,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
     test "the delete job treats Zoom 404 as success so cancellation is idempotent" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -479,7 +481,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
     test "still enqueues the delete job after the integration was disconnected" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -508,7 +510,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
     test "does not enqueue a video-sync job when meeting has no video_room_id" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -523,25 +525,6 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       refute_enqueued(worker: VideoSyncWorker)
     end
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:delete:meeting",
-      provider_account_id: nil
-    )
   end
 
   defp insert_held_paid_request(user, status \\ "awaiting_approval", extra_attrs \\ %{}) do

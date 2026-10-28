@@ -41,18 +41,10 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
         href={Config.site_home_path()}
         class="hidden sm:flex fixed top-6 left-6 items-center px-6 py-3 text-base font-bold bg-linear-to-br from-turquoise-600 to-cyan-600 text-white rounded-token-2xl shadow-lg shadow-turquoise-500/20 hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40 transition-glass duration-300 group z-50"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
+        <.icon
+          name="hero-arrow-left-mini"
           class="h-5 w-5 mr-2 transform group-hover:-translate-x-1 transition-transform duration-200"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-            clip-rule="evenodd"
-          />
-        </svg>
+        />
         {dgettext("auth", "Back to Website")}
       </a>
     <% end %>

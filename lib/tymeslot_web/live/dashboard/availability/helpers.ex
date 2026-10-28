@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
       <.safe_flag
         country_code={@country_code}
         class="w-4 h-3 shrink-0 rounded-token-sm shadow-sm"
-        fallback_icon="🌐"
+        fallback_icon="hero-globe-alt"
         show_fallback={true}
       />
       <span data-testid="timezone-display" class="truncate" title={@timezone_display}>{@timezone_display}</span>

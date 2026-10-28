@@ -296,7 +296,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   """
   @spec preload_user(ProfileSchema.t()) :: ProfileSchema.t()
   def preload_user(%ProfileSchema{} = profile) do
-    Repo.preload(profile, :user)
+    %ProfileSchema{} = Repo.preload(profile, :user)
   end
 
   @doc """

@@ -18,7 +18,6 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
@@ -36,10 +35,13 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
     :ok
   end
 
+  # A grant without the delete scope; the factory's Zoom holds all three.
+  @zoom_scope "meeting:write:meeting meeting:update:meeting"
+
   describe "Zoom video room sync" do
     test "still enqueues the update job after the integration was disconnected" do
       %{user: user, profile: _profile} = create_always_bookable_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -73,7 +75,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
 
     test "enqueues a video-sync update job that PATCHes the Zoom meeting with new times" do
       %{user: user, profile: _profile} = create_always_bookable_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -123,7 +125,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
 
     test "still reschedules successfully and the job retries when Zoom update fails" do
       %{user: user, profile: _profile} = create_always_bookable_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -160,7 +162,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
 
     test "does not enqueue a video-sync job when meeting has no video_room_id" do
       %{user: user, profile: _profile} = create_always_bookable_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -180,24 +182,5 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
 
       refute_enqueued(worker: VideoSyncWorker)
     end
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:update:meeting",
-      provider_account_id: nil
-    )
   end
 end

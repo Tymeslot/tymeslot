@@ -237,6 +237,8 @@ defmodule Tymeslot.Infrastructure.Metrics do
         error: metadata[:error]
       )
     end
+
+    :ok
   end
 
   @spec handle_http_event(list(atom()), http_measurements(), http_metadata(), term()) :: :ok
@@ -255,6 +257,8 @@ defmodule Tymeslot.Infrastructure.Metrics do
         duration_ms: measurements[:duration]
       )
     end
+
+    :ok
   end
 
   defp request_target(url) when is_binary(url) do
@@ -382,5 +386,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
         event_count: measurements[:event_count]
       )
     end
+
+    :ok
   end
 end

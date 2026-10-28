@@ -72,30 +72,18 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   """
   @spec extract_calendar_display_name(CalendarEntry.t() | map()) :: String.t()
   def extract_calendar_display_name(calendar) do
-    entry = CalendarEntry.normalize(calendar)
-    raw_name = entry.name
-    path = entry.path
-    id = entry.id
+    %CalendarEntry{name: raw_name, path: path, id: id} = CalendarEntry.normalize(calendar)
 
-    cond do
-      # If name exists and doesn't look like a UUID, use it
-      raw_name && !uuid_like?(raw_name) ->
-        raw_name
-
-      # If path exists, try to extract a friendly name from it
-      path ->
-        extract_name_from_path(path)
-
-      # If id doesn't look like a UUID, use it
-      id && !uuid_like?(id) ->
-        id
-
-      # Last resort: use the raw name even if it's a UUID
-      raw_name ->
-        raw_name
-
-      true ->
-        dgettext("dashboard_common", "Calendar")
+    # In order of preference: a name that doesn't look like a UUID, a friendly
+    # name derived from the path, an id that doesn't look like a UUID, and as a
+    # last resort the raw name even if it is a UUID.
+    with :error <- readable(raw_name),
+         :error <- name_from_path(path),
+         :error <- readable(id),
+         :error <- present(raw_name) do
+      dgettext("dashboard_common", "Calendar")
+    else
+      {:ok, name} -> name
     end
   end
 
@@ -127,12 +115,22 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
     end
   end
 
+  defp readable(value) when is_binary(value) do
+    if uuid_like?(value), do: :error, else: {:ok, value}
+  end
+
+  defp readable(_value), do: :error
+
+  defp name_from_path(path) when is_binary(path), do: {:ok, extract_name_from_path(path)}
+  defp name_from_path(_path), do: :error
+
+  defp present(value) when is_binary(value), do: {:ok, value}
+  defp present(_value), do: :error
+
   # Check if a string looks like a UUID
   defp uuid_like?(str) when is_binary(str) do
     String.match?(str, ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
   end
-
-  defp uuid_like?(_non_string), do: false
 
   # Extract a friendly name from a path like "/user/calendar-name/" -> "Calendar Name"
   defp extract_name_from_path(path) when is_binary(path) do
@@ -153,6 +151,4 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
         |> Enum.map_join(" ", &String.capitalize/1)
     end
   end
-
-  defp extract_name_from_path(_arg), do: dgettext("dashboard_common", "Calendar")
 end

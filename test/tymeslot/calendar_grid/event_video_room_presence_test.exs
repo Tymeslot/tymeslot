@@ -49,7 +49,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
     talk_host = "talk-#{System.unique_integer([:positive])}.example.com"
     answer_requests(%{})
 
-    %{user: user, talk: insert_talk_integration(user, talk_host), talk_host: talk_host}
+    %{
+      user: user,
+      talk: insert(:talk_video_integration, user: user, base_url: "https://" <> talk_host),
+      talk_host: talk_host
+    }
   end
 
   describe "an endless series on a CalDAV calendar" do
@@ -263,7 +267,12 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
     test "is the room's own, not that of an occurrence with a video of its own", ctx do
       room = series_room(ctx, "grid-series-7")
       link = talk_link(ctx, room)
-      other_talk = insert_talk_integration(ctx.user, "other-#{ctx.talk_host}")
+
+      other_talk =
+        insert(:talk_video_integration,
+          user: ctx.user,
+          base_url: "https://other-#{ctx.talk_host}"
+        )
 
       # Cached first, so the first link found would be this one.
       cache_occurrence(ctx, "grid-series-7",
@@ -629,19 +638,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
     END:VEVENT\r
     END:VCALENDAR\r
     """
-  end
-
-  defp insert_talk_integration(user, host) do
-    base_url = "https://" <> host
-
-    insert(:video_integration,
-      user: user,
-      provider: "nextcloud_talk",
-      base_url: base_url,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-      provider_account_id: base_url <> "||organiser"
-    )
   end
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})

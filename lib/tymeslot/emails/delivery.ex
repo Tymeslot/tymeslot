@@ -67,13 +67,22 @@ defmodule Tymeslot.Emails.Delivery do
     with :ok <- check_text_body(email) do
       Logger.debug("Delivering email via Mailer", recipient_domains: recipient_domains(email))
 
-      CircuitBreaker.call(
-        Keyword.get_lazy(opts, :breaker, &CircuitBreakerSupervisor.email_breaker_name/0),
+      breaker = Keyword.get_lazy(opts, :breaker, &CircuitBreakerSupervisor.email_breaker_name/0)
+
+      breaker
+      |> CircuitBreaker.call(
         fn -> email |> deliver_within_deadline() |> handle_delivery_result(email) end,
         classify: &classify_outcome/1
       )
+      |> delivery_result()
     end
   end
+
+  # `CircuitBreaker.call/3` is typed for every breaker's results, but the
+  # delivery function only ever returns `{:ok, _}` or `{:error, _}`, and so
+  # does a refusal from an open circuit.
+  defp delivery_result({:ok, _receipt} = result), do: result
+  defp delivery_result({:error, _reason} = result), do: result
 
   @doc """
   Runs `fun` with `policy` for ambiguous timeouts in every `deliver/2` it

@@ -17,6 +17,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
 
   import Ecto.Query
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -28,6 +29,14 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Repo
+
+  @design_review %{
+    summary: "Design review",
+    provider_calendar_id: "/src/",
+    provider_event_id: "/src/design-review.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z]
+  }
 
   setup :verify_on_exit!
 
@@ -47,7 +56,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
     test "a Google event is cached under the iCalUID sync keys it by, and a sync adds no second row",
          %{user: user, source: source} do
       google = insert(:calendar_integration, user: user, provider: "google")
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
 
       # What Google answers an insert with: its own event id and an iCalUID
       # that is not derived from it.
@@ -99,7 +108,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
       source: source
     } do
       outlook = insert(:calendar_integration, user: user, provider: "outlook")
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
 
       expect_create(fn payload ->
         [converted] =
@@ -131,7 +140,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
 
       # A tag PostgreSQL refuses to store, so the destination row cannot be
       # written although the create succeeded.
@@ -150,7 +159,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
       expect_create(&created/1)
 
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
@@ -166,7 +175,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
       source: source,
       destination: destination
     } do
-      event = insert_event(source)
+      event = insert_event(source, @design_review)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _payload, _context ->
         raise "connection closed"
@@ -177,21 +186,6 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
       assert_raise RuntimeError, "connection closed", fn -> move(user, event, destination) end
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
     end
-  end
-
-  defp insert_event(integration) do
-    insert(:provider_calendar_event,
-      calendar_integration: integration,
-      uid: "event-#{System.unique_integer([:positive])}",
-      summary: "Design review",
-      provider: integration.provider,
-      provider_calendar_id: "/src/",
-      provider_event_id: "/src/design-review.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    )
   end
 
   defp expect_create(result_fun) do

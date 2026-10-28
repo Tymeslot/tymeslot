@@ -7,22 +7,16 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
   @moduletag :auth
 
   import Tymeslot.Factory
+  import TymeslotWeb.Test.SocketHelpers
 
-  alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Hooks.AuthLiveSessionHook
 
-  # Mounted at `uri`, as `get_connect_info/2` reports it during a mount.
-  defp build_socket(assigns \\ %{}, uri \\ "http://localhost/dashboard") do
-    %Socket{
-      assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns),
-      endpoint: TymeslotWeb.Endpoint,
-      private: Map.put(%Socket{}.private, :connect_info, %{uri: URI.parse(uri)})
-    }
-  end
+  # The page a mount is at, as `get_connect_info/2` reports its `:uri`.
+  @dashboard_url "http://localhost/dashboard"
 
   describe "on_mount(:ensure_authenticated, ...)" do
     test "redirects when no token in session" do
-      socket = build_socket()
+      socket = build_socket(%{}, uri: @dashboard_url)
 
       assert {:halt, updated_socket} =
                AuthLiveSessionHook.on_mount(:ensure_authenticated, %{}, %{}, socket)
@@ -32,7 +26,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     end
 
     test "names the page being mounted, query included, in the login link" do
-      socket = build_socket(%{}, "http://localhost/dashboard/meetings?meeting=12")
+      socket = build_socket(%{}, uri: "http://localhost/dashboard/meetings?meeting=12")
 
       assert {:halt, updated_socket} =
                AuthLiveSessionHook.on_mount(:ensure_authenticated, %{}, %{}, socket)
@@ -48,13 +42,11 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     # Once connected, `:uri` is the websocket's address, CSRF token and all,
     # not the page; naming it would send the user there after signing in.
     test "a connected mount sends the user to the plain login page" do
-      socket = %{
-        build_socket(
-          %{},
-          "http://localhost/live/websocket?_csrf_token=secret-token&vsn=2.0.0"
+      socket =
+        build_socket(%{},
+          uri: "http://localhost/live/websocket?_csrf_token=secret-token&vsn=2.0.0",
+          connected: true
         )
-        | transport_pid: self()
-      }
 
       session = %{"user_token" => "expired-nonexistent-token"}
 
@@ -65,7 +57,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     end
 
     test "redirects when token exists but session expired" do
-      socket = build_socket()
+      socket = build_socket(%{}, uri: @dashboard_url)
       session = %{"user_token" => "expired-nonexistent-token"}
 
       assert {:halt, updated_socket} =
@@ -78,7 +70,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     test "assigns current_user and is_email_verified on valid token" do
       user = insert(:user, verified_at: DateTime.utc_now())
       session_record = insert(:user_session, user: user)
-      socket = build_socket()
+      socket = build_socket(%{}, uri: @dashboard_url)
       session = %{"user_token" => session_record.token}
 
       assert {:cont, updated_socket} =
@@ -91,7 +83,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     test "assigns is_email_verified as false for unverified user" do
       user = insert(:unverified_user)
       session_record = insert(:user_session, user: user)
-      socket = build_socket()
+      socket = build_socket(%{}, uri: @dashboard_url)
       session = %{"user_token" => session_record.token}
 
       assert {:cont, updated_socket} =
@@ -104,7 +96,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
 
   describe "on_mount(:fetch_current_user, ...)" do
     test "assigns nil when no token" do
-      socket = build_socket()
+      socket = build_socket(%{}, uri: @dashboard_url)
 
       assert {:cont, updated_socket} =
                AuthLiveSessionHook.on_mount(:fetch_current_user, %{}, %{}, socket)
@@ -115,7 +107,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     test "assigns user when valid token" do
       user = insert(:user)
       session_record = insert(:user_session, user: user)
-      socket = build_socket()
+      socket = build_socket(%{}, uri: @dashboard_url)
       session = %{"user_token" => session_record.token}
 
       assert {:cont, updated_socket} =
@@ -125,7 +117,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     end
 
     test "assigns nil when token exists but invalid" do
-      socket = build_socket()
+      socket = build_socket(%{}, uri: @dashboard_url)
       session = %{"user_token" => "invalid-token"}
 
       assert {:cont, updated_socket} =
@@ -139,7 +131,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     @hook {:redirect_if_authenticated, actions: [:login, :signup], events: ["submit_signup"]}
 
     test "lets an anonymous visitor through" do
-      socket = build_socket(%{live_action: :login})
+      socket = build_socket(%{live_action: :login}, uri: @dashboard_url)
 
       assert {:cont, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, %{}, socket)
 
@@ -149,7 +141,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     test "redirects a signed-in user away from a listed action" do
       user = insert(:user)
       session_record = insert(:user_session, user: user)
-      socket = build_socket(%{live_action: :login})
+      socket = build_socket(%{live_action: :login}, uri: @dashboard_url)
       session = %{"user_token" => session_record.token}
 
       assert {:halt, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, session, socket)
@@ -162,7 +154,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
       session_record = insert(:user_session, user: user)
       # Mounted at the router, as the patch and event guards it attaches need.
       socket = %{
-        build_socket(%{live_action: :reset_password_form})
+        build_socket(%{live_action: :reset_password_form}, uri: @dashboard_url)
         | router: TymeslotWeb.Router,
           private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}}
       }
@@ -175,7 +167,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     end
 
     test "lets a visitor with a dead token through" do
-      socket = build_socket(%{live_action: :login})
+      socket = build_socket(%{live_action: :login}, uri: @dashboard_url)
       session = %{"user_token" => "invalid-token"}
 
       assert {:cont, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, session, socket)

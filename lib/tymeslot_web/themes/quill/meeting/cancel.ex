@@ -38,19 +38,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
               <%= if @meeting_kept do %>
                 <div class="text-center mb-8">
                   <div class="mx-auto mb-4 w-16 h-16">
-                    <svg
-                      class="w-16 h-16 meeting-page-icon--success"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
+                    <.icon name="hero-check-circle" class="w-16 h-16 meeting-page-icon--success" />
                   </div>
 
                   <h1 class="text-3xl font-bold mb-2 meeting-page-title">
@@ -97,19 +85,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
               <% else %>
                 <div class="text-center mb-8">
                   <div class="mx-auto mb-4 w-16 h-16">
-                    <svg
-                      class="w-16 h-16 meeting-page-icon--danger"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <.icon name="hero-x-mark" class="w-16 h-16 meeting-page-icon--danger" />
                   </div>
 
                   <h1 class="text-3xl font-bold mb-2 meeting-page-title">
@@ -142,17 +118,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                 </div>
 
                 <div class="mb-6 p-4 rounded-lg flex items-start gap-3 meeting-page-notice meeting-page-notice--danger">
-                  <svg
+                  <.icon
+                    name="hero-information-circle-mini"
                     class="w-5 h-5 shrink-0 mt-0.5 meeting-page-icon--danger"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
+                  />
                   <div class="text-sm meeting-page-muted">
                     {dgettext(
                       "booking_manage",

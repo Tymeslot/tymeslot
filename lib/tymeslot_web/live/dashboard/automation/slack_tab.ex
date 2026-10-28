@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.SlackCard
 
   attr :integrations, :list, required: true
@@ -96,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
           )
         }
       >
-        <:graphic><IconComponents.icon name={:slack} class="w-10 h-10" /></:graphic>
+        <:graphic><.icon name="brand-slack" class="w-10 h-10" /></:graphic>
         <:action :if={@oauth_mode_available?}>
           <.add_to_slack paused={@paused} icon />
           <.action_button
@@ -130,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   defp add_to_slack(%{paused: true} = assigns) do
     ~H"""
     <.action_button disabled>
-      <IconComponents.icon :if={@icon} name={:slack} class="w-5 h-5" />
+      <.icon :if={@icon} name="brand-slack" class="w-5 h-5" />
       {dgettext("dashboard_automation_chat", "Add to Slack")}
     </.action_button>
     """
@@ -139,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   defp add_to_slack(assigns) do
     ~H"""
     <.action_link href={~p"/api/slack/oauth/start"}>
-      <IconComponents.icon :if={@icon} name={:slack} class="w-5 h-5" />
+      <.icon :if={@icon} name="brand-slack" class="w-5 h-5" />
       {dgettext("dashboard_automation_chat", "Add to Slack")}
     </.action_link>
     """

@@ -250,8 +250,13 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     assert log =~ "line 5"
   end
 
-  test "missing files are silently skipped" do
-    assert :ok = DotenvLoader.load(["/nonexistent/path/.env"])
+  test "missing files are silently skipped", %{tmp_dir: tmp_dir} do
+    path = write_env(tmp_dir, "TYMESLOT_DOTENV_TEST_A=after_missing\n")
+
+    log = capture_log(fn -> assert :ok = DotenvLoader.load(["/nonexistent/path/.env", path]) end)
+
+    assert System.get_env("TYMESLOT_DOTENV_TEST_A") == "after_missing"
+    assert log == ""
   end
 
   test "an empty path list is a no-op" do

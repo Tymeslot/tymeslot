@@ -6,7 +6,13 @@ defmodule TymeslotWeb.Hooks.ModalHook do
 
   alias Phoenix.Component
 
-  @spec mount_modal(Phoenix.LiveView.Socket.t(), list({atom(), boolean()})) ::
+  @typedoc """
+  A modal Core registers, by name (atom or string), or the
+  `{show_key, data_key}` assigns of one it does not.
+  """
+  @type modal_name :: atom() | String.t() | {atom(), atom()}
+
+  @spec mount_modal(Phoenix.LiveView.Socket.t(), list({modal_name(), boolean()})) ::
           Phoenix.LiveView.Socket.t()
   def mount_modal(socket, modal_configs) do
     Enum.reduce(modal_configs, socket, fn {modal_name, initial_state}, acc ->
@@ -18,7 +24,7 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     end)
   end
 
-  @spec show_modal(Phoenix.LiveView.Socket.t(), atom() | String.t(), any()) ::
+  @spec show_modal(Phoenix.LiveView.Socket.t(), modal_name(), any()) ::
           Phoenix.LiveView.Socket.t()
   def show_modal(socket, modal_name, data \\ nil) do
     {show_key, data_key} = resolve_keys(modal_name)
@@ -28,7 +34,7 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     |> Component.assign(data_key, data)
   end
 
-  @spec hide_modal(Phoenix.LiveView.Socket.t(), atom() | String.t()) ::
+  @spec hide_modal(Phoenix.LiveView.Socket.t(), modal_name()) ::
           Phoenix.LiveView.Socket.t()
   def hide_modal(socket, modal_name) do
     {show_key, data_key} = resolve_keys(modal_name)
@@ -52,7 +58,7 @@ defmodule TymeslotWeb.Hooks.ModalHook do
   `{:noreply, socket}` no-op. Otherwise `fun` is invoked with the present data
   and its result is returned verbatim.
   """
-  @spec with_modal_data(Phoenix.LiveView.Socket.t(), atom() | String.t(), (term() -> result)) ::
+  @spec with_modal_data(Phoenix.LiveView.Socket.t(), modal_name(), (term() -> result)) ::
           result | {:noreply, Phoenix.LiveView.Socket.t()}
         when result: term()
   def with_modal_data(socket, modal_name, fun) when is_function(fun, 1) do
@@ -86,8 +92,19 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     telegram_delete: {:show_telegram_delete_modal, :telegram_delete_modal_data},
     telegram_deliveries: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data},
     slack_delete: {:show_slack_delete_modal, :slack_delete_modal_data},
-    slack_deliveries: {:show_slack_deliveries_modal, :slack_deliveries_modal_data}
+    slack_deliveries: {:show_slack_deliveries_modal, :slack_deliveries_modal_data},
+    slug: {:show_slug_modal, :slug_modal_data},
+    cancel: {:show_cancel_modal, :cancel_modal_data},
+    skip: {:show_skip_modal, :skip_modal_data},
+    skip_calendar: {:show_skip_calendar_modal, :skip_calendar_modal_data},
+    theme_preview: {:show_theme_preview_modal, :theme_preview_modal_data},
+    disconnect: {:show_disconnect_modal, :disconnect_modal_data},
+    refund: {:show_refund_modal, :refund_modal_data}
   }
+
+  # A modal Core does not register (one of SaaS's) names its own keys.
+  defp resolve_keys({show_key, data_key} = keys) when is_atom(show_key) and is_atom(data_key),
+    do: keys
 
   defp resolve_keys(k) when is_atom(k) do
     case Map.fetch(@modal_registry, k) do

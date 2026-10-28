@@ -50,7 +50,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       video_integration = insert(:video_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Video Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -119,7 +120,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       link = "https://video.example.com/join/old-room"
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Linked Event",
           description: "Join video call: #{link}",
           start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
@@ -204,7 +206,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       link = "https://video.example.com/join/current-room"
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Linked Event",
           description: "Join video call: #{link}",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
@@ -245,7 +248,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       integration: integration
     } do
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Plain Event",
           description: "Agenda",
           start_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -275,7 +279,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       url = "https://video.example.com/join/repaired-room"
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Half-linked Event",
           description: "Agenda",
           start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
@@ -315,7 +320,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       video_integration = insert(:video_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Sync",
           description: "Agenda",
           attendees: [%{"email" => "guest@example.com", "name" => "Guest"}],
@@ -402,7 +408,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
         )
 
       event =
-        insert_event(calendar, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: calendar,
           summary: "Planning",
           provider: "google",
           provider_event_id: "googlehex1",
@@ -469,7 +476,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       link = "https://video.example.com/join/booking-room"
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Booked Call",
           description: "Join video call: #{link}",
           start_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -524,7 +532,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
         })
 
       occurrence =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           uid: "series1@google.com_#{Calendar.strftime(start_at, "%Y%m%dT%H%M%SZ")}",
           provider: "google",
           provider_event_id: "series1_occurrence",
@@ -627,9 +636,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
     assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
     render(lv)
     render(lv)
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

@@ -56,7 +56,7 @@ defmodule Tymeslot.Media.Uploads do
   states it to the organiser. Captions are measured in kilobytes and have no
   megabyte figure.
   """
-  @spec max_file_size_mb(:avatar | :image | :video) :: pos_integer()
+  @spec max_file_size_mb(:avatar | :image | :video) :: non_neg_integer()
   def max_file_size_mb(kind) when kind in [:avatar, :image, :video],
     do: div(max_file_size(kind), 1_000_000)
 

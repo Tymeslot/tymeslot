@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import TymeslotWeb.Components.CoreComponents.Feedback, only: [spinner: 1]
   import TymeslotWeb.Components.CoreComponents.Icons, only: [icon: 1]
 
   alias Phoenix.LiveView.JS
@@ -253,23 +254,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
       >
         <%= if @submitting do %>
-          <svg class="paper-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle
-              class="paper-spinner__track"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="3"
-            />
-            <path
-              class="paper-spinner__head"
-              d="M22 12a10 10 0 0 0-10-10"
-              stroke="currentColor"
-              stroke-width="3"
-              stroke-linecap="round"
-            />
-          </svg>
+          <.spinner class="paper-spinner" aria-hidden="true" />
           <span>{dpgettext("booking_voice", "paper", "Sending…")}</span>
         <% else %>
           {BookingLabels.submit_label(

@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
-  alias TymeslotWeb.Components.Icons.IconComponents
 
   # ========== NAVIGATION ==========
 
@@ -48,7 +47,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   Each entry is a map with `:id` and `:label`, and optionally:
 
-    * `:icon`: a `hero-…` name, or a brand-mark atom for `IconComponents.icon/1`
+    * `:icon`: an icon name for `<.icon>` (`hero-…` or a custom icon such as `brand-slack`)
     * `:count`: a number shown in a small pill after the label
     * `:badge`: a short word in a neutral pill, such as "Disabled"
     * `:status` and `:status_label`: a pill tone (`:warning`, `:danger`, …)
@@ -445,14 +444,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     """
   end
 
-  attr :icon, :any, required: true
+  attr :icon, :string, required: true
   attr :class, :string, required: true
-
-  defp strip_icon(%{icon: icon} = assigns) when is_atom(icon) do
-    ~H"""
-    <IconComponents.icon name={@icon} class={"shrink-0 #{@class}"} />
-    """
-  end
 
   defp strip_icon(assigns) do
     ~H"""

@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.32.0",
+      version: "1.33.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -43,7 +43,7 @@ defmodule Tymeslot.MixProject do
         plt_ignore_apps: [:xmerl],
         plt_core_path: "priv/plts",
         plt_local_path: "priv/plts",
-        flags: [:error_handling]
+        flags: [:error_handling, :missing_return, :extra_return]
       ],
       releases: [
         tymeslot: [

@@ -133,7 +133,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
   @spec calculate_next_backoff(map(), error_class()) :: pos_integer()
   def calculate_next_backoff(%{last_error_class: nil}, :transient), do: @transient_initial_ms
 
-  def calculate_next_backoff(%{backoff_ms: current}, :transient) do
+  def calculate_next_backoff(%{backoff_ms: current}, :transient) when is_integer(current) do
     min(current * 2, @max_backoff_ms)
   end
 
