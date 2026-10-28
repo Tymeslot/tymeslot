@@ -30,4 +30,25 @@ defmodule TymeslotWeb.Hooks.ModalHookTest do
                ModalHook.with_modal_data(socket, "delete_break", fn data -> {:ok, data} end)
     end
   end
+
+  describe "a modal Core does not register" do
+    test "is opened and closed by its own {show_key, data_key}" do
+      keys = {:show_unregistered_modal, :unregistered_modal_data}
+
+      socket = ModalHook.mount_modal(%Socket{}, [{keys, false}])
+      refute socket.assigns.show_unregistered_modal
+
+      socket = ModalHook.show_modal(socket, keys, %{id: 3})
+      assert socket.assigns.show_unregistered_modal
+      assert socket.assigns.unregistered_modal_data == %{id: 3}
+
+      socket = ModalHook.hide_modal(socket, keys)
+      refute socket.assigns.show_unregistered_modal
+      assert socket.assigns.unregistered_modal_data == nil
+    end
+
+    test "is rejected by name" do
+      assert_raise ArgumentError, fn -> ModalHook.show_modal(%Socket{}, :unregistered) end
+    end
+  end
 end
