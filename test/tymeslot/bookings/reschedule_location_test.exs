@@ -29,7 +29,6 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.{VideoRoomWorker, VideoSyncWorker}
   alias Tymeslot.ZoomOAuthHelperMock
@@ -41,7 +40,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
     TestMocks.stub_no_calendar_events()
 
     %{user: user} = create_always_bookable_profile()
-    zoom = insert_zoom_integration(user)
+    zoom = insert(:zoom_video_integration, user: user)
     mirotalk = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
 
     %{user: user, zoom: zoom, mirotalk: mirotalk}
@@ -603,24 +602,5 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       assert updated.video_integration_id == nil
       refute_enqueued(worker: VideoRoomWorker)
     end
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting",
-      provider_account_id: nil
-    )
   end
 end

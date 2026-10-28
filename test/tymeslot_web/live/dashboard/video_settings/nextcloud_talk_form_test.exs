@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       conn: conn,
       user: user
     } do
-      insert_talk_integration(user)
+      insert(:talk_video_integration, user: user, name: "Team Talk", base_url: @server)
 
       html =
         conn
@@ -339,7 +339,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       conn: conn,
       user: user
     } do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user, base_url: @server)
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
       open_edit_dialog(view, integration)
 
@@ -373,7 +373,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       user: user
     } do
       integration =
-        insert_talk_integration(user,
+        insert(:talk_video_integration,
+          user: user,
+          base_url: @server,
           needs_reauth: true,
           sync_error:
             "Nextcloud refused the app password. Edit this integration and enter a new app password."
@@ -400,7 +402,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       conn: conn,
       user: user
     } do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user, base_url: @server)
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
       open_edit_dialog(view, integration)
 
@@ -428,7 +430,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
     end
 
     test "shows the provider's own refusal of an edit in the dialog", %{conn: conn, user: user} do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user, base_url: @server)
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
       open_edit_dialog(view, integration)
 
@@ -449,7 +451,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       conn: conn,
       user: user
     } do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user, base_url: @server)
       expect_status(401)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
@@ -471,7 +473,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       conn: conn,
       user: user
     } do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user, base_url: @server)
       expect_status(429)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
@@ -498,9 +500,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       conn: conn,
       user: user
     } do
-      integration = insert_talk_integration(user)
+      integration = insert(:talk_video_integration, user: user, base_url: @server)
 
-      insert_talk_integration(user,
+      insert(:talk_video_integration,
+        user: user,
+        base_url: @server,
         name: "Second Talk",
         client_id_encrypted: Encryption.encrypt("olivia"),
         provider_account_id: @server <> "||olivia"
@@ -559,24 +563,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       base_url: @server <> "/remote.php/dav",
       username_encrypted: Encryption.encrypt("olivia"),
       password_encrypted: Encryption.encrypt(@app_password)
-    )
-  end
-
-  defp insert_talk_integration(user, overrides \\ []) do
-    insert(
-      :video_integration,
-      Keyword.merge(
-        [
-          user: user,
-          name: "Team Talk",
-          provider: "nextcloud_talk",
-          base_url: @server,
-          client_id_encrypted: Encryption.encrypt("organiser"),
-          client_secret_encrypted: Encryption.encrypt(@app_password),
-          provider_account_id: @server <> "||organiser"
-        ],
-        overrides
-      )
     )
   end
 

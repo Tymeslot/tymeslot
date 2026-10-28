@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
   import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Plug.Test
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, quarterly_planning())
       stub_delete(:ok)
 
       {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
@@ -72,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
 
     test "cancels the booking the event belongs to", %{conn: conn, integration: integration} do
       TestMocks.setup_email_mocks()
-      event = insert_event(integration)
+      event = insert_event(integration, quarterly_planning())
 
       meeting =
         insert(:meeting,
@@ -96,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       conn: conn,
       integration: integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, quarterly_planning())
       stub_delete({:error, :network_error})
 
       {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
@@ -122,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       conn: conn,
       integration: integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, quarterly_planning())
       stub_delete({:error, :unauthorized})
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -144,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       conn: conn,
       integration: integration
     } do
-      event = insert_event(integration)
+      event = insert_event(integration, quarterly_planning())
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
@@ -170,8 +171,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       user: user
     } do
       google = insert(:calendar_integration, user: user, provider: "google")
-      first = insert_event(google, google_occurrence("series-1", "T100000Z", ~T[10:00:00]))
-      second = insert_event(google, google_occurrence("series-1", "T140000Z", ~T[14:00:00]))
+
+      first =
+        insert_event(
+          google,
+          quarterly_planning(),
+          google_occurrence("series-1", "T100000Z", ~T[10:00:00])
+        )
+
+      second =
+        insert_event(
+          google,
+          quarterly_planning(),
+          google_occurrence("series-1", "T140000Z", ~T[14:00:00])
+        )
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
@@ -197,8 +210,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
 
       %{
         google: google,
-        first: insert_event(google, google_occurrence("series-1", "T100000Z", ~T[10:00:00])),
-        second: insert_event(google, google_occurrence("series-1", "T140000Z", ~T[14:00:00]))
+        first:
+          insert_event(
+            google,
+            quarterly_planning(),
+            google_occurrence("series-1", "T100000Z", ~T[10:00:00])
+          ),
+        second:
+          insert_event(
+            google,
+            quarterly_planning(),
+            google_occurrence("series-1", "T140000Z", ~T[14:00:00])
+          )
       }
     end
 
@@ -264,7 +287,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     } do
       attendee = %{"email" => "guest@example.com", "name" => "Guest"}
       occurrence = google_occurrence("series-1", "T160000Z", ~T[16:00:00])
-      event = insert_event(google, Map.put(occurrence, :attendees, [attendee]))
+
+      event =
+        insert_event(google, quarterly_planning(), Map.put(occurrence, :attendees, [attendee]))
 
       stub_delete(:ok)
 
@@ -308,12 +333,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       head =
         insert_event(
           google,
+          quarterly_planning(),
           "head-master" |> google_occurrence("#{day}T090000Z", ~T[09:00:00]) |> Map.merge(video)
         )
 
       tail =
         insert_event(
           google,
+          quarterly_planning(),
           "tail-master" |> google_occurrence("#{day}T140000Z", ~T[14:00:00]) |> Map.merge(video)
         )
 
@@ -387,6 +414,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       _head =
         insert_event(
           second,
+          quarterly_planning(),
           "head-master"
           |> google_occurrence("#{day}T090000Z", ~T[09:00:00])
           |> Map.merge(video)
@@ -396,6 +424,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       tail =
         insert_event(
           first,
+          quarterly_planning(),
           "tail-master" |> google_occurrence("#{day}T140000Z", ~T[14:00:00]) |> Map.merge(video)
         )
 
@@ -445,7 +474,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
 
   describe "deleting an event that is not in a series" do
     test "confirms without asking for a scope", %{conn: conn, integration: integration} do
-      event = insert_event(integration)
+      event = insert_event(integration, quarterly_planning())
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       request_delete(lv, event)
@@ -465,7 +494,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       exchange = insert(:calendar_integration, user: user, provider: "exchange")
 
       event =
-        insert_event(exchange, %{
+        insert_event(exchange, quarterly_planning(), %{
           provider: "exchange",
           provider_calendar_id: "calendar",
           provider_event_id: "AAMkAD-occurrence",
@@ -484,22 +513,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     end
   end
 
-  defp insert_event(integration, attrs \\ %{}) do
-    today = Date.utc_today()
-
-    defaults = %{
-      calendar_integration: integration,
+  defp quarterly_planning do
+    %{
       provider: "caldav",
       provider_calendar_id: "/cal/",
       provider_event_id: "/cal/quarterly-planning-#{System.unique_integer([:positive])}.ics",
       summary: "Quarterly Planning",
-      start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
-      end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
-      all_day: false,
-      sync_state: "synced"
+      start_at: today_at(~T[10:00:00]),
+      end_at: today_at(~T[11:00:00])
     }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   # An expanded Google occurrence on today's grid: an id of its own, naming

@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       day_one = Date.add(Date.utc_today(), 2)
       day_two = Date.add(Date.utc_today(), 5)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Quarterly Review",
         location: "Boardroom A",
         start_at: DateTime.new!(day_one, ~T[09:00:00], "Etc/UTC"),
@@ -39,7 +40,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
         all_day: false
       })
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Design Workshop",
         start_at: DateTime.new!(day_two, ~T[14:00:00], "Etc/UTC"),
         end_at: DateTime.new!(day_two, ~T[15:30:00], "Etc/UTC"),
@@ -69,7 +71,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       day = Date.add(Date.utc_today(), 2)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Night Shift",
           start_at: DateTime.new!(day, ~T[23:30:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.add(day, 1), ~T[00:30:00], "Etc/UTC"),
@@ -87,7 +90,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
       day = Date.add(Date.utc_today(), 3)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Company Offsite",
         start_date: day,
         end_date: Date.add(day, 1),
@@ -117,7 +121,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
       past_day = Date.add(Date.utc_today(), -3)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Old Standup",
         start_at: DateTime.new!(past_day, ~T[09:00:00], "Etc/UTC"),
         end_at: DateTime.new!(past_day, ~T[09:30:00], "Etc/UTC"),
@@ -142,7 +147,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       day = Date.add(Date.utc_today(), 20)
 
       # Insert in reverse alphabetical order — stable sort must normalise this.
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Zeta Conference",
         start_date: day,
         end_date: Date.add(day, 1),
@@ -151,7 +157,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
         all_day: true
       })
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Alpha Offsite",
         start_date: day,
         end_date: Date.add(day, 1),
@@ -211,7 +218,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
 
       monday = Date.add(saturday, -5)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Week Opener",
         start_at: DateTime.new!(monday, ~T[09:00:00], "Etc/UTC"),
         end_at: DateTime.new!(monday, ~T[10:00:00], "Etc/UTC"),
@@ -257,9 +265,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       assert has_element?(lv, ~s([data-day-col="#{Date.to_iso8601(monday)}"]))
       refute has_element?(lv, ~s([data-day-col="#{Date.to_iso8601(saturday)}"]))
     end
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

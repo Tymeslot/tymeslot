@@ -47,17 +47,10 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
   @moduletag :themes
 
   import Tymeslot.Factory
+  import TymeslotWeb.Test.SocketHelpers
 
-  alias Phoenix.LiveView.Socket
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Hooks.ThemeHook
-
-  defp build_socket do
-    %Socket{
-      assigns: %{__changed__: %{}},
-      endpoint: TymeslotWeb.Endpoint
-    }
-  end
 
   describe "on_mount/4 — username param with missing profile" do
     test "falls back to default theme when the user was deleted mid-mount" do

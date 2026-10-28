@@ -171,7 +171,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -215,7 +216,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -242,7 +244,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -270,7 +273,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -295,7 +299,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Validation Test Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -342,7 +347,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
     } do
       # CalDAV and Outlook keep the case the address was stored with.
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Mixed Case Attendee Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
@@ -501,7 +507,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -579,10 +586,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       "end-hour" => "11",
       "end-minute" => "0"
     })
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 
   defp occurrences(html, email) do

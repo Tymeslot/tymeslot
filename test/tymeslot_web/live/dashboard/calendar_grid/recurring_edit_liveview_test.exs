@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.CalendarGridHelpers
   import Tymeslot.TestHelpers.Eventually
 
   alias Plug.Test
@@ -183,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
 
   describe "dragging an event the writer can address on its own" do
     test "a one-off CalDAV event still moves", %{conn: conn, integration: integration} do
-      event = insert_event(integration)
+      event = insert_event(integration, weekly_standup())
       stub_update()
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -204,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
       google = insert(:calendar_integration, user: user, provider: "google")
 
       event =
-        insert_event(google, %{
+        insert_event(google, weekly_standup(), %{
           provider: "google",
           provider_calendar_id: "primary",
           recurring_event_id: "weekly-standup",
@@ -229,7 +230,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
       # An Exchange occurrence names no master; only its item type says it
       # belongs to a series.
       event =
-        insert_event(exchange, %{
+        insert_event(exchange, weekly_standup(), %{
           provider: "exchange",
           provider_calendar_id: "calendar",
           provider_event_id: "AAMkAD-occurrence",
@@ -253,22 +254,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
 
   defp at_today(hour), do: DateTime.new!(Date.utc_today(), Time.new!(hour, 0, 0), "Etc/UTC")
 
-  defp insert_event(integration, attrs \\ %{}) do
-    today = Date.utc_today()
-
-    defaults = %{
-      calendar_integration: integration,
+  defp weekly_standup do
+    %{
       provider: "caldav",
       provider_calendar_id: "/cal/",
       provider_event_id: "/cal/weekly-standup-#{System.unique_integer([:positive])}.ics",
       summary: "Weekly standup",
-      start_at: DateTime.new!(today, ~T[09:00:00], "Etc/UTC"),
-      end_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
-      all_day: false,
-      sync_state: "synced"
+      start_at: today_at(~T[09:00:00]),
+      end_at: today_at(~T[10:00:00])
     }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   # An occurrence of a weekly series, expanded by the sync: its uid is the
@@ -278,6 +272,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
 
     insert_event(
       integration,
+      weekly_standup(),
       Map.merge(
         %{
           uid: "weekly-standup_#{key}",

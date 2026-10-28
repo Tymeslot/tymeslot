@@ -27,7 +27,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
 
@@ -212,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     event: event
   } do
     host = "grid-switch.example.com"
-    talk = insert_talk_integration(user, host)
+    talk = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
     rooms_url = "https://#{host}#{@rooms_path}"
 
     # Plays the organiser's Nextcloud server, which holds no conversation
@@ -255,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       calendar: calendar
     } do
       host = "grid-google.example.com"
-      talk = insert_talk_integration(user, host)
+      talk = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
       play_nextcloud(host, "goog0001")
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
@@ -312,7 +311,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       user: user
     } do
       host = "grid-caldav.example.com"
-      talk = insert_talk_integration(user, host)
+      talk = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
       calendar = insert(:calendar_integration, user: user, provider: "caldav", is_active: true)
       play_nextcloud(host, "cald0001")
 
@@ -415,7 +414,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   end
 
   defp insert_room(user, event, host) do
-    talk = insert_talk_integration(user, host)
+    talk = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
     {:ok, room} =
       EventVideoRoomQueries.insert(%{
@@ -430,19 +429,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       })
 
     room
-  end
-
-  defp insert_talk_integration(user, host) do
-    base_url = "https://" <> host
-
-    insert(:video_integration,
-      user: user,
-      provider: "nextcloud_talk",
-      base_url: base_url,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-      provider_account_id: base_url <> "||organiser"
-    )
   end
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})

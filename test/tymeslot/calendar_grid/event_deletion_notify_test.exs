@@ -18,6 +18,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -36,6 +37,14 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
     %{user: user, caldav: caldav}
   end
 
+  @design_review %{
+    summary: "Design review",
+    provider_calendar_id: "/cal/",
+    provider_event_id: "/cal/design-review.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z]
+  }
+
   describe "delete_event/4 telling the attendees" do
     @attendees [%{"email" => "guest@example.com"}, %{"email" => "other@example.com"}]
 
@@ -43,7 +52,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, %{attendees: @attendees})
+      event = insert_event(caldav, @design_review, %{attendees: @attendees})
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :sent}} =
@@ -54,7 +63,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
     end
 
     test "sends nothing unless asked", %{user: user, caldav: caldav} do
-      event = insert_event(caldav, %{attendees: @attendees})
+      event = insert_event(caldav, @design_review, %{attendees: @attendees})
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :none}} = CalendarGrid.delete_event(user.id, event)
@@ -62,7 +71,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
     end
 
     test "sends nothing for a delete queued for the next sync", %{user: user, caldav: caldav} do
-      event = insert_event(caldav, %{attendees: @attendees})
+      event = insert_event(caldav, @design_review, %{attendees: @attendees})
       expect_delete({:error, :network_error})
 
       assert {:error, %{retry: :queued}} =
@@ -72,7 +81,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
     end
 
     test "sends nothing for a delete the calendar refused", %{user: user, caldav: caldav} do
-      event = insert_event(caldav, %{attendees: @attendees})
+      event = insert_event(caldav, @design_review, %{attendees: @attendees})
       expect_delete({:error, :unauthorized})
 
       assert {:error, %{retry: :not_queued}} =
@@ -87,7 +96,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       caldav: caldav
     } do
       TestMocks.setup_email_mocks()
-      event = insert_event(caldav, %{attendees: @attendees})
+      event = insert_event(caldav, @design_review, %{attendees: @attendees})
 
       insert(:meeting,
         calendar_integration_id: caldav.id,
@@ -109,10 +118,13 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       first =
         insert_event(
           google,
+          @design_review,
           Map.put(google_occurrence("series-1", "20260601T090000Z"), :attendees, @attendees)
         )
 
-      second = insert_event(google, google_occurrence("series-1", "20260608T090000Z"))
+      second =
+        insert_event(google, @design_review, google_occurrence("series-1", "20260608T090000Z"))
+
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :sent}} =
@@ -134,6 +146,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       first =
         insert_event(
           google,
+          @design_review,
           Map.put(google_occurrence("series-1", "20260601T090000Z"), :attendees, @attendees)
         )
 
@@ -155,7 +168,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
   describe "delete_event/4 and an event someone else organises" do
     test "deletes it and sends its attendees nothing", %{user: user, caldav: caldav} do
       event =
-        insert_event(caldav, %{
+        insert_event(caldav, @design_review, %{
           organiser: %{"email" => "boss@elsewhere.example"},
           attendees: [%{"email" => "boss@elsewhere.example"} | @attendees]
         })
@@ -180,7 +193,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       caldav: caldav
     } do
       event =
-        insert_event(caldav, %{
+        insert_event(caldav, @design_review, %{
           attendees: @attendees,
           all_day: true,
           start_at: nil,
@@ -215,23 +228,6 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
   end
 
   defp cancelled_to, do: Enum.map(cancellation_jobs(), & &1.args["attendee_email"])
-
-  defp insert_event(integration, attrs) do
-    defaults = %{
-      calendar_integration: integration,
-      uid: "event-#{System.unique_integer([:positive])}",
-      summary: "Design review",
-      provider: integration.provider,
-      provider_calendar_id: "/cal/",
-      provider_event_id: "/cal/design-review.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
-  end
 
   defp expect_delete(result) do
     expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> result end)

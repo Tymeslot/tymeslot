@@ -17,7 +17,6 @@ defmodule Tymeslot.Workers.VideoSyncWorkerReleaseTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.VideoSyncWorker
@@ -100,7 +99,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerReleaseTest do
   describe "perform/1 — release" do
     test "DELETEs the room from the args and leaves the meeting alone" do
       %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+      integration = insert(:zoom_video_integration, user: user)
 
       # The meeting has since moved on to a room of its own; the release must
       # not touch it.
@@ -125,7 +124,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerReleaseTest do
     test "falls back to the user's current integration when the recorded one is gone" do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user)
-      insert_zoom_integration(user)
+      insert(:zoom_video_integration, user: user)
 
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
@@ -178,24 +177,5 @@ defmodule Tymeslot.Workers.VideoSyncWorkerReleaseTest do
       "video_integration_id" => integration_id,
       "organizer_user_id" => meeting.organizer_user_id
     }
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting",
-      provider_account_id: nil
-    )
   end
 end

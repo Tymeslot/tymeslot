@@ -26,6 +26,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -43,6 +44,18 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
 
     %{user: user, caldav: caldav}
   end
+
+  @weekly_sync %{
+    summary: "Weekly sync",
+    provider: "caldav",
+    provider_calendar_id: "team-calendar",
+    provider_event_id: "/cal/weekly-sync.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z],
+    colour: "tomato",
+    etag: "\"etag-1\"",
+    raw_ical: "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"
+  }
 
   describe "an occurrence of a CalDAV series" do
     test "a rename is addressed to the occurrence, with only the change", %{
@@ -186,7 +199,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, %{})
+      event = insert_event(caldav, @weekly_sync, %{})
       expect_provider_update()
 
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
@@ -199,7 +212,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       google = insert(:calendar_integration, user: user, provider: "google")
 
       event =
-        insert_event(google, %{
+        insert_event(google, @weekly_sync, %{
           provider: "google",
           provider_calendar_id: "primary",
           recurrence_rule: @rrule,
@@ -219,30 +232,11 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
     end
   end
 
-  defp insert_event(integration, attrs) do
-    defaults = %{
-      calendar_integration: integration,
-      uid: "event-#{System.unique_integer([:positive])}",
-      summary: "Weekly sync",
-      provider: "caldav",
-      provider_calendar_id: "team-calendar",
-      provider_event_id: "/cal/weekly-sync.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      colour: "tomato",
-      etag: "\"etag-1\"",
-      raw_ical: "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n",
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
-  end
-
   # An expanded occurrence of a Berlin series: 11:00 local on 1 June.
   defp insert_occurrence(integration, attrs) do
     insert_event(
       integration,
+      @weekly_sync,
       Map.merge(
         %{
           uid: "weekly-sync_20260601T110000",
