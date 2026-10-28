@@ -53,6 +53,14 @@
   display: none;
 }
 
+/* On phones the fixed button would sit over the auth card. The auth `main` is
+   `relative` and leaves room below the card, so anchor it there instead. */
+@media (max-width: 639px) {
+  .background-motion-toggle {
+    position: absolute;
+  }
+}
+
 @media print {
   .background-motion-toggle {
     display: none;
