@@ -71,6 +71,8 @@
 
 https://github.com/user-attachments/assets/f7fdf4cc-5e47-4de5-9312-e3da01e9ce5f
 
+<p align="center"><sub><a href="https://www.youtube.com/watch?v=XjDvnbdJH1Q">Watch in HD on YouTube →</a></sub></p>
+
 <a id="features"></a>
 
 ## ✨ Features
