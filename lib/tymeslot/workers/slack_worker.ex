@@ -38,6 +38,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.MeetingNotificationJob
+  alias Tymeslot.Workers.RetryHelpers
 
   @behaviour ExpectedJobOutcome
 
@@ -308,8 +309,8 @@ defmodule Tymeslot.Workers.SlackWorker do
   defp sanitize_body(body) when is_binary(body), do: body
   defp sanitize_body(body), do: inspect(body)
 
-  defp retry_after_from(seconds) when is_integer(seconds) and seconds >= 0, do: min(seconds, 600)
-  defp retry_after_from(_other), do: 30
+  defp retry_after_from(seconds),
+    do: RetryHelpers.clamp_retry_after(seconds, max: 600, default: 30)
 
   defp truncate(text, max) when is_binary(text) do
     if String.length(text) > max do

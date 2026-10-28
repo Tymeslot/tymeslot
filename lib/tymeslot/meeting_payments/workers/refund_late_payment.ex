@@ -66,6 +66,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   # Sixty seconds, doubling, capped at an hour: nine waits between ten
@@ -128,7 +129,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
 
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}),
-    do: min(@base_backoff_seconds * 2 ** (attempt - 1), @max_backoff_seconds)
+    do: Backoff.exponential(attempt, @base_backoff_seconds, @max_backoff_seconds)
 
   # A raise (a dropped connection, say) is an attempt failing like any other,
   # so it is returned rather than raised, and the last one is alerted on.

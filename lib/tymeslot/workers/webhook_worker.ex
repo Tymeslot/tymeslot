@@ -43,6 +43,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Webhooks
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.MeetingNotificationJob
 
@@ -327,12 +328,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
   # after the first, so a receiver down for a deploy or a short outage still
   # receives the event, while any 4xx but a 408, 425 or 429 is discarded at
   # once.
-  @backoff_seconds {30, 120, 600, 1_800, 3_600, 10_800, 21_600}
+  @backoff_seconds [30, 120, 600, 1_800, 3_600, 10_800, 21_600]
 
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt}) do
-    elem(@backoff_seconds, min(attempt, tuple_size(@backoff_seconds)) - 1)
-  end
+  def backoff(%Oban.Job{attempt: attempt}), do: Backoff.ladder(attempt, @backoff_seconds)
 
   # Private functions
 

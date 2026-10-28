@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.EmailWorker do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.Bounded
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
@@ -50,10 +51,9 @@ defmodule Tymeslot.Workers.EmailWorker do
   # `:email_timeout_ms` overrides it (e.g. lowered in tests).
   @sends_beyond_guests 2
   @headroom_deadlines 1
-  # 1 second base for exponential backoff
-  @backoff_cap_ms 120_000
+  @backoff_base_seconds 1
+  @backoff_cap_seconds 120
   @ambiguous_retry "ambiguous_timeout"
-  @backoff_base_ms 1_000
   # The actions that deliver admin alerts (`AdminAlertScheduler.actions/0`),
   # as a literal for use in guards.
   @admin_alert_actions ["send_admin_alert", "send_admin_alert_digest"]
@@ -281,13 +281,6 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   defp max_recipients, do: max(Guests.max_guests(), PollSchema.max_participants())
 
-  # 1 s, 2 s, 4 s ... capped at 2 minutes: about six minutes over the ten
-  # attempts. A job's legs share those attempts, each retry sending only the
-  # copies not yet sent, so a short outage costs a delay rather than a copy.
-  defp calculate_backoff(attempt) do
-    round(min(@backoff_base_ms * :math.pow(2, attempt - 1), @backoff_cap_ms))
-  end
-
   # Admin alerts and their daily digest retry on their own, much longer
   # schedule; see `AdminAlertScheduler` for why.
   @impl Oban.Worker
@@ -295,8 +288,9 @@ defmodule Tymeslot.Workers.EmailWorker do
       when action in @admin_alert_actions,
       do: AdminAlertScheduler.backoff(job)
 
-  def backoff(%Oban.Job{attempt: attempt}) do
-    # convert ms to seconds for Oban backoff
-    div(calculate_backoff(attempt), 1_000)
-  end
+  # 1 s, 2 s, 4 s ... capped at 2 minutes: about six minutes over the ten
+  # attempts. A job's legs share those attempts, each retry sending only the
+  # copies not yet sent, so a short outage costs a delay rather than a copy.
+  def backoff(%Oban.Job{attempt: attempt}),
+    do: Backoff.exponential(attempt, @backoff_base_seconds, @backoff_cap_seconds)
 end
