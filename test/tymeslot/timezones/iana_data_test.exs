@@ -37,7 +37,7 @@ defmodule Tymeslot.Timezones.IanaDataTest do
     end
 
     test "the pin is not older than the release carrying the 2026 changes" do
-      assert Tz.iana_version() >= "2026e"
+      assert Tz.iana_version() >= "2026f"
     end
   end
 
@@ -91,6 +91,17 @@ defmodule Tymeslot.Timezones.IanaDataTest do
     test "stays on -06 through the winter instead of falling back" do
       assert offset_hours("America/Inuvik", ~N[2026-10-15 12:00:00]) == -6
       assert offset_hours("America/Inuvik", ~N[2026-11-15 12:00:00]) == -6
+    end
+  end
+
+  describe "Cuba keeping daylight time through the 2026-27 winter" do
+    test "does not fall back on 2026-11-01" do
+      assert offset_hours("America/Havana", ~N[2026-11-15 12:00:00]) == -4
+      assert offset_hours("America/Havana", ~N[2027-01-15 12:00:00]) == -4
+    end
+
+    test "falls back on 2027-11-07 as usual" do
+      assert offset_hours("America/Havana", ~N[2027-11-15 12:00:00]) == -5
     end
   end
 end
