@@ -195,6 +195,8 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       refute url =~ "login_hint="
     end
 
+    # This host skipped the calendar, so the way back runs through the theme
+    # step they have not seen.
     test "returns a host who came from the share step to it", %{conn: conn} do
       original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
 
@@ -219,7 +221,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       assert {:error, {:redirect, %{to: url}}} = continue_with_google(view)
 
       assert URI.decode_query(URI.parse(url).query)["return_to"] ==
-               "/onboarding/connect_calendar?return=share"
+               "/onboarding/connect_calendar?return=theme"
     end
   end
 

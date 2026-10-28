@@ -46,7 +46,11 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   end
 
   # A host sent back from the share step keeps that through the provider's
-  # redirect, so connecting still leads straight back to the share step.
+  # redirect, so connecting still leads straight back to the share step (by
+  # way of the theme step for a host who has not seen it).
+  defp oauth_return_path(%{assigns: %{returning_to_share: true, theme_unseen: true}}),
+    do: ~p"/onboarding/connect_calendar?#{[return: "theme"]}"
+
   defp oauth_return_path(%{assigns: %{returning_to_share: true}}),
     do: ~p"/onboarding/connect_calendar?#{[return: "share"]}"
 

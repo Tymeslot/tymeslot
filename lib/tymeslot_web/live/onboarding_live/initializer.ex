@@ -85,6 +85,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # Unknown until the connected render checks the calendars.
       booking_page_live: nil,
       returning_to_share: false,
+      # Whether that host skipped the calendar, and so never saw the theme step.
+      theme_unseen: false,
       timezone_options: Timezones.all_options(),
       timezone_dropdown_open: false,
       timezone_search: "",
