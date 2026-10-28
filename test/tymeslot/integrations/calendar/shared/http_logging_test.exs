@@ -74,6 +74,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.HttpLoggingTest do
       assert String.length(excerpt) < String.length(body)
     end
 
+    test "redacts a credential the server echoes back" do
+      excerpt =
+        HttpLogging.body_excerpt(~s(<error>bad request "password": "hunter2-secret"</error>))
+
+      assert excerpt =~ "bad request"
+      refute excerpt =~ "hunter2-secret"
+    end
+
     test "reports a body that is not text rather than rendering its bytes" do
       assert HttpLogging.body_excerpt(<<0xFF, 0xFE, 0x00>>) == "(non-text body)"
     end
