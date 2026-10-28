@@ -344,7 +344,28 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
         {:ok, %Req.Response{status: 201, body: "not valid json{{"}}
       end)
 
-      assert {:error, _reason} = TeamsProvider.create_meeting_room(config)
+      assert {:error, :malformed_response} = TeamsProvider.create_meeting_room(config)
+    end
+
+    test "points an AuthenticationError at reconnecting, with Graph's own words" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 403,
+           body:
+             Jason.encode!(%{
+               "error" => %{"code" => "AuthenticationError", "message" => "Missing scope"}
+             })
+         }}
+      end)
+
+      assert {:error, {:http_error, 403, message}} = TeamsProvider.create_meeting_room(config)
+      assert message =~ "Teams API error (403): AuthenticationError - Missing scope"
+      assert message =~ "reconnect your Microsoft Teams integration"
     end
 
     test "handles malformed or missing fields in Graph API response" do

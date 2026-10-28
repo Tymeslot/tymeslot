@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Shared.ApiResponse
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.SsrfOptions
 
@@ -144,27 +145,12 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   # ---------------------------------------------------------------------------
 
   defp handle_join_api_response(http_result) do
-    case http_result do
-      {:ok, %Req.Response{status: 200, body: response_body}} ->
-        case Jason.decode(response_body) do
-          {:ok, response} ->
-            extract_join_url(response)
+    case ApiResponse.handle_tagged(http_result, label: "MiroTalk join", success: [200]) do
+      {:ok, response} ->
+        extract_join_url(response)
 
-          {:error, _decode_error} ->
-            Logger.error("Invalid JSON response from MiroTalk API join endpoint")
-            {:error, :invalid_json}
-        end
-
-      {:ok, %Req.Response{status: status, body: body}} ->
-        error_msg = "MiroTalk join API error"
-
-        Logger.error("MiroTalk API error",
-          message: error_msg,
-          status: status,
-          body: Redactor.redact_and_truncate(body)
-        )
-
-        {:error, {:http_error, status, "#{error_msg} (see logs for details)"}}
+      {:error, {:http_error, _status, _message}} = error ->
+        error
 
       {:error, reason} ->
         Logger.error("Failed to call MiroTalk join API", reason: Redactor.redact(reason))

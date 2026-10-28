@@ -16,8 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
-  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
   alias Tymeslot.Integrations.Calendar.Tokens
+  alias Tymeslot.Integrations.Shared.ApiResponse
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.Refresh
   alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint

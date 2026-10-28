@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Shared.HttpAuth
 
   @doc """
   Human-readable detail for a provider 404, derived from the request path.
@@ -133,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
   end
 
   defp prepend_auth_header(headers, token) do
-    auth_header = {"Authorization", "Bearer #{token}"}
+    auth_header = HttpAuth.bearer(token)
 
     headers
     |> Enum.reject(fn {k, _value} -> String.downcase(k) == "authorization" end)

@@ -26,6 +26,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.HttpAuth
   alias Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.OAuth.Refresh
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
@@ -237,65 +239,33 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   # Creates a standalone Google Meet space via the Meet REST API. An empty body
   # provisions a space with default settings; no calendar event is created.
+  #
+  # A 403 here is most often the Meet API being disabled for the Cloud project;
+  # Google says so in `error.message`, which the returned reason carries.
   defp create_meet_space(config) do
-    access_token = Map.get(config, :access_token)
-
     headers = [
-      {"Authorization", "Bearer #{access_token}"},
+      HttpAuth.bearer(Map.get(config, :access_token)),
       {"Content-Type", "application/json"}
     ]
 
     url = "https://meet.googleapis.com/v2/spaces"
 
-    case Config.http_client_module().request(:post, url, "{}", headers, @create_request_options) do
-      {:ok, %Req.Response{status: 200, body: response_body}} ->
-        case Jason.decode(response_body) do
-          {:ok, space} -> {:ok, space}
-          {:error, _decode_error} -> {:error, "Invalid JSON response from Google Meet API"}
-        end
-
-      {:ok, %Req.Response{status: 401, body: body}} ->
-        Logger.error("Google Meet API rejected the access token",
-          status: 401,
-          body: Redactor.redact_and_truncate(body)
-        )
-
-        # The access token was rejected even though it had survived token
-        # validation/refresh — this indicates server-side revocation or consent
-        # withdrawal at Google. Flag the integration so the dashboard shows the
-        # "Reconnect required" badge immediately. Mirrors Zoom's flag_revoked_token/1.
-        flag_revoked_token(config)
-        {:error, {:http_error, 401, "Google Meet API error: HTTP 401 (see logs for details)"}}
-
-      {:ok, %Req.Response{status: 403, body: body}} ->
-        Logger.error(
-          "Google Meet API denied access — the Google Meet API may be disabled for the " <>
-            "Cloud project (enable it in the Google Cloud console)",
-          status: 403,
-          body: Redactor.redact_and_truncate(body)
-        )
-
-        {:error,
-         {:http_error, 403,
-          "Google Meet API error: HTTP 403 (Meet API may be disabled; see logs)"}}
-
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Logger.error("Google Meet API error creating space",
-          status: status,
-          body: Redactor.redact_and_truncate(body)
-        )
-
-        {:error,
-         {:http_error, status, "Google Meet API error: HTTP #{status} (see logs for details)"}}
-
-      {:error, reason} ->
-        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
-        # transport reason atom) rather than flattened to prose, so
-        # `BreakerOutcome` recognises a genuine transport failure and lets the
-        # breaker witness it.
-        {:error, reason}
-    end
+    :post
+    |> Config.http_client_module().request(url, "{}", headers, @create_request_options)
+    |> ApiResponse.handle_tagged(api_options())
+    |> flag_on_unauthorized(config)
   end
+
+  # The access token was rejected even though it had survived token
+  # validation/refresh — this indicates server-side revocation or consent
+  # withdrawal at Google. Flag the integration so the dashboard shows the
+  # "Reconnect required" badge immediately. Mirrors Zoom's flag_revoked_token/1.
+  defp flag_on_unauthorized({:error, {:http_error, 401, _message}} = error, config) do
+    flag_revoked_token(config)
+    error
+  end
+
+  defp flag_on_unauthorized(result, _config), do: result
 
   # Ends the active conference on a space when a meeting is cancelled. The space
   # itself is not a calendar event and cannot be deleted via the API, but ending
@@ -306,47 +276,40 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # which we treat as success. Legacy meetings stored a meeting *code* rather
   # than a space id, which yields 403/404 here; those are also treated as no-ops.
   defp end_active_conference(config, space_id) do
-    access_token = Map.get(config, :access_token)
-
     headers = [
-      {"Authorization", "Bearer #{access_token}"},
+      HttpAuth.bearer(Map.get(config, :access_token)),
       {"Content-Type", "application/json"}
     ]
 
     url = "https://meet.googleapis.com/v2/spaces/#{space_id}:endActiveConference"
 
-    case Config.http_client_module().request(:post, url, "{}", headers, []) do
-      {:ok, %Req.Response{status: 200}} ->
-        :ok
-
-      {:ok, %Req.Response{status: status}} when status in [400, 403, 404] ->
-        # 400: no active conference. 403/404: space not addressable (e.g. a
-        # legacy meeting-code id) or already gone. Nothing to tear down.
-        Logger.debug("No active Google Meet conference to end; treating as success",
-          room_ref: Redactor.fingerprint(space_id),
-          status: status
-        )
-
-        :ok
-
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Logger.warning("Google Meet endActiveConference failed",
-          room_ref: Redactor.fingerprint(space_id),
-          status: status,
-          body: Redactor.redact_and_truncate(body)
-        )
-
-        {:error,
-         {:http_error, status, "Google Meet API error: HTTP #{status} (see logs for details)"}}
-
-      {:error, reason} ->
-        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
-        # transport reason atom) rather than flattened to prose, so
-        # `BreakerOutcome` recognises a genuine transport failure and lets the
-        # breaker witness it.
-        {:error, reason}
-    end
+    :post
+    |> Config.http_client_module().request(url, "{}", headers, [])
+    |> ApiResponse.handle_tagged(
+      api_options(custom: &no_conference_to_end(&1, space_id), log_level: :warning)
+    )
   end
+
+  defp no_conference_to_end({:ok, %{status: 200}}, _space_id), do: :ok
+
+  # 400: no active conference. 403/404: space not addressable (e.g. a legacy
+  # meeting-code id) or already gone. Nothing to tear down.
+  defp no_conference_to_end({:ok, %{status: status}}, space_id) when status in [400, 403, 404] do
+    Logger.debug("No active Google Meet conference to end; treating as success",
+      room_ref: Redactor.fingerprint(space_id),
+      status: status
+    )
+
+    :ok
+  end
+
+  defp no_conference_to_end(_response, _space_id), do: :default
+
+  defp api_options(opts \\ []) do
+    [label: "Google Meet", detail: &google_error_message/1] ++ opts
+  end
+
+  defp google_error_message(decoded), do: get_in(decoded, ["error", "message"])
 
   # Flags the integration as needing reauthentication after a 401 from Google —
   # i.e. the credentials are no longer accepted server-side. The dashboard
@@ -366,32 +329,23 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   end
 
   defp get_calendar_list(config) do
-    access_token = Map.get(config, :access_token)
-
     headers = [
-      {"Authorization", "Bearer #{access_token}"},
+      HttpAuth.bearer(Map.get(config, :access_token)),
       {"Content-Type", "application/json"}
     ]
 
     url = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
 
-    case Config.http_client_module().request(:get, url, "", headers, []) do
-      {:ok, %Req.Response{status: 200, body: response_body}} ->
-        case Jason.decode(response_body) do
-          {:ok, list} ->
-            {:ok, list}
+    response = Config.http_client_module().request(:get, url, "", headers, [])
 
-          {:error, _decode_error} ->
-            {:error,
-             dgettext("integrations_video", "Invalid JSON response from Google Calendar API")}
-        end
+    case ApiResponse.handle_tagged(response, label: "Google Calendar") do
+      {:ok, list} ->
+        {:ok, list}
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Logger.error("Google Calendar API error fetching calendar list",
-          status: status,
-          body: Redactor.redact_and_truncate(body)
-        )
+      {:error, :malformed_response} ->
+        {:error, dgettext("integrations_video", "Invalid JSON response from Google Calendar API")}
 
+      {:error, {:http_error, status, _message}} ->
         {:error,
          dgettext("integrations_video", "HTTP %{status} (see logs for details)", status: status)}
 

@@ -14,6 +14,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.HttpAuth
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
   alias Tymeslot.Integrations.Video.Providers.OAuthRoom
@@ -274,32 +276,20 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     duration = max(div(DateTime.diff(end_time, start_time, :second), 60), 15)
     payload = Payload.build_meeting_payload(start_time, duration, config)
 
-    headers = [
-      {"Authorization", "Bearer #{token}"},
-      {"Content-Type", "application/json"}
-    ]
-
+    headers = [HttpAuth.bearer(token), {"Content-Type", "application/json"}]
     url = "#{@api_base_url}/users/me/meetings"
 
-    case Config.http_client_module().request(
-           :post,
-           url,
-           Jason.encode!(payload),
-           headers,
-           @create_request_options
-         ) do
-      {:ok, %Req.Response{status: 201, body: body}} ->
-        Payload.parse_meeting_response(body)
+    response =
+      Config.http_client_module().request(
+        :post,
+        url,
+        Jason.encode!(payload),
+        headers,
+        @create_request_options
+      )
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Payload.decode_and_format_error(status, body)
-
-      {:error, reason} ->
-        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
-        # transport reason atom) rather than flattened to prose, so
-        # `BreakerOutcome` recognises a genuine transport failure and lets the
-        # breaker witness it.
-        {:error, reason}
+    with {:ok, meeting} <- ApiResponse.handle_tagged(response, api_options(success: [201])) do
+      Payload.meeting(meeting)
     end
   end
 
@@ -310,72 +300,46 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   defp verify_meeting_created(_token, nil), do: :ok
 
   defp verify_meeting_created(token, meeting_id) do
-    headers = [{"Authorization", "Bearer #{token}"}]
     url = "#{@api_base_url}/meetings/#{meeting_id}"
+    room_ref = Redactor.fingerprint(to_string(meeting_id))
 
-    case Config.http_client_module().request(:get, url, "", headers, @create_request_options) do
-      {:ok, %Req.Response{status: 200, body: body}} ->
+    response =
+      Config.http_client_module().request(
+        :get,
+        url,
+        "",
+        [HttpAuth.bearer(token)],
+        @create_request_options
+      )
+
+    case ApiResponse.handle_tagged(response, api_options(success: [200], log_level: :warning)) do
+      {:ok, meeting} ->
         Logger.info("Verified Zoom meeting",
-          room_ref: Redactor.fingerprint(to_string(meeting_id)),
-          meeting_status: read_meeting_status(body)
-        )
-
-      {:ok, %Req.Response{status: status}} ->
-        Logger.warning("Could not verify Zoom meeting after creation",
-          room_ref: Redactor.fingerprint(to_string(meeting_id)),
-          http_status: status
+          room_ref: room_ref,
+          meeting_status: Map.get(meeting, "status", "unknown")
         )
 
       {:error, reason} ->
-        Logger.warning("Network error verifying Zoom meeting after creation",
-          room_ref: Redactor.fingerprint(to_string(meeting_id)),
+        Logger.warning("Could not verify Zoom meeting after creation",
+          room_ref: room_ref,
           error: LogFormat.reason(reason)
         )
-    end
-  end
-
-  defp read_meeting_status(body) do
-    case Jason.decode(body) do
-      {:ok, %{"status" => status}} -> status
-      _other -> "unknown"
     end
   end
 
   defp patch_scheduled_meeting(token, room_id, start_time, end_time, config) do
     duration = max(div(DateTime.diff(end_time, start_time, :second), 60), 15)
     body = Jason.encode!(Payload.build_meeting_payload(start_time, duration, config))
-    url = "#{@api_base_url}/meetings/#{room_id}"
 
-    case Config.http_client_module().request(
-           :patch,
-           url,
-           body,
-           request_headers(:patch, token),
-           []
-         ) do
-      {:ok, %Req.Response{status: 204}} ->
-        :ok
-
-      {:ok, %Req.Response{status: 404, body: response_body}} ->
-        Logger.warning("Zoom meeting no longer exists on reschedule",
-          room_ref: Redactor.fingerprint(room_id),
-          body: Redactor.redact_and_truncate(response_body)
-        )
-
-        {:error, :meeting_not_found}
-
-      {:ok, %Req.Response{status: 401, body: _body}} ->
-        # Token may have been server-side revoked. Attempt one forced refresh
-        # and retry the already-built body. If refresh fails or the retry also
-        # returns 401, flag the integration for reauthentication.
+    case meeting_request(:patch, room_id, body, token) do
+      # Token may have been server-side revoked. Attempt one forced refresh
+      # and retry the already-built body. If refresh fails or the retry also
+      # returns 401, flag the integration for reauthentication.
+      {:ok, %Req.Response{status: 401}} ->
         retry_after_401(:patch, room_id, config, body, token)
 
-      # Everything else — including the 400/4711 that means the grant lacks
-      # `meeting:update:meeting` — shares the update-verb error handling used by
-      # the post-401 retry path, so a scope rejection is recognised on the first
-      # attempt rather than retried as though it were transient.
       response ->
-        handle_error_response(response, config, :update)
+        handle_verb_response(:patch, room_id, config, response)
     end
   end
 
@@ -391,23 +355,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     # the config's if the operation refreshed at its start.
     case get_access_token(config, refused_token: refused_token) do
       {:ok, fresh_token} ->
-        url = "#{@api_base_url}/meetings/#{room_id}"
-
-        case Config.http_client_module().request(
-               verb,
-               url,
-               body,
-               request_headers(verb, fresh_token),
-               []
-             ) do
-          {:ok, %Req.Response{status: 401, body: response_body}} ->
-            # Refresh succeeded but Zoom still rejects — token is revoked.
-            Reauth.flag_revoked_token(config)
-            Payload.decode_and_format_error(401, response_body)
-
-          response ->
-            handle_verb_response(verb, room_id, config, response)
-        end
+        verb
+        |> meeting_request(room_id, body, fresh_token)
+        |> then(&handle_verb_response(verb, room_id, config, &1))
+        |> flag_on_unauthorized(config)
 
       {:error, _reason} ->
         # Refresh itself failed — credentials are no longer usable.
@@ -421,48 +372,68 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
+  # Refresh succeeded but Zoom still rejects — the token is revoked.
+  defp flag_on_unauthorized({:error, {:http_error, 401, _message}} = error, config) do
+    Reauth.flag_revoked_token(config)
+    error
+  end
+
+  defp flag_on_unauthorized(result, _config), do: result
+
+  defp meeting_request(verb, room_id, body, token) do
+    Config.http_client_module().request(
+      verb,
+      "#{@api_base_url}/meetings/#{room_id}",
+      body,
+      request_headers(verb, token),
+      []
+    )
+  end
+
   defp request_headers(:patch, token),
-    do: [{"Authorization", "Bearer #{token}"}, {"Content-Type", "application/json"}]
+    do: [HttpAuth.bearer(token), {"Content-Type", "application/json"}]
 
-  defp request_headers(:delete, token), do: [{"Authorization", "Bearer #{token}"}]
+  defp request_headers(:delete, token), do: [HttpAuth.bearer(token)]
 
-  defp handle_verb_response(:patch, room_id, config, response) do
-    case response do
-      {:ok, %Req.Response{status: 204}} ->
-        :ok
-
-      {:ok, %Req.Response{status: 404}} ->
-        Logger.warning("Zoom meeting no longer exists on reschedule retry",
-          room_ref: Redactor.fingerprint(room_id)
-        )
-
-        {:error, :meeting_not_found}
-
-      other ->
-        handle_error_response(other, config, :update)
+  # Every status a verb does not name below is an error, including the
+  # 400/4711 that means the grant lacks the verb's scope.
+  defp handle_verb_response(verb, room_id, config, response) do
+    custom = fn response ->
+      with :default <- verb_status(verb, room_id, response),
+           do: scope_rejection(response, config, verb)
     end
+
+    ApiResponse.handle_tagged(response, api_options(success: [], custom: custom))
   end
 
-  defp handle_verb_response(:delete, room_id, config, response) do
-    case response do
-      {:ok, %Req.Response{status: status}} when status in [204, 200] ->
-        :ok
+  defp verb_status(:patch, _room_id, {:ok, %{status: 204}}), do: :ok
 
-      {:ok, %Req.Response{status: 404}} ->
-        Logger.info("Zoom meeting already deleted", room_ref: Redactor.fingerprint(room_id))
-        :ok
+  defp verb_status(:patch, room_id, {:ok, %{status: 404}}) do
+    Logger.warning("Zoom meeting no longer exists on reschedule",
+      room_ref: Redactor.fingerprint(room_id)
+    )
 
-      other ->
-        handle_error_response(other, config, :delete)
-    end
+    {:error, :meeting_not_found}
   end
+
+  defp verb_status(:delete, _room_id, {:ok, %{status: status}}) when status in [204, 200],
+    do: :ok
+
+  defp verb_status(:delete, room_id, {:ok, %{status: 404}}) do
+    Logger.info("Zoom meeting already deleted", room_ref: Redactor.fingerprint(room_id))
+    :ok
+  end
+
+  defp verb_status(_verb, _room_id, _response), do: :default
 
   # Zoom answers a request whose token was granted before a scope was added
   # with code 4711. Retrying cannot widen an existing grant — only the user
   # re-consenting can — so flag the integration and return a reason callers can
   # discard on rather than burning their whole retry budget.
-  defp handle_error_response({:ok, %Req.Response{status: status, body: body}}, config, operation) do
+  defp scope_rejection({:ok, %{status: status, body: body}}, config, verb) do
     if Scopes.rejection?(body) do
+      operation = verb_operation(verb)
+
       Logger.error("Zoom rejected the request for missing scope",
         operation: operation,
         status: status
@@ -471,27 +442,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       Reauth.flag_missing_scope(config, operation)
       {:error, :insufficient_scope}
     else
-      Payload.decode_and_format_error(status, body)
+      :default
     end
   end
 
-  defp handle_error_response({:error, reason}, _config, _operation),
-    do: {:error, reason}
+  defp scope_rejection(_response, _config, _verb), do: :default
+
+  defp verb_operation(:patch), do: :update
+  defp verb_operation(:delete), do: :delete
 
   defp delete_scheduled_meeting(token, room_id, config) do
-    url = "#{@api_base_url}/meetings/#{room_id}"
-
-    case Config.http_client_module().request(
-           :delete,
-           url,
-           "",
-           request_headers(:delete, token),
-           []
-         ) do
-      {:ok, %Req.Response{status: 401, body: _body}} ->
-        # Token may have been server-side revoked. Attempt one forced refresh
-        # and retry. If refresh fails or the retry also returns 401, flag the
-        # integration for reauthentication.
+    case meeting_request(:delete, room_id, "", token) do
+      # Token may have been server-side revoked. Attempt one forced refresh
+      # and retry. If refresh fails or the retry also returns 401, flag the
+      # integration for reauthentication.
+      {:ok, %Req.Response{status: 401}} ->
         retry_after_401(:delete, room_id, config, "", token)
 
       # 204/200 success, 404 "already gone" (idempotent), and other errors all
@@ -500,6 +465,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         handle_verb_response(:delete, room_id, config, response)
     end
   end
+
+  defp api_options(opts), do: [label: "Zoom", detail: &Payload.error_detail/1] ++ opts
 
   defp zoom_oauth_helper do
     Application.get_env(:tymeslot, :zoom_oauth_helper, ZoomOAuthHelper)

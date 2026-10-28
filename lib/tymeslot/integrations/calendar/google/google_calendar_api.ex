@@ -16,9 +16,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
   alias Tymeslot.Integrations.Calendar.Google.PushChannel
   alias Tymeslot.Integrations.Calendar.HTTP
-  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.Tokens
+  alias Tymeslot.Integrations.Shared.ApiResponse
   alias Tymeslot.Integrations.Shared.GoogleConfig
   alias Tymeslot.Integrations.Shared.OAuth.Refresh
   alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint

@@ -175,6 +175,11 @@
           {CredoChecks.PhantomLiveCallback, [priority: :high]},
           {CredoChecks.PutFlashInLiveComponent, [priority: :normal]},
           {CredoChecks.HttpClientBoundary, [priority: :normal]},
+          {CredoChecks.ProviderResponseBoundary,
+           [
+             priority: :normal,
+             allowed: ["lib/tymeslot/integrations/video/providers/nextcloud_talk/client.ex"]
+           ]},
           {CredoChecks.TaskSpawnBoundary, [priority: :normal]},
           {CredoChecks.NoSaasReferenceInCore, [priority: :high]},
           {CredoChecks.NoMixEnvInCoreLib, [priority: :high]},

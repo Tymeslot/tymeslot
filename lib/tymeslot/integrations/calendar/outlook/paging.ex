@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Paging do
 
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.GraphStatus
-  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.ApiResponse
 
   @graph_host "https://graph.microsoft.com"
   @api_root "/v1.0"

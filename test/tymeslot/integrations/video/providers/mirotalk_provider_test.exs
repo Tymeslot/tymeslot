@@ -151,7 +151,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
       # The body goes to metadata, which the console formatter drops, so this
       # must be asserted against the captured record rather than `capture_log`.
-      refute LogCapture.dump(LogCapture.await_log("MiroTalk server error")) =~ "ya29.secret"
+      refute LogCapture.dump(LogCapture.await_log("Provider API error")) =~ "ya29.secret"
     end
   end
 
@@ -338,7 +338,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
         {:ok, %Req.Response{status: 200, body: "not valid json{{"}}
       end)
 
-      assert {:error, :invalid_json} = MiroTalkProvider.create_meeting_room(config)
+      assert {:error, :malformed_response} = MiroTalkProvider.create_meeting_room(config)
     end
 
     test "returns error when a 200 response carries no room identifier" do

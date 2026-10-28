@@ -3,13 +3,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload do
   Pure payload and response helpers for the Zoom provider.
 
   Resolves the meeting's start/end times from the request config, builds the
-  Zoom `POST /meetings` request body, and decodes Zoom's success and error
+  Zoom `POST /meetings` request body, and reads Zoom's success and error
   responses. None of these functions perform I/O or touch OAuth state — they
   exist as a focused, side-effect-free slice extracted from
   `Tymeslot.Integrations.Video.Providers.ZoomProvider`.
   """
-
-  alias Tymeslot.Infrastructure.Logging.Redactor
 
   @doc """
   Resolves the `{start_time, end_time}` pair for the meeting from `config`.
@@ -48,44 +46,19 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload do
   end
 
   @doc """
-  Decodes a Zoom meeting-creation response body, requiring `id` and `join_url`.
+  Checks a decoded Zoom meeting-creation response carries `id` and `join_url`.
   """
-  @spec parse_meeting_response(binary()) :: {:ok, map()} | {:error, String.t()}
-  def parse_meeting_response(body) do
-    case Jason.decode(body) do
-      {:ok, %{"id" => _id, "join_url" => _url} = meeting} -> {:ok, meeting}
-      {:ok, _other} -> {:error, "Zoom response missing id or join_url"}
-      {:error, _reason} -> {:error, "Invalid JSON in Zoom response"}
-    end
-  end
+  @spec meeting(term()) :: {:ok, map()} | {:error, String.t()}
+  def meeting(%{"id" => _id, "join_url" => _url} = meeting), do: {:ok, meeting}
+  def meeting(_other), do: {:error, "Zoom response missing id or join_url"}
 
   @doc """
-  Formats a Zoom API error response into an `{:error, {:http_error, status,
-  message}}` tuple. Tagged with `status` (rather than flattened to prose) so
-  `BreakerOutcome` can tell a genuine outage (5xx/429/408) from a request
-  problem and let the breaker witness it.
+  Zoom's own explanation from a decoded error body, for
+  `Tymeslot.Integrations.Shared.ApiResponse.handle_tagged/2`'s `:detail`.
   """
-  @spec decode_and_format_error(integer(), binary()) ::
-          {:error, {:http_error, integer(), String.t()}}
-  def decode_and_format_error(status, body) do
-    detail =
-      case Jason.decode(body) do
-        {:ok, %{"message" => message, "code" => code}} ->
-          # Zoom's own message/code are provider-supplied and can echo request
-          # fragments (or token prefixes for auth errors), so they are
-          # redacted and bounded the same as the undecodable branch below,
-          # just to a tighter cap since this is prose, not a raw body.
-          Redactor.redact_and_truncate("code #{code} - #{message}", 512)
-
-        _other ->
-          # Undecodable body: still bounded and scrubbed before it reaches a log
-          # line, so a provider that answers with something unexpected cannot
-          # write an unbounded blob (or whatever it happens to contain) to disk.
-          Redactor.redact_and_truncate(body)
-      end
-
-    {:error, {:http_error, status, "Zoom API error (#{status}): #{detail}"}}
-  end
+  @spec error_detail(term()) :: String.t() | nil
+  def error_detail(%{"message" => message, "code" => code}), do: "code #{code} - #{message}"
+  def error_detail(_body), do: nil
 
   defp config_start_time(config) do
     case Map.get(config, :event_details) do
