@@ -622,7 +622,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
         failures: SyncGating.threshold(),
         consecutive_hard_failures: SyncGating.threshold(),
         last_check_at: DateTime.utc_now(),
-        last_error_class: "hard"
+        last_error_class: :hard
       )
   end
 end

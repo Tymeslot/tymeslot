@@ -19,7 +19,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
     {:ok, _row} =
       %IntegrationHealthStateSchema{}
       |> IntegrationHealthStateSchema.changeset(%{
-        integration_type: "calendar",
+        integration_type: :calendar,
         integration_id: integration_id,
         user_id: user.id,
         status: :unhealthy,
@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
         successes: 0,
         backoff_ms: :timer.hours(1),
         last_check_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-        last_error_class: "hard",
+        last_error_class: :hard,
         became_unhealthy_at: DateTime.add(DateTime.utc_now(), -3 * 24 * 3600, :second),
         notification_sent_at: DateTime.add(DateTime.utc_now(), -2 * 24 * 3600, :second)
       })
@@ -47,6 +47,21 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
 
       assert Repo.get_by!(IntegrationHealthStateSchema, integration_id: integration.id).status ==
                :unhealthy
+    end
+
+    test "refuses an error class outside the known set before it reaches the database",
+         %{user: user} do
+      integration = insert(:calendar_integration, user: user)
+      {:ok, _row} = insert_unhealthy_row(user, integration.id)
+
+      assert_raise Ecto.Query.CastError, fn ->
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          last_error_class: :fatal
+        )
+      end
+
+      assert %{last_error_class: :hard} =
+               Repo.get_by!(IntegrationHealthStateSchema, integration_id: integration.id)
     end
   end
 

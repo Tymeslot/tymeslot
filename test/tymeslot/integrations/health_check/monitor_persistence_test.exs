@@ -156,24 +156,6 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
     end
   end
 
-  describe "from_db_record/1" do
-    test "handles unexpected last_error_class string without crashing" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
-
-      {:ok, _record} =
-        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
-
-      {1, _nil} =
-        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          last_error_class: "unknown_class"
-        )
-
-      health = Monitor.get_state(:calendar, integration.id, user.id)
-      assert health.last_error_class == :hard
-    end
-  end
-
   describe "orphaned health state cleanup" do
     test "delete_orphaned removes health states for deleted integrations" do
       user = insert(:user)

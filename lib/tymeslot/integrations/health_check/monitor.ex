@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
           last_check_at: DateTime.t() | nil,
           status: health_status(),
           backoff_ms: pos_integer(),
-          last_error_class: :transient | :hard | nil,
+          last_error_class: IntegrationHealthStateSchema.error_class() | nil,
           became_unhealthy_at: DateTime.t() | nil,
           notification_sent_at: DateTime.t() | nil
         }
@@ -374,7 +374,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       last_check_at: record.last_check_at,
       status: record.status,
       backoff_ms: record.backoff_ms,
-      last_error_class: safe_to_error_class(record.last_error_class),
+      last_error_class: record.last_error_class,
       became_unhealthy_at: record.became_unhealthy_at,
       notification_sent_at: record.notification_sent_at
     }
@@ -397,8 +397,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       successes: health_state.successes,
       backoff_ms: health_state.backoff_ms,
       last_check_at: health_state.last_check_at,
-      last_error_class:
-        health_state.last_error_class && Atom.to_string(health_state.last_error_class),
+      last_error_class: health_state.last_error_class,
       became_unhealthy_at: health_state.became_unhealthy_at
     }
 
@@ -407,12 +406,4 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       user_id -> Map.put(base, :user_id, user_id)
     end
   end
-
-  @valid_error_classes ~w(transient hard)a
-  @error_classes_by_name Map.new(@valid_error_classes, &{Atom.to_string(&1), &1})
-
-  defp safe_to_error_class(nil), do: nil
-
-  defp safe_to_error_class(str) when is_binary(str),
-    do: Map.get(@error_classes_by_name, str, :hard)
 end

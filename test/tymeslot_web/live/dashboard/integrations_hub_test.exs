@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       integration =
         insert(:calendar_integration, user: user, name: "Work Google", is_active: true)
 
-      mark_unhealthy(user, integration.id, "calendar")
+      mark_unhealthy(user, integration.id, :calendar)
 
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations")
 

@@ -126,7 +126,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       {:ok, health_state} =
         %IntegrationHealthStateSchema{}
         |> IntegrationHealthStateSchema.changeset(%{
-          integration_type: "calendar",
+          integration_type: :calendar,
           integration_id: calendar_integration.id,
           user_id: user.id,
           status: :healthy,

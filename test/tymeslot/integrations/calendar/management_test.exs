@@ -156,7 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.ManagementTest do
       # Seed an unhealthy row so we can verify the reset fires.
       %IntegrationHealthStateSchema{}
       |> IntegrationHealthStateSchema.changeset(%{
-        integration_type: "calendar",
+        integration_type: :calendar,
         integration_id: integration.id,
         user_id: user.id,
         status: :unhealthy,

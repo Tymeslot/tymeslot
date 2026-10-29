@@ -59,7 +59,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorConcurrentTest do
           successes: 0,
           backoff_ms: :timer.hours(1),
           last_check_at: DateTime.utc_now(),
-          last_error_class: "hard",
+          last_error_class: :hard,
           became_unhealthy_at: unhealthy_since,
           notification_sent_at: nil
         )

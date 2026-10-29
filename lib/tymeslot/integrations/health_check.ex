@@ -99,7 +99,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
       |> Enum.group_by(& &1.integration_type)
 
     Map.new(IntegrationTypes.kinds(), fn kind ->
-      records = Map.get(grouped, IntegrationTypes.db_value(kind), [])
+      records = Map.get(grouped, kind, [])
       {kind, Map.new(records, &{&1.integration_id, Monitor.from_db_record(&1)})}
     end)
   end

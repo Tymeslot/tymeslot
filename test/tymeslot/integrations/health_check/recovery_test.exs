@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
         successes: 0,
         backoff_ms: :timer.hours(1),
         last_check_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-        last_error_class: "hard",
+        last_error_class: :hard,
         became_unhealthy_at: DateTime.add(DateTime.utc_now(), -3 * 24 * 3600, :second),
         notification_sent_at: DateTime.add(DateTime.utc_now(), -2 * 24 * 3600, :second)
       })

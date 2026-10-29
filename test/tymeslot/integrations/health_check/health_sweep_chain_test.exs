@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.HealthCheck.HealthSweepChainTest do
     # backoff reaches its cap.
     assert {:ok, state} = IntegrationHealthStateQueries.get(:calendar, integration.id)
     assert %DateTime{} = state.last_check_at
-    assert state.last_error_class == "transient"
+    assert state.last_error_class == :transient
     assert state.backoff_ms == :timer.minutes(5)
     assert state.failures == 0
     assert state.status == :healthy
