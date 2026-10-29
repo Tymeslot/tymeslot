@@ -1,7 +1,8 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceSummary do
+defmodule Tymeslot.Integrations.Calendar.Recurrence.Summary do
   @moduledoc """
-  How a repeat pattern reads, for the grid's repeat editor and the event
-  details: "Repeats monthly on the second Tuesday, 6 times".
+  How a repeat pattern reads, for the grid's repeat editor, the event
+  details and the emails sent for a series: "Repeats monthly on the second
+  Tuesday, 6 times".
 
   A position (the second Tuesday, the last weekday) is one translated
   phrase, never an ordinal glued to a weekday: the ordinal agrees with the
@@ -10,7 +11,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceSummary do
   the case its name takes after a day ("13 października") or a position.
 
   Rendered in the process's Gettext locale, the end date included, so it is
-  called from the LiveView process rather than from a task.
+  called from the LiveView process rather than from a task, and from inside
+  an email's `Gettext.with_locale/3`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -33,6 +35,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceSummary do
   ]
   @weekday_numbers %{mo: 1, tu: 2, we: 3, th: 4, fr: 5, sa: 6, su: 7}
   @months ~w(January February March April May June July August September October November December)
+
+  @doc """
+  The summary of the RRULE value `rule` (no `RRULE:` prefix) for a series
+  starting at `start`: an all-day series' first day, or a timed series'
+  first instant in the zone it repeats in. Nil for no rule.
+  """
+  @spec describe(String.t() | nil, Date.t() | DateTime.t()) :: String.t() | nil
+  def describe(rule, start) do
+    start_date = if is_struct(start, DateTime), do: DateTime.to_date(start), else: start
+
+    case Pattern.read(rule, start) do
+      {:ok, pattern} -> summary(pattern, start_date)
+      :custom -> summary(:custom, start_date)
+    end
+  end
 
   @doc """
   The summary of `pattern` (see `Pattern`) for a series starting on

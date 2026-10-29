@@ -188,8 +188,9 @@ defmodule Tymeslot.Notifications.Email.CalendarEventEmailsTest do
         assert details.first_notification
 
         # The time is stated in the organiser's timezone: the same instant.
-        assert [{:time, nil, time} | fields] = details.changes
-        assert DateTime.compare(time, event.start_at) == :eq
+        assert [{:time, nil, {start_time, end_time}} | fields] = details.changes
+        assert DateTime.compare(start_time, event.start_at) == :eq
+        assert DateTime.compare(end_time, event.end_at) == :eq
 
         assert fields == [
                  {:title, nil, "Updated Title"},

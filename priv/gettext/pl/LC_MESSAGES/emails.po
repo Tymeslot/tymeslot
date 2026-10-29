@@ -214,11 +214,6 @@ msgstr "(brak)"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
-msgid "Description updated"
-msgstr "Opis zaktualizowany"
-
-#: lib/tymeslot/emails/shared/text_body_helper.ex
-#, elixir-autogen, elixir-format
 msgid "Title:"
 msgstr "Tytuł:"
 
@@ -556,3 +551,53 @@ msgstr "GOŚCIE:"
 #, elixir-autogen, elixir-format
 msgid "Guests"
 msgstr "Goście"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has removed you from an event."
+msgstr "%{name} usuwa cię z wydarzenia."
+
+#: lib/tymeslot/emails/shared/calendar_event_content.ex
+#, elixir-autogen, elixir-format
+msgid "DESCRIPTION:"
+msgstr "OPIS:"
+
+#: lib/tymeslot/emails/shared/calendar_event_content.ex
+#, elixir-autogen, elixir-format
+msgid "Description"
+msgstr "Opis"
+
+#: lib/tymeslot/emails/shared/meeting/hero.ex
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr "Wydarzenie"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Event:"
+msgstr "Wydarzenie:"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "If the event is still in your calendar, you can delete it there."
+msgstr "Jeśli wydarzenie nadal jest w twoim kalendarzu, możesz je stamtąd usunąć."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Removed"
+msgstr "Usunięto"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from %{title} on %{date}"
+msgstr "Usunięto – %{title}, %{date}"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from Event"
+msgstr "Usunięto z wydarzenia"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Video call:"
+msgstr "Spotkanie wideo:"

@@ -218,11 +218,6 @@ msgstr "(nevyplněno)"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
-msgid "Description updated"
-msgstr "Popis byl aktualizován"
-
-#: lib/tymeslot/emails/shared/text_body_helper.ex
-#, elixir-autogen, elixir-format
 msgid "Title:"
 msgstr "Název:"
 
@@ -560,3 +555,53 @@ msgstr "HOSTÉ:"
 #, elixir-autogen, elixir-format
 msgid "Guests"
 msgstr "Hosté"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has removed you from an event."
+msgstr "Uživatel %{name} vás odebral z události."
+
+#: lib/tymeslot/emails/shared/calendar_event_content.ex
+#, elixir-autogen, elixir-format
+msgid "DESCRIPTION:"
+msgstr "POPIS:"
+
+#: lib/tymeslot/emails/shared/calendar_event_content.ex
+#, elixir-autogen, elixir-format
+msgid "Description"
+msgstr "Popis"
+
+#: lib/tymeslot/emails/shared/meeting/hero.ex
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr "Událost"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Event:"
+msgstr "Událost:"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "If the event is still in your calendar, you can delete it there."
+msgstr "Pokud je událost stále ve vašem kalendáři, můžete ji tam smazat."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Removed"
+msgstr "Odebráno"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from %{title} on %{date}"
+msgstr "Odebráno: %{title} – %{date}"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Removed from Event"
+msgstr "Odebrání z události"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Video call:"
+msgstr "Videohovor:"

@@ -408,7 +408,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     do: CalendarEventDetails.snapshot_event(snapshot)
 
   defp updated_event(_args, integration_id, event_uid),
-    do: CalendarGrid.get_cached_event(integration_id, event_uid)
+    do: CalendarGrid.get_cached_event_with_video(integration_id, event_uid)
 
   # An empty diff against a recorded baseline is a genuine no-op (an Oban
   # retry of a change already applied lands here) and stays `:ok`. A first

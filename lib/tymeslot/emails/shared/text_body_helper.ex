@@ -24,7 +24,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
         format_duration_line(meeting_details, locale),
         format_location_line(meeting_details),
         Formatting.location_note(meeting_details),
-        format_meeting_type_line(Map.get(meeting_details, :meeting_type))
+        format_title_line(meeting_details)
       ]
       |> Enum.filter(& &1)
       |> Enum.join("\n")
@@ -232,10 +232,13 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   defp format_location_line(details),
     do: "#{dgettext("emails", "Location:")} #{Formatting.format_location(details)}"
 
-  defp format_meeting_type_line(meeting_type) when is_binary(meeting_type) and meeting_type != "",
-    do: "#{dgettext("emails", "Type:")} #{meeting_type}"
+  defp format_title_line(%{event_title: title}) when is_binary(title) and title != "",
+    do: "#{dgettext("emails", "Event:")} #{title}"
 
-  defp format_meeting_type_line(_meeting_type), do: nil
+  defp format_title_line(%{meeting_type: type}) when is_binary(type) and type != "",
+    do: "#{dgettext("emails", "Type:")} #{type}"
+
+  defp format_title_line(_details), do: nil
 
   @doc "Formats a list of event field changes as plain text lines."
   @spec format_event_changes([{atom(), term(), term()}], String.t()) :: String.t()
@@ -256,8 +259,12 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     "#{dgettext("emails", "Location:")} #{from || dgettext("emails", "(none)")} → #{to || dgettext("emails", "(none)")}"
   end
 
-  defp format_single_change({:description, _from, _to}, _locale) do
-    dgettext("emails", "Description updated")
+  defp format_single_change({:description, from, to}, _locale) do
+    "#{dgettext("emails", "Description:")} #{excerpt_or_none(from)} → #{excerpt_or_none(to)}"
+  end
+
+  defp format_single_change({:video_link, from, to}, _locale) do
+    "#{dgettext("emails", "Video call:")} #{from || dgettext("emails", "(none)")} → #{to || dgettext("emails", "(none)")}"
   end
 
   defp format_single_change({:time, from_start, to_start}, locale) do
@@ -291,10 +298,20 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   defp format_current_detail({:description, _from, to}, _locale),
     do: "#{dgettext("emails", "Description:")} #{Formatting.plain_excerpt(to)}"
 
+  defp format_current_detail({:video_link, _from, to}, _locale),
+    do: "#{dgettext("emails", "Video call:")} #{to}"
+
   defp format_current_detail({:time, _from, to}, locale),
     do: "#{dgettext("emails", "Time:")} #{Formatting.format_time_short(to, locale)}"
 
   defp format_current_detail(_other, _locale), do: nil
+
+  defp excerpt_or_none(text) do
+    case Formatting.plain_excerpt(text) do
+      "" -> dgettext("emails", "(none)")
+      excerpt -> excerpt
+    end
+  end
 
   # A guest of a host-managed meeting as a text line: their name and address,
   # or the address alone when they gave no name.

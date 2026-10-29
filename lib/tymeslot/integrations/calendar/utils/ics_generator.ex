@@ -114,6 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       organizer: format_organizer(meeting_details),
       attendee: format_attendees(meeting_details),
       conference: conference_uri(meeting_details),
+      rrule: rrule(meeting_details),
       status: Map.get(meeting_details, :status, "CONFIRMED")
     }
   end
@@ -125,6 +126,16 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   defp dtend(%{all_day: true, end_date: %Date{} = end_date}), do: end_date
   defp dtend(meeting_details), do: meeting_details.end_time
+
+  # A repeating event's rule, RFC 5545 §3.8.5.3, as an RRULE value with or
+  # without its property name. CR/LF are stripped against property injection.
+  defp rrule(meeting_details) do
+    case Map.get(meeting_details, :recurrence_rule) do
+      "RRULE:" <> rule -> rrule(%{recurrence_rule: rule})
+      rule when is_binary(rule) and rule != "" -> Format.sanitize_ical_value(rule)
+      _single -> nil
+    end
+  end
 
   defp conference_uri(meeting_details) do
     case Map.get(meeting_details, :meeting_url) do
@@ -163,6 +174,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
       "DTSTART#{format_ical_time(event.dtstart)}",
       "DTEND#{format_ical_time(event.dtend)}",
+      event.rrule && "RRULE:#{event.rrule}",
       if(is_integer(sequence), do: "SEQUENCE:#{sequence}"),
       "SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}",
       "DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}",

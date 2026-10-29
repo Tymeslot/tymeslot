@@ -13,7 +13,10 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   `event_end_date` instead of the two instants, which it does not have.
 
   `method: :cancel` makes it a cancellation instead, and `series: true` a
-  cancellation of every occurrence of a recurring event. The job carries all
+  cancellation of every occurrence of a recurring event, and `removed: true`
+  the recipient's removal from an event that still takes place.
+  `event_recurrence_rule` is the RRULE value of a series invited as a whole.
+  The job carries all
   it says, so it does not depend on the event still being cached when it
   runs.
   """
@@ -36,9 +39,11 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
       "event_location" => params[:event_location],
       "event_video_link" => params[:event_video_link],
       "event_description" => params[:event_description],
+      "event_recurrence_rule" => params[:event_recurrence_rule],
       "method" => Atom.to_string(method),
       "sequence" => sequence,
-      "event_series" => Map.get(params, :series, false)
+      "event_series" => Map.get(params, :series, false),
+      "event_removed" => Map.get(params, :removed, false)
     }
     |> EmailWorker.new(
       queue: :emails,
@@ -65,7 +70,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   first.
 
   `before_start_date`/`before_end_date` are the ISO 8601 dates of an all-day
-  baseline. `first_notification: true` marks an event that was never
+  baseline. `before_video_link` is the join link the attendees were last
+  sent (`nil` for none). `first_notification: true` marks an event that was never
   notified before, whose `before_*` values are therefore unknown rather than
   empty; the handler states the current details instead of diffing.
 
@@ -90,6 +96,7 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
       "before_title" => params.before_title,
       "before_location" => params.before_location,
       "before_description" => params.before_description,
+      "before_video_link" => params[:before_video_link],
       "before_start_at" => params.before_start_at && DateTime.to_iso8601(params.before_start_at),
       "before_end_at" => params.before_end_at && DateTime.to_iso8601(params.before_end_at),
       "before_start_date" => params[:before_start_date],
