@@ -77,7 +77,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
         {:ok, :noop}
 
       recipients ->
-        send_immediate(event, recipients, method, sequence)
+        # Only here is the event known to be the series as a whole: the grid
+        # has just created it. A cached row can be one occurrence carrying
+        # its series' rule (CalDAV sets no `recurring_event_id`), so no other
+        # invitation says the event repeats.
+        extra = %{event_recurrence_rule: Map.get(event, :recurrence_rule)}
+        send_immediate(event, recipients, method, sequence, extra)
         {:ok, :sent}
     end
   end
@@ -416,10 +421,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   ## Internal helpers
 
-  # `extra` overrides the defaults: the organiser a caller already knows, and
-  # whether a cancellation takes the whole series. Returns the first failure
-  # to enqueue, after trying every attendee.
-  defp send_immediate(event, attendees, method, sequence, extra \\ %{}) do
+  # `extra` overrides the defaults: the organiser a caller already knows,
+  # whether a cancellation takes the whole series, and a new series' rule.
+  # Returns the first failure to enqueue, after trying every attendee.
+  defp send_immediate(event, attendees, method, sequence, extra) do
     timing = invitation_timing(event)
 
     attendees
@@ -434,7 +439,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
           event_location: Map.get(event, :location),
           event_video_link: video_link_for(event),
           event_description: Map.get(event, :description),
-          event_recurrence_rule: series_rule(event),
           method: method,
           sequence: sequence
         })
@@ -486,15 +490,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   defp video_link_for(event),
     do: Map.get(event, :video_link) || Map.get(event, :attendee_video_url)
-
-  # The rule of a series invited as a whole. An occurrence the provider
-  # expanded names its series and is invited as itself, without the rule.
-  defp series_rule(event) do
-    case Map.get(event, :recurring_event_id) do
-      id when is_binary(id) and id != "" -> nil
-      _series_or_single -> Map.get(event, :recurrence_rule)
-    end
-  end
 
   defp current_sequence(event), do: Map.get(event, :ical_sequence, 0) || 0
 

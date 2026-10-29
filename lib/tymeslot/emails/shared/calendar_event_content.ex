@@ -137,6 +137,13 @@ defmodule Tymeslot.Emails.Shared.CalendarEventContent do
   The fields of the ICS attachment for `attendee_email`. The SEQUENCE is the
   details' `:sequence`, so an invitation sent again after a removal
   supersedes the cancellation the guest's calendar holds.
+
+  The attachment is always a single event, even for a series: the email
+  says how it repeats, but no RRULE is written. A rule needs a DTSTART in
+  the series' own zone (BYDAY is a local weekday, and a UTC start moves an
+  hour at every DST change), and the updates and cancellations that follow
+  are keyed by occurrence, with no RECURRENCE-ID, so none of them could
+  reach a repeating entry in the guest's calendar.
   """
   @spec ics_details(map(), String.t()) :: map()
   def ics_details(details, attendee_email) do
@@ -153,20 +160,11 @@ defmodule Tymeslot.Emails.Shared.CalendarEventContent do
       # The attachment states the link itself, in CONFERENCE and its own
       # description line, so the provider's join line is left out.
       description: EventVideo.without_join_lines(Map.get(details, :description)),
-      recurrence_rule: ics_rule(details),
       ical_sequence: Map.get(details, :sequence),
       organizer_name: details.organizer_name,
       organizer_email: details.organizer_email,
       organizer_user_id: Map.get(details, :organizer_user_id),
       attendee_email: attendee_email
     }
-  end
-
-  # The rule repeats the entry the attachment writes. A cancellation carries
-  # it only when it cancels the whole series: on the cancellation of one
-  # occurrence it would cancel every other one in the guest's calendar too.
-  defp ics_rule(details) do
-    if not cancellation?(details) or Map.get(details, :series) == true,
-      do: Map.get(details, :recurrence_rule)
   end
 end

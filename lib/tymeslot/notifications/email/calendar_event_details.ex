@@ -325,9 +325,10 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   # The join link travels in its own field, so a new room reads as a new
   # link rather than as an edit of the description it is written into. A
   # job enqueued before the previous link was recorded carries no
-  # `before_video_link` key and announces no video change.
+  # `before_video_link` key and announces no video change. A baseline records
+  # no link as "", which is read as none.
   defp maybe_add_video_change(changes, %{"before_video_link" => before}, current),
-    do: maybe_add_change(changes, :video_link, before, current)
+    do: maybe_add_change(changes, :video_link, normalise_blank(before), current)
 
   defp maybe_add_video_change(changes, _args, _current), do: changes
 

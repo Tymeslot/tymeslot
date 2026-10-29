@@ -88,6 +88,40 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.CalendarEventEmailContentTest 
     end
   end
 
+  describe "a video room added to an event notified without one" do
+    test "shows the previous link as none", %{integration: integration} do
+      start_at = ~U[2026-11-03 09:30:00.000000Z]
+      end_at = ~U[2026-11-03 09:45:00.000000Z]
+
+      baseline =
+        LastNotifiedState.serialise(
+          %{
+            title: "Standup",
+            starts_at: start_at,
+            ends_at: end_at,
+            location: "",
+            description: ""
+          },
+          [%{email: "guest@example.com"}]
+        )
+
+      assert baseline["video_link"] == ""
+
+      event =
+        insert_timed_event(integration,
+          summary: "Standup",
+          start_at: start_at,
+          end_at: end_at,
+          video_link: "https://zoom.example/j/new",
+          last_notified_state: baseline
+        )
+
+      email = run_update_to_delivery(event)
+
+      assert email.text_body =~ "Video call: (none) → https://zoom.example/j/new"
+    end
+  end
+
   describe "an update that moves only the end" do
     test "shows the end that moved", %{integration: integration} do
       start_at = ~U[2026-11-03 09:30:00.000000Z]
@@ -120,10 +154,32 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.CalendarEventEmailContentTest 
   end
 
   describe "an invitation" do
-    test "to a repeating series says how it repeats and repeats the calendar entry", %{
+    test "to a series just created says how it repeats, in a single calendar entry", %{
+      integration: integration
+    } do
+      event =
+        insert_timed_event(integration,
+          summary: "Weekly sync",
+          start_at: ~U[2026-11-03 09:30:00.000000Z],
+          end_at: ~U[2026-11-03 10:00:00.000000Z],
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"
+        )
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.event_created(event, [%{email: "new@example.com"}])
+
+      assert [email] = deliver_all("send_calendar_invitation")
+      assert email.text_body =~ "Repeats weekly on Tue"
+      ics = calendar_attachment(email).data
+      assert ics =~ "BEGIN:VEVENT"
+      refute ics =~ "RRULE"
+    end
+
+    test "to an occurrence carrying its series' rule is for that occurrence alone", %{
       user: user,
       integration: integration
     } do
+      # A CalDAV occurrence row: the series' rule, and no `recurring_event_id`.
       event =
         insert_timed_event(integration,
           summary: "Weekly sync",
@@ -140,11 +196,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.CalendarEventEmailContentTest 
                )
 
       assert [email] = deliver_all("send_calendar_invitation")
-      assert email.text_body =~ "Repeats weekly on Tue"
-      assert calendar_attachment(email).data =~ "RRULE:FREQ=WEEKLY;BYDAY=TU"
+      refute email.text_body =~ "Repeats"
+      refute calendar_attachment(email).data =~ "RRULE"
     end
 
-    test "to one occurrence of a series is for that occurrence alone", %{
+    test "cancelling a whole series writes no rule into the cancellation", %{
       user: user,
       integration: integration
     } do
@@ -153,20 +209,15 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.CalendarEventEmailContentTest 
           summary: "Weekly sync",
           start_at: ~U[2026-11-03 09:30:00.000000Z],
           end_at: ~U[2026-11-03 10:00:00.000000Z],
-          recurrence_rule: "FREQ=WEEKLY;BYDAY=TU",
-          recurring_event_id: "series-1"
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"
         )
 
-      assert {:ok, :sent} =
-               AttendeeNotifications.attendees_added(
-                 event,
-                 [%{email: "new@example.com"}],
-                 user.id
-               )
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
 
       assert [email] = deliver_all("send_calendar_invitation")
-      refute email.text_body =~ "Repeats"
-      refute calendar_attachment(email).data =~ "RRULE"
+      ics = calendar_attachment(email).data
+      assert ics =~ "STATUS:CANCELLED"
+      refute ics =~ "RRULE"
     end
 
     test "sent again after a removal supersedes the cancellation", %{

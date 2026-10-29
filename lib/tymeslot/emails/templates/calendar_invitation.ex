@@ -3,8 +3,8 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   Email template for calendar event invitations sent from the dashboard calendar.
 
   Simpler than booking confirmations — no reschedule/cancel URLs or reminders.
-  Includes event details, how a series repeats (`:recurrence_rule`, also
-  written to the attachment as its RRULE), the description, the event's video
+  Includes event details, how a series repeats (`:recurrence_rule`, stated
+  in the body only), the description, the event's video
   link (`:video_link`) as a join section when it has one, and an ICS calendar
   attachment (see `Tymeslot.Emails.Shared.CalendarEventContent`).
 
