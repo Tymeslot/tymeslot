@@ -15,9 +15,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.MeetingTypes.LocationOption
 
-  @unique_slot_constraint :unique_confirmed_meeting_per_organizer_at_time
+  @unique_slot_constraint UniqueSlot.constraint()
 
   @type calendar_sync_status :: :externally_deleted | :externally_modified
 
@@ -608,22 +609,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     end
   end
 
-  @doc """
-  True when a changeset's error is a violation of the organiser's unique
-  slot index, `(organizer_user_id, start_time)` over the rows that hold a
-  slot: a lost race for the slot against a writer that committed first, not
-  invalid input.
-
-  Group seat booking retries on it by joining the winner's meeting, and the
-  booking flow answers it as the slot being taken.
-  """
-  @spec unique_slot_violation?(Ecto.Changeset.t()) :: boolean()
-  def unique_slot_violation?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, error_opts}} ->
-      error_opts[:constraint] == :unique and
-        to_string(error_opts[:constraint_name] || "") == Atom.to_string(@unique_slot_constraint)
-    end)
-  end
+  @doc "Whether a write lost the race for its slot; see `Tymeslot.Meetings.UniqueSlot`."
+  defdelegate unique_slot_violation?(changeset), to: UniqueSlot, as: :violation?
 
   @doc """
   Whether the meeting was booked with room for more than one seat.
