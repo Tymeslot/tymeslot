@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.HealthCheck.HealthSweepChainTest do
 
     assert {:ok, state} = IntegrationHealthStateQueries.get(:calendar, integration.id)
     assert %DateTime{} = state.last_check_at
-    assert state.status == "healthy"
+    assert state.status == :healthy
     assert state.successes == 1
     assert state.failures == 0
   end
@@ -67,7 +67,7 @@ defmodule Tymeslot.Integrations.HealthCheck.HealthSweepChainTest do
     assert state.last_error_class == "transient"
     assert state.backoff_ms == :timer.minutes(5)
     assert state.failures == 0
-    assert state.status == "healthy"
+    assert state.status == :healthy
   end
 
   defp run_sweep_and_probe(integration) do

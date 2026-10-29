@@ -11,7 +11,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Clock
-  alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Shared.IntegrationTypes
 
@@ -55,7 +54,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
           integration_type: ^type_str,
           integration_id: i.id,
           user_id: i.user_id,
-          status: ^HealthStatus.to_db_value(:healthy),
+          status: type(^:healthy, s.status),
           failures: 0,
           consecutive_hard_failures: 0,
           consecutive_sync_failures: 0,
@@ -128,7 +127,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       integration_type: type_str,
       integration_id: integration_id,
       user_id: user_id,
-      status: HealthStatus.to_db_value(:healthy),
+      status: :healthy,
       failures: 0,
       consecutive_hard_failures: 0,
       consecutive_sync_failures: 0,
@@ -183,8 +182,9 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   clean no-op rather than a raise.
   Returns the number of records updated (0 if no record exists).
 
-  A `status` value outside `HealthStatus.values/0` is rejected by the
-  `status_must_be_known` database constraint. Every writer, including
+  `status` is an `Ecto.Enum`, so a value outside its atoms is refused when
+  the update is built, and the `status_must_be_known` database constraint
+  backstops anything written outside Ecto. Every writer, including
   `Monitor.put_state/3` (the sole path that writes a runtime-derived
   status), goes through this one function.
   """
@@ -224,7 +224,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @spec reset(String.t() | atom(), integer()) :: {non_neg_integer(), nil}
   def reset(type, integration_id) do
     update_fields(type, integration_id,
-      status: HealthStatus.to_db_value(:healthy),
+      status: :healthy,
       failures: 0,
       consecutive_hard_failures: 0,
       consecutive_sync_failures: 0,
@@ -305,7 +305,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
     Repo.all(
       from(s in IntegrationHealthStateSchema,
-        where: s.user_id == ^user_id and s.status == ^HealthStatus.to_db_value(:unhealthy),
+        where: s.user_id == ^user_id and s.status == :unhealthy,
         where: ^of_active_integration
       )
     )
@@ -339,7 +339,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
     |> where(
       [s],
       s.integration_type == ^type_str and
-        s.status == ^HealthStatus.to_db_value(:unhealthy) and
+        s.status == :unhealthy and
         s.integration_id in subquery(active_ids) and
         ((not is_nil(s.became_unhealthy_at) and s.became_unhealthy_at < ^calendar_cutoff) or
            s.consecutive_hard_failures >= ^hard_failure_count)

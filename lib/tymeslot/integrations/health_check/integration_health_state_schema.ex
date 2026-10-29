@@ -11,7 +11,8 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.Integrations.HealthCheck.HealthStatus
+  @typedoc "An integration's health, as the monitor last assessed it."
+  @type status :: :healthy | :degraded | :unhealthy
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -19,7 +20,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
           integration_id: integer() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           user_id: integer() | nil,
-          status: String.t(),
+          status: status(),
           failures: non_neg_integer(),
           consecutive_hard_failures: non_neg_integer(),
           consecutive_sync_failures: non_neg_integer(),
@@ -41,7 +42,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
     field(:integration_type, :string)
     field(:integration_id, :integer)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
-    field(:status, :string, default: "healthy")
+    field(:status, Ecto.Enum, values: [:healthy, :degraded, :unhealthy], default: :healthy)
     field(:failures, :integer, default: 0)
     field(:consecutive_hard_failures, :integer, default: 0)
     field(:consecutive_sync_failures, :integer, default: 0)
@@ -59,13 +60,10 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
   @spec check_interval_ms() :: pos_integer()
   def check_interval_ms, do: @check_interval_ms
 
-  # The canonical status set lives in `HealthCheck.HealthStatus`. The sole
-  # runtime-derived writer (`Monitor.put_state/3`) writes through
-  # `IntegrationHealthStateQueries.update_fields/3`, a raw `update_all` that
-  # never builds a changeset, so this inclusion check only binds the seed
-  # (`get_or_init/3`) caller; the
-  # `status_must_be_known` database constraint is what closes the value set
-  # for every writer.
+  # `status` is an `Ecto.Enum`, so every writer, the raw `update_all` in
+  # `IntegrationHealthStateQueries.update_fields/3` included, can only dump
+  # one of its atoms; the `status_must_be_known` database constraint closes
+  # the set for anything written outside Ecto.
   @valid_error_classes ~w(transient hard)
 
   @doc false
@@ -88,7 +86,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :notification_sent_at
     ])
     |> validate_required([:integration_type, :integration_id, :user_id, :status])
-    |> validate_inclusion(:status, HealthStatus.strings())
     |> validate_inclusion(:last_error_class, @valid_error_classes)
     |> unique_constraint([:integration_type, :integration_id])
   end

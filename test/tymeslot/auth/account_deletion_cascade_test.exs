@@ -129,7 +129,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
           integration_type: "calendar",
           integration_id: calendar_integration.id,
           user_id: user.id,
-          status: "healthy",
+          status: :healthy,
           backoff_ms: 1_800_000
         })
         |> Repo.insert()

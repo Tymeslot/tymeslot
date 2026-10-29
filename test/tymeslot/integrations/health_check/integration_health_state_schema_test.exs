@@ -20,7 +20,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchemaTest do
         integration_type: "calendar",
         integration_id: 1,
         user_id: user.id,
-        status: "healthy"
+        status: :healthy
       }
 
       changeset =
@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchemaTest do
           user_id: user.id
         })
 
-      assert get_field(changeset, :status) == "healthy"
+      assert get_field(changeset, :status) == :healthy
       assert get_field(changeset, :failures) == 0
       assert get_field(changeset, :successes) == 0
       assert get_field(changeset, :backoff_ms) == 1_800_000
@@ -59,7 +59,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchemaTest do
         integration_type: "calendar",
         integration_id: 1,
         user_id: user.id,
-        status: "healthy"
+        status: :healthy
       }
 
       {:ok, _state} =

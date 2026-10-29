@@ -109,7 +109,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       IntegrationHealthStateQueries.update_fields(
         :calendar,
         integration_id,
-        Keyword.merge([status: "unhealthy", last_check_at: DateTime.utc_now()], fields)
+        Keyword.merge([status: :unhealthy, last_check_at: DateTime.utc_now()], fields)
       )
   end
 end

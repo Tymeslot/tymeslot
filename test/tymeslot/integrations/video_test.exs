@@ -302,7 +302,7 @@ defmodule Tymeslot.Integrations.VideoTest do
         integration_type: "video",
         integration_id: integration.id,
         user_id: user.id,
-        status: "unhealthy",
+        status: :unhealthy,
         failures: 5,
         consecutive_hard_failures: 5,
         successes: 0,
@@ -317,7 +317,7 @@ defmodule Tymeslot.Integrations.VideoTest do
 
       # Health row is reset to a healthy baseline.
       {:ok, row} = IntegrationHealthStateQueries.get(:video, integration.id)
-      assert row.status == "healthy"
+      assert row.status == :healthy
       assert row.failures == 0
 
       # Immediate verification probe is enqueued.

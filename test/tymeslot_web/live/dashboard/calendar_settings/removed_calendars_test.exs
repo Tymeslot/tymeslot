@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RemovedCalendarsTest do
       integration_type: "calendar",
       integration_id: integration.id,
       user_id: user.id,
-      status: "unhealthy"
+      status: :unhealthy
     })
     |> Repo.insert!()
 

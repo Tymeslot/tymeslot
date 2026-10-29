@@ -53,7 +53,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorConcurrentTest do
 
       {1, _nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          status: "unhealthy",
+          status: :unhealthy,
           failures: 3,
           consecutive_hard_failures: 3,
           successes: 0,

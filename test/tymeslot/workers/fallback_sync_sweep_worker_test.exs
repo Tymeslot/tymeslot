@@ -618,7 +618,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
 
     {1, nil} =
       IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-        status: "unhealthy",
+        status: :unhealthy,
         failures: SyncGating.threshold(),
         consecutive_hard_failures: SyncGating.threshold(),
         last_check_at: DateTime.utc_now(),

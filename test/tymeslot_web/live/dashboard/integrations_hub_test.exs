@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       integration_type: type,
       integration_id: integration_id,
       user_id: user.id,
-      status: "unhealthy"
+      status: :unhealthy
     })
     |> Repo.insert!()
   end

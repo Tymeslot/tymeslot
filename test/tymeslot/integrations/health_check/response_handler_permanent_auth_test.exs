@@ -102,7 +102,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
 
       {1, nil} =
         IntegrationHealthStateQueries.update_fields(:video, integration.id,
-          status: "unhealthy",
+          status: :unhealthy,
           became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour)
         )
 
