@@ -12,6 +12,8 @@ defmodule Tymeslot.Auth.UserQueries do
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
   @doc """
@@ -177,20 +179,32 @@ defmodule Tymeslot.Auth.UserQueries do
 
   An account sent a verification link since `cutoff` is left out, so a link
   its owner asked for recently still works when it is followed. So is an
-  admin. Nothing else is spared: no route gives an unverified account a
-  session (a sign-in either verifies it, when a provider vouches for the
-  email, or is refused and sent a fresh link), so one used under older rules
-  is as locked out as one never used.
+  admin, and so is an account with a meeting still to come that nobody has
+  cancelled: its booking page took that booking from a guest, so it goes only
+  once the meeting is over. Nothing else is spared: no route gives an
+  unverified account a session (a sign-in either verifies it, when a provider
+  vouches for the email, or is refused and sent a fresh link), so one used
+  under older rules is as locked out as one never used.
   """
   @spec list_stale_unverified_users(DateTime.t(), pos_integer()) :: [UserSchema.t()]
   def list_stale_unverified_users(%DateTime{} = cutoff, limit) do
-    UserSchema
+    from(u in UserSchema, as: :user)
     |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
     |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
     |> where([u], not u.is_admin)
+    |> where([u], not exists(upcoming_meetings_of_user(DateTime.utc_now())))
     |> order_by([u], asc: u.inserted_at, asc: u.id)
     |> limit(^limit)
     |> Repo.all()
+  end
+
+  defp upcoming_meetings_of_user(now) do
+    MeetingState.where_not_terminal(
+      from(m in MeetingSchema,
+        where: m.organizer_user_id == parent_as(:user).id and m.end_time > ^now,
+        select: 1
+      )
+    )
   end
 
   @doc """
