@@ -21,6 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
   import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
   alias Tymeslot.Test.LogCapture
@@ -270,6 +271,54 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       refute meta.error =~ "to_iso8601(nil"
       assert meta.stacktrace =~ "Date.to_iso8601/2"
     end
+  end
+
+  describe "delete_event/4 and the undelivered update notices" do
+    test "an event's delete forgets its notices and leaves another event's", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_event(caldav, @design_review)
+
+      other =
+        insert_event(caldav, %{@design_review | provider_event_id: "/cal/standup.ics"})
+
+      missed(caldav, event.uid)
+      missed(caldav, other.uid)
+      expect_delete(:ok)
+
+      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, event)
+
+      assert UndeliveredUpdates.list_for_event(user.id, caldav.id, event.uid) == []
+
+      assert UndeliveredUpdates.list_for_event(user.id, caldav.id, other.uid) == [
+               "guest@example.com"
+             ]
+    end
+
+    test "a whole-series delete forgets the notices of every occurrence", %{user: user} do
+      google = insert(:calendar_integration, user: user, provider: "google")
+
+      [first, second] =
+        for stamp <- ["20260601T090000Z", "20260608T090000Z"] do
+          insert_event(google, @design_review, google_occurrence("series-1", stamp))
+        end
+
+      missed(google, first.uid)
+      missed(google, second.uid)
+      expect_delete(:ok)
+
+      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, first, :series)
+
+      for event <- [first, second] do
+        assert UndeliveredUpdates.list_for_event(user.id, google.id, event.uid) == []
+      end
+    end
+  end
+
+  defp missed(integration, uid) do
+    :ok =
+      UndeliveredUpdates.note_delivery(integration.id, uid, "guest@example.com", {:error, :smtp})
   end
 
   defp cancellation_jobs do

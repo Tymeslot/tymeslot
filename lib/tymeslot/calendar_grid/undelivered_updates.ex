@@ -71,6 +71,34 @@ defmodule Tymeslot.CalendarGrid.UndeliveredUpdates do
     :ok
   end
 
+  @doc """
+  Forgets the notices of the events `event_uids` of the integration, once
+  they are deleted: nothing is left to show them on. Touches nothing on an
+  integration `user_id` does not own.
+  """
+  @spec events_deleted(pos_integer(), pos_integer(), [String.t()]) :: :ok
+  def events_deleted(user_id, integration_id, event_uids) do
+    UndeliveredUpdateQueries.delete_events_for_owner(user_id, integration_id, event_uids)
+    :ok
+  end
+
+  @doc """
+  Moves each event's notices to the uid its occurrence is cached under
+  after a write that rewrote its series, as
+  `Tymeslot.CalendarGrid.SeriesCarry` works it out: `moves` pairs each
+  `{integration_id, event_uid}` with its successor, or `nil` for an
+  occurrence with none, whose notices are forgotten. Touches nothing on an
+  integration `user_id` does not own.
+  """
+  @spec series_rewritten(
+          pos_integer(),
+          [{{pos_integer(), String.t()}, {pos_integer(), String.t()} | nil}]
+        ) :: :ok
+  def series_rewritten(user_id, moves) do
+    UndeliveredUpdateQueries.move_for_owner(user_id, moves)
+    :ok
+  end
+
   defp clear(integration_id, event_uid, email) do
     UndeliveredUpdateQueries.delete(integration_id, event_uid, email)
     :ok

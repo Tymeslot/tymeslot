@@ -7,6 +7,7 @@ defmodule Tymeslot.CalendarGrid.UndeliveredUpdateQueries do
   import Ecto.Query
 
   alias Tymeslot.CalendarGrid.UndeliveredUpdateSchema
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
 
@@ -71,7 +72,85 @@ defmodule Tymeslot.CalendarGrid.UndeliveredUpdateQueries do
     count
   end
 
-  defp for_owned_event(user_id, calendar_integration_id, event_uid) do
+  @doc """
+  Deletes every failure recorded for the events `event_uids` of the
+  integration, provided `user_id` owns it; nothing otherwise.
+  """
+  @spec delete_events_for_owner(pos_integer(), pos_integer(), [String.t()]) :: non_neg_integer()
+  def delete_events_for_owner(_user_id, _calendar_integration_id, []), do: 0
+
+  def delete_events_for_owner(user_id, calendar_integration_id, event_uids) do
+    {count, _rows} =
+      user_id
+      |> for_owned_events(calendar_integration_id, event_uids)
+      |> Repo.delete_all()
+
+    count
+  end
+
+  @doc """
+  Moves the failures recorded on the events `moves` names, provided
+  `user_id` owns the integration each comes from, in one transaction: those
+  on `from` (an `{integration_id, event_uid}` pair) are put on `to`, or
+  deleted when `to` is `nil`. Every failure on a `from` is taken off first,
+  so moves that chain (one event's uid becoming another's) do not overwrite
+  each other. Returns the number moved or deleted.
+  """
+  @spec move_for_owner(pos_integer(), [
+          {{pos_integer(), String.t()}, {pos_integer(), String.t()} | nil}
+        ]) ::
+          non_neg_integer()
+  def move_for_owner(_user_id, []), do: 0
+
+  def move_for_owner(user_id, moves) do
+    targets = Map.new(moves)
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    {:ok, count} =
+      Repo.transaction(fn ->
+        found =
+          moves
+          |> Enum.map(&elem(&1, 0))
+          |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+          |> Enum.flat_map(fn {integration_id, uids} ->
+            Repo.all(for_owned_events(user_id, integration_id, uids))
+          end)
+
+        Repo.delete_all(
+          from(u in UndeliveredUpdateSchema, where: u.id in ^Enum.map(found, & &1.id))
+        )
+
+        moved =
+          found
+          |> Enum.map(&{Map.fetch!(targets, {&1.calendar_integration_id, &1.event_uid}), &1})
+          |> Enum.reject(fn {to, _failure} -> is_nil(to) end)
+          |> Enum.uniq_by(fn {to, failure} -> {to, failure.email} end)
+          |> Enum.map(fn {{integration_id, uid}, failure} ->
+            %{
+              calendar_integration_id: integration_id,
+              event_uid: uid,
+              email: failure.email,
+              failed_at: failure.failed_at,
+              inserted_at: now,
+              updated_at: now
+            }
+          end)
+
+        Repo.insert_all(UndeliveredUpdateSchema, moved,
+          on_conflict: {:replace, [:failed_at, :updated_at]},
+          conflict_target: @conflict_target
+        )
+
+        length(found)
+      end)
+
+    count
+  end
+
+  defp for_owned_event(user_id, calendar_integration_id, event_uid),
+    do: for_owned_events(user_id, calendar_integration_id, [event_uid])
+
+  defp for_owned_events(user_id, calendar_integration_id, event_uids) do
     owned =
       from(i in CalendarIntegrationSchema,
         where: i.id == ^calendar_integration_id and i.user_id == ^user_id,
@@ -79,7 +158,7 @@ defmodule Tymeslot.CalendarGrid.UndeliveredUpdateQueries do
       )
 
     from(u in UndeliveredUpdateSchema,
-      where: u.calendar_integration_id in subquery(owned) and u.event_uid == ^event_uid
+      where: u.calendar_integration_id in subquery(owned) and u.event_uid in ^event_uids
     )
   end
 end
