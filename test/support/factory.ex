@@ -480,7 +480,7 @@ defmodule Tymeslot.Factory do
       user: build(:user),
       amount: 1000,
       product_identifier: "pro_plan",
-      status: "pending",
+      status: :pending,
       metadata: %{},
       stripe_id: sequence(:stripe_id, &"sess_#{&1}")
     }

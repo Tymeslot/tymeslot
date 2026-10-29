@@ -66,7 +66,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_123"
       )
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       assert {:ok, :invoice_processed} = process(event, invoice)
 
       # Verify a new transaction was created for the renewal
-      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("completed", user.id)
+      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status(:completed, user.id)
       # One initial + one renewal
       assert length(transactions) == 2
     end
@@ -99,7 +99,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         insert(:payment_transaction,
           user: user,
           subscription_id: subscription_id,
-          status: "completed",
+          status: :completed,
           stripe_id: "sess_finalized"
         )
 
@@ -152,7 +152,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       # charge for the same customer is a valid ownership signal.
       insert(:payment_transaction,
         user: user,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_out_of_band",
         stripe_customer_id: "cus_out_of_band"
       )
@@ -182,7 +182,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
 
       insert(:payment_transaction,
         user: user,
-        status: "pending",
+        status: :pending,
         stripe_id: "sess_pending_only",
         stripe_customer_id: "cus_pending_only"
       )
@@ -208,7 +208,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_renewal_doc"
       )
 
@@ -243,7 +243,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_finalized_then_paid"
       )
 
@@ -285,7 +285,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_paid_then_finalized"
       )
 
@@ -342,7 +342,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         insert(:payment_transaction,
           user: user,
           subscription_id: subscription_id,
-          status: "completed",
+          status: :completed,
           stripe_id: "cs_two_cycles_checkout",
           amount: 500
         )
@@ -425,7 +425,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_fail"
       )
 
@@ -443,7 +443,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
 
       # Verify transaction status was updated to pending_reconciliation
       assert {:ok, [t]} =
-               PaymentQueries.get_transactions_by_status("pending_reconciliation", user.id)
+               PaymentQueries.get_transactions_by_status(:pending_reconciliation, user.id)
 
       assert t.subscription_id == subscription_id
     end
@@ -455,7 +455,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_paid"
       )
 
@@ -471,7 +471,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
 
       assert {:ok, :invoice_processed} = process(event, invoice)
 
-      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("completed", user.id)
+      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status(:completed, user.id)
       assert length(transactions) == 2
     end
 
@@ -482,7 +482,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_dupe"
       )
 
@@ -500,7 +500,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       assert {:ok, :invoice_processed} = process(payment_succeeded, invoice)
       assert {:ok, :already_processed} = process(paid, invoice)
 
-      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("completed", user.id)
+      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status(:completed, user.id)
       assert length(transactions) == 2
     end
 
@@ -511,7 +511,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_parent_ref"
       )
 
@@ -533,7 +533,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
 
       assert {:ok, :invoice_processed} = process(event, invoice)
 
-      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("completed", user.id)
+      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status(:completed, user.id)
       assert length(transactions) == 2
     end
 
@@ -544,7 +544,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       insert(:payment_transaction,
         user: user,
         subscription_id: subscription_id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_parent_expanded"
       )
 
@@ -563,7 +563,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
 
       assert {:ok, :invoice_processed} = process(event, invoice)
 
-      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("completed", user.id)
+      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status(:completed, user.id)
       assert length(transactions) == 2
     end
 

@@ -14,7 +14,7 @@ defmodule Tymeslot.PaymentTestHelpers do
     defaults = %{
       user_id: attrs[:user_id] || raise("user_id is required"),
       amount: 500,
-      status: "pending",
+      status: :pending,
       stripe_id: "ch_test_#{System.unique_integer([:positive])}",
       stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
       product_identifier: "pro_monthly",

@@ -62,7 +62,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
   end
 
   # Payment transactions stand in for the subscription records a subscription
-  # manager keeps: they carry the same user, customer and subscription ids.
+  # manager keeps: they carry the same user, customer and subscription ids, and
+  # the subscription's status rides in their metadata.
   defp stub_lookups_over_transactions do
     stub(SubscriptionManagerMock, :get_subscription_by_customer_id, fn id ->
       PaymentTransactionSchema |> Repo.get_by(stripe_customer_id: id) |> as_subscription()
@@ -78,7 +79,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
   defp as_subscription(transaction),
     do: %{
       user_id: transaction.user_id,
-      status: transaction.status,
+      status: transaction.metadata["subscription_status"],
       stripe_subscription_id: transaction.subscription_id
     }
 
@@ -105,7 +106,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     # subscription: only a live one has access a refund can end.
     insert(:payment_transaction,
       user: user,
-      status: "active",
+      status: :completed,
+      metadata: %{"subscription_status" => "active"},
       stripe_customer_id: customer_id,
       subscription_id: "sub_current"
     )
@@ -395,7 +397,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
 
       insert(:payment_transaction,
         user: user,
-        status: "canceled",
+        status: :completed,
+        metadata: %{"subscription_status" => "canceled"},
         stripe_customer_id: customer_id,
         subscription_id: "sub_ended"
       )

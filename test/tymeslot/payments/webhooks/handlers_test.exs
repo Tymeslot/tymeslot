@@ -89,7 +89,7 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
       Factory.insert(:payment_transaction,
         user: user,
         stripe_id: "cs_expired",
-        status: "pending"
+        status: :pending
       )
 
       session = %{"id" => "cs_expired"}
@@ -102,7 +102,7 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
           stripe_id: "cs_expired"
         )
 
-      assert tx.status == "failed"
+      assert tx.status == :failed
     end
 
     test "handle/1 handles expired session when transaction not found" do

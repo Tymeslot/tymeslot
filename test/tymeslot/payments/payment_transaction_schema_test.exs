@@ -16,7 +16,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
       attrs = %{
         user_id: user.id,
         amount: 1000,
-        status: "completed"
+        status: :completed
       }
 
       changeset = PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, attrs)
@@ -70,7 +70,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
         PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
           user_id: user.id,
           amount: -1,
-          status: "completed"
+          status: :completed
         })
 
       refute changeset.valid?
@@ -84,7 +84,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
         PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
           user_id: user.id,
           amount: 0,
-          status: "completed"
+          status: :completed
         })
 
       assert changeset.valid?
@@ -97,7 +97,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
         PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
           user_id: user.id,
           amount: 500,
-          status: "completed",
+          status: :completed,
           tax_amount: -1
         })
 
@@ -112,7 +112,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
         PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
           user_id: user.id,
           amount: 500,
-          status: "completed",
+          status: :completed,
           discount_amount: -1
         })
 
@@ -127,7 +127,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
         PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
           user_id: user.id,
           amount: 1000,
-          status: "completed",
+          status: :completed,
           country_code: "USA"
         })
 
@@ -142,7 +142,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
         PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
           user_id: user.id,
           amount: 1000,
-          status: "completed",
+          status: :completed,
           country_code: "US"
         })
 
@@ -155,7 +155,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
       attrs = %{
         user_id: user.id,
         amount: 1000,
-        status: "completed",
+        status: :completed,
         stripe_id: "pi_abc123"
       }
 
@@ -178,7 +178,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
       attrs = %{
         user_id: user.id,
         amount: 2500,
-        status: "completed",
+        status: :completed,
         stripe_id: "pi_optional_test",
         stripe_customer_id: "cus_123",
         product_identifier: "pro_monthly",
@@ -206,7 +206,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
         PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
           user_id: user.id,
           amount: 1000,
-          status: "completed"
+          status: :completed
         })
 
       assert get_field(changeset, :is_eu_business) == false
@@ -219,7 +219,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
       attrs = %{
         user_id: user.id,
         amount: 1000,
-        status: "pending"
+        status: :pending
       }
 
       {:ok, _transaction} =
@@ -241,7 +241,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
       attrs = %{
         user_id: user.id,
         amount: 1000,
-        status: "completed"
+        status: :completed
       }
 
       {:ok, _transaction1} =
