@@ -14,6 +14,9 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   application code reads as the mistake it would be.
   """
 
+  alias Tymeslot.Availability.Events, as: AvailabilityEvents
+  alias Tymeslot.Integrations.Calendar.CalDAV.HostAddresses
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
@@ -148,6 +151,48 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
       {:error, :all_clients_failed}
     else
       {:ok, Enum.uniq_by(successes, &{&1[:uid], &1[:start_time]})}
+    end
+  end
+
+  @doc """
+  The addresses a CalDAV integration's host is known by, the ones an
+  invitation they declined is matched against (`CalDAV.HostAddresses`).
+  """
+  @spec host_addresses(integration()) :: [String.t()]
+  def host_addresses(%CalendarIntegrationSchema{} = integration),
+    do: HostAddresses.for_integration(integration)
+
+  @doc """
+  The integration's busy intervals over the range, as booking availability
+  computes them: the fresh-fetch read, kept to the events that block, each
+  turned into its `{start, end}` UTC interval.
+
+  Exchange answers from its own busy read (`fetch_exchange_busy_intervals/3`),
+  since its item read does not expand a series and availability does not use
+  it. All-day events are anchored to UTC days, so a caller asking about an
+  all-day event should ask about a UTC day.
+  """
+  @spec fetch_busy_intervals(integration(), DateTime.t(), DateTime.t()) ::
+          {:ok, [{DateTime.t(), DateTime.t()}]} | {:error, term()}
+  def fetch_busy_intervals(
+        %CalendarIntegrationSchema{provider: "exchange"} = integration,
+        range_start,
+        range_end
+      ) do
+    with {:ok, intervals} <- fetch_exchange_busy_intervals(integration, range_start, range_end) do
+      {:ok, Enum.map(intervals, &{&1.start_at, &1.end_at})}
+    end
+  end
+
+  def fetch_busy_intervals(%CalendarIntegrationSchema{} = integration, range_start, range_end) do
+    with {:ok, events} <- fetch_fresh_events(integration, range_start, range_end) do
+      intervals =
+        for event <- events,
+            CalendarEvent.blocking?(event),
+            {:ok, interval} <- [AvailabilityEvents.to_interval(event, "Etc/UTC")],
+            do: interval
+
+      {:ok, intervals}
     end
   end
 
@@ -484,6 +529,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
     context = %{
       calendar_integration_id: integration.id,
       provider_calendar_id: integration.default_booking_calendar_id || "",
+      host_addresses: HostAddresses.for_integration(integration),
       synced_at: DateTime.utc_now(:microsecond)
     }
 

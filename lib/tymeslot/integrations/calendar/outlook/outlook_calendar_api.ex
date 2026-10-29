@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubs
   alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
+  alias Tymeslot.Integrations.Calendar.Shared.ReadPageSize
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.ApiResponse
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
@@ -24,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint
 
   @base_url "https://graph.microsoft.com/v1.0"
+  @list_page_size 1000
   @silent_event_headers [
     {"Content-Type", "application/json"},
     {"Prefer", "outlook.calendar-update.disableNotifications"}
@@ -507,7 +509,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "startDateTime" => DateTime.to_iso8601(start_time),
       "endDateTime" => DateTime.to_iso8601(end_time),
       "$orderby" => "start/dateTime",
-      "$top" => "1000",
+      "$top" => Integer.to_string(ReadPageSize.get(@list_page_size)),
       "$select" =>
         "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone",
       "$expand" =>

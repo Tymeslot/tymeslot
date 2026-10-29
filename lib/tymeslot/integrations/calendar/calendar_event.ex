@@ -124,10 +124,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
     do: not instant?(event.start_at, event.end_at)
 
   def blocking?(%__MODULE__{}), do: true
-  # Plain maps from the OAuth fresh-fetch path (convert_events) carry string-valued fields.
-  def blocking?(%{status: status}) when status in ["cancelled", "declined"], do: false
-  def blocking?(%{transparency: "transparent"}), do: false
-  def blocking?(%{} = event), do: not instant?(event[:start_time], event[:end_time])
+  # Plain maps from the fresh-fetch path carry string-valued fields: lowercase
+  # from the OAuth providers' `convert_events`, the property's own value
+  # (`STATUS:CANCELLED`) from the CalDAV family's, which passes the parsed
+  # event through as it is.
+  def blocking?(%{} = event) do
+    not unavailable_status?(event[:status]) and event[:transparency] != "transparent" and
+      not instant?(event[:start_time], event[:end_time])
+  end
+
+  defp unavailable_status?(status) when is_binary(status),
+    do: String.downcase(String.trim(status)) in ["cancelled", "declined"]
+
+  defp unavailable_status?(_status), do: false
 
   defp instant?(%DateTime{} = start, %DateTime{} = finish),
     do: DateTime.compare(start, finish) == :eq
