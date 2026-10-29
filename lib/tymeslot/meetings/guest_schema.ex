@@ -28,7 +28,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
           name: String.t() | nil,
           locale: String.t() | nil,
           timezone: String.t() | nil,
-          status: String.t(),
+          status: status(),
           rsvp_token: String.t() | nil,
           rsvp_token_hash: String.t() | nil,
           responded_at: DateTime.t() | nil,
@@ -53,7 +53,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
     # values (`Tymeslot.Meetings.Recipient.as_seen_by_guest/2`).
     field(:locale, :string)
     field(:timezone, :string)
-    field(:status, :string, default: "pending")
+    field(:status, Ecto.Enum, values: [:pending, :accepted, :declined], default: :pending)
     # Every email a guest is sent (confirmation, reminders, reschedules)
     # rebuilds their RSVP links from this token, so it is encrypted rather
     # than only hashed, and looked up by `rsvp_token_hash`.
@@ -82,14 +82,15 @@ defmodule Tymeslot.Meetings.GuestSchema do
   """
   @type inviter :: :booker | :organizer
 
-  @valid_statuses ~w(pending accepted declined)
+  @typedoc "How a guest has answered their invitation."
+  @type status :: :pending | :accepted | :declined
   @token_bytes 24
 
   @doc """
   Changeset for adding a guest to a meeting.
 
   Normalises the email, validates its format, defaults the status to
-  `"pending"`, and generates an unguessable `rsvp_token` when one is not
+  `:pending`, and generates an unguessable `rsvp_token` when one is not
   already present. A `locale` must be a supported one and a `timezone` a
   known IANA zone, as for the meeting's attendee; both are optional.
   """
@@ -114,7 +115,6 @@ defmodule Tymeslot.Meetings.GuestSchema do
     )
     |> validate_change(:timezone, &validate_timezone/2)
     |> ensure_status()
-    |> validate_inclusion(:status, @valid_statuses)
     |> ensure_rsvp_token()
     |> Token.put_hash(:rsvp_token, :rsvp_token_hash)
     |> unique_constraint(:rsvp_token_hash)
@@ -144,7 +144,6 @@ defmodule Tymeslot.Meetings.GuestSchema do
     guest
     |> cast(attrs, [:status, :responded_at])
     |> validate_required([:status])
-    |> validate_inclusion(:status, @valid_statuses)
   end
 
   @doc "Changeset for stamping the confirmation email as sent."
@@ -183,20 +182,9 @@ defmodule Tymeslot.Meetings.GuestSchema do
   @spec empty_summary() :: summary()
   def empty_summary, do: %{total: 0, accepted: 0, declined: 0, pending: 0}
 
-  @doc """
-  Maps an RSVP status string to its summary bucket key.
-
-  Anything other than `"accepted"`/`"declined"` (i.e. `"pending"` or an
-  unexpected value) buckets as `:pending`.
-  """
-  @spec status_key(String.t()) :: :accepted | :declined | :pending
-  def status_key("accepted"), do: :accepted
-  def status_key("declined"), do: :declined
-  def status_key(_pending), do: :pending
-
   defp ensure_status(changeset) do
     case get_field(changeset, :status) do
-      nil -> put_change(changeset, :status, "pending")
+      nil -> put_change(changeset, :status, :pending)
       _present -> changeset
     end
   end

@@ -34,8 +34,8 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     # Written directly: the meeting is often in a state (cancelled, awaiting
     # approval) that no longer takes responses, but the guests answered while
     # it still did.
-    {:ok, _guest} = GuestQueries.update_rsvp(accepted, %{status: "accepted"})
-    {:ok, _guest} = GuestQueries.update_rsvp(declined, %{status: "declined"})
+    {:ok, _guest} = GuestQueries.update_rsvp(accepted, %{status: :accepted})
+    {:ok, _guest} = GuestQueries.update_rsvp(declined, %{status: :declined})
 
     for guest <- [accepted, declined] do
       {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
@@ -79,7 +79,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
       assert Enum.sort(sent) == Enum.sort(expected)
 
       guests = GuestQueries.list_for_meeting(meeting.id)
-      assert Enum.all?(guests, &(&1.status == "pending" and is_nil(&1.responded_at)))
+      assert Enum.all?(guests, &(&1.status == :pending and is_nil(&1.responded_at)))
       # They were invited before; that stays on record.
       assert GuestQueries.list_unsent_for_meeting(meeting.id) == []
     end
@@ -267,7 +267,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
 
       assert :ok = GuestNotifications.reset_for_new_time(meeting)
 
-      assert Enum.all?(GuestQueries.list_for_meeting(meeting.id), &(&1.status == "pending"))
+      assert Enum.all?(GuestQueries.list_for_meeting(meeting.id), &(&1.status == :pending))
       # Still on record as invited: approval tells them about the move.
       assert GuestQueries.list_unsent_for_meeting(meeting.id) == []
     end

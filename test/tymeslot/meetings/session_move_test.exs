@@ -104,13 +104,13 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
         "not.coming@example.com"
       ])
 
-    {:ok, _accepted} = Guests.record_rsvp(coming.rsvp_token, "accepted")
-    {:ok, _declined} = Guests.record_rsvp(not_coming.rsvp_token, "declined")
+    {:ok, _accepted} = Guests.record_rsvp(coming.rsvp_token, :accepted)
+    {:ok, _declined} = Guests.record_rsvp(not_coming.rsvp_token, :declined)
 
     {:ok, _moved} = PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
 
-    assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(coming.rsvp_token)
-    assert {:ok, %{status: "declined"}} = GuestQueries.get_by_token(not_coming.rsvp_token)
+    assert {:ok, %{status: :pending}} = GuestQueries.get_by_token(coming.rsvp_token)
+    assert {:ok, %{status: :declined}} = GuestQueries.get_by_token(not_coming.rsvp_token)
   end
 
   test "refuses a start in the past, a close after the new start and a cancelled session",

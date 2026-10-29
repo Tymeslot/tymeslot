@@ -229,11 +229,11 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
       {:ok, guest} =
         GuestQueries.insert_guest(%{meeting_id: meeting.id, email: "guest@example.com"})
 
-      {:ok, _rsvp} = GuestQueries.update_rsvp(guest, %{status: "accepted"})
+      {:ok, _rsvp} = GuestQueries.update_rsvp(guest, %{status: :accepted})
 
       assert {:ok, _updated} = FollowCalendar.execute(meeting, new_start, new_end)
 
-      assert [%{status: "pending"}] = GuestQueries.list_for_meeting(meeting.id)
+      assert [%{status: :pending}] = GuestQueries.list_for_meeting(meeting.id)
       send_reschedule_emails()
       assert_received {:email, %{to: [{_name, "guest@example.com"}]}}
     end

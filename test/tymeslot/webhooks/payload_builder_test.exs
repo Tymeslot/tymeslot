@@ -248,7 +248,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
             %GuestSchema{
               email: "colleague@example.com",
               name: "A Colleague",
-              status: "accepted",
+              status: :accepted,
               responded_at: ~U[2026-09-01 10:00:00Z]
             }
           ]

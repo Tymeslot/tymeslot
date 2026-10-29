@@ -74,7 +74,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
       {:ok, guests} = Guests.create_for_meeting(meeting.id, ["a@example.com", "b@example.com"])
 
       assert length(guests) == 2
-      assert Enum.all?(guests, &(&1.status == "pending"))
+      assert Enum.all?(guests, &(&1.status == :pending))
       assert Enum.all?(guests, &(byte_size(&1.rsvp_token) > 0))
 
       stored = GuestQueries.list_for_meeting(meeting.id)
@@ -192,7 +192,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
                %{
                  id: guest_id,
                  email: "colleague@example.com",
-                 status: "pending",
+                 status: :pending,
                  invited_by: :organizer
                }
              ] = added
@@ -372,18 +372,18 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
 
     test "accepts via token and stamps responded_at", %{guest: guest} do
-      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, "accepted")
-      assert updated.status == "accepted"
+      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, :accepted)
+      assert updated.status == :accepted
       assert %DateTime{} = updated.responded_at
     end
 
     test "declines via token", %{guest: guest} do
-      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, "declined")
-      assert updated.status == "declined"
+      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, :declined)
+      assert updated.status == :declined
     end
 
     test "rejects an unknown token" do
-      assert {:error, :not_found} = Guests.record_rsvp("nope", "accepted")
+      assert {:error, :not_found} = Guests.record_rsvp("nope", :accepted)
     end
 
     test "rejects an invalid response", %{guest: guest} do
@@ -395,8 +395,8 @@ defmodule Tymeslot.Meetings.GuestsTest do
       test "refuses a #{status} meeting and leaves the guest pending" do
         guest = guest_for(status: unquote(status))
 
-        assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
-        assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+        assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, :accepted)
+        assert {:ok, %{status: :pending}} = GuestQueries.get_by_token(guest.rsvp_token)
       end
     end
 
@@ -404,15 +404,15 @@ defmodule Tymeslot.Meetings.GuestsTest do
       # The time the guest would be answering for no longer holds.
       guest = guest_for(reschedule_requested_at: DateTime.utc_now(:second))
 
-      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
-      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, :accepted)
+      assert {:ok, %{status: :pending}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
 
     test "refuses a meeting that has already started" do
       guest = guest_for(started_meeting_attrs())
 
-      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "declined")
-      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, :declined)
+      assert {:ok, %{status: :pending}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
 
     test "notifies the organiser's subscribers" do
@@ -421,7 +421,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
       {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
       :ok = Guests.subscribe_to_rsvp_updates(user.id)
 
-      {:ok, _guest} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      {:ok, _guest} = Guests.record_rsvp(guest.rsvp_token, :accepted)
 
       meeting_id = meeting.id
       assert_receive {:guest_rsvp_updated, ^meeting_id}
@@ -432,7 +432,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
       guest = guest_for(organizer_user: user, status: "cancelled")
       :ok = Guests.subscribe_to_rsvp_updates(user.id)
 
-      {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, :accepted)
 
       refute_receive {:guest_rsvp_updated, _meeting_id}
     end
@@ -481,7 +481,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
       meeting = insert(:cancelled_meeting)
       {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
 
-      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, :accepted)
     end
 
     test "rejects an RSVP for a guest whose owning participant has cancelled their seat" do
@@ -501,7 +501,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
 
       {:ok, _cancelled} = ParticipantQueries.cancel(participant)
 
-      assert {:error, :not_found} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      assert {:error, :not_found} = Guests.record_rsvp(guest.rsvp_token, :accepted)
     end
 
     test "accepts an RSVP for a guest whose owning participant is still live" do
@@ -519,8 +519,8 @@ defmodule Tymeslot.Meetings.GuestsTest do
       {:ok, [guest]} =
         Guests.create_for_participant(meeting.id, participant.id, ["guest@example.com"])
 
-      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, "accepted")
-      assert updated.status == "accepted"
+      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, :accepted)
+      assert updated.status == :accepted
     end
   end
 
@@ -528,8 +528,8 @@ defmodule Tymeslot.Meetings.GuestsTest do
     test "aggregates RSVP counts" do
       meeting = insert(:meeting)
       {:ok, [g1, g2, _g3]} = Guests.create_for_meeting(meeting.id, ~w(a@x.com b@x.com c@x.com))
-      {:ok, _accepted} = Guests.record_rsvp(g1.rsvp_token, "accepted")
-      {:ok, _declined} = Guests.record_rsvp(g2.rsvp_token, "declined")
+      {:ok, _accepted} = Guests.record_rsvp(g1.rsvp_token, :accepted)
+      {:ok, _declined} = Guests.record_rsvp(g2.rsvp_token, :declined)
 
       summary = Guests.summarize(GuestQueries.list_for_meeting(meeting.id))
 

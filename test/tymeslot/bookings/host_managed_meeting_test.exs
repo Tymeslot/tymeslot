@@ -155,7 +155,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     test "moves the meeting, keeping its length, and tells the host and every guest", ctx do
       Repo.update_all(
         from(g in GuestSchema, where: g.meeting_id == ^ctx.meeting.id),
-        set: [status: "accepted"]
+        set: [status: :accepted]
       )
 
       new_start = DateTime.add(ctx.meeting.start_time, 2, :day)
@@ -188,7 +188,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
       # Everyone is asked again whether they can come.
       assert ctx.meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.status) ==
-               ["pending", "pending"]
+               [:pending, :pending]
     end
 
     test "refuses a time the host already has another meeting at", ctx do
@@ -289,7 +289,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     test "refuses the time it already has, so nobody is told of a move or asked again", ctx do
       Repo.update_all(
         from(g in GuestSchema, where: g.meeting_id == ^ctx.meeting.id),
-        set: [status: "accepted"]
+        set: [status: :accepted]
       )
 
       assert {:error, :same_time} =
@@ -300,7 +300,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       assert Repo.get!(MeetingSchema, ctx.meeting.id).ical_sequence == ctx.meeting.ical_sequence
 
       assert ctx.meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.status) ==
-               ["accepted", "accepted"]
+               [:accepted, :accepted]
     end
 
     test "is not for a meeting with a booker, who moves it themselves", ctx do

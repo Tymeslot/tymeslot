@@ -225,7 +225,7 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
         participant_id: ada.id,
         name: "Not Coming",
         email: "declined@example.com",
-        status: "declined",
+        status: :declined,
         invited_by: :booker
       })
 

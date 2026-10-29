@@ -141,7 +141,7 @@ defmodule Tymeslot.Notifications.Email.GuestReminderTest do
 
       {:ok, _guest} =
         GuestQueries.update_rsvp(declined, %{
-          status: "declined",
+          status: :declined,
           responded_at: DateTime.utc_now(:second)
         })
 

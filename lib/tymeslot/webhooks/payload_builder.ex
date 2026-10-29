@@ -110,7 +110,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       %{
         email: guest.email,
         name: guest.name,
-        status: guest.status,
+        status: Atom.to_string(guest.status),
         responded_at: format_datetime(guest.responded_at)
       }
     end)

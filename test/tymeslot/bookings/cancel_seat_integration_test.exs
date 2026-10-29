@@ -273,7 +273,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
       Guests.create_for_participant(meeting.id, stayer.id, ["stayers.guest@example.com"])
 
     {:ok, guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
-    assert {:ok, _accepted} = Meetings.record_guest_rsvp(guest.rsvp_token, "accepted")
+    assert {:ok, _accepted} = Meetings.record_guest_rsvp(guest.rsvp_token, :accepted)
 
     assert {:ok, cancelled_meeting} = Cancel.execute(meeting, caller: :organizer)
     assert cancelled_meeting.status == "cancelled"
@@ -354,7 +354,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
              })
 
     # The guest's RSVP link, live a moment ago, is inert on a cancelled meeting.
-    assert {:error, :meeting_closed} = Meetings.record_guest_rsvp(guest.rsvp_token, "declined")
+    assert {:error, :meeting_closed} = Meetings.record_guest_rsvp(guest.rsvp_token, :declined)
   end
 
   # A participant's guests are guests of their seat: when the seat goes,
@@ -373,7 +373,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
       {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
     end
 
-    assert {:ok, _declined} = Meetings.record_guest_rsvp(declined.rsvp_token, "declined")
+    assert {:ok, _declined} = Meetings.record_guest_rsvp(declined.rsvp_token, :declined)
 
     assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
 
