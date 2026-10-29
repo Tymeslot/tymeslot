@@ -67,14 +67,14 @@ defmodule TymeslotWeb.Themes.Shared.ChoicesInUrl do
     assigns = socket.assigns
 
     is_nil(socket.redirected) and is_map(assigns[:journey]) and
-      assigns[:live_action] in @booking_routes and is_binary(assigns[:request_path])
+      assigns[:live_action] in @booking_routes and is_binary(assigns[:username_context])
   end
 
   defp patch_if_changed(socket, query) do
     if query == (socket.assigns[:page_query_params] || %{}) do
       socket
     else
-      path = socket.assigns.request_path
+      path = PathHandlers.page_path(socket)
       to = if query == %{}, do: path, else: "#{path}?#{URI.encode_query(query)}"
 
       socket

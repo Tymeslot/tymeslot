@@ -150,6 +150,34 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
     end
   end
 
+  describe "a page reached with a doubled slash" do
+    # The router reads `//username` as `/username`, but navigation refuses
+    # a path starting `//` (a protocol-relative URL), so the page's patch
+    # must name its route, not the address bar's spelling of it.
+    test "patches to the overview's own path", %{conn: conn} do
+      %{profile: profile} = seed_organiser("1", "url-doubled")
+      {:ok, view, _html} = live(conn, "http://www.example.com//#{profile.username}")
+
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+
+      url = BookingTestHelpers.last_patched_url(view)
+      assert URI.parse(url).path == "/#{profile.username}"
+      assert query(url)["duration"] == "quick-chat"
+    end
+
+    test "patches to a meeting type's own path", %{conn: conn} do
+      %{profile: profile} = seed_organiser("1", "url-doubled-type")
+
+      {:ok, view, _html} =
+        live(conn, "http://www.example.com//#{profile.username}//quick-chat")
+
+      BookingDriver.pick_first_slot(view)
+
+      url = BookingTestHelpers.await_patched_url(view, &is_binary(query(&1)["time"]))
+      assert URI.parse(url).path == "/#{profile.username}/quick-chat"
+    end
+  end
+
   describe "an embedded page" do
     test "keeps the embed's parameters and its own path in each patch", %{conn: conn} do
       %{profile: profile} = seed_organiser("1", "url-embed")

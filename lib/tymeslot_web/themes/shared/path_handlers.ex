@@ -14,13 +14,19 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   """
   @spec build_path_with_locale(Phoenix.LiveView.Socket.t(), String.t()) :: String.t()
   def build_path_with_locale(socket, locale) do
-    base_path = get_base_path(socket)
+    base_path = page_path(socket)
     query_params = build_query_params(socket, locale)
     query_string = URI.encode_query(query_params)
     if query_string == "", do: base_path, else: "#{base_path}?#{query_string}"
   end
 
-  defp get_base_path(socket) do
+  @doc """
+  The page's own path, built from its route and the organiser and meeting
+  type it resolved rather than echoed from the address bar, which may carry
+  a path the router accepts and navigation refuses (`//username`).
+  """
+  @spec page_path(Phoenix.LiveView.Socket.t()) :: String.t()
+  def page_path(socket) do
     username = socket.assigns[:username_context]
 
     if is_nil(username) do
