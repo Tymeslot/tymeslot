@@ -40,17 +40,19 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   """
 
   alias Tymeslot.CalendarGrid.AllDay
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Profiles
 
   @typedoc "One announced change: the field, its previous value (nil when unknown) and its current one."
-  @type change :: {:title | :location | :description | :time, term(), term()}
+  @type change :: {:title | :location | :description | :video_link | :time, term(), term()}
 
   @doc """
   Invitation details from the job args of a `send_calendar_invitation` job.
   `:method` is `:cancel` for a cancellation (`:request` otherwise, and for a
-  job enqueued before the method was read), and `:series` whether that
-  cancellation takes every occurrence of a recurring event.
+  job enqueued before the method was read), `:series` whether that
+  cancellation takes every occurrence of a recurring event, and `:removed`
+  whether it is the recipient's removal from an event that goes ahead.
   """
   @spec invitation_details(map(), map()) :: {:ok, map()} | {:error, String.t()}
   def invitation_details(user, args) do
@@ -64,12 +66,14 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
          location: args["event_location"],
          video_link: args["event_video_link"],
          description: args["event_description"],
+         recurrence_rule: args["event_recurrence_rule"],
          organizer_name: user.name || user.email,
          organizer_email: user.email,
          organizer_user_id: user.id,
          method: parse_method(args["method"]),
          sequence: args["sequence"],
-         series: args["event_series"] == true
+         series: args["event_series"] == true,
+         removed: args["event_removed"] == true
        })}
     end
   end
@@ -87,7 +91,12 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
       []
       |> maybe_add_change(:title, args["before_title"], current_event.summary)
       |> maybe_add_change(:location, args["before_location"], current_event.location)
-      |> maybe_add_change(:description, args["before_description"], current_event.description)
+      |> maybe_add_change(
+        :description,
+        EventVideo.without_join_lines(args["before_description"]),
+        EventVideo.without_join_lines(current_event.description)
+      )
+      |> maybe_add_video_change(args, video_link(current_event))
       |> maybe_add_time_change(args, current_event)
     end
   end
@@ -111,6 +120,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
       summary: snapshot["summary"],
       location: snapshot["location"],
       description: snapshot["description"],
+      video_link: snapshot["video_link"],
       all_day: snapshot["all_day"] == true,
       start_at: snapshot_datetime(snapshot["start_at"]),
       end_at: snapshot_datetime(snapshot["end_at"]),
@@ -154,6 +164,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
          event_title: current_event.summary,
          event_uid: current_event.uid,
          location: current_event.location,
+         video_link: video_link(current_event),
          description: current_event.description,
          organizer_name: user.name || user.email,
          organizer_email: user.email,
@@ -234,9 +245,14 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   defp shift_timing(timing, _zone), do: timing
 
   defp change_in_zone({:time, before, current}, zone),
-    do: {:time, in_zone(before, zone), in_zone(current, zone)}
+    do: {:time, moment_in_zone(before, zone), moment_in_zone(current, zone)}
 
   defp change_in_zone(change, _zone), do: change
+
+  defp moment_in_zone({start_at, end_at}, zone),
+    do: {in_zone(start_at, zone), in_zone(end_at, zone)}
+
+  defp moment_in_zone(moment, zone), do: in_zone(moment, zone)
 
   defp in_zone(%DateTime{} = datetime, zone) do
     case DateTime.shift_zone(datetime, zone) do
@@ -286,7 +302,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
       for {field, current} <- [
             title: current_event.summary,
             location: current_event.location,
-            description: current_event.description
+            description: EventVideo.without_join_lines(current_event.description),
+            video_link: video_link(current_event)
           ],
           normalise_blank(current) != nil,
           do: {field, nil, current}
@@ -304,6 +321,18 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
       changes
     end
   end
+
+  # The join link travels in its own field, so a new room reads as a new
+  # link rather than as an edit of the description it is written into. A
+  # job enqueued before the previous link was recorded carries no
+  # `before_video_link` key and announces no video change. A baseline records
+  # no link as "", which is read as none.
+  defp maybe_add_video_change(changes, %{"before_video_link" => before}, current),
+    do: maybe_add_change(changes, :video_link, normalise_blank(before), current)
+
+  defp maybe_add_video_change(changes, _args, _current), do: changes
+
+  defp video_link(event), do: Map.get(event, :video_link)
 
   # Compares whichever representation each side carries, so an event moved to
   # other days, retimed, or toggled between all-day and timed all read as a
@@ -357,9 +386,10 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
 
   defp same_moment?(_before, _current), do: false
 
-  # What the email shows for a moment: a timed event's start instant (as it
-  # always has), an all-day event's inclusive range of days.
-  defp display_moment({:timed, start_at, _end_at}), do: start_at
+  # What the email shows for a moment: a timed event's start and end, so a
+  # change of the end alone is visible, an all-day event's inclusive range
+  # of days.
+  defp display_moment({:timed, start_at, end_at}), do: {start_at, end_at}
 
   defp display_moment({:all_day, start_date, end_date}),
     do: Date.range(start_date, AllDay.last_day(start_date, end_date))

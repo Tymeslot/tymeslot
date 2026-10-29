@@ -21,6 +21,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(:location_type) => atom() | nil,
           optional(:audience) => :host | :guest,
           optional(:meeting_type) => String.t() | nil,
+          optional(:event_title) => String.t() | nil,
           optional(:time_format) => String.t() | nil,
           optional(atom()) => term()
         }
@@ -31,6 +32,10 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
   An all-day event (`all_day: true`, with `:date` its first day and
   `:last_date` its inclusive last day) has no clock time or duration in
   minutes, so the time line says "All day" and the duration counts days.
+
+  A calendar event, which has a title rather than a meeting type, passes
+  `:event_title` instead of `:meeting_type`, and the row is labelled as the
+  event.
   """
   @spec meeting_details_table(meeting_details(), String.t()) :: String.t()
   def meeting_details_table(details, locale) do
@@ -41,7 +46,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
       duration = Formatting.format_meeting_duration(details, locale)
       location = Formatting.format_location(details)
       location_note = Formatting.location_note(details)
-      meeting_type = Map.get(details, :meeting_type)
+      title_row = title_row(details)
 
       Stack.spaced("""
       <mj-section
@@ -55,7 +60,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           #{hero_date(date_line)}
           #{hero_time(time_line)}
           #{hero_divider()}
-          #{hero_meta_grid(meeting_type, duration, location, location_note)}
+          #{hero_meta_grid(title_row, duration, location, location_note)}
         </mj-column>
       </mj-section>
       """)
@@ -127,15 +132,17 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
     """
   end
 
-  defp hero_meta_grid(meeting_type, duration, location, location_note) do
-    type_row =
-      case meeting_type do
-        nil -> ""
-        type -> hero_meta_row(dgettext("emails", "Meeting type"), type, border_bottom: true)
-      end
+  defp title_row(%{event_title: title}) when is_binary(title) and title != "",
+    do: hero_meta_row(dgettext("emails", "Event"), title, border_bottom: true)
 
+  defp title_row(%{meeting_type: type}) when is_binary(type),
+    do: hero_meta_row(dgettext("emails", "Meeting type"), type, border_bottom: true)
+
+  defp title_row(_details), do: ""
+
+  defp hero_meta_grid(title_row, duration, location, location_note) do
     """
-    #{type_row}
+    #{title_row}
     <mj-table padding="0">
       <tr>
         <td style="vertical-align: top; padding: 12px 12px 0 0; width: 50%;">

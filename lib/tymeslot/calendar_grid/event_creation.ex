@@ -426,6 +426,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
         description: build_description(creating[:description], video_context),
         video_link: meeting_url,
         attendee_video_url: meeting_url,
+        recurrence_rule: creating[:recurrence_rule],
         ical_sequence: 0,
         calendar_integration: %{user_id: user_id}
       })

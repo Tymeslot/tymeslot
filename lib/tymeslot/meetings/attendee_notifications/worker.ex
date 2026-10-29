@@ -221,6 +221,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       before_title: last_state_string(event, "title"),
       before_location: last_state_string(event, "location"),
       before_description: last_state_string(event, "description"),
+      before_video_link: last_state_string(event, "video_link"),
       before_start_at: last_state_datetime(event, "starts_at"),
       before_end_at: last_state_datetime(event, "ends_at"),
       before_start_date: last_state_string(event, "start_date"),
