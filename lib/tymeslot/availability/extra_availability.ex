@@ -11,8 +11,8 @@ defmodule Tymeslot.Availability.ExtraAvailability do
   They belong to one schedule, so they reach exactly the meeting types booked
   against it, and they are stored as `availability_overrides` rows of type
   `extra_hours`. Time off and an `unavailable` override on the date still
-  outrank them: either closes an extra time too. Past dates are deleted by the daily retention run
-  (`prune_past/1`).
+  outrank them: either closes an extra time too. Past dates are deleted by
+  the daily retention run (`prune_past/1`).
   """
 
   alias Ecto.Changeset
