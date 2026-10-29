@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.AvailabilityView
   alias Tymeslot.Integrations.Calendar.BookingEligibility
+  alias Tymeslot.Integrations.Calendar.CalDAV.HostAddresses
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
@@ -255,6 +256,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       |> Enum.filter(keep?)
       |> Enum.map(&create_adapter_client(provider, &1))
       |> Enum.reject(&is_nil/1)
+      |> with_host_addresses(provider, integration)
     else
       _other ->
         Logger.warning("Unknown or unsupported calendar provider",
@@ -262,6 +264,19 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         )
 
         []
+    end
+  end
+
+  # The CalDAV family's reads mark the invitations its host declined
+  # (`CalDAV.HostAddresses`); only they need to know who the host is.
+  defp with_host_addresses([], _provider, _integration), do: []
+
+  defp with_host_addresses(clients, provider, integration) do
+    if ProviderConfig.caldav_based?(provider) do
+      addresses = HostAddresses.for_integration(integration)
+      Enum.map(clients, &Map.put(&1, :host_addresses, addresses))
+    else
+      clients
     end
   end
 
@@ -287,8 +302,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
            ProviderConfig.get_provider_module(provider),
          true <- callback_exported?(provider_module, :build_booking_client_config, 1),
          # credo:disable-for-next-line Credo.Check.Refactor.Apply
-         %{} = config <- apply(provider_module, :build_booking_client_config, [integration]) do
-      create_adapter_client(provider, config)
+         %{} = config <- apply(provider_module, :build_booking_client_config, [integration]),
+         %{} = client <- create_adapter_client(provider, config) do
+      [client] |> with_host_addresses(provider, integration) |> hd()
     else
       _other -> nil
     end

@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.Attendee
+  alias Tymeslot.Integrations.Calendar.CalDAV.HostAddresses
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
@@ -48,6 +49,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
 
     {events, defaulted} =
       raw_events
+      |> HostAddresses.mark_declined(Map.get(context, :host_addresses, []))
       |> expand_all(range_start, range_end)
       |> Enum.reduce({[], %{}}, fn raw, {acc, defaulted} ->
         case build_calendar_event(raw, context, provider) do
@@ -230,9 +232,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     }
 
     exdates = parse_exdates(raw[:exdate] || raw[:exdates] || [])
+    rdates = parse_exdates(raw[:rdates] || [])
 
     expander_event
-    rdates = parse_exdates(raw[:rdates] || [])
     |> RecurrenceExpander.expand(range_start, range_end, exdates: exdates, rdates: rdates)
     |> Enum.map(&{&1, occurrence_suffix(&1.start_time)})
     |> Enum.reject(fn {_occurrence, suffix} ->
@@ -543,6 +545,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp map_status("CONFIRMED"), do: :confirmed
   defp map_status("TENTATIVE"), do: :tentative
   defp map_status("CANCELLED"), do: :cancelled
+  # Not an iCalendar STATUS value: set by `CalDAV.HostAddresses` on an event
+  # the host declined.
+  defp map_status("DECLINED"), do: :declined
   defp map_status(_other), do: :confirmed
 
   defp map_organiser(nil), do: nil
