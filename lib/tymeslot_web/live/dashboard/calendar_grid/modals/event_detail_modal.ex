@@ -39,6 +39,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   attr :video_integrations, :list, default: []
   attr :pending_notification, :boolean, default: false
 
+  attr :undelivered_updates, :list,
+    default: [],
+    doc: "addresses of the guests whose latest update email could not be delivered"
+
   attr :recurrence_edit, :map,
     default: nil,
     doc: "the repeat editor's series start and staged pattern (`Shared.recurrence_edit/1`)"
@@ -72,6 +76,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           {dgettext("dashboard_calendar_events", "Cancel")}
         </button>
       </div>
+
+      <%!-- Undelivered-update notice --%>
+      <.info_box
+        :if={@undelivered_updates != []}
+        variant={:warning}
+        class="mb-3! p-3!"
+      >
+        <div id="undelivered-updates-notice" class="flex items-start gap-2" role="status">
+          <.icon name="hero-exclamation-triangle" class="w-5 h-5 shrink-0 text-amber-500" />
+          <div class="min-w-0 flex-1 text-token-sm">
+            <p>
+              {dngettext(
+                "dashboard_calendar_events",
+                "The latest update could not be emailed to this guest. Let them know another way.",
+                "The latest update could not be emailed to these guests. Let them know another way.",
+                length(@undelivered_updates)
+              )}
+            </p>
+            <ul class="mt-1 font-semibold break-all">
+              <li :for={email <- @undelivered_updates}>{email}</li>
+            </ul>
+          </div>
+          <button
+            type="button"
+            phx-click="dismiss_undelivered_updates"
+            phx-target={@myself}
+            class="text-token-sm text-amber-800 hover:text-amber-900 underline shrink-0"
+          >
+            {dgettext("dashboard_calendar_events", "Dismiss")}
+          </button>
+        </div>
+      </.info_box>
 
       <%!--
         Custom header: title gets full width, close button is absolute top-right.

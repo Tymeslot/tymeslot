@@ -41,7 +41,6 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "Unknown room creation error code",
        "Link missing or unreadable",
        "Invalid datetime: 2026-13-01",
-       "Partial delivery failure: 1 of 2 failed",
        "Partial cancellation email failure: one email succeeded, retry would duplicate"
      ]},
     {Workers.CalendarEventWorker,

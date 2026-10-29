@@ -42,6 +42,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity
   alias Tymeslot.Profiles
 
   @typedoc "One announced change: the field, its previous value (nil when unknown) and its current one."
@@ -53,6 +54,9 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   job enqueued before the method was read), `:series` whether that
   cancellation takes every occurrence of a recurring event, and `:removed`
   whether it is the recipient's removal from an event that goes ahead.
+  `:ical_uid` and `:other_entries` are the entries in the guest's calendar
+  the attachment changes, when they are not the event's own
+  (`Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity`).
   """
   @spec invitation_details(map(), map()) :: {:ok, map()} | {:error, String.t()}
   def invitation_details(user, args) do
@@ -63,6 +67,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
        |> Map.merge(%{
          event_title: args["event_title"],
          event_uid: args["event_uid"],
+         ical_uid: args["ical_uid"],
+         other_entries: SeriesIdentity.from_arg(args["other_entries"]),
          location: args["event_location"],
          video_link: args["event_video_link"],
          description: args["event_description"],
@@ -153,6 +159,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   carries neither representation's fields, which nothing can describe.
   `:series` is `:all` or `:following` for the update of a whole series or
   of its occurrences from the edited one on, `nil` for one event.
+  `:ical_uid` and `:other_entries` are as on `invitation_details/2`.
   """
   @spec update_details(map(), map(), [change()], map()) :: {:ok, map()} | {:error, :no_timing}
   def update_details(user, current_event, changes, args) do
@@ -163,6 +170,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
        Map.merge(view, %{
          event_title: current_event.summary,
          event_uid: current_event.uid,
+         ical_uid: args["ical_uid"],
+         other_entries: SeriesIdentity.from_arg(args["other_entries"]),
          location: current_event.location,
          video_link: video_link(current_event),
          description: current_event.description,

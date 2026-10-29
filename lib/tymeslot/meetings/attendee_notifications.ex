@@ -60,6 +60,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity
 
   @type event :: map
   @type attendee ::
@@ -155,6 +156,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     params = %{
       user_id: owner_user_id,
       event_uid: Map.get(updated, :uid),
+      ical_uid: SeriesIdentity.entry_uid(original),
+      other_entries: other_entries(scope == :all, original, updated),
       integration_id: Map.get(updated, :calendar_integration_id),
       attendee_emails: recipients,
       before_title: title_for(original),
@@ -176,6 +179,25 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  # An email about every occurrence, sent from another one, changes the
+  # entry the series' invitation made too. One about this occurrence and the
+  # following ones leaves it: the series' first is never among them.
+  defp other_entries(true = _whole_series, original, updated) do
+    case SeriesIdentity.series_entry(original, updated) do
+      nil -> []
+      entry -> SeriesIdentity.to_arg([entry])
+    end
+  end
+
+  defp other_entries(false, _original, _updated), do: []
+
+  # A cancellation of every occurrence removes every entry of the series the
+  # guest holds; one of a single occurrence, that occurrence's own.
+  defp cancelled_entries(:series, event),
+    do: event |> SeriesIdentity.cancelled_entries() |> SeriesIdentity.to_arg()
+
+  defp cancelled_entries(_scope, _event), do: []
 
   # The event as the update email describes it, in the job's JSON args.
   defp event_snapshot(event) do
@@ -358,8 +380,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   `event` is the cached row as it was before the delete, whose attendees are
   the recipients, less anyone who declined and the user `owner_user_id`
   (who made the delete). `scope` is `:series` when the whole series was
-  deleted, which the email says; anything else cancels the one event.
-  `{:ok, :noop}` when nobody is left to tell, and for an event someone else
+  deleted, which the email says, and which also cancels every other entry
+  of the series the guests were sent, read from the series' cached rows
+  (`SeriesIdentity.cancelled_entries/1`), so call it before those rows are
+  purged; anything else cancels the one event. `{:ok, :noop}` when nobody is left to tell, and for an event someone else
   organises, whose cancellation is not the user's to send (see
   `event_deleted/3`).
   """
@@ -392,7 +416,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {method, sequence} =
       IcalMethod.for(:event_deleted, current_sequence: current_sequence(event))
 
-    extra = %{user_id: owner_user_id, series: scope == :series}
+    extra = %{
+      user_id: owner_user_id,
+      series: scope == :series,
+      other_entries: cancelled_entries(scope, event)
+    }
 
     case send_immediate(event, recipients, method, sequence, extra) do
       :ok -> {:ok, :sent}
@@ -426,6 +454,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   # Returns the first failure to enqueue, after trying every attendee.
   defp send_immediate(event, attendees, method, sequence, extra) do
     timing = invitation_timing(event)
+    ical_uid = SeriesIdentity.entry_uid(event)
 
     attendees
     |> Enum.map(fn attendee ->
@@ -436,6 +465,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
           attendee_email: Map.get(attendee, :email),
           event_title: title_for(event),
           event_uid: Map.get(event, :uid),
+          ical_uid: ical_uid,
           event_location: Map.get(event, :location),
           event_video_link: video_link_for(event),
           event_description: Map.get(event, :description),

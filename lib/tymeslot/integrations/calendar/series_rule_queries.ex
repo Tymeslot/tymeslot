@@ -54,6 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRuleQueries do
   stored for it.
   """
   @spec put(integer(), String.t(), %{
+          optional(:ical_uid) => String.t() | nil,
           rule: String.t() | nil,
           master_start: DateTime.t() | nil,
           fetched_at: DateTime.t()
@@ -65,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRuleQueries do
       Map.merge(attrs, %{calendar_integration_id: integration_id, provider_master_id: master_id})
     )
     |> Repo.insert(
-      on_conflict: {:replace, [:rule, :master_start, :fetched_at, :updated_at]},
+      on_conflict: {:replace, [:rule, :master_start, :ical_uid, :fetched_at, :updated_at]},
       conflict_target: [:calendar_integration_id, :provider_master_id]
     )
   end
