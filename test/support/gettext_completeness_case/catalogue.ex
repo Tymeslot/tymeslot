@@ -231,7 +231,8 @@ defmodule Tymeslot.GettextCompletenessCase.Catalogue do
   # Returns `{unknown, dropped}`. A plural form legitimately omits placeholders
   # (a singular often spells out the count), so only unknown ones count there.
   defp placeholder_mismatch(%Message.Singular{msgid: msgid, msgstr: msgstr}) do
-    {placeholders(msgstr) -- placeholders(msgid), placeholders(msgid) -- placeholders(msgstr)}
+    {expected, actual} = {placeholders(msgid), placeholders(msgstr)}
+    {actual -- expected, expected -- actual}
   end
 
   defp placeholder_mismatch(%Message.Plural{} = message) do
@@ -247,11 +248,19 @@ defmodule Tymeslot.GettextCompletenessCase.Catalogue do
     {unknown, []}
   end
 
+  # This runs over every message in every locale, so skip the regex for the
+  # majority of strings that hold no placeholder at all.
   defp placeholders(iodata) do
-    @placeholder
-    |> Regex.scan(text(iodata), capture: :all_but_first)
-    |> List.flatten()
-    |> Enum.uniq()
+    string = text(iodata)
+
+    if String.contains?(string, "%{") do
+      @placeholder
+      |> Regex.scan(string, capture: :all_but_first)
+      |> List.flatten()
+      |> Enum.uniq()
+    else
+      []
+    end
   end
 
   defp nplurals(%Messages{} = catalogue) do
