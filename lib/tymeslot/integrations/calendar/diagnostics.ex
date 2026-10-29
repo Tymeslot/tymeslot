@@ -20,11 +20,15 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   alias Tymeslot.Integrations.Calendar.Exchange.Provider, as: ExchangeProvider
   alias Tymeslot.Integrations.Calendar.Exchange.Writes, as: ExchangeWrites
   alias Tymeslot.Integrations.Calendar.MailboxOrg.Provider, as: MailboxOrgProvider
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Runtime.EventsRead
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
+  alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   @type integration :: CalendarIntegrationSchema.t()
 
@@ -146,6 +150,40 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
       {:ok, Enum.uniq_by(successes, &{&1[:uid], &1[:start_time]})}
     end
   end
+
+  @doc """
+  Runs one sync of the integration's event cache, the job its sync worker
+  runs, and returns the cached rows overlapping the range: what the
+  calendar grid and the agenda read.
+
+  This is the inbound path `fetch_and_normalise_provider_events/3` does not
+  take: a provider can answer a listing correctly and still hand the sync a
+  different shape, as Graph's delta does with the occurrences of a series.
+
+  Google and Outlook only; any other provider is `{:error, :no_synced_cache}`.
+  """
+  @spec sync_and_read_cache(integration(), DateTime.t(), DateTime.t()) ::
+          {:ok, [ProviderCalendarEventSchema.t()]} | {:error, term()}
+  def sync_and_read_cache(%CalendarIntegrationSchema{} = integration, range_start, range_end) do
+    with {:ok, {worker, args}} <- sync_job(integration),
+         :ok <- worker.perform(%Oban.Job{args: args, attempt: 1, max_attempts: 1}) do
+      {:ok, ProviderCalendarEventQueries.list_for_range([integration.id], range_start, range_end)}
+    else
+      {:error, :no_synced_cache} = error -> error
+      failed -> {:error, {:sync_failed, failed}}
+    end
+  end
+
+  defp sync_job(%{provider: "outlook", id: id}),
+    do: {:ok, {RefreshOutlookCalendarWorker, %{"calendar_integration_id" => id}}}
+
+  defp sync_job(%{provider: "google", id: id}),
+    do:
+      {:ok,
+       {SyncGoogleCalendarWorker,
+        %{"calendar_integration_id" => id, "list_booking_calendar" => true}}}
+
+  defp sync_job(_integration), do: {:error, :no_synced_cache}
 
   @doc """
   Updates an event on the integration's calendar provider.
