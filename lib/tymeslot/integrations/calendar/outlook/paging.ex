@@ -112,14 +112,39 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Paging do
     do: preference(:list) <> ", odata.maxpagesize=#{@delta_page_size}"
 
   # 410 Gone on a delta read is Graph's signal that the link is no longer
-  # valid and the caller must bootstrap again.
+  # valid and the caller must bootstrap again. A link Graph cannot read at all
+  # is answered 400 instead, `syncStateNotFound`/`syncStateInvalid`, or plain
+  # `BadRequest` with "Badly formed token." for a `$deltatoken` it never
+  # issued, and needs the same: no retry of that link can succeed.
   defp handle({:ok, %{status: 410}}, :delta),
     do: {:error, :delta_link_expired, "Delta link expired"}
 
   defp handle(response, _kind),
+  defp handle({:ok, %{status: 400, body: body}} = response, :delta) do
+    if unusable_link?(body),
+      do: {:error, :delta_link_expired, "Delta link refused"},
+      else: handle(response, :list)
+  end
+
     do: ApiResponse.handle(response, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
 
   defp url(path, params) when params == %{}, do: @graph_host <> @api_root <> path
+  defp unusable_link?(%{"error" => %{"code" => code}})
+       when code in ["syncStateNotFound", "syncStateInvalid"],
+       do: true
+
+  defp unusable_link?(%{"error" => %{"message" => message}}) when is_binary(message),
+    do: message =~ ~r/token/i
+
+  defp unusable_link?(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, %{} = decoded} -> unusable_link?(decoded)
+      _not_json -> false
+    end
+  end
+
+  defp unusable_link?(_body), do: false
+
 
   # A first request's query is built as every other Graph request's is
   # (`HTTP.request/5`); only the links Graph returns are kept as they are.
