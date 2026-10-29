@@ -271,7 +271,7 @@ defmodule Tymeslot.Availability.SlotGridTest do
     end
 
     test "unavailable on Tuesday keeps Monday's tail", %{days: days} do
-      config = pure_config(days: days, overrides: [%{date: @tue, override_type: "unavailable"}])
+      config = pure_config(days: days, overrides: [%{date: @tue, override_type: :unavailable}])
 
       assert labels(@mon, 60, "Europe/London", "Europe/London", config) == [
                "10:00 PM",
@@ -282,7 +282,7 @@ defmodule Tymeslot.Availability.SlotGridTest do
     end
 
     test "unavailable on Monday removes the whole overnight window", %{days: days} do
-      config = pure_config(days: days, overrides: [%{date: @mon, override_type: "unavailable"}])
+      config = pure_config(days: days, overrides: [%{date: @mon, override_type: :unavailable}])
 
       assert labels(@mon, 60, "Europe/London", "Europe/London", config) == []
       assert List.first(labels(@tue, 60, "Europe/London", "Europe/London", config)) == "9:00 AM"
@@ -310,7 +310,7 @@ defmodule Tymeslot.Availability.SlotGridTest do
           overrides: [
             %{
               date: ~D[2027-06-16],
-              override_type: "custom_hours",
+              override_type: :custom_hours,
               start_time: ~T[20:00:00],
               end_time: ~T[01:00:00],
               ends_next_day: true

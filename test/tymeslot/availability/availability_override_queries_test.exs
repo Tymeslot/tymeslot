@@ -72,7 +72,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
       conflicting_override = %{
         schedule_id: schedule.id,
         date: tomorrow,
-        override_type: "unavailable"
+        override_type: :unavailable
       }
 
       result = AvailabilityOverrideQueries.create_override(conflicting_override)
@@ -88,7 +88,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
       incomplete_custom_hours = %{
         schedule_id: schedule.id,
         date: tomorrow,
-        override_type: "custom_hours"
+        override_type: :custom_hours
         # Missing required start_time and end_time
       }
 

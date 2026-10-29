@@ -345,7 +345,7 @@ defmodule Tymeslot.Availability.OfferRangeTest do
       insert(:availability_override,
         schedule: schedule,
         date: Date.add(range_start, 2),
-        override_type: "unavailable"
+        override_type: :unavailable
       )
     end
 

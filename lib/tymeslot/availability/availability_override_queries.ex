@@ -18,7 +18,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   def get_override_by_schedule_and_date(schedule_id, date) do
     AvailabilityOverrideSchema
     |> where([o], o.schedule_id == ^schedule_id and o.date == ^date)
-    |> where([o], o.override_type != "extra_hours")
+    |> where([o], o.override_type != :extra_hours)
     |> Repo.one()
   end
 
@@ -65,7 +65,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   @spec delete_extra_before(Date.t()) :: {non_neg_integer(), nil}
   def delete_extra_before(%Date{} = date) do
     AvailabilityOverrideSchema
-    |> where([o], o.override_type == "extra_hours" and o.date < ^date)
+    |> where([o], o.override_type == :extra_hours and o.date < ^date)
     |> Repo.delete_all()
   end
 
@@ -73,7 +73,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
     where(
       AvailabilityOverrideSchema,
       [o],
-      o.schedule_id == ^schedule_id and o.override_type == "extra_hours"
+      o.schedule_id == ^schedule_id and o.override_type == :extra_hours
     )
   end
 

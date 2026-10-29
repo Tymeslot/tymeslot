@@ -180,14 +180,14 @@ defmodule Tymeslot.Availability.BusinessHours do
   @spec day_opening(Date.t(), integer(), Calculate.availability_config()) :: day_opening()
   defp day_opening(date, schedule_id, config) do
     case lookup_override(date, schedule_id, config) do
-      %{override_type: "unavailable"} ->
+      %{override_type: :unavailable} ->
         :closed
 
       %{override_type: type, start_time: %Time{}, end_time: %Time{}} = override
-      when type in ["custom_hours", "available"] ->
+      when type in [:custom_hours, :available] ->
         window_of(override)
 
-      %{override_type: type} when type in ["custom_hours", "available"] ->
+      %{override_type: type} when type in [:custom_hours, :available] ->
         weekly_opening(date, schedule_id, config, :no_hours)
 
       _no_override ->
@@ -252,7 +252,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   defp lookup_override(date, schedule_id, %{overrides: overrides}) when is_list(overrides) do
     Enum.find(
       overrides,
-      &(&1.date == date and &1.schedule_id == schedule_id and &1.override_type != "extra_hours")
+      &(&1.date == date and &1.schedule_id == schedule_id and &1.override_type != :extra_hours)
     )
   end
 

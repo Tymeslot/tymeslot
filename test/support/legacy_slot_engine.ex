@@ -100,14 +100,14 @@ defmodule Tymeslot.Test.LegacySlotEngine do
 
   defp day_opening(date, config) do
     case Enum.find(config.overrides, &(&1.date == date)) do
-      %{override_type: "unavailable"} ->
+      %{override_type: :unavailable} ->
         :closed
 
       %{override_type: type, start_time: %Time{} = s, end_time: %Time{} = e}
-      when type in ["custom_hours", "available"] ->
+      when type in [:custom_hours, :available] ->
         {s, e}
 
-      %{override_type: type} when type in ["custom_hours", "available"] ->
+      %{override_type: type} when type in [:custom_hours, :available] ->
         weekly_opening(date, config, :no_hours)
 
       _none ->

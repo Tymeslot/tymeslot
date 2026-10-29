@@ -450,7 +450,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:availability_override,
           schedule: schedule,
           date: date,
-          override_type: "extra_hours",
+          override_type: :extra_hours,
           start_time: ~T[09:00:00],
           end_time: ~T[10:00:00]
         )

@@ -133,7 +133,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
         AvailabilityOverrideQueries.create_override(%{
           schedule_id: source.id,
           date: ~D[2026-12-24],
-          override_type: "unavailable",
+          override_type: :unavailable,
           reason: "Holiday"
         })
 

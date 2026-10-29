@@ -341,7 +341,7 @@ defmodule Tymeslot.Factory do
   def availability_override_factory do
     %AvailabilityOverrideSchema{
       date: Date.add(Date.utc_today(), 1),
-      override_type: "unavailable",
+      override_type: :unavailable,
       reason: "Out of office",
       schedule: build(:availability_schedule)
     }

@@ -63,7 +63,7 @@ defmodule Tymeslot.Availability.ExtraAvailabilityTest do
         insert(:availability_override,
           schedule: schedule,
           date: Date.add(@saturday, n),
-          override_type: "extra_hours",
+          override_type: :extra_hours,
           start_time: ~T[09:00:00],
           end_time: ~T[10:00:00]
         )
@@ -78,19 +78,19 @@ defmodule Tymeslot.Availability.ExtraAvailabilityTest do
       insert(:availability_override,
         schedule: schedule,
         date: @saturday,
-        override_type: "unavailable"
+        override_type: :unavailable
       )
 
       assert {:error, %Ecto.Changeset{}} =
                AvailabilityOverrideQueries.create_override(%{
                  schedule_id: schedule.id,
                  date: @saturday,
-                 override_type: "unavailable"
+                 override_type: :unavailable
                })
 
       # The lookup for the day's replacement hours does not mistake an extra
       # time for one.
-      assert %{override_type: "unavailable"} =
+      assert %{override_type: :unavailable} =
                AvailabilityOverrideQueries.get_override_by_schedule_and_date(
                  schedule.id,
                  @saturday
@@ -116,7 +116,7 @@ defmodule Tymeslot.Availability.ExtraAvailabilityTest do
         insert(:availability_override,
           schedule: schedule,
           date: ~D[2030-03-29],
-          override_type: "unavailable"
+          override_type: :unavailable
         )
 
       assert {1, nil} = ExtraAvailability.prune_past(~D[2030-03-31])
@@ -255,7 +255,7 @@ defmodule Tymeslot.Availability.ExtraAvailabilityTest do
     insert(:availability_override,
       schedule: schedule,
       date: date,
-      override_type: "extra_hours",
+      override_type: :extra_hours,
       start_time: ~T[09:00:00],
       end_time: ~T[10:00:00]
     )

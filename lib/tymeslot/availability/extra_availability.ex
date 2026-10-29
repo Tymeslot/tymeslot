@@ -20,7 +20,7 @@ defmodule Tymeslot.Availability.ExtraAvailability do
   alias Tymeslot.Availability.{AvailabilityOverrideQueries, AvailabilityOverrideSchema}
   alias Tymeslot.Availability.AvailabilityScheduleSchema
 
-  @type_name "extra_hours"
+  @type_name :extra_hours
   # Plenty for office hours a few times a month for a year or more, and a
   # bound on what a schedule's slot calculation has to read.
   @max_per_schedule 100
