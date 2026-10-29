@@ -24,9 +24,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
     * CalDAV: the resource's UID, kept in the occurrence's metadata.
 
   An email about the whole series sent from another occurrence changes the
-  invitation's entry too (`series_entry/2`): a cancellation of every
-  occurrence removes it, and an edit of all of them moves it as far as it
-  moved the occurrence.
+  invitation's entry too (`series_entry/2`): an edit of all of them moves it
+  as far as it moved the occurrence, and a cancellation of every occurrence
+  removes it along with every other occurrence's entry the guest was sent
+  (`cancelled_entries/1`).
 
   A single event, a master's own row, an Exchange item, or an occurrence
   whose series' UID or first start cannot be told keeps its own uid.
@@ -35,7 +36,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.SeriesStart
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
+  alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Utils.MapKeys
 
   @typedoc """
@@ -88,6 +91,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
     end
   end
 
+  @doc """
+  Every entry besides `event`'s own that a cancellation of the whole series
+  it belongs to removes from a guest's calendar: the invitation's
+  (`series_entry/2`), and that of each other cached occurrence an email went
+  out about on its own (one with a notified state or revision), which the
+  guest holds under its own UID. Read while the series' rows are still
+  cached; once they are gone only the invitation's entry is known.
+  """
+  @spec cancelled_entries(map()) :: [entry()]
+  def cancelled_entries(event) do
+    row = row(event)
+    own_uid = entry_uid(row)
+
+    [series_entry(row) | emailed_occurrences(row)]
+    |> Enum.reject(&(is_nil(&1) or &1.uid == own_uid))
+    |> Enum.uniq_by(& &1.uid)
+  end
+
   @doc "`entries` as an email job's JSON arg."
   @spec to_arg([entry()]) :: [%{String.t() => String.t()}]
   def to_arg(entries) do
@@ -130,6 +151,30 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   end
 
   defp decode(_value), do: nil
+
+  defp emailed_occurrences(row) do
+    with integration_id when is_integer(integration_id) <-
+           Map.get(row, :calendar_integration_id),
+         {:ok, address} <- Occurrence.series_address(row) do
+      integration_id
+      |> ProviderCalendarSeriesQueries.list_rows(address)
+      |> Enum.filter(&emailed?/1)
+      |> Enum.flat_map(&own_entry/1)
+    else
+      _no_series -> []
+    end
+  end
+
+  defp emailed?(row),
+    do: not LastNotifiedState.empty?(row.last_notified_state || %{}) or row.ical_sequence > 0
+
+  defp own_entry(%{all_day: true, start_date: %Date{} = from, end_date: %Date{} = to} = row),
+    do: [%{uid: entry_uid(row), start: from, end: to}]
+
+  defp own_entry(%{start_at: %DateTime{} = from, end_at: %DateTime{} = to} = row),
+    do: [%{uid: entry_uid(row), start: from, end: to}]
+
+  defp own_entry(_untimed), do: []
 
   defp row(%ProviderCalendarEventSchema{} = row), do: row
   defp row(event), do: Occurrence.cached_row(event)

@@ -22,6 +22,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -138,6 +139,58 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
         assert ProviderCalendarEventQueries.get_by_uid(google.id, event.uid) ==
                  {:error, :not_found}
       end
+    end
+
+    # The guests hold the invitation's entry (the first occurrence, under the
+    # series' UID) and one for each occurrence they were emailed about on its
+    # own, each under that occurrence's uid. The series' rows are still
+    # cached when the cancellation is built, so it can name them all.
+    test "a whole-series delete cancels every entry of the series the guests were sent", %{
+      user: user
+    } do
+      google = insert(:calendar_integration, user: user, provider: "google")
+
+      {:ok, _rule} =
+        SeriesRuleQueries.put(google.id, "series-1", %{
+          rule: "FREQ=WEEKLY;BYDAY=MO",
+          master_start: ~U[2026-06-01 09:00:00Z],
+          fetched_at: DateTime.utc_now()
+        })
+
+      occurrence = fn stamp, start_at, attrs ->
+        insert_event(
+          google,
+          %{@design_review | start_at: start_at, end_at: DateTime.add(start_at, 1, :hour)},
+          "series-1" |> google_occurrence(stamp) |> Map.merge(attrs)
+        )
+      end
+
+      occurrence.("20260601T090000Z", ~U[2026-06-01 09:00:00.000000Z], %{})
+
+      emailed =
+        occurrence.("20260608T090000Z", ~U[2026-06-08 09:00:00.000000Z], %{
+          last_notified_state: %{"title" => "Design review"}
+        })
+
+      occurrence.("20260615T090000Z", ~U[2026-06-15 09:00:00.000000Z], %{})
+
+      deleted =
+        occurrence.("20260622T090000Z", ~U[2026-06-22 09:00:00.000000Z], %{
+          attendees: @attendees
+        })
+
+      expect_delete(:ok)
+
+      assert {:ok, %{attendees_notified: :sent}} =
+               CalendarGrid.delete_event(user.id, deleted, :series, notify_attendees: true)
+
+      assert [job | _other_attendees] = cancellation_jobs()
+      assert job.args["event_uid"] == deleted.uid
+
+      assert Enum.map(job.args["other_entries"], & &1["uid"]) == [
+               "series-1@google.com",
+               emailed.uid
+             ]
     end
 
     test "an occurrence's cancellation is of that occurrence alone", %{user: user} do

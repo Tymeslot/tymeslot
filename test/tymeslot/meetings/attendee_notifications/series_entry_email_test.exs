@@ -86,6 +86,31 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
       assert ics =~ "DTSTART:20261103T093000Z"
     end
 
+    test "cancelling every occurrence cancels each one the guest was emailed about too", %{
+      user: user,
+      integration: integration
+    } do
+      third = ~U[2026-11-17 09:30:00.000000Z]
+      emailed = google_occurrence(integration, @second, last_notified_state: baseline(@second))
+      _never_emailed = google_occurrence(integration, ~U[2026-11-24 09:30:00.000000Z])
+      event = google_occurrence(integration, third)
+
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+      [email] = deliver_all("send_calendar_invitation")
+
+      ics = calendar_attachment(email).data
+
+      assert entry_uids(email) == [
+               "series-g_20261117T093000Z",
+               "series-g",
+               "series-g_20261110T093000Z"
+             ]
+
+      assert emailed.uid == "series-g_20261110T093000Z"
+      assert length(String.split(ics, "STATUS:CANCELLED")) == 4
+      assert ics =~ "DTSTART:20261110T093000Z"
+    end
+
     test "cancelling one later occurrence leaves the invitation's entry alone", %{
       user: user,
       integration: integration

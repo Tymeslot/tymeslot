@@ -192,6 +192,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   defp other_entries(false, _original, _updated), do: []
 
+  # A cancellation of every occurrence removes every entry of the series the
+  # guest holds; one of a single occurrence, that occurrence's own.
+  defp cancelled_entries(:series, event),
+    do: event |> SeriesIdentity.cancelled_entries() |> SeriesIdentity.to_arg()
+
+  defp cancelled_entries(_scope, _event), do: []
+
   # The event as the update email describes it, in the job's JSON args.
   defp event_snapshot(event) do
     %{
@@ -373,8 +380,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   `event` is the cached row as it was before the delete, whose attendees are
   the recipients, less anyone who declined and the user `owner_user_id`
   (who made the delete). `scope` is `:series` when the whole series was
-  deleted, which the email says; anything else cancels the one event.
-  `{:ok, :noop}` when nobody is left to tell, and for an event someone else
+  deleted, which the email says, and which also cancels every other entry
+  of the series the guests were sent, read from the series' cached rows
+  (`SeriesIdentity.cancelled_entries/1`), so call it before those rows are
+  purged; anything else cancels the one event. `{:ok, :noop}` when nobody is left to tell, and for an event someone else
   organises, whose cancellation is not the user's to send (see
   `event_deleted/3`).
   """
@@ -410,7 +419,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     extra = %{
       user_id: owner_user_id,
       series: scope == :series,
-      other_entries: other_entries(scope == :series, event, nil)
+      other_entries: cancelled_entries(scope, event)
     }
 
     case send_immediate(event, recipients, method, sequence, extra) do

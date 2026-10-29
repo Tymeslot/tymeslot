@@ -394,9 +394,9 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   end
 
   # Runs once the provider has deleted the event, and before the cached rows
-  # go, although the cancellation reads only `stored`, already in memory. Like
-  # the local tidying, a failure here cannot undo the delete, so it is
-  # reported rather than raised.
+  # go: a cancellation of the whole series reads them for the occurrences the
+  # guests were emailed about on their own. Like the local tidying, a failure
+  # here cannot undo the delete, so it is reported rather than raised.
   defp notify_attendees(false, _stored, _user_id, _scope), do: :none
 
   defp notify_attendees(true, stored, user_id, scope) do
