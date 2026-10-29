@@ -31,9 +31,6 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
 
   @type signal :: :deleted | :modified
 
-  @externally_deleted "externally_deleted"
-  @externally_modified "externally_modified"
-
   @max_duration_minutes Constraints.duration_minutes_range().last
 
   @doc """
@@ -214,7 +211,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   cancelled, not a condition that can lapse.
   """
   @spec resolve_modification(Meeting.t()) :: :ok
-  def resolve_modification(%{calendar_sync_status: @externally_modified} = meeting) do
+  def resolve_modification(%{calendar_sync_status: :externally_modified} = meeting) do
     MeetingCalendarQueries.clear_external_modification(meeting.id)
 
     Logger.info("External calendar modification resolved",
@@ -263,9 +260,9 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   defp by_uid(calendar_integration_id, uid),
     do: MeetingCalendarQueries.get_by_calendar_uid_and_integration(calendar_integration_id, uid)
 
-  @spec status_for(signal()) :: String.t()
-  defp status_for(:deleted), do: @externally_deleted
-  defp status_for(:modified), do: @externally_modified
+  @spec status_for(signal()) :: Meeting.calendar_sync_status()
+  defp status_for(:deleted), do: :externally_deleted
+  defp status_for(:modified), do: :externally_modified
 
   # Both signals share the same conditional-update shape and differ only in
   # the status literal and what happens on a successful write, so both are
@@ -277,7 +274,12 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   # external change.
   #
   # An elapsed slot cannot be acted on at all: see `slot_elapsed?/1`.
-  @spec apply_status_change(Meeting.t(), String.t(), signal(), DateTime.t() | nil) ::
+  @spec apply_status_change(
+          Meeting.t(),
+          Meeting.calendar_sync_status(),
+          signal(),
+          DateTime.t() | nil
+        ) ::
           :ok | {:error, term()}
   defp apply_status_change(meeting, new_status, signal, snapshot_at) do
     cond do

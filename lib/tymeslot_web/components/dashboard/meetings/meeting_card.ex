@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     <Containers.card>
       <.calendar_sync_banner
         :if={
-          @meeting.calendar_sync_status in ["externally_deleted", "externally_modified"] and
+          @meeting.calendar_sync_status in [:externally_deleted, :externally_modified] and
             is_nil(@meeting.calendar_sync_status_dismissed_at)
         }
         meeting={@meeting}
@@ -294,19 +294,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     ~H"""
     <div class={[
       "flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 rounded-token-2xl px-5 py-4 mb-6 border-2",
-      if(@meeting.calendar_sync_status == "externally_deleted",
+      if(@meeting.calendar_sync_status == :externally_deleted,
         do: "bg-red-50 border-red-200 text-red-800",
         else: "bg-amber-50 border-amber-200 text-amber-800"
       )
     ]}>
       <p class="font-medium text-token-sm">
-        <span :if={@meeting.calendar_sync_status == "externally_deleted"}>
+        <span :if={@meeting.calendar_sync_status == :externally_deleted}>
           {dgettext(
             "dashboard_bookings",
             "This meeting's event was deleted from your external calendar."
           )}
         </span>
-        <span :if={@meeting.calendar_sync_status != "externally_deleted"}>
+        <span :if={@meeting.calendar_sync_status != :externally_deleted}>
           {dgettext(
             "dashboard_bookings",
             "This meeting's event was rescheduled in your external calendar."

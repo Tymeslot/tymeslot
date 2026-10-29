@@ -126,7 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       sync(ctx, DateTime.add(ctx.meeting.start_time, 3600, :second), ~T[11:30:00])
 
       {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
       assert updated.end_time == ctx.meeting.end_time
     end
 
@@ -134,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       sync(ctx, ctx.meeting.start_time, ~T[09:30:00])
 
       {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
       assert updated.end_time == ctx.meeting.end_time
     end
   end
@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       })
 
       {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
       assert updated.end_time == ctx.meeting.end_time
       refute_enqueued(worker: EmailWorker)
     end
@@ -309,7 +309,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       sync_all_day(ctx, Date.add(ctx.date, 1))
 
       {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
     end
   end
 

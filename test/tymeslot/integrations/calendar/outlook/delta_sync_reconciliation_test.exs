@@ -140,7 +140,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
       {:ok, integration} = CalendarIntegrationQueries.get(integration.id)
       assert :ok = DeltaSync.fetch_and_apply(integration)
 
-      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+      assert {:ok, %{calendar_sync_status: :externally_modified}} =
                MeetingQueries.get_meeting(meeting.id)
 
       refute_received {:email, _email}
@@ -202,7 +202,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
       expect_delta([moved])
       assert :ok = DeltaSync.fetch_and_apply(integration)
 
-      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+      assert {:ok, %{calendar_sync_status: :externally_modified}} =
                MeetingQueries.get_meeting(meeting.id)
 
       organizer_email = meeting.organizer_email
@@ -256,7 +256,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
 
       assert :ok = DeltaSync.fetch_and_apply(integration)
 
-      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+      assert {:ok, %{calendar_sync_status: :externally_modified}} =
                MeetingQueries.get_meeting(meeting.id)
     end
   end

@@ -244,7 +244,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
       reloaded = Repo.get!(MeetingSchema, meeting.id)
 
       assert reloaded.status == :confirmed
-      assert reloaded.calendar_sync_status != "externally_deleted"
+      assert reloaded.calendar_sync_status != :externally_deleted
     end
 
     test "carries a namespace no meeting uid or EWS identifier can produce", %{

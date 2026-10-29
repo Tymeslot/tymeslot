@@ -70,7 +70,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
       meeting
       |> Changeset.change(
-        calendar_sync_status: "externally_modified",
+        calendar_sync_status: :externally_modified,
         calendar_sync_status_dismissed_at: DateTime.utc_now(:second)
       )
       |> Repo.update!()

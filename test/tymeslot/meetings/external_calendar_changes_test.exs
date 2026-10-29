@@ -62,7 +62,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesTest do
     assert reloaded.status == :cancelled
     # A failed auto-cancel clears the status so the next sync retries; a lost
     # race must not, since there is nothing left to retry.
-    assert reloaded.calendar_sync_status == "externally_deleted"
+    assert reloaded.calendar_sync_status == :externally_deleted
     assert is_nil(reloaded.cancellation_reason)
   end
 

@@ -84,7 +84,7 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
     end
 
     test "advances ical_sequence and clears the external-change flag", %{user: user} do
-      meeting = insert_future_meeting(user, calendar_sync_status: "externally_modified")
+      meeting = insert_future_meeting(user, calendar_sync_status: :externally_modified)
       {new_start, new_end} = new_times(meeting)
 
       assert {:ok, updated} = FollowCalendar.execute(meeting, new_start, new_end)
@@ -113,7 +113,7 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
     end
 
     test "a guard refusing the locked row writes and sends nothing", %{user: user} do
-      stale = insert_future_meeting(user, calendar_sync_status: "externally_modified")
+      stale = insert_future_meeting(user, calendar_sync_status: :externally_modified)
       {new_start, new_end} = new_times(stale)
 
       # A confirm from another tab moved the booking after `stale` was read,
@@ -123,7 +123,7 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
       |> Repo.update!()
 
       still_flagged = fn
-        %{calendar_sync_status: "externally_modified"} -> :ok
+        %{calendar_sync_status: :externally_modified} -> :ok
         _current -> {:error, :not_flagged}
       end
 

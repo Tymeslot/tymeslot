@@ -18,6 +18,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   @unique_slot_constraint :unique_confirmed_meeting_per_organizer_at_time
 
+  @type calendar_sync_status :: :externally_deleted | :externally_modified
+
   @type t :: %__MODULE__{
           id: binary() | nil,
           uid: String.t() | nil,
@@ -88,7 +90,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           organizer_email_sent: boolean(),
           attendee_email_sent: boolean(),
           reminder_email_sent: boolean(),
-          calendar_sync_status: String.t() | nil,
+          calendar_sync_status: calendar_sync_status() | nil,
           calendar_sync_status_dismissed_at: DateTime.t() | nil,
           provider_event_id: String.t() | nil,
           ical_sequence: integer(),
@@ -299,7 +301,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:reminder_email_sent, :boolean, default: false)
 
     # External calendar sync
-    field(:calendar_sync_status, :string)
+    field(:calendar_sync_status, Ecto.Enum, values: [:externally_deleted, :externally_modified])
     field(:calendar_sync_status_dismissed_at, :utc_datetime)
     field(:provider_event_id, :string)
 
