@@ -123,6 +123,21 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       assert email.html_body =~ @urls.decline_url
     end
 
+    test "names the invitee's zone alongside their time" do
+      html = BookingApprovalRequest.render(:request, meeting(), @urls, "en").html_body
+
+      assert html =~ "(Europe/Ljubljana)"
+    end
+
+    test "does not label a UTC time with an invitee zone that no longer resolves" do
+      meeting = meeting(%{attendee_timezone: "Mars/Olympus_Mons"})
+      email = BookingApprovalRequest.render(:request, meeting, @urls, "en")
+
+      assert email.html_body =~ "For Alex Guest, that"
+      refute email.html_body =~ "Mars/Olympus_Mons"
+      refute email.text_body =~ "Mars/Olympus_Mons"
+    end
+
     test "shows the host what the invitee said" do
       html = BookingApprovalRequest.render(:request, meeting(), @urls, "en").html_body
 

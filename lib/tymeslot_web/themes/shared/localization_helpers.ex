@@ -200,11 +200,11 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   """
   @spec to_attendee_datetime(DateTime.t() | NaiveDateTime.t() | nil, String.t() | nil) ::
           {:ok, DateTime.t()} | :error
-  def to_attendee_datetime(%DateTime{} = dt, timezone), do: {:ok, shift_or_keep(dt, timezone)}
+  def to_attendee_datetime(%DateTime{} = dt, timezone), do: {:ok, shift_or_utc(dt, timezone)}
 
   def to_attendee_datetime(%NaiveDateTime{} = naive, timezone) do
     case DateTime.from_naive(naive, "Etc/UTC") do
-      {:ok, dt} -> {:ok, shift_or_keep(dt, timezone)}
+      {:ok, dt} -> {:ok, shift_or_utc(dt, timezone)}
       _error -> :error
     end
   end
@@ -524,14 +524,10 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   defp parse_date(date) when is_binary(date), do: Date.from_iso8601(date)
 
-  defp shift_or_keep(dt, timezone) when is_binary(timezone) and timezone != "" do
-    case DateTime.shift_zone(dt, timezone) do
-      {:ok, shifted} -> shifted
-      _error -> dt
-    end
+  defp shift_or_utc(dt, timezone) do
+    {shifted, _label} = DateTimeUtils.shift_or_utc(dt, timezone)
+    shifted
   end
-
-  defp shift_or_keep(dt, _timezone), do: dt
 
   defp format_weeks_advance(days),
     do: dgettext("datetime", "%{weeks} weeks in advance", weeks: div(days, 7))
