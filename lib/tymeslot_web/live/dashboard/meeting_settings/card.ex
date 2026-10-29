@@ -367,7 +367,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   # venue by name, or how many the booker picks between. Venue ids no longer
   # in the library are ignored, so a deleted venue never shows; with none left
   # the location's own label stands.
-  defp single_label(%LocationOption{kind: "in_person", venue_ids: ids} = location, venues) do
+  defp single_label(%LocationOption{kind: :in_person, venue_ids: ids} = location, venues) do
     case Enum.filter(venues, &(&1.id in ids)) do
       [] ->
         location.label
@@ -390,12 +390,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   # The provider whose mark a video location shows, or nil for a location
   # that is not a video call (or whose integration has since been deleted,
   # leaving nothing to name).
-  defp video_provider(%{kind: "video"}, %{video_integration: %{provider: provider}}), do: provider
+  defp video_provider(%{kind: :video}, %{video_integration: %{provider: provider}}), do: provider
   defp video_provider(_location, _type), do: nil
 
-  defp kind_icon("video"), do: "hero-video-camera-mini"
-  defp kind_icon("phone"), do: "hero-phone-mini"
-  defp kind_icon("in_person"), do: "hero-building-office-mini"
+  defp kind_icon(:video), do: "hero-video-camera-mini"
+  defp kind_icon(:phone), do: "hero-phone-mini"
+  defp kind_icon(:in_person), do: "hero-building-office-mini"
   defp kind_icon(_kind), do: "hero-map-pin-mini"
 
   defp custom_question_count(%{custom_fields: fields}) when is_list(fields), do: length(fields)

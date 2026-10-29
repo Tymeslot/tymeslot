@@ -15,6 +15,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.MeetingTypes.LocationOption
 
   @unique_slot_constraint :unique_confirmed_meeting_per_organizer_at_time
 
@@ -31,7 +32,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           end_time: DateTime.t() | nil,
           duration: integer() | nil,
           location: String.t() | nil,
-          location_kind: String.t() | nil,
+          location_kind: LocationOption.kind() | nil,
           location_option_id: String.t() | nil,
           venue_id: integer() | nil,
           address_to_arrange: boolean(),
@@ -144,7 +145,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # string, which stops carrying meaning the moment a host writes their own
     # label; the option id pins the choice so a later edit to the meeting type
     # cannot rewrite what this booking agreed to.
-    field(:location_kind, :string)
+    field(:location_kind, Ecto.Enum, values: LocationOption.kinds())
     field(:location_option_id, :string)
     field(:meeting_type, :string)
 

@@ -34,7 +34,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
         changeset(
           %MeetingTypeSchema{},
           base_attrs(%{
-            locations: [location(kind: "video", label: "Zoom", video_integration_ids: [7])]
+            locations: [location(kind: :video, label: "Zoom", video_integration_ids: [7])]
           })
         )
 
@@ -47,7 +47,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
         changeset(
           %MeetingTypeSchema{},
           base_attrs(%{
-            locations: [location(kind: "video", label: "Video", video_integration_ids: [9, 7])]
+            locations: [location(kind: :video, label: "Video", video_integration_ids: [9, 7])]
           })
         )
 
@@ -60,9 +60,9 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
           %MeetingTypeSchema{},
           base_attrs(%{
             locations: [
-              location(kind: "in_person", label: "The office", position: 0),
-              location(kind: "video", label: "Zoom", video_integration_ids: [7], position: 1),
-              location(kind: "video", label: "Teams", video_integration_ids: [9], position: 2)
+              location(kind: :in_person, label: "The office", position: 0),
+              location(kind: :video, label: "Zoom", video_integration_ids: [7], position: 1),
+              location(kind: :video, label: "Teams", video_integration_ids: [9], position: 2)
             ]
           })
         )
@@ -76,7 +76,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
       cs =
         changeset(
           existing,
-          base_attrs(%{locations: [location(kind: "in_person", label: "The office")]})
+          base_attrs(%{locations: [location(kind: :in_person, label: "The office")]})
         )
 
       assert Changeset.get_field(cs, :allow_video) == false
@@ -118,13 +118,13 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
             user_id: user.id,
             locations: [
               location(
-                kind: "in_person",
+                kind: :in_person,
                 label: "The office",
                 venue_ids: [42],
                 position: 0
               ),
               location(
-                kind: "video",
+                kind: :video,
                 label: "Zoom",
                 video_integration_ids: [integration.id],
                 position: 1
@@ -137,7 +137,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
       reloaded = Repo.get!(MeetingTypeSchema, meeting_type.id)
 
       assert [in_person, video] = reloaded.locations
-      assert in_person.kind == "in_person"
+      assert in_person.kind == :in_person
       assert in_person.venue_ids == [42]
       assert video.video_integration_ids == [integration.id]
       assert reloaded.allow_video == true

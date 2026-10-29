@@ -223,7 +223,7 @@ defmodule Tymeslot.Factory do
     struct!(
       %LocationOption{
         id: UUID.generate(),
-        kind: "video",
+        kind: :video,
         label: "Video call",
         video_integration_ids: integrations |> List.wrap() |> Enum.map(& &1.id),
         position: 0
@@ -244,7 +244,7 @@ defmodule Tymeslot.Factory do
     struct!(
       %LocationOption{
         id: UUID.generate(),
-        kind: "in_person",
+        kind: :in_person,
         label: "In person",
         venue_ids: Enum.map(venues, & &1.id),
         position: 0

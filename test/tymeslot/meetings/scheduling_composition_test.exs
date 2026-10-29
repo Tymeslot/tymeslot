@@ -292,7 +292,7 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
 
     @at_venue %{
       location: "Berlin office (Friedrichstrasse 1)",
-      location_kind: "in_person",
+      location_kind: :in_person,
       address_to_arrange: false
     }
 

@@ -276,7 +276,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       when is_integer(venue_id) do
     locations =
       Enum.map(locations, fn
-        %LocationOption{kind: "in_person", venue_ids: ids} = location ->
+        %LocationOption{kind: :in_person, venue_ids: ids} = location ->
           %{location | venue_ids: Enum.reject(ids, &(&1 == venue_id))}
 
         location ->
@@ -297,7 +297,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @spec left_without_venue?(t(), integer()) :: boolean()
   def left_without_venue?(%__MODULE__{locations: locations}, venue_id) do
     Enum.any?(locations, fn
-      %LocationOption{kind: "in_person", venue_ids: [^venue_id]} -> true
+      %LocationOption{kind: :in_person, venue_ids: [^venue_id]} -> true
       _location -> false
     end)
   end
@@ -426,7 +426,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   defp project_video_fields(%{changes: %{locations: _locations}} = changeset) do
     changeset
     |> get_field(:locations)
-    |> Enum.find(&(&1.kind == "video"))
+    |> Enum.find(&(&1.kind == :video))
     |> apply_video_projection(changeset)
   end
 

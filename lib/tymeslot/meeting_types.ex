@@ -144,7 +144,7 @@ defmodule Tymeslot.MeetingTypes do
         }
   def location_video_choices(%{user_id: user_id} = meeting_type) when is_integer(user_id) do
     video_options =
-      meeting_type |> LocationSelection.options() |> Enum.filter(&(&1.kind == "video"))
+      meeting_type |> LocationSelection.options() |> Enum.filter(&(&1.kind == :video))
 
     if video_options == [] do
       %{}
@@ -183,7 +183,7 @@ defmodule Tymeslot.MeetingTypes do
     in_person =
       meeting_type
       |> LocationSelection.options()
-      |> Enum.filter(&(&1.kind == "in_person" and &1.venue_ids != []))
+      |> Enum.filter(&(&1.kind == :in_person and &1.venue_ids != []))
 
     if in_person == [] do
       %{}
@@ -640,7 +640,7 @@ defmodule Tymeslot.MeetingTypes do
   defp default_in_person_location do
     %LocationOption{
       id: UUID.generate(),
-      kind: "in_person",
+      kind: :in_person,
       label: "In person",
       position: 0
     }

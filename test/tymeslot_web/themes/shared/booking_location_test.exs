@@ -21,19 +21,19 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
   defp offices,
     do: %LocationOption{
       id: "loc-offices",
-      kind: "in_person",
+      kind: :in_person,
       label: "Our offices",
       venue_ids: [1, 2],
       position: 0
     }
 
   defp arranged,
-    do: %LocationOption{id: "loc-arranged", kind: "in_person", label: "In person", position: 1}
+    do: %LocationOption{id: "loc-arranged", kind: :in_person, label: "In person", position: 1}
 
   defp call_me,
     do: %LocationOption{
       id: "loc-call",
-      kind: "phone",
+      kind: :phone,
       label: "Phone call",
       collect_from_guest: true,
       position: 2
@@ -79,13 +79,13 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
     # load for it: the one provider or the one venue it names.
     defp admitted_group_locations do
       [
-        {%LocationOption{id: "v", kind: "video", label: "Video", video_integration_ids: [7]},
+        {%LocationOption{id: "v", kind: :video, label: "Video", video_integration_ids: [7]},
          %{"v" => [%{id: 7}]}, %{}},
-        {%LocationOption{id: "o", kind: "in_person", label: "Office", venue_ids: [1]}, %{},
+        {%LocationOption{id: "o", kind: :in_person, label: "Office", venue_ids: [1]}, %{},
          %{"o" => [@berlin]}},
-        {%LocationOption{id: "p", kind: "phone", label: "Phone", details: "+44 20 7946 0000"},
-         %{}, %{}},
-        {%LocationOption{id: "c", kind: "custom", label: "Main hall"}, %{}, %{}}
+        {%LocationOption{id: "p", kind: :phone, label: "Phone", details: "+44 20 7946 0000"}, %{},
+         %{}},
+        {%LocationOption{id: "c", kind: :custom, label: "Main hall"}, %{}, %{}}
       ]
     end
 
@@ -187,7 +187,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
     defp hq,
       do: %LocationOption{
         id: "loc-hq",
-        kind: "in_person",
+        kind: :in_person,
         label: "Headquarters",
         venue_ids: [2],
         position: 3

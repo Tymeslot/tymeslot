@@ -20,6 +20,7 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Timezones
@@ -37,7 +38,7 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
           required(:end_time) => DateTime.t(),
           required(:duration) => integer(),
           required(:location) => String.t() | nil,
-          required(:location_kind) => String.t() | nil,
+          required(:location_kind) => LocationOption.kind() | nil,
           required(:location_option_id) => String.t() | nil,
           required(:meeting_type) => String.t(),
           required(:meeting_type_id) => integer() | nil,

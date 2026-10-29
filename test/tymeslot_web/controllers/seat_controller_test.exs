@@ -97,7 +97,7 @@ defmodule TymeslotWeb.SeatControllerTest do
       meeting: meeting
     } do
       meeting
-      |> Changeset.change(%{location_kind: "custom", location: "Studio 4, 1 High Street"})
+      |> Changeset.change(%{location_kind: :custom, location: "Studio 4, 1 High Street"})
       |> Repo.update!()
 
       conn = get(conn, ~p"/seat/#{leaver.management_token}/cancel")
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.SeatControllerTest do
       meeting: meeting
     } do
       meeting
-      |> Changeset.change(%{location_kind: "video", location: "Video Call"})
+      |> Changeset.change(%{location_kind: :video, location: "Video Call"})
       |> Repo.update!()
 
       conn = post(conn, ~p"/seat/#{leaver.management_token}/cancel")

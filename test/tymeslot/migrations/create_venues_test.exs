@@ -336,7 +336,7 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
         organizer_user_id: user.id,
         meeting_type_id: meeting_type.id,
         location: "Office (12 High Street)",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-office"
       )
 
@@ -349,7 +349,7 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
         start_time: later,
         end_time: DateTime.add(later, 60, :minute),
         location: "In person",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-none"
       )
 
@@ -400,11 +400,11 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
       )
     end
 
-    to_arrange = meeting.("loc-none", "in_person", 1)
-    at_office = meeting.("loc-office", "in_person", 2)
-    on_video = meeting.("loc-video", "video", 3)
+    to_arrange = meeting.("loc-none", :in_person, 1)
+    at_office = meeting.("loc-office", :in_person, 2)
+    on_video = meeting.("loc-video", :video, 3)
     # A stale option id: the location it was booked on has since gone.
-    elsewhere = meeting.("loc-gone", "in_person", 4)
+    elsewhere = meeting.("loc-gone", :in_person, 4)
 
     MigrationRunner.rerun!(@version)
 
@@ -428,7 +428,7 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
         organizer_user_id: user.id,
         meeting_type_id: meeting_type.id,
         location: "Office (12 High Street)",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-office"
       )
 
@@ -448,7 +448,7 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
         organizer_user_id: user.id,
         meeting_type_id: meeting_type.id,
         location: "Office (12 High Street)",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-office",
         address_to_arrange: true
       )

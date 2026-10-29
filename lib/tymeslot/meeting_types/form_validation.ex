@@ -34,6 +34,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UriUtils
   alias Tymeslot.Venues
@@ -92,7 +93,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
 
   defp validate_video_locations(locations, user_id) do
     locations
-    |> Enum.filter(&(location_field(&1, "kind") == "video"))
+    |> Enum.filter(&(kind(&1) == {:ok, :video}))
     |> Enum.flat_map(&video_integration_ids/1)
     |> Enum.reduce_while(:ok, fn id, :ok ->
       case video_integration_active?(id, user_id) do
@@ -109,7 +110,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   defp validate_venues(locations, user_id) do
     ids =
       locations
-      |> Enum.filter(&(location_field(&1, "kind") == "in_person"))
+      |> Enum.filter(&(kind(&1) == {:ok, :in_person}))
       |> Enum.flat_map(&(&1 |> location_field("venue_ids") |> List.wrap()))
       |> Enum.reject(&(&1 in [nil, ""]))
 
@@ -138,6 +139,10 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       ids -> ids
     end
   end
+
+  # The kind is a string in posted params and an atom in params built from a
+  # stored option, so both are read.
+  defp kind(location), do: location |> location_field("kind") |> LocationOption.parse_kind()
 
   defp location_field(location, key) when is_map(location) do
     Map.get(location, key) || Map.get(location, String.to_existing_atom(key))

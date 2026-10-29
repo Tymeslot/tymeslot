@@ -474,7 +474,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     @host_note "The address is to be arranged with the booker."
 
     defp to_arrange,
-      do: meeting(%{location_kind: "in_person", address_to_arrange: true, location: "In person"})
+      do: meeting(%{location_kind: :in_person, address_to_arrange: true, location: "In person"})
 
     test "each email to the booker notes it under the location, in HTML and text" do
       for email <- [
@@ -498,7 +498,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     end
 
     test "a meeting at a saved venue carries no note" do
-      at_venue = meeting(%{location_kind: "in_person", venue_id: 7, location: "Office"})
+      at_venue = meeting(%{location_kind: :in_person, venue_id: 7, location: "Office"})
 
       refute BookingRequestReceived.render(at_venue).text_body =~ @note
     end

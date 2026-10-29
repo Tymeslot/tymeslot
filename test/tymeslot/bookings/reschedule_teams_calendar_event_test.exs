@@ -86,14 +86,14 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
         locations: [
           %LocationOption{
             id: "loc-teams",
-            kind: "video",
+            kind: :video,
             label: "Teams",
             video_integration_ids: [teams.id],
             position: 0
           },
           %LocationOption{
             id: "loc-office",
-            kind: "in_person",
+            kind: :in_person,
             label: "Our office",
             details: "12 High Street",
             position: 1
@@ -105,7 +105,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
       insert_meeting_for_user(user, %{
         meeting_type_id: meeting_type.id,
         location: "https://teams.microsoft.com/l/meetup-join/19%3ameeting",
-        location_kind: "video",
+        location_kind: :video,
         location_option_id: "loc-teams",
         video_integration_id: teams.id,
         video_provider: "teams",

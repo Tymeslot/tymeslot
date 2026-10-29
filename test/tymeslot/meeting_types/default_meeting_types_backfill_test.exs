@@ -45,7 +45,7 @@ defmodule Tymeslot.MeetingTypes.DefaultMeetingTypesBackfillTest do
 
     assert {thirty.name, thirty.duration_minutes} == {"30 Minutes", 30}
 
-    assert [%LocationOption{kind: "in_person", label: "In person", position: 0, id: id}] =
+    assert [%LocationOption{kind: :in_person, label: "In person", position: 0, id: id}] =
              fifteen.locations
 
     assert {:ok, _uuid} = UUID.cast(id)

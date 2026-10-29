@@ -451,7 +451,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     {:ok, meeting_type} =
       MeetingTypes.update_meeting_type(meeting_type, %{
         locations: [
-          %{kind: "video", label: "Video call", video_integration_ids: [integration.id]}
+          %{kind: :video, label: "Video call", video_integration_ids: [integration.id]}
         ]
       })
 
@@ -478,7 +478,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
              move(mover, new_slot_params())
 
     assert new_meeting.id != old_meeting.id
-    assert new_meeting.location_kind == "in_person"
+    assert new_meeting.location_kind == :in_person
     assert new_meeting.location_option_id == old_meeting.location_option_id
     assert new_meeting.venue_id == venue.id
     assert new_meeting.location == "Main Hall (1 Market Square)"

@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
         locations: [
           %LocationOption{
             id: "loc-1",
-            kind: "in_person",
+            kind: :in_person,
             label: "The office",
             venue_ids: [3, 1],
             position: 0
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
             locations: [
               %LocationOption{
                 id: "loc-2",
-                kind: "video",
+                kind: :video,
                 label: "Zoom",
                 video_integration_ids: [9, 4],
                 position: 0
