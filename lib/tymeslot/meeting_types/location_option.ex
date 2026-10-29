@@ -36,6 +36,10 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
 
   alias Ecto.UUID
 
+  # The `meetings_location_kind_must_be_known` CHECK constraint spells this
+  # list out in SQL, so a new kind needs a migration widening it; stored
+  # `locations` with an unknown kind are repaired by
+  # `RepairUnknownMeetingTypeLocationKinds`.
   @kinds [:video, :in_person, :phone, :custom]
   @kinds_by_name Map.new(@kinds, &{Atom.to_string(&1), &1})
 
