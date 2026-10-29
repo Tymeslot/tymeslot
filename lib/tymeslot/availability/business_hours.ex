@@ -59,6 +59,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   Extra available times (`Tymeslot.Availability.ExtraAvailability`) are
   windows of their own beside the day's hours, so a date may have several,
   and they open a date the weekly pattern leaves closed. They carry no breaks.
+  An `unavailable` override closes them too: a date marked closed is closed.
 
   Each window's weekly breaks are resolved against the weekly row they belong
   to and clipped to the window in effect, so a break left outside its hours
@@ -72,13 +73,19 @@ defmodule Tymeslot.Availability.BusinessHours do
         ) :: [owner_window()]
   def owner_windows(dates, schedule_id, owner_timezone, config) do
     Enum.flat_map(dates, fn date ->
-      regular =
-        case opening(date, schedule_id, config) do
-          %{} = window -> [resolve_window(date, window, schedule_id, owner_timezone, config)]
-          _closed -> []
-        end
+      case opening(date, schedule_id, config) do
+        :unavailable ->
+          []
 
-      regular ++ extra_windows(date, schedule_id, owner_timezone, config)
+        %{} = window ->
+          [
+            resolve_window(date, window, schedule_id, owner_timezone, config)
+            | extra_windows(date, schedule_id, owner_timezone, config)
+          ]
+
+        _closed ->
+          extra_windows(date, schedule_id, owner_timezone, config)
+      end
     end)
   end
 
@@ -153,10 +160,13 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   @typedoc """
   What the schedule alone says about a date, before time off is taken out of
-  it: the window it opens in the owner's own clock, `:closed`, or `:no_hours`
-  for a day marked available that names no window to offer.
+  it: the window it opens in the owner's own clock, `:closed`, `:no_hours`
+  for a day marked available that names no window to offer, or
+  `:unavailable` for a date an override closes. Unlike `:closed`, which is
+  also what the weekly pattern says of a day off, `:unavailable` closes the
+  date's extra times as well.
   """
-  @type day_opening :: Window.t() | :closed | :no_hours
+  @type day_opening :: Window.t() | :closed | :no_hours | :unavailable
 
   defp opening(date, nil, _config) do
     if Date.day_of_week(date) in @fallback_working_days,
@@ -170,6 +180,7 @@ defmodule Tymeslot.Availability.BusinessHours do
          true <- Window.valid?(start_time, end_time, ends_next_day) do
       window
     else
+      :unavailable -> :unavailable
       _closed_or_invalid -> :closed
     end
   end
@@ -181,7 +192,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   defp day_opening(date, schedule_id, config) do
     case lookup_override(date, schedule_id, config) do
       %{override_type: :unavailable} ->
-        :closed
+        :unavailable
 
       %{override_type: type, start_time: %Time{}, end_time: %Time{}} = override
       when type in [:custom_hours, :available] ->

@@ -65,6 +65,22 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       )
     end
 
+    test "an event's video link travels with its invitation" do
+      event =
+        insert(:provider_calendar_event, video_link: "https://meet.google.com/abc-defg-hij")
+
+      assert {:ok, :sent} = AttendeeNotifications.event_created(event, [%{email: "a@x.com"}])
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "a@x.com",
+          "event_video_link" => "https://meet.google.com/abc-defg-hij"
+        }
+      )
+    end
+
     test "enqueues a :request invitation for a MeetingSchema attendee" do
       meeting = insert(:meeting, attendee_email: "guest@example.com")
       attendees = [%{email: "guest@example.com"}]

@@ -2,8 +2,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   @moduledoc """
   Email template for calendar event invitations sent from the dashboard calendar.
 
-  Simpler than booking confirmations — no reschedule/cancel URLs, video sections,
-  or reminders. Includes event details and an ICS calendar attachment.
+  Simpler than booking confirmations — no reschedule/cancel URLs or reminders.
+  Includes event details, the event's video link (`:video_link`) as a join
+  section when it has one, and an ICS calendar attachment.
 
   An all-day event (`all_day: true`) carries `:start_date`, an exclusive
   `:end_date` and an inclusive `:last_date` instead of `:start_time`,
@@ -22,6 +23,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
 
   import Swoosh.Email
 
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Emails.RecipientLocale
 
   alias Tymeslot.Emails.Shared.{
@@ -57,12 +59,16 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
           start_time: invitation_details.start_time,
           duration: invitation_details.duration,
           location: invitation_details.location,
-          location_type: if(invitation_details.location, do: :in_person),
+          location_type: location_type(invitation_details),
           meeting_type: invitation_details.event_title
         })
 
+      video_link = join_link(invitation_details)
+
       mjml_content = """
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{MeetingComponents.video_meeting_section(:confirmed, video_link)}
       """
 
       details_for_organizer =
@@ -89,7 +95,15 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
         end_time: invitation_details.end_time,
         uid: invitation_details.event_uid,
         location: invitation_details.location,
-        description: invitation_details.description,
+        meeting_url: Map.get(invitation_details, :video_link),
+        # The attachment states the link itself, so the "Join video call"
+        # line the provider event carries in its description is left out.
+        description:
+          EventVideo.put_join_link(
+            invitation_details.description,
+            Map.get(invitation_details, :video_link),
+            nil
+          ),
         organizer_name: invitation_details.organizer_name,
         organizer_email: invitation_details.organizer_email,
         organizer_user_id: Map.get(invitation_details, :organizer_user_id),
@@ -104,12 +118,21 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
       )
       |> subject(copy.subject)
       |> html_body(html_body)
-      |> text_body(build_text_body(invitation_details, meeting_details, copy, locale))
+      |> text_body(build_text_body(invitation_details, meeting_details, video_link, copy, locale))
       |> attachment(build_ics_attachment(ics_details, invitation_details, locale))
     end)
   end
 
   defp cancellation?(details), do: Map.get(details, :method) == :cancel
+
+  # A written location wins; an event with only a video room is a video call.
+  defp location_type(%{location: location}) when is_binary(location) and location != "",
+    do: :in_person
+
+  defp location_type(details), do: if(Map.get(details, :video_link), do: :video)
+
+  # A cancelled event has no meeting left to join.
+  defp join_link(details), do: if(not cancellation?(details), do: Map.get(details, :video_link))
 
   # What the email calls itself: an invitation, the cancellation of one
   # event, or the cancellation of a whole series.
@@ -176,7 +199,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
     end
   end
 
-  defp build_text_body(invitation_details, meeting_details, copy, locale) do
+  defp build_text_body(invitation_details, meeting_details, video_link, copy, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(meeting_details, locale)
 
     """
@@ -186,6 +209,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
 
     #{dgettext("emails", "MEETING DETAILS:")}
     #{meeting_details}
+    #{TextBodyHelper.format_video_section(video_link, locale)}
 
     #{invitation_details.organizer_name}
     """

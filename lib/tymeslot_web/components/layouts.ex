@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Layouts do
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Analytics.Providers, as: AnalyticsProviders
   alias TymeslotWeb.AuthLive
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.MeetingRequestLive
@@ -309,8 +310,7 @@ defmodule TymeslotWeb.Layouts do
   end
 
   def analytics_scripts(assigns) do
-    providers = Application.get_env(:tymeslot, :analytics_providers, nil)
-    assigns = assign(assigns, :providers, filter_valid_providers(providers))
+    assigns = assign(assigns, :providers, AnalyticsProviders.all())
 
     ~H"""
     <%= for provider <- @providers do %>
@@ -328,15 +328,7 @@ defmodule TymeslotWeb.Layouts do
   """
   @spec analytics_preconnect(map()) :: Phoenix.LiveView.Rendered.t()
   def analytics_preconnect(assigns) do
-    origins =
-      :tymeslot
-      |> Application.get_env(:analytics_providers, nil)
-      |> filter_valid_providers()
-      |> Enum.map(fn %{script_url: url} -> analytics_origin(url) end)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.uniq()
-
-    assigns = assign(assigns, :origins, origins)
+    assigns = assign(assigns, :origins, AnalyticsProviders.origins())
 
     ~H"""
     <%= for origin <- @origins do %>
@@ -344,27 +336,6 @@ defmodule TymeslotWeb.Layouts do
     <% end %>
     """
   end
-
-  # Origin (scheme://host[:port]) of an analytics script URL, or nil for a
-  # same-origin (relative) URL, which needs no preconnect.
-  defp analytics_origin(url) when is_binary(url) do
-    case URI.parse(url) do
-      %URI{scheme: scheme, host: host, port: port}
-      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
-        default_port = if scheme == "https", do: 443, else: 80
-
-        if port && port != default_port do
-          "#{scheme}://#{host}:#{port}"
-        else
-          "#{scheme}://#{host}"
-        end
-
-      _uri ->
-        nil
-    end
-  end
-
-  defp analytics_origin(_url), do: nil
 
   defp render_provider_script(%{provider: :umami, script_url: url, website_id: id}, assigns)
        when is_binary(url) and is_binary(id) do
@@ -424,22 +395,4 @@ defmodule TymeslotWeb.Layouts do
   end
 
   defp render_provider_script(_other, assigns), do: ~H""
-
-  defp filter_valid_providers(nil), do: []
-  defp filter_valid_providers([]), do: []
-
-  defp filter_valid_providers(providers) when is_list(providers) do
-    Enum.filter(providers, fn provider ->
-      case provider do
-        %{provider: :umami, script_url: url, website_id: id}
-        when is_binary(url) and is_binary(id) and url != "" and id != "" ->
-          String.starts_with?(url, ["https://", "http://", "/"])
-
-        _other ->
-          false
-      end
-    end)
-  end
-
-  defp filter_valid_providers(_arg), do: []
 end
