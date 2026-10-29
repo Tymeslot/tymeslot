@@ -56,7 +56,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       account = ConnectAccountQueries.live_for_user(user.id)
       assert account.stripe_account_id == "acct_TEST_123"
       assert account.default_currency == "chf"
-      assert account.status == "active"
+      assert account.status == :active
       assert_received {:idempotency_key, key}
       assert key == "connect_account:#{account.id}"
     end
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       end)
 
       account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.status == "creating"
+      assert account.status == :creating
       assert account.default_currency == nil
     end
 
@@ -215,7 +215,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       # Row must still exist in "creating" state — not left in "active" with a
       # stripe_account_id set, since the link never succeeded.
       account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.status == "creating"
+      assert account.status == :creating
       assert is_nil(account.stripe_account_id)
     end
   end
@@ -331,7 +331,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_EVENT",
-          status: "active"
+          status: :active
         })
 
       stripe_account = %{
@@ -357,7 +357,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_REJECTED",
-          status: "active"
+          status: :active
         })
 
       stripe_account = %{
@@ -397,7 +397,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_RESTRICT",
-          status: "active",
+          status: :active,
           disabled_reason: nil
         })
 
@@ -431,7 +431,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_UNSUBMITTED",
-          status: "active",
+          status: :active,
           disabled_reason: nil
         })
 
@@ -457,7 +457,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_SAME",
-          status: "active",
+          status: :active,
           disabled_reason: "requirements.past_due"
         })
 
@@ -481,7 +481,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_CHANGE",
-          status: "active",
+          status: :active,
           disabled_reason: "requirements.past_due"
         })
 
@@ -511,7 +511,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_CLEAR",
-          status: "active",
+          status: :active,
           disabled_reason: "requirements.past_due"
         })
 
@@ -537,7 +537,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_OOO",
-          status: "active",
+          status: :active,
           charges_enabled: true,
           last_account_event_at: now
         })
@@ -565,7 +565,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_REPLAY",
-          status: "active",
+          status: :active,
           disabled_reason: nil
         })
 
@@ -598,7 +598,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_DELETED",
-          status: "active",
+          status: :active,
           charges_enabled: true
         })
 

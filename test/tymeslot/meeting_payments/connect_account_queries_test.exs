@@ -10,7 +10,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueriesTest do
     user = insert(:user)
     {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
     assert account = ConnectAccountQueries.live_for_user(user.id)
-    assert account.status == "creating"
+    assert account.status == :creating
   end
 
   test "live_for_user excludes soft-deleted rows" do
@@ -30,7 +30,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueriesTest do
     deleted = Repo.reload(account)
     assert deleted.deleted_at == now
     assert deleted.user_id == nil
-    assert deleted.status == "deleted"
+    assert deleted.status == :deleted
     refute deleted.charges_enabled
   end
 

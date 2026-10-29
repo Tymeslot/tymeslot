@@ -85,7 +85,7 @@ defmodule Tymeslot.Workers.TransactionalEmailRescueTest do
         payouts_enabled: false,
         details_submitted: true,
         disabled_reason: "requirements.past_due",
-        status: "active"
+        status: :active
       )
 
     job =

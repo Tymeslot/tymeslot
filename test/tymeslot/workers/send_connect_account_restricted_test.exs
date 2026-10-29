@@ -31,7 +31,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
       payouts_enabled: false,
       details_submitted: true,
       disabled_reason: "requirements.past_due",
-      status: "active"
+      status: :active
     }
 
     insert(:connect_account, Map.merge(defaults, Map.new(attrs)))
@@ -82,7 +82,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
         ConnectAccountQueries.update(account, %{
           user_id: nil,
           deleted_at: DateTime.utc_now(:second),
-          status: "deleted",
+          status: :deleted,
           charges_enabled: false
         })
 

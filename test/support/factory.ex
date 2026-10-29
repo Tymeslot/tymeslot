@@ -495,7 +495,7 @@ defmodule Tymeslot.Factory do
       charges_enabled: false,
       payouts_enabled: false,
       details_submitted: false,
-      status: "active",
+      status: :active,
       user: build(:user)
     }
   end
