@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Paging do
 
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.GraphStatus
+  alias Tymeslot.Integrations.Calendar.Shared.ReadPageSize
   alias Tymeslot.Integrations.Shared.ApiResponse
 
   @graph_host "https://graph.microsoft.com"
@@ -109,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Paging do
   defp preference(:list), do: ~s(outlook.timezone="UTC", outlook.body-content-type="text")
 
   defp preference(:delta),
-    do: preference(:list) <> ", odata.maxpagesize=#{@delta_page_size}"
+    do: preference(:list) <> ", odata.maxpagesize=#{ReadPageSize.get(@delta_page_size)}"
 
   # 410 Gone on a delta read is Graph's signal that the link is no longer
   # valid and the caller must bootstrap again. A link Graph cannot read at all
@@ -119,16 +120,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Paging do
   defp handle({:ok, %{status: 410}}, :delta),
     do: {:error, :delta_link_expired, "Delta link expired"}
 
-  defp handle(response, _kind),
   defp handle({:ok, %{status: 400, body: body}} = response, :delta) do
     if unusable_link?(body),
       do: {:error, :delta_link_expired, "Delta link refused"},
       else: handle(response, :list)
   end
 
+  defp handle(response, _kind),
     do: ApiResponse.handle(response, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
 
-  defp url(path, params) when params == %{}, do: @graph_host <> @api_root <> path
   defp unusable_link?(%{"error" => %{"code" => code}})
        when code in ["syncStateNotFound", "syncStateInvalid"],
        do: true
@@ -145,6 +145,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Paging do
 
   defp unusable_link?(_body), do: false
 
+  defp url(path, params) when params == %{}, do: @graph_host <> @api_root <> path
 
   # A first request's query is built as every other Graph request's is
   # (`HTTP.request/5`); only the links Graph returns are kept as they are.
