@@ -104,39 +104,16 @@ defmodule Tymeslot.CalendarGrid.UndeliveredUpdateQueries do
 
   def move_for_owner(user_id, moves) do
     targets = Map.new(moves)
-    now = DateTime.truncate(Clock.utc_now(), :second)
 
     {:ok, count} =
       Repo.transaction(fn ->
-        found =
-          moves
-          |> Enum.map(&elem(&1, 0))
-          |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-          |> Enum.flat_map(fn {integration_id, uids} ->
-            Repo.all(for_owned_events(user_id, integration_id, uids))
-          end)
+        found = owned_failures_on(user_id, Map.keys(targets))
 
         Repo.delete_all(
           from(u in UndeliveredUpdateSchema, where: u.id in ^Enum.map(found, & &1.id))
         )
 
-        moved =
-          found
-          |> Enum.map(&{Map.fetch!(targets, {&1.calendar_integration_id, &1.event_uid}), &1})
-          |> Enum.reject(fn {to, _failure} -> is_nil(to) end)
-          |> Enum.uniq_by(fn {to, failure} -> {to, failure.email} end)
-          |> Enum.map(fn {{integration_id, uid}, failure} ->
-            %{
-              calendar_integration_id: integration_id,
-              event_uid: uid,
-              email: failure.email,
-              failed_at: failure.failed_at,
-              inserted_at: now,
-              updated_at: now
-            }
-          end)
-
-        Repo.insert_all(UndeliveredUpdateSchema, moved,
+        Repo.insert_all(UndeliveredUpdateSchema, moved_rows(found, targets),
           on_conflict: {:replace, [:failed_at, :updated_at]},
           conflict_target: @conflict_target
         )
@@ -145,6 +122,34 @@ defmodule Tymeslot.CalendarGrid.UndeliveredUpdateQueries do
       end)
 
     count
+  end
+
+  defp owned_failures_on(user_id, events) do
+    events
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.flat_map(fn {integration_id, uids} ->
+      Repo.all(for_owned_events(user_id, integration_id, uids))
+    end)
+  end
+
+  # Each failure put on its event's successor, one per guest of an event.
+  defp moved_rows(found, targets) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    found
+    |> Enum.map(&{Map.fetch!(targets, {&1.calendar_integration_id, &1.event_uid}), &1})
+    |> Enum.reject(fn {to, _failure} -> is_nil(to) end)
+    |> Enum.uniq_by(fn {to, failure} -> {to, failure.email} end)
+    |> Enum.map(fn {{integration_id, uid}, failure} ->
+      %{
+        calendar_integration_id: integration_id,
+        event_uid: uid,
+        email: failure.email,
+        failed_at: failure.failed_at,
+        inserted_at: now,
+        updated_at: now
+      }
+    end)
   end
 
   defp for_owned_event(user_id, calendar_integration_id, event_uid),
