@@ -451,7 +451,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           amount_cents: 5000,
           application_fee_cents: 25,
           currency: "eur",
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           refunded_amount_cents: 0
         )
@@ -471,7 +471,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Meeting cancelled and refund issued"
 
       updated = BookingPaymentQueries.get(payment.id)
-      assert updated.status == "refunded"
+      assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
 
       assert Repo.get(MeetingSchema, meeting.id).status == "cancelled"
@@ -496,7 +496,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           amount_cents: 5000,
           application_fee_cents: 25,
           currency: "eur",
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           refunded_amount_cents: 0
         )
@@ -513,7 +513,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert Repo.get(MeetingSchema, meeting.id).status == "confirmed"
 
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
     end
 
@@ -536,7 +536,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           amount_cents: 5000,
           application_fee_cents: 25,
           currency: "eur",
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           refunded_amount_cents: 0
         )
@@ -555,7 +555,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert Repo.get(MeetingSchema, meeting.id).status == "cancelled"
 
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
     end
   end

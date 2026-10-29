@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
           insert(:booking_payment,
             meeting: meeting,
             host_user_id: user.id,
-            status: "pending",
+            status: :pending,
             stripe_checkout_session_id: "cs_TEST"
           )
 
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
         # one transaction, then the broadcast.
         {:ok, _payment} =
           BookingPaymentQueries.update(payment, %{
-            status: "paid",
+            status: :paid,
             paid_at: DateTime.utc_now(:second)
           })
 

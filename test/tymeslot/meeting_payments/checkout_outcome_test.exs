@@ -52,7 +52,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       amount_cents: 5000,
       refunded_amount_cents: 0,
       application_fee_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: now
     })
 
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
   describe "before the payment completes" do
     test "a checkout still in flight is processing" do
       meeting = insert(:meeting, status: "awaiting_payment")
-      insert(:booking_payment, meeting_id: meeting.id, status: "pending", paid_at: nil)
+      insert(:booking_payment, meeting_id: meeting.id, status: :pending, paid_at: nil)
 
       assert outcome(meeting) == :processing
     end
@@ -88,7 +88,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       insert(:booking_payment,
         meeting_id: meeting.id,
         stripe_account_id: "acct_TEST",
-        status: "pending",
+        status: :pending,
         paid_at: nil
       )
 
@@ -108,7 +108,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "an unpaid booking cancelled before checkout finished is failed" do
       meeting = insert(:meeting, status: "cancelled")
-      insert(:booking_payment, meeting_id: meeting.id, status: "pending", paid_at: nil)
+      insert(:booking_payment, meeting_id: meeting.id, status: :pending, paid_at: nil)
 
       assert outcome(meeting) == :failed
     end
@@ -120,7 +120,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
       insert(:booking_payment,
         meeting_id: meeting.id,
-        status: "paid",
+        status: :paid,
         paid_at: DateTime.utc_now(:second)
       )
 
@@ -132,7 +132,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
       insert(:booking_payment,
         meeting_id: meeting.id,
-        status: "disputed",
+        status: :disputed,
         paid_at: DateTime.utc_now(:second)
       )
 
@@ -169,7 +169,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
 
-      assert BookingPaymentQueries.by_meeting_id(meeting.id).status == "refunded"
+      assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :refunded
       assert outcome(meeting) == :declined
     end
 
@@ -179,7 +179,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
 
-      assert BookingPaymentQueries.by_meeting_id(meeting.id).status == "paid"
+      assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :paid
       assert outcome(meeting) == :declined
     end
 

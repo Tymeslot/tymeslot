@@ -46,7 +46,7 @@ defmodule Tymeslot.Meetings.ApprovalErrorTrackingTest do
       amount_cents: 5000,
       refunded_amount_cents: 0,
       application_fee_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     })
 

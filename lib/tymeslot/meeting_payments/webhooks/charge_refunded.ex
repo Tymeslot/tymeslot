@@ -89,13 +89,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
 
   # Disputes own the status field — refund webhooks during a dispute only
   # record the running refund total without changing status.
-  defp derive_status(%{status: "disputed"}, _new_total), do: "disputed"
+  defp derive_status(%{status: :disputed}, _new_total), do: :disputed
 
   defp derive_status(%{amount_cents: amount_cents}, new_total) do
     cond do
-      new_total >= amount_cents -> "refunded"
-      new_total > 0 -> "partially_refunded"
-      true -> "paid"
+      new_total >= amount_cents -> :refunded
+      new_total > 0 -> :partially_refunded
+      true -> :paid
     end
   end
 end

@@ -30,7 +30,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
     bp =
       insert(:booking_payment,
         meeting: meeting,
-        status: "pending",
+        status: :pending,
         stripe_account_id: "acct_TEST",
         stripe_checkout_session_id: Keyword.get(opts, :session_id, "cs_STALE")
       )
@@ -68,7 +68,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
                perform_job(ReconcileAwaitingPayments, %{})
 
       reloaded = BookingPaymentQueries.get(bp.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.paid_at
       assert reloaded.stripe_payment_intent_id == "pi_RECONCILED"
 
@@ -95,7 +95,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
                perform_job(ReconcileAwaitingPayments, %{})
 
       reloaded = BookingPaymentQueries.get(bp.id)
-      assert reloaded.status == "failed"
+      assert reloaded.status == :failed
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
       assert reloaded_meeting.status == "expired"
@@ -132,7 +132,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
         end
 
       assert log =~ "ReconcileAwaitingPayments handler failed"
-      assert BookingPaymentQueries.get(bp.id).status == "pending"
+      assert BookingPaymentQueries.get(bp.id).status == :pending
     end
 
     test "leaves still-open sessions alone" do
@@ -152,7 +152,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
                perform_job(ReconcileAwaitingPayments, %{})
 
       reloaded = BookingPaymentQueries.get(bp.id)
-      assert reloaded.status == "pending"
+      assert reloaded.status == :pending
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
       assert reloaded_meeting.status == "awaiting_payment"
@@ -196,7 +196,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
                perform_job(ReconcileAwaitingPayments, %{})
 
       reloaded = BookingPaymentQueries.get(bp.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.stripe_payment_intent_id == "pi_STRUCT_PAID"
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
@@ -214,7 +214,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
                perform_job(ReconcileAwaitingPayments, %{})
 
       reloaded = BookingPaymentQueries.get(bp.id)
-      assert reloaded.status == "pending"
+      assert reloaded.status == :pending
     end
   end
 end

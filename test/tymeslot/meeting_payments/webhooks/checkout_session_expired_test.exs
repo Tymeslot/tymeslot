@@ -26,7 +26,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_EXPIRED"
         )
 
@@ -39,7 +39,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       assert :ok = CheckoutSessionExpired.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "failed"
+      assert reloaded.status == :failed
       assert reloaded.last_event_id == "evt_EXPIRED"
 
       {:ok, meeting} = MeetingQueries.get_meeting(meeting.id)
@@ -53,7 +53,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "failed",
+          status: :failed,
           stripe_checkout_session_id: "cs_REPLAY",
           last_event_id: "evt_REPLAY"
         )
@@ -67,7 +67,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       assert :ok = CheckoutSessionExpired.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "failed"
+      assert reloaded.status == :failed
       assert reloaded.last_event_id == "evt_REPLAY"
     end
 
@@ -78,7 +78,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_SILENT"
         )
 
@@ -118,7 +118,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting_a,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_FALLBACK_W3"
         )
 
@@ -131,7 +131,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       assert :ok = CheckoutSessionExpired.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "failed"
+      assert reloaded.status == :failed
       assert reloaded.last_event_id == "evt_FALLBACK_W3"
     end
 
@@ -142,7 +142,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_BCAST_EXPIRED"
         )
 
@@ -168,7 +168,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_CANCELLED_PENDING"
         )
 
@@ -183,7 +183,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       assert :ok = CheckoutSessionExpired.handle(event)
       assert_receive :expired, 1_000
 
-      assert Repo.reload!(bp).status == "failed"
+      assert Repo.reload!(bp).status == :failed
       assert {:ok, %{status: "cancelled"}} = MeetingQueries.get_meeting(meeting.id)
     end
   end
@@ -199,7 +199,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "failed",
+          status: :failed,
           last_event_id: "disconnect",
           stripe_checkout_session_id: "cs_FAILED_HELD"
         )
@@ -213,7 +213,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       assert_receive :expired, 1_000
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "failed"
+      assert reloaded.status == :failed
       assert reloaded.last_event_id == "disconnect"
 
       assert :ok = CheckoutSessionExpired.handle(expired_event("evt_FAILED_HELD_2", object))
@@ -233,7 +233,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       insert(:booking_payment,
         stripe_account_id: @account,
         meeting: meeting,
-        status: "failed",
+        status: :failed,
         stripe_checkout_session_id: "cs_FAILED_LEGACY"
       )
 
@@ -249,7 +249,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       insert(:booking_payment,
         stripe_account_id: @account,
         meeting: meeting,
-        status: "failed",
+        status: :failed,
         stripe_checkout_session_id: "cs_FAILED_GONE"
       )
 
@@ -276,7 +276,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: nil
         )
 
@@ -288,7 +288,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       assert :ok = CheckoutSessionExpired.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "pending"
+      assert reloaded.status == :pending
       assert reloaded.last_event_id == nil
       assert {:ok, %{status: "awaiting_payment"}} = MeetingQueries.get_meeting(meeting.id)
     end

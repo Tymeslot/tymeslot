@@ -145,7 +145,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
 
     reloaded = unboxed(fn -> Repo.get!(BookingPaymentSchema, payment.id) end)
     assert reloaded.refunded_amount_cents == 3000
-    assert reloaded.status == "partially_refunded"
+    assert reloaded.status == :partially_refunded
   end
 
   # A charge can be disputed the instant it is captured, so the dispute can
@@ -187,7 +187,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     assert results == [:ok, :ok]
 
     reloaded = unboxed(fn -> Repo.get!(BookingPaymentSchema, payment.id) end)
-    assert reloaded.status == "disputed"
+    assert reloaded.status == :disputed
     assert reloaded.last_event_id == "evt_RACE_COMPLETED"
     assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == "confirmed"
   end
@@ -222,7 +222,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     assert results == [:ok, :ok]
 
     reloaded = unboxed(fn -> Repo.get!(BookingPaymentSchema, payment.id) end)
-    assert reloaded.status == "paid"
+    assert reloaded.status == :paid
     assert reloaded.last_event_id == "evt_RACE_PAID"
     assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == "confirmed"
   end
@@ -257,7 +257,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     assert live_meetings(ctx.user) == 1
 
     paid = unboxed(fn -> Repo.get!(BookingPaymentSchema, payment.id) end)
-    assert paid.status == "paid"
+    assert paid.status == :paid
 
     case booking do
       {:ok, %MeetingSchema{}} ->
@@ -325,7 +325,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
         insert(:booking_payment,
           meeting_id: meeting.id,
           host_user_id: user.id,
-          status: "failed",
+          status: :failed,
           stripe_account_id: @account,
           stripe_checkout_session_id: session_id
         )

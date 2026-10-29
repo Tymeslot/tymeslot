@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       insert(:booking_payment,
         meeting: meeting,
         host_user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_checkout_session_id: "cs_TEST"
       )
 
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     # Flip the row to paid (simulating the webhook side effect) and broadcast
     {:ok, _bp} =
       BookingPaymentQueries.update(bp, %{
-        status: "paid",
+        status: :paid,
         paid_at: DateTime.utc_now(:second)
       })
 
@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       insert(:booking_payment,
         meeting: meeting,
         host_user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_checkout_session_id: "cs_TEST"
       )
 
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
           :telemetry.detach(handler_id)
 
           {:ok, _bp} =
-            BookingPaymentQueries.update(bp, %{status: "paid", paid_at: DateTime.utc_now(:second)})
+            BookingPaymentQueries.update(bp, %{status: :paid, paid_at: DateTime.utc_now(:second)})
 
           {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "confirmed"})
 
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       insert(:booking_payment,
         meeting: meeting,
         host_user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_checkout_session_id: "cs_TEST"
       )
 
@@ -160,7 +160,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
 
     {:ok, _bp} =
-      BookingPaymentQueries.update(bp, %{status: "paid", paid_at: DateTime.utc_now(:second)})
+      BookingPaymentQueries.update(bp, %{status: :paid, paid_at: DateTime.utc_now(:second)})
 
     # The webhook confirms the meeting in the same transaction.
     {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "confirmed"})
@@ -186,7 +186,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second),
       stripe_checkout_session_id: "cs_TEST"
     )
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second),
       amount_cents: 4550,
       currency: "eur",
@@ -243,7 +243,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "refunded",
+      status: :refunded,
       paid_at: now,
       refunded_amount_cents: 5000,
       stripe_checkout_session_id: "cs_TEST"
@@ -274,7 +274,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "refunded",
+      status: :refunded,
       paid_at: now,
       refunded_amount_cents: 5000,
       stripe_checkout_session_id: "cs_TEST"
@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "paid",
+      status: :paid,
       paid_at: now,
       stripe_checkout_session_id: "cs_TEST"
     )
@@ -325,7 +325,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "pending",
+      status: :pending,
       stripe_account_id: "acct_TEST",
       stripe_checkout_session_id: "cs_TEST"
     )
@@ -364,7 +364,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "failed",
+      status: :failed,
       stripe_checkout_session_id: "cs_TEST"
     )
 
@@ -394,7 +394,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "refunded",
+      status: :refunded,
       paid_at: now,
       refunded_amount_cents: 5000,
       stripe_checkout_session_id: "cs_TEST"
@@ -427,7 +427,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "paid",
+      status: :paid,
       paid_at: now,
       stripe_checkout_session_id: "cs_TEST"
     )
@@ -456,7 +456,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     insert(:booking_payment,
       meeting: meeting,
       host_user_id: user.id,
-      status: "paid",
+      status: :paid,
       paid_at: now,
       stripe_checkout_session_id: "cs_TEST"
     )

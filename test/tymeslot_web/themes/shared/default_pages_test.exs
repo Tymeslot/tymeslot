@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPagesTest do
       status: "confirmed"
     }
 
-    payment = %{status: "paid"}
+    payment = %{status: :paid}
 
     out =
       payment(:processing, %{

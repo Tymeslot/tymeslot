@@ -31,7 +31,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_OK"
         )
 
@@ -48,7 +48,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.paid_at
       assert reloaded.stripe_payment_intent_id == "pi_TEST"
       assert reloaded.last_event_id == "evt_OK"
@@ -63,7 +63,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       bp =
         insert_payment(
           meeting: meeting,
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           stripe_checkout_session_id: "cs_REPLAY",
           stripe_payment_intent_id: "pi_REPLAY",
@@ -80,7 +80,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.last_event_id == "evt_REPLAY"
     end
 
@@ -97,7 +97,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_EFFECTS"
         )
 
@@ -129,7 +129,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_CALENDAR"
         )
 
@@ -154,7 +154,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_BCAST"
         )
 
@@ -190,7 +190,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           stripe_checkout_session_id: "cs_ALREADY_CONFIRMED"
         )
@@ -205,7 +205,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       bp_reloaded = BookingPaymentQueries.by_checkout_session("cs_ALREADY_CONFIRMED")
-      assert bp_reloaded.status == "paid"
+      assert bp_reloaded.status == :paid
     end
 
     test "preserves a disputed status when a dispute landed before completion" do
@@ -218,7 +218,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       bp =
         insert_payment(
           meeting: meeting,
-          status: "disputed",
+          status: :disputed,
           stripe_checkout_session_id: "cs_DISP_FIRST"
         )
 
@@ -232,7 +232,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.paid_at
       assert reloaded.stripe_payment_intent_id == "pi_DISP_FIRST"
 
@@ -246,7 +246,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_ASYNC"
         )
 
@@ -260,7 +260,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       assert :ok = CheckoutSessionCompleted.handle(event)
 
-      assert Repo.reload!(bp).status == "pending"
+      assert Repo.reload!(bp).status == :pending
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
       assert reloaded_meeting.status == "awaiting_payment"
       refute_enqueued(worker: CalendarEventWorker)
@@ -272,7 +272,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_ENQUEUE_FAIL"
         )
 
@@ -295,7 +295,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       # The whole state transition rolled back with the failed enqueue — a
       # Stripe redelivery or the reconciler sweep must still find work to do.
       reloaded_bp = Repo.reload!(bp)
-      assert reloaded_bp.status == "pending"
+      assert reloaded_bp.status == :pending
       assert is_nil(reloaded_bp.last_event_id)
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
@@ -310,7 +310,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_CHARGE"
         )
 
@@ -360,7 +360,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_GATED"
         )
 
@@ -405,7 +405,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_MISSING_TYPE"
         )
 
@@ -442,7 +442,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_STALE_DEADLINE"
         )
 
@@ -490,7 +490,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_WINDOW_KEPT"
         )
 
@@ -534,7 +534,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_TOGGLE_OFF"
         )
 
@@ -573,7 +573,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       _bp =
         insert_payment(
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEST_TOGGLE_ON"
         )
 

@@ -69,7 +69,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
 
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.refunded_amount_cents == 2000
-      assert reloaded.status == "partially_refunded"
+      assert reloaded.status == :partially_refunded
 
       assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
     end
@@ -125,7 +125,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
 
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.refunded_amount_cents == 0
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
 
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end

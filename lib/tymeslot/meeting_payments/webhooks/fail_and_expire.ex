@@ -70,16 +70,16 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
   defp run(payment, event_id, reason) do
     result =
       LockedPayment.run(payment, event_id, fn
-        %BookingPaymentSchema{status: "pending"} = locked ->
+        %BookingPaymentSchema{status: :pending} = locked ->
           with {:ok, _bp} <- mark_failed(locked, event_id, reason),
                {:ok, outcome} <- expire_meeting(locked.meeting_id) do
             {:ok, {:failed, failed_outcome(outcome, locked.meeting_id)}}
           end
 
-        %BookingPaymentSchema{status: "failed"} = locked ->
+        %BookingPaymentSchema{status: :failed} = locked ->
           case expire_meeting(locked.meeting_id) do
             {:ok, %MeetingSchema{} = meeting} -> {:ok, {:failed, meeting}}
-            {:ok, :unchanged} -> {:ok, {:not_pending, "failed"}}
+            {:ok, :unchanged} -> {:ok, {:not_pending, :failed}}
             {:error, _reason} = error -> error
           end
 
@@ -127,7 +127,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
   defp failed_outcome(:unchanged, meeting_id), do: {:moved_on, meeting_id}
 
   defp mark_failed(payment, event_id, reason) do
-    case BookingPaymentQueries.update(payment, %{status: "failed", last_event_id: event_id}) do
+    case BookingPaymentQueries.update(payment, %{status: :failed, last_event_id: event_id}) do
       {:ok, updated} = result ->
         Telemetry.emit_status_changed(payment.status, updated.status, reason)
         result

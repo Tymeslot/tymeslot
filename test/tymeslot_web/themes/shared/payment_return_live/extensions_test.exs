@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ExtensionsTest do
       insert(:booking_payment,
         meeting: meeting,
         host_user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_checkout_session_id: "cs_TEST"
       )
 

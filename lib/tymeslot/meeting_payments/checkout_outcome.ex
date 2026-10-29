@@ -13,7 +13,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
 
     * `payment.paid_at` proves this checkout's payment cycle completed. The
       status cannot, because refunding a released request flips it to
-      `"refunded"` while the booking's story is still "paid, then declined".
+      `:refunded` while the booking's story is still "paid, then declined".
     * The meeting's own status and gate fields say what became of the booking
       once paid. `Approval.declined?/1` is the only proof of a decline:
       `approval_resolved_at` is stamped by an approval as well.
@@ -51,7 +51,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
   def classify(nil, _meeting), do: :processing
   def classify(_payment, nil), do: :processing
 
-  def classify(%{paid_at: nil, status: "failed"}, _meeting), do: :failed
+  def classify(%{paid_at: nil, status: :failed}, _meeting), do: :failed
   def classify(%{paid_at: nil}, %{status: status}) when status in @ended_statuses, do: :failed
   def classify(%{paid_at: nil}, _meeting), do: :processing
 

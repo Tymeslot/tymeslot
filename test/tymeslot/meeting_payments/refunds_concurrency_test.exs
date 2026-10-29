@@ -24,7 +24,7 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       amount_cents: 4000,
       application_fee_cents: 20,
       currency: "eur",
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second),
       refunded_amount_cents: 0,
       stripe_account_id: "acct_CONCURRENT"
@@ -131,7 +131,7 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
 
       reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
       assert reloaded.refunded_amount_cents == 3000
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
     end
   end
 end

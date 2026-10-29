@@ -248,11 +248,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         insert(:booking_payment,
           host_user_id: user.id,
           stripe_checkout_session_id: "cs_race_test",
-          status: "pending"
+          status: :pending
         )
 
       # Simulate the concurrent webhook arriving: flip the row to "paid" directly.
-      {:ok, _updated} = BookingPaymentQueries.update(payment, %{status: "paid"})
+      {:ok, _updated} = BookingPaymentQueries.update(payment, %{status: :paid})
 
       # disconnect/1 pre-fetches the payment as "pending" (it was pending when
       # list_pending_for_host ran), but inside the transaction the conditional
@@ -265,7 +265,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       # The payment row must still be "paid" — not "failed".
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
     end
 
     # A row that no longer passes the full meeting validation (here a solo
@@ -282,7 +282,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         host_user_id: user.id,
         meeting: meeting,
         stripe_checkout_session_id: "cs_LEGACY",
-        status: "pending"
+        status: :pending
       )
 
       stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
@@ -306,7 +306,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       # Untouched: still owed, still unrefunded, just no longer refundable here.
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
     end
 

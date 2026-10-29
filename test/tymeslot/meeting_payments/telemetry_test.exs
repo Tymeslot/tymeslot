@@ -30,7 +30,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
 
       on_exit(fn -> :telemetry.detach(handler_id) end)
 
-      assert :ok = PaymentsTelemetry.emit_status_changed("pending", "paid", :webhook_paid)
+      assert :ok = PaymentsTelemetry.emit_status_changed(:pending, :paid, :webhook_paid)
 
       assert_received {:status_changed, %{count: 1},
                        %{from: :pending, to: :paid, reason: :webhook_paid}}
@@ -50,7 +50,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
 
       on_exit(fn -> :telemetry.detach(handler_id) end)
 
-      assert :ok = PaymentsTelemetry.emit_status_changed("paid", "paid", :webhook_paid)
+      assert :ok = PaymentsTelemetry.emit_status_changed(:paid, :paid, :webhook_paid)
 
       refute_received :unexpected_event
     end
@@ -93,7 +93,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
         insert(:booking_payment,
           stripe_account_id: "acct_TEL_HOST",
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_TEL_OK"
         )
 
@@ -127,7 +127,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
         insert(:booking_payment,
           stripe_account_id: "acct_TEL_HOST",
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           currency: "eur",
           stripe_checkout_session_id: "cs_TEL_ANALYTICS"
         )
@@ -173,7 +173,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
         insert(:booking_payment,
           stripe_account_id: "acct_TEL_HOST",
           meeting: meeting,
-          status: "failed",
+          status: :failed,
           currency: "usd",
           stripe_checkout_session_id: "cs_TEL_RECOVERED"
         )
@@ -215,7 +215,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
         insert(:booking_payment,
           stripe_account_id: "acct_TEL_HOST",
           meeting: meeting,
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           stripe_checkout_session_id: "cs_TEL_REPLAY",
           last_event_id: "evt_TEL_REPLAY"
@@ -259,7 +259,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
         insert(:booking_payment,
           stripe_account_id: "acct_TEL_HOST",
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           stripe_checkout_session_id: "cs_STATUS"
         )
 

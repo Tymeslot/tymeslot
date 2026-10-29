@@ -124,9 +124,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   defp derive_status_from_refund(%{amount_cents: amount_cents}, refunded) do
     cond do
-      refunded >= amount_cents -> "refunded"
-      refunded > 0 -> "partially_refunded"
-      true -> "paid"
+      refunded >= amount_cents -> :refunded
+      refunded > 0 -> :partially_refunded
+      true -> :paid
     end
   end
 end

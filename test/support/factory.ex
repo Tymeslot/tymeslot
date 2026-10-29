@@ -514,7 +514,7 @@ defmodule Tymeslot.Factory do
       amount_cents: 5000,
       currency: "eur",
       application_fee_cents: 25,
-      status: "pending",
+      status: :pending,
       refunded_amount_cents: 0
     }
   end
@@ -524,7 +524,7 @@ defmodule Tymeslot.Factory do
   def paid_booking_payment_factory do
     struct!(booking_payment_factory(),
       stripe_charge_id: sequence(:bp_stripe_charge_id, &"ch_#{&1}"),
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     )
   end

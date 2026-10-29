@@ -195,7 +195,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert cancelled.status == "cancelled"
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
 
       assert_enqueued(
@@ -242,7 +242,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert cancelled.status == "cancelled"
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
@@ -284,7 +284,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       refute_received :refund_attempted
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
@@ -309,7 +309,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert reloaded.status == "confirmed"
 
       reloaded_payment = BookingPaymentQueries.by_meeting_id(stale_meeting.id)
-      assert reloaded_payment.status == "paid"
+      assert reloaded_payment.status == :paid
       assert reloaded_payment.refunded_amount_cents == 0
     end
   end
@@ -335,7 +335,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert cancelled.cancellation_reason == "Cancelled externally via calendar sync"
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
 
       assert_enqueued(
@@ -548,7 +548,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       amount_cents: 5000,
       refunded_amount_cents: 0,
       application_fee_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     })
 

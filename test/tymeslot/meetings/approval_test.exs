@@ -57,7 +57,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       amount_cents: 5000,
       refunded_amount_cents: 0,
       application_fee_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     })
 
@@ -444,7 +444,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
 
       assert_enqueued(
@@ -486,7 +486,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:ok, _expired} = Approval.expire(meeting)
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
     end
 
@@ -515,7 +515,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
         stripe_charge_id: nil,
         amount_cents: 5000,
         refunded_amount_cents: 0,
-        status: "pending",
+        status: :pending,
         paid_at: nil
       })
 
@@ -532,7 +532,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
         stripe_charge_id: "ch_TEST_already_refunded",
         amount_cents: 5000,
         refunded_amount_cents: 5000,
-        status: "refunded",
+        status: :refunded,
         paid_at: DateTime.utc_now(:second)
       })
 
@@ -553,7 +553,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert reload(meeting).status == "expired"
 
       reloaded_payment = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded_payment.status == "paid"
+      assert reloaded_payment.status == :paid
       assert reloaded_payment.refunded_amount_cents == 0
     end
   end

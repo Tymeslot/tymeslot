@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       host = connected_host()
 
       cancelled_payment_for(host, %{
-        status: "partially_refunded",
+        status: :partially_refunded,
         refunded_amount_cents: 2000
       })
 
@@ -182,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
     test "is absent entirely when nothing is outstanding", %{conn: conn} do
       host = connected_host()
 
-      cancelled_payment_for(host, %{status: "refunded", refunded_amount_cents: 5000})
+      cancelled_payment_for(host, %{status: :refunded, refunded_amount_cents: 5000})
 
       {_view, html} = open_payments(conn, host)
 
@@ -326,7 +326,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       |> form("#refund-form", %{"refund_type" => "full"})
       |> render_submit()
 
-      assert Repo.reload!(payment).status == "refunded"
+      assert Repo.reload!(payment).status == :refunded
       refute has_element?(view, refund_button(payment))
     end
 

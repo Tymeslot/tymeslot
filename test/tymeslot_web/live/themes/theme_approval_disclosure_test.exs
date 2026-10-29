@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
           insert(:booking_payment,
             meeting: meeting,
             host_user_id: user.id,
-            status: "pending",
+            status: :pending,
             stripe_checkout_session_id: "cs_TEST"
           )
 
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         # gate instead of being confirmed outright.
         {:ok, _payment} =
           BookingPaymentQueries.update(payment, %{
-            status: "paid",
+            status: :paid,
             paid_at: DateTime.utc_now(:second)
           })
 

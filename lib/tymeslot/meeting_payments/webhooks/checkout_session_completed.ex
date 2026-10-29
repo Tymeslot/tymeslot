@@ -330,7 +330,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # confirm. A payment still awaiting its money is recorded paid and refunded
   # in full like a refused one; one already recorded is a replay of this.
   defp refund_orphaned(%{status: status} = payment, event_id, object)
-       when status in ["pending", "failed"] do
+       when status in [:pending, :failed] do
     with {:ok, paid} <- mark_paid(payment, event_id, object),
          {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
       {:ok, {:refused, paid, nil}}
@@ -453,7 +453,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   #                refunded otherwise (see `complete/3`)
   #   :no_op     — meeting already in a non-recoverable terminal state; skip
   defp check_transition(%{status: "awaiting_payment"}, _payment), do: {:proceed, :advanced}
-  defp check_transition(%{status: "expired"}, %{status: "failed"}), do: {:proceed, :recovered}
+  defp check_transition(%{status: "expired"}, %{status: :failed}), do: {:proceed, :recovered}
 
   defp check_transition(_meeting, _payment), do: :no_op
 
@@ -477,8 +477,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # instant it is captured). When it has, the row is already `disputed` — record
   # the payment_intent and timestamp but keep the dispute status rather than
   # clobbering it back to `paid`.
-  defp paid_status("disputed"), do: "disputed"
-  defp paid_status(_status), do: "paid"
+  defp paid_status(:disputed), do: :disputed
+  defp paid_status(_status), do: :paid
 
   defp emit_payment_succeeded(paid, meeting) do
     :telemetry.execute(

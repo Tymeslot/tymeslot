@@ -98,7 +98,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   end
 
   defp assert_cancelled(meeting, payment) do
-    assert Repo.reload!(payment).status == "failed"
+    assert Repo.reload!(payment).status == :failed
     assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
   end
 
@@ -108,7 +108,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
     request_deletion(host)
     assert_enqueued(worker: AccountDeletionCheckoutsWorker, args: %{user_id: host.id})
-    assert Repo.reload!(payment).status == "pending"
+    assert Repo.reload!(payment).status == :pending
 
     expect(StripeAdapterMock, :expire_checkout_session, fn "cs_REQ_EXPIRE", _opts ->
       {:ok, %{"id" => "cs_REQ_EXPIRE", "status" => "expired"}}
@@ -144,7 +144,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
     # Mox fails on any call to the adapter that is not expected.
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
-    assert Repo.reload!(payment).status == "pending"
+    assert Repo.reload!(payment).status == :pending
 
     assert :ok = CheckoutSessionCompleted.handle(completed("RESTORED", meeting))
     assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
@@ -174,7 +174,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
 
     refunded = Repo.reload!(payment)
-    assert refunded.status == "refunded"
+    assert refunded.status == :refunded
     assert refunded.refunded_amount_cents == payment.amount_cents
     assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
     refute_enqueued(worker: CalendarEventWorker)
@@ -215,7 +215,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     Oban.drain_queue(queue: :payments)
 
     refunded = Repo.reload!(payment)
-    assert refunded.status == "refunded"
+    assert refunded.status == :refunded
     assert refunded.refunded_amount_cents == payment.amount_cents
   end
 
@@ -233,7 +233,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     assert :ok = CheckoutSessionCompleted.handle(completed("AWAITING", meeting))
 
     recorded = Repo.reload!(payment)
-    assert recorded.status == "paid"
+    assert recorded.status == :paid
     assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
     refute_enqueued(worker: CalendarEventWorker)
 

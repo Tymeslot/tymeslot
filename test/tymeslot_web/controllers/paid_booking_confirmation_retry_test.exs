@@ -40,7 +40,7 @@ defmodule TymeslotWeb.PaidBookingConfirmationRetryTest do
     payment =
       insert(:booking_payment,
         meeting: meeting,
-        status: "pending",
+        status: :pending,
         stripe_account_id: @account,
         stripe_checkout_session_id: "cs_TEST_RETRY"
       )
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.PaidBookingConfirmationRetryTest do
     end
 
     reloaded_payment = Repo.reload!(payment)
-    assert reloaded_payment.status == "pending"
+    assert reloaded_payment.status == :pending
     assert is_nil(reloaded_payment.last_event_id)
 
     assert {:ok, %{status: "awaiting_payment", announced_at: nil}} =
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.PaidBookingConfirmationRetryTest do
     # A further redelivery of the same event changes nothing.
     assert build_conn() |> post_connect(payload) |> response(200) == ""
 
-    assert Repo.reload!(payment).status == "paid"
+    assert Repo.reload!(payment).status == :paid
     assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
 
     assert [_one] =

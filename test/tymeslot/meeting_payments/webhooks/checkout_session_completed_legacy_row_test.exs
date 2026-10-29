@@ -30,7 +30,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLegacyRowTes
 
     assert :ok = CheckoutSessionCompleted.handle(completed_event(meeting, "LEGACY"))
 
-    assert Repo.reload!(bp).status == "paid"
+    assert Repo.reload!(bp).status == :paid
     assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
   end
 
@@ -63,7 +63,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLegacyRowTes
     insert(:booking_payment,
       stripe_account_id: @account,
       meeting: meeting,
-      status: "pending",
+      status: :pending,
       stripe_checkout_session_id: "cs_#{suffix}"
     )
   end
