@@ -10,6 +10,7 @@ defmodule Tymeslot.Migrations.AddStatusCheckToBookingPaymentsTest do
   @moduletag :database
   @moduletag :migrations
 
+  alias Ecto.UUID
   alias Tymeslot.Repo
   alias Tymeslot.Test.MigrationRunner
 
@@ -43,7 +44,7 @@ defmodule Tymeslot.Migrations.AddStatusCheckToBookingPaymentsTest do
   defp set_raw_status!(id, status) do
     Repo.query!("UPDATE booking_payments SET status = $1 WHERE id = $2", [
       status,
-      Ecto.UUID.dump!(id)
+      UUID.dump!(id)
     ])
   end
 end

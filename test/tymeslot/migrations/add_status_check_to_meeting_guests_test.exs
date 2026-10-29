@@ -10,6 +10,7 @@ defmodule Tymeslot.Migrations.AddStatusCheckToMeetingGuestsTest do
   @moduletag :database
   @moduletag :migrations
 
+  alias Ecto.UUID
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Repo
   alias Tymeslot.Test.MigrationRunner
@@ -37,7 +38,7 @@ defmodule Tymeslot.Migrations.AddStatusCheckToMeetingGuestsTest do
   defp set_raw_status!(id, status) do
     Repo.query!("UPDATE meeting_guests SET status = $1 WHERE id = $2", [
       status,
-      Ecto.UUID.dump!(id)
+      UUID.dump!(id)
     ])
   end
 end
