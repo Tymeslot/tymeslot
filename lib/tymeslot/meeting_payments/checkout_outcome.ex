@@ -40,9 +40,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
   # writes both rows in one transaction, so this is a moment, not a state.
   @pre_payment_statuses ["pending", "awaiting_payment"]
 
-  # An unpaid checkout whose booking is gone will never complete.
-  @ended_statuses ["expired", "cancelled"]
-
   @doc """
   Classifies a checkout for the attendee. `nil` for either row means there is
   nothing to judge yet, which reads as `:processing`.
@@ -52,8 +49,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
   def classify(_payment, nil), do: :processing
 
   def classify(%{paid_at: nil, status: :failed}, _meeting), do: :failed
-  def classify(%{paid_at: nil}, %{status: status}) when status in @ended_statuses, do: :failed
-  def classify(%{paid_at: nil}, _meeting), do: :processing
+  # An unpaid checkout whose booking was released will never complete.
+  def classify(%{paid_at: nil}, %{status: status}) do
+    if MeetingState.released_status?(status), do: :failed, else: :processing
+  end
 
   def classify(_paid, %{status: "expired", approval_resolved_at: %DateTime{}}), do: :expired
 

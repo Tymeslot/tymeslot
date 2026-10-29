@@ -18,27 +18,51 @@ defmodule Tymeslot.Meetings.MeetingState do
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
-  @active_statuses ["confirmed", "pending", "awaiting_approval", "reschedule_requested"]
+  @pending "pending"
+  @awaiting_payment "awaiting_payment"
+  # Held pending the host's manual approval. Occupies its slot like a pending
+  # booking does, but is not a booking anyone has agreed to yet.
+  @awaiting_approval "awaiting_approval"
+  @confirmed "confirmed"
+  @cancelled "cancelled"
+  @completed "completed"
+  @expired "expired"
+  @reschedule_requested "reschedule_requested"
+
+  @active_statuses [@confirmed, @pending, @awaiting_approval, @reschedule_requested]
 
   # Statuses that occupy a calendar slot for conflict-detection purposes.
   # Combined with `exclude_voided_slots/1`, this is the query-side mirror of
   # `slot_void?/1`: a meeting only actually blocks a time window while it
   # holds one of these statuses AND has no pending reschedule request.
-  @occupying_statuses ["confirmed", "pending", "awaiting_payment", "awaiting_approval"]
-
-  @awaiting_approval "awaiting_approval"
-  @awaiting_payment "awaiting_payment"
-  @cancelled "cancelled"
-  @confirmed "confirmed"
-  @expired "expired"
+  @occupying_statuses [@confirmed, @pending, @awaiting_payment, @awaiting_approval]
 
   # Statuses a booking is released in without taking place: cancelled, or a
   # request that expired unanswered. Releasing one deletes its video room.
-  @released_statuses ["cancelled", "expired"]
+  @released_statuses [@cancelled, @expired]
 
   # Statuses a meeting never leaves: it is over, one way or another, so
   # nothing may cancel, move or confirm it again.
-  @terminal_statuses ["cancelled", "completed", "expired"]
+  @terminal_statuses [@cancelled, @completed, @expired]
+
+  @doc "The statuses `active?/1` accepts."
+  @spec active() :: [String.t()]
+  def active, do: @active_statuses
+
+  @doc """
+  The statuses that occupy a calendar slot for conflict detection; see
+  `where_slot_live/1`, which also excludes voided slots.
+  """
+  @spec occupying() :: [String.t()]
+  def occupying, do: @occupying_statuses
+
+  @doc "The statuses `released_status?/1` accepts."
+  @spec released() :: [String.t()]
+  def released, do: @released_statuses
+
+  @doc "The statuses `terminal?/1` accepts."
+  @spec terminal() :: [String.t()]
+  def terminal, do: @terminal_statuses
 
   @doc """
   Whether the meeting still represents a live booking a user should be able
@@ -63,8 +87,8 @@ defmodule Tymeslot.Meetings.MeetingState do
   it, nor a calendar event referencing it.
   """
   @spec slot_void?(Meeting.t()) :: boolean()
-  def slot_void?(%{status: "cancelled"}), do: true
-  def slot_void?(%{status: "reschedule_requested"}), do: true
+  def slot_void?(%{status: @cancelled}), do: true
+  def slot_void?(%{status: @reschedule_requested}), do: true
   def slot_void?(%{reschedule_requested_at: nil}), do: false
   def slot_void?(%{reschedule_requested_at: %DateTime{}}), do: true
 
@@ -91,7 +115,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   time for this meeting.
   """
   @spec awaiting_new_time?(Meeting.t()) :: boolean()
-  def awaiting_new_time?(%{status: "reschedule_requested"}), do: true
+  def awaiting_new_time?(%{status: @reschedule_requested}), do: true
   def awaiting_new_time?(%{reschedule_requested_at: %DateTime{}}), do: true
   def awaiting_new_time?(_meeting), do: false
 
@@ -120,7 +144,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec where_expects_calendar_event(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_expects_calendar_event(query) do
     query
-    |> where([m], m.status in ^(@active_statuses -- ["reschedule_requested"]))
+    |> where([m], m.status in ^(@active_statuses -- [@reschedule_requested]))
     |> exclude_voided_slots()
   end
 
@@ -268,7 +292,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec where_live_booking(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_live_booking(query) do
     query
-    |> where([m], m.status == "confirmed")
+    |> where([m], m.status == ^@confirmed)
     |> exclude_voided_slots()
   end
 end

@@ -32,6 +32,19 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
     end
   end
 
+  describe "status groupings" do
+    test "each grouping agrees with its predicate" do
+      for status <- MeetingState.active(), do: assert(MeetingState.active?(%{status: status}))
+      for status <- MeetingState.terminal(), do: assert(MeetingState.terminal?(%{status: status}))
+      for status <- MeetingState.released(), do: assert(MeetingState.released_status?(status))
+    end
+
+    test "a released booking is terminal, and neither occupies a slot" do
+      assert MeetingState.released() -- MeetingState.terminal() == []
+      assert Enum.filter(MeetingState.terminal(), &(&1 in MeetingState.occupying())) == []
+    end
+  end
+
   describe "released_status?/1" do
     test "true for a cancelled booking and an expired request" do
       assert MeetingState.released_status?("cancelled")
