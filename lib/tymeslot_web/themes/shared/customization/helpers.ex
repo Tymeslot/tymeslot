@@ -18,7 +18,9 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   @spec assign_theme_customization(Phoenix.LiveView.Socket.t(), map(), String.t()) ::
           Phoenix.LiveView.Socket.t()
   def assign_theme_customization(socket, profile, theme_id) do
-    customization = Demo.get_theme_customization(profile.id, theme_id)
+    customization =
+      Demo.get_theme_customization(ThemeCustomizations.scope_for(profile), theme_id)
+
     overrides = socket.assigns[:theme_overrides] || %{}
 
     assign(socket, :theme_tokens, ThemeCustomizations.tokens(theme_id, customization, overrides))

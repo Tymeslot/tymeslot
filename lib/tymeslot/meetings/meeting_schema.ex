@@ -112,6 +112,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           tracking_params: map(),
           visitor_hash: String.t() | nil,
           invitee_data_erased_at: DateTime.t() | nil,
+          booking_page_id: integer() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -351,6 +352,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Cookieless join key to the booking-page view in analytics_events.
     field(:visitor_hash, :string)
     field(:tracking_params, :map, default: %{})
+    # The booking page the booking came through; nil for `/<username>`, a
+    # direct link under it, or a booking that came through no page at all.
+    field(:booking_page_id, :id)
 
     # Stamped once the retention purge has removed everything the invitees
     # gave, so the purge passes over the meeting from then on. See
@@ -444,7 +448,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :referrer_host,
     :tracking_params,
     :visitor_hash,
-    :managed_by_host
+    :managed_by_host,
+    :booking_page_id
   ]
 
   @group_required_fields [
@@ -571,6 +576,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     )
     |> check_constraint(:end_time, name: :meetings_end_after_start)
     |> foreign_key_constraint(:venue_id)
+    |> foreign_key_constraint(:booking_page_id)
   end
 
   # A new meeting gets its own calendar identity, generated independently of

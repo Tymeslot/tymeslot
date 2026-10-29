@@ -848,3 +848,8 @@ msgstr "перенесень зустрічей"
 #, elixir-autogen, elixir-format
 msgid "cancel the planned dates before turning fixed dates off"
 msgstr "скасуйте заплановані дати, перш ніж вимкнути фіксовані дати"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Використовуйте від 3 до 30 малих літер, цифр, дефісів або підкреслень, починаючи з літери чи цифри"

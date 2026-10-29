@@ -2,13 +2,24 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   @moduledoc """
   Theme selection component for the dashboard.
   Allows users to select their booking page theme.
+
+  Everything here applies to the page chosen by the `page` query parameter
+  (`/dashboard/theme?page=<id>`), or to the profile's own page at
+  `/<username>` without one. A booking page is edited through the owner's
+  profile as that page presents it (`BookingPages.apply_to_profile/2`, held in
+  `@page_profile`), so the theme cards, booking texts and colour editor read
+  the page's values unchanged; only the writes branch on whether a page is
+  selected.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm
+  alias TymeslotWeb.Dashboard.ThemeSettings.PagesComponent
+  alias TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemePreview
   alias TymeslotWeb.Live.Scheduling.PreviewMode
@@ -34,12 +45,18 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
       (assigns.live_action == :theme_customization && not is_nil(customization_theme_id)) ||
         assigns[:show_customization] || false
 
+    pages = BookingPages.list(assigns.profile.id)
+    selected_page = Enum.find(pages, &(to_string(&1.id) == assigns[:params]["page"]))
+
     socket =
       socket
       |> assign(assigns)
       |> assign(:themes, ThemeInfo.theme_options())
       |> assign(:show_customization, show_customization)
       |> assign(:customization_theme_id, customization_theme_id)
+      |> assign(:pages, pages)
+      |> assign(:selected_page, selected_page)
+      |> assign(:page_profile, page_profile(assigns.profile, selected_page))
       |> assign_new(:customization_timestamp, fn -> System.system_time() end)
 
     {:ok, socket}
@@ -52,15 +69,31 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
       <.dashboard_page icon="hero-paint-brush" title={dgettext("dashboard_common", "Theme")}>
         <%= if @show_customization && @customization_theme_id do %>
           <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <p :if={@pages != []} class="mb-6 text-token-sm font-semibold text-tymeslot-600">
+              {dgettext("dashboard_appearance", "You are editing %{address}",
+                address: "/" <> (BookingPages.public_address(@page_profile) || "")
+              )}
+            </p>
             <.live_component
               module={ThemeCustomizationComponent}
-              id={"theme-customization-#{@customization_theme_id}-#{@customization_timestamp}"}
-              profile={@profile}
+              id={
+                "theme-customization-#{@customization_theme_id}-#{@customization_timestamp}" <>
+                  page_suffix(@selected_page)
+              }
+              profile={@page_profile}
               theme_id={@customization_theme_id}
               parent_component={@myself}
             />
           </div>
         <% else %>
+          <.live_component
+            module={PagesComponent}
+            id="booking-pages"
+            profile={@profile}
+            pages={@pages}
+            selected_page={@selected_page}
+          />
+
           <div class="mb-16 max-w-2xl">
             <p class="text-xl text-tymeslot-500 font-medium leading-relaxed">
               {dgettext(
@@ -78,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                   interactive
                   class={[
                     "overflow-hidden duration-500",
-                    if(@profile.booking_theme == theme_id,
+                    if(@page_profile.booking_theme == theme_id,
                       do:
                         "glass-gradient border-turquoise-400 shadow-turquoise-500/20 ring-4 ring-turquoise-50",
                       else: "hover:border-turquoise-200 hover:shadow-tymeslot-200/50"
@@ -99,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                       <h2 class="text-token-lg font-semibold text-white drop-shadow-md">
                         {theme_name}
                       </h2>
-                      <%= if @profile.booking_theme == theme_id do %>
+                      <%= if @page_profile.booking_theme == theme_id do %>
                         <.pill tone={:brand} size={:sm} icon="hero-check">
                           {dgettext("dashboard_appearance", "Current style")}
                         </.pill>
@@ -132,7 +165,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                   <%= if LinkAccessPolicy.can_link?(@profile, @integration_status) do %>
                     <.action_link
                       href={
-                        PreviewMode.owner_path(@profile.username, @profile.user_id, theme: theme_id)
+                        PreviewMode.owner_path(
+                          BookingPages.public_address(@page_profile),
+                          @profile.user_id,
+                          theme: theme_id
+                        )
                       }
                       target="_blank"
                       rel="noopener noreferrer"
@@ -171,8 +208,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
           <.live_component
             module={BookingTextForm}
-            id="booking-text-form"
+            id={"booking-text-form" <> page_suffix(@selected_page)}
+            profile={@page_profile}
+          />
+
+          <.live_component
+            module={PageSettingsComponent}
+            id={"page-settings" <> page_suffix(@selected_page)}
             profile={@profile}
+            page={@selected_page}
           />
         <% end %>
       </.dashboard_page>
@@ -182,31 +226,29 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("show_customization", %{"theme" => theme_id}, socket) do
-    {:noreply, push_patch(socket, to: ~p"/dashboard/theme/customize/#{theme_id}")}
+    {:noreply, push_patch(socket, to: customize_path(theme_id, socket.assigns.selected_page))}
   end
 
   def handle_event("close_customization", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/dashboard/theme")}
+    {:noreply, push_patch(socket, to: theme_path(socket.assigns.selected_page))}
   end
 
   def handle_event("select_theme", %{"theme" => theme_id}, socket) do
     if ThemeInfo.valid_theme_id?(theme_id) do
-      case Profiles.update_booking_theme(socket.assigns.profile, theme_id) do
-        {:ok, updated_profile} ->
-          theme_name = ThemeInfo.get_theme_name(updated_profile.booking_theme)
-          send(self(), {:profile_updated, updated_profile})
+      case apply_theme(socket, socket.assigns.selected_page, theme_id) do
+        {:ok, socket} ->
+          theme_name = ThemeInfo.get_theme_name(socket.assigns.page_profile.booking_theme)
 
           {:noreply,
-           socket
-           |> assign(profile: updated_profile)
-           |> Flash.put_flash(
+           Flash.put_flash(
+             socket,
              :info,
              dgettext("dashboard_appearance", "Theme updated to %{theme_name}",
                theme_name: theme_name
              )
            )}
 
-        {:error, _changeset} ->
+        {:error, _reason} ->
           {:noreply,
            Flash.put_flash(
              socket,
@@ -220,6 +262,49 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
          socket,
          :error,
          dgettext("dashboard_appearance", "Invalid theme selection")
+       )}
+    end
+  end
+
+  @doc """
+  The Theme screen for `page`, or for the profile's own page when nil.
+  """
+  @spec theme_path(map() | nil) :: String.t()
+  def theme_path(nil), do: ~p"/dashboard/theme"
+  def theme_path(%{id: id}), do: ~p"/dashboard/theme?#{[page: id]}"
+
+  defp customize_path(theme_id, nil), do: ~p"/dashboard/theme/customize/#{theme_id}"
+
+  defp customize_path(theme_id, %{id: id}),
+    do: ~p"/dashboard/theme/customize/#{theme_id}?#{[page: id]}"
+
+  defp page_profile(profile, nil), do: profile
+  defp page_profile(profile, page), do: BookingPages.apply_to_profile(profile, page)
+
+  # The profile's own tab keeps the ids it always had; a page's tab gets its
+  # own, so switching tabs mounts fresh editors instead of carrying state over.
+  defp page_suffix(nil), do: ""
+  defp page_suffix(%{id: id}), do: "-#{id}"
+
+  defp apply_theme(socket, nil, theme_id) do
+    with {:ok, updated_profile} <- Profiles.update_booking_theme(socket.assigns.profile, theme_id) do
+      send(self(), {:profile_updated, updated_profile})
+      {:ok, assign(socket, profile: updated_profile, page_profile: updated_profile)}
+    end
+  end
+
+  # A page's theme is the page's own. The dashboard is not told: it holds the
+  # profile, and handing it the page's look would make that the profile's.
+  # The page is read afresh rather than taken from the assigns: the one held
+  # here predates any texts the form below has saved since, and the form is
+  # re-rendered from what this returns.
+  defp apply_theme(socket, page, theme_id) do
+    with {:ok, fresh} <- BookingPages.fetch(socket.assigns.profile.id, page.id),
+         {:ok, page} <- BookingPages.update_theme(fresh, theme_id) do
+      {:ok,
+       assign(socket,
+         selected_page: page,
+         page_profile: BookingPages.apply_to_profile(socket.assigns.profile, page)
        )}
     end
   end

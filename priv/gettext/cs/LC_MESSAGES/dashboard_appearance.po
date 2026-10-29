@@ -694,3 +694,146 @@ msgstr "Tento typ souboru není podporován. Nahrajte prosím video ve formátu 
 #, elixir-autogen, elixir-format
 msgid "You are customising %{theme}, but your booking page uses %{current}. These changes appear on your booking page once you choose %{theme} as your style."
 msgstr "Přizpůsobujete motiv %{theme}, ale vaše rezervační stránka používá %{current}. Tyto změny se na rezervační stránce projeví, jakmile jako styl zvolíte %{theme}."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Address"
+msgstr "Adresa"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page created"
+msgstr "Rezervační stránka byla vytvořena"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page deleted"
+msgstr "Rezervační stránka byla smazána"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page saved"
+msgstr "Rezervační stránka byla uložena"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Rezervační stránky"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Changing the address stops the old one working at once. Links in emails you have already sent keep working."
+msgstr "Po změně adresy přestane stará ihned fungovat. Odkazy v již odeslaných e-mailech fungují dál."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr "Kopírovat odkaz"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the booking page. Please try again."
+msgstr "Rezervační stránku se nepodařilo vytvořit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete the booking page. Please try again."
+msgstr "Rezervační stránku se nepodařilo smazat. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not update this page's meeting types. Please try again."
+msgstr "Typy schůzek na této stránce se nepodařilo aktualizovat. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create page"
+msgstr "Vytvořit stránku"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{address}? Bookings made through it keep working and show your main page's look. Its colours and uploaded backgrounds are removed."
+msgstr "Smazat %{address}? Rezervace vytvořené přes tuto stránku zůstanou platné a zobrazí se ve vzhledu vaší hlavní stránky. Barvy a nahraná pozadí této stránky budou odstraněny."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete booking page"
+msgstr "Smazat rezervační stránku"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete page"
+msgstr "Smazat stránku"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Inactive: not offered anywhere until you turn it back on."
+msgstr "Neaktivní: nikde se nenabízí, dokud jej znovu nezapnete."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types on this page"
+msgstr "Typy schůzek na této stránce"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "New booking page"
+msgstr "Nová rezervační stránka"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "New page"
+msgstr "Nová stránka"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting types yet."
+msgstr "Zatím žádné typy schůzek."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Open"
+msgstr "Otevřít"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Page name"
+msgstr "Název stránky"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Uložit"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "The page starts with your main page's theme and colours, its own texts switched off, and no meeting types."
+msgstr "Stránka začne s motivem a barvami vaší hlavní stránky, bez vlastních textů a bez typů schůzek."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page no longer exists."
+msgstr "Tato rezervační stránka již neexistuje."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This page"
+msgstr "Tato stránka"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "You are editing %{address}"
+msgstr "Upravujete %{address}"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "You have reached the limit of %{count} booking pages. Delete one to add another."
+msgstr "Byl dosažen limit %{count} rezervačních stránek. Chcete-li přidat další, jednu smažte."

@@ -694,3 +694,146 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You are customising %{theme}, but your booking page uses %{current}. These changes appear on your booking page once you choose %{theme} as your style."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Address"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page created"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page deleted"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page saved"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Changing the address stops the old one working at once. Links in emails you have already sent keep working."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the booking page. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete the booking page. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not update this page's meeting types. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{address}? Bookings made through it keep working and show your main page's look. Its colours and uploaded backgrounds are removed."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete booking page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Inactive: not offered anywhere until you turn it back on."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types on this page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "New booking page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "New page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting types yet."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Open"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Page name"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "The page starts with your main page's theme and colours, its own texts switched off, and no meeting types."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page no longer exists."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "You are editing %{address}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "You have reached the limit of %{count} booking pages. Delete one to add another."
+msgstr ""

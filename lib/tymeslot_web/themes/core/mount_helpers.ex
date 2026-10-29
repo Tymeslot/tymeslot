@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
+  alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Polls
   alias Tymeslot.Scheduling.LinkAccessPolicy
@@ -119,6 +120,9 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
 
     case MeetingManagement.validate_and_load_meeting(meeting_uid, action, profile.user_id) do
       {:ok, meeting} ->
+        # A booking made through a booking page is managed in that page's look.
+        profile = BookingPages.for_meeting(profile, meeting)
+
         socket =
           setup_meeting_management_socket(
             socket,

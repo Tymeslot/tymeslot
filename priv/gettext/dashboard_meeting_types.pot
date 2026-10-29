@@ -27,11 +27,6 @@ msgstr ""
 msgid "Changing this link will stop any links you have already shared for this meeting type from working."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Hidden from your public booking page; reachable only by its direct link"
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Link address"
@@ -429,3 +424,8 @@ msgid "The %{count} person who signed up is told by email."
 msgid_plural "The %{count} people who signed up are told by email."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; reachable only by its direct link"
+msgstr ""

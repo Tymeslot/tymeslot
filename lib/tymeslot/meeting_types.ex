@@ -15,13 +15,11 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
-  alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.MeetingTypes.OneOffEvents
-  alias Tymeslot.MeetingTypes.PaymentAccess
+  alias Tymeslot.MeetingTypes.PublicListing
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
@@ -236,10 +234,7 @@ defmodule Tymeslot.MeetingTypes do
   def get_public_meeting_types(user_id) do
     user_id
     |> MeetingTypeQueries.list_public_meeting_types()
-    |> GroupAccess.reject_paused()
-    |> FixedDates.reject_unbookable()
-    |> PaymentAccess.reject_unsellable()
-    |> OneOffEvents.order_for_listing()
+    |> PublicListing.offered()
   end
 
   @doc """

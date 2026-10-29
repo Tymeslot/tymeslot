@@ -334,11 +334,6 @@ msgstr "Правила бронювання"
 msgid "Details"
 msgstr "Деталі"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "Hide from public booking page"
-msgstr "Приховати з публічної сторінки бронювання"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Location & Calendar"
@@ -353,11 +348,6 @@ msgstr "Запитання"
 #, elixir-autogen, elixir-format
 msgid "Visibility"
 msgstr "Видимість"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "When on, this meeting type is reachable only through its direct link."
-msgstr "Якщо ввімкнено, цей тип зустрічі буде доступний лише за прямим посиланням."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
 #, elixir-autogen, elixir-format
@@ -990,3 +980,13 @@ msgstr[2] "Без обмеження кожне бронювання може п
 #, elixir-autogen, elixir-format
 msgid "Cancel the planned dates to turn group bookings off."
 msgstr "Скасуйте заплановані дати, щоб вимкнути групові бронювання."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page: bookable only through its direct link."
+msgstr "На жодній сторінці бронювання: доступно лише за прямим посиланням."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show on %{address}"
+msgstr "Показувати на %{address}"

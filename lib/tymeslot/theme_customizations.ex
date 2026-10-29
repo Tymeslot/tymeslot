@@ -6,7 +6,10 @@ defmodule Tymeslot.ThemeCustomizations do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  require Logger
+
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations.OptionGroup
@@ -30,6 +33,12 @@ defmodule Tymeslot.ThemeCustomizations do
   }
 
   @type profile_id :: pos_integer()
+
+  @typedoc """
+  Whose customizations: a profile id for its own page at `/<username>`, or
+  `{profile_id, page_id}` for one of its booking pages.
+  """
+  @type scope :: profile_id() | {profile_id(), pos_integer()}
   @type theme_id :: String.t()
   @type user_id :: pos_integer()
   @type customization_input :: ThemeCustomizationSchema.t() | map() | nil
@@ -38,13 +47,23 @@ defmodule Tymeslot.ThemeCustomizations do
           {:ok, ThemeCustomizationSchema.t()} | {:error, Changeset.t() | :not_found}
 
   @doc """
-  Gets a theme customization by profile ID and theme ID.
+  Gets a theme customization by scope (see `t:scope/0`) and theme ID.
   """
-  @spec get_by_profile_and_theme(profile_id(), theme_id()) ::
-          ThemeCustomizationSchema.t() | nil
-  def get_by_profile_and_theme(profile_id, theme_id) do
-    ThemeCustomizationQueries.get_by_profile_and_theme(profile_id, theme_id)
-  end
+  @spec get_by_profile_and_theme(scope(), theme_id()) :: ThemeCustomizationSchema.t() | nil
+  def get_by_profile_and_theme({profile_id, page_id}, theme_id),
+    do: ThemeCustomizationQueries.get_by_page_and_theme(profile_id, page_id, theme_id)
+
+  def get_by_profile_and_theme(profile_id, theme_id),
+    do: ThemeCustomizationQueries.get_by_profile_and_theme(profile_id, theme_id)
+
+  @doc """
+  The scope a profile's start page reads its colours from: the booking page it
+  was resolved through (`Tymeslot.BookingPages.apply_to_profile/2`), or the
+  profile's own.
+  """
+  @spec scope_for(map()) :: scope()
+  def scope_for(%{id: profile_id, booking_page: %{id: page_id}}), do: {profile_id, page_id}
+  def scope_for(%{id: profile_id}), do: profile_id
 
   @doc """
   The video-background preset keys a theme offers (e.g. `"preset:blue-wave"`),
@@ -120,11 +139,11 @@ defmodule Tymeslot.ThemeCustomizations do
 
   @doc """
   Stores an uploaded file for one of the theme's asset fields and saves it on
-  the profile's customisation. See `Tymeslot.ThemeCustomizations.Assets`.
+  the scope's customisation. See `Tymeslot.ThemeCustomizations.Assets`.
   """
-  @spec attach_asset(profile_id(), theme_id(), atom(), upload_attrs()) ::
+  @spec attach_asset(scope(), theme_id(), atom(), upload_attrs()) ::
           Assets.result()
-  defdelegate attach_asset(profile_id, theme_id, field, upload), to: Assets
+  defdelegate attach_asset(scope, theme_id, field, upload), to: Assets
 
   @doc """
   The upload columns the theme's customisation spec declares, with the kind of
@@ -145,12 +164,12 @@ defmodule Tymeslot.ThemeCustomizations do
   See `save_customization/4`.
   """
   @spec upsert_theme_customization(
-          profile_id(),
+          scope(),
           theme_id(),
           map() | OptionGroup.stored_changes()
         ) :: persistence_result()
-  def upsert_theme_customization(profile_id, theme_id, attrs) do
-    case save_customization(profile_id, theme_id, attrs, &{:ok, &1}) do
+  def upsert_theme_customization(scope, theme_id, attrs) do
+    case save_customization(scope, theme_id, attrs, &{:ok, &1}) do
       {:ok, saved} -> {:ok, saved}
       {:error, {:raised, error, stacktrace}} -> reraise error, stacktrace
       {:error, reason} -> {:error, reason}
@@ -158,8 +177,8 @@ defmodule Tymeslot.ThemeCustomizations do
   end
 
   @doc """
-  Saves `attrs` on the profile's customisation of a theme, creating it if
-  there is none, then runs `then_fun` with the saved row in the same
+  Saves `attrs` on the customisation of a theme for `scope` (see
+  `t:scope/0`), creating it if there is none, then runs `then_fun` with the saved row in the same
   transaction and returns its result.
 
   The save takes the row's lock and applies `attrs` to the row as stored at
@@ -182,16 +201,16 @@ defmodule Tymeslot.ThemeCustomizations do
   (the file clean-up) is caught.
   """
   @spec save_customization(
-          profile_id(),
+          scope(),
           theme_id(),
           map() | OptionGroup.stored_changes(),
           (ThemeCustomizationSchema.t() -> {:ok, result} | {:error, reason})
         ) :: {:ok, result} | {:error, reason | Changeset.t()}
         when result: term(), reason: term()
-  def save_customization(profile_id, theme_id, attrs, then_fun) do
+  def save_customization(scope, theme_id, attrs, then_fun) do
     transaction =
       run_transaction(fn ->
-        with {:ok, previous, saved} <- lock_and_write(profile_id, theme_id, attrs),
+        with {:ok, previous, saved} <- lock_and_write(scope, theme_id, attrs),
              {:ok, result} <- then_fun.(saved) do
           {previous, saved, result}
         else
@@ -221,25 +240,32 @@ defmodule Tymeslot.ThemeCustomizations do
     error -> {:error, {:raised, error, __STACKTRACE__}}
   end
 
-  defp lock_and_write(profile_id, theme_id, attrs) do
-    case ThemeCustomizationQueries.lock_by_profile_and_theme(profile_id, theme_id) do
-      nil -> create_or_write_locked(profile_id, theme_id, attrs)
+  defp lock_and_write(scope, theme_id, attrs) do
+    case lock(scope, theme_id) do
+      nil -> create_or_write_locked(scope, theme_id, attrs)
       current -> write_locked(current, attrs)
     end
   end
 
+  defp lock({profile_id, page_id}, theme_id),
+    do: ThemeCustomizationQueries.lock_by_page_and_theme(profile_id, page_id, theme_id)
+
+  defp lock(profile_id, theme_id),
+    do: ThemeCustomizationQueries.lock_by_profile_and_theme(profile_id, theme_id)
+
   # A row created by another request between the read and the insert is
   # locked and updated instead; if it is gone again by then (its profile
-  # was deleted), the save is refused.
-  defp create_or_write_locked(profile_id, theme_id, attrs) do
+  # or page was deleted), the save is refused.
+  defp create_or_write_locked(scope, theme_id, attrs) do
     keyed =
       %{}
       |> resolve_attrs(theme_id, attrs)
-      |> Map.merge(%{"profile_id" => profile_id, "theme_id" => theme_id})
+      |> Map.merge(scope_attrs(scope))
+      |> Map.put("theme_id", theme_id)
 
     case ThemeCustomizationQueries.create(keyed) do
       {:ok, :exists} ->
-        case ThemeCustomizationQueries.lock_by_profile_and_theme(profile_id, theme_id) do
+        case lock(scope, theme_id) do
           nil -> {:error, :not_found}
           current -> write_locked(current, attrs)
         end
@@ -333,13 +359,13 @@ defmodule Tymeslot.ThemeCustomizations do
   defaults unsaved, with its settings as the booking page reads them
   (`Specs.settings/2`), plus the saved original as stored.
   """
-  @spec initialize_customization(profile_id(), theme_id()) :: %{
+  @spec initialize_customization(scope(), theme_id()) :: %{
           customization: ThemeCustomizationSchema.t(),
           original: ThemeCustomizationSchema.t()
         }
-  def initialize_customization(profile_id, theme_id) do
-    saved = get_by_profile_and_theme(profile_id, theme_id)
-    current = saved || default_customization(profile_id, theme_id)
+  def initialize_customization(scope, theme_id) do
+    saved = get_by_profile_and_theme(scope, theme_id)
+    current = saved || default_customization(scope_profile_id(scope), theme_id)
     settings = Specs.settings(Specs.for_theme(theme_id), to_map(current))
 
     %{customization: %{current | settings: settings}, original: saved || current}
@@ -364,9 +390,9 @@ defmodule Tymeslot.ThemeCustomizations do
   stale value in another group never refuses it (`Specs.settings/2`).
   Returns a translated message on failure.
   """
-  @spec apply_option(profile_id(), theme_id(), atom(), map()) ::
+  @spec apply_option(scope(), theme_id(), atom(), map()) ::
           {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
-  def apply_option(profile_id, theme_id, option_key, %{"field" => field, "value" => value})
+  def apply_option(scope, theme_id, option_key, %{"field" => field, "value" => value})
       when is_binary(field) and is_binary(value) do
     with {:ok, group} <- option_group(theme_id, option_key),
          {:ok, changes} <- group.module.changes(field, value, group) do
@@ -374,7 +400,7 @@ defmodule Tymeslot.ThemeCustomizations do
       # them (the schema changeset), so only the change is passed and only
       # its group is judged. The save deletes any upload the change stops
       # naming (`save_customization/4`).
-      profile_id
+      scope
       |> upsert_theme_customization(theme_id, changes)
       |> format_persistence_error()
     else
@@ -440,7 +466,103 @@ defmodule Tymeslot.ThemeCustomizations do
     ThemeCustomizationQueries.get_profile_by_user_id(user_id)
   end
 
+  @doc """
+  Gives a new booking page copies of its profile's customizations.
+
+  Each theme's settings are copied as the profile's page shows them
+  (`Specs.settings/2`), so an option the current rules reject (a scheme or
+  preset retired since it was saved) arrives as that option's default. An
+  uploaded file is not copied: an option group holding one (an uploaded
+  background image or video, say) starts from the theme's defaults on the page
+  instead, since a file shared between two rows would be deleted from under
+  one of them when the other replaced it.
+
+  A row that cannot be copied at all (its theme was retired) is left out and
+  logged, so it cannot stop the page being created. Stops at, and returns, the
+  first insert the database refuses.
+  """
+  @spec copy_to_page(profile_id(), pos_integer()) :: :ok | {:error, Changeset.t()}
+  def copy_to_page(profile_id, page_id) do
+    profile_id
+    |> ThemeCustomizationQueries.list_for_profile_page()
+    |> Enum.reduce_while(:ok, fn row, :ok ->
+      case create_copy({profile_id, page_id}, row.theme_id, copy_attrs(row)) do
+        {:ok, _copy_or_exists} -> {:cont, :ok}
+        {:error, changeset} -> skip_or_stop(changeset, row, page_id)
+      end
+    end)
+  end
+
+  # A constraint error is the database refusing the row; anything else is a
+  # validation the row failed before it reached the database.
+  defp skip_or_stop(%Changeset{errors: errors} = changeset, row, page_id) do
+    if Enum.any?(errors, fn {_field, {_message, opts}} -> Keyword.has_key?(opts, :constraint) end) do
+      {:halt, {:error, changeset}}
+    else
+      Logger.warning("Skipped a colour row the current rules reject while copying it to a page",
+        profile_id: row.profile_id,
+        page_id: page_id,
+        theme_id: row.theme_id,
+        reason: LogFormat.reason(errors)
+      )
+
+      {:cont, :ok}
+    end
+  end
+
+  @doc """
+  Deletes a booking page's customizations, then the uploaded files they named
+  as they stood when deleted.
+  """
+  @spec delete_page_customizations(pos_integer()) :: :ok
+  def delete_page_customizations(page_id) do
+    page_id
+    |> ThemeCustomizationQueries.delete_by_page()
+    |> Enum.each(&FileLifecycle.cleanup_all_files(Specs.for_theme(&1.theme_id), &1))
+  end
+
+  @doc "The profile a scope (see `t:scope/0`) belongs to."
+  @spec scope_profile_id(scope()) :: profile_id()
+  def scope_profile_id({profile_id, _page_id}), do: profile_id
+  def scope_profile_id(profile_id), do: profile_id
+
   # Private functions
+
+  # The row's settings as its page reads them, less every option group that
+  # names an uploaded file: leaving a group out lets the new row start it from
+  # the theme's defaults.
+  defp copy_attrs(row) do
+    spec = Specs.for_theme(row.theme_id)
+
+    Enum.reduce(spec.option_groups(), Specs.settings(spec, to_map(row)), fn group, settings ->
+      if holds_upload?(settings, group),
+        do: Map.drop(settings, Enum.map(Map.keys(group.module.types()), &Atom.to_string/1)),
+        else: settings
+    end)
+  end
+
+  defp holds_upload?(settings, group) do
+    group
+    |> OptionGroup.asset_fields()
+    |> Enum.any?(fn {field, _kind} ->
+      Map.get(settings, Atom.to_string(field)) not in [nil, ""]
+    end)
+  end
+
+  # A plain insert rather than `save_customization/4`: `copy_to_page/2` runs
+  # inside the page's creation transaction, which a nested save's rollback of
+  # one refused row would doom, while a refused copy is meant to be skipped.
+  defp create_copy(scope, theme_id, attrs) do
+    attrs
+    |> Map.merge(scope_attrs(scope))
+    |> Map.put("theme_id", theme_id)
+    |> ThemeCustomizationQueries.create()
+  end
+
+  defp scope_attrs({profile_id, page_id}),
+    do: %{"profile_id" => profile_id, "booking_page_id" => page_id}
+
+  defp scope_attrs(profile_id), do: %{"profile_id" => profile_id}
 
   # Converts a rejected write (an invalid changeset or an invalid seed) into a
   # user-safe string. Callers flash the returned message, and `Flash.error/1`

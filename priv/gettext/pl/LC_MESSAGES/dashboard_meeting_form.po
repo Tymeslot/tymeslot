@@ -331,11 +331,6 @@ msgstr "Zasady rezerwacji"
 msgid "Details"
 msgstr "Szczegóły"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "Hide from public booking page"
-msgstr "Ukryj na publicznej stronie rezerwacji"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Location & Calendar"
@@ -350,11 +345,6 @@ msgstr "Pytania"
 #, elixir-autogen, elixir-format
 msgid "Visibility"
 msgstr "Widoczność"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "When on, this meeting type is reachable only through its direct link."
-msgstr "Po włączeniu ten typ spotkania jest dostępny tylko przez bezpośredni link."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
 #, elixir-autogen, elixir-format
@@ -987,3 +977,13 @@ msgstr[2] "Bez limitu każda rezerwacja może obejmować do %{count} gości."
 #, elixir-autogen, elixir-format
 msgid "Cancel the planned dates to turn group bookings off."
 msgstr "Odwołaj zaplanowane terminy, aby wyłączyć rezerwacje grupowe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page: bookable only through its direct link."
+msgstr "Na żadnej stronie rezerwacji: dostępny tylko przez bezpośredni link."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show on %{address}"
+msgstr "Pokazuj na stronie %{address}"

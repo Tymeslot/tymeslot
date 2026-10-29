@@ -77,7 +77,8 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
           required(:utm_term) => String.t() | nil,
           required(:referrer_host) => String.t() | nil,
           required(:tracking_params) => map(),
-          required(:visitor_hash) => String.t() | nil
+          required(:visitor_hash) => String.t() | nil,
+          required(:booking_page_id) => integer() | nil
         }
 
   @doc """
@@ -219,10 +220,9 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
     }
   end
 
-  # Where the booking came from: the UTM parameters and referrer captured on
-  # the booking page, plus the cookieless key joining this meeting to that
-  # page view in analytics. Grouped so the attributes map states the booking
-  # itself rather than burying it under eight tracking keys.
+  # Where the booking came from: the UTM parameters and referrer captured on the
+  # booking page, the cookieless key joining it to that page view in analytics,
+  # and the booking page itself. Grouped so the attributes map states the booking.
   defp source_attribution(%BuildParams{} = params) do
     %{
       utm_source: params.utm_source,
@@ -232,7 +232,8 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       utm_term: params.utm_term,
       referrer_host: params.referrer_host,
       tracking_params: params.tracking_params,
-      visitor_hash: params.visitor_hash
+      visitor_hash: params.visitor_hash,
+      booking_page_id: params.booking_page_id
     }
   end
 
