@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Profiles
   alias Tymeslot.Security.Token
+  alias TymeslotWeb.Analytics.Providers, as: AnalyticsProviders
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.PathUtils
   alias TymeslotWeb.Plugs.SecurityHeaders.Hsts
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   @spec call(Plug.Conn.t(), any()) :: Plug.Conn.t()
   def call(conn, opts) do
     allow_embedding = Keyword.get(opts, :allow_embedding, false)
+    env = Application.get_env(:tymeslot, :environment)
 
     # Per-request CSP nonce. Generated here so the same plug that builds the
     # CSP header also owns the value the templates render — a page either gets
@@ -50,13 +52,13 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     {frame_ancestors, x_frame_options} =
       case allow_embedding do
         :any -> {nil, nil}
-        true -> get_embed_security_headers(conn)
+        true -> get_embed_security_headers(conn, env)
         _other -> {"'none'", "DENY"}
       end
 
     conn =
       conn
-      |> put_resp_header("content-security-policy", csp_header(frame_ancestors, nonce))
+      |> put_resp_header("content-security-policy", csp_header(frame_ancestors, nonce, env))
       |> put_resp_header("x-content-type-options", "nosniff")
       |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
       |> put_resp_header("permissions-policy", permissions_policy())
@@ -80,7 +82,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   # Extracts username from path and retrieves allowed embed domains
   # Returns {frame_ancestors, x_frame_options | nil}
-  defp get_embed_security_headers(conn) do
+  defp get_embed_security_headers(conn, env) do
     conn = fetch_query_params(conn)
     is_preview = conn.query_params["preview"] in ["true", "1"]
     username = PathUtils.extract_username_from_path(conn.request_path)
@@ -96,7 +98,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         case Profiles.get_profile_by_username(username) do
           %{} = profile ->
             {frame_ancestors, x_frame_options} =
-              build_security_headers(profile.allowed_embed_domains, is_preview)
+              build_security_headers(profile.allowed_embed_domains, is_preview, env)
 
             # Log when embedding is restricted (skip nil/[]/["none"] — those deny all)
             if profile.allowed_embed_domains not in [nil, [], ["none"]] do
@@ -122,22 +124,22 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   # CSP frame-ancestors is the sole embedding authority for modern browsers.
   # X-Frame-Options is only set for non-embed pages (DENY or SAMEORIGIN).
   # Returns {frame_ancestors, x_frame_options | nil}
-  defp build_security_headers(allowed_domains, true)
+  defp build_security_headers(allowed_domains, true, _env)
        when allowed_domains in [nil, [], ["none"]] do
     # Allow same-origin framing for dashboard "Live Preview" (iframe),
     # while still blocking embedding from other origins.
     {"'self'", "SAMEORIGIN"}
   end
 
-  defp build_security_headers([], _is_preview), do: dev_local_or_deny()
-  defp build_security_headers(nil, _is_preview), do: dev_local_or_deny()
-  defp build_security_headers(["none"], _is_preview), do: dev_local_or_deny()
+  defp build_security_headers([], _is_preview, env), do: dev_local_or_deny(env)
+  defp build_security_headers(nil, _is_preview, env), do: dev_local_or_deny(env)
+  defp build_security_headers(["none"], _is_preview, env), do: dev_local_or_deny(env)
 
-  defp build_security_headers(allowed_domains, _is_preview) when is_list(allowed_domains) do
+  defp build_security_headers(allowed_domains, _is_preview, env) when is_list(allowed_domains) do
     if "none" in allowed_domains do
-      dev_local_or_deny()
+      dev_local_or_deny(env)
     else
-      is_dev_env = Application.get_env(:tymeslot, :environment) in [:dev, :test]
+      is_dev_env = env in [:dev, :test]
 
       # Build CSP frame-ancestors with appropriate protocols.
       # Modern browsers prioritize this over X-Frame-Options.
@@ -165,13 +167,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   # In dev/test, allow localhost embedding without requiring it in allowed_embed_domains.
   # In production this always returns {"'none'", "DENY"}.
-  defp dev_local_or_deny do
-    if Application.get_env(:tymeslot, :environment) in [:dev, :test] do
-      {"'self' http://localhost:* http://127.0.0.1:*", nil}
-    else
-      {"'none'", "DENY"}
-    end
-  end
+  defp dev_local_or_deny(env) when env in [:dev, :test],
+    do: {"'self' http://localhost:* http://127.0.0.1:*", nil}
+
+  defp dev_local_or_deny(_env), do: {"'none'", "DENY"}
 
   # Appends localhost origins in dev/test when not already in the allowed list.
   defp dev_localhost_suffix(allowed_domains, is_dev_env) do
@@ -180,26 +179,6 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     else
       ""
     end
-  end
-
-  defp analytics_script_origins do
-    providers = Application.get_env(:tymeslot, :analytics_providers, []) || []
-
-    providers
-    |> Enum.flat_map(fn
-      %{script_url: url} when is_binary(url) ->
-        case URI.parse(url) do
-          %URI{scheme: scheme, host: host} when is_binary(scheme) and is_binary(host) ->
-            ["#{scheme}://#{host}"]
-
-          _uri ->
-            []
-        end
-
-      _provider ->
-        []
-    end)
-    |> Enum.uniq()
   end
 
   # 18 random bytes → 24-char base64url. Enough entropy to make the nonce
@@ -229,24 +208,24 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   end
 
   # Dev needs plain ws: and the localhost origins for live reload.
-  defp base_connect_sources do
-    if Application.get_env(:tymeslot, :environment) == :dev do
-      [
-        "'self'",
-        "ws://localhost:*",
-        "ws://127.0.0.1:*",
-        "http://localhost:*",
-        "http://127.0.0.1:*",
-        "ws:",
-        "wss:"
-      ]
-    else
-      ["'self'", socket_origin()]
-    end
+  defp base_connect_sources(:dev) do
+    [
+      "'self'",
+      "ws://localhost:*",
+      "ws://127.0.0.1:*",
+      "http://localhost:*",
+      "http://127.0.0.1:*",
+      "ws:",
+      "wss:"
+    ]
   end
 
-  defp csp_header(frame_ancestors, nonce) do
-    analytics_origins = analytics_script_origins()
+  defp base_connect_sources(_env), do: ["'self'", socket_origin()]
+
+  defp csp_header(frame_ancestors, nonce, env) do
+    # The same origins the layout renders loader scripts for, so the two
+    # cannot disagree about which providers are valid.
+    analytics_origins = AnalyticsProviders.origins()
     recaptcha? = RecaptchaHelpers.any_active?()
 
     script_src =
@@ -254,7 +233,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         recaptcha_origins(recaptcha?, @recaptcha_script_origins) ++ analytics_origins
 
     connect_src =
-      base_connect_sources() ++
+      base_connect_sources(env) ++
         recaptcha_origins(recaptcha?, @recaptcha_connect_origins) ++ analytics_origins
 
     frame_src = ["'self'" | recaptcha_origins(recaptcha?, @recaptcha_frame_origins)]
