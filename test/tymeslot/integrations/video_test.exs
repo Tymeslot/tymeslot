@@ -193,7 +193,7 @@ defmodule Tymeslot.Integrations.VideoTest do
          %{user: user, integration: integration} do
       room_booking(user, integration, 24)
       room_booking(user, integration, -24)
-      room_booking(user, integration, 72, %{status: "cancelled"})
+      room_booking(user, integration, 72, %{status: :cancelled})
 
       drained =
         MeetingListQueries.list_with_video_room_for_integration(
@@ -222,7 +222,7 @@ defmodule Tymeslot.Integrations.VideoTest do
       other = insert(:video_integration, user: user, provider: "zoom")
 
       room_booking(user, integration, -24)
-      room_booking(user, integration, 24, %{status: "cancelled"})
+      room_booking(user, integration, 24, %{status: :cancelled})
       room_booking(user, integration, 48, %{video_room_id: nil})
       room_booking(user, integration, 72, %{reschedule_requested_at: DateTime.utc_now()})
       room_booking(user, other, 96)

@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugScheduleTest do
       summary: summary,
       start_time: DateTime.new!(date, from, @timezone),
       end_time: DateTime.new!(date, to, @timezone),
-      status: "confirmed"
+      status: :confirmed
     }
   end
 

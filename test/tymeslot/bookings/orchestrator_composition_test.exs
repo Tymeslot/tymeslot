@@ -88,7 +88,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
       }
 
       assert {:ok, meeting} = Orchestrator.submit_booking(params)
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
       assert meeting.attendee_email == "attendee@example.com"
 
       assert_enqueued(
@@ -154,7 +154,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
       }
 
       assert {:ok, meeting} = Orchestrator.submit_booking(params)
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
 
       assert_enqueued(
         worker: VideoRoomWorker,
@@ -172,7 +172,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     } do
       count_fresh_fetches(fn -> {:ok, []} end)
 
-      assert {:ok, %{status: "confirmed"}} =
+      assert {:ok, %{status: :confirmed}} =
                Orchestrator.submit_booking(video_submit(user, meeting_type))
 
       assert_received {:fresh_fetch, _user_id}
@@ -269,7 +269,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
           uid: UUID.generate(),
           organizer_user_id: user.id,
           organizer_email: "organiser@example.com",
-          status: "cancelled",
+          status: :cancelled,
           start_time: future_datetime(3, :day),
           end_time: DateTime.add(future_datetime(3, :day), 30, :minute)
         )
@@ -283,7 +283,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     # the submit would then refuse.
     test "refuses an expired booking, as the reschedule submit does", %{user: user} do
       meeting = insert_future_meeting(user, nil)
-      {:ok, expired} = MeetingQueries.update_meeting_status(meeting, %{status: "expired"})
+      {:ok, expired} = MeetingQueries.update_meeting_status(meeting, %{status: :expired})
 
       assert {:error, {:not_reschedulable, :expired}} =
                Orchestrator.get_meeting_for_reschedule(expired.uid, user.id)
@@ -302,7 +302,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 30, :minute),
       duration: 30,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 
@@ -317,7 +317,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 30, :minute),
       duration: 30,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 

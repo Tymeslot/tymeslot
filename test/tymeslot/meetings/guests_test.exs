@@ -225,9 +225,9 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
 
     for {label, attrs} <- [
-          {"cancelled", %{status: "cancelled"}},
-          {"awaiting approval", %{status: "awaiting_approval"}},
-          {"being rescheduled", %{status: "reschedule_requested"}}
+          {"cancelled", %{status: :cancelled}},
+          {"awaiting approval", %{status: :awaiting_approval}},
+          {"being rescheduled", %{status: :reschedule_requested}}
         ] do
       test "refuses a meeting that is #{label}", %{host: host} do
         # A different slot from the setup's meeting, which would otherwise
@@ -391,7 +391,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
 
     for status <-
-          ~w(cancelled expired completed awaiting_payment awaiting_approval reschedule_requested) do
+          ~w(cancelled expired completed awaiting_payment awaiting_approval reschedule_requested)a do
       test "refuses a #{status} meeting and leaves the guest pending" do
         guest = guest_for(status: unquote(status))
 
@@ -429,7 +429,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
 
     test "does not notify on a refused response" do
       user = insert(:user)
-      guest = guest_for(organizer_user: user, status: "cancelled")
+      guest = guest_for(organizer_user: user, status: :cancelled)
       :ok = Guests.subscribe_to_rsvp_updates(user.id)
 
       {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, :accepted)
@@ -453,7 +453,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
 
     test "rejects a cancelled meeting" do
-      guest = guest_for(status: "cancelled")
+      guest = guest_for(status: :cancelled)
 
       assert {:error, :meeting_closed} = Guests.get_open_invitation(guest.rsvp_token)
     end

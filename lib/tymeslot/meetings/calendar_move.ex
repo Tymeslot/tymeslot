@@ -132,7 +132,7 @@ defmodule Tymeslot.Meetings.CalendarMove do
     cond do
       meeting.calendar_sync_status_dismissed_at != nil -> {:error, :not_flagged}
       MeetingSchema.group?(meeting) -> {:error, :group_meeting}
-      meeting.status != "confirmed" -> {:error, :not_confirmed}
+      meeting.status != :confirmed -> {:error, :not_confirmed}
       not MeetingState.expects_calendar_event?(meeting) -> {:error, :awaiting_new_time}
       true -> :ok
     end

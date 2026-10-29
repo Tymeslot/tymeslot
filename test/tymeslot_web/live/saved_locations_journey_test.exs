@@ -353,7 +353,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
           start_time: start,
           end_time: DateTime.add(start, 30, :minute),
           duration: 30,
-          status: "confirmed",
+          status: :confirmed,
           location: "Berlin office (Friedrichstrasse 1)",
           location_kind: "in_person",
           location_option_id: "loc-offices",
@@ -443,7 +443,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
                 start_time: start,
                 end_time: DateTime.add(start, 30, :minute),
                 duration: 30,
-                status: "confirmed",
+                status: :confirmed,
                 location_kind: "in_person",
                 location_option_id: "loc-offices"
               },

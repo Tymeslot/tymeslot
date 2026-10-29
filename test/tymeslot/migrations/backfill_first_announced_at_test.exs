@@ -30,7 +30,7 @@ defmodule Tymeslot.Migrations.BackfillFirstAnnouncedAtTest do
 
   describe "up/0" do
     test "stamps a confirmed booking that predates announced_at with its inserted_at" do
-      meeting = pre_announcement_meeting("confirmed")
+      meeting = pre_announcement_meeting(:confirmed)
 
       MigrationRunner.replay!(@version)
 
@@ -38,7 +38,7 @@ defmodule Tymeslot.Migrations.BackfillFirstAnnouncedAtTest do
     end
 
     test "stamps a completed booking too" do
-      meeting = pre_announcement_meeting("completed")
+      meeting = pre_announcement_meeting(:completed)
 
       MigrationRunner.replay!(@version)
 
@@ -47,7 +47,7 @@ defmodule Tymeslot.Migrations.BackfillFirstAnnouncedAtTest do
 
     test "leaves bookings that were never live unstamped" do
       never_live =
-        for status <- ["awaiting_approval", "pending", "awaiting_payment", "expired"],
+        for status <- [:awaiting_approval, :pending, :awaiting_payment, :expired],
             do: {status, pre_announcement_meeting(status)}
 
       MigrationRunner.replay!(@version)
@@ -58,7 +58,7 @@ defmodule Tymeslot.Migrations.BackfillFirstAnnouncedAtTest do
     end
 
     test "leaves a cancelled booking unstamped: it can never re-enter the gate" do
-      meeting = pre_announcement_meeting("cancelled")
+      meeting = pre_announcement_meeting(:cancelled)
 
       MigrationRunner.replay!(@version)
 
@@ -66,7 +66,7 @@ defmodule Tymeslot.Migrations.BackfillFirstAnnouncedAtTest do
     end
 
     test "keeps an existing first_announced_at rather than overwriting it" do
-      meeting = pre_announcement_meeting("confirmed")
+      meeting = pre_announcement_meeting(:confirmed)
       stamp!(meeting, announced_at: @announced_at, first_announced_at: @announced_at)
 
       MigrationRunner.replay!(@version)
@@ -75,7 +75,7 @@ defmodule Tymeslot.Migrations.BackfillFirstAnnouncedAtTest do
     end
 
     test "prefers announced_at over inserted_at when the row has one" do
-      meeting = pre_announcement_meeting("confirmed")
+      meeting = pre_announcement_meeting(:confirmed)
       stamp!(meeting, announced_at: @announced_at)
 
       MigrationRunner.replay!(@version)

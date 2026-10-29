@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       Repo.update_all(from(m in MeetingSchema, where: m.id == ^meeting.id),
-        set: [status: "cancelled"]
+        set: [status: :cancelled]
       )
 
       view |> element("#add-guests-#{meeting.id}") |> render_click()
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       conn: conn,
       user: user
     } do
-      meeting = upcoming_meeting(user, %{status: "reschedule_requested"})
+      meeting = upcoming_meeting(user, %{status: :reschedule_requested})
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       refute has_element?(view, "#add-guests-#{meeting.id}")

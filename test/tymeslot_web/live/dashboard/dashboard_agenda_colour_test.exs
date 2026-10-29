@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
         organizer_email: user.email,
         start_time: start,
         end_time: DateTime.add(start, 3600, :second),
-        status: "confirmed",
+        status: :confirmed,
         title: "Quarterly review"
       )
 

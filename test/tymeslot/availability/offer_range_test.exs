@@ -372,7 +372,7 @@ defmodule Tymeslot.Availability.OfferRangeTest do
             start_time: start_time,
             end_time: DateTime.add(start_time, duration, :minute),
             duration: duration,
-            status: "confirmed"
+            status: :confirmed
           )
 
         meeting.uid
@@ -446,7 +446,7 @@ defmodule Tymeslot.Availability.OfferRangeTest do
         uid: "range-#{System.unique_integer([:positive])}",
         start_time: start_dt,
         end_time: end_dt,
-        status: "confirmed",
+        status: :confirmed,
         transparency: "opaque",
         summary: "Generated block"
       }

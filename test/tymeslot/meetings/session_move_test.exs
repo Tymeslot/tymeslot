@@ -126,7 +126,7 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
                at(13, ~T[09:00:00])
              )
 
-    cancelled = ctx.session |> Changeset.change(status: "cancelled") |> Repo.update!()
+    cancelled = ctx.session |> Changeset.change(status: :cancelled) |> Repo.update!()
 
     assert {:error, :session_started} =
              PlannedSessions.move(cancelled, ctx.user.id, at(12, ~T[09:00:00]), nil)
@@ -135,12 +135,12 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   test "refuses a session cancelled since the host's copy of it was read", ctx do
     # Cancelled in another tab: the row is cancelled, the struct the form
     # holds still reads as a live session.
-    Repo.update!(Changeset.change(ctx.session, status: "cancelled"))
+    Repo.update!(Changeset.change(ctx.session, status: :cancelled))
 
     assert {:error, :not_found} =
              PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
 
-    assert %{status: "cancelled", start_time: start_time} = Repo.reload!(ctx.session)
+    assert %{status: :cancelled, start_time: start_time} = Repo.reload!(ctx.session)
     assert start_time == at(10, ~T[18:00:00])
     refute_enqueued(worker: CalendarEventWorker, args: %{"action" => "update"})
   end

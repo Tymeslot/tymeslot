@@ -52,7 +52,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
         organizer_user_id: user.id,
         start_time: existing_start,
         end_time: existing_end,
-        status: "confirmed"
+        status: :confirmed
       )
 
       conflicting_attrs = %{
@@ -119,7 +119,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
           organizer_user_id: user.id,
           start_time: start_time2,
           end_time: end_time2,
-          status: "confirmed"
+          status: :confirmed
         )
 
       conflicting_reschedule = %{
@@ -170,7 +170,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
         organizer_user_id: user.id,
         attendee_name: "Test Attendee",
         attendee_email: "attendee@example.com",
-        status: "confirmed"
+        status: :confirmed
       }
 
       {:ok, _meeting1} = Scheduling.create_meeting_with_conflict_check(attrs1)
@@ -225,7 +225,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
         organizer_user_id: user.id,
         attendee_name: "Test Attendee",
         attendee_email: "attendee@example.com",
-        status: "confirmed"
+        status: :confirmed
       }
 
       {:ok, _existing} = Scheduling.create_meeting_with_conflict_check(attrs)
@@ -267,7 +267,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
 
       insert_room(user, integration, 1, "upcoming")
       insert_room(user, integration, -2, "ended")
-      insert_room(user, integration, 2, "cancelled", status: "cancelled")
+      insert_room(user, integration, 2, "cancelled", status: :cancelled)
 
       # Neither of these holds a room this integration could delete.
       insert_room(user, integration, 3, nil)
@@ -302,7 +302,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       now = DateTime.utc_now(:second)
 
       later = insert_room(user, integration, 2, "later")
-      sooner = insert_room(user, integration, 1, "sooner", status: "pending")
+      sooner = insert_room(user, integration, 1, "sooner", status: :pending)
 
       # Started an hour ago and still running: it has not ended, so it counts.
       running =
@@ -312,8 +312,8 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
           video_room_id: "running"
         )
 
-      cancelled = insert_room(user, integration, 3, "cancelled", status: "cancelled")
-      expired = insert_room(user, integration, 4, "expired", status: "expired")
+      cancelled = insert_room(user, integration, 3, "cancelled", status: :cancelled)
+      expired = insert_room(user, integration, 4, "expired", status: :expired)
 
       insert_room(user, integration, -2, "ended")
       insert_room(user, integration, 5, nil)
@@ -321,11 +321,11 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       insert_room(user, other, 6, "elsewhere")
 
       expected = [
-        %{id: running.id, status: "confirmed"},
-        %{id: sooner.id, status: "pending"},
-        %{id: later.id, status: "confirmed"},
-        %{id: cancelled.id, status: "cancelled"},
-        %{id: expired.id, status: "expired"}
+        %{id: running.id, status: :confirmed},
+        %{id: sooner.id, status: :pending},
+        %{id: later.id, status: :confirmed},
+        %{id: cancelled.id, status: :cancelled},
+        %{id: expired.id, status: :expired}
       ]
 
       %{integration: integration, now: now, expected: expected}

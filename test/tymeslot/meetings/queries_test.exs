@@ -85,14 +85,14 @@ defmodule Tymeslot.Meetings.QueriesTest do
       insert(:meeting,
         organizer_user_id: organizer.id,
         start_time: start_time,
-        status: "awaiting_approval"
+        status: :awaiting_approval
       )
 
       assert_raise Ecto.ConstraintError, fn ->
         insert(:meeting,
           organizer_user_id: organizer.id,
           start_time: start_time,
-          status: "awaiting_approval"
+          status: :awaiting_approval
         )
       end
     end
@@ -104,14 +104,14 @@ defmodule Tymeslot.Meetings.QueriesTest do
       insert(:meeting,
         organizer_user_id: organizer.id,
         start_time: start_time,
-        status: "awaiting_approval"
+        status: :awaiting_approval
       )
 
       assert_raise Ecto.ConstraintError, fn ->
         insert(:meeting,
           organizer_user_id: organizer.id,
           start_time: start_time,
-          status: "confirmed"
+          status: :confirmed
         )
       end
     end
@@ -126,7 +126,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
         organizer_user_id: organizer.id,
         start_time: taken_time,
         end_time: DateTime.add(taken_time, 3600, :second),
-        status: "confirmed"
+        status: :confirmed
       )
 
       held_start = DateTime.add(taken_time, 7200, :second)
@@ -136,7 +136,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
           organizer_user_id: organizer.id,
           start_time: held_start,
           end_time: DateTime.add(held_start, 3600, :second),
-          status: "awaiting_approval"
+          status: :awaiting_approval
         )
 
       # `changes` is a plain keyword list — the function's contract allows any
@@ -147,12 +147,12 @@ defmodule Tymeslot.Meetings.QueriesTest do
       assert {:error, :slot_taken} =
                MeetingQueries.transition_from_awaiting_approval(
                  held.id,
-                 status: "confirmed",
+                 status: :confirmed,
                  start_time: taken_time
                )
 
       reloaded = Repo.get!(MeetingSchema, held.id)
-      assert reloaded.status == "awaiting_approval"
+      assert reloaded.status == :awaiting_approval
       assert reloaded.start_time == held.start_time
     end
   end

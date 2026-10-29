@@ -43,7 +43,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
         meeting_type: "Team offsite",
         attendee_name: "Ada",
         attendee_email: "ada@example.com",
-        status: "confirmed",
+        status: :confirmed,
         managed_by_host: true,
         meeting_type_id: nil,
         start_time: start,
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     insert(:meeting,
       organizer_user: ctx.user,
       organizer_email: ctx.user.email,
-      status: "confirmed",
+      status: :confirmed,
       start_time: taken,
       end_time: DateTime.add(taken, 30, :minute)
     )
@@ -158,7 +158,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     |> element("[phx-click='show_reschedule_modal'][phx-value-id='#{ctx.meeting.id}']")
     |> render_click()
 
-    Repo.update!(Changeset.change(ctx.meeting, status: "cancelled"))
+    Repo.update!(Changeset.change(ctx.meeting, status: :cancelled))
 
     html =
       view
@@ -279,7 +279,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     view |> form("#cancel-meeting-form") |> render_submit()
 
     assert render(view) =~ "Meeting cancelled successfully"
-    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == :cancelled
 
     test_pid = self()
 

@@ -151,7 +151,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
 
     updated = Repo.get!(MeetingSchema, meeting.id)
     assert updated.provider_event_id == @replacement_event
-    assert updated.status == "confirmed"
+    assert updated.status == :confirmed
     assert updated.calendar_sync_status == nil
     assert updated.video_room_id == nil
   end
@@ -192,7 +192,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
 
     updated = Repo.get!(MeetingSchema, meeting.id)
     assert updated.provider_event_id == @replacement_event
-    assert updated.status == "confirmed"
+    assert updated.status == :confirmed
   end
 
   test "the old event's removal arriving through inbound sync leaves the booking standing",
@@ -205,7 +205,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
              Sync.reconcile_deletions(calendar, [%{provider_event_id: @teams_event, uid: nil}])
 
     updated = Repo.get!(MeetingSchema, meeting.id)
-    assert updated.status == "confirmed"
+    assert updated.status == :confirmed
     assert updated.calendar_sync_status == nil
   end
 

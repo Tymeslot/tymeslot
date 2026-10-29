@@ -102,7 +102,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   # The orphaned room scan owns cancelled meetings, so the two scans never both
   # queue the same room.
   test "leaves cancelled meetings to the orphaned room scan", %{user: user} do
-    cancelled = insert_ended(user, 8, "nextcloud_talk", "cancel01", status: "cancelled")
+    cancelled = insert_ended(user, 8, "nextcloud_talk", "cancel01", status: :cancelled)
 
     assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
 

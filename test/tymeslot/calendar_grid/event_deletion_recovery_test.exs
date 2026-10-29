@@ -122,7 +122,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
       assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
 
       {:ok, untouched} = MeetingQueries.get_meeting(meeting.id)
-      assert {untouched.status, untouched.calendar_sync_status} == {"confirmed", nil}
+      assert {untouched.status, untouched.calendar_sync_status} == {:confirmed, nil}
     end
 
     test "reports a cancellation that crashed the same way", %{

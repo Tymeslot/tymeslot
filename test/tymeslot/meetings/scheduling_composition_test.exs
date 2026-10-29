@@ -362,7 +362,7 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
       attendee_email: "attendee-#{System.unique_integer([:positive])}@example.com",
       attendee_timezone: "Etc/UTC",
       attendee_locale: "en",
-      status: "confirmed"
+      status: :confirmed
     }
   end
 
@@ -374,7 +374,7 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 30, :minute),
       duration: 30,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 end

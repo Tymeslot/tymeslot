@@ -149,7 +149,7 @@ defmodule TymeslotWeb.SeatControllerTest do
     # email that nothing sends. The GET said the link was no longer valid.
     test "a meeting the host cancelled gets the same page from GET and POST, with no promised email",
          %{conn: conn, leaver: leaver, meeting: meeting} do
-      assert {:ok, %{status: "cancelled"}} = Cancel.execute(meeting, caller: :organizer)
+      assert {:ok, %{status: :cancelled}} = Cancel.execute(meeting, caller: :organizer)
 
       {get_conn, post_conn} = get_and_post(conn, leaver.management_token)
 

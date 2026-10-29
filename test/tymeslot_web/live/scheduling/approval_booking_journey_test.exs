@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Live.Scheduling.ApprovalBookingJourneyTest do
     )
 
     meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
-    assert meeting.status == "awaiting_approval"
+    assert meeting.status == :awaiting_approval
     assert meeting.video_integration_id == video.id
 
     # Step 2: the request's work runs. No room may exist yet: nothing is
@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Live.Scheduling.ApprovalBookingJourneyTest do
     drain()
 
     confirmed = Repo.reload!(meeting)
-    assert confirmed.status == "confirmed"
+    assert confirmed.status == :confirmed
     assert confirmed.video_room_id == "ApprovalSpace"
     assert confirmed.meeting_url == @meet_url
     assert confirmed.attendee_email_sent
@@ -172,7 +172,7 @@ defmodule TymeslotWeb.Live.Scheduling.ApprovalBookingJourneyTest do
     BookingDriver.book(view, attendee: %{name: "Alan Turing", email: "alan@example.com"})
 
     meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
-    assert meeting.status == "awaiting_approval"
+    assert meeting.status == :awaiting_approval
 
     drain()
     assert_receive {:calendar_create, :tentative}
@@ -190,7 +190,7 @@ defmodule TymeslotWeb.Live.Scheduling.ApprovalBookingJourneyTest do
     assert_received {:calendar_update, :confirmed}
 
     confirmed = Repo.reload!(meeting)
-    assert confirmed.status == "confirmed"
+    assert confirmed.status == :confirmed
     assert confirmed.attendee_email_sent
 
     confirmation = email_to(drain_mailbox(), "alan@example.com")
@@ -214,7 +214,7 @@ defmodule TymeslotWeb.Live.Scheduling.ApprovalBookingJourneyTest do
     )
 
     requested = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
-    assert requested.status == "awaiting_approval"
+    assert requested.status == :awaiting_approval
     assert requested.duration == 60
     assert DateTime.diff(requested.end_time, requested.start_time, :minute) == 60
 
@@ -230,7 +230,7 @@ defmodule TymeslotWeb.Live.Scheduling.ApprovalBookingJourneyTest do
     drain()
 
     confirmed = Repo.reload!(requested)
-    assert confirmed.status == "confirmed"
+    assert confirmed.status == :confirmed
     assert confirmed.duration == 60
     assert confirmed.start_time == requested.start_time
     assert confirmed.end_time == requested.end_time

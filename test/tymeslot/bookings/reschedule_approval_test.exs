@@ -56,7 +56,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     meeting =
       insert_meeting_for_user(
         user,
-        Map.merge(%{meeting_type_id: meeting_type.id, status: "confirmed"}, meeting_attrs)
+        Map.merge(%{meeting_type_id: meeting_type.id, status: :confirmed}, meeting_attrs)
       )
 
     new_date = Date.add(Date.utc_today(), 2)
@@ -79,7 +79,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       false,
       Map.merge(
         %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
         },
@@ -97,8 +97,8 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert {:ok, rescheduled} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
-      assert rescheduled.status == "awaiting_approval"
-      assert reload(meeting).status == "awaiting_approval"
+      assert rescheduled.status == :awaiting_approval
+      assert reload(meeting).status == :awaiting_approval
     end
 
     test "gives the new request its own window rather than the old one" do
@@ -182,7 +182,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert {:ok, rescheduled} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
-      assert rescheduled.status == "awaiting_approval"
+      assert rescheduled.status == :awaiting_approval
       # The claim must be free again so the second approval's announcement
       # is not silently lost to the first one.
       assert is_nil(rescheduled.announced_at)
@@ -270,7 +270,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     test "approving a first-time request sends no reschedule notice" do
       %{meeting: meeting} =
         gated_booking(true, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
         })
@@ -307,7 +307,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     test "a lapsed first-time request costs the host no booking and sends them nothing" do
       %{meeting: meeting} =
         gated_booking(true, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
         })
@@ -381,7 +381,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         insert_meeting_for_user(user, %{
           meeting_type_id: nil,
           duration: 60,
-          status: "confirmed"
+          status: :confirmed
         })
 
       new_date = Date.add(Date.utc_today(), 2)
@@ -396,7 +396,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert {:ok, rescheduled} =
                Reschedule.execute(ad_hoc.uid, params, ad_hoc.organizer_user_id)
 
-      assert rescheduled.status == "confirmed"
+      assert rescheduled.status == :confirmed
       assert is_nil(rescheduled.approval_requested_at)
       assert is_nil(rescheduled.approval_deadline_at)
     end
@@ -406,7 +406,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     test "re-enters the gate with a fresh window rather than being left alone" do
       %{meeting: meeting, params: params} =
         gated_booking(true, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
         })
@@ -414,8 +414,8 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert {:ok, rescheduled} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
-      assert rescheduled.status == "awaiting_approval"
-      assert reload(meeting).status == "awaiting_approval"
+      assert rescheduled.status == :awaiting_approval
+      assert reload(meeting).status == :awaiting_approval
 
       window = DateTime.diff(rescheduled.approval_deadline_at, rescheduled.approval_requested_at)
       assert window == 12 * 3600
@@ -424,21 +424,21 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
 
   describe "rescheduling a booking whose status the gate is not meaningful for" do
     test "awaiting_payment: leaves the status untouched instead of confirming it into the gate" do
-      %{meeting: meeting, params: params} = gated_booking(true, %{status: "awaiting_payment"})
+      %{meeting: meeting, params: params} = gated_booking(true, %{status: :awaiting_payment})
 
       assert {:ok, rescheduled} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       # A booking that never paid must not be revived into a state the host
       # can approve — that would confirm a meeting nobody paid for.
-      assert rescheduled.status == "awaiting_payment"
+      assert rescheduled.status == :awaiting_payment
       refute_enqueued(worker: ApprovalExpiryWorker)
     end
 
     test "expired: is refused outright rather than reviving a refunded request" do
       %{meeting: meeting, params: params} =
         gated_booking(true, %{
-          status: "expired",
+          status: :expired,
           approval_resolved_at: DateTime.utc_now(:second),
           cancelled_at: DateTime.utc_now(:second)
         })
@@ -462,7 +462,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert {:ok, rescheduled} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
-      assert rescheduled.status == "confirmed"
+      assert rescheduled.status == :confirmed
       refute_enqueued(worker: ApprovalExpiryWorker)
     end
 
@@ -471,7 +471,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       # back then — but no longer does by the time it is rescheduled.
       %{meeting: meeting, params: params} =
         gated_booking(false, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
           # A deadline already in the past: nothing recaps it against the new
           # start time, so leaving the booking held here would make it
@@ -483,9 +483,9 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert {:ok, rescheduled} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
-      assert rescheduled.status == "confirmed"
+      assert rescheduled.status == :confirmed
       assert %DateTime{} = rescheduled.approval_resolved_at
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
 
       # There is no gate left to hold it in, so nothing should still be
       # waiting to nudge or expire it.
@@ -561,7 +561,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
 
       held =
         insert_meeting_for_user(user, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
         })

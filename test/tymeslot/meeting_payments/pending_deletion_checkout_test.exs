@@ -42,7 +42,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   defp open_checkout(host, suffix) do
     meeting =
       insert(:meeting,
-        status: "awaiting_payment",
+        status: :awaiting_payment,
         organizer_user_id: host.id,
         organizer_email: host.email
       )
@@ -99,7 +99,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
   defp assert_cancelled(meeting, payment) do
     assert Repo.reload!(payment).status == :failed
-    assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
   end
 
   test "requesting deletion queues the expiry of the host's open checkouts" do
@@ -147,7 +147,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     assert Repo.reload!(payment).status == :pending
 
     assert :ok = CheckoutSessionCompleted.handle(completed("RESTORED", meeting))
-    assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
     refute_enqueued(worker: RefundLatePayment)
   end
 
@@ -168,7 +168,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     expect_full_refund(payment, "JOURNEY")
 
     assert :ok = CheckoutSessionCompleted.handle(completed("JOURNEY", meeting))
-    assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
 
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
@@ -178,7 +178,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     assert refunded.refunded_amount_cents == payment.amount_cents
     assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
     refute_enqueued(worker: CalendarEventWorker)
-    assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
   end
 
   # With no grace period the account, and its meetings, are gone before the
@@ -234,7 +234,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
     recorded = Repo.reload!(payment)
     assert recorded.status == :paid
-    assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     refute_enqueued(worker: CalendarEventWorker)
 
     # The reconciler replays the completion under its own event id.

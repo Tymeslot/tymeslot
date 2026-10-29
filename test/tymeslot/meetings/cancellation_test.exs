@@ -65,7 +65,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       assert {:ok, cancelled} =
                Meetings.cancel_meeting_with_refund(meeting, host.id, {:refund, 2000})
 
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.refunded_amount_cents == 2000
@@ -101,7 +101,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       assert {:error, {:refund_failed, _reason}} =
                Meetings.cancel_meeting_with_refund(meeting, host.id, {:refund, 5000})
 
-      assert {:ok, %{status: "cancelled"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :cancelled}} = MeetingQueries.get_meeting(meeting.id)
       assert_enqueued(@cancellation_email)
     end
   end
@@ -121,7 +121,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       assert {:error, :not_found} =
                Meetings.cancel_meeting_with_refund(meeting, attendee.id, {:refund, 5000})
 
-      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
 
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.refunded_amount_cents == 0
@@ -138,7 +138,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       assert {:error, :not_found} =
                Meetings.cancel_meeting_with_refund(meeting, attendee.id, :none)
 
-      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
     end
   end

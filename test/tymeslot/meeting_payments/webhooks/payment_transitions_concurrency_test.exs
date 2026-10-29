@@ -104,7 +104,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     assert results == [:ok, :ok]
     assert_received :activated
     refute_received :activated
-    assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == "confirmed"
+    assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == :confirmed
   end
 
   test "a lost dispute racing a larger refund keeps the larger refunded amount", ctx do
@@ -189,7 +189,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     reloaded = unboxed(fn -> Repo.get!(BookingPaymentSchema, payment.id) end)
     assert reloaded.status == :disputed
     assert reloaded.last_event_id == "evt_RACE_COMPLETED"
-    assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == "confirmed"
+    assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == :confirmed
   end
 
   # Stripe can deliver a session's expiry while its completion is being
@@ -224,7 +224,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     reloaded = unboxed(fn -> Repo.get!(BookingPaymentSchema, payment.id) end)
     assert reloaded.status == :paid
     assert reloaded.last_event_id == "evt_RACE_PAID"
-    assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == "confirmed"
+    assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == :confirmed
   end
 
   # The expiry released the slot, so a late completion bringing the booking
@@ -261,11 +261,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
 
     case booking do
       {:ok, %MeetingSchema{}} ->
-        assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == "expired"
+        assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == :expired
         assert refunds_scheduled(payment) == 1
 
       {:error, :time_conflict} ->
-        assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == "confirmed"
+        assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == :confirmed
         assert refunds_scheduled(payment) == 0
     end
   end
@@ -295,7 +295,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     unboxed(fn ->
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email
         )
@@ -316,7 +316,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     unboxed(fn ->
       meeting =
         insert(:meeting,
-          status: "expired",
+          status: :expired,
           organizer_user_id: user.id,
           organizer_email: user.email
         )
@@ -341,7 +341,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 60, :minute),
       duration: 60,
-      status: "confirmed",
+      status: :confirmed,
       organizer_user_id: user.id,
       organizer_name: "Organiser",
       organizer_email: user.email,
@@ -369,7 +369,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     unboxed(fn ->
       Repo.aggregate(
         from(m in MeetingSchema,
-          where: m.organizer_user_id == ^user.id and m.status == "confirmed"
+          where: m.organizer_user_id == ^user.id and m.status == :confirmed
         ),
         :count
       )

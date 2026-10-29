@@ -77,7 +77,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           attendee_email: "alice@example.com",
           attendee_name: "Alice",
           attendee_locale: "en",
-          status: "awaiting_payment"
+          status: :awaiting_payment
         )
 
       expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
@@ -136,7 +136,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           organizer_user_id: user.id,
           meeting_type_ref: mt,
           attendee_email: "alice@example.com",
-          status: "awaiting_payment"
+          status: :awaiting_payment
         )
 
       assert {:error, :payments_unavailable} =
@@ -156,7 +156,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           organizer_user_id: user.id,
           meeting_type_ref: mt,
           attendee_email: "alice@example.com",
-          status: "awaiting_payment"
+          status: :awaiting_payment
         )
 
       assert {:error, :payment_not_required} =
@@ -181,7 +181,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           organizer_user_id: user.id,
           meeting_type_ref: mt,
           attendee_email: "alice@example.com",
-          status: "awaiting_payment"
+          status: :awaiting_payment
         )
 
       assert {:error, :payments_unavailable} =
@@ -202,7 +202,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           attendee_email: "bob@example.com",
           attendee_name: "Bob",
           attendee_locale: "en",
-          status: "awaiting_payment"
+          status: :awaiting_payment
         )
 
       expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
@@ -224,7 +224,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           organizer_user_id: user.id,
           meeting_type_ref: mt,
           attendee_email: "alice@example.com",
-          status: "awaiting_payment"
+          status: :awaiting_payment
         )
 
       expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
@@ -254,7 +254,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           organizer_user_id: user.id,
           meeting_type_ref: mt,
           attendee_email: "alice@example.com",
-          status: "awaiting_payment"
+          status: :awaiting_payment
         )
 
       assert {:error, :payments_unavailable} =
@@ -294,7 +294,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
             attendee_email: "alice@example.com",
             attendee_name: "Alice",
             attendee_locale: "en",
-            status: "awaiting_payment"
+            status: :awaiting_payment
           )
 
         slug = unquote(Atom.to_string(key))

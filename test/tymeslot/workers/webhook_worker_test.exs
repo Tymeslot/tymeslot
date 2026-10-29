@@ -450,7 +450,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
     test "captures the event-defining fields as JSON-safe values" do
       meeting =
         insert(:meeting,
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: ~U[2026-01-14 09:00:00Z],
           approval_deadline_at: ~U[2026-01-15 09:00:00Z]
         )
@@ -550,14 +550,14 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
   describe "perform/1 - replays the dispatch-time snapshot on retry" do
     test "reports the status the event asserted, not the meeting's current status" do
-      meeting = insert(:meeting, status: "awaiting_approval")
+      meeting = insert(:meeting, status: :awaiting_approval)
       webhook = insert(:webhook)
       snapshot = WebhookWorker.snapshot(meeting)
 
       # Simulates the host declining the request before a retried delivery of
       # the original meeting.requested job runs.
       meeting
-      |> Changeset.change(status: "cancelled", decline_reason: "Not a fit")
+      |> Changeset.change(status: :cancelled, decline_reason: "Not a fit")
       |> Repo.update!()
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
@@ -579,7 +579,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
     end
 
     test "falls back to the live meeting for a job enqueued before snapshots existed" do
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
       webhook = insert(:webhook)
 
       expect_http_success()

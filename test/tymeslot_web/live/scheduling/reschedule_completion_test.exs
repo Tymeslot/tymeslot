@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       assert DateTime.compare(moved.start_time, original_start) != :eq,
              "expected the meeting to be moved to the newly selected slot"
 
-      assert moved.status == "confirmed",
+      assert moved.status == :confirmed,
              "a reschedule moves the meeting; it must not change its lifecycle status"
 
       assert meeting_count_for(user) == 1,
@@ -460,7 +460,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       view =
         navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)
 
-      meeting |> Changeset.change(%{status: "cancelled"}) |> Repo.update!()
+      meeting |> Changeset.change(%{status: :cancelled}) |> Repo.update!()
 
       view
       |> form("form[phx-submit='submit']", %{
@@ -475,7 +475,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       wait_until(fn -> render(view) =~ "Cannot reschedule a cancelled meeting" end)
 
       kept = Repo.get!(MeetingSchema, meeting.id)
-      assert kept.status == "cancelled"
+      assert kept.status == :cancelled
       assert DateTime.compare(kept.start_time, original_start) == :eq
       assert meeting_count_for(user) == 1
     end
@@ -492,7 +492,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       path = "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}"
       {:ok, view, _html} = live(conn, path)
 
-      meeting |> Changeset.change(%{status: "cancelled"}) |> Repo.update!()
+      meeting |> Changeset.change(%{status: :cancelled}) |> Repo.update!()
 
       assert {:error, {:live_redirect, %{to: to}}} = render_patch(view, path)
       assert to == "/#{profile.username}?timezone=UTC"

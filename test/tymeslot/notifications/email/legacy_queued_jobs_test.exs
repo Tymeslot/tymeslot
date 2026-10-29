@@ -78,8 +78,8 @@ defmodule Tymeslot.Notifications.Email.LegacyQueuedJobsTest do
 
   describe "a job already holding the pair's participants claim" do
     for {notice, action, status} <- [
-          {"reschedule", "send_reschedule_emails", "confirmed"},
-          {"cancellation", "send_cancellation_emails", "cancelled"}
+          {"reschedule", "send_reschedule_emails", :confirmed},
+          {"cancellation", "send_cancellation_emails", :cancelled}
         ] do
       test "the #{notice} job tells the guest once and no participant again" do
         meeting = announced_meeting(unquote(status))
@@ -117,7 +117,7 @@ defmodule Tymeslot.Notifications.Email.LegacyQueuedJobsTest do
     user = insert(:user)
 
     insert(:meeting,
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       approval_requested_at: DateTime.utc_now(:second),
@@ -147,7 +147,7 @@ defmodule Tymeslot.Notifications.Email.LegacyQueuedJobsTest do
       "action" => "send_reschedule_emails",
       "meeting_id" => meeting.id,
       "rescheduled_to" => DateTime.to_iso8601(meeting.start_time),
-      "status" => meeting.status,
+      "status" => Atom.to_string(meeting.status),
       "original" => %{
         "start_time" => DateTime.to_iso8601(DateTime.add(meeting.start_time, -1, :day)),
         "end_time" => DateTime.to_iso8601(DateTime.add(meeting.end_time, -1, :day)),

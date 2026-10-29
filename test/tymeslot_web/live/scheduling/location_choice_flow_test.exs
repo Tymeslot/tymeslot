@@ -420,7 +420,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
               start_time: start,
               end_time: DateTime.add(start, 30, :minute),
               duration: 30,
-              status: "confirmed"
+              status: :confirmed
             },
             meeting_attrs
           )
@@ -538,7 +538,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
           start_time: start,
           end_time: DateTime.add(start, 30, :minute),
           duration: 30,
-          status: "confirmed",
+          status: :confirmed,
           location: "#{venue.name} (#{venue.description})",
           location_kind: "in_person",
           location_option_id: "loc-offices",

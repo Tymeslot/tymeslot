@@ -43,7 +43,7 @@ defmodule Tymeslot.Emails.Templates.RequestEmailsTimeLineTest do
         attendee_email: "alex@example.com",
         attendee_timezone: "Europe/Ljubljana",
         attendee_locale: "en",
-        status: "pending",
+        status: :pending,
         first_announced_at: ~U[2026-08-20 10:00:00Z]
       },
       attrs
@@ -78,7 +78,7 @@ defmodule Tymeslot.Emails.Templates.RequestEmailsTimeLineTest do
   end
 
   test "RescheduleRequestExpired states the host's time, in the host's zone" do
-    meeting = meeting(%{status: "expired"})
+    meeting = meeting(%{status: :expired})
     host_zone = HostClock.for_meeting(meeting, "en").timezone
     host_start = DateTime.shift_zone!(meeting.start_time, host_zone)
 

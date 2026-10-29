@@ -36,7 +36,7 @@ defmodule Tymeslot.Meetings.CalendarMoveTest do
       Keyword.merge(
         [
           organizer_user_id: user.id,
-          status: "confirmed",
+          status: :confirmed,
           calendar_sync_status: "externally_modified",
           calendar_integration_id: integration.id,
           provider_event_id: event_id
@@ -95,7 +95,7 @@ defmodule Tymeslot.Meetings.CalendarMoveTest do
     end
 
     test "a meeting that is not confirmed", %{meeting: meeting} do
-      meeting = change_meeting(meeting, status: "awaiting_approval")
+      meeting = change_meeting(meeting, status: :awaiting_approval)
       assert CalendarMove.offer(meeting) == {:error, :not_confirmed}
     end
 

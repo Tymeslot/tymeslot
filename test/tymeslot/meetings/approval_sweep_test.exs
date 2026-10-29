@@ -31,7 +31,7 @@ defmodule Tymeslot.Meetings.ApprovalSweepTest do
     user = insert(:user)
 
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       approval_requested_at: DateTime.utc_now(:second),
@@ -67,7 +67,7 @@ defmodule Tymeslot.Meetings.ApprovalSweepTest do
       assert {:error, %RuntimeError{}} =
                perform_job(ApprovalExpiryWorker, %{"meeting_id" => meeting.id})
 
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
   end
 
@@ -79,7 +79,7 @@ defmodule Tymeslot.Meetings.ApprovalSweepTest do
       assert {:ok, %{expired: 0, skipped: 0, failed: 1}} =
                perform_job(ApprovalSweepWorker, %{})
 
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
 
     # The job itself succeeds, so ErrorTracker's Oban integration never sees

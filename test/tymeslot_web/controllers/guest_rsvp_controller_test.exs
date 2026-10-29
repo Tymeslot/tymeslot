@@ -67,7 +67,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
   describe "GET /guest/:token/:response — meeting no longer taking responses" do
     test "a cancelled meeting shows the closed page", %{conn: conn} do
-      guest = guest_for(status: "cancelled")
+      guest = guest_for(status: :cancelled)
 
       conn = get(conn, ~p"/guest/#{guest.rsvp_token}/accept")
 
@@ -124,7 +124,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
   describe "POST /guest/:token/:response — meeting no longer taking responses" do
     test "a cancelled meeting is not answered", %{conn: conn} do
-      guest = guest_for(status: "cancelled")
+      guest = guest_for(status: :cancelled)
 
       conn = post(conn, ~p"/guest/#{guest.rsvp_token}/accept")
 

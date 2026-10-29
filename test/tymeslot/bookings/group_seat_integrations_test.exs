@@ -224,7 +224,7 @@ defmodule Tymeslot.Bookings.GroupSeatIntegrationsTest do
       {meeting, only} = book_seat!(params, "Only Booker", "only@example.com")
 
       assert {:ok, :meeting_cancelled} = CancelSeat.execute(only.management_token)
-      assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
+      assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
 
       assert [job] = jobs(WebhookWorker, "meeting.cancelled")
       assert job.args["participant_id"] == only.id

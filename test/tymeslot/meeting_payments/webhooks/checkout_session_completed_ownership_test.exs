@@ -22,7 +22,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedOwnershipTes
 
   describe "handle/1 refuses a session that is not this booking's payment" do
     setup do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert(:booking_payment,
@@ -118,7 +118,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedOwnershipTes
     # must not depend on it: the same currency in a different case is the
     # same price.
     test "confirms a session whose currency differs only in case" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert(:booking_payment,
@@ -140,7 +140,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedOwnershipTes
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       assert %{status: :paid, last_event_id: "evt_UPPER"} = Repo.reload!(bp)
-      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
     end
   end
 
@@ -148,7 +148,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedOwnershipTes
     reloaded = Repo.reload!(bp)
     assert reloaded.status == :pending
     assert reloaded.last_event_id == nil
-    assert {:ok, %{status: "awaiting_payment"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :awaiting_payment}} = MeetingQueries.get_meeting(meeting.id)
     refute_enqueued(worker: EmailWorker)
   end
 

@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
         user = insert(:user)
         {:ok, profile} = Profiles.get_or_create_profile(user.id)
         {:ok, profile} = Profiles.update_booking_theme(profile, unquote(theme_id))
-        meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+        meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
         payment =
           insert(:booking_payment,
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
             paid_at: DateTime.utc_now(:second)
           })
 
-        {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "confirmed"})
+        {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: :confirmed})
         PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
 
         assert has_element?(view, "#{shell} h1", "Booking confirmed")
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
           insert(:meeting,
             organizer_user_id: user.id,
             meeting_type_id: meeting_type.id,
-            status: "awaiting_payment"
+            status: :awaiting_payment
           )
 
         {:ok, view, _html} =

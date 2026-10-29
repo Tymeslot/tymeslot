@@ -76,7 +76,7 @@ defmodule Tymeslot.Factory do
       attendee_timezone: "America/New_York",
       attendee_locale: "en",
       reschedule_url: sequence(:reschedule_url, &"https://example.com/reschedule/token#{&1}"),
-      status: "confirmed",
+      status: :confirmed,
       ical_sequence: 0,
       last_notified_state: %{}
     }
@@ -102,7 +102,7 @@ defmodule Tymeslot.Factory do
     build(:meeting,
       start_time: start_time,
       end_time: end_time,
-      status: "completed"
+      status: :completed
     )
   end
 
@@ -114,18 +114,18 @@ defmodule Tymeslot.Factory do
     build(:meeting,
       start_time: start_time,
       end_time: end_time,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 
   @spec cancelled_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def cancelled_meeting_factory do
-    build(:meeting, status: "cancelled")
+    build(:meeting, status: :cancelled)
   end
 
   @spec pending_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def pending_meeting_factory do
-    build(:meeting, status: "pending")
+    build(:meeting, status: :pending)
   end
 
   @spec group_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()

@@ -87,7 +87,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
     insert_meeting_for_user(
       user,
-      Map.merge(%{meeting_type_id: meeting_type.id, status: "confirmed"}, meeting_attrs)
+      Map.merge(%{meeting_type_id: meeting_type.id, status: :confirmed}, meeting_attrs)
     )
   end
 
@@ -520,7 +520,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
 
-      assert updated.status == "awaiting_approval"
+      assert updated.status == :awaiting_approval
       assert updated.video_integration_id == zoom.id
       refute_enqueued(worker: VideoRoomWorker)
     end
@@ -531,12 +531,12 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
         meeting_on(
           user,
           [office(), video("loc-zoom", zoom, 1)],
-          Map.put(office_meeting_attrs(), :status, "awaiting_payment")
+          Map.put(office_meeting_attrs(), :status, :awaiting_payment)
         )
 
       updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
 
-      assert updated.status == "awaiting_payment"
+      assert updated.status == :awaiting_payment
       assert updated.video_integration_id == zoom.id
       refute_enqueued(worker: VideoRoomWorker)
     end
@@ -554,7 +554,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       updated = reschedule(meeting, %{location_option_id: "loc-office"})
 
-      assert updated.status == "awaiting_approval"
+      assert updated.status == :awaiting_approval
       assert updated.video_room_id == nil
 
       assert_enqueued(

@@ -24,7 +24,7 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   window plus a generous margin for a host who reads their mail late, short
   enough that a forwarded email does not stay actionable indefinitely. There
   is no revocation list beyond the `approval_requested_at` check above:
-  answering the request moves it out of `"awaiting_approval"`, and the
+  answering the request moves it out of `:awaiting_approval`, and the
   guarded transition then refuses every later use of the token on its own.
 
   ## What the token does not do

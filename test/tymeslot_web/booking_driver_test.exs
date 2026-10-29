@@ -88,7 +88,7 @@ defmodule TymeslotWeb.BookingDriverTest do
 
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
         assert meeting.attendee_email == "ada-#{slug}@example.com"
-        assert meeting.status == "confirmed"
+        assert meeting.status == :confirmed
       end
 
       @tag :capture_log

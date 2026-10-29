@@ -105,7 +105,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   defp maybe_schedule_refund(%{status: status, meeting_id: meeting_id} = payment)
        when is_binary(meeting_id) do
     with true <- status in BookingPaymentSchema.refundable_statuses(),
-         {:ok, %{status: "expired"}} <- MeetingQueries.get_meeting(meeting_id) do
+         {:ok, %{status: :expired}} <- MeetingQueries.get_meeting(meeting_id) do
       Oban.insert(RefundLatePayment.new_after_dispute(payment.id))
     else
       _not_owed -> {:ok, :none}

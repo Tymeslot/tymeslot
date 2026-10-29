@@ -348,7 +348,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # a cancellation of this seat that committed first makes the move fail and
   # roll the new seat back, rather than both succeeding.
   defp cancel_old_seat(old_meeting, participant) do
-    with %{status: status} when status != "cancelled" <-
+    with %{status: status} when status != :cancelled <-
            GroupMeetingQueries.lock_for_update(old_meeting.id),
          {:ok, %{cancelled_at: nil} = current} <- ParticipantQueries.get(participant.id) do
       ParticipantQueries.cancel(current)

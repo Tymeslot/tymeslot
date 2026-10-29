@@ -270,8 +270,8 @@ defmodule Tymeslot.AgendaTest do
     end
 
     test "excludes pending and cancelled bookings", %{user: user, tomorrow: tomorrow} do
-      booking(user, at(tomorrow, ~T[12:00:00]), title: "Pending", status: "pending")
-      booking(user, at(tomorrow, ~T[13:00:00]), title: "Cancelled", status: "cancelled")
+      booking(user, at(tomorrow, ~T[12:00:00]), title: "Pending", status: :pending)
+      booking(user, at(tomorrow, ~T[13:00:00]), title: "Cancelled", status: :cancelled)
 
       assert Day.empty?(Agenda.day_agenda(user, "Etc/UTC"))
     end
@@ -546,7 +546,7 @@ defmodule Tymeslot.AgendaTest do
   defp entry_integration_id(%Entry{target: {:external, id, _uid}}, _day), do: id
 
   defp booking(user, start, opts) do
-    {status, opts} = Keyword.pop(opts, :status, "confirmed")
+    {status, opts} = Keyword.pop(opts, :status, :confirmed)
 
     insert(
       :meeting,

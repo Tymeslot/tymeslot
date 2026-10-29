@@ -274,7 +274,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     test "expires a pending booking's meeting whose other fields no longer pass validation" do
       user = insert(:user)
       {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-      meeting = insert(:meeting, status: "awaiting_payment", organizer_user_id: user.id)
+      meeting = insert(:meeting, status: :awaiting_payment, organizer_user_id: user.id)
 
       Repo.update_all(from(m in Meeting, where: m.id == ^meeting.id), set: [attendee_name: nil])
 
@@ -288,7 +288,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
 
       assert {:ok, %{cancelled_count: 1}} = ConnectAccounts.disconnect(user)
-      assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     end
 
     # Disconnecting neither settles nor cancels a refund the host already owes;
@@ -299,7 +299,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       user = insert(:user)
       {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
 
-      meeting = insert(:meeting, status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      meeting = insert(:meeting, status: :cancelled, cancelled_at: DateTime.utc_now(:second))
       payment = insert(:paid_booking_payment, host_user_id: user.id, meeting: meeting)
 
       assert {:ok, %{outstanding_refunds_count: 1}} = ConnectAccounts.disconnect(user)
@@ -316,7 +316,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       insert(:paid_booking_payment,
         host_user_id: user.id,
-        meeting: insert(:meeting, status: "confirmed")
+        meeting: insert(:meeting, status: :confirmed)
       )
 
       assert {:ok, %{outstanding_refunds_count: 0}} = ConnectAccounts.disconnect(user)

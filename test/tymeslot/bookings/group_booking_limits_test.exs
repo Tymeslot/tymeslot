@@ -190,7 +190,7 @@ defmodule Tymeslot.Bookings.GroupBookingLimitsTest do
     to_utc = DateTime.add(from_utc, 1, :day)
 
     MeetingSchema
-    |> where([m], m.status == "confirmed")
+    |> where([m], m.status == :confirmed)
     |> where([m], m.start_time >= ^from_utc and m.start_time < ^to_utc)
     |> select([m], m.id)
     |> Repo.all()

@@ -606,14 +606,14 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:meeting,
           start_time: DateTime.add(old_end, -1, :hour),
           end_time: old_end,
-          status: "completed"
+          status: :completed
         )
 
       recent =
         insert(:meeting,
           start_time: DateTime.add(recent_end, -1, :hour),
           end_time: recent_end,
-          status: "completed"
+          status: :completed
         )
 
       assert :ok = perform_job(DataRetentionWorker, %{})
@@ -630,7 +630,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:meeting,
           start_time: DateTime.add(ended, -1, :hour),
           end_time: ended,
-          status: "completed"
+          status: :completed
         )
 
       assert :ok = perform_job(DataRetentionWorker, %{"invitee_data_retention_days" => 30})

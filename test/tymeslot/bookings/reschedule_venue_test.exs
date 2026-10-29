@@ -67,7 +67,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
 
     insert_meeting_for_user(
       user,
-      Map.merge(%{meeting_type_id: meeting_type.id, status: "confirmed"}, meeting_attrs)
+      Map.merge(%{meeting_type_id: meeting_type.id, status: :confirmed}, meeting_attrs)
     )
   end
 

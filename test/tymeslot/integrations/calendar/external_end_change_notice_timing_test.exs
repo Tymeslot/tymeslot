@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeNoticeTimingTest do
         meeting_type_id: meeting_type.id,
         organizer_user_id: user.id,
         organizer_email: user.email,
-        status: "confirmed",
+        status: :confirmed,
         start_time: start_time,
         end_time: DateTime.add(start_time, 30, :minute),
         duration: 30,
@@ -403,7 +403,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeNoticeTimingTest do
 
     for {label, reason, move_on} <- [
           {"cancelled", "Meeting not confirmed",
-           quote(do: fn meeting -> Changeset.change(meeting, status: "cancelled") end)},
+           quote(do: fn meeting -> Changeset.change(meeting, status: :cancelled) end)},
           {"sent a reschedule request", "Meeting time no longer holds",
            quote(
              do: fn meeting ->

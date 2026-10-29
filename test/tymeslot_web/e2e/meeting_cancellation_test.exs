@@ -14,7 +14,7 @@ defmodule TymeslotWeb.E2E.MeetingCancellationTest do
       insert(:meeting, %{
         organizer_user: user,
         organizer_user_id: user.id,
-        status: "confirmed"
+        status: :confirmed
       })
 
     session =

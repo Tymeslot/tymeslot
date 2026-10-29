@@ -87,7 +87,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
 
   describe "Webhook span" do
     test "emits :ok processed metadata on a fresh CheckoutSessionCompleted event" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       _bp =
         insert(:booking_payment,
@@ -121,7 +121,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
     end
 
     test "a successful paid booking emits anonymous booking_payment_succeeded telemetry" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       _bp =
         insert(:booking_payment,
@@ -167,7 +167,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
       # expiry webhook has already run — the meeting is expired and the payment
       # is failed. The slot is still free, so the booking is brought back.
       user = insert(:user)
-      meeting = insert(:meeting, status: "expired", organizer_user_id: user.id)
+      meeting = insert(:meeting, status: :expired, organizer_user_id: user.id)
 
       _bp =
         insert(:booking_payment,
@@ -209,7 +209,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
     end
 
     test "emits :idempotent_replay processed metadata on a replay" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       _bp =
         insert(:booking_payment,
@@ -253,7 +253,7 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
 
   describe "status_changed wired into CheckoutSessionCompleted" do
     test "emits a status_changed event when the booking transitions pending → paid" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       _bp =
         insert(:booking_payment,

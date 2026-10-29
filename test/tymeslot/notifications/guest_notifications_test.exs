@@ -25,7 +25,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     meeting =
       insert(
         :meeting,
-        Map.merge(%{first_announced_at: DateTime.utc_now(:second), status: "confirmed"}, attrs)
+        Map.merge(%{first_announced_at: DateTime.utc_now(:second), status: :confirmed}, attrs)
       )
 
     {:ok, [accepted, declined]} =
@@ -162,7 +162,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     end
 
     test "the cancellation job retries, and the retry writes only to the guest missed" do
-      %{meeting: meeting} = meeting_with_guests(moved(%{status: "cancelled"}))
+      %{meeting: meeting} = meeting_with_guests(moved(%{status: :cancelled}))
 
       expect(EmailServiceMock, :send_cancellation_email_to_organizer, 1, fn _email, _details ->
         {:ok, :sent}
@@ -200,7 +200,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
         ] do
       test "the #{notice} job retries for the guest, and then gives up on the attendee alone" do
         start_time = DateTime.add(DateTime.utc_now(:second), 3, :day)
-        status = if unquote(notice) == "cancellation", do: "cancelled", else: "confirmed"
+        status = if unquote(notice) == "cancellation", do: :cancelled, else: :confirmed
 
         %{meeting: meeting} =
           meeting_with_guests(%{
@@ -279,7 +279,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
 
       Map.merge(
         %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           organizer_user_id: user.id,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour),
@@ -345,7 +345,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
 
       %{meeting: meeting} =
         meeting_with_guests(%{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           organizer_user_id: user.id,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
@@ -363,7 +363,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
 
       %{meeting: meeting} =
         meeting_with_guests(%{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           first_announced_at: nil,
           organizer_user_id: user.id,
           approval_requested_at: DateTime.utc_now(:second),
@@ -374,7 +374,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     end
 
     test "the cancellation email job tells the guests alongside host and booker" do
-      %{meeting: meeting} = meeting_with_guests(%{status: "cancelled"})
+      %{meeting: meeting} = meeting_with_guests(%{status: :cancelled})
 
       expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, _details ->
         {:ok, :sent}

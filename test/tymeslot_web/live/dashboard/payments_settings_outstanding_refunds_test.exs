@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
   end
 
   defp cancelled_payment_for(user, attrs \\ %{}) do
-    meeting = insert(:meeting, status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+    meeting = insert(:meeting, status: :cancelled, cancelled_at: DateTime.utc_now(:second))
 
     defaults = %{
       host_user_id: user.id,
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
       payment =
         cancelled_payment_for(host, %{
-          meeting: insert(:meeting, status: "cancelled", cancelled_at: cancelled_at)
+          meeting: insert(:meeting, status: :cancelled, cancelled_at: cancelled_at)
         })
 
       {view, html} = open_payments(conn, host)
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
       payment =
         cancelled_payment_for(host, %{
-          meeting: insert(:meeting, status: "expired"),
+          meeting: insert(:meeting, status: :expired),
           paid_at: ~U[2026-09-30 08:00:00Z]
         })
 
@@ -151,13 +151,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       cancelled =
         for hour <- 1..50 do
           meeting =
-            insert(:meeting, status: "cancelled", cancelled_at: DateTime.add(now, -hour, :hour))
+            insert(:meeting, status: :cancelled, cancelled_at: DateTime.add(now, -hour, :hour))
 
           cancelled_payment_for(host, %{meeting: meeting})
         end
 
       newest =
-        cancelled_payment_for(host, %{meeting: insert(:meeting, status: "expired"), paid_at: now})
+        cancelled_payment_for(host, %{meeting: insert(:meeting, status: :expired), paid_at: now})
 
       {view, html} = open_payments(conn, host)
 
@@ -191,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
     test "is absent when the meeting is still going ahead", %{conn: conn} do
       host = connected_host()
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
 
       insert(:paid_booking_payment,
         host_user_id: host.id,
@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
           :meeting,
           Map.merge(
             %{
-              status: "awaiting_approval",
+              status: :awaiting_approval,
               organizer_user_id: host.id,
               approval_requested_at: DateTime.utc_now(:second),
               approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
@@ -311,7 +311,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
     # expired, with no cancellation date, while the money is still owed.
     test "an expired booking paid after its slot was taken can be refunded", %{conn: conn} do
       host = connected_host()
-      payment = cancelled_payment_for(host, %{meeting: insert(:meeting, status: "expired")})
+      payment = cancelled_payment_for(host, %{meeting: insert(:meeting, status: :expired)})
 
       Mox.stub(StripeAdapterMock, :create_refund, fn params, _opts ->
         assert params.amount == 5000

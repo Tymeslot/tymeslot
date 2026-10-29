@@ -26,7 +26,7 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
         organizer_email: user.email,
         start_time: future_start,
         end_time: DateTime.add(future_start, 60, :minute),
-        status: "confirmed",
+        status: :confirmed,
         title: "Kickoff"
       )
 

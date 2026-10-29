@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
 
         # And the booking really is held, not merely described as one.
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
-        assert meeting.status == "awaiting_approval"
+        assert meeting.status == :awaiting_approval
       end
     end
 
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
             "America/New_York"
           )
 
-        meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+        meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
         payment =
           insert(:booking_payment,
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
           })
 
         meeting
-        |> Changeset.change(status: "awaiting_approval")
+        |> Changeset.change(status: :awaiting_approval)
         |> Repo.update!()
 
         PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
@@ -206,7 +206,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         refute html =~ "Request sent!"
 
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
-        assert meeting.status == "confirmed"
+        assert meeting.status == :confirmed
       end
     end
   end

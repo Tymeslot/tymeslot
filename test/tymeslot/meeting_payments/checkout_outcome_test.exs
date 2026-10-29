@@ -35,7 +35,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
         :meeting,
         Map.merge(
           %{
-            status: "awaiting_approval",
+            status: :awaiting_approval,
             organizer_user: user,
             organizer_user_id: user.id,
             approval_requested_at: now,
@@ -72,7 +72,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
   describe "before the payment completes" do
     test "a checkout still in flight is processing" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
       insert(:booking_payment, meeting_id: meeting.id, status: :pending, paid_at: nil)
 
       assert outcome(meeting) == :processing
@@ -83,7 +83,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
     end
 
     test "an asynchronous payment failure is failed, not processing" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       insert(:booking_payment,
         meeting_id: meeting.id,
@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
     end
 
     test "an unpaid booking cancelled before checkout finished is failed" do
-      meeting = insert(:meeting, status: "cancelled")
+      meeting = insert(:meeting, status: :cancelled)
       insert(:booking_payment, meeting_id: meeting.id, status: :pending, paid_at: nil)
 
       assert outcome(meeting) == :failed
@@ -116,7 +116,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
   describe "after the payment completes" do
     test "a confirmed booking is confirmed" do
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
 
       insert(:booking_payment,
         meeting_id: meeting.id,
@@ -128,7 +128,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
     end
 
     test "a disputed payment is classified by its booking, like any other paid one" do
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
 
       insert(:booking_payment,
         meeting_id: meeting.id,
@@ -157,7 +157,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       assert {:ok, approved} = Approval.approve(meeting)
 
       approved
-      |> Changeset.change(status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      |> Changeset.change(status: :cancelled, cancelled_at: DateTime.utc_now(:second))
       |> Repo.update!()
 
       assert outcome(meeting) == :cancelled

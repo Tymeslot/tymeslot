@@ -277,7 +277,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
           provider_event_id: nil,
           calendar_uid: uid,
           start_time: start_time,
-          status: "cancelled",
+          status: :cancelled,
           calendar_sync_status: "externally_deleted"
         )
 

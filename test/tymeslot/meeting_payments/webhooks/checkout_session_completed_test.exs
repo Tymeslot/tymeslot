@@ -26,7 +26,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
   describe "handle/1" do
     test "marks the booking_payment paid and the meeting confirmed" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert_payment(
@@ -54,11 +54,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert reloaded.last_event_id == "evt_OK"
 
       {:ok, meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     test "is idempotent — replaying the same event id is a no-op" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert_payment(
@@ -89,7 +89,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email
         )
@@ -120,7 +120,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email,
           video_integration_id: nil
@@ -149,7 +149,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
     end
 
     test "broadcasts :paid via PubSub after a successful transition" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       _bp =
         insert_payment(
@@ -172,7 +172,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
     end
 
     test "returns :ok when no booking_payment matches (event for foreign meeting)" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       event =
         completed_event("evt_NOMATCH", %{
@@ -185,7 +185,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
     end
 
     test "leaves a non-awaiting_payment meeting unchanged (replay safety)" do
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
 
       _bp =
         insert_payment(
@@ -213,7 +213,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       # webhook can mark the booking_payment disputed before this completed event
       # is processed. Completion must record the payment_intent and confirm the
       # meeting without clobbering the dispute back to paid.
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert_payment(
@@ -237,11 +237,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert reloaded.stripe_payment_intent_id == "pi_DISP_FIRST"
 
       {:ok, confirmed_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert confirmed_meeting.status == "confirmed"
+      assert confirmed_meeting.status == :confirmed
     end
 
     test "skips confirmation when payment_status is not yet paid (async payment method)" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert_payment(
@@ -262,12 +262,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       assert Repo.reload!(bp).status == :pending
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded_meeting.status == "awaiting_payment"
+      assert reloaded_meeting.status == :awaiting_payment
       refute_enqueued(worker: CalendarEventWorker)
     end
 
     test "rolls back and returns an error, instead of :ok, when the calendar enqueue fails" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert_payment(
@@ -299,13 +299,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert is_nil(reloaded_bp.last_event_id)
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded_meeting.status == "awaiting_payment"
+      assert reloaded_meeting.status == :awaiting_payment
 
       refute_enqueued(worker: CalendarEventWorker)
     end
 
     test "backfills stripe_charge_id from an atom-keyed payment intent (real adapter shape)" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert_payment(
@@ -349,7 +349,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email,
           meeting_type_id: meeting_type.id,
@@ -374,14 +374,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       {:ok, gated_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert gated_meeting.status == "awaiting_approval"
+      assert gated_meeting.status == :awaiting_approval
 
       # Paid but not yet approved must not send a confirmation — only the
       # request fan-out, exactly like the free gated path.
       refute_enqueued(worker: EmailWorker, args: %{"action" => "send_confirmation_emails"})
 
       assert {:ok, approved} = Approval.approve(gated_meeting)
-      assert approved.status == "confirmed"
+      assert approved.status == :confirmed
     end
 
     test "a gated booking whose meeting type has since been deleted still fails safe into the gate" do
@@ -394,7 +394,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       # booking time, are what this handler must fall back to.
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email,
           meeting_type_id: nil,
@@ -419,7 +419,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "awaiting_approval"
+      assert reloaded.status == :awaiting_approval
     end
 
     test "refreshes a stale approval deadline instead of carrying the booking-time one" do
@@ -432,7 +432,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email,
           approval_requested_at: stale_requested_at,
@@ -456,7 +456,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "awaiting_approval"
+      assert reloaded.status == :awaiting_approval
       assert DateTime.compare(reloaded.approval_requested_at, stale_requested_at) == :gt
       assert DateTime.compare(reloaded.approval_deadline_at, DateTime.utc_now()) == :gt
 
@@ -477,7 +477,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email,
           # Far enough out that the deadline is never capped at the start time.
@@ -504,7 +504,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "awaiting_approval"
+      assert reloaded.status == :awaiting_approval
 
       window_hours =
         DateTime.diff(reloaded.approval_deadline_at, reloaded.approval_requested_at, :hour)
@@ -523,7 +523,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email,
           meeting_type_id: meeting_type.id,
@@ -548,7 +548,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "awaiting_approval"
+      assert reloaded.status == :awaiting_approval
     end
 
     test "the gate follows the row, not a meeting type edited while checkout was open — approval turned on" do
@@ -562,7 +562,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       meeting =
         insert(:meeting,
-          status: "awaiting_payment",
+          status: :awaiting_payment,
           organizer_user_id: user.id,
           organizer_email: user.email,
           meeting_type_id: meeting_type.id,
@@ -587,7 +587,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "confirmed"
+      assert reloaded.status == :confirmed
       assert is_nil(reloaded.approval_requested_at)
       assert is_nil(reloaded.approval_deadline_at)
     end

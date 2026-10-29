@@ -309,7 +309,7 @@ defmodule Tymeslot.Notifications.Events do
 
   # A room job that finishes after the host cancelled the meeting has no
   # confirmations left to release: the participants were told it is off.
-  defp release_seat_confirmations(%{status: "cancelled"}), do: :ok
+  defp release_seat_confirmations(%{status: :cancelled}), do: :ok
 
   defp release_seat_confirmations(meeting) do
     meeting.id

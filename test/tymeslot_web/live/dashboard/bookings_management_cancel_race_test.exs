@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
 
   defp cancel_behind_the_modal(meeting) do
     meeting
-    |> Changeset.change(status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+    |> Changeset.change(status: :cancelled, cancelled_at: DateTime.utc_now(:second))
     |> Repo.update!()
   end
 end

@@ -14,6 +14,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.MeetingState
 
   @unique_slot_constraint :unique_confirmed_meeting_per_organizer_at_time
 
@@ -72,7 +73,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           default_reminder_time: String.t() | nil,
           reminders: [map()] | nil,
           reminders_sent: [map()] | nil,
-          status: String.t(),
+          status: MeetingState.status(),
           cancelled_at: DateTime.t() | nil,
           cancellation_reason: String.t() | nil,
           reschedule_requested_at: DateTime.t() | nil,
@@ -239,8 +240,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:reminders, {:array, :map}, default: nil)
     field(:reminders_sent, {:array, :map}, default: nil)
 
-    # Status tracking
-    field(:status, :string, default: "pending")
+    # Grouped and read by `Tymeslot.Meetings.MeetingState`, which explains each
+    # value; closed in the database by `meetings_status_must_be_known`.
+    field(:status, Ecto.Enum,
+      values: ~w(pending awaiting_payment awaiting_approval confirmed cancelled completed
+                 expired reschedule_requested)a,
+      default: :pending
+    )
+
     field(:cancelled_at, :utc_datetime)
     field(:cancellation_reason, :string)
     # Set while an organizer reschedule request is pending; independent of
@@ -261,7 +268,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:approval_resolved_at, :utc_datetime)
     # Stamped only by `Meetings.Approval.decline/2`, and the single fact that
     # tells a declined booking apart from every other cancelled one. `status`
-    # cannot: a decline lands on "cancelled" deliberately, so that the whole
+    # cannot: a decline lands on `:cancelled` deliberately, so that the whole
     # cancellation pipeline (calendar deletion, refund resolution, cache
     # invalidation) applies to it unchanged. Nor can `approval_resolved_at`,
     # which an approval sets too and which therefore survives on a meeting that
@@ -448,19 +455,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   @organizer_note_max_length 2000
 
-  @valid_statuses [
-    "pending",
-    # Held pending the host's manual approval. Occupies its slot like
-    # "pending" does, but is not a booking anyone has agreed to yet.
-    "awaiting_approval",
-    "confirmed",
-    "cancelled",
-    "completed",
-    "reschedule_requested",
-    "awaiting_payment",
-    "expired"
-  ]
-
   @doc """
   The longest note an organiser may leave for the guest. Anything that
   becomes one (a poll's description) is held to the same limit.
@@ -475,7 +469,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   in `meeting_participants`), so updating one must not demand the attendee
   fields: it dispatches on the same `capacity > 1` predicate as
   `Tymeslot.Meetings.group?/1`. `group_changeset/2` is not usable here,
-  because it also forces `status` back to `"confirmed"`.
+  because it also forces `status` back to `:confirmed`.
   """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(%__MODULE__{capacity: capacity} = meeting, attrs) when capacity > 1 do
@@ -491,7 +485,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   Group meetings hold no attendee — bookers live in `meeting_participants` —
   so `attendee_name`/`attendee_email` are not required. Status is always
-  forced to `"confirmed"`, regardless of what the caller passes: group
+  forced to `:confirmed`, regardless of what the caller passes: group
   meetings never wait on payment, and the single-live-row invariant (backed
   by `unique_confirmed_meeting_per_organizer_at_time`, which only indexes
   confirmed rows) depends on every group meeting landing in that status.
@@ -500,7 +494,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   def group_changeset(meeting, attrs) do
     meeting
     |> base_changeset(attrs, @group_required_fields)
-    |> put_change(:status, "confirmed")
+    |> put_change(:status, :confirmed)
   end
 
   @status_transition_fields [
@@ -522,13 +516,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   legitimately carry no `attendee_name`/`attendee_email` — see
   `group_changeset/2`). Reusing the full `changeset/2` here would wrongly
   demand attendee data the transition never changes; reusing
-  `group_changeset/2` would silently force `status` back to `"confirmed"`.
+  `group_changeset/2` would silently force `status` back to `:confirmed`.
   """
   @spec status_changeset(t(), map()) :: Ecto.Changeset.t()
   def status_changeset(meeting, attrs) do
     meeting
     |> cast(attrs, @status_transition_fields)
-    |> validate_inclusion(:status, @valid_statuses)
     |> unique_constraint([:organizer_user_id, :start_time],
       name: @unique_slot_constraint,
       message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
@@ -547,7 +540,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # current format rules must still be able to take bookings.
     |> EmailChangeset.validate_email(:organizer_email, existing: true)
     |> EmailChangeset.validate_email(:attendee_email)
-    |> validate_inclusion(:status, @valid_statuses)
     |> validate_required([:attendee_locale])
     |> validate_inclusion(:attendee_locale, supported_locale_codes(),
       message: dgettext_noop("errors", "is not a supported locale")

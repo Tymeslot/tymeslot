@@ -356,7 +356,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # booked when it was called off: the participants whose own seat was never
   # released (the host cancelled the slot, or its calendar event was deleted).
   # A slot cancelled because its last seat was released had nobody left.
-  defp seats_label(%{status: "cancelled"} = meeting, _guests) do
+  defp seats_label(%{status: :cancelled} = meeting, _guests) do
     case Enum.count(Helpers.participants(meeting), &is_nil(&1.cancelled_at)) do
       0 ->
         dgettext("dashboard_bookings", "Every spot was released")
@@ -385,7 +385,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # A planned session (`PlannedSessions`) that has not started yet but takes
   # no more sign-ups. Once it has started, the card's status says enough.
   defp registration_closed?(%{planned: true, status: status} = session)
-       when status != "cancelled" do
+       when status != :cancelled do
     now = Clock.utc_now()
     DateTime.compare(session.start_time, now) == :gt and not PlannedSessions.open?(session, now)
   end

@@ -46,7 +46,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       attendee_locale: "en",
       cancel_url: "https://example.com/sam/meeting/abc-123/cancel",
       approval_deadline_at: ~U[2026-08-30 09:00:00Z],
-      status: "awaiting_approval"
+      status: :awaiting_approval
     }
 
     struct!(base, attrs)

@@ -21,7 +21,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
 
   defp cancelled_meeting(opts \\ []) do
     cancelled_at = Keyword.get(opts, :cancelled_at, DateTime.utc_now(:second))
-    insert(:meeting, status: "cancelled", cancelled_at: cancelled_at)
+    insert(:meeting, status: :cancelled, cancelled_at: cancelled_at)
   end
 
   defp payment_for(host_user_id, meeting, attrs \\ %{}) do
@@ -61,7 +61,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
     end
 
     test "omits a meeting that is still going ahead" do
-      payment_for(1, insert(:meeting, status: "confirmed"))
+      payment_for(1, insert(:meeting, status: :confirmed))
 
       assert MeetingPayments.list_outstanding_refunds_for_host(1) == []
     end
@@ -94,12 +94,12 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
       days_ago = &DateTime.add(now, -&1, :day)
 
       expired_20 =
-        payment_for(1, insert(:meeting, status: "expired"), %{paid_at: days_ago.(20)})
+        payment_for(1, insert(:meeting, status: :expired), %{paid_at: days_ago.(20)})
 
       cancelled_10 = payment_for(1, cancelled_meeting(cancelled_at: days_ago.(10)))
 
       expired_5 =
-        payment_for(1, insert(:meeting, status: "expired"), %{paid_at: days_ago.(5)})
+        payment_for(1, insert(:meeting, status: :expired), %{paid_at: days_ago.(5)})
 
       cancelled_1 = payment_for(1, cancelled_meeting(cancelled_at: days_ago.(1)))
 
@@ -211,7 +211,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
     end
 
     test "is empty when the host owes nothing" do
-      payment_for(1, insert(:meeting, status: "confirmed"))
+      payment_for(1, insert(:meeting, status: :confirmed))
 
       assert MeetingPayments.outstanding_refunds_summary_for_host(1) == %{count: 0, totals: []}
     end

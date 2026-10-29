@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
         attendee_name: "Grace Hopper",
         start_time: start_time,
         end_time: DateTime.add(start_time, 1800, :second),
-        status: "confirmed"
+        status: :confirmed
       )
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
         title: "Strategy sync",
         start_time: start_time,
         end_time: DateTime.add(start_time, 1800, :second),
-        status: "confirmed",
+        status: :confirmed,
         organizer_video_url: "https://zoom.us/j/456"
       )
 

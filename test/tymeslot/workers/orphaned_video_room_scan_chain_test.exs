@@ -35,7 +35,7 @@ defmodule Tymeslot.Workers.OrphanedVideoRoomScanChainTest do
       insert_meeting_for_user(user, %{
         start_offset: 2 * 3600,
         duration: 1800,
-        status: "cancelled",
+        status: :cancelled,
         cancelled_at: DateTime.add(now, -7200, :second),
         video_integration_id: integration.id,
         video_provider: "zoom",

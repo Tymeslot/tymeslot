@@ -86,7 +86,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
   end
 
   # `:declined` is the host's own refusal and nothing else. `Approval.declined?/1`
-  # owns that question: `status == "cancelled"` does not answer it, since the
+  # owns that question: `status == :cancelled` does not answer it, since the
   # invitee can withdraw a held request themselves, and neither does
   # `approval_resolved_at`, which an approval stamps as well — a meeting the
   # host approved and later cancelled would otherwise be shown to the invitee
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
   # the decline copy.
   #
   # `:lapsed` is a request whose answer deadline has passed while the row is
-  # still `"awaiting_approval"`: the window between the deadline and the
+  # still `:awaiting_approval`: the window between the deadline and the
   # expiry sweep (or a losing race against it) actually running. Telling it
   # apart from `:awaiting` keeps the page from showing a past deadline as if
   # it were still ahead, and from offering Approve/Decline on a request that
@@ -110,10 +110,10 @@ defmodule TymeslotWeb.MeetingRequestLive do
       MeetingState.awaiting_approval?(meeting) ->
         :awaiting
 
-      meeting.status == "confirmed" ->
+      meeting.status == :confirmed ->
         :approved
 
-      meeting.status == "expired" ->
+      meeting.status == :expired ->
         :expired
 
       Approval.declined?(meeting) ->

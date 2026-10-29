@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementRefusalTest do
     view = open_meetings(ctx.conn)
     push_to_component(view, "show_reschedule_modal", %{"id" => meeting.id})
 
-    {:ok, _held} = MeetingQueries.update_meeting_status(meeting, %{status: "awaiting_approval"})
+    {:ok, _held} = MeetingQueries.update_meeting_status(meeting, %{status: :awaiting_approval})
 
     html = push_to_component(view, "confirm_reschedule_request", %{})
 
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementRefusalTest do
              BookingsManagementComponent.handle_event("confirm_cancel_meeting", %{}, socket)
 
     assert_received {:flash, {:error, "Ein bereits begonnener Termin kann nicht abgesagt werden"}}
-    assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
   end
 
   defp meeting_for(host, start_in_minutes) do
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementRefusalTest do
     start_time = DateTime.add(now, start_in_minutes, :minute)
 
     insert(:meeting,
-      status: "confirmed",
+      status: :confirmed,
       organizer_user: host,
       organizer_user_id: host.id,
       organizer_email: host.email,

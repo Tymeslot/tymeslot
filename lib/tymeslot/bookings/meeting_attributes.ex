@@ -18,6 +18,7 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles.ProfileQueries
@@ -56,7 +57,7 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
           required(:attendee_company) => String.t() | nil,
           required(:attendee_timezone) => String.t(),
           required(:attendee_locale) => String.t(),
-          required(:status) => String.t(),
+          required(:status) => MeetingState.status(),
           required(:approval_requested_at) => DateTime.t() | nil,
           required(:approval_deadline_at) => DateTime.t() | nil,
           required(:reminders) => [reminder()],
@@ -242,13 +243,13 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       requested_at = DateTime.truncate(Clock.utc_now(), :second)
 
       %{
-        status: "awaiting_approval",
+        status: :awaiting_approval,
         approval_requested_at: requested_at,
         approval_deadline_at:
           Approval.deadline_for(meeting_type_record, requested_at, start_datetime)
       }
     else
-      %{status: "confirmed", approval_requested_at: nil, approval_deadline_at: nil}
+      %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
     end
   end
 

@@ -59,7 +59,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesTest do
     refute Process.get(@armed_key)
 
     assert {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-    assert reloaded.status == "cancelled"
+    assert reloaded.status == :cancelled
     # A failed auto-cancel clears the status so the next sync retries; a lost
     # race must not, since there is nothing left to retry.
     assert reloaded.calendar_sync_status == "externally_deleted"

@@ -31,7 +31,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
   setup do
     host = insert(:user)
-    meeting = insert(:meeting, status: "expired", organizer_user_id: host.id)
+    meeting = insert(:meeting, status: :expired, organizer_user_id: host.id)
 
     payment =
       insert(:paid_booking_payment,

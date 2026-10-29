@@ -25,7 +25,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
         DateTime.utc_now() |> DateTime.add(-2, :hour) |> DateTime.truncate(:second)
       end)
 
-    meeting = insert(:meeting, status: "awaiting_payment")
+    meeting = insert(:meeting, status: :awaiting_payment)
 
     bp =
       insert(:booking_payment,
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
       assert reloaded.stripe_payment_intent_id == "pi_RECONCILED"
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded_meeting.status == "confirmed"
+      assert reloaded_meeting.status == :confirmed
     end
 
     test "polls Stripe and reconciles an expired session to failed+expired" do
@@ -98,7 +98,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
       assert reloaded.status == :failed
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded_meeting.status == "expired"
+      assert reloaded_meeting.status == :expired
     end
 
     test "a handler failure is logged and leaves the payment pending for the next sweep" do
@@ -155,7 +155,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
       assert reloaded.status == :pending
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded_meeting.status == "awaiting_payment"
+      assert reloaded_meeting.status == :awaiting_payment
     end
 
     test "skips fresh pending payments" do
@@ -200,7 +200,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
       assert reloaded.stripe_payment_intent_id == "pi_STRUCT_PAID"
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded_meeting.status == "confirmed"
+      assert reloaded_meeting.status == :confirmed
     end
 
     test "tolerates Stripe errors and reports them in the result" do

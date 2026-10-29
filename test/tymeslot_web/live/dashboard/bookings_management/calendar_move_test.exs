@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
       insert(:meeting,
         organizer_user_id: user.id,
         organizer_email: user.email,
-        status: "confirmed",
+        status: :confirmed,
         attendee_name: "Ada Attendee",
         calendar_sync_status: "externally_modified",
         calendar_integration_id: integration.id,
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
 
     insert(:meeting,
       organizer_user_id: user.id,
-      status: "confirmed",
+      status: :confirmed,
       start_time: DateTime.truncate(event.start_at, :second),
       end_time: DateTime.truncate(event.end_at, :second)
     )
@@ -255,7 +255,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
     foreign =
       insert(:meeting,
         organizer_user_id: other.id,
-        status: "confirmed",
+        status: :confirmed,
         calendar_sync_status: "externally_modified",
         calendar_integration_id: other_integration.id,
         provider_event_id: "evt-foreign"

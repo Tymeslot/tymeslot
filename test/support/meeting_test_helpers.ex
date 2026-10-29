@@ -35,7 +35,7 @@ defmodule Tymeslot.MeetingTestHelpers do
     base_attrs = %{
       organizer_user_id: user.id,
       organizer_email: Map.get(attrs, :organizer_email, user.email),
-      status: Map.get(attrs, :status, "confirmed"),
+      status: Map.get(attrs, :status, :confirmed),
       start_time: DateTime.add(DateTime.utc_now(), start_offset, :second),
       end_time: DateTime.add(DateTime.utc_now(), start_offset + duration, :second)
     }

@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Live.Themes.DefaultPagesJourneyTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: "Etc/UTC",
-        status: "confirmed"
+        status: :confirmed
       )
 
     %{profile: profile, meeting: meeting}
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Live.Themes.DefaultPagesJourneyTest do
     {:ok, _view, confirmed} = live(conn, to)
     assert confirmed =~ ~s(data-page="cancel_confirmed")
     assert confirmed =~ "Meeting Cancelled"
-    assert Repo.get!(MeetingSchema, m.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, m.id).status == :cancelled
   end
 
   @tag :capture_log
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Live.Themes.DefaultPagesJourneyTest do
     kept = view |> element("[data-testid='keep-meeting']") |> render_click()
     assert kept =~ "Great! Your meeting is still scheduled as planned."
     refute kept =~ "Yes, Cancel Meeting"
-    assert Repo.get!(MeetingSchema, m.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, m.id).status == :confirmed
   end
 
   @tag :capture_log

@@ -29,7 +29,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestExpiredTest do
       attendee_email: "alex@example.com",
       attendee_timezone: "Europe/Ljubljana",
       attendee_locale: "fr",
-      status: "expired",
+      status: :expired,
       first_announced_at: ~U[2026-08-20 10:00:00Z]
     }
   end

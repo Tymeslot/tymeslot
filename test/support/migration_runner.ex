@@ -16,7 +16,7 @@ defmodule Tymeslot.Test.MigrationRunner do
       @version 20_260_716_094_322
 
       test "backfills the column" do
-        insert(:meeting, status: "reschedule_requested")
+        insert(:meeting, status: :reschedule_requested)
 
         MigrationRunner.rerun!(@version)
 

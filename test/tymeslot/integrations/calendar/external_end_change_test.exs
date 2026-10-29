@@ -204,10 +204,10 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
 
   describe "an end change for a meeting that no longer stands" do
     for {label, attrs} <- [
-          {"cancelled", [status: "cancelled"]},
+          {:cancelled, [status: :cancelled]},
           {"waiting on a reschedule request",
            [reschedule_requested_at: ~U[2026-01-01 00:00:00Z]]},
-          {"with the legacy reschedule status", [status: "reschedule_requested"]}
+          {"with the legacy reschedule status", [status: :reschedule_requested]}
         ] do
       test "is not followed for a meeting #{label}", ctx do
         meeting = ctx.meeting |> Changeset.change(unquote(Macro.escape(attrs))) |> Repo.update!()
@@ -257,7 +257,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
 
     test "is not written over a cancellation that landed after the read", ctx do
       read = ctx.meeting
-      cancelled = read |> Changeset.change(status: "cancelled") |> Repo.update!()
+      cancelled = read |> Changeset.change(status: :cancelled) |> Repo.update!()
       with_video_room(cancelled)
 
       assert :ok =

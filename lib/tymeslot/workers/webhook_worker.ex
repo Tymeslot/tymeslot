@@ -41,6 +41,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.Backoff
@@ -109,6 +110,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
   end
 
   defp encode_snapshot_field(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+  # Job args are JSON: the status is stored in its string form.
+  defp encode_snapshot_field(status) when is_atom(status) and status != nil,
+    do: Atom.to_string(status)
+
   defp encode_snapshot_field(value), do: value
 
   @behaviour ExpectedJobOutcome
@@ -403,21 +408,27 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   defp snapshot_field_value(snapshot, field, default) do
     case Map.fetch(snapshot, Atom.to_string(field)) do
-      {:ok, value} -> decode_snapshot_field(field, value)
+      {:ok, value} -> decode_snapshot_field(field, value, default)
       :error -> default
     end
   end
 
-  defp decode_snapshot_field(_field, nil), do: nil
+  defp decode_snapshot_field(_field, nil, _default), do: nil
 
-  defp decode_snapshot_field(field, value) when field in @datetime_snapshot_fields do
+  # Read back through the known statuses rather than `String.to_atom/1`; a
+  # value no status matches keeps the meeting's own.
+  defp decode_snapshot_field(:status, value, default) when is_binary(value) do
+    Enum.find(MeetingState.statuses(), default, &(Atom.to_string(&1) == value))
+  end
+
+  defp decode_snapshot_field(field, value, _default) when field in @datetime_snapshot_fields do
     case DateTime.from_iso8601(value) do
       {:ok, dt, _offset} -> dt
       {:error, _reason} -> nil
     end
   end
 
-  defp decode_snapshot_field(_field, value), do: value
+  defp decode_snapshot_field(_field, value, _default), do: value
 
   # The claim covers the post alone. Recording the outcome happens once the
   # claim has settled: a delivered post keeps its claim whatever the log write

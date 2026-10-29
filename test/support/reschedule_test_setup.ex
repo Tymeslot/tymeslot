@@ -87,7 +87,7 @@ defmodule Tymeslot.RescheduleTestSetup do
         start_time: original_start,
         end_time: DateTime.add(original_start, 30, :minute),
         duration: 30,
-        status: "confirmed"
+        status: :confirmed
       )
 
     [

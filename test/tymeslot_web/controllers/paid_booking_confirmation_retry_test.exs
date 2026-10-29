@@ -32,7 +32,7 @@ defmodule TymeslotWeb.PaidBookingConfirmationRetryTest do
 
     meeting =
       insert(:meeting,
-        status: "awaiting_payment",
+        status: :awaiting_payment,
         organizer_user_id: user.id,
         organizer_email: user.email
       )
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.PaidBookingConfirmationRetryTest do
     assert reloaded_payment.status == :pending
     assert is_nil(reloaded_payment.last_event_id)
 
-    assert {:ok, %{status: "awaiting_payment", announced_at: nil}} =
+    assert {:ok, %{status: :awaiting_payment, announced_at: nil}} =
              MeetingQueries.get_meeting(meeting.id)
 
     assert all_enqueued(worker: EmailWorker) == []
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.PaidBookingConfirmationRetryTest do
     assert build_conn() |> post_connect(payload) |> response(200) == ""
 
     assert Repo.reload!(payment).status == :paid
-    assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
 
     assert [_one] =
              all_enqueued(
