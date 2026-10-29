@@ -39,7 +39,7 @@ defmodule Tymeslot.TelegramTest do
 
       assert integration.name == "Test Bot"
       assert integration.chat_id == "123456789"
-      assert integration.bot_mode == "own"
+      assert integration.bot_mode == :own
       assert integration.events == ["meeting.created"]
     end
 
@@ -79,22 +79,22 @@ defmodule Tymeslot.TelegramTest do
   describe "form_bot_mode/2" do
     test "an edit follows the integration's own mode, whatever the installation's" do
       setup_config(:tymeslot, telegram_shared_bot: true)
-      assert Telegram.form_bot_mode(:edit, %TelegramIntegrationSchema{bot_mode: "own"}) == "own"
+      assert Telegram.form_bot_mode(:edit, %TelegramIntegrationSchema{bot_mode: :own}) == :own
 
       setup_config(:tymeslot, telegram_shared_bot: false)
 
-      assert Telegram.form_bot_mode(:edit, %TelegramIntegrationSchema{bot_mode: "shared"}) ==
-               "shared"
+      assert Telegram.form_bot_mode(:edit, %TelegramIntegrationSchema{bot_mode: :shared}) ==
+               :shared
     end
 
     test "creating follows the installation's mode" do
       setup_config(:tymeslot, telegram_shared_bot: true)
 
-      assert Telegram.form_bot_mode(:create, %TelegramIntegrationSchema{bot_mode: "own"}) ==
-               "shared"
+      assert Telegram.form_bot_mode(:create, %TelegramIntegrationSchema{bot_mode: :own}) ==
+               :shared
 
       setup_config(:tymeslot, telegram_shared_bot: false)
-      assert Telegram.form_bot_mode(:create, nil) == "own"
+      assert Telegram.form_bot_mode(:create, nil) == :own
     end
   end
 
@@ -178,14 +178,14 @@ defmodule Tymeslot.TelegramTest do
     test "resolves token for shared-bot mode from app config" do
       setup_config(:tymeslot, telegram_bot_token: "shared_token_123")
 
-      integration = %TelegramIntegrationSchema{bot_mode: "shared"}
+      integration = %TelegramIntegrationSchema{bot_mode: :shared}
       assert {:ok, "shared_token_123"} = Telegram.resolve_bot_token(integration)
     end
 
     test "returns error when shared token not configured" do
       setup_config(:tymeslot, telegram_bot_token: nil)
 
-      integration = %TelegramIntegrationSchema{bot_mode: "shared"}
+      integration = %TelegramIntegrationSchema{bot_mode: :shared}
       assert {:error, :no_shared_token} = Telegram.resolve_bot_token(integration)
     end
   end
@@ -197,7 +197,7 @@ defmodule Tymeslot.TelegramTest do
       integration =
         insert(:telegram_integration,
           chat_id: nil,
-          bot_mode: "shared",
+          bot_mode: :shared,
           link_token: token,
           link_token_issued_at: DateTime.utc_now(:second)
         )
@@ -219,7 +219,7 @@ defmodule Tymeslot.TelegramTest do
       integration =
         insert(:telegram_integration,
           chat_id: nil,
-          bot_mode: "own",
+          bot_mode: :own,
           link_token: token,
           link_token_issued_at: DateTime.utc_now(:second)
         )
@@ -232,7 +232,7 @@ defmodule Tymeslot.TelegramTest do
     end
 
     test "handle_start_payload/2 rejects unknown tokens" do
-      _integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared")
+      _integration = insert(:telegram_integration, chat_id: nil, bot_mode: :shared)
 
       assert {:error, :not_found} =
                Telegram.handle_start_payload("nonexistent_token", "999888777")
@@ -243,7 +243,7 @@ defmodule Tymeslot.TelegramTest do
 
       insert(:telegram_integration,
         chat_id: nil,
-        bot_mode: "shared",
+        bot_mode: :shared,
         link_token: token,
         link_token_issued_at: DateTime.utc_now(:second)
       )
@@ -267,7 +267,7 @@ defmodule Tymeslot.TelegramTest do
       integration =
         insert(:telegram_integration,
           chat_id: nil,
-          bot_mode: "shared",
+          bot_mode: :shared,
           link_token: token,
           link_token_issued_at: issued_at
         )
@@ -278,7 +278,7 @@ defmodule Tymeslot.TelegramTest do
 
     test "handle_start_payload/2 refuses a token with no recorded issue time" do
       token = Telegram.generate_link_token()
-      insert(:telegram_integration, chat_id: nil, bot_mode: "shared", link_token: token)
+      insert(:telegram_integration, chat_id: nil, bot_mode: :shared, link_token: token)
 
       assert {:error, :not_found} = Telegram.handle_start_payload(token, "999888777")
     end
@@ -292,7 +292,7 @@ defmodule Tymeslot.TelegramTest do
 
   describe "disconnect_integration/1 and reconnect_integration/1" do
     test "disconnect_integration/1 clears chat_id on shared-bot integrations" do
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: "123456")
 
       assert {:ok, updated} = Telegram.disconnect_integration(integration)
       assert is_nil(updated.chat_id)
@@ -302,19 +302,19 @@ defmodule Tymeslot.TelegramTest do
       linked_at = DateTime.add(DateTime.utc_now(:second), -86_400, :second)
 
       integration =
-        insert(:telegram_integration, bot_mode: "shared", chat_id: "123456", linked_at: linked_at)
+        insert(:telegram_integration, bot_mode: :shared, chat_id: "123456", linked_at: linked_at)
 
       assert {:ok, updated} = Telegram.disconnect_integration(integration)
       assert updated.linked_at == linked_at
     end
 
     test "disconnect_integration/1 returns error for own-bot integrations" do
-      integration = insert(:telegram_integration, bot_mode: "own")
+      integration = insert(:telegram_integration, bot_mode: :own)
       assert {:error, :own_bot_mode} = Telegram.disconnect_integration(integration)
     end
 
     test "disconnect_integration/1 returns not_found when the integration is gone" do
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: "123456")
       Repo.delete!(integration)
 
       assert {:error, :not_found} = Telegram.disconnect_integration(integration)
@@ -326,7 +326,7 @@ defmodule Tymeslot.TelegramTest do
         telegram_bot_username: "TestBot"
       )
 
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: "123456")
 
       assert {:ok, updated, deep_link} = Telegram.reconnect_integration(integration)
       assert is_nil(updated.chat_id)
@@ -334,7 +334,7 @@ defmodule Tymeslot.TelegramTest do
     end
 
     test "reconnect_integration/1 issues a token the bot accepts" do
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: "123456")
 
       assert {:ok, updated, _deep_link} = Telegram.reconnect_integration(integration)
       assert {:ok, linked} = Telegram.handle_start_payload(updated.link_token, "654321")
@@ -342,14 +342,14 @@ defmodule Tymeslot.TelegramTest do
     end
 
     test "reconnect_integration/1 returns not_found when the integration is gone" do
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: "123456")
       Repo.delete!(integration)
 
       assert {:error, :not_found} = Telegram.reconnect_integration(integration)
     end
 
     test "reconnect_integration/1 returns error for own-bot integrations" do
-      integration = insert(:telegram_integration, bot_mode: "own")
+      integration = insert(:telegram_integration, bot_mode: :own)
       assert {:error, :own_bot_mode} = Telegram.reconnect_integration(integration)
     end
   end
@@ -366,7 +366,7 @@ defmodule Tymeslot.TelegramTest do
       assert deep_link == "https://t.me/TestBot?start=#{stub.link_token}"
       assert stub.link_token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
       assert %DateTime{} = stub.link_token_issued_at
-      assert %{bot_mode: "shared", chat_id: nil, linked_at: nil} = stub
+      assert %{bot_mode: :shared, chat_id: nil, linked_at: nil} = stub
       assert stub.events == ["meeting.created"]
       assert [%{id: id}] = Telegram.list_integrations(user.id)
       assert id == stub.id
@@ -543,7 +543,7 @@ defmodule Tymeslot.TelegramTest do
   defp pending_stub(user, attrs \\ []) do
     defaults = [
       user: user,
-      bot_mode: "shared",
+      bot_mode: :shared,
       chat_id: nil,
       link_token: Telegram.generate_link_token()
     ]
@@ -554,7 +554,7 @@ defmodule Tymeslot.TelegramTest do
   defp disconnected_integration(user) do
     insert(:telegram_integration,
       user: user,
-      bot_mode: "shared",
+      bot_mode: :shared,
       chat_id: nil,
       linked_at: an_hour_ago(),
       inserted_at: an_hour_ago()
@@ -584,7 +584,7 @@ defmodule Tymeslot.TelegramTest do
       assert {:error, :no_chat} =
                Telegram.test_integration(%TelegramIntegrationSchema{
                  user_id: insert(:user).id,
-                 bot_mode: "own",
+                 bot_mode: :own,
                  chat_id: nil
                })
     end

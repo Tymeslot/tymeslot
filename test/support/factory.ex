@@ -410,7 +410,7 @@ defmodule Tymeslot.Factory do
   def telegram_integration_factory(attrs) do
     %TelegramIntegrationSchema{
       name: sequence(:telegram_name, &"Telegram #{&1}"),
-      bot_mode: "own",
+      bot_mode: :own,
       bot_token_encrypted: Encryption.encrypt("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"),
       chat_id: sequence(:telegram_chat_id, &"#{&1 + 100_000}"),
       events: ["meeting.created", "meeting.cancelled"],

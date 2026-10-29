@@ -22,7 +22,7 @@ defmodule Tymeslot.Telegram.InputValidation do
   """
   @spec validate_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
   def validate_form(params, opts) do
-    bot_mode = Keyword.get(opts, :bot_mode, "own")
+    bot_mode = Keyword.get(opts, :bot_mode, :own)
     mode = Keyword.get(opts, :mode, :create)
     errors = %{}
 
@@ -30,7 +30,7 @@ defmodule Tymeslot.Telegram.InputValidation do
     {events, errors} = validate_events(params["events"], errors)
 
     {bot_token, chat_id, errors} =
-      if bot_mode == "own" do
+      if bot_mode == :own do
         validate_fn =
           if mode == :edit, do: &validate_bot_token_optional/2, else: &validate_bot_token/2
 

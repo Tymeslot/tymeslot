@@ -336,7 +336,7 @@ defmodule Tymeslot.Notifications.IntegrationQueriesTest do
         TelegramIntegrationSchema.create_changeset(%{
           user_id: user.id,
           name: "My Channel",
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token: "1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789",
           chat_id: "999111",
           events: ["meeting.created"]

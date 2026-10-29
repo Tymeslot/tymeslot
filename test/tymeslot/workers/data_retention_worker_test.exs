@@ -386,7 +386,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
     defp telegram_stub(user, attrs \\ []) do
       defaults = [
         user: user,
-        bot_mode: "shared",
+        bot_mode: :shared,
         chat_id: nil,
         link_token: "tok-#{System.unique_integer([:positive])}"
       ]

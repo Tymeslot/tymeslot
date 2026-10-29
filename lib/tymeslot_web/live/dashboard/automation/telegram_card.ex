@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
         </.loading_button>
         <%!-- Shared bot only: the link step is ours to restart. --%>
         <.action_button
-          :if={@status == :pending_link && @integration.bot_mode == "shared" && @on_reconnect}
+          :if={@status == :pending_link && @integration.bot_mode == :shared && @on_reconnect}
           size={:sm}
           disabled={@paused}
           phx-click={!@paused && @on_reconnect}
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
         />
         <%!-- Shared bot mode only, once a chat is linked. --%>
         <.icon_button
-          :if={@on_disconnect && @integration.bot_mode == "shared" && @integration.chat_id}
+          :if={@on_disconnect && @integration.bot_mode == :shared && @integration.chat_id}
           icon="hero-link"
           variant={:warning}
           label={dgettext("dashboard_automation_chat", "Disconnect Telegram")}

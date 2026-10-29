@@ -61,10 +61,10 @@ defmodule Tymeslot.Notifications.IntegrationNameLengthTest do
     test "Telegram refuses a 101-character name" do
       params = %{"name" => @too_long, "events" => ["meeting.created"]}
 
-      assert {:error, %{name: _message}} = TelegramInput.validate_form(params, bot_mode: "shared")
+      assert {:error, %{name: _message}} = TelegramInput.validate_form(params, bot_mode: :shared)
 
       assert {:ok, %{name: @longest}} =
-               TelegramInput.validate_form(%{params | "name" => @longest}, bot_mode: "shared")
+               TelegramInput.validate_form(%{params | "name" => @longest}, bot_mode: :shared)
     end
 
     test "webhooks refuse a 101-character name" do
@@ -97,11 +97,11 @@ defmodule Tymeslot.Notifications.IntegrationNameLengthTest do
       telegram = %{"name" => stored, "events" => ["meeting.cancelled"]}
 
       assert {:ok, %{name: ^stored}} =
-               TelegramInput.validate_form(telegram, bot_mode: "shared", stored_name: stored)
+               TelegramInput.validate_form(telegram, bot_mode: :shared, stored_name: stored)
 
       assert {:error, %{name: _message}} =
                TelegramInput.validate_form(%{telegram | "name" => stored <> "x"},
-                 bot_mode: "shared",
+                 bot_mode: :shared,
                  stored_name: stored
                )
 

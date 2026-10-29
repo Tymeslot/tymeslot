@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
   defp own_bot_integration(user, attrs \\ %{}) do
     defaults = %{
       user: user,
-      bot_mode: "own",
+      bot_mode: :own,
       bot_token_encrypted: Encryption.encrypt("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"),
       chat_id: "123456789",
       is_active: true
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
   defp shared_bot_integration(user, attrs \\ %{}) do
     defaults = %{
       user: user,
-      bot_mode: "shared",
+      bot_mode: :shared,
       bot_token_encrypted: nil,
       chat_id: "987654321",
       is_active: true
