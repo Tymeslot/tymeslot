@@ -60,6 +60,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity
 
   @type event :: map
   @type attendee ::
@@ -155,6 +156,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     params = %{
       user_id: owner_user_id,
       event_uid: Map.get(updated, :uid),
+      ical_uid: SeriesIdentity.entry_uid(original),
+      other_entries: other_entries(scope == :all, original, updated),
       integration_id: Map.get(updated, :calendar_integration_id),
       attendee_emails: recipients,
       before_title: title_for(original),
@@ -176,6 +179,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  # An email about every occurrence, sent from another one, changes the
+  # entry the series' invitation made too. One about this occurrence and the
+  # following ones leaves it: the series' first is never among them.
+  defp other_entries(true = _whole_series, original, updated) do
+    case SeriesIdentity.series_entry(original, updated) do
+      nil -> []
+      entry -> SeriesIdentity.to_arg([entry])
+    end
+  end
+
+  defp other_entries(false, _original, _updated), do: []
 
   # The event as the update email describes it, in the job's JSON args.
   defp event_snapshot(event) do
@@ -392,7 +407,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {method, sequence} =
       IcalMethod.for(:event_deleted, current_sequence: current_sequence(event))
 
-    extra = %{user_id: owner_user_id, series: scope == :series}
+    extra = %{
+      user_id: owner_user_id,
+      series: scope == :series,
+      other_entries: other_entries(scope == :series, event, nil)
+    }
 
     case send_immediate(event, recipients, method, sequence, extra) do
       :ok -> {:ok, :sent}
@@ -426,6 +445,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   # Returns the first failure to enqueue, after trying every attendee.
   defp send_immediate(event, attendees, method, sequence, extra) do
     timing = invitation_timing(event)
+    ical_uid = SeriesIdentity.entry_uid(event)
 
     attendees
     |> Enum.map(fn attendee ->
@@ -436,6 +456,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
           attendee_email: Map.get(attendee, :email),
           event_title: title_for(event),
           event_uid: Map.get(event, :uid),
+          ical_uid: ical_uid,
           event_location: Map.get(event, :location),
           event_video_link: video_link_for(event),
           event_description: Map.get(event, :description),

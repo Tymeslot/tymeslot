@@ -16,9 +16,12 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   cancellation of every occurrence of a recurring event, and `removed: true`
   the recipient's removal from an event that still takes place.
   `event_recurrence_rule` is the RRULE value of a series invited as a whole.
-  The job carries all
-  it says, so it does not depend on the event still being cached when it
-  runs.
+  `ical_uid` (the attachment's UID, when not `event_uid`) and
+  `other_entries` (further entries it changes, as
+  `SeriesIdentity.to_arg/1` writes them) say which entries in the guest's
+  calendar it changes (`Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity`).
+  The job carries all it says, so it does not depend on the event still
+  being cached when it runs.
   """
   @spec schedule_calendar_invitation(map()) :: :ok | {:error, term()}
   def schedule_calendar_invitation(params) do
@@ -31,6 +34,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
       "attendee_email" => params.attendee_email,
       "event_title" => params.event_title,
       "event_uid" => params.event_uid,
+      "ical_uid" => params[:ical_uid],
+      "other_entries" => params[:other_entries] || [],
       "event_start_at" => params.event_start_at,
       "event_end_at" => params.event_end_at,
       "event_all_day" => Map.get(params, :all_day, false),
@@ -80,7 +85,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   describes that instead of reading the cached event, which a write to a
   whole series drops. Such a job is sent at once and never coalesced, since
   the organiser confirmed that one change; `series` (`:following` or `:all`)
-  says how much of the series it changed.
+  says how much of the series it changed. `ical_uid` and `other_entries`
+  are as on `schedule_calendar_invitation/1`.
   """
   @spec schedule_event_update_notification(map()) :: :ok | {:error, term()}
   def schedule_event_update_notification(params) do
@@ -91,6 +97,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
       "action" => "send_event_update_notification",
       "user_id" => params.user_id,
       "event_uid" => params.event_uid,
+      "ical_uid" => params[:ical_uid],
+      "other_entries" => params[:other_entries] || [],
       "integration_id" => params.integration_id,
       "attendee_emails" => params.attendee_emails,
       "before_title" => params.before_title,

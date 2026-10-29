@@ -42,13 +42,19 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRules do
 
   @typedoc """
   Reads one master, given its id and the calendar an occurrence of it is in
-  (nil when not known): its rule (nil when it is not a series) and first start,
-  `:gone` when the provider no longer has it, or `{:stop, reason}` when no
-  further master should be read this run (throttled, refused, unreachable).
+  (nil when not known): its rule (nil when it is not a series), first start
+  and, where the provider gives one, iCalendar UID; `:gone` when the provider
+  no longer has it, or `{:stop, reason}` when no further master should be
+  read this run (throttled, refused, unreachable).
   """
   @type read ::
           (String.t(), String.t() | nil ->
-             {:ok, %{rule: String.t() | nil, master_start: DateTime.t() | nil}}
+             {:ok,
+              %{
+                optional(:ical_uid) => String.t() | nil,
+                rule: String.t() | nil,
+                master_start: DateTime.t() | nil
+              }}
              | :gone
              | {:stop, term()})
 
@@ -109,10 +115,10 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRules do
   end
 
   defp stored(integration_id, master_id, {:ok, found}),
-    do: store(integration_id, master_id, found)
+    do: store(integration_id, master_id, Map.put_new(found, :ical_uid, nil))
 
   defp stored(integration_id, master_id, :gone),
-    do: store(integration_id, master_id, %{rule: nil, master_start: nil})
+    do: store(integration_id, master_id, %{rule: nil, master_start: nil, ical_uid: nil})
 
   defp stored(_integration_id, _master_id, {:stop, _reason} = stop), do: stop
 
@@ -175,6 +181,18 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRules do
     )
 
     :ok
+  end
+
+  @doc """
+  The iCalendar UID of the series whose master is `master_id`, as last read
+  from the master, or nil when it was never read or the provider gave none.
+  """
+  @spec ical_uid(integer(), String.t()) :: String.t() | nil
+  def ical_uid(integration_id, master_id) do
+    case SeriesRuleQueries.list_by_master(integration_id, [master_id]) do
+      %{^master_id => %{ical_uid: uid}} -> uid
+      _unread -> nil
+    end
   end
 
   @doc """

@@ -17,11 +17,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesMaster do
     do: fn master_id, _calendar_id -> read(integration, master_id) end
 
   @doc """
-  Reads one master. A master that is not a series has no rule; one Graph no
-  longer has is `:gone`; any other failure stops the run's reads.
+  Reads one master: its rule, first start and iCalendar UID, which no
+  occurrence carries (each has its own). A master that is not a series has
+  no rule; one Graph no longer has is `:gone`; any other failure stops the
+  run's reads.
   """
   @spec read(CalendarIntegrationSchema.t(), String.t()) ::
-          {:ok, %{rule: String.t() | nil, master_start: DateTime.t() | nil}}
+          {:ok,
+           %{rule: String.t() | nil, master_start: DateTime.t() | nil, ical_uid: String.t() | nil}}
           | :gone
           | {:stop, term()}
   def read(integration, master_id) do
@@ -30,11 +33,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesMaster do
         {:ok,
          %{
            rule: RecurrenceConverter.outlook_to_rrule(recurrence),
-           master_start: master_start(master["start"])
+           master_start: master_start(master["start"]),
+           ical_uid: master["iCalUId"]
          }}
 
       {:ok, %{}} ->
-        {:ok, %{rule: nil, master_start: nil}}
+        {:ok, %{rule: nil, master_start: nil, ical_uid: nil}}
 
       {:error, :not_found, _message} ->
         :gone
