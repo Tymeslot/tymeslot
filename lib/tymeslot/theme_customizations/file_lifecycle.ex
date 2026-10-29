@@ -49,6 +49,24 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycle do
   end
 
   @doc """
+  Deletes every file a customisation names: each asset field of `spec`, and a
+  video's transcoded variants. For a row that has just been deleted (a booking
+  page's, when the page goes), as it stood when deleted.
+  """
+  @spec cleanup_all_files(module(), ThemeCustomizationSchema.t()) :: :ok
+  def cleanup_all_files(spec, %ThemeCustomizationSchema{} = customization) do
+    context = %{
+      profile_id: customization.profile_id,
+      theme_id: customization.theme_id,
+      operation: "theme_delete"
+    }
+
+    Enum.each(spec.asset_fields(), fn {field, kind} ->
+      if path = setting(customization, field), do: delete_asset(path, kind, context, "#{kind}")
+    end)
+  end
+
+  @doc """
   Deletes the file an upload has just stored, when saving it was refused.
 
   Only that file: its name is the upload's own (`Storage.store_asset/4`), so

@@ -830,3 +830,8 @@ msgstr "Terminverschiebungen"
 #, elixir-autogen, elixir-format
 msgid "cancel the planned dates before turning fixed dates off"
 msgstr "sagen Sie die geplanten Termine ab, bevor Sie feste Termine ausschalten"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Verwenden Sie 3 bis 30 Kleinbuchstaben, Ziffern, Bindestriche oder Unterstriche, beginnend mit einem Buchstaben oder einer Ziffer"

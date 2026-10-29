@@ -45,31 +45,33 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
 
   @doc """
   Stores `upload` for the theme's asset field `field` (an upload setting such as
-  `:background_image_path`) and saves it on the profile's customisation.
+  `:background_image_path`) and saves it on the customisation of `scope`
+  (`t:Tymeslot.ThemeCustomizations.scope/0`). A booking page's file is stored
+  with its profile's.
   """
-  @spec attach_asset(pos_integer(), String.t(), atom(), upload()) :: result()
-  def attach_asset(profile_id, theme_id, field, upload) do
+  @spec attach_asset(ThemeCustomizations.scope(), String.t(), atom(), upload()) :: result()
+  def attach_asset(scope, theme_id, field, upload) do
     with {:ok, spec} <- Catalog.customization_spec(theme_id),
          {:ok, group, kind} <- Specs.upload_group(spec, field) do
-      attach(kind, profile_id, theme_id, {group, field}, upload)
+      attach(kind, scope, theme_id, {group, field}, upload)
     else
       _unavailable -> {:error, option_unavailable()}
     end
   end
 
   # Images and captions are served as stored; only a video is transcoded.
-  defp attach(kind, profile_id, theme_id, {group, field}, upload)
+  defp attach(kind, scope, theme_id, {group, field}, upload)
        when kind in [:image, :captions] do
-    with {:ok, path} <- store(kind, profile_id, theme_id, upload) do
-      save(profile_id, theme_id, path, Specs.upload_changes(group, field, path), &{:ok, &1})
+    with {:ok, path} <- store(kind, scope, theme_id, upload) do
+      save(scope, theme_id, path, Specs.upload_changes(group, field, path), &{:ok, &1})
     end
   end
 
-  defp attach(:video, profile_id, theme_id, {group, field}, upload) do
+  defp attach(:video, scope, theme_id, {group, field}, upload) do
     with :ok <- ensure_transcoder(),
-         {:ok, path} <- store(:video, profile_id, theme_id, upload) do
+         {:ok, path} <- store(:video, scope, theme_id, upload) do
       save(
-        profile_id,
+        scope,
         theme_id,
         path,
         Specs.upload_changes(group, field, path),
@@ -78,8 +80,8 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
     end
   end
 
-  defp store(kind, profile_id, theme_id, upload) do
-    case Storage.store_asset(kind, profile_id, theme_id, upload) do
+  defp store(kind, scope, theme_id, upload) do
+    case Storage.store_asset(kind, ThemeCustomizations.scope_profile_id(scope), theme_id, upload) do
       {:ok, path} ->
         {:ok, path}
 
@@ -122,8 +124,10 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   # inside it (inserting the transcoding job is the likeliest place) is
   # reported as nothing changed, and anything else is re-raised once the
   # file is gone.
-  defp save(profile_id, theme_id, path, attrs, then_fun) do
-    case ThemeCustomizations.save_customization(profile_id, theme_id, attrs, then_fun) do
+  defp save(scope, theme_id, path, attrs, then_fun) do
+    profile_id = ThemeCustomizations.scope_profile_id(scope)
+
+    case ThemeCustomizations.save_customization(scope, theme_id, attrs, then_fun) do
       {:ok, customization} ->
         {:ok, customization}
 

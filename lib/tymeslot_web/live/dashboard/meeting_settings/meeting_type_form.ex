@@ -47,6 +47,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - venues: the organiser's saved venues, for in-person locations
   # - parent_myself: phx-target for parent events (cancel, done, visibility)
   # - current_user: used for security metadata in validation
+  # - username: the profile's own page address, for the Visibility switches
+  # - booking_pages: the profile's booking pages, one Visibility switch each
+  # - page_memberships: `BookingPages.memberships/1`, which pages list which type
 
   # The further lengths' events, all handled by `LengthsHandlers`.
   @lengths_events LengthsHandlers.events()
@@ -104,6 +107,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        last_spots_threshold: nil,
        booking_limits: Init.get_booking_limits(nil),
        active_tab: "details",
+       username: nil,
+       booking_pages: [],
+       page_memberships: %{},
        __initialized__: false
      )}
   end

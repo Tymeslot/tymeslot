@@ -449,3 +449,8 @@ msgstr "Ze względów bezpieczeństwa %{emphasis} tylko do wybranych domen, któ
 #, elixir-autogen, elixir-format
 msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options."
 msgstr "Potrzebujesz pomocy? Instrukcje krok po kroku, wskazówki dla poszczególnych platform i opcje dostosowania znajdziesz tutaj: %{guide}."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page"
+msgstr "Strona rezerwacji"

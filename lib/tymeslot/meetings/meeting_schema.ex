@@ -15,9 +15,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.MeetingTypes.LocationOption
 
-  @unique_slot_constraint :unique_confirmed_meeting_per_organizer_at_time
+  @unique_slot_constraint UniqueSlot.constraint()
 
   @type calendar_sync_status :: :externally_deleted | :externally_modified
 
@@ -111,6 +112,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           tracking_params: map(),
           visitor_hash: String.t() | nil,
           invitee_data_erased_at: DateTime.t() | nil,
+          booking_page_id: integer() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -350,6 +352,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Cookieless join key to the booking-page view in analytics_events.
     field(:visitor_hash, :string)
     field(:tracking_params, :map, default: %{})
+    # The booking page the booking came through; nil for `/<username>`, a
+    # direct link under it, or a booking that came through no page at all.
+    field(:booking_page_id, :id)
 
     # Stamped once the retention purge has removed everything the invitees
     # gave, so the purge passes over the meeting from then on. See
@@ -443,7 +448,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :referrer_host,
     :tracking_params,
     :visitor_hash,
-    :managed_by_host
+    :managed_by_host,
+    :booking_page_id
   ]
 
   @group_required_fields [
@@ -570,6 +576,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     )
     |> check_constraint(:end_time, name: :meetings_end_after_start)
     |> foreign_key_constraint(:venue_id)
+    |> foreign_key_constraint(:booking_page_id)
   end
 
   # A new meeting gets its own calendar identity, generated independently of
@@ -608,22 +615,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     end
   end
 
-  @doc """
-  True when a changeset's error is a violation of the organiser's unique
-  slot index, `(organizer_user_id, start_time)` over the rows that hold a
-  slot: a lost race for the slot against a writer that committed first, not
-  invalid input.
-
-  Group seat booking retries on it by joining the winner's meeting, and the
-  booking flow answers it as the slot being taken.
-  """
-  @spec unique_slot_violation?(Ecto.Changeset.t()) :: boolean()
-  def unique_slot_violation?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, error_opts}} ->
-      error_opts[:constraint] == :unique and
-        to_string(error_opts[:constraint_name] || "") == Atom.to_string(@unique_slot_constraint)
-    end)
-  end
+  @doc "Whether a write lost the race for its slot; see `Tymeslot.Meetings.UniqueSlot`."
+  defdelegate unique_slot_violation?(changeset), to: UniqueSlot, as: :violation?
 
   @doc """
   Whether the meeting was booked with room for more than one seat.

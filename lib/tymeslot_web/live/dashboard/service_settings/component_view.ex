@@ -116,6 +116,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               user_agent={@user_agent}
               custom_questions_allowed={@custom_questions_allowed}
               group_bookings_allowed={@group_bookings_allowed}
+              username={@profile.username}
+              booking_pages={@booking_pages}
+              page_memberships={@page_memberships}
             />
 
             <BookingLinkModal.booking_link_modal
@@ -142,6 +145,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 timezone={(@profile && @profile.timezone) || "Etc/UTC"}
                 time_format={@time_format}
                 payments_accepted={@payments_accepted}
+                username={@profile.username}
+                booking_pages={@booking_pages}
+                page_memberships={@page_memberships}
                 parent_myself={@myself}
               />
             </div>

@@ -837,3 +837,8 @@ msgstr "remarcações de reuniões"
 #, elixir-autogen, elixir-format
 msgid "cancel the planned dates before turning fixed dates off"
 msgstr "cancele as datas planejadas antes de desativar as datas fixas"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Use de 3 a 30 letras minúsculas, números, hifens ou sublinhados, começando com uma letra ou um número"
