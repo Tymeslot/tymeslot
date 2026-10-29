@@ -112,8 +112,10 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
         send(view.pid, {:step_event, :booking, :change_timezone, "America/New_York"})
         Eventually.eventually(fn -> live_assigns(view).user_timezone == "America/New_York" end)
 
-        assert query(BookingTestHelpers.last_patched_url(view))["visitor_timezone"] ==
-                 "America/New_York"
+        BookingTestHelpers.await_patched_url(
+          view,
+          &(query(&1)["visitor_timezone"] == "America/New_York")
+        )
 
         assert live_assigns(view).current_state == :booking
         assert live_assigns(view).submission_token == token
