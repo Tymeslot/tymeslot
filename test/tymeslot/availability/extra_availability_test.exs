@@ -172,6 +172,20 @@ defmodule Tymeslot.Availability.ExtraAvailabilityTest do
 
       refute BusinessHours.business_day?(@saturday, schedule.id, %{owner_timezone: "Etc/UTC"})
     end
+
+    test "are closed by an unavailable override on their date", %{schedule: schedule} do
+      {:ok, _extra} = add(schedule, @saturday, ~T[09:00:00], ~T[11:00:00])
+
+      insert(:availability_override,
+        schedule: schedule,
+        date: @saturday,
+        override_type: "unavailable"
+      )
+
+      assert open_times(schedule, @saturday) == []
+      assert utc_times(schedule, @saturday) == []
+      refute BusinessHours.business_day?(@saturday, schedule.id, %{owner_timezone: "Etc/UTC"})
+    end
   end
 
   describe "an extra time over a weekly break" do
