@@ -11,6 +11,9 @@ defmodule Tymeslot.Auth.AccountDeletion.Runner do
        owner can still restore the account, operators get the
        `:account_deletion_held_last_admin` alert, and the job snoozes until then. A
        release-shell deletion forced past the rule (`force: true`) skips this;
+
+  then, through `AccountDeletion.erase_account/2`:
+
     1. third-party cleanup (`ExternalCleanup`), while its credentials exist;
     2. the meeting ids, read before the cascade removes the meetings;
     3. `AccountDeletion.delete_account/2` with `only_if_pending: true`: the
@@ -35,10 +38,8 @@ defmodule Tymeslot.Auth.AccountDeletion.Runner do
   require Logger
 
   alias Tymeslot.Auth.AccountDeletion
-  alias Tymeslot.Auth.AccountDeletion.ExternalCleanup
   alias Tymeslot.Auth.{AdminRoles, AdminUserQueries, UserQueries, UserSchema}
   alias Tymeslot.Infrastructure.AdminAlerts
-  alias Tymeslot.Meetings
   alias Tymeslot.Repo
   alias Tymeslot.Workers.AccountDeletionWorker
 
@@ -126,10 +127,7 @@ defmodule Tymeslot.Auth.AccountDeletion.Runner do
   end
 
   defp hard_delete(user) do
-    ExternalCleanup.run(user)
-    meeting_ids = Meetings.list_meeting_ids_for_organizer(user.id)
-
-    case AccountDeletion.delete_account(user, only_if_pending: true, meeting_ids: meeting_ids) do
+    case AccountDeletion.erase_account(user, only_if_pending: true) do
       {:ok, _deleted} ->
         Logger.info("Account deleted", user_id: user.id)
         {:ok, :deleted}

@@ -10,12 +10,13 @@ defmodule Tymeslot.Auth.AccountDeletion do
 
   require Logger
 
-  alias Tymeslot.Auth.AccountDeletion.Hook
+  alias Tymeslot.Auth.AccountDeletion.{ExternalCleanup, Hook}
   alias Tymeslot.Auth.{Session, UserQueries, UserSchema}
   alias Tymeslot.FinancialRetention
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Jobs
+  alias Tymeslot.Meetings
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Workers.AccountFilesPurgeWorker
@@ -196,20 +197,40 @@ defmodule Tymeslot.Auth.AccountDeletion do
     end
   end
 
+  @doc """
+  Erases a user for good: cleans up what the account left with third parties
+  (`ExternalCleanup`), reads the ids of the meetings it organised before the
+  cascade removes them, then runs `delete_account/2` with `opts` plus those ids
+  as `:meeting_ids`, so no pending job naming the user or one of their
+  meetings outlives the account.
+
+  Both routes that delete an account without its owner present go through
+  here: the deletion job once the grace period ends, and the purge of
+  abandoned sign-ups.
+  """
+  @spec erase_account(UserSchema.t(), keyword()) ::
+          {:ok, UserSchema.t()}
+          | {:error, :not_pending | :not_found | Ecto.Changeset.t() | term()}
+  def erase_account(%UserSchema{} = user, opts \\ []) do
+    ExternalCleanup.run(user)
+    meeting_ids = Meetings.list_meeting_ids_for_organizer(user.id)
+
+    delete_account(user, Keyword.put(opts, :meeting_ids, meeting_ids))
+  end
+
   # A daily run deletes at most this many, so a sign-up flood cannot turn one
   # run into an unbounded loop of deletions; the rest go on the following days.
   @purge_batch_size 500
 
   @doc """
   Deletes accounts still unverified `days` after sign-up, through
-  `delete_account/1`, so each goes exactly as an erasure request would.
+  `erase_account/2`, so each goes exactly as an erasure request would.
 
-  An unverified password account cannot sign in, so after a month one that
-  never had a session is an abandoned sign-up, or one made with somebody
-  else's address, holding an email address and the IP it was registered
-  from. Anything evidently in use is spared: see
-  `Tymeslot.Auth.UserQueries.list_stale_unverified_users/2`. So is an account
-  sent a fresh verification link within the window. At most
+  An unverified account cannot sign in, so after a month it is an abandoned
+  sign-up, or one made with somebody else's address, holding an email
+  address and the IP it was registered from. Admins are spared, and so is an
+  account sent a fresh verification link within the window: see
+  `Tymeslot.Auth.UserQueries.list_stale_unverified_users/2`. At most
   #{@purge_batch_size} are deleted per call, and none for a `days` below one.
 
   Returns `{deleted_count, nil}`, the shape `Tymeslot.Workers.DataRetentionWorker`
@@ -233,7 +254,7 @@ defmodule Tymeslot.Auth.AccountDeletion do
   def purge_unverified_accounts(_days), do: {0, nil}
 
   defp purged?(user) do
-    case delete_account(user) do
+    case erase_account(user) do
       {:ok, _deleted} ->
         true
 
