@@ -50,6 +50,26 @@ defmodule Tymeslot.Notifications.Email.CalendarEventEmailsTest do
                })
     end
 
+    test "hands the template the event's video link" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_calendar_invitation, fn "bob@example.com", details ->
+        assert details.video_link == "https://meet.google.com/abc-defg-hij"
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
+                 "user_id" => user.id,
+                 "attendee_email" => "bob@example.com",
+                 "event_title" => "Sync",
+                 "event_uid" => "evt-meet",
+                 "event_start_at" => "2026-10-29T15:00:00Z",
+                 "event_end_at" => "2026-10-29T16:00:00Z",
+                 "event_video_link" => "https://meet.google.com/abc-defg-hij"
+               })
+    end
+
     test "discards, rather than raising, an all-day invitation enqueued without its dates" do
       user = insert(:user)
 

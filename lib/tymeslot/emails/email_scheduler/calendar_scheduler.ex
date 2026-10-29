@@ -34,6 +34,7 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
       "event_start_date" => params[:event_start_date],
       "event_end_date" => params[:event_end_date],
       "event_location" => params[:event_location],
+      "event_video_link" => params[:event_video_link],
       "event_description" => params[:event_description],
       "method" => Atom.to_string(method),
       "sequence" => sequence,

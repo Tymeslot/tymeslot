@@ -62,6 +62,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
          event_title: args["event_title"],
          event_uid: args["event_uid"],
          location: args["event_location"],
+         video_link: args["event_video_link"],
          description: args["event_description"],
          organizer_name: user.name || user.email,
          organizer_email: user.email,

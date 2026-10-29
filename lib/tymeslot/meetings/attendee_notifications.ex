@@ -405,6 +405,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
           event_title: title_for(event),
           event_uid: Map.get(event, :uid),
           event_location: Map.get(event, :location),
+          event_video_link: video_link_for(event),
           event_description: Map.get(event, :description),
           method: method,
           sequence: sequence
