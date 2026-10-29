@@ -43,7 +43,10 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
   ## Options
 
-    * `:exdates` - list of `DateTime` values to exclude (cancelled occurrences)
+    * `:exdates` - occurrences to exclude: `DateTime`s, or `Date`s, which
+      exclude a timed series' occurrence on that day in the series' zone
+    * `:rdates` - extra occurrence starts (RDATE) to add to those the rule
+      makes, `DateTime`s for a timed series and `Date`s for an all-day one
     * `:max_occurrences` - the most occurrences to return, below the cap the
       range sets (one per date); a caller comparing rules passes it to bound
       the work. A series cut short by either is warned about.
@@ -57,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
   def expand(%{recurrence_rule: rrule} = event, range_start, range_end, opts)
       when is_binary(rrule) do
-    exdates = Keyword.get(opts, :exdates, [])
+    dates = %{exdates: Keyword.get(opts, :exdates, []), rdates: Keyword.get(opts, :rdates, [])}
 
     # `RRule.parse/1` reads every part this module follows (RFC 5545
     # §3.3.10). Any other part (BYWEEKNO, BYYEARDAY, BYHOUR, ...) is ignored
@@ -66,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
       {:ok, rule} ->
         warn_unsupported(rule, rrule)
         limits = {:capped, Keyword.get(opts, :max_occurrences)}
-        generate_occurrences(event, rule, range_start, range_end, exdates, limits)
+        generate_occurrences(event, rule, range_start, range_end, dates, limits)
 
       :error ->
         # Fail-open: return the original event rather than silently dropping it
@@ -113,7 +116,9 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
     case RRule.parse(rule) do
       {:ok, parsed} ->
-        event |> generate_occurrences(parsed, first, last, [], :uncapped) |> length()
+        event
+        |> generate_occurrences(parsed, first, last, %{exdates: [], rdates: []}, :uncapped)
+        |> length()
 
       # `expand/4` shows an unreadable rule's event once, as it is.
       :error ->
@@ -156,22 +161,54 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   # returned by the range's dates (`@spare_dates`) or `most`, if lower. `:uncapped` (for `count_before/3`) steps every
   # occurrence from the first start, bounded only by the rule's own end and
   # `range_end`, so the count it makes is exact.
-  defp generate_occurrences(event, %RRule{} = parsed, range_start, range_end, exdates, limits) do
+  defp generate_occurrences(event, %RRule{} = parsed, range_start, range_end, dates, limits) do
     # All-day events store Date structs; normalise to DateTime for uniform arithmetic
     all_day? = is_struct(event.start_time, Date) and not is_struct(event.start_time, DateTime)
     start_dt = step_datetime(event.start_time)
     rule = stepping(parsed, start_dt.time_zone)
     end_dt = step_datetime(event.end_time) || DateTime.add(start_dt, 30, :minute)
     duration = DateTime.diff(end_dt, start_dt, :second)
-    range_start_dt = step_datetime(range_start)
-    range_end_dt = step_datetime(range_end)
-    exdates_dt = exdates |> Enum.map(&step_datetime/1) |> Enum.reject(&is_nil/1)
+    range = {step_datetime(range_start), step_datetime(range_end)}
+    exclusions = exclusions(dates.exdates, all_day?)
 
     start_dt
-    |> occurrence_starts(rule, range_start_dt, range_end_dt, limits)
-    |> Stream.reject(&excluded?(&1, exdates_dt))
-    |> within_occurrence_cap(limits, range_start_dt, range_end_dt)
+    |> occurrence_starts(rule, range, duration, limits)
+    |> with_rdates(dates.rdates, range, duration)
+    |> Stream.reject(&excluded?(&1, exclusions))
+    |> within_occurrence_cap(limits, elem(range, 0), elem(range, 1))
     |> Enum.map(&build_occurrence(event, &1, duration, all_day?))
+  end
+
+  # EXDATE names an occurrence by its start, or, as some clients write it for
+  # a timed series, by its day alone (`EXDATE;VALUE=DATE`): every occurrence
+  # starting that day in the series' zone. An all-day series is stepped at UTC
+  # midnight, so its dates are matched as instants like any other.
+  defp exclusions(exdates, all_day?) do
+    {days, instants} =
+      Enum.split_with(exdates, &(not all_day? and is_struct(&1, Date)))
+
+    %{
+      days: MapSet.new(days),
+      instants: instants |> Enum.map(&step_datetime/1) |> Enum.reject(&is_nil/1)
+    }
+  end
+
+  # RDATE adds occurrences beside the rule's (RFC 5545 §3.8.5.2), neither
+  # counted by COUNT nor bounded by UNTIL. They join the rule's in order, so
+  # the per-date cap applies to the set as a whole.
+  defp with_rdates(starts, [], _range, _duration), do: starts
+
+  defp with_rdates(starts, rdates, {range_start, range_end}, duration) do
+    added =
+      rdates
+      |> Enum.map(&step_datetime/1)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.filter(&overlaps?(&1, duration, range_start, range_end))
+
+    starts
+    |> Enum.concat(added)
+    |> Enum.sort(DateTime)
+    |> Enum.dedup_by(&DateTime.to_unix/1)
   end
 
   # The rule as it is stepped: UNTIL read in the zone the occurrences are
@@ -192,15 +229,11 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   # and a date the rule makes on that day is not made twice. COUNT counts the
   # starts so made from the first start, before the range and EXDATE are
   # applied.
-  defp occurrence_starts(start_dt, rule, range_start_dt, range_end_dt, limits) do
+  defp occurrence_starts(start_dt, rule, {range_start_dt, range_end_dt}, duration, limits) do
     first_date = DateTime.to_date(start_dt)
     first_period = period_start(first_date, rule)
 
-    {skip, max_periods} =
-      case limits do
-        {:capped, _most} -> {periods_to_skip(first_period, rule, range_start_dt), @max_steps}
-        :uncapped -> {0, nil}
-      end
+    {skip, max_periods} = stepping_bounds(first_period, rule, range_start_dt, duration, limits)
 
     last_date = last_period_date(rule, range_end_dt)
 
@@ -218,8 +251,18 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     |> Stream.concat(rule_starts)
     |> take_at_most(rule.count)
     |> Stream.take_while(&before_end?(&1, rule, range_end_dt))
-    |> Stream.filter(&in_range?(&1, range_start_dt, range_end_dt))
+    |> Stream.filter(&overlaps?(&1, duration, range_start_dt, range_end_dt))
   end
+
+  # Where stepping starts and how far it may go. An occurrence still running
+  # when the range starts belongs to it, so the skip stops short of the
+  # earliest start that can still be running.
+  defp stepping_bounds(first_period, rule, range_start_dt, duration, {:capped, _most}) do
+    earliest_running = DateTime.add(range_start_dt, -duration, :second)
+    {periods_to_skip(first_period, rule, earliest_running), @max_steps}
+  end
+
+  defp stepping_bounds(_first_period, _rule, _range_start_dt, _duration, :uncapped), do: {0, nil}
 
   # Passes on at most `budget` periods, and warns when the range still
   # reaches a period beyond them: the series is then cut short, and its
@@ -518,16 +561,20 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     within_range and within_until
   end
 
-  defp in_range?(dt, range_start, range_end) do
-    DateTime.compare(dt, range_start) != :lt and
-      DateTime.compare(dt, range_end) != :gt
+  # An occurrence belongs to the range when it starts inside it, or started
+  # before it and is still running when it begins: a two-day occurrence read
+  # over its second day still holds that day.
+  defp overlaps?(dt, duration, range_start, range_end) do
+    DateTime.compare(dt, range_end) != :gt and
+      (DateTime.compare(dt, range_start) != :lt or
+         DateTime.compare(DateTime.add(dt, duration, :second), range_start) == :gt)
   end
 
-  defp excluded?(_dt, []), do: false
-
-  defp excluded?(dt, exdates) do
-    Enum.any?(exdates, fn exdate ->
-      DateTime.compare(DateTime.truncate(dt, :second), DateTime.truncate(exdate, :second)) == :eq
-    end)
+  defp excluded?(dt, %{days: days, instants: instants}) do
+    MapSet.member?(days, DateTime.to_date(dt)) or
+      Enum.any?(instants, fn exdate ->
+        DateTime.compare(DateTime.truncate(dt, :second), DateTime.truncate(exdate, :second)) ==
+          :eq
+      end)
   end
 end
