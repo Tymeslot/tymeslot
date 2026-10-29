@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
   alias Tymeslot.Integrations.Calendar.Outlook.GraphStatus
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
+  alias Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubs
   alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Tokens
@@ -242,8 +243,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   @doc """
-  The series master `master_id`, with only what its repeat rule is read
-  from: its type, `recurrence` and first start. Through the circuit breaker,
+  The series master `master_id`, with what its repeat rule is read from
+  (its type, `recurrence` and first start) and what its occurrences take
+  from it when Graph lists them as stubs (`Outlook.OccurrenceStubs`). Through the circuit breaker,
   which counts only failures that say Graph is unwell, so a master that is
   gone (404) does not trip it; an open breaker answers `{:error,
   :circuit_open}`.
@@ -252,7 +254,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec get_series_master(CalendarIntegrationSchema.t(), String.t()) ::
           {:ok, map()} | api_error() | {:error, term()}
   def get_series_master(%CalendarIntegrationSchema{} = integration, master_id) do
-    params = %{"$select" => "id,type,recurrence,start"}
+    params = %{
+      "$select" => Enum.join(~w(id type recurrence start) ++ OccurrenceStubs.master_fields(), ",")
+    }
 
     Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       CalendarCircuitBreaker.call(:outlook, fn ->
