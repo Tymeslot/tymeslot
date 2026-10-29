@@ -47,7 +47,7 @@ defmodule Tymeslot.Slack.TokenRevocationTest do
     test "revokes the OAuth workspace and skips a webhook-only one" do
       user = insert(:user)
       insert(:slack_integration, user: user)
-      insert(:slack_integration, user: user, app_mode: "webhook_url", bot_token_encrypted: nil)
+      insert(:slack_integration, user: user, app_mode: :webhook_url, bot_token_encrypted: nil)
 
       expect(Tymeslot.HTTPClientMock, :post, 1, fn "https://slack.com/api/auth.revoke",
                                                    _body,
@@ -91,7 +91,7 @@ defmodule Tymeslot.Slack.TokenRevocationTest do
       insert(:slack_integration,
         user: other,
         team_id: "T-SHARED",
-        app_mode: "webhook_url",
+        app_mode: :webhook_url,
         bot_token_encrypted: nil
       )
 

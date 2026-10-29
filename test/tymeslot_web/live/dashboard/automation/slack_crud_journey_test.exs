@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
         insert(:slack_integration,
           user: user,
           name: "Original Name",
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           webhook_url_encrypted: Encryption.encrypt(@webhook_url),
           events: ["meeting.created"],
           is_active: true
@@ -330,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
         insert(:slack_integration,
           user: user,
           name: "Toggle Me",
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           webhook_url_encrypted: Encryption.encrypt(@webhook_url),
           events: ["meeting.created"],
           is_active: true

@@ -14,7 +14,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
     # set in setup
     user_id: nil,
     name: "My Workspace",
-    app_mode: "oauth",
+    app_mode: :oauth,
     bot_token: "xoxb-fake-token",
     team_id: "T123",
     team_name: "Acme",
@@ -26,7 +26,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
   @valid_webhook_attrs %{
     user_id: nil,
     name: "Slack via webhook",
-    app_mode: "webhook_url",
+    app_mode: :webhook_url,
     webhook_url: "https://hooks.slack.com/services/T1/B2/abc123",
     events: ["meeting.created"]
   }
@@ -34,6 +34,19 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
   setup do
     user = insert(:user)
     {:ok, user: user}
+  end
+
+  describe "create_changeset/1 — mode" do
+    test "rejects a mode outside oauth and webhook_url", %{user: user} do
+      cs =
+        SlackIntegrationSchema.create_changeset(%{
+          @valid_webhook_attrs
+          | user_id: user.id,
+            app_mode: "email"
+        })
+
+      assert "is invalid" in errors_on(cs).app_mode
+    end
   end
 
   describe "changeset/2 — OAuth mode" do
@@ -104,7 +117,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
         |> SlackIntegrationSchema.user_changeset(%{
           name: "Renamed",
           user_id: other.id,
-          app_mode: "oauth",
+          app_mode: :oauth,
           is_active: false,
           failure_count: 9,
           disabled_at: DateTime.utc_now(),
@@ -162,7 +175,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
       attrs = %{
         user_id: user.id,
         name: "My Workspace",
-        app_mode: "oauth",
+        app_mode: :oauth,
         bot_token: "xoxb-init-token",
         team_id: "T123",
         team_name: "Acme",
@@ -197,7 +210,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
       attrs = %{
         user_id: user.id,
         name: "Pending",
-        app_mode: "oauth",
+        app_mode: :oauth,
         bot_token: "xoxb-pending",
         team_id: "T999",
         events: ["meeting.created"]
@@ -217,7 +230,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
       pending_attrs = %{
         user_id: user.id,
         name: "Pending",
-        app_mode: "oauth",
+        app_mode: :oauth,
         bot_token: "xoxb-pending",
         team_id: "T1",
         events: ["meeting.created"]
@@ -256,7 +269,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
       pending_attrs = %{
         user_id: user.id,
         name: "Paused",
-        app_mode: "oauth",
+        app_mode: :oauth,
         bot_token: "xoxb-paused",
         team_id: "T1",
         events: ["meeting.created"]
@@ -299,7 +312,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
     |> SlackIntegrationSchema.oauth_init_changeset(%{
       user_id: user.id,
       name: "Pending",
-      app_mode: "oauth",
+      app_mode: :oauth,
       bot_token: "xoxb-pending",
       team_id: "T1",
       events: ["meeting.created"]

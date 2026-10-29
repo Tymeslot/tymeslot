@@ -318,7 +318,7 @@ defmodule Tymeslot.Notifications.IntegrationQueriesTest do
         SlackIntegrationSchema.create_changeset(%{
           user_id: user.id,
           name: "My Workspace",
-          app_mode: "oauth",
+          app_mode: :oauth,
           bot_token: "xoxb-token",
           team_id: "T1",
           channel_id: "C1",

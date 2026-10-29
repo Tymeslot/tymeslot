@@ -426,7 +426,7 @@ defmodule Tymeslot.Factory do
   def slack_integration_factory do
     %SlackIntegrationSchema{
       name: sequence(:slack_name, &"Slack #{&1}"),
-      app_mode: "oauth",
+      app_mode: :oauth,
       bot_token_encrypted: Encryption.encrypt("xoxb-test-token"),
       team_id: sequence(:slack_team_id, &"T#{&1 + 100_000}"),
       team_name: "Test Workspace",

@@ -188,8 +188,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
     |> assign(:slack_form_values, %{})
   end
 
-  defp edit_mode_for(%{app_mode: "oauth"}), do: :oauth_existing
-  defp edit_mode_for(%{app_mode: "webhook_url"}), do: :webhook_url_existing
+  defp edit_mode_for(%{app_mode: :oauth}), do: :oauth_existing
+  defp edit_mode_for(%{app_mode: :webhook_url}), do: :webhook_url_existing
   defp edit_mode_for(_other), do: :webhook_url_existing
 
   defp edit_form_values(integration, :oauth_existing) do
