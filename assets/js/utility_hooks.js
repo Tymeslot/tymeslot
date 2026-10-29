@@ -286,10 +286,9 @@ export const AuthAutoFocus = {
 
 // Scroll the whole page back to the top.
 //
-// The global `html, body { height: 100% }` + `overflow-x: hidden` rules
-// (base.css) promote <body> to the scroll container, so `window.scrollTo`
-// alone is a no-op on full-page views. Reset every plausible scroll root to
-// cover both the window-scroller and body-scroller layouts.
+// The document is the scroll container (base.css), so `window.scrollTo` does
+// the work; the explicit root resets also cover a page that makes <html> or
+// <body> scroll on its own.
 export function scrollPageToTop() {
   window.scrollTo({ top: 0, behavior: 'instant' });
   document.documentElement.scrollTop = 0;

@@ -119,7 +119,8 @@
   .slider-dark::-moz-range-track {
     height: 6px;
     border-radius: 9999px;
-    background: var(--color-neutral-700);
+    /* Transparent so the input's inline fill gradient shows through. */
+    background: transparent;
   }
 
   .slider-dark::-moz-range-thumb {
