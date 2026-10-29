@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -28,7 +29,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
          |> assign(:recurrence_edit, Shared.recurrence_edit(event))
          |> assign(:pending_attendees, [])
          |> assign(:attendee_input, "")
-         |> assign(:pending_notification, pending?)}
+         |> assign(:pending_notification, pending?)
+         |> assign(:undelivered_updates, NotificationFlows.undelivered_updates(socket, event))}
 
       :error ->
         {:noreply, socket}

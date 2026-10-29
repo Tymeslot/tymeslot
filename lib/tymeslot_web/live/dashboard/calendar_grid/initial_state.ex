@@ -66,6 +66,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       attendee_input: "",
       notify_prompt: nil,
       pending_notification: false,
+      # Guests of the event in the details whose latest update email could
+      # not be delivered; read when the details open.
+      undelivered_updates: [],
       owned_integration_ids: MapSet.new(),
       visible_events: [],
       guest_rsvp_summaries: %{},

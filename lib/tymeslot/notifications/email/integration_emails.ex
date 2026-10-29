@@ -8,6 +8,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Infrastructure.Config
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -19,8 +20,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   alias Tymeslot.Workers.DeliveryClaims
 
   # The user, integration or event is gone, or the condition the email was
-  # about has cleared. Unknown error codes, unreadable dates and partial
-  # delivery failures are recorded.
+  # about has cleared. Unknown error codes and unreadable dates are recorded.
   @gone "User or integration not found"
   @reauth_resolved "Integration no longer needs reauth"
   @deletion_pending "Account pending deletion"
@@ -357,7 +357,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   # separately (`DeliveryClaims`): a job the Oban lifeline rescues part-way
   # through re-mails nobody it already reached.
   @spec handle_event_update_notification(%{String.t() => term()}, DeliveryClaims.job_id()) ::
-          :ok | {:discard, String.t()}
+          :ok | {:error, term()} | {:discard, String.t()}
   def handle_event_update_notification(
         %{"event_uid" => event_uid, "integration_id" => integration_id} = args,
         job_id
@@ -368,7 +368,12 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
          false <- nothing_to_announce?(changes, args),
          {:ok, details} <-
            CalendarEventDetails.update_details(user, current_event, changes, args) do
-      deliver_event_update(args["attendee_emails"], details, event_uid, job_id)
+      deliver_event_update(
+        args["attendee_emails"],
+        details,
+        {integration_id, event_uid},
+        job_id
+      )
     else
       {:error, :not_found} ->
         Logger.warning("Event or user not found for update notification",
@@ -410,31 +415,28 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   defp nothing_to_announce?([], args), do: not CalendarEventDetails.first_notification?(args)
   defp nothing_to_announce?(_changes, _args), do: false
 
-  defp deliver_event_update(attendee_emails, details, event_uid, job_id) do
+  # A guest the email fails for is recorded on the event for the organiser
+  # (`UndeliveredUpdates`), and a guest it reaches cleared, so a retry that
+  # gets through takes the notice down again. A failure retries the job,
+  # snoozes it past an open circuit, or discards it when every remaining
+  # address is rejected outright; the guests already reached are not
+  # re-mailed, as each holds its claim.
+  defp deliver_event_update(attendee_emails, details, {integration_id, event_uid}, job_id) do
     results =
       Enum.map(attendee_emails, fn email ->
-        DeliveryClaims.once(job_id, "attendee:#{email}", fn ->
-          Config.email_service_module().send_event_update_notification(email, details)
-        end)
+        result =
+          DeliveryClaims.once(job_id, "attendee:#{email}", fn ->
+            Config.email_service_module().send_event_update_notification(email, details)
+          end)
+
+        UndeliveredUpdates.note_delivery(integration_id, event_uid, email, result)
+        result
       end)
 
-    errors = Enum.filter(results, &match?({:error, _reason}, &1))
+    metadata = [event_uid: event_uid, attendee_count: length(attendee_emails)]
 
-    if errors == [] do
-      Logger.info("Event update notifications sent",
-        event_uid: event_uid,
-        attendee_count: length(attendee_emails)
-      )
-
-      :ok
-    else
-      Logger.error("Some event update notifications failed",
-        event_uid: event_uid,
-        error_count: length(errors)
-      )
-
-      {:discard,
-       "Partial delivery failure: #{length(errors)} of #{length(attendee_emails)} failed"}
+    with :ok <- DeliveryOutcome.from_results("event update", metadata, results) do
+      Logger.info("Event update notifications sent", metadata)
     end
   end
 

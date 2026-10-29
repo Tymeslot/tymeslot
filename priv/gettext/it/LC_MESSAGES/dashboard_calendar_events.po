@@ -1002,3 +1002,15 @@ msgstr "Partecipante aggiunto. Riceverà l'invito non appena la modifica sarà s
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They will be notified once the change has synced to your calendar."
 msgstr "Partecipante rimosso. Verrà avvisato non appena la modifica sarà sincronizzata con il tuo calendario."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss"
+msgstr "Ignora"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The latest update could not be emailed to this guest. Let them know another way."
+msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
+msgstr[0] "Non è stato possibile inviare via email l'ultima modifica a questo ospite. Avvisalo in un altro modo."
+msgstr[1] "Non è stato possibile inviare via email l'ultima modifica a questi ospiti. Avvisali in un altro modo."
