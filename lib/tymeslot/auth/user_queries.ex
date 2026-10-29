@@ -172,24 +172,22 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Lists up to `limit` abandoned sign-ups: password accounts still unverified
-  and signed up before `cutoff`, oldest first.
+  Lists up to `limit` abandoned sign-ups: accounts still unverified and
+  signed up before `cutoff`, oldest first.
 
   An account sent a verification link since `cutoff` is left out, so a link
-  its owner asked for recently still works when it is followed. So is any
-  account that is evidently in use: an admin, one that has had a session or
-  finished onboarding, and every social account. A social sign-in only
-  creates an account with a provider-vouched, already verified email, so an
-  unverified social account predates that rule and was signed in to.
+  its owner asked for recently still works when it is followed. So is an
+  admin. Nothing else is spared: no route gives an unverified account a
+  session (a sign-in either verifies it, when a provider vouches for the
+  email, or is refused and sent a fresh link), so one used under older rules
+  is as locked out as one never used.
   """
   @spec list_stale_unverified_users(DateTime.t(), pos_integer()) :: [UserSchema.t()]
   def list_stale_unverified_users(%DateTime{} = cutoff, limit) do
     UserSchema
     |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
     |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
-    |> where([u], is_nil(u.provider) or u.provider == "email")
     |> where([u], not u.is_admin)
-    |> where([u], is_nil(u.last_active_at) and is_nil(u.onboarding_completed_at))
     |> order_by([u], asc: u.inserted_at, asc: u.id)
     |> limit(^limit)
     |> Repo.all()
