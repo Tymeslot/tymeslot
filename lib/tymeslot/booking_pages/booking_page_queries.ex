@@ -34,6 +34,14 @@ defmodule Tymeslot.BookingPages.BookingPageQueries do
   def get_for_profile(profile_id, id),
     do: Repo.get_by(BookingPageSchema, id: id, profile_id: profile_id)
 
+  @doc """
+  The page with `id`, locked `FOR UPDATE` until the surrounding transaction
+  ends, or nil when it is gone. Holding it keeps any write that references the
+  page (a new colour row, a listing) waiting until the transaction ends.
+  """
+  @spec lock(integer()) :: BookingPageSchema.t() | nil
+  def lock(id), do: Repo.one(from(p in BookingPageSchema, where: p.id == ^id, lock: "FOR UPDATE"))
+
   @doc "A page by id."
   @spec get(integer()) :: BookingPageSchema.t() | nil
   def get(id), do: Repo.get(BookingPageSchema, id)

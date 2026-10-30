@@ -140,7 +140,10 @@ defmodule Tymeslot.ThemeCustomizations.PageScopeTest do
     insert(:theme_customization, profile: ctx.profile, theme_id: "1")
     insert(:theme_customization, profile: ctx.profile, booking_page: ctx.page, theme_id: "1")
 
-    assert :ok = ThemeCustomizations.delete_page_customizations(ctx.page.id)
+    assert [%{booking_page_id: page_id}] =
+             ThemeCustomizations.delete_page_customizations(ctx.page.id)
+
+    assert page_id == ctx.page.id
 
     assert [%{booking_page_id: nil}] = Repo.all(ThemeCustomizationSchema)
   end

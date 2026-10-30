@@ -511,14 +511,18 @@ defmodule Tymeslot.ThemeCustomizations do
   end
 
   @doc """
-  Deletes a booking page's customizations, then the uploaded files they named
-  as they stood when deleted.
+  Deletes a booking page's customizations and returns them as they stood when
+  deleted. Their uploaded files stay: give the rows to `cleanup_page_files/1`
+  once the surrounding transaction has committed, so a rollback never leaves
+  a row naming a file that is gone.
   """
-  @spec delete_page_customizations(pos_integer()) :: :ok
-  def delete_page_customizations(page_id) do
-    page_id
-    |> ThemeCustomizationQueries.delete_by_page()
-    |> Enum.each(&FileLifecycle.cleanup_all_files(Specs.for_theme(&1.theme_id), &1))
+  @spec delete_page_customizations(pos_integer()) :: [ThemeCustomizationSchema.t()]
+  def delete_page_customizations(page_id), do: ThemeCustomizationQueries.delete_by_page(page_id)
+
+  @doc "Deletes the uploaded files the deleted `customizations` named."
+  @spec cleanup_page_files([ThemeCustomizationSchema.t()]) :: :ok
+  def cleanup_page_files(customizations) do
+    Enum.each(customizations, &FileLifecycle.cleanup_all_files(Specs.for_theme(&1.theme_id), &1))
   end
 
   @doc "The profile a scope (see `t:scope/0`) belongs to."

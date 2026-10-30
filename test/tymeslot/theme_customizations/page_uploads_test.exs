@@ -6,6 +6,7 @@ defmodule Tymeslot.ThemeCustomizations.PageUploadsTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.Test.UploadRoot
   alias Tymeslot.ThemeCustomizations
@@ -41,9 +42,24 @@ defmodule Tymeslot.ThemeCustomizations.PageUploadsTest do
 
     assert page_id == ctx.page.id
 
-    assert :ok = ThemeCustomizations.delete_page_customizations(ctx.page.id)
+    deleted = ThemeCustomizations.delete_page_customizations(ctx.page.id)
+    # The rows are gone but their files stay until the caller cleans them up.
+    assert File.exists?(UploadRoot.path(page_path))
+
+    assert :ok = ThemeCustomizations.cleanup_page_files(deleted)
 
     assert File.exists?(UploadRoot.path(profile_path))
     refute File.exists?(UploadRoot.path(page_path))
+  end
+
+  test "deleting the page removes its rows and uploaded file, not the profile's", ctx do
+    profile_path = attach!(ctx.profile.id, "bg.webp")
+    page_path = attach!({ctx.profile.id, ctx.page.id}, "bg.webp")
+
+    assert {:ok, _deleted} = BookingPages.delete(ctx.page)
+
+    refute ThemeCustomizations.get_by_profile_and_theme({ctx.profile.id, ctx.page.id}, "1")
+    refute File.exists?(UploadRoot.path(page_path))
+    assert File.exists?(UploadRoot.path(profile_path))
   end
 end

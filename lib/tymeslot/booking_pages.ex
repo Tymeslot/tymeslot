@@ -242,15 +242,32 @@ defmodule Tymeslot.BookingPages do
   end
 
   @doc """
-  Deletes a page. Its colours go first, through `ThemeCustomizations`, so
-  their uploaded background files are removed too; the database would drop the
-  rows on its own but leave the files behind. Its meeting type listings go
-  with the page, and its bookings keep everything but the page id.
+  Deletes a page, its colours and their uploaded background files. Its meeting
+  type listings go with the page, and its bookings keep everything but the
+  page id. A page already gone counts as deleted.
+
+  The page is locked first, so a colour saved in another tab either lands
+  before the delete (and goes with it) or fails on the missing page, never
+  between. The colour rows and the page go in one transaction; the files only
+  once it has committed, so a failed delete leaves the page whole.
   """
   @spec delete(page()) :: {:ok, page()} | {:error, term()}
   def delete(%BookingPageSchema{} = page) do
-    with :ok <- ThemeCustomizations.delete_page_customizations(page.id) do
-      BookingPageQueries.delete(page)
+    result =
+      Repo.transaction(fn ->
+        case BookingPageQueries.lock(page.id) do
+          nil ->
+            {page, []}
+
+          %BookingPageSchema{} ->
+            customizations = ThemeCustomizations.delete_page_customizations(page.id)
+            {page |> BookingPageQueries.delete() |> ok_or_rollback(), customizations}
+        end
+      end)
+
+    with {:ok, {deleted, customizations}} <- result do
+      ThemeCustomizations.cleanup_page_files(customizations)
+      {:ok, deleted}
     end
   end
 
