@@ -170,7 +170,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
           "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
           "DTSTART#{format_ical_time(entry.dtstart)}",
           "DTEND#{format_ical_time(entry.dtend)}",
-          if(is_integer(sequence), do: "SEQUENCE:#{sequence}"),
+          if(is_integer(sequence), do: "SEQUENCE:#{entry.sequence || sequence}"),
           "SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}",
           "DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}",
           "LOCATION#{tag_language(location_text, lang)}:#{location_text}",
@@ -191,12 +191,23 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   # changes alike (`:other_entries`): the entry the invitation of a series
   # made, when an email about every occurrence is sent from another one
   # (`Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity.series_entry/2`).
-  # Each is a VEVENT of its own, differing only in its UID and timing.
+  # Each is a VEVENT of its own, differing only in its UID, timing and
+  # SEQUENCE: a further entry carries its own when the guest may hold it at a
+  # higher revision than the event (an occurrence emailed about on its own),
+  # and takes the email's otherwise, as one queued before entries carried
+  # their own does.
   defp entries(event) do
     others =
-      Enum.map(event.other_entries, &%{uid: ics_uid(&1.uid), dtstart: &1.start, dtend: &1.end})
+      Enum.map(event.other_entries, fn entry ->
+        %{
+          uid: ics_uid(entry.uid),
+          dtstart: entry.start,
+          dtend: entry.end,
+          sequence: Map.get(entry, :sequence)
+        }
+      end)
 
-    [Map.take(event, [:uid, :dtstart, :dtend]) | others]
+    [event |> Map.take([:uid, :dtstart, :dtend]) |> Map.put(:sequence, nil) | others]
   end
 
   # RFC 7986 §5.11 — `CONFERENCE` advertises an online-meeting access URI so

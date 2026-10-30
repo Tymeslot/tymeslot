@@ -44,11 +44,20 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   @typedoc """
   A further entry an email's attachment changes: its UID and timing, a
   `Date` pair (end exclusive) for an all-day series, UTC instants otherwise.
+
+  `:sent_sequence` is the SEQUENCE the guest was last sent for the entry, as
+  the cached row of the occurrence it describes records it (nil when that
+  row is not cached), which can be higher than the event's own: an
+  occurrence emailed about on its own advances only its own row. `:sequence`
+  is the SEQUENCE the email sends the entry at, set by the caller from it
+  (`Tymeslot.Meetings.AttendeeNotifications`), and carried in the job's arg.
   """
   @type entry :: %{
-          uid: String.t(),
-          start: Date.t() | DateTime.t(),
-          end: Date.t() | DateTime.t()
+          required(:uid) => String.t(),
+          required(:start) => Date.t() | DateTime.t(),
+          required(:end) => Date.t() | DateTime.t(),
+          optional(:sent_sequence) => non_neg_integer() | nil,
+          optional(:sequence) => non_neg_integer() | nil
         }
 
   # The original start Google ends an occurrence's uid with.
@@ -85,7 +94,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
          {:ok, moved_by} <- moved_by(original, now),
          {:ok, duration} <- duration(now) do
       start = shift(first, moved_by)
-      %{uid: series_uid, start: start, end: shift(start, duration)}
+
+      %{
+        uid: series_uid,
+        start: start,
+        end: shift(start, duration),
+        sent_sequence: first_sent_sequence(row, first)
+      }
     else
       _none -> nil
     end
@@ -109,22 +124,29 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
     |> Enum.uniq_by(& &1.uid)
   end
 
-  @doc "`entries` as an email job's JSON arg."
-  @spec to_arg([entry()]) :: [%{String.t() => String.t()}]
+  @doc "`entries` as an email job's JSON arg, each with its `:sequence` when set."
+  @spec to_arg([entry()]) :: [%{String.t() => String.t() | non_neg_integer()}]
   def to_arg(entries) do
     Enum.map(entries, fn entry ->
-      %{"uid" => entry.uid, "start" => encode(entry.start), "end" => encode(entry.end)}
+      put_sequence(
+        %{"uid" => entry.uid, "start" => encode(entry.start), "end" => encode(entry.end)},
+        Map.get(entry, :sequence)
+      )
     end)
   end
 
-  @doc "The entries an email job's arg names, leaving out any unreadable."
+  @doc """
+  The entries an email job's arg names, leaving out any unreadable. An entry
+  of a job queued before entries carried their own SEQUENCE has a nil
+  `:sequence`, and is sent at the email's.
+  """
   @spec from_arg(term()) :: [entry()]
   def from_arg(arg) when is_list(arg) do
     Enum.flat_map(arg, fn
-      %{"uid" => uid, "start" => start, "end" => ending} when is_binary(uid) ->
+      %{"uid" => uid, "start" => start, "end" => ending} = entry when is_binary(uid) ->
         with %{} = start <- decode(start),
              %{} = ending <- decode(ending),
-             do: [%{uid: uid, start: start, end: ending}],
+             do: [%{uid: uid, start: start, end: ending, sequence: sequence_arg(entry)}],
              else: (_unreadable -> [])
 
       _unreadable ->
@@ -133,6 +155,16 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   end
 
   def from_arg(_none), do: []
+
+  defp put_sequence(arg, sequence) when is_integer(sequence),
+    do: Map.put(arg, "sequence", sequence)
+
+  defp put_sequence(arg, _none), do: arg
+
+  defp sequence_arg(%{"sequence" => sequence}) when is_integer(sequence) and sequence >= 0,
+    do: sequence
+
+  defp sequence_arg(_legacy), do: nil
 
   defp encode(%Date{} = date), do: Date.to_iso8601(date)
   defp encode(%DateTime{} = at), do: DateTime.to_iso8601(at)
@@ -153,13 +185,29 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   defp decode(_value), do: nil
 
   defp emailed_occurrences(row) do
+    row
+    |> series_rows()
+    |> Enum.filter(&emailed?/1)
+    |> Enum.flat_map(&own_entry/1)
+  end
+
+  # The SEQUENCE last sent for the invitation's entry, which the series'
+  # first occurrence's row records when an email about it went out on its
+  # own; nil once the series' rows are gone. The series' own row can share
+  # the first start, so the highest of the rows there is taken.
+  defp first_sent_sequence(row, first) do
+    row
+    |> series_rows()
+    |> Enum.filter(&same_start?(SeriesStart.slot_of_cached(&1), first))
+    |> Enum.map(&(&1.ical_sequence || 0))
+    |> Enum.max(fn -> nil end)
+  end
+
+  defp series_rows(row) do
     with integration_id when is_integer(integration_id) <-
            Map.get(row, :calendar_integration_id),
          {:ok, address} <- Occurrence.series_address(row) do
-      integration_id
-      |> ProviderCalendarSeriesQueries.list_rows(address)
-      |> Enum.filter(&emailed?/1)
-      |> Enum.flat_map(&own_entry/1)
+      ProviderCalendarSeriesQueries.list_rows(integration_id, address)
     else
       _no_series -> []
     end
@@ -169,10 +217,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
     do: not LastNotifiedState.empty?(row.last_notified_state || %{}) or row.ical_sequence > 0
 
   defp own_entry(%{all_day: true, start_date: %Date{} = from, end_date: %Date{} = to} = row),
-    do: [%{uid: entry_uid(row), start: from, end: to}]
+    do: [%{uid: entry_uid(row), start: from, end: to, sent_sequence: row.ical_sequence}]
 
   defp own_entry(%{start_at: %DateTime{} = from, end_at: %DateTime{} = to} = row),
-    do: [%{uid: entry_uid(row), start: from, end: to}]
+    do: [%{uid: entry_uid(row), start: from, end: to, sent_sequence: row.ical_sequence}]
 
   defp own_entry(_untimed), do: []
 

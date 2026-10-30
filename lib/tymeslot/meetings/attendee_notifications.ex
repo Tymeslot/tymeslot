@@ -157,7 +157,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       user_id: owner_user_id,
       event_uid: Map.get(updated, :uid),
       ical_uid: SeriesIdentity.entry_uid(original),
-      other_entries: other_entries(scope == :all, original, updated),
+      other_entries: other_entries(scope == :all, original, updated, sequence),
       integration_id: Map.get(updated, :calendar_integration_id),
       attendee_emails: recipients,
       before_title: title_for(original),
@@ -183,21 +183,37 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   # An email about every occurrence, sent from another one, changes the
   # entry the series' invitation made too. One about this occurrence and the
   # following ones leaves it: the series' first is never among them.
-  defp other_entries(true = _whole_series, original, updated) do
+  defp other_entries(true = _whole_series, original, updated, sequence) do
     case SeriesIdentity.series_entry(original, updated) do
       nil -> []
-      entry -> SeriesIdentity.to_arg([entry])
+      entry -> entries_arg([entry], :event_updated, sequence)
     end
   end
 
-  defp other_entries(false, _original, _updated), do: []
+  defp other_entries(false, _original, _updated, _sequence), do: []
 
   # A cancellation of every occurrence removes every entry of the series the
   # guest holds; one of a single occurrence, that occurrence's own.
-  defp cancelled_entries(:series, event),
-    do: event |> SeriesIdentity.cancelled_entries() |> SeriesIdentity.to_arg()
+  defp cancelled_entries(:series, event, sequence),
+    do: event |> SeriesIdentity.cancelled_entries() |> entries_arg(:event_deleted, sequence)
 
-  defp cancelled_entries(_scope, _event), do: []
+  defp cancelled_entries(_scope, _event, _sequence), do: []
+
+  # A client ignores a VEVENT whose SEQUENCE is below the one it holds for
+  # that UID, and the guest may hold a further entry at a higher revision
+  # than the event's: one for an occurrence emailed about on its own. So
+  # each goes out at the SEQUENCE `action` gives after the one last sent for
+  # it, and never below the email's own `sequence`.
+  defp entries_arg(entries, action, sequence) do
+    entries
+    |> Enum.map(fn entry ->
+      {_method, own} =
+        IcalMethod.for(action, current_sequence: Map.get(entry, :sent_sequence) || 0)
+
+      Map.put(entry, :sequence, max(own, sequence))
+    end)
+    |> SeriesIdentity.to_arg()
+  end
 
   # The event as the update email describes it, in the job's JSON args.
   defp event_snapshot(event) do
@@ -419,7 +435,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     extra = %{
       user_id: owner_user_id,
       series: scope == :series,
-      other_entries: cancelled_entries(scope, event)
+      other_entries: cancelled_entries(scope, event, sequence)
     }
 
     case send_immediate(event, recipients, method, sequence, extra) do
