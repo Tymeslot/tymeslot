@@ -194,18 +194,20 @@ defmodule Tymeslot.BookingPages do
   @spec update_details(page(), map()) ::
           {:ok, page()} | {:error, :not_found} | {:error, Changeset.t()}
   def update_details(%BookingPageSchema{} = page, attrs) do
-    Repo.transaction(fn ->
-      page
-      |> BookingPageSchema.details_changeset(attrs)
-      |> claim_address(page.slug)
-      |> BookingPageQueries.update()
-      |> case do
-        {:ok, updated} -> updated
-        {:error, changeset} -> Repo.rollback(changeset)
-      end
-    end)
-    |> not_found_when_gone()
+    result =
+      Repo.transaction(fn ->
+        page
+        |> BookingPageSchema.details_changeset(attrs)
+        |> claim_address(page.slug)
+        |> BookingPageQueries.update()
+        |> ok_or_rollback()
+      end)
+
+    not_found_when_gone(result)
   end
+
+  defp ok_or_rollback({:ok, value}), do: value
+  defp ok_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   # `BookingPageQueries.update/1` reports a vanished row as a stale `:id`.
   defp not_found_when_gone({:error, %Changeset{errors: errors}} = result) do
@@ -308,8 +310,8 @@ defmodule Tymeslot.BookingPages do
   end
 
   defp new_changeset(profile, attrs) do
-    %BookingPageSchema{}
-    |> BookingPageSchema.create_changeset(
+    BookingPageSchema.create_changeset(
+      %BookingPageSchema{},
       Map.merge(stringify(attrs), %{
         "profile_id" => profile.id,
         "booking_theme" => profile.booking_theme || Catalog.default_id()

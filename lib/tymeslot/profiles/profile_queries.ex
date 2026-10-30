@@ -4,6 +4,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   """
 
   import Ecto.Query
+  alias Ecto.Changeset
   alias Tymeslot.BookingPages.BookingPageQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
@@ -259,14 +260,12 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   # Under the address lock, so no booking page takes the username between this
   # check and the update. Reported as the unique constraint would report
   # another profile holding it, so `Profiles.username_error/1` calls it taken.
-  defp claim_username(%Ecto.Changeset{valid?: true, changes: %{username: username}} = changeset) do
+  defp claim_username(%Changeset{valid?: true, changes: %{username: username}} = changeset) do
     :ok = lock_public_address(username)
 
     if BookingPageQueries.slug_taken?(username),
       do:
-        Ecto.Changeset.add_error(changeset, :username, "has already been taken",
-          constraint: :unique
-        ),
+        Changeset.add_error(changeset, :username, "has already been taken", constraint: :unique),
       else: changeset
   end
 
