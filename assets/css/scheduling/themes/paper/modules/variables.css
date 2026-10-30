@@ -82,6 +82,11 @@
   --notice-warning: color-mix(in srgb, var(--theme-warning) 85%, var(--theme-text));
   --notice-warning-surface: color-mix(in srgb, var(--theme-warning) 10%, var(--theme-surface));
   --notice-warning-border: color-mix(in srgb, var(--theme-warning) 40%, var(--theme-surface));
+  /* The preview notice sits on the page's own canvas, a flat colour from
+     the palette rather than an organiser's media, so it takes the card
+     instead of the shared dark scrim, under which the warning ink, mixed
+     towards a light scheme's dark text, would all but vanish. */
+  --preview-notice-ground: var(--theme-surface);
 
   /* Seat availability on a group meeting's slots (shared slot-list.css):
      the status hues on a wash of themselves over the surface, so they follow

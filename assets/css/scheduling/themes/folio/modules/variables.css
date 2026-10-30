@@ -107,6 +107,11 @@
   --ink-3: color-mix(in srgb, var(--theme-text-secondary) 90%, var(--theme-surface));
   --notice-warning-surface: color-mix(in srgb, var(--folio-warning-hue) 12%, var(--theme-surface));
   --notice-warning-border: color-mix(in srgb, var(--folio-warning-hue) 40%, var(--theme-surface));
+  /* The preview notice sits on the page's own canvas, a flat colour from
+     the palette rather than an organiser's media, so it takes the card
+     instead of the shared dark scrim, under which the warning ink, mixed
+     towards a light scheme's dark text, would all but vanish. */
+  --preview-notice-ground: var(--theme-surface);
   --radius-control: 8px;
   --radius-card: 12px;
   /* Boxes taller than one line (the message field, the timezone panel, the
