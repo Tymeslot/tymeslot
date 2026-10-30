@@ -92,6 +92,33 @@ defmodule Tymeslot.Profiles.Avatars do
   end
 
   @doc """
+  Consumption callback for avatar upload.
+  Validates the upload using security policies before updating the profile.
+  """
+  @spec consume_upload(profile, map(), map(), map()) ::
+          {:ok, profile | {:error, any()}}
+  def consume_upload(profile, %{path: path}, entry, _metadata) do
+    uploaded_entry = %{
+      "path" => path,
+      "client_name" => entry.client_name,
+      "size" => entry.client_size
+    }
+
+    case validate_upload(uploaded_entry) do
+      {:ok, validated_entry} ->
+        atom_entry = %{path: validated_entry["path"], client_name: validated_entry["client_name"]}
+
+        case update_avatar(profile, atom_entry) do
+          {:ok, updated_profile} -> {:ok, updated_profile}
+          {:error, reason} -> {:ok, {:error, reason}}
+        end
+
+      {:error, validation_error} ->
+        {:ok, {:error, validation_error}}
+    end
+  end
+
+  @doc """
   Deletes a user's avatar file and updates database record.
   """
   @spec delete_avatar(profile) :: result(profile)

@@ -235,7 +235,7 @@ msgstr ""
 msgid "Promoting..."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/setting_row.ex
 #, elixir-autogen, elixir-format
 msgid "Recommended:"
 msgstr ""
@@ -250,11 +250,13 @@ msgstr ""
 msgid "Role"
 msgstr ""
 
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -462,7 +464,7 @@ msgstr ""
 msgid "Could not save the logo."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Current email logo"
 msgstr ""
@@ -512,17 +514,17 @@ msgstr ""
 msgid "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a colour"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Replace"
 msgstr ""
@@ -552,7 +554,7 @@ msgstr ""
 msgid "The logo could not be uploaded."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Upload"
 msgstr ""
@@ -562,7 +564,7 @@ msgstr ""
 msgid "Upload one logo at a time."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "White button text on this colour has a contrast of only %{ratio}:1. Buttons may be hard to read."
 msgstr ""

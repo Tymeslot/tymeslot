@@ -125,6 +125,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
 
   def resolve_event_url(_base_url, _calendar_path, _uid, _href), do: {:error, :unaddressable}
 
+  @doc """
+  `resolve_event_url/4` against `client`'s `base_url`: the one way an event
+  operation addresses its resource.
+  """
+  @spec event_url(
+          %{required(:base_url) => String.t(), optional(atom()) => any()},
+          String.t() | nil,
+          String.t() | nil,
+          String.t() | nil
+        ) ::
+          {:ok, String.t()} | {:error, :unaddressable}
+  def event_url(%{base_url: base_url}, calendar_path, uid, href),
+    do: resolve_event_url(base_url, calendar_path, uid, href)
+
+  @doc """
+  The href of the resource at `url`: the URL reduced to its path, which is
+  how sync spells a CalDAV `provider_event_id` and what `event_url/4` expects
+  back. A URL with no path is returned whole.
+  """
+  @spec href_path(String.t()) :: String.t()
+  def href_path(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{path: path} when is_binary(path) and path != "" -> path
+      _no_path -> url
+    end
+  end
+
   # CalDAV hrefs are normally server-root-relative paths, but some providers —
   # notably iCloud — return an *absolute* URL on a different host (a per-user
   # partition like `p110-caldav.icloud.com`). Reduce such hrefs to their path

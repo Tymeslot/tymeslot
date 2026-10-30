@@ -14,8 +14,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.ApprovalWindow
-  alias Tymeslot.MeetingTypes.InputValidation
-  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
 
@@ -23,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Autosave,
     Creation,
     FormView,
-    GroupRules,
+    GroupHandlers,
     GuestLimit,
     Init,
     LengthsField,
@@ -35,10 +33,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.Flash
-  alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   # The fixed dates' events, all handled by `SessionHandlers`.
   @session_events SessionHandlers.events()
+
+  # The group bookings section's events, all handled by `GroupHandlers`.
+  @group_events GroupHandlers.events()
 
   # Public assigns passed from parent
   # - type: existing meeting type or nil
@@ -234,13 +234,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       |> assign(:no_writable_calendars, false)
       |> assign(:target_calendar_status, :ok)
       |> assign(:selected_target_calendar_id, nil)
-      |> assign(
-        :form_errors,
-        FormValidationHelpers.delete_field_error(
-          socket.assigns.form_errors,
-          :calendar_integration
-        )
-      )
+      |> Validation.clear_error(:calendar_integration)
 
     {:noreply, socket}
   end
@@ -253,10 +247,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       # The picker only offers writable calendars, so any pick clears the
       # warning raised about the calendar that was stored before.
       |> assign(:target_calendar_status, :ok)
-      |> assign(
-        :form_errors,
-        FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :target_calendar)
-      )
+      |> Validation.clear_error(:target_calendar)
 
     {:noreply, Autosave.maybe_run(socket)}
   end
@@ -284,10 +275,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:noreply,
        socket
        |> assign(:payment_required, !socket.assigns.payment_required)
-       |> assign(
-         :form_errors,
-         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :payment_required)
-       )
+       |> Validation.clear_error(:payment_required)
        |> Autosave.maybe_run()}
     else
       {:noreply, socket}
@@ -305,10 +293,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:noreply,
        socket
        |> assign(:requires_approval, !socket.assigns.requires_approval)
-       |> assign(
-         :form_errors,
-         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :max_participants)
-       )
+       |> Validation.clear_error(:max_participants)
        |> Autosave.maybe_run()}
     end
   end
@@ -327,13 +312,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         {:noreply,
          socket
          |> assign(:approval_window_hours, hours)
-         |> assign(
-           :form_errors,
-           FormValidationHelpers.delete_field_error(
-             socket.assigns.form_errors,
-             :approval_window_hours
-           )
-         )
+         |> Validation.clear_error(:approval_window_hours)
          |> Autosave.maybe_run()}
 
       # Leave the stored value and last successful save untouched: surfacing
@@ -398,10 +377,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:noreply,
        socket
        |> assign(:payment_price, price)
-       |> assign(
-         :form_errors,
-         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :price_cents)
-       )
+       |> Validation.clear_error(:price_cents)
        |> Autosave.maybe_run()}
     else
       {:noreply, socket}
@@ -409,84 +385,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_group_bookings", _params, socket) do
-    # Guard: turning group bookings on is refused while anything stands in
-    # the way (`GroupRules.enable_blocker/1`: no plan access, payment or
-    # approval required, a location that is not fixed in advance). The
-    # control renders disabled with the reason, so this only stops a stale
-    # or forged event. Turning them off is refused only while planned dates
-    # hold a fixed-date type on (`SessionHandlers.dates_planned?/1`).
-    #
-    # A host who has lost charge capability cannot reach the payments toggle,
-    # so a required payment does not block them; enabling clears
-    # `payment_required` instead, keeping the two mutually exclusive without
-    # a dead end.
-    turning_on? = not socket.assigns.group_bookings_enabled
-
-    if (turning_on? and GroupRules.enable_blocker(socket.assigns) == nil) or
-         (not turning_on? and not SessionHandlers.dates_planned?(socket.assigns)) do
-      {:noreply,
-       socket
-       |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)
-       |> assign(:payment_required, false)
-       |> assign(
-         :form_errors,
-         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :max_participants)
-       )
-       |> Autosave.maybe_run()}
-    else
-      {:noreply, socket}
-    end
-  end
+  def handle_event(event, params, socket) when event in @group_events,
+    do: {:noreply, GroupHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when event in @session_events,
     do: {:noreply, SessionHandlers.handle_event(event, params, socket)}
-
-  @impl Phoenix.LiveComponent
-  def handle_event(
-        "change_max_participants",
-        %{"meeting_type" => %{"max_participants_input" => value}},
-        socket
-      ) do
-    metadata = Helpers.get_security_metadata(socket)
-
-    case InputValidation.validate_field(:group_participants, value, metadata) do
-      {:ok, sanitized} ->
-        {:noreply,
-         socket
-         |> assign(:max_participants, sanitized)
-         |> assign(
-           :form_errors,
-           FormValidationHelpers.delete_field_error(
-             socket.assigns.form_errors,
-             :max_participants
-           )
-         )
-         |> Autosave.maybe_run()}
-
-      {:error, %{max_participants: message}} ->
-        # Keep the raw value so the input shows what was typed; skip the
-        # autosave — persisting a known-invalid limit is pointless. The
-        # indicator must not keep claiming the form is saved meanwhile.
-        {:noreply,
-         socket
-         |> assign(:max_participants, value)
-         |> assign(:save_status, :unsaved)
-         |> assign(
-           :form_errors,
-           Map.put(socket.assigns.form_errors, :max_participants, message)
-         )}
-    end
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("toggle_seat_availability", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:show_seat_availability, !socket.assigns.show_seat_availability)
-     |> Autosave.maybe_run()}
-  end
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_guest_limit", _params, socket),
@@ -495,38 +399,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   @impl Phoenix.LiveComponent
   def handle_event("change_guest_limit", params, socket),
     do: {:noreply, GuestLimit.change(params, socket)}
-
-  @impl Phoenix.LiveComponent
-  def handle_event("toggle_last_spots", _params, socket) do
-    threshold = if is_nil(socket.assigns.last_spots_threshold), do: Init.default_last_spots()
-
-    {:noreply,
-     socket
-     |> assign(:last_spots_threshold, threshold)
-     |> Autosave.maybe_run()}
-  end
-
-  # The input is bounded by its own min and max, so a value outside them is
-  # clamped rather than refused, and one that is not a number is ignored.
-  @impl Phoenix.LiveComponent
-  def handle_event(
-        "change_last_spots_threshold",
-        %{"meeting_type" => %{"last_spots_threshold_input" => value}},
-        socket
-      ) do
-    case Integer.parse(value) do
-      {count, ""} ->
-        range = Constraints.last_spots_threshold_range()
-
-        {:noreply,
-         socket
-         |> assign(:last_spots_threshold, count |> max(range.first) |> min(range.last))
-         |> Autosave.maybe_run()}
-
-      _not_a_number ->
-        {:noreply, socket}
-    end
-  end
 
   # The reminder picker's events, all handled by `ReminderHandlers`.
   @reminder_events ReminderHandlers.events()

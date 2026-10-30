@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRowSyncTest do
   import Phoenix.LiveViewTest
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias TymeslotWeb.Dashboard.CalendarSettings.Components
+  alias TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow
 
   @refused "The calendar server refused the request."
 
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRowSyncTest do
         provider_account_email: nil
       })
 
-    render_component(&Components.calendar_connection_row/1,
+    render_component(&ConnectionRow.calendar_connection_row/1,
       integration: integration,
       health_state: nil,
       stuck: stuck,

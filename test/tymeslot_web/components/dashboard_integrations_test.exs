@@ -12,8 +12,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
-  alias TymeslotWeb.Dashboard.CalendarSettings.Components, as: CalendarComponents
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
+  alias TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
 
   test "renders calendar_connection_row with its flat, always-visible actions" do
@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       myself: "some-target"
     }
 
-    html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
+    html = render_component(&ConnectionRow.calendar_connection_row/1, assigns)
     doc = Floki.parse_document!(html)
 
     assert html =~ "My Calendar"
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       myself: "some-target"
     }
 
-    html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
+    html = render_component(&ConnectionRow.calendar_connection_row/1, assigns)
     assert html =~ "Paused"
     # The shared connection row dims inactive integrations.
     assert html =~ "opacity-70"
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     }
 
     # Should not crash
-    html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
+    html = render_component(&ConnectionRow.calendar_connection_row/1, assigns)
     assert html =~ "My Calendar"
     assert html =~ "Manage calendars"
   end

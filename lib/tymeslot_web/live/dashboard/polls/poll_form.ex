@@ -30,16 +30,19 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Timezones
 
   alias TymeslotWeb.Dashboard.Polls.{
+    CandidateTimes,
     LocalTime,
     PollAccess,
     PollDuration,
+    PollFormErrors,
     PollInvite,
     PollReminders,
     PollsComponent
   }
 
-  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
+
+  import PollFormErrors, only: [error_list: 2]
 
   @reminder_events PollReminders.Events.all()
 
@@ -290,7 +293,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        access: access,
        access_chosen?: access_chosen?,
        timezone: Map.get(params, "timezone", socket.assigns.timezone),
-       slots: merge_slot_values(socket.assigns.slots, Map.get(params, "slots", %{}))
+       slots: CandidateTimes.merge(socket.assigns.slots, Map.get(params, "slots", %{}))
      )
      |> assign_time_off_keys()}
   end
@@ -314,10 +317,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("remove_slot", %{"key" => key}, socket) do
-    case Integer.parse(key) do
-      {key, ""} ->
-        slots = Enum.reject(socket.assigns.slots, &(&1.key == key))
-
+    case CandidateTimes.remove(socket.assigns.slots, key) do
+      {:ok, slots, key} ->
         {:noreply,
          assign(socket,
            slots: slots,
@@ -325,7 +326,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
            errors: Map.delete(socket.assigns.errors, :slots)
          )}
 
-      _forged ->
+      :error ->
         {:noreply, socket}
     end
   end
@@ -371,23 +372,21 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   defp append_slot(socket, value) do
     if length(socket.assigns.slots) >= PollSchema.max_slots() do
-      assign(socket, :errors, Map.put(socket.assigns.errors, :slots, [too_many_message()]))
+      assign(
+        socket,
+        :errors,
+        Map.put(socket.assigns.errors, :slots, [PollFormErrors.too_many_message()])
+      )
     else
-      key = socket.assigns.slot_counter
-      slots = socket.assigns.slots ++ [%{key: key, value: value}]
+      {slots, counter} =
+        CandidateTimes.add(socket.assigns.slots, socket.assigns.slot_counter, value)
 
       assign(socket,
         slots: slots,
-        slot_counter: key + 1,
+        slot_counter: counter,
         errors: Map.delete(socket.assigns.errors, :slots)
       )
     end
-  end
-
-  defp merge_slot_values(slots, values) do
-    Enum.map(slots, fn %{key: key} = slot ->
-      %{slot | value: Map.get(values, Integer.to_string(key), slot.value)}
-    end)
   end
 
   # The rows whose time the host is away for. Recomputed on every change
@@ -569,14 +568,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       else: [{selected, selected} | options]
   end
 
-  defp error_list(errors, field) do
-    case Map.get(errors, field) do
-      nil -> []
-      messages when is_list(messages) -> messages
-      message -> [message]
-    end
-  end
-
   defp errors_for({:invitees, reason}), do: %{invitees: [PollInvite.error_message(reason)]}
   defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}
   defp errors_for(:no_username), do: %{invitees: [PollInvite.error_message(:no_username)]}
@@ -587,32 +578,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp errors_for(:no_slots),
     do: %{slots: [dgettext("dashboard_polls", "Add at least one candidate time")]}
 
-  defp errors_for(:too_many_slots), do: %{slots: [too_many_message()]}
-
-  defp errors_for(:slot_in_past),
-    do: %{slots: [dgettext("dashboard_polls", "Times must be in the future")]}
-
-  defp errors_for(:payment_required_type),
-    do: %{
-      meeting_type_id: [
-        dgettext("dashboard_polls", "Paid meeting types can't be used for polls")
-      ]
-    }
-
-  defp errors_for(:meeting_type_not_found),
-    do: %{meeting_type_id: [dgettext("dashboard_polls", "That meeting type is unavailable")]}
-
-  defp errors_for(%Changeset{} = changeset) do
-    errors = FormErrors.to_map(changeset)
-
-    if Map.has_key?(errors, :deadline_at),
-      do:
-        Map.put(errors, :deadline_at, [
-          dgettext("dashboard_polls", "The deadline must be in the future")
-        ]),
-      else: errors
-  end
-
-  defp too_many_message,
-    do: dgettext("dashboard_polls", "Up to %{max} times", max: PollSchema.max_slots())
+  defp errors_for(%Changeset{} = changeset), do: PollFormErrors.changeset_errors(changeset)
+  defp errors_for(reason), do: PollFormErrors.errors_for(reason, :slots)
 end

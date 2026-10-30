@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       ics_import: nil,
       recurrence_prompt: nil,
       # The repeat editor's series start and staged pattern for the event in
-      # the details (`Shared.recurrence_edit/1`).
+      # the details (`RecurrenceFields.recurrence_edit/1`).
       recurrence_edit: nil,
       # A move of a whole series awaiting confirmation; see `SeriesMove`.
       series_move_prompt: nil,

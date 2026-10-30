@@ -1,7 +1,21 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
   @moduledoc "Field-level validation helpers for MeetingTypeForm."
 
+  import Phoenix.Component, only: [assign: 3]
+
+  alias Phoenix.LiveView.Socket
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
+  alias TymeslotWeb.Live.Shared.FormValidationHelpers
+
+  @doc "Drops the form's error for `field`, once a change has made it stale."
+  @spec clear_error(Socket.t(), atom()) :: Socket.t()
+  def clear_error(socket, field) do
+    assign(
+      socket,
+      :form_errors,
+      FormValidationHelpers.delete_field_error(socket.assigns.form_errors, field)
+    )
+  end
 
   @doc """
   Validates a single named field and returns the updated `{data, errors}`

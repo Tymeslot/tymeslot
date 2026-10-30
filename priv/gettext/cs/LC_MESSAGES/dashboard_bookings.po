@@ -101,7 +101,7 @@ msgstr "Skrýt"
 msgid "Enter a valid partial refund amount."
 msgstr "Zadejte platnou částku částečného vrácení platby."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr "Schůzku se nepodařilo zrušit. Zkuste to prosím znovu."
@@ -156,7 +156,7 @@ msgstr "Poznámky ke schůzce"
 msgid "Meeting cancelled and refund issued."
 msgstr "Schůzka byla zrušena a platba byla vrácena."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Schůzka byla zrušena, ale platbu se nepodařilo vrátit. Vraťte ji prosím ručně ve svém účtu Stripe."

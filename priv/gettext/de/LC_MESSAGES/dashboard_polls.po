@@ -197,8 +197,7 @@ msgstr "Noch keine Umfragen"
 msgid "Open"
 msgstr "Offen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Kostenpflichtige Termintypen können nicht für Umfragen verwendet werden"
@@ -229,8 +228,7 @@ msgstr "Umfragen"
 msgid "Remove time"
 msgstr "Zeit entfernen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Dieser Termintyp ist nicht verfügbar"
@@ -263,8 +261,7 @@ msgstr "Diese Zeit überschneidet sich mit einem Termin in Ihrem Kalender"
 msgid "This time is no longer free"
 msgstr "Diese Zeit ist nicht mehr frei"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Die Zeiten müssen in der Zukunft liegen"
@@ -285,8 +282,7 @@ msgstr "Zeitzone"
 msgid "Title"
 msgstr "Titel"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Bis zu %{max} Zeiten"
@@ -534,8 +530,7 @@ msgstr "%{name} samt Antworten aus dieser Umfrage entfernen? Die Person wird nic
 msgid "Remove from the poll"
 msgstr "Aus der Umfrage entfernen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "Die Frist muss in der Zukunft liegen"
