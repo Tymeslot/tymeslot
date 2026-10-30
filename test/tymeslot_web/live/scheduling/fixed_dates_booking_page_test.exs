@@ -129,7 +129,11 @@ defmodule TymeslotWeb.Live.Scheduling.FixedDatesBookingPageTest do
 
         view |> element(@entry) |> render_click()
         BookingDriver.pick_time(view, "6:00 PM")
-        BookingDriver.continue(view)
+
+        # A screen that asks for the details beside the time (Paper's) shows
+        # the form as soon as the time is picked: there is no way on to take.
+        unless has_element?(view, "form[data-fact='attendee']"), do: BookingDriver.continue(view)
+
         BookingDriver.submit(view, @attendee)
 
         wait_until(fn -> has_element?(view, "[data-intent='restart']") end)
