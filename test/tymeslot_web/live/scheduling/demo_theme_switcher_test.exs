@@ -47,8 +47,11 @@ defmodule TymeslotWeb.Live.Scheduling.DemoThemeSwitcherTest do
     assert {:error, {:redirect, %{to: to}}} =
              render_click(view, "change_locale", %{"locale" => "de"})
 
+    # The switch also carries the page's choices, as every locale switch
+    # does (`Shared.ChoicesInUrl`: the moment on screen and the visitor's
+    # timezone); only the theme is this suite's concern.
     %URI{path: path, query: query} = URI.parse(to)
-    {path, query |> URI.decode_query() |> Map.delete("visitor_hash")}
+    {path, query |> URI.decode_query() |> Map.drop(["visitor_hash", "step", "visitor_timezone"])}
   end
 
   setup do

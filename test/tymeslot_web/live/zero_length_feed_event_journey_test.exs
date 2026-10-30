@@ -236,8 +236,8 @@ defmodule TymeslotWeb.ZeroLengthFeedEventJourneyTest do
   defp open_day(conn, profile, date) do
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=Etc/UTC")
 
+    # Choosing the meeting type moves on to the calendar.
     view |> element("button[data-testid='duration-option']") |> render_click()
-    view |> element("button[data-testid='next-step']") |> render_click()
 
     day = "button[data-testid='calendar-day'][phx-value-date='#{date}']"
     eventually(fn -> has_element?(view, "button[data-testid='calendar-day']") end)
