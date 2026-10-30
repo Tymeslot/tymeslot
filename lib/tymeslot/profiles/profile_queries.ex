@@ -209,13 +209,68 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     ) and not BookingPageQueries.slug_taken?(normalised)
   end
 
+  # Distinguishes the public address lock from any other advisory locks the
+  # application takes. Arbitrary but must stay stable.
+  @public_address_lock_class 715_002
+
   @doc """
-  Updates a profile's username.
+  Serialises claims on one public address (`/<address>`) within the current
+  transaction via `pg_advisory_xact_lock/2`.
+
+  Usernames and booking page addresses share one namespace but live in two
+  tables, so no unique index can keep them apart. Every write that gives a
+  profile a username or a page an address takes this lock on the address
+  first and checks the other table under it, so neither can take an address
+  the other claimed between the check and the write. Released on commit or
+  rollback. Must be called inside a transaction.
+  """
+  @spec lock_public_address(String.t()) :: :ok
+  def lock_public_address(address) when is_binary(address) do
+    Repo.query!("SELECT pg_advisory_xact_lock($1, hashtext($2))", [
+      @public_address_lock_class,
+      String.downcase(address)
+    ])
+
+    :ok
+  end
+
+  @doc """
+  Updates a profile's username. One a booking page holds is refused as taken,
+  as another profile's would be.
   """
   @spec update_username(ProfileSchema.t(), String.t()) ::
           {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_username(%ProfileSchema{} = profile, username),
-    do: profile |> ProfileSchema.username_changeset(%{username: username}) |> Repo.update()
+  def update_username(%ProfileSchema{} = profile, username) do
+    Repo.transaction(fn ->
+      case write_username(profile, username) do
+        {:ok, updated} -> updated
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  defp write_username(profile, username) do
+    profile
+    |> ProfileSchema.username_changeset(%{username: username})
+    |> claim_username()
+    |> Repo.update()
+  end
+
+  # Under the address lock, so no booking page takes the username between this
+  # check and the update. Reported as the unique constraint would report
+  # another profile holding it, so `Profiles.username_error/1` calls it taken.
+  defp claim_username(%Ecto.Changeset{valid?: true, changes: %{username: username}} = changeset) do
+    :ok = lock_public_address(username)
+
+    if BookingPageQueries.slug_taken?(username),
+      do:
+        Ecto.Changeset.add_error(changeset, :username, "has already been taken",
+          constraint: :unique
+        ),
+      else: changeset
+  end
+
+  defp claim_username(changeset), do: changeset
 
   @doc """
   Gives a profile `username` only if its stored username is still blank,
@@ -247,7 +302,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
   defp fill_blank_username(%ProfileSchema{username: blank} = stored, username)
        when blank in [nil, ""] do
-    case update_username(stored, username) do
+    case write_username(stored, username) do
       {:ok, updated} -> {:ok, updated}
       {:error, changeset} -> Repo.rollback(changeset)
     end

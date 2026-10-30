@@ -148,6 +148,7 @@ defmodule Tymeslot.BookingPages do
   def change_new(%ProfileSchema{} = profile, attrs) do
     profile
     |> new_changeset(attrs)
+    |> validate_address_free(nil)
     |> Map.put(:action, :validate)
   end
 
@@ -163,7 +164,11 @@ defmodule Tymeslot.BookingPages do
       {:error, :limit_reached}
     else
       Repo.transaction(fn ->
-        with {:ok, page} <- profile |> new_changeset(attrs) |> BookingPageQueries.insert(),
+        with {:ok, page} <-
+               profile
+               |> new_changeset(attrs)
+               |> claim_address(nil)
+               |> BookingPageQueries.insert(),
              :ok <- ThemeCustomizations.copy_to_page(profile.id, page.id) do
           page
         else
@@ -189,10 +194,16 @@ defmodule Tymeslot.BookingPages do
   @spec update_details(page(), map()) ::
           {:ok, page()} | {:error, :not_found} | {:error, Changeset.t()}
   def update_details(%BookingPageSchema{} = page, attrs) do
-    page
-    |> BookingPageSchema.details_changeset(attrs)
-    |> validate_address_free(page.slug)
-    |> BookingPageQueries.update()
+    Repo.transaction(fn ->
+      page
+      |> BookingPageSchema.details_changeset(attrs)
+      |> claim_address(page.slug)
+      |> BookingPageQueries.update()
+      |> case do
+        {:ok, updated} -> updated
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
     |> not_found_when_gone()
   end
 
@@ -285,7 +296,6 @@ defmodule Tymeslot.BookingPages do
         "booking_theme" => profile.booking_theme || Catalog.default_id()
       })
     )
-    |> validate_address_free(nil)
   end
 
   defp stringify(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
@@ -322,10 +332,21 @@ defmodule Tymeslot.BookingPages do
 
   def address_for_meeting(_meeting, fallback), do: fallback
 
+  # `validate_address_free/2` under the address lock, inside the write's
+  # transaction, so no username takes the address between the check and the
+  # write (`ProfileQueries.lock_public_address/1`).
+  defp claim_address(changeset, current_slug) do
+    case Changeset.fetch_change(changeset, :slug) do
+      {:ok, slug} when is_binary(slug) -> ProfileQueries.lock_public_address(slug)
+      _unchanged -> :ok
+    end
+
+    validate_address_free(changeset, current_slug)
+  end
+
   # The page's own current address is never a clash with itself. Otherwise
-  # `Profiles.username_available?/1` answers for usernames and pages alike
-  # (Task 4), case-insensitively; the unique index settles a race between
-  # pages, and resolution lets a username win a race against a page.
+  # `Profiles.username_available?/1` answers for usernames and pages alike,
+  # case-insensitively.
   defp validate_address_free(changeset, current_slug) do
     Changeset.validate_change(changeset, :slug, fn :slug, slug ->
       cond do
