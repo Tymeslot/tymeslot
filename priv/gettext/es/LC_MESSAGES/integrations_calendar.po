@@ -607,6 +607,7 @@ msgid "The calendar server took too long to respond. Tymeslot will retry automat
 msgstr "El servidor de calendario tardó demasiado en responder. Tymeslot volverá a intentarlo automáticamente."
 
 #: lib/tymeslot/integrations/calendar/shared/error_handler.ex
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar service encountered an error. Please try again later."
 msgstr "Se produjo un error en el servicio de calendario. Inténtalo más tarde."
@@ -801,3 +802,23 @@ msgstr "mailbox.org usa siempre este servidor CalDAV, así que la dirección no 
 #, elixir-autogen, elixir-format
 msgid "mailbox.org connection successful"
 msgstr "Conexión con mailbox.org correcta"
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} refused the change. The connection is working, but the calendar would not accept this request."
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/domain/management.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar connection does not allow Tymeslot to add bookings to it. Please reconnect the integration and allow Tymeslot to create and edit events."
+msgstr ""
+
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud refused the stored app password. It was most likely revoked, or the account password was changed. Create a new app password and reconnect."
+msgstr ""
+
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "iCloud refused the stored app-specific password. It was most likely revoked, or your Apple ID password was changed, which revokes every app-specific password. Generate a new one and reconnect."
+msgstr ""

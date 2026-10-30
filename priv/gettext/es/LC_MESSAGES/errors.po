@@ -279,7 +279,7 @@ msgstr "comprobaciones del servidor de video"
 msgid "bookings"
 msgstr "reservas"
 
-#: lib/tymeslot/security/rate_limiter/limits.ex
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
 msgstr "cambios de eventos de calendario"
@@ -389,6 +389,16 @@ msgstr "las reservas de grupo no pueden requerir pago"
 msgid "You already have a meeting type with this name"
 msgstr "Ya tienes un tipo de reunión con este nombre"
 
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "group bookings cannot offer more than one duration"
+msgstr "las reservas de grupo no pueden requerir pago"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr ""
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -439,7 +449,7 @@ msgstr "debe ser un múltiplo de %{step} minutos"
 msgid "Break times overlap with existing break"
 msgstr "El horario de la pausa se superpone a otra pausa"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe must be connected"
 msgstr "Hay que conectar Stripe"
@@ -522,6 +532,7 @@ msgid "is not a supported language"
 msgstr "no es un idioma compatible"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_schema.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
@@ -533,6 +544,7 @@ msgstr "no es un idioma compatible"
 msgid "is not a valid palette key"
 msgstr "no es una clave de paleta válida"
 
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid timezone"
@@ -605,7 +617,7 @@ msgstr "debe ser un tema válido"
 msgid "must be after start time"
 msgstr "debe ser posterior a la hora de inicio"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "must be at least %{minimum}"
 msgstr "debe ser como mínimo %{minimum}"
@@ -780,7 +792,7 @@ msgstr "Este archivo es demasiado grande. Sube un archivo de %{size} MB como má
 msgid "This file type is not accepted. Please upload a JPG, PNG, GIF or WebP image."
 msgstr "No se acepta este tipo de archivo. Sube una imagen JPG, PNG, GIF o WebP."
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Prices cannot be set in your Stripe account's currency"
 msgstr "No se pueden fijar precios en la moneda de tu cuenta de Stripe"
@@ -795,3 +807,33 @@ msgstr "La respuesta es demasiado larga"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Tipo de campo desconocido"
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "allows at most %{max} durations"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "must each be a multiple of %{step} minutes"
+msgstr "debe ser un múltiplo de %{step} minutos"
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "must each be between %{min} and %{max} minutes"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "must not repeat a duration"
+msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "meeting moves"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr ""

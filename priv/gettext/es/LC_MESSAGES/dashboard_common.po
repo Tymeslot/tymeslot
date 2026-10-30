@@ -1,11 +1,11 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: es\n"
@@ -220,316 +220,11 @@ msgstr "Integración de video"
 msgid "Calendar subscription"
 msgstr "Suscripción a calendario"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} of %{max} time"
-msgid_plural "%{count} of %{max} times"
-msgstr[0] "Horarios: %{count} de %{max}"
-msgstr[1] "Horarios: %{count} de %{max}"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} participant"
-msgid_plural "%{count} participants"
-msgstr[0] "%{count} participante"
-msgstr[1] "%{count} participantes"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} time option"
-msgid_plural "%{count} time options"
-msgstr[0] "%{count} horario propuesto"
-msgstr[1] "%{count} horarios propuestos"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} vote"
-msgid_plural "%{count} votes"
-msgstr[0] "%{count} voto"
-msgstr[1] "%{count} votos"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Add any context for your guests"
-msgstr "Añade el contexto que necesiten tus invitados"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Add at least one candidate time"
-msgstr "Añade al menos un horario propuesto"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Add time"
-msgstr "Añadir un horario"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar conflict"
-msgstr "Conflicto de calendario"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Cancelar"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel poll"
-msgstr "Cancelar la votación"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelled"
-msgstr "Votación cancelada"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Candidate time %{n}"
-msgstr "Horario propuesto %{n}"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Candidate times"
-msgstr "Horarios propuestos"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Checking your calendar for conflicts…"
-msgstr "Comprobando si hay conflictos en tu calendario…"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Close results"
-msgstr "Cerrar los resultados"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm this time"
-msgstr "Confirmar este horario"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "Confirmed"
-msgstr "Confirmada"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_share_link.ex
-#, elixir-autogen, elixir-format
-msgid "Copy poll link to clipboard"
-msgstr "Copiar el enlace de la votación al portapapeles"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't cancel this poll. Please try again."
-msgstr "No se pudo cancelar esta votación. Inténtalo de nuevo."
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't confirm this time. Please try again."
-msgstr "No se pudo confirmar este horario. Inténtalo de nuevo."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "Create a poll to propose a few times and let your guests vote."
-msgstr "Crea una votación para proponer varios horarios y que tus invitados voten."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Create poll"
-msgstr "Crear la votación"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Description (optional)"
-msgstr "Descripción (opcional)"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Duration (minutes)"
-msgstr "Duración (minutos)"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Duration: %{minutes} min (from meeting type)"
-msgstr "Duración: %{minutes} min (del tipo de reunión)"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Find a time that works for everyone. Propose a few slots and let your guests vote."
-msgstr "Encuentra un horario que funcione para todos. Propón varias franjas y deja que tus invitados voten."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "If need be"
-msgstr "Si hace falta"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting confirmed. Your guests have been notified."
-msgstr "Reunión confirmada. Ya se avisó a tus invitados."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting type (optional)"
-msgstr "Tipo de reunión (opcional)"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "New poll"
-msgstr "Nueva votación"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "No"
-msgstr "No"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "No answer"
-msgstr "Sin respuesta"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "No meeting type"
-msgstr "Sin tipo de reunión"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "No polls yet"
-msgstr "Todavía no hay votaciones"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "Open"
-msgstr "Abierta"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Paid meeting types can't be used for polls"
-msgstr "Los tipos de reunión de pago no se pueden usar en votaciones"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Poll cancelled"
-msgstr "Votación cancelada"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Poll created"
-msgstr "Votación creada"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_share_link.ex
-#, elixir-autogen, elixir-format
-msgid "Poll link copied to clipboard!"
-msgstr "Enlace de la votación copiado al portapapeles"
-
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Polls"
 msgstr "Votaciones"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Remove time"
-msgstr "Quitar el horario"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "That meeting type is unavailable"
-msgstr "Ese tipo de reunión no está disponible"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "This poll is confirmed. The winning time is highlighted below."
-msgstr "Esta votación está confirmada. El horario ganador aparece destacado abajo."
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "This poll is no longer open."
-msgstr "Esta votación ya no está abierta."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "This poll was cancelled. Voting is closed."
-msgstr "Esta votación se canceló. Ya no se puede votar."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "This time clashes with an event on your calendar"
-msgstr "Este horario choca con un evento de tu calendario"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "This time is no longer free"
-msgstr "Este horario ya no está libre"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Times must be in the future"
-msgstr "Los horarios deben estar en el futuro"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Times shown in %{timezone}"
-msgstr "Horarios en %{timezone}"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone"
-msgstr "Zona horaria"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Título"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Up to %{max} times"
-msgstr "Hasta %{max} horarios"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "View meeting"
-msgstr "Ver la reunión"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
-#, elixir-autogen, elixir-format
-msgid "View results"
-msgstr "Ver los resultados"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Voting deadline (optional)"
-msgstr "Plazo de votación (opcional)"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Voting is open. Confirm a time once your guests have voted."
-msgstr "La votación está abierta. Confirma un horario cuando tus invitados hayan votado."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Winner"
-msgstr "Ganador"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Yes"
-msgstr "Sí"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "e.g., Team sync"
-msgstr "p. ej., Reunión de equipo"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -545,80 +240,6 @@ msgstr "Conecta un calendario para terminar la configuración"
 #, elixir-autogen, elixir-format
 msgid "Connect a video provider to finish setup"
 msgstr "Conecta un proveedor de video para terminar la configuración"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} guest has already voted. Their responses will be discarded."
-msgid_plural "%{count} guests have already voted. Their responses will be discarded."
-msgstr[0] "%{count} invitado ya votó. Se descartarán sus respuestas."
-msgstr[1] "%{count} invitados ya votaron. Se descartarán sus respuestas."
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Keep poll"
-msgstr "Mantener la votación"
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
-msgid "“%{title}” will stop accepting responses and everyone holding the voting link will see it as cancelled. This cannot be undone."
-msgstr "«%{title}» dejará de admitir respuestas, y quien tenga el enlace de la votación la verá como cancelada. Esto no se puede deshacer."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} guest has voted so far."
-msgid_plural "%{count} guests have voted so far."
-msgstr[0] "Hasta ahora ha votado %{count} invitado."
-msgstr[1] "Hasta ahora han votado %{count} invitados."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Most votes"
-msgstr "Más votos"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "No responses yet."
-msgstr "Todavía no hay respuestas."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Who voted"
-msgstr "Quién votó"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Hide who voted"
-msgstr "Ocultar quién votó"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't save this poll. Please try again."
-msgstr "No se pudo guardar esta votación. Inténtalo de nuevo."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Edit title and description"
-msgstr "Editar el título y la descripción"
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Poll updated"
-msgstr "Votación actualizada"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Save changes"
-msgstr "Guardar los cambios"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
-msgstr "Este horario cae dentro de tu periodo de ausencia, así que no se puede confirmar mientras esa ausencia no cambie."
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "This time falls within your time off. Change or remove the time off to confirm it."
-msgstr "Este horario cae dentro de tu periodo de ausencia. Cambia o quita esa ausencia para poder confirmar el horario."
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
@@ -738,7 +359,19 @@ msgstr "Con"
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
 
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#: lib/tymeslot_web/components/dashboard_layout.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel this poll"
-msgstr "Cancelar esta votación"
+msgid "Reconnect"
+msgstr "Volver a conectar"
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
+msgid_plural "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
+msgstr ""
