@@ -127,7 +127,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp notify_if_create_abandoned(_result, _action, _meeting_id, _job), do: :ok
 
   defp run_unbounded(action, meeting_id, job, attempt) do
-    timeout_ms = calendar_timeout_ms()
+    timeout_ms = attempt_timeout_ms()
 
     case Bounded.run(fn -> dispatch_action(action, meeting_id, job.args, attempt) end, timeout_ms) do
       {:ok, result} ->
@@ -222,7 +222,21 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
-  defp calendar_timeout_ms do
+  @doc """
+  The most one run of the job may spend on the calendar, in milliseconds.
+
+  The run's work (reading the meeting, refreshing the provider token, the
+  provider call itself and recording the event it made) happens in a task
+  that is stopped at this deadline, so nothing the run does outlasts it: by
+  then the event's id is recorded, or this run never records one. The worker
+  sets no Oban timeout of its own, so Oban never stops the job first and
+  leaves the task running.
+
+  `Tymeslot.Integrations.MeetingProvisioning.booking_online_meeting/1`
+  relies on that bound, so it reads it from here rather than repeating it.
+  """
+  @spec attempt_timeout_ms() :: pos_integer()
+  def attempt_timeout_ms do
     Application.get_env(:tymeslot, :calendar_timeout_ms, @default_calendar_timeout_ms)
   end
 

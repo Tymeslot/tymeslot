@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.ClockHelpers
+  alias Tymeslot.Workers.CalendarEventWorker
 
   setup :verify_on_exit!
 
@@ -269,6 +270,51 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       %{user: user, calendar: calendar, video: video, meeting: meeting}
     end
 
+    # Walks the wait second by second and returns the seconds at which the
+    # create adds the meeting, after checking that at each of them the Teams
+    # job is still waiting `deadline_ms` later.
+    defp assert_meeting_added_only_while_outwaited(deadline_ms) do
+      booked_at = ~U[2026-03-01 10:00:00Z]
+
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, inserted_at: booked_at)
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      at = fn seconds, fun ->
+        ClockHelpers.with_frozen_clock(DateTime.add(booked_at, seconds, :second), fun)
+      end
+
+      adding_seconds =
+        Enum.filter(0..180, fn seconds ->
+          at.(seconds, fn -> MeetingProvisioning.booking_online_meeting(meeting) != nil end)
+        end)
+
+      assert adding_seconds != []
+
+      deadline_seconds = div(deadline_ms + 999, 1_000)
+
+      outrun =
+        Enum.reject(adding_seconds, fn seconds ->
+          at.(seconds + deadline_seconds, fn ->
+            MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+          end)
+        end)
+
+      assert outrun == []
+      adding_seconds
+    end
+
+    defp with_calendar_deadline(ms, fun) do
+      Application.put_env(:tymeslot, :calendar_timeout_ms, ms)
+
+      try do
+        fun.()
+      after
+        Application.delete_env(:tymeslot, :calendar_timeout_ms)
+      end
+    end
+
     defp encrypt_present(nil), do: nil
     defp encrypt_present(value), do: Encryption.encrypt(value)
 
@@ -402,6 +448,40 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
       assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+    end
+
+    # The race behind a second Teams meeting: a create that adds the meeting
+    # late in the wait is still running when the Teams job gives up and makes
+    # its own. A run is stopped at the calendar job's deadline, so every
+    # second at which the create adds the meeting must leave the Teams job
+    # still waiting that deadline later.
+    test "the Teams job outwaits every create that adds the meeting" do
+      assert_meeting_added_only_while_outwaited(CalendarEventWorker.attempt_timeout_ms())
+    end
+
+    test "the margin follows the calendar job's configured deadline" do
+      with_calendar_deadline(30_000, fn ->
+        seconds = assert_meeting_added_only_while_outwaited(30_000)
+
+        # Under the 90-second default this second is already too late.
+        assert 60 in seconds
+      end)
+    end
+
+    test "a calendar deadline as long as the wait never adds the meeting" do
+      with_calendar_deadline(120_000, fn ->
+        booked_at = ~U[2026-03-01 10:00:00Z]
+
+        %{calendar: calendar, meeting: meeting} =
+          teams_booking(provider_event_id: nil, inserted_at: booked_at)
+
+        stub_booking_calendar(meeting, calendar.id)
+
+        ClockHelpers.with_frozen_clock(booked_at, fn ->
+          assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+          assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+        end)
+      end)
     end
 
     test "adds nothing to an event the booking already has" do
