@@ -169,6 +169,8 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
   test "ticking a meeting type lists it on the page, and unticking removes it", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
+    # A public page shows its meeting types only once a calendar is connected.
+    insert(:calendar_integration, user: ctx.user, is_active: true)
     type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
 
@@ -181,6 +183,29 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     view |> element(switch) |> render_click()
     refute Map.has_key?(BookingPages.memberships(ctx.profile.id), type.id)
     assert has_element?(view, switch <> "[aria-checked='false']")
+  end
+
+  test "a page created and ticked in the dashboard offers the type at its address", ctx do
+    # A public page shows its meeting types only once a calendar is connected.
+    insert(:calendar_integration, user: ctx.user, is_active: true)
+    type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+
+    view |> element("[data-testid='new-booking-page']") |> render_click()
+
+    view
+    |> form("#new-booking-page-form", page: %{name: "einfachISO", slug: "einfachiso"})
+    |> render_submit()
+
+    [page] = BookingPages.list(ctx.profile.id)
+    {:ok, _view, before_html} = live(ctx.conn, ~p"/einfachiso")
+    refute before_html =~ "ISO audit"
+
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    view |> element("#page-settings-#{page.id}-type-#{type.id}") |> render_click()
+
+    {:ok, _view, after_html} = live(ctx.conn, ~p"/einfachiso")
+    assert after_html =~ "ISO audit"
   end
 
   test "on the username's tab the checklist works the unlisted flag", ctx do
@@ -197,6 +222,8 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
   test "a meeting type that is not the host's is not listed, and says so", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
+    # A public page shows its meeting types only once a calendar is connected.
+    insert(:calendar_integration, user: ctx.user, is_active: true)
     type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
     foreign_type = insert(:meeting_type, name: "Someone else's")
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
@@ -216,6 +243,8 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
   test "the checklist shares the meeting type write limit", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
+    # A public page shows its meeting types only once a calendar is connected.
+    insert(:calendar_integration, user: ctx.user, is_active: true)
     type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
 
