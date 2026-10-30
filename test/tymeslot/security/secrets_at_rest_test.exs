@@ -75,7 +75,7 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
 
   describe "hashed tokens" do
     test "a Telegram link token, cleared once it links a chat" do
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: nil)
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: nil)
       {:ok, token} = Telegram.refresh_link_token(integration)
 
       assert_hashed("telegram_integrations", integration.id, "link_token", token)

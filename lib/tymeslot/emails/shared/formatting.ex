@@ -154,19 +154,40 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   Example (en): "25 Jun 2026, 14:30 UTC",
   (de): "25 Jun 2026, 16:30 CEST (Europe/Berlin)"
   An all-day event's timing is a `Date.Range` of the days it covers and
-  renders as a date range, since it has no clock time to show.
+  renders as a date range, since it has no clock time to show; a timed
+  event's `{start, end}` pair renders as a range of times.
   Falls back to `to_string/1` for other values.
   """
-  @spec format_time_short(DateTime.t() | Date.Range.t() | term(), String.t()) :: String.t()
-  def format_time_short(%DateTime{} = dt, locale) do
-    month = LocaleFormat.format_month_name(dt.month, locale, :short)
-    day = dt.day |> to_string() |> String.pad_leading(2, "0")
-    "#{day} #{month} #{dt.year}, #{Calendar.strftime(dt, "%H:%M %Z")}#{zone_name(dt)}"
-  end
+  @spec format_time_short(
+          DateTime.t() | Date.Range.t() | {DateTime.t(), DateTime.t()} | term(),
+          String.t()
+        ) :: String.t()
+  def format_time_short(%DateTime{} = dt, locale),
+    do: "#{short_date(dt, locale)}, #{Calendar.strftime(dt, "%H:%M")}#{zone_suffix(dt)}"
 
   def format_time_short(%Date.Range{} = days, locale), do: format_date_range(days, locale)
 
+  # A timed event's start and end, the end as its clock time alone when it
+  # falls on the same day in the same zone.
+  def format_time_short({%DateTime{} = start_at, %DateTime{} = end_at}, locale) do
+    if DateTime.to_date(start_at) == DateTime.to_date(end_at) and
+         start_at.time_zone == end_at.time_zone do
+      "#{short_date(start_at, locale)}, #{Calendar.strftime(start_at, "%H:%M")} – " <>
+        "#{Calendar.strftime(end_at, "%H:%M")}#{zone_suffix(end_at)}"
+    else
+      "#{format_time_short(start_at, locale)} – #{format_time_short(end_at, locale)}"
+    end
+  end
+
   def format_time_short(val, _locale), do: to_string(val)
+
+  defp short_date(dt, locale) do
+    month = LocaleFormat.format_month_name(dt.month, locale, :short)
+    day = dt.day |> to_string() |> String.pad_leading(2, "0")
+    "#{day} #{month} #{dt.year}"
+  end
+
+  defp zone_suffix(dt), do: " #{Calendar.strftime(dt, "%Z")}#{zone_name(dt)}"
 
   defp zone_name(%DateTime{time_zone: "Etc/UTC"}), do: ""
   defp zone_name(%DateTime{time_zone: zone, zone_abbr: zone}), do: ""

@@ -115,7 +115,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       assert meeting.organizer_email == "organizer@example.com"
       assert meeting.attendee_email == "attendee@example.com"
       assert meeting.attendee_name == "Test Attendee"
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
 
       # Step 2: Verify the email job was enqueued
       assert_enqueued(
@@ -296,7 +296,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       assert attendee_ics(collect_emails(2)) =~
                "SUMMARY;LANGUAGE=fr:Test Meeting avec Test Attendee"
 
-      meeting |> Changeset.change(status: "cancelled") |> Repo.update!()
+      meeting |> Changeset.change(status: :cancelled) |> Repo.update!()
 
       assert :ok =
                perform_job(EmailWorker, %{
@@ -410,7 +410,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       # Verify the booking was created successfully
       assert meeting.organizer_email == "organizer@example.com"
       assert meeting.attendee_email == "attendee@example.com"
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
 
       # Note: Video room attachment is tested separately in video worker tests
       # This integration test focuses on the booking → email flow

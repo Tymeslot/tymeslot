@@ -6,7 +6,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.MeetingProvisioning
+  alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.ClockHelpers
 
   setup :verify_on_exit!
@@ -251,7 +253,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
         insert(:video_integration,
           user: user,
           provider: Keyword.get(opts, :video_provider, "teams"),
-          provider_account_id: account_id
+          provider_account_id: account_id,
+          tenant_id_encrypted: opts |> Keyword.get(:tenant_id) |> encrypt_present()
         )
 
       meeting =
@@ -265,6 +268,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       %{user: user, calendar: calendar, video: video, meeting: meeting}
     end
+
+    defp encrypt_present(nil), do: nil
+    defp encrypt_present(value), do: Encryption.encrypt(value)
 
     test "attaches to the booking's event when it is already in the same account's Outlook calendar" do
       %{calendar: calendar, meeting: meeting} = teams_booking(provider_event_id: "AAMk-event-1")
@@ -358,6 +364,60 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       end)
 
       assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+    end
+  end
+
+  # Graph mails the attendees of an organiser's event on every write to it, so
+  # the booking's event is created with its Teams meeting rather than given it
+  # by a second write (issue #191).
+  describe "MeetingProvisioning.booking_online_meeting/1" do
+    test "has the event created with the meeting while the meeting waits for it" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, tenant_id: "11111111-2222-3333-4444-555555555555")
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) ==
+               %{isOnlineMeeting: true, onlineMeetingProvider: "teamsForBusiness"}
+    end
+
+    test "names no provider for a personal Microsoft account" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, tenant_id: MicrosoftConfig.consumer_tenant_id())
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) == %{isOnlineMeeting: true}
+    end
+
+    # The Teams job may give up waiting while a create late in the wait is
+    # still in flight, and make a meeting of its own beside it.
+    test "creates the event without the meeting late in the wait" do
+      booked_at = DateTime.add(DateTime.utc_now(:second), -91, :second)
+
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, inserted_at: booked_at)
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+    end
+
+    test "adds nothing to an event the booking already has" do
+      %{calendar: calendar, meeting: meeting} = teams_booking(provider_event_id: "AAMk-event-1")
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+    end
+
+    test "adds nothing when the Outlook calendar is another Microsoft account" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(calendar_account: "entra-oid-other", provider_event_id: nil)
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
     end
   end
 end

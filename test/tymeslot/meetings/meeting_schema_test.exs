@@ -178,13 +178,13 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
 
   describe "status enum" do
     test "accepts awaiting_payment" do
-      changeset = Meeting.changeset(%Meeting{}, %{status: "awaiting_payment"})
+      changeset = Meeting.changeset(%Meeting{}, %{status: :awaiting_payment})
 
       refute Map.has_key?(errors_on(changeset), :status)
     end
 
     test "accepts expired" do
-      changeset = Meeting.changeset(%Meeting{}, %{status: "expired"})
+      changeset = Meeting.changeset(%Meeting{}, %{status: :expired})
 
       refute Map.has_key?(errors_on(changeset), :status)
     end
@@ -218,7 +218,7 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
   describe "unique_slot_violation?/1" do
     test "recognises a write refused by the organiser's unique slot index" do
       user = insert(:user)
-      existing = insert(:meeting, organizer_user_id: user.id, status: "confirmed")
+      existing = insert(:meeting, organizer_user_id: user.id, status: :confirmed)
 
       {:error, changeset} =
         %Meeting{}
@@ -230,7 +230,7 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
               end_time: existing.end_time
           }
           |> Map.put(:organizer_user_id, user.id)
-          |> Map.put(:status, "confirmed")
+          |> Map.put(:status, :confirmed)
         )
         |> Repo.insert()
 

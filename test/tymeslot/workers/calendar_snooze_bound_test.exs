@@ -118,7 +118,7 @@ defmodule Tymeslot.Workers.CalendarSnoozeBoundTest do
     end
 
     test "sends nothing for a cancelled booking or one that is gone" do
-      cancelled = insert(:meeting, status: "cancelled")
+      cancelled = insert(:meeting, status: :cancelled)
 
       expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, 0, fn _meeting, _reason ->
         :ok

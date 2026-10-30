@@ -35,7 +35,7 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
 
       _past =
         insert_meeting_for_user(user, %{
-          status: "completed",
+          status: :completed,
           start_offset: -86_400,
           duration: 3_600
         })

@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
         </.action_button>
         <%!-- Restarts OAuth from scratch for an install still waiting on a channel. --%>
         <.action_button
-          :if={@status == :pending_oauth && @integration.app_mode == "oauth" && @on_reconnect}
+          :if={@status == :pending_oauth && @integration.app_mode == :oauth && @on_reconnect}
           variant={:secondary}
           size={:sm}
           icon="hero-arrow-path"
@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
         <%!-- OAuth installs only, once a channel is set. Available while paused:
              the owner can always disconnect. --%>
         <.icon_button
-          :if={@on_disconnect && @integration.app_mode == "oauth" && @integration.channel_id}
+          :if={@on_disconnect && @integration.app_mode == :oauth && @integration.channel_id}
           icon="hero-no-symbol"
           variant={:warning}
           label={dgettext("dashboard_automation_chat", "Disconnect Slack")}
@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
   # Renders the human-readable destination for the integration: workspace and
   # channel for OAuth installs, or "Custom webhook" with channel hint for
   # pasted Incoming Webhook URLs.
-  defp location_label(%{app_mode: "oauth"} = integration) do
+  defp location_label(%{app_mode: :oauth} = integration) do
     workspace = integration.team_name || dgettext("dashboard_automation_chat", "Slack workspace")
 
     case integration.channel_name do
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
     end
   end
 
-  defp location_label(%{app_mode: "webhook_url"} = integration) do
+  defp location_label(%{app_mode: :webhook_url} = integration) do
     case integration.webhook_channel_hint do
       nil ->
         dgettext("dashboard_automation_chat", "Custom webhook")

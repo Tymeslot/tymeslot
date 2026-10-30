@@ -232,7 +232,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
           calendar_integration_id: integration.id,
           calendar_uid: busy.uid,
           provider_event_id: nil,
-          status: "confirmed"
+          status: :confirmed
         )
 
       # The interval disappears from the mailbox, so its row is deleted. A
@@ -243,8 +243,8 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
 
       reloaded = Repo.get!(MeetingSchema, meeting.id)
 
-      assert reloaded.status == "confirmed"
-      assert reloaded.calendar_sync_status != "externally_deleted"
+      assert reloaded.status == :confirmed
+      assert reloaded.calendar_sync_status != :externally_deleted
     end
 
     test "carries a namespace no meeting uid or EWS identifier can produce", %{

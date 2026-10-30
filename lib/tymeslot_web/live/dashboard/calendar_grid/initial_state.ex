@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       ics_import: nil,
       recurrence_prompt: nil,
       # The repeat editor's series start and staged pattern for the event in
-      # the details (`Shared.recurrence_edit/1`).
+      # the details (`RecurrenceFields.recurrence_edit/1`).
       recurrence_edit: nil,
       # A move of a whole series awaiting confirmation; see `SeriesMove`.
       series_move_prompt: nil,
@@ -66,6 +66,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       attendee_input: "",
       notify_prompt: nil,
       pending_notification: false,
+      # Guests of the event in the details whose latest update email could
+      # not be delivered; read when the details open.
+      undelivered_updates: [],
       owned_integration_ids: MapSet.new(),
       visible_events: [],
       guest_rsvp_summaries: %{},

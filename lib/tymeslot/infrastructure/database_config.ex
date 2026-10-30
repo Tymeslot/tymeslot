@@ -76,6 +76,7 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
   # honoured, because Ecto forwards that parameter to Postgrex, which ignores
   # it — so a pasted provider URL carrying sslmode=require would otherwise
   # connect in plaintext.
+  # sobelow_skip ["Config.TLSVerify"]
   defp ssl_opts(env, url) do
     mode =
       case env |> Map.get("DATABASE_SSL") |> blank_to_nil() do

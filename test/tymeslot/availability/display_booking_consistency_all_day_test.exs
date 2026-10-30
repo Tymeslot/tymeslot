@@ -42,7 +42,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAllDayTest do
         start_time: holiday,
         end_time: Date.add(holiday, 1),
         all_day: true,
-        status: "confirmed",
+        status: :confirmed,
         transparency: "opaque",
         summary: "Public holiday"
       }
@@ -65,7 +65,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAllDayTest do
         assert CalendarCheck.probe(slot(user, day_after, time, ctx.timezone), config) == :ok
       end
 
-      assert {:ok, %MeetingSchema{status: "confirmed"}} =
+      assert {:ok, %MeetingSchema{status: :confirmed}} =
                book_at(ctx, day_after, "9:00 AM")
     end
 
@@ -167,7 +167,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAllDayTest do
       start_time: start,
       end_time: nil,
       all_day: all_day,
-      status: "confirmed",
+      status: :confirmed,
       transparency: "opaque",
       summary: "No end"
     }

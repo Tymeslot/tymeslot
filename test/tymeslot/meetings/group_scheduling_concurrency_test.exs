@@ -302,7 +302,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
         start_time: slot.start_time,
         end_time: DateTime.add(slot.start_time, 30, :minute),
         duration: 30,
-        status: "confirmed",
+        status: :confirmed,
         organizer_user_id: slot.user.id,
         organizer_name: "Organiser",
         organizer_email: "organiser@example.com",

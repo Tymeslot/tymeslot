@@ -55,36 +55,29 @@ defmodule TymeslotWeb.Components.SiteComponents do
   def navigation(assigns) do
     ~H"""
     <nav class="bg-white border-b-4 border-turquoise-500 shadow-xl relative z-50">
-      <div class="container mx-auto flex justify-between items-center px-6 py-5">
-        <%= if external_url?(logo_link(@current_user)) do %>
-          <.link
-            href={logo_link(@current_user)}
-            class="flex items-center text-tymeslot-900 hover:text-turquoise-600 transition-all transform hover:scale-105"
-          >
-            <.logo mode={:full} img_class="h-12 shrink-0" />
-          </.link>
-        <% else %>
-          <.link
-            navigate={logo_link(@current_user)}
-            class="flex items-center text-tymeslot-900 hover:text-turquoise-600 transition-all transform hover:scale-105"
-          >
-            <.logo mode={:full} img_class="h-12 shrink-0" />
-          </.link>
-        <% end %>
+      <div class="container mx-auto flex justify-between items-center gap-2 2xl:gap-4 px-6 xl:px-4 2xl:px-6 py-5">
+        <.nav_sublink
+          url={logo_link(@current_user)}
+          class="flex items-center shrink-0 text-tymeslot-900 hover:text-turquoise-600 transition-all hover:scale-105"
+        >
+          <.logo mode={:full} img_class="h-12 xl:h-10 2xl:h-12 shrink-0" />
+        </.nav_sublink>
 
-        <%!-- Desktop Navigation: marketing links (centre zone) --%>
-        <div class="hidden lg:flex flex-1 items-center justify-center gap-1">
+        <%!-- Desktop Navigation: marketing links (centre zone). It switches on at
+        xl, not lg: at 1024px the logo, the menu and the account actions are
+        wider than the viewport, more so in the longer locales. --%>
+        <div class="hidden xl:flex flex-1 items-center justify-center gap-1">
           <.nav_section :for={section <- @menu_sections} section={section} />
         </div>
 
         <%!-- Desktop Navigation: account actions (right zone) --%>
-        <div class="hidden lg:flex items-center gap-3">
+        <div class="hidden xl:flex items-center gap-3 shrink-0">
           {render_slot(@end_actions)}
           <%= if @current_user do %>
             <.link
               navigate={~p"/dashboard"}
               data-tymeslot-suppress-lv-disconnect
-              class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+              class="px-4 py-2 whitespace-nowrap font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
             >
               {dgettext("common", "Dashboard")}
             </.link>
@@ -92,14 +85,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
             <.link
               href={~p"/auth/logout"}
               method="delete"
-              class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-red-600 hover:bg-red-50 transition-all rounded-2xl"
+              class="px-4 py-2 whitespace-nowrap font-semibold text-tymeslot-700 hover:text-red-600 hover:bg-red-50 transition-all rounded-2xl"
             >
               {dgettext("common", "Logout")}
             </.link>
           <% else %>
             <.link
               href={~p"/auth/login"}
-              class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+              class="px-4 py-2 whitespace-nowrap font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
             >
               {dgettext("common", "Login")}
             </.link>
@@ -108,7 +101,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
               href={~p"/auth/signup"}
               data-analytics-event="signup_started"
               data-analytics-props={Jason.encode!(%{source_page: "marketing", cta_location: "nav"})}
-              class="px-8 py-3 font-black text-white bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
+              class="px-6 py-3 whitespace-nowrap font-black text-white bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
             >
               {dgettext("common", "Get Started")}
             </.link>
@@ -117,20 +110,27 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
         <%!-- Mobile Menu Button --%>
         <button
-          class="lg:hidden mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-turquoise-100 hover:bg-turquoise-200 transition-colors"
+          class="xl:hidden mobile-menu-toggle group flex items-center justify-center w-12 h-12 rounded-xl bg-turquoise-100 hover:bg-turquoise-200 transition-colors"
           phx-click={
             JS.toggle(to: "#mobile-menu")
             |> JS.toggle_class("mobile-menu-open", to: ".mobile-menu-toggle")
           }
           aria-label={dgettext("common", "Toggle menu")}
         >
-          <.icon name="hero-bars-3" class="w-7 h-7 text-turquoise-700 stroke-3" />
+          <.icon
+            name="hero-bars-3"
+            class="w-7 h-7 text-turquoise-700 stroke-3 group-[.mobile-menu-open]:hidden"
+          />
+          <.icon
+            name="hero-x-mark"
+            class="w-7 h-7 text-turquoise-700 stroke-3 hidden group-[.mobile-menu-open]:block"
+          />
         </button>
 
         <%!-- Mobile Menu --%>
         <div
           id="mobile-menu"
-          class="mobile-menu lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-tymeslot-200 shadow-lg hidden"
+          class="mobile-menu xl:hidden absolute top-full left-0 right-0 bg-white border-t border-tymeslot-200 shadow-lg hidden"
         >
           <div class="container mx-auto px-4 py-4 space-y-3">
             <.nav_section_mobile :for={section <- @menu_sections} section={section} />
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
                 data-analytics-props={
                   Jason.encode!(%{source_page: "marketing", cta_location: "mobile_menu"})
                 }
-                class="mobile-nav-button block px-4 py-3 bg-turquoise-600 text-white text-center rounded-lg hover:bg-turquoise-700 transition-colors"
+                class="mobile-nav-button block justify-center px-4 py-3 bg-turquoise-600 text-white text-center rounded-lg hover:bg-turquoise-700 transition-colors"
               >
                 {dgettext("common", "Get Started")}
               </.link>
@@ -175,63 +175,59 @@ defmodule TymeslotWeb.Components.SiteComponents do
     """
   end
 
+  # Desktop menu items. Between xl and 2xl the menu, the account actions and
+  # longer translations only fit without the icons and with tighter padding.
+  @nav_item_class "px-3 2xl:px-4 py-2 whitespace-nowrap font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+  @nav_icon_class "hidden 2xl:block w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+
   # Desktop navigation entry. A `:link` renders as a flat top-level link; a
   # `:menu` with no sub-pages collapses to a plain link to its landing page;
   # otherwise it renders a hover dropdown grouping the section's pages.
   attr :section, :map, required: true
 
-  defp nav_section(%{section: %{kind: :link}} = assigns) do
-    ~H"""
-    <.nav_sublink
-      url={@section.url}
-      class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
-    >
-      <.icon
-        name={@section.icon}
-        class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-      /> {@section.label}
-    </.nav_sublink>
-    """
-  end
+  defp nav_section(%{section: section} = assigns)
+       when section.kind == :link or (section.kind == :menu and section.pages == []) do
+    assigns = assign(assigns, nav_item_class: @nav_item_class, nav_icon_class: @nav_icon_class)
 
-  defp nav_section(%{section: %{kind: :menu, pages: []}} = assigns) do
     ~H"""
     <.nav_sublink
       url={@section.url}
-      class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+      class={"group " <> @nav_item_class}
     >
       <.icon
         name={@section.icon}
-        class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+        class={@nav_icon_class}
       /> {@section.label}
     </.nav_sublink>
     """
   end
 
   defp nav_section(%{section: %{kind: :menu}} = assigns) do
+    assigns = assign(assigns, nav_item_class: @nav_item_class, nav_icon_class: @nav_icon_class)
+
     ~H"""
     <div class="relative group">
       <%!-- Trigger: a link when the menu has a landing page, a disclosure button otherwise. --%>
       <.nav_sublink
         :if={@section.url}
         url={@section.url}
-        class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+        class={@nav_item_class}
       >
         <.icon
           name={@section.icon}
-          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+          class={@nav_icon_class}
         /> {@section.label}
         <.nav_chevron />
       </.nav_sublink>
       <button
         :if={!@section.url}
         type="button"
-        class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+        class={@nav_item_class}
         aria-haspopup="true"
       >
         <.icon
           name={@section.icon}
-          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+          class={@nav_icon_class}
         /> {@section.label}
         <.nav_chevron />
       </button>
@@ -267,21 +263,8 @@ defmodule TymeslotWeb.Components.SiteComponents do
   # accordion that toggles its grouped sub-pages.
   attr :section, :map, required: true
 
-  defp nav_section_mobile(%{section: %{kind: :link}} = assigns) do
-    ~H"""
-    <.nav_sublink
-      url={@section.url}
-      class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-    >
-      <.icon
-        name={@section.icon}
-        class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-      /> {@section.label}
-    </.nav_sublink>
-    """
-  end
-
-  defp nav_section_mobile(%{section: %{kind: :menu, pages: []}} = assigns) do
+  defp nav_section_mobile(%{section: section} = assigns)
+       when section.kind == :link or (section.kind == :menu and section.pages == []) do
     ~H"""
     <.nav_sublink
       url={@section.url}
@@ -424,7 +407,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </div>
 
           <%!-- Link columns — caller-supplied so the (marketing) labels stay out of Core --%>
-          <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
+          <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-8">
             <.footer_column :for={col <- @link_columns} heading={col.heading} links={col.links} />
           </div>
         </div>
@@ -448,7 +431,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
   defp footer_column(assigns) do
     ~H"""
-    <div>
+    <div class="min-w-0">
       <%!-- h3, not h4: the last heading before the footer on every page is an
            h2, so an h4 here skips a level and fails the heading-order check. --%>
       <h3 class="text-white font-bold text-token-sm mb-4 uppercase tracking-widest">
@@ -458,7 +441,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
         <li :for={link <- @links}>
           <.nav_sublink
             url={link.url}
-            class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
+            class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm hyphens-auto wrap-break-word"
           >
             {link.label}
           </.nav_sublink>

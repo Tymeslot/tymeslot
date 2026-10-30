@@ -21,11 +21,6 @@ msgstr "Motiv %{theme_name}"
 msgid "%{theme_name} Theme Preview"
 msgstr "Náhled motivu %{theme_name}"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "An error occurred. Please refresh the page and try again."
-msgstr "Došlo k chybě. Obnovte prosím stránku a zkuste to znovu."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Background Design"

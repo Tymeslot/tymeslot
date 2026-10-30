@@ -89,7 +89,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     assert meeting.attendee_email == nil
     assert meeting.attendee_name == nil
     assert meeting.title == ctx.meeting_type.name
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
 
     assert [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
     assert participant.email == "one@example.com"

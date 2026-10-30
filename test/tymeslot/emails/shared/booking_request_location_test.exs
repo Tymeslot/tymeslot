@@ -18,10 +18,10 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocationTest do
   describe "type/1 with a recorded location kind" do
     test "the kind the booker chose is read straight off the meeting" do
       for {kind, expected} <- [
-            {"video", :video},
-            {"phone", :phone},
-            {"in_person", :in_person},
-            {"custom", :custom}
+            {:video, :video},
+            {:phone, :phone},
+            {:in_person, :in_person},
+            {:custom, :custom}
           ] do
         meeting =
           build(:meeting,
@@ -40,7 +40,7 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocationTest do
       # `video_integration_id` is set, but the booker did not choose video.
       meeting =
         build(:meeting,
-          location_kind: "in_person",
+          location_kind: :in_person,
           address_to_arrange: false,
           video_integration_id: 1,
           meeting_url: nil,
@@ -53,7 +53,7 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocationTest do
     test "an in-person meeting booked with no venue is one whose address is still to be arranged" do
       meeting =
         build(:meeting,
-          location_kind: "in_person",
+          location_kind: :in_person,
           venue_id: nil,
           address_to_arrange: true,
           location: "In person"
@@ -65,7 +65,7 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocationTest do
     test "an in-person meeting whose venue was deleted after booking still has its address" do
       meeting =
         build(:meeting,
-          location_kind: "in_person",
+          location_kind: :in_person,
           venue_id: nil,
           address_to_arrange: false,
           location: "Berlin office (Friedrichstrasse 1)"

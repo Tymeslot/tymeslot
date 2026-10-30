@@ -79,16 +79,6 @@ msgstr[2] "Obsazeno %{taken} z %{count} míst"
 msgid "(none)"
 msgstr "(nevyplněno)"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(previous)"
-msgstr "(původní)"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(updated)"
-msgstr "(nový)"
-
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
@@ -716,3 +706,8 @@ msgstr "Schůzka zrušena: %{date} – %{title}"
 #, elixir-autogen, elixir-format
 msgid "Your guests have been notified of the cancellation."
 msgstr "Vaši hosté byli o zrušení informováni."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Videohovor"

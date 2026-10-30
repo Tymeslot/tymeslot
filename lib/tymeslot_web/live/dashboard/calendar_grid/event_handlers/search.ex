@@ -9,6 +9,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceFields
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -69,10 +71,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search do
       event ->
         socket
         |> assign(:selected_event, event)
-        |> assign(:recurrence_edit, Shared.recurrence_edit(event))
+        |> assign(:recurrence_edit, RecurrenceFields.recurrence_edit(event))
         |> assign(:pending_attendees, [])
         |> assign(:attendee_input, "")
         |> assign(:pending_notification, false)
+        |> assign(:undelivered_updates, NotificationFlows.undelivered_updates(socket, event))
     end
   end
 end

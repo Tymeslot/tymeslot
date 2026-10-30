@@ -37,7 +37,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   # Payment states that are settled enough to show the booker a receipt and the
   # host a payout summary. A refunded payment still gets both: the money did
   # change hands, and the refund is announced by its own email.
-  @paid_like ["paid", "partially_refunded", "refunded"]
+  @paid_like [:paid, :partially_refunded, :refunded]
 
   @typedoc "Attendee-facing receipt, or `nil` when there is nothing to show."
   @type receipt ::

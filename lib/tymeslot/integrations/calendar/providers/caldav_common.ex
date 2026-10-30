@@ -15,12 +15,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     Client,
     Discovery,
     Events,
-    Family,
     Http,
     UrlBuilder
   }
 
-  alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
@@ -31,97 +29,17 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   @type caldav_client :: Client.t()
 
-  @spec normalize_url(String.t() | nil) :: String.t()
-  def normalize_url(nil), do: ""
+  @doc "See `CalDAV.Client.normalize_url/1`."
+  defdelegate normalize_url(url), to: Client
 
-  def normalize_url(url) when is_binary(url) do
-    url
-    |> String.trim()
-    |> String.trim_trailing("/")
-  end
+  @doc "See `CalDAV.Client.build_provider_client/4`."
+  defdelegate build_provider_client(config, provider, base_url, calendar_paths), to: Client
 
-  @doc """
-  Builds a provider's client from the config its `new/1` is given, with the
-  base URL and calendar paths already put into that provider's own form.
+  @doc "See `CalDAV.Client.build_client/2`."
+  defdelegate build_client(config, opts), to: Client
 
-  The credentials and `:writable_calendar_paths` are carried over as given.
-  A provider that rebuilt the config by hand used to drop the writable paths,
-  and the client then wrote every event to its booking calendar, whichever
-  calendar the organiser had picked.
-  """
-  @spec build_provider_client(map(), atom(), String.t() | nil, [String.t()]) :: caldav_client()
-  def build_provider_client(config, provider, base_url, calendar_paths) do
-    build_client(
-      %{
-        base_url: base_url,
-        username: config[:username],
-        password: config[:password],
-        calendar_paths: calendar_paths,
-        writable_calendar_paths: config[:writable_calendar_paths],
-        free_busy_paths: config[:free_busy_paths],
-        skip_breaker: config[:skip_breaker] || false
-      },
-      provider: provider
-    )
-  end
-
-  @doc """
-  Builds the client struct downstream Base.* functions run on.
-
-  Accepts atom- or string-keyed config with `:base_url`, `:username`,
-  `:password`, `:calendar_paths`, and `:writable_calendar_paths`; takes the provider from
-  `opts`. This is the only place a `Client` is constructed, which is what
-  makes the password's inspect-time redaction hold for every CalDAV-family
-  provider.
-  """
-  @spec build_client(%{atom() => term()} | %{String.t() => term()}, keyword()) :: caldav_client()
-  def build_client(config, opts) when is_map(config) do
-    provider = Keyword.fetch!(opts, :provider)
-
-    %Client{
-      base_url: normalize_url(Map.get(config, :base_url) || Map.get(config, "base_url")),
-      username: Map.get(config, :username) || Map.get(config, "username"),
-      password: Map.get(config, :password) || Map.get(config, "password"),
-      calendar_paths: Map.get(config, :calendar_paths) || [],
-      writable_calendar_paths:
-        Map.get(config, :writable_calendar_paths) ||
-          Map.get(config, "writable_calendar_paths") || [],
-      free_busy_paths: Map.get(config, :free_busy_paths) || [],
-      skip_breaker: Map.get(config, :skip_breaker, false),
-      provider: provider
-    }
-  end
-
-  # The provider is a string on the integration row and an atom on the client,
-  # so the mapping belongs here, next to the client it feeds. A generic
-  # `"caldav"` row is not in it: its client takes the server type detected
-  # from the URL, as every other generic CalDAV client does, so that its
-  # calls trip the host breaker a reset closes
-  # (`CalendarCircuitBreaker.breaker_key/2`).
-  @provider_atoms Family.client_providers()
-
-  @doc """
-  Builds a client from a stored calendar integration row.
-  """
-  @spec client_for_integration(map()) :: caldav_client()
-  def client_for_integration(integration) do
-    build_client(
-      %{
-        base_url: integration.base_url,
-        username: integration.username,
-        password: integration.password,
-        calendar_paths: integration.calendar_paths
-      },
-      provider: client_provider(integration)
-    )
-  end
-
-  defp client_provider(%{provider: provider, base_url: base_url}) do
-    case Map.fetch(@provider_atoms, provider) do
-      {:ok, provider_atom} -> provider_atom
-      :error -> CalDAVProvider.client_provider(base_url)
-    end
-  end
+  @doc "See `CalDAV.Client.client_for_integration/1`."
+  defdelegate client_for_integration(integration), to: Client
 
   @doc """
   Quick connectivity probe via a PROPFIND request with a short timeout.
@@ -382,6 +300,18 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     case primary_calendar_path(client) do
       nil -> {:error, "No calendar configured for creating events"}
       path -> Events.put_raw_event(client, path, uid, ical_data)
+    end
+  end
+
+  @doc """
+  The URL of the event `uid` in the primary configured calendar, the
+  resource `put_raw_event/3` writes. `nil` when no calendar is configured.
+  """
+  @spec primary_event_url(caldav_client(), String.t()) :: String.t() | nil
+  def primary_event_url(client, uid) do
+    case primary_calendar_path(client) do
+      nil -> nil
+      path -> UrlBuilder.build_event_url(client.base_url, path, uid)
     end
   end
 

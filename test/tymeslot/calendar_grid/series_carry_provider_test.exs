@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesTransfer
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
@@ -219,6 +220,40 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
 
       assert [:ok] = run_video_jobs()
       assert video_of(integration, synced.uid) == {video.id, @link}
+    end
+
+    # The notice of a guest an update email missed follows its occurrence to
+    # the uid the sync caches it under, as a colour override does.
+    test "an edit of every occurrence an hour later moves the undelivered update notices", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence
+    } do
+      :ok =
+        UndeliveredUpdates.note_delivery(
+          integration.id,
+          occurrence.uid,
+          "guest@example.com",
+          {:error, :smtp}
+        )
+
+      serve(google())
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(
+                 user.id,
+                 occurrence,
+                 %{start_at: ~U[2026-11-02 09:00:00Z], end_at: ~U[2026-11-02 10:00:00Z]},
+                 recurrence_scope: :all
+               )
+
+      assert UndeliveredUpdates.list_for_event(user.id, integration.id, occurrence.uid) == []
+
+      assert UndeliveredUpdates.list_for_event(
+               user.id,
+               integration.id,
+               "series1@google.com_20261102T090000Z"
+             ) == ["guest@example.com"]
     end
 
     test "a split keeps the video on both halves and moves the following colours", %{

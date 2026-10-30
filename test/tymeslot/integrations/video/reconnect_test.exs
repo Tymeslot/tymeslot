@@ -28,9 +28,9 @@ defmodule Tymeslot.Integrations.Video.ReconnectTest do
     integration = insert(:video_integration, user: user, provider: "zoom", needs_reauth: true)
 
     live = room(integration, 1)
-    pending = room(integration, 2, status: "pending")
-    cancelled = room(integration, 3, status: "cancelled")
-    expired = room(integration, 4, status: "expired")
+    pending = room(integration, 2, status: :pending)
+    cancelled = room(integration, 3, status: :cancelled)
+    expired = room(integration, 4, status: :expired)
     room(integration, -3)
 
     assert {:ok, updated} = Reconnect.save(integration, %{access_token: "new-token"})

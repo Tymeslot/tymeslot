@@ -85,7 +85,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
           meeting_type_name: "Consult"
         )
 
-      connect_account = insert(:connect_account, user: user, status: "active")
+      connect_account = insert(:connect_account, user: user, status: :active)
 
       # Transitive cascade via webhook_id -> delete_all
       webhook_delivery = insert(:webhook_delivery, webhook: webhook)
@@ -126,10 +126,10 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       {:ok, health_state} =
         %IntegrationHealthStateSchema{}
         |> IntegrationHealthStateSchema.changeset(%{
-          integration_type: "calendar",
+          integration_type: :calendar,
           integration_id: calendar_integration.id,
           user_id: user.id,
-          status: "healthy",
+          status: :healthy,
           backoff_ms: 1_800_000
         })
         |> Repo.insert()
@@ -241,7 +241,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert retained_connect, "connect_account: expected retention (soft-delete only)"
       assert retained_connect.user_id == nil, "connect_account.user_id should be nilified"
       assert retained_connect.deleted_at != nil, "connect_account.deleted_at must be set"
-      assert retained_connect.status == "deleted"
+      assert retained_connect.status == :deleted
       refute retained_connect.charges_enabled
 
       refute Repo.get(MeetingSchema, meeting.id),

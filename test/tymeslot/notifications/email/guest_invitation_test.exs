@@ -98,7 +98,7 @@ defmodule Tymeslot.Notifications.Email.GuestInvitationTest do
     end
 
     test "discards the job for a meeting cancelled since the guests were added" do
-      meeting = confirmed_meeting(status: "cancelled")
+      meeting = confirmed_meeting(status: :cancelled)
       {:ok, guests} = Guests.create_for_meeting(meeting.id, ["late@example.com"])
 
       # No expectation: any send fails the test.

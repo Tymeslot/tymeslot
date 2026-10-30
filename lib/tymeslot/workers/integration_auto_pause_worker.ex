@@ -29,7 +29,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
       server answering one sync a day would reset this timer daily and never
       be paused.
 
-  Both triggers also require the *current* status to be `"unhealthy"`, so an
+  Both triggers also require the *current* status to be `:unhealthy`, so an
   integration that's working today but was broken in the past is never
   paused.
 
@@ -41,7 +41,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
 
   ## Idempotency
 
-  The pause query filters by `s.status == "unhealthy"`, so an already-paused
+  The pause query filters by `s.status == :unhealthy`, so an already-paused
   integration won't be picked up again on the next run (its row is unchanged
   because the probe loop skips inactive integrations and never updates the
   status). The "paused" email scheduler also has a 90-day uniqueness window
@@ -59,14 +59,12 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.HealthCheck.Alerting
-  alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Shared.IntegrationTypes
 
   @default_cutoff_days 14
   @default_hard_failure_count 168
-  @unhealthy_status HealthStatus.to_db_value(:unhealthy)
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
@@ -108,7 +106,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
         # against the race where a concurrent sync worker reset the row to
         # "healthy" after list_pausable returned the stale unhealthy snapshot.
         case IntegrationHealthStateQueries.get(type, row.integration_id) do
-          {:ok, %{status: @unhealthy_status} = fresh_row} ->
+          {:ok, %{status: :unhealthy} = fresh_row} ->
             case deactivate(type, integration) do
               {:ok, paused} ->
                 Logger.info("Auto-pausing integration",

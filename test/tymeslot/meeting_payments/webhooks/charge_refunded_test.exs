@@ -18,7 +18,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           stripe_charge_id: "ch_FULL"
@@ -29,7 +29,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert :ok = ChargeRefunded.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
       assert reloaded.last_event_id == "evt_FULL"
     end
@@ -38,7 +38,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           stripe_charge_id: "ch_PART"
@@ -49,7 +49,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert :ok = ChargeRefunded.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "partially_refunded"
+      assert reloaded.status == :partially_refunded
       assert reloaded.refunded_amount_cents == 2000
     end
 
@@ -57,7 +57,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "refunded",
+          status: :refunded,
           amount_cents: 5000,
           refunded_amount_cents: 5000,
           stripe_charge_id: "ch_DUP",
@@ -69,7 +69,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert :ok = ChargeRefunded.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
       # Should still record the most recent event id
       assert reloaded.last_event_id == "evt_DUP"
@@ -79,7 +79,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "partially_refunded",
+          status: :partially_refunded,
           amount_cents: 5000,
           refunded_amount_cents: 2000,
           stripe_charge_id: "ch_SAME",
@@ -104,7 +104,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           stripe_charge_id: "ch_DISP"
@@ -115,7 +115,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert :ok = ChargeRefunded.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.refunded_amount_cents == 5000
     end
   end
@@ -125,7 +125,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           stripe_charge_id: "ch_FOREIGN_REFUND"
         )
@@ -138,7 +138,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert :ok = ChargeRefunded.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
       assert reloaded.last_event_id == nil
     end

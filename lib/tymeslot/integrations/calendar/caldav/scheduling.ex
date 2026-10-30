@@ -158,6 +158,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
     do: if(open_xchange?(client), do: [schedule_reply: false], else: [])
 
   @doc """
+  `write_opts/1` behind the caller's `:timeout`, if `opts` carries one: the
+  full option list an event write passes to `CalDAV.Http`.
+  """
+  @spec write_opts(Client.t(), keyword()) :: keyword()
+  def write_opts(client, opts) when is_map(client),
+    do: Keyword.take(opts, [:timeout]) ++ write_opts(client)
+
+  @doc """
   The address an `{:organiser_attendee, addresses}` event lists for its
   owner, given the organiser's (see the moduledoc): the organiser's own when
   it is on the account or the account's addresses are unknown, otherwise the

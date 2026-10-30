@@ -54,7 +54,7 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
     classify_error = Keyword.fetch!(callbacks, :classify_error)
     on_created = Keyword.fetch!(callbacks, :on_created)
 
-    paid_attrs = Map.put(meeting_attrs, :status, "awaiting_payment")
+    paid_attrs = Map.put(meeting_attrs, :status, :awaiting_payment)
 
     with {:ok, meeting} <- create_meeting.(paid_attrs),
          {:ok, _guests} <- guests_or_expire(meeting, booking_data, create_guests),
@@ -91,7 +91,7 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
   # Best-effort: the booking has already failed, and failing to expire it only
   # means the reconciliation sweep picks the slot up later instead of now.
   defp expire_unpaid_meeting(meeting, reason) do
-    case Scheduling.update_meeting_with_conflict_check(meeting, %{status: "expired"}) do
+    case Scheduling.update_meeting_with_conflict_check(meeting, %{status: :expired}) do
       {:ok, _expired} ->
         :ok
 

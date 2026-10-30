@@ -3,9 +3,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
   Stripe Connect account linked to a Tymeslot host.
 
   status values:
-    * "creating" — placeholder row; Stripe.Account.create has not yet succeeded
-    * "active"   — Stripe account exists and the row tracks its current state
-    * "deleted"  — host disconnected or was deleted; user_id nilified
+    * `:creating` — placeholder row; Stripe.Account.create has not yet succeeded
+    * `:active`   — Stripe account exists and the row tracks its current state
+    * `:deleted`  — host disconnected or was deleted; user_id nilified
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -15,8 +15,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  @valid_statuses ~w(creating active deleted)
-
+  @type status :: :creating | :active | :deleted
   @type t :: %__MODULE__{}
 
   schema "connect_accounts" do
@@ -30,7 +29,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     field :last_synced_at, :utc_datetime
     field :last_account_event_at, :utc_datetime
     field :deleted_at, :utc_datetime
-    field :status, :string, default: "creating"
+    field :status, Ecto.Enum, values: [:creating, :active, :deleted], default: :creating
 
     belongs_to :user, UserSchema, type: :id
     timestamps(type: :utc_datetime)
@@ -47,7 +46,6 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     schema
     |> cast(attrs, @castable)
     |> validate_required([:status])
-    |> validate_inclusion(:status, @valid_statuses)
     |> validate_inclusion(:default_currency, Currency.allowlist())
     |> unique_constraint(:stripe_account_id,
       name: :connect_accounts_stripe_account_id_live_unique_index

@@ -112,8 +112,10 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
         send(view.pid, {:step_event, :booking, :change_timezone, "America/New_York"})
         Eventually.eventually(fn -> live_assigns(view).user_timezone == "America/New_York" end)
 
-        assert query(BookingTestHelpers.last_patched_url(view))["visitor_timezone"] ==
-                 "America/New_York"
+        BookingTestHelpers.await_patched_url(
+          view,
+          &(query(&1)["visitor_timezone"] == "America/New_York")
+        )
 
         assert live_assigns(view).current_state == :booking
         assert live_assigns(view).submission_token == token
@@ -145,6 +147,34 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
       assigns = live_assigns(view)
       assert assigns.current_state == :schedule
       refute assigns.entered_via_overview
+    end
+  end
+
+  describe "a page reached with a doubled slash" do
+    # The router reads `//username` as `/username`, but navigation refuses
+    # a path starting `//` (a protocol-relative URL), so the page's patch
+    # must name its route, not the address bar's spelling of it.
+    test "patches to the overview's own path", %{conn: conn} do
+      %{profile: profile} = seed_organiser("1", "url-doubled")
+      {:ok, view, _html} = live(conn, "http://www.example.com//#{profile.username}")
+
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+
+      url = BookingTestHelpers.last_patched_url(view)
+      assert URI.parse(url).path == "/#{profile.username}"
+      assert query(url)["duration"] == "quick-chat"
+    end
+
+    test "patches to a meeting type's own path", %{conn: conn} do
+      %{profile: profile} = seed_organiser("1", "url-doubled-type")
+
+      {:ok, view, _html} =
+        live(conn, "http://www.example.com//#{profile.username}//quick-chat")
+
+      BookingDriver.pick_first_slot(view)
+
+      url = BookingTestHelpers.await_patched_url(view, &is_binary(query(&1)["time"]))
+      assert URI.parse(url).path == "/#{profile.username}/quick-chat"
     end
   end
 

@@ -49,7 +49,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   @typedoc "The meeting fields that follow from the booker's chosen location."
   @type resolution :: %{
           location: String.t() | nil,
-          location_kind: String.t() | nil,
+          location_kind: LocationOption.kind() | nil,
           location_option_id: String.t() | nil,
           video_integration_id: integer() | nil,
           venue_id: integer() | nil,
@@ -130,7 +130,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   """
   @spec video_integration_for(LocationOption.t(), integer() | String.t() | nil) ::
           integer() | nil
-  def video_integration_for(%LocationOption{kind: "video", video_integration_ids: ids}, chosen) do
+  def video_integration_for(%LocationOption{kind: :video, video_integration_ids: ids}, chosen) do
     chosen_id = to_integer(chosen)
     if chosen_id in ids, do: chosen_id, else: List.first(ids)
   end
@@ -180,7 +180,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   @spec display(LocationOption.t(), String.t() | nil) :: String.t()
   # An in-person option's address lives in its venues (see
   # `place_at_venue/3`), never in the option, so the option alone is its label.
-  def display(%LocationOption{kind: "in_person", label: label}, _guest_phone), do: label
+  def display(%LocationOption{kind: :in_person, label: label}, _guest_phone), do: label
 
   def display(%LocationOption{collect_from_guest: true, label: label} = option, guest_phone) do
     case normalize_phone(guest_phone) do
@@ -200,7 +200,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       venue_id: nil,
       # Until `place_at_venue/3` places it, an in-person booking has no
       # address yet.
-      address_to_arrange: option.kind == "in_person",
+      address_to_arrange: option.kind == :in_person,
       attendee_phone: collected_phone(option, guest_phone)
     }
   end
@@ -217,7 +217,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
     }
   end
 
-  defp collected_phone(%LocationOption{kind: "phone", collect_from_guest: true}, guest_phone),
+  defp collected_phone(%LocationOption{kind: :phone, collect_from_guest: true}, guest_phone),
     do: normalize_phone(guest_phone)
 
   defp collected_phone(_option, _guest_phone), do: nil
@@ -239,8 +239,8 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
     [
       %LocationOption{
         id: "legacy-video",
-        kind: "video",
-        label: default_label("video"),
+        kind: :video,
+        label: default_label(:video),
         video_integration_ids: [id],
         position: 0
       }
@@ -251,8 +251,8 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
     [
       %LocationOption{
         id: "legacy-in-person",
-        kind: "in_person",
-        label: default_label("in_person"),
+        kind: :in_person,
+        label: default_label(:in_person),
         position: 0
       }
     ]
@@ -261,10 +261,10 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   # Each kind's default label in English, as the default meeting types store
   # it, and in the current locale.
   @default_labels %{
-    "video" => "Video call",
-    "in_person" => "In person",
-    "phone" => "Phone call",
-    "custom" => "Somewhere else"
+    video: "Video call",
+    in_person: "In person",
+    phone: "Phone call",
+    custom: "Somewhere else"
   }
 
   defp localise_default_label(%LocationOption{kind: kind, label: label} = option) do
@@ -273,8 +273,8 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       else: option
   end
 
-  defp default_label("video"), do: dgettext("booking", "Video call")
-  defp default_label("in_person"), do: dgettext("booking", "In person")
-  defp default_label("phone"), do: dgettext("booking", "Phone call")
-  defp default_label("custom"), do: dgettext("booking", "Somewhere else")
+  defp default_label(:video), do: dgettext("booking", "Video call")
+  defp default_label(:in_person), do: dgettext("booking", "In person")
+  defp default_label(:phone), do: dgettext("booking", "Phone call")
+  defp default_label(:custom), do: dgettext("booking", "Somewhere else")
 end

@@ -326,7 +326,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   defp default_location do
     %LocationOption{
       id: UUID.generate(),
-      kind: "in_person",
+      kind: :in_person,
       label: dgettext("dashboard_meeting_form", "In person"),
       position: 0
     }

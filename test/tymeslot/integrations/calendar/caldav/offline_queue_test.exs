@@ -229,7 +229,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     test "creates the event from the local copy when a live meeting claims the row",
          %{integration: integration} do
       row = insert_missing_row(integration, [])
-      insert_claiming_meeting(integration, row, status: "confirmed")
+      insert_claiming_meeting(integration, row, status: :confirmed)
 
       counter = :counters.new(1, [])
 
@@ -276,7 +276,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     test "never recreates the event of a cancelled meeting",
          %{integration: integration} do
       row = insert_missing_row(integration, [])
-      insert_claiming_meeting(integration, row, status: "cancelled")
+      insert_claiming_meeting(integration, row, status: :cancelled)
 
       counter = :counters.new(1, [])
 
@@ -300,7 +300,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       row = insert_missing_row(integration, start_at: past_start, end_at: past_end)
 
       insert_claiming_meeting(integration, row,
-        status: "confirmed",
+        status: :confirmed,
         start_time: past_start,
         end_time: past_end
       )
@@ -321,7 +321,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     test "keeps the row queued when the recreate itself fails",
          %{integration: integration} do
       row = insert_missing_row(integration, [])
-      insert_claiming_meeting(integration, row, status: "confirmed")
+      insert_claiming_meeting(integration, row, status: :confirmed)
 
       counter = :counters.new(1, [])
 

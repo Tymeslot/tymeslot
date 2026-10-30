@@ -25,7 +25,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       amount_cents: 5000,
       currency: "eur",
       refunded_amount_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     }
 
@@ -64,14 +64,14 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
   describe "refund_outstanding?/1" do
     test "returns true for a paid payment with nothing refunded yet" do
-      payment = payment_stub(%{status: "paid", refunded_amount_cents: 0})
+      payment = payment_stub(%{status: :paid, refunded_amount_cents: 0})
       assert Refunds.refund_outstanding?(payment)
     end
 
     test "returns true for a partially refunded payment with a balance left" do
       payment =
         payment_stub(%{
-          status: "partially_refunded",
+          status: :partially_refunded,
           amount_cents: 5000,
           refunded_amount_cents: 2000
         })
@@ -81,18 +81,18 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
     test "returns false once the whole amount has been given back" do
       payment =
-        payment_stub(%{status: "refunded", amount_cents: 5000, refunded_amount_cents: 5000})
+        payment_stub(%{status: :refunded, amount_cents: 5000, refunded_amount_cents: 5000})
 
       refute Refunds.refund_outstanding?(payment)
     end
 
     test "returns false for a disputed payment, since Stripe owns the decision" do
-      payment = payment_stub(%{status: "disputed", refunded_amount_cents: 0})
+      payment = payment_stub(%{status: :disputed, refunded_amount_cents: 0})
       refute Refunds.refund_outstanding?(payment)
     end
 
     test "returns false for a payment that never settled" do
-      payment = payment_stub(%{status: "pending", refunded_amount_cents: 0})
+      payment = payment_stub(%{status: :pending, refunded_amount_cents: 0})
       refute Refunds.refund_outstanding?(payment)
     end
 
@@ -105,7 +105,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "stays true outside the 60-day window, where refundable?/1 turns false" do
       payment =
         payment_stub(%{
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)
         })
 
@@ -116,19 +116,19 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
   describe "refundable?/1" do
     test "returns true for a paid payment within the window" do
-      payment = payment_stub(%{status: "paid", paid_at: DateTime.utc_now(:second)})
+      payment = payment_stub(%{status: :paid, paid_at: DateTime.utc_now(:second)})
       assert Refunds.refundable?(payment)
     end
 
     test "returns true for a partially_refunded payment within the window" do
       payment =
-        payment_stub(%{status: "partially_refunded", paid_at: DateTime.utc_now(:second)})
+        payment_stub(%{status: :partially_refunded, paid_at: DateTime.utc_now(:second)})
 
       assert Refunds.refundable?(payment)
     end
 
     test "returns false when paid_at is nil" do
-      payment = payment_stub(%{status: "paid", paid_at: nil})
+      payment = payment_stub(%{status: :paid, paid_at: nil})
       refute Refunds.refundable?(payment)
     end
 
@@ -137,25 +137,25 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     # that `validate_amount/2` would then reject.
     test "returns false for a paid row whose balance is already fully refunded" do
       payment =
-        payment_stub(%{status: "paid", amount_cents: 5000, refunded_amount_cents: 5000})
+        payment_stub(%{status: :paid, amount_cents: 5000, refunded_amount_cents: 5000})
 
       refute Refunds.refundable?(payment)
     end
 
     test "returns false for a fully refunded payment" do
-      payment = payment_stub(%{status: "refunded", paid_at: DateTime.utc_now(:second)})
+      payment = payment_stub(%{status: :refunded, paid_at: DateTime.utc_now(:second)})
       refute Refunds.refundable?(payment)
     end
 
     test "returns false when outside the 60-day window" do
       old_paid_at = DateTime.add(DateTime.utc_now(:second), -61, :day)
-      payment = payment_stub(%{status: "paid", paid_at: old_paid_at})
+      payment = payment_stub(%{status: :paid, paid_at: old_paid_at})
       refute Refunds.refundable?(payment)
     end
 
     test "returns true on the last day of the window (boundary)" do
       paid_at = DateTime.add(DateTime.utc_now(:second), -60, :day)
-      payment = payment_stub(%{status: "paid", paid_at: paid_at})
+      payment = payment_stub(%{status: :paid, paid_at: paid_at})
       assert Refunds.refundable?(payment)
     end
   end
@@ -172,7 +172,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       amount_cents: 5000,
       application_fee_cents: 25,
       currency: "eur",
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second),
       refunded_amount_cents: 0,
       stripe_account_id: "acct_TEST"
@@ -197,11 +197,11 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       end)
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 5000)
-      assert updated.status == "refunded"
+      assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
 
       reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
     end
   end
@@ -217,12 +217,12 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       end)
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 2000)
-      assert updated.status == "partially_refunded"
+      assert updated.status == :partially_refunded
       assert updated.refunded_amount_cents == 2000
     end
 
     test "second partial reaching total transitions to refunded" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: "partially_refunded"})
+      payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
       expect(StripeAdapterMock, :create_refund, fn params, opts ->
         assert params.amount == 3000
@@ -232,19 +232,19 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       end)
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 3000)
-      assert updated.status == "refunded"
+      assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
     end
 
     test "second partial below total stays partially_refunded" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 1000, status: "partially_refunded"})
+      payment = paid_booking_payment(%{refunded_amount_cents: 1000, status: :partially_refunded})
 
       expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
         {:ok, %{id: "re_partial2"}}
       end)
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 1500)
-      assert updated.status == "partially_refunded"
+      assert updated.status == :partially_refunded
       assert updated.refunded_amount_cents == 2500
     end
   end
@@ -257,7 +257,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     end
 
     test "rejects refund that exceeds remaining refundable balance" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 4500, status: "partially_refunded"})
+      payment = paid_booking_payment(%{refunded_amount_cents: 4500, status: :partially_refunded})
 
       # remaining = 500; asking for 600 must error
       assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 600)
@@ -273,7 +273,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "rejects already-refunded payment" do
       payment =
         paid_booking_payment(%{
-          status: "refunded",
+          status: :refunded,
           refunded_amount_cents: 5000
         })
 
@@ -288,7 +288,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     end
 
     test "rejects refund when paid_at is missing" do
-      payment = paid_booking_payment(%{paid_at: nil, status: "pending"})
+      payment = paid_booking_payment(%{paid_at: nil, status: :pending})
 
       assert {:error, :not_paid} = Refunds.issue_refund(payment, 100)
     end
@@ -298,7 +298,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       # validation must short-circuit so the host gets a meaningful error
       # instead of a wasted Stripe round-trip — Mox verify_on_exit! enforces
       # that no create_refund call is made.
-      payment = paid_booking_payment(%{status: "disputed"})
+      payment = paid_booking_payment(%{status: :disputed})
 
       assert {:error, :under_dispute} = Refunds.issue_refund(payment, 100)
     end
@@ -314,7 +314,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       end)
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 1000)
-      assert updated.status == "partially_refunded"
+      assert updated.status == :partially_refunded
     end
 
     test "includes refund_application_fee=true when application_fee_cents > 0" do
@@ -340,7 +340,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 1000)
 
       reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
     end
   end
@@ -494,7 +494,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   defp assert_untouched(payment) do
     reloaded = BookingPaymentQueries.get(payment.id)
     assert reloaded.refunded_amount_cents == 0
-    assert reloaded.status == "paid"
+    assert reloaded.status == :paid
     refute_enqueued(worker: SendBookingPaymentRefunded)
   end
 end

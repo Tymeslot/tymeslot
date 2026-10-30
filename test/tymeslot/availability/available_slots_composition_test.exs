@@ -175,7 +175,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       insert(:availability_override,
         schedule: schedule,
         date: target,
-        override_type: "unavailable"
+        override_type: :unavailable
       )
 
       assert {:ok, []} =
@@ -196,7 +196,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       insert(:availability_override,
         schedule: schedule,
         date: target,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[12:00:00]
       )

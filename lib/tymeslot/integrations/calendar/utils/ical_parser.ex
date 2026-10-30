@@ -105,7 +105,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     uid = extract_property(lines, "UID")
     recurrence_rule = extract_property(lines, "RRULE")
     recurrence_id = extract_recurrence_id(lines)
-    exdates = extract_exdates(lines, vtimezones)
+    exdates = extract_date_list(lines, "EXDATE", vtimezones)
 
     # Parse dates with timezone support
     dtstart = extract_datetime_property(lines, "DTSTART")
@@ -137,6 +137,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         # already says all there is to say about.
         recurrence_id_at: zoned_recurrence_id(lines, vtimezones),
         exdates: exdates,
+        # Occurrences added beside the rule's (RFC 5545 §3.8.5.2); a PERIOD
+        # value names no start this parser reads and is left out.
+        rdates: extract_date_list(lines, "RDATE", vtimezones),
         start_time: start_time,
         end_time: end_time,
         # A DURATION that could not be read, so `end_time` is the default
@@ -541,10 +544,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
-  defp extract_exdates(lines, vtimezones) do
+  # EXDATE and RDATE: any number of lines, each a comma-separated list, each
+  # value read as DTSTART is (its TZID, VALUE=DATE, or UTC).
+  defp extract_date_list(lines, property, vtimezones) do
     lines
     |> Enum.filter(fn line ->
-      String.starts_with?(line, "EXDATE:") or String.starts_with?(line, "EXDATE;")
+      String.starts_with?(line, property <> ":") or String.starts_with?(line, property <> ";")
     end)
     |> Enum.flat_map(fn line ->
       timezone = extract_timezone_param(line)

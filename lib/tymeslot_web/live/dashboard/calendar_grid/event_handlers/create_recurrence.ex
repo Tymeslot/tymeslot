@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateRecurrence do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceFields
 
   @doc "Keeps the editor's fields and composes the new event's rule from them."
   @spec handle_update_create_recurrence(map(), Phoenix.LiveView.Socket.t()) ::
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateRecurrence do
       check_until: false
     }
 
-    Map.put(creating, :recurrence_rule, Shared.compose_recurrence_rule(params, context))
+    Map.put(creating, :recurrence_rule, RecurrenceFields.compose_recurrence_rule(params, context))
   end
 
   def recompose(creating, _timezone), do: creating

@@ -141,7 +141,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
              ParticipantQueries.list_live_for_meeting(new_meeting.id)
 
     # Old meeting was emptied by the move, so it is cancelled and its event deleted
-    assert Repo.get!(MeetingSchema, old_meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, old_meeting.id).status == :cancelled
 
     assert_enqueued(
       worker: CalendarEventWorker,
@@ -183,7 +183,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
     assert {:error, :failed_to_update_meeting} = result
 
-    assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, old_meeting.id).status == :confirmed
 
     assert [%{id: mover_id, cancelled_at: nil}] =
              ParticipantQueries.list_live_for_meeting(old_meeting.id)
@@ -249,7 +249,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
                move(hour_mover, half_hour_later())
 
       assert DateTime.diff(new_meeting.start_time, hour_meeting.start_time, :minute) == 30
-      assert Repo.get!(MeetingSchema, hour_meeting.id).status == "cancelled"
+      assert Repo.get!(MeetingSchema, hour_meeting.id).status == :cancelled
 
       assert [%{email: "hour@example.com"}] =
                ParticipantQueries.list_live_for_meeting(new_meeting.id)
@@ -270,7 +270,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
       assert {:error, :slot_taken} = move(hour_mover, half_hour_later())
 
-      assert Repo.get!(MeetingSchema, hour_meeting.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, hour_meeting.id).status == :confirmed
 
       assert ["hour@example.com", "s@example.com"] =
                hour_meeting.id
@@ -300,7 +300,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     assert [%{email: "mover@example.com"}] =
              ParticipantQueries.list_live_for_meeting(old_meeting.id)
 
-    assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, old_meeting.id).status == :confirmed
   end
 
   # The page offers the participant's own slot like any other with a spot
@@ -351,7 +351,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
     assert {:ok, _booked} = move(mover, new_slot_params())
 
-    assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, old_meeting.id).status == :confirmed
 
     assert [%{email: "s@example.com"}] =
              ParticipantQueries.list_live_for_meeting(old_meeting.id)
@@ -451,7 +451,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     {:ok, meeting_type} =
       MeetingTypes.update_meeting_type(meeting_type, %{
         locations: [
-          %{kind: "video", label: "Video call", video_integration_ids: [integration.id]}
+          %{kind: :video, label: "Video call", video_integration_ids: [integration.id]}
         ]
       })
 
@@ -478,7 +478,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
              move(mover, new_slot_params())
 
     assert new_meeting.id != old_meeting.id
-    assert new_meeting.location_kind == "in_person"
+    assert new_meeting.location_kind == :in_person
     assert new_meeting.location_option_id == old_meeting.location_option_id
     assert new_meeting.venue_id == venue.id
     assert new_meeting.location == "Main Hall (1 Market Square)"
@@ -575,7 +575,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
     assert {:error, :already_cancelled} = result
 
-    assert [%{id: id, status: "cancelled"}] = Repo.all(MeetingSchema)
+    assert [%{id: id, status: :cancelled}] = Repo.all(MeetingSchema)
     assert id == old_meeting.id
     assert {:ok, %{cancelled_at: %DateTime{}}} = ParticipantQueries.get(mover.id)
 

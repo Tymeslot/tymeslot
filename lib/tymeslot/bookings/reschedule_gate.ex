@@ -15,7 +15,7 @@ defmodule Tymeslot.Bookings.RescheduleGate do
   # (pending, awaiting_payment, confirmed, ...), which a reschedule never
   # changes there.
   #
-  # On a gated one being moved from `"confirmed"` or `"awaiting_approval"`,
+  # On a gated one being moved from `:confirmed` or `:awaiting_approval`,
   # the reschedule *is* a new request, so the whole approval record is reset
   # rather than partially updated: a stale `approval_resolved_at` would make
   # the new request look answered, a stale `approval_nudge_sent_at` would
@@ -55,7 +55,7 @@ defmodule Tymeslot.Bookings.RescheduleGate do
         requested_at = DateTime.truncate(Clock.utc_now(), :second)
 
         %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: requested_at,
           approval_deadline_at: Approval.deadline_for(gate_type, requested_at, start_time),
           approval_resolved_at: nil,
@@ -65,8 +65,8 @@ defmodule Tymeslot.Bookings.RescheduleGate do
           announced_at: nil
         }
 
-      not Approval.required?(gate_type) and meeting.status == "awaiting_approval" ->
-        %{status: "confirmed", approval_resolved_at: DateTime.truncate(Clock.utc_now(), :second)}
+      not Approval.required?(gate_type) and meeting.status == :awaiting_approval ->
+        %{status: :confirmed, approval_resolved_at: DateTime.truncate(Clock.utc_now(), :second)}
 
       true ->
         %{}
@@ -93,12 +93,12 @@ defmodule Tymeslot.Bookings.RescheduleGate do
   defp gate_meeting_type(meeting_type, _meeting), do: meeting_type
 
   # Only these two statuses mean the invitee is expecting a decision from the
-  # host: `"confirmed"` (the host already agreed, and the reschedule asks
-  # again) or `"awaiting_approval"` (a held request being moved before anyone
-  # has answered). `"awaiting_payment"` never reached the host in the first
-  # place, and `"expired"` already lapsed and was refunded by
+  # host: `:confirmed` (the host already agreed, and the reschedule asks
+  # again) or `:awaiting_approval` (a held request being moved before anyone
+  # has answered). `:awaiting_payment` never reached the host in the first
+  # place, and `:expired` already lapsed and was refunded by
   # `Meetings.Approval` — reviving either into the gate would let the host
   # approve a booking nobody paid for, or one the invitee was already given
   # their money back for.
-  defp reenters_gate?(%{status: status}), do: status in ["confirmed", "awaiting_approval"]
+  defp reenters_gate?(%{status: status}), do: status in [:confirmed, :awaiting_approval]
 end

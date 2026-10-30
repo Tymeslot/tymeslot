@@ -96,7 +96,7 @@ defmodule Tymeslot.Slack.SlackQueriesTest do
       attrs = %{
         user_id: user.id,
         name: "My Workspace",
-        app_mode: "oauth",
+        app_mode: :oauth,
         bot_token: "xoxb-token",
         team_id: "T1",
         channel_id: "C1",
@@ -129,7 +129,7 @@ defmodule Tymeslot.Slack.SlackQueriesTest do
       attrs = %{
         user_id: user.id,
         name: "Acme",
-        app_mode: "oauth",
+        app_mode: :oauth,
         bot_token: "xoxb-stub",
         team_id: "T123",
         team_name: "Acme",
@@ -148,7 +148,7 @@ defmodule Tymeslot.Slack.SlackQueriesTest do
         SlackQueries.create_oauth_stub(%{
           user_id: user.id,
           name: "Acme",
-          app_mode: "oauth",
+          app_mode: :oauth,
           bot_token: "xoxb-stub",
           team_id: "T1",
           events: ["meeting.created"]
@@ -252,7 +252,7 @@ defmodule Tymeslot.Slack.SlackQueriesTest do
     test "removes oauth integrations without a channel for the user" do
       user = insert(:user)
 
-      _stub = insert(:slack_integration, user: user, app_mode: "oauth", channel_id: nil)
+      _stub = insert(:slack_integration, user: user, app_mode: :oauth, channel_id: nil)
       kept = insert(:slack_integration, user: user)
 
       assert {1, _rows} = SlackQueries.delete_pending_stubs(user.id)
@@ -268,7 +268,7 @@ defmodule Tymeslot.Slack.SlackQueriesTest do
       stub =
         insert(:slack_integration,
           user: user,
-          app_mode: "oauth",
+          app_mode: :oauth,
           channel_id: nil
         )
 

@@ -150,7 +150,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   def create_room(updated, original, opts \\ [])
 
   def create_room(
-        %Meeting{status: "confirmed", video_room_id: nil, video_integration_id: id} = updated,
+        %Meeting{status: :confirmed, video_room_id: nil, video_integration_id: id} = updated,
         %Meeting{} = original,
         opts
       )

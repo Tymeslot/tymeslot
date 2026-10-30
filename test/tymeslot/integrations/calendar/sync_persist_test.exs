@@ -160,7 +160,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
       assert :ok = Sync.persist_normalised_events(integration, [event])
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
     end
 
     test "time-changed reconcile (all-day event): updates calendar_sync_status when start_date differs" do
@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
       assert :ok = Sync.persist_normalised_events(integration, [event])
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
     end
 
     test "time-changed reconcile (CalDAV): matches by uid when the cache row is keyed by href" do
@@ -222,7 +222,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
       assert :ok = Sync.persist_normalised_events(integration, [event])
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
     end
 
     test "clears a stale externally_modified flag once the times agree again" do
@@ -237,7 +237,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
           provider_event_id: nil,
           calendar_uid: uid,
           start_time: start_time,
-          calendar_sync_status: "externally_modified",
+          calendar_sync_status: :externally_modified,
           calendar_sync_status_dismissed_at: DateTime.utc_now(:second)
         )
 
@@ -277,8 +277,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
           provider_event_id: nil,
           calendar_uid: uid,
           start_time: start_time,
-          status: "cancelled",
-          calendar_sync_status: "externally_deleted"
+          status: :cancelled,
+          calendar_sync_status: :externally_deleted
         )
 
       event =
@@ -297,7 +297,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
       assert :ok = Sync.persist_normalised_events(integration, [event])
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.calendar_sync_status == "externally_deleted"
+      assert updated.calendar_sync_status == :externally_deleted
     end
 
     test "leaves an unrelated meeting alone when no identifier matches" do

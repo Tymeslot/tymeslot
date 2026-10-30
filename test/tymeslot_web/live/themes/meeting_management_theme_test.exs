@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingManagementThemeTest do
         organizer_user: user,
         organizer_user_id: user.id,
         organizer_name: user.name,
-        status: "confirmed"
+        status: :confirmed
       )
 
     {profile, meeting}

@@ -220,7 +220,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
     test "approving a first-time request fans out meeting.created", ctx do
       params = booking_params(%{user: ctx.user, meeting_type: ctx.gated_type})
 
-      assert {:ok, %{status: "awaiting_approval"} = held} = Create.execute(params, form_data())
+      assert {:ok, %{status: :awaiting_approval} = held} = Create.execute(params, form_data())
       refute_enqueued(worker: WebhookWorker, args: %{"event_type" => "meeting.created"})
 
       assert {:ok, confirmed} = Approval.approve(held)
@@ -253,7 +253,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
         user_timezone: "UTC"
       }
 
-      assert {:ok, %{status: "awaiting_approval"} = moved} =
+      assert {:ok, %{status: :awaiting_approval} = moved} =
                Reschedule.execute(confirmed.uid, new_params, ctx.user.id)
 
       expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_organizer, fn _email,

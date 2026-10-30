@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge do
   exists to remove.
 
   Used to be sibling `:if` clauses, each repeating every other state's
-  negation as a guard. That shape silently swallowed `"expired"`: it matched
+  negation as a guard. That shape silently swallowed `:expired`: it matched
   none of the guards, so it fell through to the last (unguarded-by-status)
   clause and rendered "Scheduled". `badge_variant/1` below names every status
   in `Tymeslot.Meetings.MeetingSchema`'s valid list either its own explicit
@@ -59,14 +59,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge do
   # on the meeting's time — an unpaid checkout badged "Scheduled" is the
   # "unconfirmed thing shown as agreed" failure this feature exists to
   # remove, one status over. Everything else derives from the
-  # live/awaiting/past shape, in priority order; "pending" and "confirmed"
+  # live/awaiting/past shape, in priority order; :pending and :confirmed
   # both fall to the time-derived split deliberately, since neither implies
   # anything beyond it.
   @spec badge_variant(map()) :: variant()
-  defp badge_variant(%{status: "cancelled"}), do: :cancelled
-  defp badge_variant(%{status: "expired"}), do: :expired
-  defp badge_variant(%{status: "awaiting_payment"}), do: :awaiting_payment
-  defp badge_variant(%{status: "completed"}), do: :completed
+  defp badge_variant(%{status: :cancelled}), do: :cancelled
+  defp badge_variant(%{status: :expired}), do: :expired
+  defp badge_variant(%{status: :awaiting_payment}), do: :awaiting_payment
+  defp badge_variant(%{status: :completed}), do: :completed
 
   defp badge_variant(meeting) do
     cond do

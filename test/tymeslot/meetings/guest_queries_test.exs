@@ -32,8 +32,8 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
       {:ok, [g1, g2, _g3]} =
         Guests.create_for_meeting(meeting.id, ~w(a@x.com b@x.com c@x.com))
 
-      {:ok, _rsvp} = Guests.record_rsvp(g1.rsvp_token, "accepted")
-      {:ok, _rsvp} = Guests.record_rsvp(g2.rsvp_token, "declined")
+      {:ok, _rsvp} = Guests.record_rsvp(g1.rsvp_token, :accepted)
+      {:ok, _rsvp} = Guests.record_rsvp(g2.rsvp_token, :declined)
       # _g3 remains pending
 
       summaries = GuestQueries.rsvp_summaries_for_user(user.id)
@@ -74,10 +74,10 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
         )
 
       {:ok, [g1]} = Guests.create_for_meeting(meeting1.id, ["a@x.com"])
-      {:ok, _rsvp} = Guests.record_rsvp(g1.rsvp_token, "accepted")
+      {:ok, _rsvp} = Guests.record_rsvp(g1.rsvp_token, :accepted)
 
       {:ok, [g2, _g3]} = Guests.create_for_meeting(meeting2.id, ["b@x.com", "c@x.com"])
-      {:ok, _rsvp} = Guests.record_rsvp(g2.rsvp_token, "declined")
+      {:ok, _rsvp} = Guests.record_rsvp(g2.rsvp_token, :declined)
       # _g3 remains pending
 
       summaries = GuestQueries.rsvp_summaries_for_user(user.id)
@@ -185,11 +185,11 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
     end
 
     test "the RSVP goes back to pending", %{meeting: meeting, guest: guest} do
-      {:ok, _rsvp} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      {:ok, _rsvp} = Guests.record_rsvp(guest.rsvp_token, :accepted)
 
       assert GuestQueries.reset_for_new_time(meeting.id) == 1
 
-      assert [%{status: "pending", responded_at: nil}] = GuestQueries.list_for_meeting(meeting.id)
+      assert [%{status: :pending, responded_at: nil}] = GuestQueries.list_for_meeting(meeting.id)
     end
 
     # The invitation is what makes a guest eligible for a reminder at all, so

@@ -110,14 +110,14 @@ defmodule Tymeslot.Notifications.Email.SeatJobs do
     DeliveryOutcome.from_error(reason, "Failed to send seat #{label} email")
   end
 
-  defp check_meeting(%{status: "cancelled"}, rule) when rule in [:live_slot, :not_cancelled],
+  defp check_meeting(%{status: :cancelled}, rule) when rule in [:live_slot, :not_cancelled],
     do: {:discard, @meeting_cancelled}
 
   defp check_meeting(meeting, :live_slot) do
     if MeetingState.slot_void?(meeting), do: {:discard, @slot_void}, else: :ok
   end
 
-  defp check_meeting(%{status: "cancelled"}, :cancelled), do: :ok
+  defp check_meeting(%{status: :cancelled}, :cancelled), do: :ok
   defp check_meeting(_meeting, :cancelled), do: {:discard, @meeting_not_cancelled}
   defp check_meeting(_meeting, _rule), do: :ok
 

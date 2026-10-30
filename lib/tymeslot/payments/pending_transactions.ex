@@ -14,7 +14,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
   @spec get_pending_transactions_for_user(pos_integer()) ::
           {:ok, [transaction()]} | {:error, :transaction_lookup_failed}
   def get_pending_transactions_for_user(user_id) do
-    case PaymentQueries.get_transactions_by_status("pending", user_id) do
+    case PaymentQueries.get_transactions_by_status(:pending, user_id) do
       {:ok, transactions} ->
         {:ok, transactions}
 
@@ -29,7 +29,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
     expire_checkout_session_if_present(transaction)
 
     update_attrs = %{
-      status: "failed",
+      status: :failed,
       metadata:
         Map.merge(transaction.metadata, %{
           "superseded" => true,

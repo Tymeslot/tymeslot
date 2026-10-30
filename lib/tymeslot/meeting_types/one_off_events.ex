@@ -171,11 +171,11 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
   # The labels are the English defaults, which `LocationSelection` shows in
   # the reader's language.
   defp location({:venue, venue_id}),
-    do: %{kind: "in_person", label: "In person", venue_ids: [venue_id], position: 0}
+    do: %{kind: :in_person, label: "In person", venue_ids: [venue_id], position: 0}
 
   defp location({:video, integration_id}),
     do: %{
-      kind: "video",
+      kind: :video,
       label: "Video call",
       video_integration_ids: [integration_id],
       position: 0

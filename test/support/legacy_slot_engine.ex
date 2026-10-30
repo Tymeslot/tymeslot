@@ -52,6 +52,20 @@ defmodule Tymeslot.Test.LegacySlotEngine do
     |> Enum.any?(&(DateTime.to_date(&1.start_dt) != DateTime.to_date(&1.end_dt)))
   end
 
+  @doc """
+  Whether a break or time off the legacy engine reads for `date` resolves to
+  no time at all, as one lying wholly in a spring-forward gap does: both its
+  ends move to the first instant after the gap. The legacy overlap test still
+  rejected a slot spanning that instant.
+  """
+  @spec empty_break?(Date.t(), String.t(), String.t(), map()) :: boolean()
+  def empty_break?(date, owner_tz, user_tz, config) do
+    date
+    |> windows(owner_tz, user_tz, config)
+    |> Enum.flat_map(&resolve_breaks(breaks_for_day(&1.date, config), &1.date, owner_tz))
+    |> Enum.any?(fn {from, to} -> DateTime.compare(from, to) == :eq end)
+  end
+
   defp labels(pairs),
     do: pairs |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> Enum.sort_by(&parse/1, Time)
 
@@ -100,14 +114,14 @@ defmodule Tymeslot.Test.LegacySlotEngine do
 
   defp day_opening(date, config) do
     case Enum.find(config.overrides, &(&1.date == date)) do
-      %{override_type: "unavailable"} ->
+      %{override_type: :unavailable} ->
         :closed
 
       %{override_type: type, start_time: %Time{} = s, end_time: %Time{} = e}
-      when type in ["custom_hours", "available"] ->
+      when type in [:custom_hours, :available] ->
         {s, e}
 
-      %{override_type: type} when type in ["custom_hours", "available"] ->
+      %{override_type: type} when type in [:custom_hours, :available] ->
         weekly_opening(date, config, :no_hours)
 
       _none ->

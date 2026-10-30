@@ -38,9 +38,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
   import Tymeslot.TestFixtures
 
   alias Ecto.Changeset
+  alias Plug.HTML
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Onboarding.OnboardingQueries
+  alias Tymeslot.RateLimiterTestHelpers
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
@@ -85,6 +87,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
     view
   end
 
+  # The rendered page escapes apostrophes in the limiter's message.
   describe "adding a Slack integration via webhook URL" do
     test "a valid submission persists the integration and shows it in the list", %{
       conn: conn,
@@ -109,6 +112,29 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
       assert integration.is_active
 
       assert render(view) =~ "Team Bookings"
+    end
+
+    @tag :capture_log
+    test "a submission past the write limit flashes the refusal and persists nothing", %{
+      conn: conn,
+      user: user
+    } do
+      message = RateLimiterTestHelpers.exhaust_limit!(:webhook_write, user.id)
+      view = open_webhook_form(conn)
+
+      view
+      |> form("form[phx-submit='slack_save_webhook']", %{
+        "slack" => %{
+          "name" => "Blocked Hook",
+          "webhook_url" => @webhook_url,
+          "webhook_channel_hint" => "#bookings",
+          "events" => ["meeting.created"]
+        }
+      })
+      |> render_submit()
+
+      assert render(view) =~ HTML.html_escape(message)
+      assert Slack.list_integrations(user.id) == []
     end
 
     test "the stored webhook URL is never rendered back to the page", %{conn: conn} do
@@ -176,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
         insert(:slack_integration,
           user: user,
           name: "Original Name",
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           webhook_url_encrypted: Encryption.encrypt(@webhook_url),
           events: ["meeting.created"],
           is_active: true
@@ -304,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
         insert(:slack_integration,
           user: user,
           name: "Toggle Me",
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           webhook_url_encrypted: Encryption.encrypt(@webhook_url),
           events: ["meeting.created"],
           is_active: true

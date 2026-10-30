@@ -81,6 +81,25 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   end
 
   @doc """
+  Shifts a DateTime into `timezone` for display, returning it with the label
+  of the zone it is actually in.
+
+  When `timezone` is nil, empty, or unknown to the time zone database, the
+  result is the same instant in UTC, labelled "UTC". Callers print the label
+  rather than the zone they asked for, so a failed shift can never show a UTC
+  clock under the name of the zone that failed to resolve.
+  """
+  @spec shift_or_utc(DateTime.t(), String.t() | nil) :: {DateTime.t(), String.t()}
+  def shift_or_utc(datetime, timezone) when is_binary(timezone) and timezone != "" do
+    case DateTime.shift_zone(datetime, timezone) do
+      {:ok, shifted} -> {shifted, timezone}
+      {:error, _reason} -> shift_or_utc(datetime, nil)
+    end
+  end
+
+  def shift_or_utc(datetime, _timezone), do: {DateTime.shift_zone!(datetime, "Etc/UTC"), "UTC"}
+
+  @doc """
   Returns the current DateTime in the given timezone, falling back to UTC.
 
   Reads "now" through `Tymeslot.Clock` rather than the system clock directly,

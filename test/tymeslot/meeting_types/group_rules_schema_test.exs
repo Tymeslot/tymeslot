@@ -13,7 +13,7 @@ defmodule Tymeslot.MeetingTypes.GroupRulesSchemaTest do
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
-  @fixed_location %{kind: "custom", label: "Main hall"}
+  @fixed_location %{kind: :custom, label: "Main hall"}
 
   defp changeset(attrs) do
     MeetingTypeSchema.changeset(
@@ -59,36 +59,36 @@ defmodule Tymeslot.MeetingTypes.GroupRulesSchemaTest do
     end
 
     test "a published phone number is accepted" do
-      cs = group_with_locations([%{kind: "phone", label: "Phone", details: "+44 20 7946 0000"}])
+      cs = group_with_locations([%{kind: :phone, label: "Phone", details: "+44 20 7946 0000"}])
       assert cs.valid?
     end
 
     test "a video call on one provider is accepted" do
-      assert group_with_locations([%{kind: "video", label: "Video", video_integration_ids: [7]}]).valid?
+      assert group_with_locations([%{kind: :video, label: "Video", video_integration_ids: [7]}]).valid?
     end
 
     test "an in-person location at one venue is accepted" do
-      assert group_with_locations([%{kind: "in_person", label: "Office", venue_ids: [3]}]).valid?
+      assert group_with_locations([%{kind: :in_person, label: "Office", venue_ids: [3]}]).valid?
     end
 
     test "two locations are refused" do
       cs =
         group_with_locations([
           @fixed_location,
-          %{kind: "phone", label: "Phone", details: "+44 20 7946 0000"}
+          %{kind: :phone, label: "Phone", details: "+44 20 7946 0000"}
         ])
 
       assert "a group meeting type must offer exactly one location" in errors_on(cs).locations
     end
 
     test "a choice of video providers is refused" do
-      cs = group_with_locations([%{kind: "video", label: "Video", video_integration_ids: [7, 8]}])
+      cs = group_with_locations([%{kind: :video, label: "Video", video_integration_ids: [7, 8]}])
 
       assert "a group meeting type's video call must use exactly one provider" in errors_on(cs).locations
     end
 
     test "a choice of venues is refused" do
-      cs = group_with_locations([%{kind: "in_person", label: "Office", venue_ids: [3, 4]}])
+      cs = group_with_locations([%{kind: :in_person, label: "Office", venue_ids: [3, 4]}])
 
       assert "a group meeting type's in-person location must name exactly one venue" in errors_on(
                cs
@@ -96,13 +96,13 @@ defmodule Tymeslot.MeetingTypes.GroupRulesSchemaTest do
     end
 
     test "an in-person location with the address arranged after booking is refused" do
-      cs = group_with_locations([%{kind: "in_person", label: "Office"}])
+      cs = group_with_locations([%{kind: :in_person, label: "Office"}])
 
       assert "a group meeting type's in-person location must name a venue" in errors_on(cs).locations
     end
 
     test "a phone number collected from each booker is refused" do
-      cs = group_with_locations([%{kind: "phone", label: "Phone", collect_from_guest: true}])
+      cs = group_with_locations([%{kind: :phone, label: "Phone", collect_from_guest: true}])
 
       assert "a group meeting type cannot ask each booker for their phone number" in errors_on(cs).locations
     end
@@ -130,7 +130,7 @@ defmodule Tymeslot.MeetingTypes.GroupRulesSchemaTest do
       cs =
         changeset(%{
           max_participants: 1,
-          locations: [@fixed_location, %{kind: "in_person", label: "Office", venue_ids: [3, 4]}]
+          locations: [@fixed_location, %{kind: :in_person, label: "Office", venue_ids: [3, 4]}]
         })
 
       assert cs.valid?

@@ -15,13 +15,14 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @spec handle_save_webhook(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_save_webhook(%{"slack" => params}, socket) do
     user_id = socket.assigns.current_user.id
 
-    AutomationHelpers.with_rate_limit(
+    RateLimit.with_rate_limit(
       RateLimiter.check(:webhook_write, user_id),
       socket,
       fn ->
@@ -187,8 +188,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
     |> assign(:slack_form_values, %{})
   end
 
-  defp edit_mode_for(%{app_mode: "oauth"}), do: :oauth_existing
-  defp edit_mode_for(%{app_mode: "webhook_url"}), do: :webhook_url_existing
+  defp edit_mode_for(%{app_mode: :oauth}), do: :oauth_existing
+  defp edit_mode_for(%{app_mode: :webhook_url}), do: :webhook_url_existing
   defp edit_mode_for(_other), do: :webhook_url_existing
 
   defp edit_form_values(integration, :oauth_existing) do

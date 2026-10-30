@@ -196,8 +196,7 @@ msgstr "Brak ankiet"
 msgid "Open"
 msgstr "Otwarta"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Płatnych typów spotkań nie można używać w ankietach"
@@ -228,8 +227,7 @@ msgstr "Ankiety"
 msgid "Remove time"
 msgstr "Usuń termin"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Ten typ spotkania jest niedostępny"
@@ -262,8 +260,7 @@ msgstr "Ten termin koliduje z wydarzeniem w twoim kalendarzu"
 msgid "This time is no longer free"
 msgstr "Ten termin nie jest już wolny"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Terminy muszą być w przyszłości"
@@ -284,8 +281,7 @@ msgstr "Strefa czasowa"
 msgid "Title"
 msgstr "Tytuł"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Maksymalna liczba terminów: %{max}"
@@ -537,8 +533,7 @@ msgstr "Usunąć %{name} wraz z odpowiedziami z tej ankiety? Ta osoba nie zostan
 msgid "Remove from the poll"
 msgstr "Usuń z ankiety"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "Termin końcowy musi być w przyszłości"

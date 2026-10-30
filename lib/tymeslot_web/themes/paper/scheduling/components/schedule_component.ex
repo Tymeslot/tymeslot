@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Helpers.LocationIcons
+  alias TymeslotWeb.Live.Scheduling.CalendarDays
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Paper.Components
@@ -291,7 +292,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   defp month_days("week", _assigns), do: []
 
   defp month_days("month", assigns) do
-    CalendarHelpers.get_calendar_days(
+    CalendarDays.get_calendar_days(
       assigns.user_timezone,
       assigns.current_year,
       assigns.current_month,

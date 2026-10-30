@@ -158,7 +158,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
       user_id: user_id,
       amount: amount,
       product_identifier: product_identifier,
-      status: "pending",
+      status: :pending,
       metadata: subscription_metadata
     }
 
@@ -202,7 +202,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
     }
 
     update_attrs = %{
-      status: "failed",
+      status: :failed,
       metadata: Map.merge(transaction.metadata, failure_metadata)
     }
 

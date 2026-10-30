@@ -188,7 +188,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
 
       insert(:meeting,
         organizer_user_id: user.id,
-        status: "confirmed",
+        status: :confirmed,
         start_time: slot.start_time,
         end_time: slot.end_time
       )
@@ -459,7 +459,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
       other =
         insert(:meeting,
           organizer_user_id: user.id,
-          status: "confirmed",
+          status: :confirmed,
           start_time: other_start,
           end_time: DateTime.add(other_start, 30, :minute)
         )

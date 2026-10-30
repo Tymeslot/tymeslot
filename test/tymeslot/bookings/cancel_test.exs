@@ -43,7 +43,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert {:ok, cancelled_meeting} =
                Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
 
-      assert cancelled_meeting.status == "cancelled"
+      assert cancelled_meeting.status == :cancelled
       assert %DateTime{} = cancelled_meeting.cancelled_at
     end
 
@@ -51,7 +51,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       %{user: user} = create_user_with_profile()
 
       meeting =
-        insert_meeting_for_user(user, %{status: "cancelled", start_offset: 3600, duration: 3600})
+        insert_meeting_for_user(user, %{status: :cancelled, start_offset: 3600, duration: 3600})
 
       assert {:error, :already_cancelled} =
                Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -62,7 +62,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       meeting =
         insert_meeting_for_user(user, %{
-          status: "completed",
+          status: :completed,
           start_offset: -7_200,
           duration: 3_600
         })
@@ -108,7 +108,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       # contradicting round of emails for a meeting that never happened.
       expired =
         insert_meeting_for_user(user, %{
-          status: "expired",
+          status: :expired,
           start_offset: 3_600,
           duration: 3_600,
           approval_requested_at: DateTime.add(DateTime.utc_now(:second), -13, :hour),
@@ -121,7 +121,7 @@ defmodule Tymeslot.Bookings.CancelTest do
                Cancel.execute(Repo.get_by!(MeetingSchema, uid: expired.uid))
 
       {:ok, stored} = MeetingQueries.get_meeting_by_uid(expired.uid)
-      assert stored.status == "expired"
+      assert stored.status == :expired
 
       refute_enqueued(
         worker: EmailWorker,
@@ -139,7 +139,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       {:ok, loaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
 
       assert {:ok, cancelled_meeting} = Cancel.execute(loaded_meeting)
-      assert cancelled_meeting.status == "cancelled"
+      assert cancelled_meeting.status == :cancelled
       assert %DateTime{} = cancelled_meeting.cancelled_at
     end
 
@@ -148,7 +148,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       meeting =
         insert_meeting_for_user(user, %{
-          status: "cancelled",
+          status: :cancelled,
           start_offset: 3600,
           duration: 3600
         })
@@ -170,7 +170,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       {:ok, loaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
 
       assert {:ok, cancelled_meeting} = Cancel.execute(loaded_meeting)
-      assert cancelled_meeting.status == "cancelled"
+      assert cancelled_meeting.status == :cancelled
     end
   end
 
@@ -192,10 +192,10 @@ defmodule Tymeslot.Bookings.CancelTest do
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
 
       assert_enqueued(
@@ -211,7 +211,7 @@ defmodule Tymeslot.Bookings.CancelTest do
         insert_meeting_for_user(user, %{
           start_offset: 86_400,
           duration: 3600,
-          status: "awaiting_approval"
+          status: :awaiting_approval
         })
 
       test_pid = self()
@@ -225,7 +225,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       refute_received :refund_attempted
       refute_enqueued(worker: SendBookingPaymentRefunded)
@@ -236,13 +236,13 @@ defmodule Tymeslot.Bookings.CancelTest do
     # than automatic. Withdrawing a *held request* is the case that refunds.
     test "leaves a confirmed booking's payment alone" do
       %{user: user} = create_user_with_profile()
-      meeting = insert_held_paid_request(user, "confirmed")
+      meeting = insert_held_paid_request(user, :confirmed)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
@@ -262,7 +262,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       %{user: user} = create_user_with_profile()
 
       meeting =
-        insert_held_paid_request(user, "awaiting_approval", %{
+        insert_held_paid_request(user, :awaiting_approval, %{
           announced_at: nil,
           first_announced_at: DateTime.utc_now(:second)
         })
@@ -279,12 +279,12 @@ defmodule Tymeslot.Bookings.CancelTest do
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       refute_received :refund_attempted
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
@@ -301,15 +301,15 @@ defmodule Tymeslot.Bookings.CancelTest do
       stale_meeting = insert_held_paid_request(user)
 
       {:ok, _confirmed} =
-        MeetingQueries.update_meeting(stale_meeting, %{status: "confirmed"})
+        MeetingQueries.update_meeting(stale_meeting, %{status: :confirmed})
 
       assert {:error, :not_awaiting_approval} = Cancel.execute(stale_meeting)
 
       {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(stale_meeting.uid)
-      assert reloaded.status == "confirmed"
+      assert reloaded.status == :confirmed
 
       reloaded_payment = BookingPaymentQueries.by_meeting_id(stale_meeting.id)
-      assert reloaded_payment.status == "paid"
+      assert reloaded_payment.status == :paid
       assert reloaded_payment.refunded_amount_cents == 0
     end
   end
@@ -331,11 +331,11 @@ defmodule Tymeslot.Bookings.CancelTest do
       end)
 
       assert {:ok, cancelled} = Cancel.execute_external(meeting)
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
       assert cancelled.cancellation_reason == "Cancelled externally via calendar sync"
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
 
       assert_enqueued(
@@ -355,7 +355,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       # Reload from database to verify persistence
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
-      assert reloaded_meeting.status == "cancelled"
+      assert reloaded_meeting.status == :cancelled
       assert %DateTime{} = reloaded_meeting.cancelled_at
     end
 
@@ -394,7 +394,7 @@ defmodule Tymeslot.Bookings.CancelTest do
         })
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       # The provider call is deferred to a supervised, retrying Oban job rather
       # than made inline — so a transient Zoom failure no longer orphans the
@@ -430,7 +430,7 @@ defmodule Tymeslot.Bookings.CancelTest do
         })
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       assert_enqueued(
         worker: EmailWorker,
@@ -467,7 +467,7 @@ defmodule Tymeslot.Bookings.CancelTest do
         })
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
@@ -497,7 +497,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert {:ok, :deleted} = Video.delete_integration(user.id, integration.id)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
       assert cancelled.video_integration_id == nil
       assert cancelled.video_room_id == "86360699337"
 
@@ -521,13 +521,13 @@ defmodule Tymeslot.Bookings.CancelTest do
         })
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
 
       refute_enqueued(worker: VideoSyncWorker)
     end
   end
 
-  defp insert_held_paid_request(user, status \\ "awaiting_approval", extra_attrs \\ %{}) do
+  defp insert_held_paid_request(user, status \\ :awaiting_approval, extra_attrs \\ %{}) do
     meeting =
       insert_meeting_for_user(
         user,
@@ -548,7 +548,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       amount_cents: 5000,
       refunded_amount_cents: 0,
       application_fee_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     })
 

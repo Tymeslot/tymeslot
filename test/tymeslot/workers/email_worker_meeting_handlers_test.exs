@@ -97,7 +97,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
                })
     end
 
-    for status <- ["expired", "completed"] do
+    for status <- [:expired, :completed] do
       test "drops a reschedule request for a meeting already #{status}" do
         meeting =
           insert(:meeting,
@@ -320,7 +320,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
 
   describe "handle_reminder_emails/1" do
     test "skips if meeting is cancelled" do
-      meeting = insert(:meeting, status: "cancelled")
+      meeting = insert(:meeting, status: :cancelled)
 
       assert {:discard, "Meeting cancelled"} =
                EmailHandlers.execute_email_action("send_reminder_emails", %{
@@ -329,7 +329,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
     end
 
     test "skips if a reschedule has been requested" do
-      meeting = insert(:meeting, status: "reschedule_requested")
+      meeting = insert(:meeting, status: :reschedule_requested)
 
       assert {:discard, "Meeting reschedule_requested"} =
                EmailHandlers.execute_email_action("send_reminder_emails", %{

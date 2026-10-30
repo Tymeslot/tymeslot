@@ -197,8 +197,7 @@ msgstr "Nenhuma enquete ainda"
 msgid "Open"
 msgstr "Aberta"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Tipos de reunião pagos não podem ser usados em enquetes"
@@ -229,8 +228,7 @@ msgstr "Enquetes"
 msgid "Remove time"
 msgstr "Remover horário"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Esse tipo de reunião está indisponível"
@@ -263,8 +261,7 @@ msgstr "Este horário conflita com um evento do seu calendário"
 msgid "This time is no longer free"
 msgstr "Este horário não está mais livre"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Os horários precisam estar no futuro"
@@ -285,8 +282,7 @@ msgstr "Fuso horário"
 msgid "Title"
 msgstr "Título"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Até %{max} horários"
@@ -534,8 +530,7 @@ msgstr "Remover %{name} e as respostas desta enquete? A pessoa não é avisada."
 msgid "Remove from the poll"
 msgstr "Remover da enquete"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "O prazo precisa estar no futuro"

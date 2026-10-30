@@ -21,11 +21,6 @@ msgstr "%{theme_name}-Design"
 msgid "%{theme_name} Theme Preview"
 msgstr "%{theme_name}-Design-Vorschau"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
-#, elixir-autogen, elixir-format
-msgid "An error occurred. Please refresh the page and try again."
-msgstr "Ein Fehler ist aufgetreten. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/background_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Background Design"

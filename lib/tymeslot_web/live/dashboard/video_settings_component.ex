@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
+  alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -175,71 +177,46 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   def handle_event("reconnect_integration", %{"id" => id}, socket) do
-    user_id = socket.assigns.current_user.id
+    with_integration_write(socket, id, fn user_id, integration_id ->
+      case Video.get_integration(user_id, integration_id) do
+        {:ok, integration} ->
+          reconnect(socket, user_id, integration)
 
-    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
-      case FormInput.integration_id(id) do
-        nil ->
+        # Credentials that no longer decrypt are precisely what re-running
+        # OAuth repairs, so this state reconnects like any other rather than
+        # being treated as an error. `oauth_reconnect_url/2` reads only the
+        # provider, the row id and the account email, none of which are
+        # encrypted, so it works on an undecryptable row.
+        {:error, :requires_reencryption, integration} ->
+          reconnect(socket, user_id, integration)
+
+        {:error, :not_found} ->
           {:noreply, socket}
-
-        integration_id ->
-          case Video.get_integration(user_id, integration_id) do
-            {:ok, integration} ->
-              reconnect(socket, user_id, integration)
-
-            # Credentials that no longer decrypt are precisely what re-running
-            # OAuth repairs, so this state reconnects like any other rather
-            # than being treated as an error. `oauth_reconnect_url/2` reads
-            # only the provider, the row id and the account email, none of
-            # which are encrypted, so it works on an undecryptable row.
-            {:error, :requires_reencryption, integration} ->
-              reconnect(socket, user_id, integration)
-
-            {:error, :not_found} ->
-              {:noreply, socket}
-          end
       end
     end)
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
-    user_id = socket.assigns.current_user.id
+    with_integration_write(socket, id, fn user_id, integration_id ->
+      case Video.toggle_integration(user_id, integration_id) do
+        {:ok, _result} ->
+          Flash.info(dgettext("dashboard_video", "Integration status updated"))
+          notify_parent({:integration_updated, :video})
+          {:noreply, load_integrations(socket)}
 
-    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
-      case FormInput.integration_id(id) do
-        nil ->
+        {:error, :duplicate_account} ->
+          Flash.error(
+            dgettext(
+              "dashboard_video",
+              "Cannot reactivate - another active integration already uses this account"
+            )
+          )
+
           {:noreply, socket}
 
-        integration_id ->
-          case Video.toggle_integration(user_id, integration_id) do
-            {:ok, _result} ->
-              notify_parent(
-                {:flash, {:info, dgettext("dashboard_video", "Integration status updated")}}
-              )
-
-              notify_parent({:integration_updated, :video})
-              {:noreply, load_integrations(socket)}
-
-            {:error, :duplicate_account} ->
-              notify_parent(
-                {:flash,
-                 {:error,
-                  dgettext(
-                    "dashboard_video",
-                    "Cannot reactivate - another active integration already uses this account"
-                  )}}
-              )
-
-              {:noreply, socket}
-
-            {:error, _reason} ->
-              notify_parent(
-                {:flash,
-                 {:error, dgettext("dashboard_video", "Failed to update integration status")}}
-              )
-
-              {:noreply, socket}
-          end
+        {:error, _reason} ->
+          Flash.error(dgettext("dashboard_video", "Failed to update integration status"))
+          {:noreply, socket}
       end
     end)
   end
@@ -274,39 +251,28 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_async(:test_connection, {:ok, {provider, result}}, socket) do
     case result do
       {:ok, message} ->
-        notify_parent(
-          {:flash, {:info, IntegrationProviders.format_test_success_message(provider, message)}}
-        )
+        Flash.info(IntegrationProviders.format_test_success_message(provider, message))
 
       {:error, {:rate_limited, _message} = refusal} ->
-        notify_parent(
-          {:flash, {:error, IntegrationProviders.connection_test_refusal_message(refusal)}}
-        )
+        Flash.error(IntegrationProviders.connection_test_refusal_message(refusal))
 
       {:error, :unattributable} ->
-        notify_parent(
-          {:flash,
-           {:error, IntegrationProviders.connection_test_refusal_message(:unattributable)}}
-        )
+        Flash.error(IntegrationProviders.connection_test_refusal_message(:unattributable))
 
       # Covers both a bare message and a provider's tagged `{tag, message}`;
       # the tag drives field mapping, never the copy shown here.
       {:error, reason} ->
-        notify_parent(
-          {:flash, {:error, IntegrationProviders.connection_test_error_message(reason)}}
-        )
+        Flash.error(IntegrationProviders.connection_test_error_message(reason))
     end
 
     {:noreply, assign(socket, :testing_connection, nil)}
   end
 
   def handle_async(:test_connection, {:exit, reason}, socket) do
-    notify_parent(
-      {:flash,
-       {:error,
-        dgettext("dashboard_video", "Connection test failed unexpectedly: %{reason}",
-          reason: inspect(reason)
-        )}}
+    Flash.error(
+      dgettext("dashboard_video", "Connection test failed unexpectedly: %{reason}",
+        reason: inspect(reason)
+      )
     )
 
     {:noreply, assign(socket, :testing_connection, nil)}
@@ -314,7 +280,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   def handle_async({:connection_advisory, _integration_id}, result, socket) do
     if warning = connection_advisory_warning(result) do
-      notify_parent({:flash, {:warning, warning}})
+      Flash.warning(warning)
     end
 
     {:noreply, socket}
@@ -331,11 +297,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         {:noreply, redirect(socket, external: url)}
 
       {:error, _reason} ->
-        notify_parent(
-          {:flash,
-           {:error, dgettext("dashboard_video", "Failed to reconnect. Please try again.")}}
-        )
-
+        Flash.error(dgettext("dashboard_video", "Failed to reconnect. Please try again."))
         {:noreply, socket}
     end
   end
@@ -353,54 +315,42 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, _provider, socket) do
-    {:noreply,
-     socket
-     |> assign(:form_errors, %{base: FormErrors.first(changeset, field_labels())})
-     |> assign(:saving, false)}
+    base_error(socket, FormErrors.first(changeset, field_labels()))
   end
 
   # A provider with a single fixed host (kMeet) allows one active integration.
   defp handle_create_result({:error, :provider_already_connected}, _provider, socket) do
-    {:noreply,
-     socket
-     |> assign(:form_errors, %{
-       base:
-         dgettext(
-           "dashboard_video",
-           "This provider is already connected. Deactivate or remove the existing integration before adding another."
-         )
-     })
-     |> assign(:saving, false)}
+    base_error(
+      socket,
+      dgettext(
+        "dashboard_video",
+        "This provider is already connected. Deactivate or remove the existing integration before adding another."
+      )
+    )
   end
 
   # A Jitsi integration is keyed on its server URL, so the duplicate is that
   # server, active or not.
   defp handle_create_result({:error, :duplicate_integration}, "jitsi", socket) do
-    {:noreply,
-     socket
-     |> assign(:form_errors, %{
-       base:
-         dgettext(
-           "dashboard_video",
-           "This server is already connected. Edit or remove the existing integration instead."
-         )
-     })
-     |> assign(:saving, false)}
+    base_error(
+      socket,
+      dgettext(
+        "dashboard_video",
+        "This server is already connected. Edit or remove the existing integration instead."
+      )
+    )
   end
 
   # A Nextcloud Talk integration is keyed on its server and login name, so the
   # duplicate is that account, active or not.
   defp handle_create_result({:error, :duplicate_integration}, "nextcloud_talk", socket) do
-    {:noreply,
-     socket
-     |> assign(:form_errors, %{
-       base:
-         dgettext(
-           "dashboard_video",
-           "This Nextcloud account is already connected. Edit or remove the existing integration instead."
-         )
-     })
-     |> assign(:saving, false)}
+    base_error(
+      socket,
+      dgettext(
+        "dashboard_video",
+        "This Nextcloud account is already connected. Edit or remove the existing integration instead."
+      )
+    )
   end
 
   # The Jitsi and Nextcloud Talk providers' own validation words its messages
@@ -408,23 +358,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # they are shown for the whole form rather than under the URL field.
   defp handle_create_result({:error, message}, provider, socket)
        when provider in ["jitsi", "nextcloud_talk"] and is_binary(message) do
-    {:noreply,
-     socket
-     |> assign(:form_errors, %{base: message})
-     |> assign(:saving, false)}
+    base_error(socket, message)
   end
 
   defp handle_create_result({:error, :duplicate_integration}, _provider, socket) do
-    {:noreply,
-     socket
-     |> assign(:form_errors, %{
-       base:
-         dgettext(
-           "dashboard_video",
-           "A video integration with this configuration already exists"
-         )
-     })
-     |> assign(:saving, false)}
+    base_error(
+      socket,
+      dgettext("dashboard_video", "A video integration with this configuration already exists")
+    )
   end
 
   defp handle_create_result({:error, reason}, _provider, socket) do
@@ -437,9 +378,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # The confirmation goes out at once, so it survives this component going
   # away before a probe finishes.
   defp announce_added(socket, integration) do
-    notify_parent(
-      {:flash, {:info, dgettext("dashboard_video", "Video integration added successfully")}}
-    )
+    Flash.info(dgettext("dashboard_video", "Video integration added successfully"))
 
     maybe_probe_connection(socket, integration)
   end
@@ -498,12 +437,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp add_validated_integration(nil, _validated_params, socket) do
-    {:noreply,
-     socket
-     |> assign(:form_errors, %{
-       base: dgettext("dashboard_video", "Please select a provider")
-     })
-     |> assign(:saving, false)}
+    base_error(socket, dgettext("dashboard_video", "Please select a provider"))
   end
 
   # The write budget is charged only once the form is known to be worth
@@ -513,7 +447,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp add_validated_integration(provider, validated_params, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
+    RateLimit.with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
       handle_create_result(
         Video.create_integration(user_id, provider, FormInput.to_atom_keys(validated_params)),
         provider,
@@ -566,13 +500,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(_value), do: false
 
-  defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
-    notify_parent({:flash, {:error, message}})
-    {:noreply, socket}
-  end
-
-  defp with_rate_limit(:ok, _socket, action), do: action.()
-
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id
     integrations = Video.list_integrations(user_id)
@@ -602,12 +529,30 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         {:noreply, socket}
 
       {:error, error_message} ->
-        notify_parent({:flash, {:error, error_message}})
+        Flash.error(error_message)
         {:noreply, socket}
     end
   end
 
   defp notify_parent(msg), do: send(self(), msg)
+
+  # The write budget is charged before the id is read, so a malformed id still
+  # costs a token, exactly as a well-formed one does.
+  defp with_integration_write(socket, id, fun) do
+    user_id = socket.assigns.current_user.id
+
+    RateLimit.with_rate_limit(RateLimiter.check(:integration_write, user_id), socket, fn ->
+      case FormInput.integration_id(id) do
+        nil -> {:noreply, socket}
+        integration_id -> fun.(user_id, integration_id)
+      end
+    end)
+  end
+
+  # Shown for the whole form rather than under one field.
+  defp base_error(socket, message) do
+    {:noreply, assign(socket, form_errors: %{base: message}, saving: false)}
+  end
 
   defp get_provider_name(socket, id) do
     case Enum.find(socket.assigns.integrations, &(&1.id == id)) do

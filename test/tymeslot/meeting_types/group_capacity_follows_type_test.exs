@@ -83,7 +83,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 30, :minute),
       duration: 30,
-      status: "confirmed",
+      status: :confirmed,
       organizer_user_id: ctx.user.id,
       organizer_name: "Organiser",
       organizer_email: ctx.user.email,
@@ -175,7 +175,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
       cancelled =
         meeting_at(ctx, :group_meeting, meeting_type, DateTime.add(ctx.start_time, 2, :hour),
           capacity: 4,
-          status: "cancelled"
+          status: :cancelled
         )
 
       solo =

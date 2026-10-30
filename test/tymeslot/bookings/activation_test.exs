@@ -54,7 +54,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
 
       meeting =
         meeting_for(user, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
         })
@@ -81,7 +81,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       video_integration = insert(:video_integration, user: user, provider: "mirotalk")
 
       meeting =
-        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
 
       assert {:ok, _pending} = activate(meeting, with_video_room: true)
 
@@ -101,7 +101,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
 
     test "a meeting with no video integration goes straight to notification" do
       user = insert(:user)
-      meeting = meeting_for(user, %{status: "confirmed", video_integration_id: nil})
+      meeting = meeting_for(user, %{status: :confirmed, video_integration_id: nil})
 
       assert {:ok, _pending} = activate(meeting, with_video_room: true)
 
@@ -120,7 +120,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       video_integration = insert(:video_integration, user: user, provider: "zoom")
 
       meeting =
-        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
 
       assert {:ok, _pending} = activate(meeting)
 
@@ -140,7 +140,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       video_integration = insert(:video_integration, user: user, provider: "kmeet")
 
       meeting =
-        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
 
       assert {:ok, _pending} = activate(meeting)
 
@@ -160,7 +160,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       video_integration = insert(:video_integration, user: user, provider: "jitsi")
 
       meeting =
-        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
 
       assert {:ok, _pending} = activate(meeting)
 
@@ -180,7 +180,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       video_integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
 
       meeting =
-        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
 
       assert {:ok, _pending} = activate(meeting)
 
@@ -197,7 +197,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
 
     test "a meeting whose provider is not API-created goes straight to notification" do
       user = insert(:user)
-      meeting = meeting_for(user, %{status: "confirmed", video_integration_id: nil})
+      meeting = meeting_for(user, %{status: :confirmed, video_integration_id: nil})
 
       assert {:ok, _pending} = activate(meeting)
 
@@ -219,7 +219,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
         insert(:video_integration, user: user, provider: "discontinued_provider")
 
       meeting =
-        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
 
       assert {:ok, _pending} = activate(meeting)
 
@@ -238,7 +238,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
 
       meeting =
         meeting_for(user, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
         })
@@ -278,7 +278,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       video_integration = insert(:video_integration, user: user, provider: "mirotalk")
 
       meeting =
-        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
 
       # Only the video-room insert fails; the fallback (`notify/1`) is what
       # guarantees the attendee still gets a confirmation email rather than
@@ -312,7 +312,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
       # confirmation-email insert fails: the booking must not commit with its
       # announcement claimed and no confirmation queued.
       user = insert(:user)
-      meeting = meeting_for(user, %{status: "confirmed", video_integration_id: nil})
+      meeting = meeting_for(user, %{status: :confirmed, video_integration_id: nil})
 
       :meck.new(Oban, [:passthrough])
 

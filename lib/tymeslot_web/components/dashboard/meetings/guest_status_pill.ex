@@ -3,8 +3,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
   The pill showing how a guest has answered an invitation to a booking.
 
   Shared by the meeting card's guest list and the add-guest modal, so a guest
-  reads the same in both places. Any status other than accepted or declined is
-  an invitation still waiting for an answer.
+  reads the same in both places. A pending guest is an invitation still
+  waiting for an answer.
   """
 
   use Phoenix.Component
@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
 
   alias TymeslotWeb.Components.CoreComponents.Feedback
 
-  attr :status, :string, required: true
+  attr :status, :atom, required: true
 
   @spec guest_status_pill(map()) :: Phoenix.LiveView.Rendered.t()
   def guest_status_pill(assigns) do
@@ -24,12 +24,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
     """
   end
 
-  defp presentation("accepted"),
+  defp presentation(:accepted),
     do: {:success, "hero-check-circle-mini", dgettext("dashboard_bookings", "Going")}
 
-  defp presentation("declined"),
+  defp presentation(:declined),
     do: {:danger, "hero-x-circle-mini", dgettext("dashboard_bookings", "Declined")}
 
-  defp presentation(_pending),
+  defp presentation(:pending),
     do: {:warning, "hero-clock-mini", dgettext("dashboard_bookings", "Awaiting reply")}
 end

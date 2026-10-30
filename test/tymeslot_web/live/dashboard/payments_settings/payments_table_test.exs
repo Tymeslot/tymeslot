@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTableTest do
         amount_cents: 5000,
         refunded_amount_cents: 0,
         currency: "eur",
-        status: "paid",
+        status: :paid,
         paid_at: DateTime.utc_now()
       },
       Map.new(attrs)
@@ -55,12 +55,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTableTest do
 
     test "maps each payment status to its display label" do
       statuses = %{
-        "paid" => "Paid",
-        "partially_refunded" => "Partially refunded",
-        "refunded" => "Refunded",
-        "disputed" => "Disputed",
-        "pending" => "Pending",
-        "failed" => "Failed"
+        paid: "Paid",
+        partially_refunded: "Partially refunded",
+        refunded: "Refunded",
+        disputed: "Disputed",
+        pending: "Pending",
+        failed: "Failed"
       }
 
       for {status, label} <- statuses do
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTableTest do
     end
 
     test "hides the refund button for a non-refundable payment" do
-      html = render_table([payment(%{status: "pending", paid_at: nil})], active_account())
+      html = render_table([payment(%{status: :pending, paid_at: nil})], active_account())
       doc = Floki.parse_document!(html)
 
       assert [] = Floki.find(doc, "button[phx-click=open_refund_modal]")

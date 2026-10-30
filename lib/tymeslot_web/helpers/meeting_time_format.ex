@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Helpers.MeetingTimeFormat do
   their stored timezone, the guest RSVP pages keep the request's locale.
   """
 
+  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc """
@@ -18,12 +19,8 @@ defmodule TymeslotWeb.Helpers.MeetingTimeFormat do
   """
   @spec format_when(map(), String.t() | nil) :: String.t()
   def format_when(meeting, timezone) do
-    tz = timezone || "Etc/UTC"
-
-    case DateTime.shift_zone(meeting.start_time, tz) do
-      {:ok, dt} -> format_datetime(dt) <> " (#{tz})"
-      _error -> format_datetime(meeting.start_time) <> " UTC"
-    end
+    {dt, zone} = DateTimeUtils.shift_or_utc(meeting.start_time, timezone)
+    format_datetime(dt) <> " (#{zone})"
   end
 
   defp format_datetime(dt),

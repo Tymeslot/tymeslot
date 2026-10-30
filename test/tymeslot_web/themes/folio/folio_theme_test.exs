@@ -268,7 +268,7 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
           name: "Alice",
           organizer_profile: build(:profile, full_name: "Jane Organizer"),
           meeting_type: nil,
-          meeting_status: "confirmed",
+          meeting_status: :confirmed,
           meeting_uid: "abc123",
           custom_fields_snapshot: [],
           custom_field_answers: %{},

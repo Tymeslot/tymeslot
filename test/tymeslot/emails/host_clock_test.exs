@@ -55,7 +55,7 @@ defmodule Tymeslot.Emails.HostClockTest do
         attendee_timezone: "Europe/London",
         attendee_locale: "en",
         approval_deadline_at: ~U[2026-08-30 15:00:00Z],
-        status: "awaiting_approval"
+        status: :awaiting_approval
       },
       attrs
     )
@@ -84,7 +84,7 @@ defmodule Tymeslot.Emails.HostClockTest do
   end
 
   test "the lapsed reschedule notice uses the host's clock", %{host: host} do
-    email = RescheduleRequestExpired.render(meeting(host, %{status: "cancelled"}), "en")
+    email = RescheduleRequestExpired.render(meeting(host, %{status: :cancelled}), "en")
 
     assert email.html_body =~ "14:30"
     refute email.html_body =~ ~r/\d{2}:\d{2} (AM|PM)/
@@ -93,7 +93,7 @@ defmodule Tymeslot.Emails.HostClockTest do
   test "the external change notice uses the host's clock", %{host: host} do
     email =
       ExternalBookingChange.render(
-        meeting(host, %{status: "confirmed"}),
+        meeting(host, %{status: :confirmed}),
         "sam@example.com",
         :modified,
         "Europe/London"
@@ -103,7 +103,7 @@ defmodule Tymeslot.Emails.HostClockTest do
   end
 
   test "the calendar sync failure notice uses the host's clock", %{host: host} do
-    email = CalendarSyncError.render(meeting(host, %{status: "confirmed"}), :timeout)
+    email = CalendarSyncError.render(meeting(host, %{status: :confirmed}), :timeout)
 
     assert_24_hour(email, "14:30")
   end

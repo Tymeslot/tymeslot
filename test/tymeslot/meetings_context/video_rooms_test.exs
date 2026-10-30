@@ -57,7 +57,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
       result = Create.execute(meeting_params, form_data, with_video_room: true)
 
       assert {:ok, meeting} = result
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     test "meeting without video integration still creates successfully" do
@@ -69,7 +69,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
       result = Create.execute(meeting_params, form_data, with_video_room: true)
 
       assert {:ok, meeting} = result
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
   end
 

@@ -57,7 +57,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
   defp mark_disputed(payment, event_id, object) do
     result =
       LockedPayment.run(payment, event_id, fn locked ->
-        case BookingPaymentQueries.update(locked, %{status: "disputed", last_event_id: event_id}) do
+        case BookingPaymentQueries.update(locked, %{status: :disputed, last_event_id: event_id}) do
           {:ok, updated} -> {:ok, {locked.status, updated}}
           {:error, _changeset} = error -> error
         end

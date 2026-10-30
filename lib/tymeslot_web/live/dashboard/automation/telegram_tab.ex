@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
                 JS.push("disconnect_telegram", value: %{"id" => integration.id}, target: @myself)
               }
               on_reconnect={
-                if integration.bot_mode == "shared" do
+                if integration.bot_mode == :shared do
                   JS.push("reconnect_telegram", value: %{"id" => integration.id}, target: @myself)
                 end
               }

@@ -151,7 +151,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
 
       insert(:payment_transaction,
         user: user,
-        status: "completed",
+        status: :completed,
         stripe_customer_id: "cus_one_time"
       )
 
@@ -226,7 +226,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
 
       insert(:payment_transaction,
         user: user,
-        status: "completed",
+        status: :completed,
         stripe_customer_id: "cus_lost_dispute"
       )
 
@@ -248,7 +248,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
 
       insert(:payment_transaction,
         user: user,
-        status: "completed",
+        status: :completed,
         stripe_customer_id: "cus_won_dispute"
       )
 
@@ -280,7 +280,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
 
       insert(:payment_transaction,
         user: user,
-        status: "completed",
+        status: :completed,
         stripe_customer_id: "cus_won_notice"
       )
 

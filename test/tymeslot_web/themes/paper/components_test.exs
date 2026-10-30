@@ -181,8 +181,8 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
     end
 
     test "draws each type's locations as facts, with their icons and labels" do
-      office = %LocationOption{id: "a", kind: "in_person", label: "The office", position: 0}
-      phone = %LocationOption{id: "b", kind: "phone", label: "Ring us", position: 1}
+      office = %LocationOption{id: "a", kind: :in_person, label: "The office", position: 0}
+      phone = %LocationOption{id: "b", kind: :phone, label: "Ring us", position: 1}
 
       page =
         overview(
@@ -255,7 +255,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
           name: "Alice",
           organizer_profile: build(:profile, full_name: "Jane Organizer"),
           meeting_type: nil,
-          meeting_status: "confirmed",
+          meeting_status: :confirmed,
           meeting_uid: "abc123",
           custom_fields_snapshot: [],
           custom_field_answers: %{},
@@ -284,7 +284,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
           name: "Alice",
           organizer_profile: build(:profile, full_name: "Jane Organizer"),
           meeting_type: nil,
-          meeting_status: "confirmed",
+          meeting_status: :confirmed,
           meeting_uid: "abc123",
           custom_fields_snapshot: [],
           custom_field_answers: %{},
@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
     end
 
     test "a request awaiting approval is headed exactly 'Request sent'" do
-      html = confirmation(meeting_status: "awaiting_approval")
+      html = confirmation(meeting_status: :awaiting_approval)
 
       assert text(doc(html), "[data-testid='confirmation-heading']") == "Request sent"
     end
@@ -313,7 +313,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
           {"a booking", [], "Your meeting with Jane Organizer is confirmed."},
           {"a reschedule", [is_rescheduling: true],
            "Your meeting with Jane Organizer has been rescheduled."},
-          {"a request", [meeting_status: "awaiting_approval"],
+          {"a request", [meeting_status: :awaiting_approval],
            "Your request to Jane Organizer has been sent."}
         ] do
       test "says #{label} is settled without the guest's name" do
@@ -327,7 +327,7 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
     for {label, overrides, expected} <- [
           {"a booking", [], "Your meeting is confirmed."},
           {"a reschedule", [is_rescheduling: true], "Your meeting has been rescheduled."},
-          {"a request", [meeting_status: "awaiting_approval"], "Your request has been sent."}
+          {"a request", [meeting_status: :awaiting_approval], "Your request has been sent."}
         ] do
       test "says #{label} is settled without an organiser name to give" do
         html = confirmation([organizer_profile: nil] ++ unquote(overrides))

@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendarTest do
   @moduledoc """
   The month of days a theme picks a date from. The days are passed in (the
-  shape `CalendarHelpers.get_calendar_days/7` returns), so the block is
+  shape `CalendarDays.get_calendar_days/7` returns), so the block is
   pinned apart from the availability rules: which days are buttons for the
   date fact, which are disabled, and the month navigation's bounds. The clock
   is frozen on Wednesday 10 March 2027.

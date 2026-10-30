@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.CalendarInvitation
 
@@ -108,6 +109,73 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
       assert email.html_body =~ "Team Sync"
       refute email.html_body =~ "nil"
+    end
+
+    test "an event with a video link shows a join section and lists it as a video call" do
+      url = "https://meet.google.com/abc-defg-hij"
+
+      email =
+        CalendarInvitation.render(
+          "guest@example.com",
+          build_invitation_details(%{location: nil, video_link: url})
+        )
+
+      assert email.html_body =~ ~s(href="#{url}")
+      assert email.html_body =~ "Video Call"
+      refute email.html_body =~ "TBD"
+      assert email.text_body =~ "JOIN VIDEO MEETING:\n#{url}"
+      assert email.text_body =~ "Location: Video Call"
+
+      [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
+      assert ics.data =~ ~r/^LOCATION[^:]*:Video Call\r$/m
+      assert String.replace(ics.data, "\r\n ", "") =~ "CONFERENCE;VALUE=URI;FEATURE=VIDEO"
+    end
+
+    test "a written location stays the location beside the video link" do
+      email =
+        CalendarInvitation.render(
+          "guest@example.com",
+          build_invitation_details(%{video_link: "https://meet.google.com/abc-defg-hij"})
+        )
+
+      assert email.text_body =~ "Location: Conference Room B"
+      assert email.text_body =~ "JOIN VIDEO MEETING:"
+    end
+
+    test "the attachment states a description's join link once" do
+      url = "https://meet.google.com/abc-defg-hij"
+
+      email =
+        CalendarInvitation.render(
+          "guest@example.com",
+          build_invitation_details(%{
+            video_link: url,
+            description: EventVideo.put_join_link("Agenda", nil, url)
+          })
+        )
+
+      [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
+
+      [description] =
+        Regex.run(~r/^DESCRIPTION[^:]*:(.*)$/m, String.replace(ics.data, "\r\n ", ""),
+          capture: :all_but_first
+        )
+
+      assert description =~ "Agenda"
+      assert length(String.split(description, url)) == 2
+    end
+
+    test "a cancellation offers no join link" do
+      url = "https://meet.google.com/abc-defg-hij"
+
+      email =
+        CalendarInvitation.render(
+          "guest@example.com",
+          build_invitation_details(%{video_link: url, method: :cancel, sequence: 1})
+        )
+
+      refute email.html_body =~ ~s(href="#{url}")
+      refute email.text_body =~ "JOIN VIDEO MEETING:"
     end
 
     test "handles nil description gracefully" do

@@ -47,7 +47,7 @@ defmodule Tymeslot.Workers.TransactionalEmailRescueTest do
   end
 
   test "SendBookingPaymentRefunded sends the refund email once across a rescue" do
-    payment = insert_payment(%{refunded_amount_cents: 5000, status: "refunded"})
+    payment = insert_payment(%{refunded_amount_cents: 5000, status: :refunded})
 
     job = persisted_job(SendBookingPaymentRefunded, %{"booking_payment_id" => payment.id})
     run_twice(SendBookingPaymentRefunded, job)
@@ -58,7 +58,7 @@ defmodule Tymeslot.Workers.TransactionalEmailRescueTest do
 
   test "SendChargeDisputeOpened sends the dispute email once across a rescue" do
     payment =
-      insert_payment(%{status: "disputed", stripe_charge_id: "ch_DISPUTED"})
+      insert_payment(%{status: :disputed, stripe_charge_id: "ch_DISPUTED"})
 
     job =
       persisted_job(SendChargeDisputeOpened, %{
@@ -85,7 +85,7 @@ defmodule Tymeslot.Workers.TransactionalEmailRescueTest do
         payouts_enabled: false,
         details_submitted: true,
         disabled_reason: "requirements.past_due",
-        status: "active"
+        status: :active
       )
 
     job =

@@ -52,7 +52,7 @@ defmodule Tymeslot.Notifications.ReminderScheduleTest do
     defp booking(attrs) do
       Map.merge(
         %{
-          status: "confirmed",
+          status: :confirmed,
           start_time: DateTime.add(@now, 1, :day),
           reschedule_requested_at: nil,
           reminders: [%{"value" => 20, "unit" => "minutes"}],
@@ -137,14 +137,14 @@ defmodule Tymeslot.Notifications.ReminderScheduleTest do
     test "a held booking says what its reminders are waiting on" do
       assert [%{status: :after_approval}] =
                ReminderSchedule.with_status(
-                 booking(status: "awaiting_approval"),
+                 booking(status: :awaiting_approval),
                  MapSet.new(),
                  @now
                )
 
       assert [%{status: :after_payment}] =
                ReminderSchedule.with_status(
-                 booking(status: "awaiting_payment"),
+                 booking(status: :awaiting_payment),
                  MapSet.new(),
                  @now
                )
@@ -165,10 +165,10 @@ defmodule Tymeslot.Notifications.ReminderScheduleTest do
     end
 
     test "a released booking has no reminders left" do
-      assert ReminderSchedule.with_status(booking(status: "cancelled"), @twenty_minutes, @now) ==
+      assert ReminderSchedule.with_status(booking(status: :cancelled), @twenty_minutes, @now) ==
                []
 
-      assert ReminderSchedule.with_status(booking(status: "expired"), @twenty_minutes, @now) == []
+      assert ReminderSchedule.with_status(booking(status: :expired), @twenty_minutes, @now) == []
     end
 
     test "a reminder still ahead with no job behind it reads as not scheduled" do

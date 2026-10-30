@@ -101,7 +101,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
 
       assert %MeetingSchema{
                planned: true,
-               status: "confirmed",
+               status: :confirmed,
                capacity: 2,
                attendee_email: nil,
                title: "Introduction to X"
@@ -227,7 +227,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       {:ok, _cancelled} = PlannedSessions.cancel(session, ctx.user.id)
 
       assert {:error, :slot_taken} = book(ctx, starts_at, "one@example.com")
-      assert [%{status: "cancelled"}] = Repo.all(MeetingSchema)
+      assert [%{status: :cancelled}] = Repo.all(MeetingSchema)
     end
   end
 
@@ -241,7 +241,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       assert {:ok, _cancelled} = CancelSeat.execute(participant.management_token)
 
       assert ParticipantQueries.list_live_for_meeting(session.id) == []
-      assert Repo.get!(MeetingSchema, session.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, session.id).status == :confirmed
     end
 
     test "moving the seat to another session leaves the first one on", ctx do
@@ -265,7 +265,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
                )
 
       assert moved_to.id == second_session.id
-      assert Repo.get!(MeetingSchema, first_session.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, first_session.id).status == :confirmed
     end
 
     test "a seat cannot move to a time that is not a session", ctx do
@@ -409,7 +409,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
         start_time: starts_at,
         end_time: DateTime.add(starts_at, 90, :minute),
         duration: 90,
-        status: "confirmed",
+        status: :confirmed,
         organizer_user_id: ctx.user.id,
         organizer_name: "Host",
         organizer_email: "host@example.com",

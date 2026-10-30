@@ -1,11 +1,11 @@
-defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
+defmodule Tymeslot.Integrations.Shared.ApiResponse do
   @moduledoc """
-  Shared HTTP response handling for the JSON calendar API clients.
+  Shared HTTP response handling for the JSON provider API clients.
 
-  Google Calendar and Microsoft Graph return different error vocabularies, but
-  the envelope around them is the same: decode a JSON body on success, treat a
-  401 as an expired token, refine a bare 404 using the request path, and fall
-  back to a redacted log line plus an opaque message for anything else.
+  Every provider returns its own error vocabulary, but the envelope around it
+  is the same: decode a JSON body on success, pass a transport failure through,
+  and fall back to a redacted log line plus an opaque message for any status
+  the provider does not model.
 
   Centralising that envelope is a safety property rather than a tidiness one.
   The generic fallback is the only place a raw provider body is logged, so it
@@ -13,11 +13,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   statuses inline would have to remember `Redactor.redact_and_truncate/1` every
   time; routing through here means it cannot be skipped.
 
-  Throttling and server failure are classified here too, because both
-  providers answer them alike: a 429 is `:rate_limited`, carrying the
-  `Retry-After` seconds as `"retry_after:<n>"` when the header gives them,
-  and a 5xx is `:server_error`. Both are transient; neither is a network
-  failure, and a caller that waits out a rate limit needs to tell them apart.
+  Two result contracts share that fallback:
+
+    * `handle/2` and `handle/3`, for the calendar clients (Google Calendar,
+      Microsoft Graph), return `{:error, reason, message}`.
+    * `handle_tagged/2`, for the video providers, returns
+      `{:error, {:http_error, status, message}}` for an unmodelled status and
+      the transport reason untouched, the shapes `BreakerOutcome` and the
+      video callers already branch on.
+
+  For the calendar contract, throttling and server failure are classified
+  here too, because both providers answer them alike: a 429 is
+  `:rate_limited`, carrying the `Retry-After` seconds as `"retry_after:<n>"`
+  when the header gives them, and a 5xx is `:server_error`. Both are
+  transient; neither is a network failure, and a caller that waits out a rate
+  limit needs to tell them apart.
 
   Any other 4xx (400, 409, 412, 422, ...) is `:refused`: the provider
   understood the request and declined it, so sending it again changes
@@ -27,7 +37,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
 
   Providers keep what genuinely differs, passing it as `:custom`: Google
   classifies a 403 from `error.errors[].reason`, Graph from `error.code` plus a
-  `Retry-After` header.
+  `Retry-After` header, and a video provider whose 401 means a revoked grant
+  flags the integration on the result it gets back.
   """
 
   require Logger
@@ -45,6 +56,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   readable reason alongside a message safe to surface to the caller.
   """
   @type result :: {:ok, map()} | {:error, atom(), String.t()}
+
+  @typedoc """
+  The video providers' shape: an unmodelled status keeps its number, so
+  `BreakerOutcome` can tell an outage (5xx, 429, 408) from a refusal, and a
+  transport failure is passed through as the reason the client gave.
+  """
+  @type tagged_result ::
+          {:ok, map()}
+          | {:error, {:http_error, integer(), String.t()}}
+          | {:error, :malformed_response}
+          | {:error, term()}
+
+  # Long enough for a provider's one-line explanation, short enough that an
+  # echoed request cannot fill the returned reason.
+  @detail_max_bytes 512
 
   @doc """
   Handles a response whose 404 should name the missing resource.
@@ -81,6 +107,87 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
       result -> result
     end
   end
+
+  @doc """
+  Handles a response for a client whose errors are
+  `{:error, {:http_error, status, message}}`.
+
+  A success status decodes its JSON body (`:malformed_response` when it will
+  not decode), a transport failure is returned as it came, and any other
+  status is logged once, redacted, and returned with its status.
+
+  ## Options
+
+    * `:label` — provider name for the log line and the message, e.g.
+      `"Zoom"`. **Required.**
+    * `:custom` — a `(response -> result | :default)` consulted first, as for
+      `handle/2`.
+    * `:detail` — a `(decoded_error_body -> String.t() | nil)` naming the
+      provider's own explanation, which the message carries redacted and
+      bounded. Without one, or when the body does not decode, the message
+      points at the logs instead.
+    * `:success` — the statuses that count as success. Default `200..299`.
+    * `:log_level` — level of the fallback log line. Default `:error`; a
+      best-effort call whose failure changes nothing passes `:warning`.
+  """
+  @spec handle_tagged(term(), keyword()) :: tagged_result() | term()
+  def handle_tagged(response, opts) do
+    custom = Keyword.get(opts, :custom, fn _response -> :default end)
+
+    case custom.(response) do
+      :default -> tagged_default(response, opts)
+      result -> result
+    end
+  end
+
+  defp tagged_default({:ok, %{status: status, body: body}} = response, opts) do
+    if status in Keyword.get(opts, :success, 200..299),
+      do: decode_tagged(body),
+      else: tagged_error(response, opts)
+  end
+
+  defp tagged_default({:error, reason}, _opts), do: {:error, reason}
+
+  defp tagged_error({:ok, %{status: status, body: body}}, opts) do
+    label = Keyword.fetch!(opts, :label)
+    log_unmodelled(Keyword.get(opts, :log_level, :error), label, status, body)
+
+    detail =
+      case {Keyword.get(opts, :detail), decode_tagged(body)} do
+        {detail_fun, {:ok, decoded}} when is_function(detail_fun, 1) -> detail_fun.(decoded)
+        _no_detail -> nil
+      end
+
+    {:error, {:http_error, status, tagged_message(label, status, detail)}}
+  end
+
+  defp tagged_message(label, status, detail) when is_binary(detail) and detail != "",
+    do:
+      "#{label} API error (#{status}): #{Redactor.redact_and_truncate(detail, @detail_max_bytes)}"
+
+  defp tagged_message(label, status, _detail),
+    do: "#{label} API error (#{status}): see logs for details"
+
+  defp decode_tagged(body) when is_map(body), do: {:ok, body}
+  defp decode_tagged(body) when not is_binary(body), do: {:error, :malformed_response}
+
+  defp decode_tagged(body) do
+    case decode_body(body) do
+      {:ok, decoded} -> {:ok, decoded}
+      {:error, :malformed_response, _message} -> {:error, :malformed_response}
+    end
+  end
+
+  @doc """
+  A `:custom` for `handle_tagged/2` that reports a 429 as
+  `{:error, {:rate_limited, seconds}}`, the form `Retry.with_backoff/2` waits
+  out, with the `Retry-After` seconds when the provider names them.
+  """
+  @spec rate_limited(term()) :: {:error, {:rate_limited, non_neg_integer() | nil}} | :default
+  def rate_limited({:ok, %{status: 429} = response}),
+    do: {:error, {:rate_limited, Retry.retry_after_seconds(response)}}
+
+  def rate_limited(_response), do: :default
 
   @doc """
   Decodes a provider error body and hands its `error` object to `fun`.
@@ -151,25 +258,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   end
 
   defp default_handle({:ok, %{status: status, body: body}}, label) when status in 500..599 do
-    Logger.warning("Calendar API server error",
-      provider: label,
-      status: status,
-      body: Redactor.redact_and_truncate(body)
-    )
-
+    log_unmodelled(:warning, label, status, body)
     {:error, :server_error, "HTTP #{status}"}
   end
 
-  # The only path that sees an unrecognised provider body, and so the only one
-  # that has to redact. The caller gets an opaque message: the detail is in the
-  # logs, where it is truncated and stripped of credentials.
+  # The caller gets an opaque message: the detail is in the logs, where it is
+  # truncated and stripped of credentials.
   defp default_handle({:ok, %{status: status, body: body}}, label) do
-    Logger.error("Calendar API error",
-      provider: label,
-      status: status,
-      body: Redactor.redact_and_truncate(body)
-    )
-
+    log_unmodelled(:error, label, status, body)
     {:error, unrecognised_status_reason(status), "HTTP #{status} (see logs for details)"}
   end
 
@@ -198,6 +294,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   defp unrecognised_status_reason(408), do: :timeout
   defp unrecognised_status_reason(status) when status in 400..499, do: :refused
   defp unrecognised_status_reason(_status), do: :network_error
+
+  # The only place an unrecognised provider body is logged, and so the only
+  # one that has to redact.
+  defp log_unmodelled(level, label, status, body) do
+    Logger.log(level, "Provider API error",
+      provider: label,
+      status: status,
+      body: Redactor.redact_and_truncate(body)
+    )
+  end
 
   defp decode_body(""), do: {:ok, %{}}
 

@@ -12,11 +12,14 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
 
   @type status :: :pending_link | :active | :paused | :auto_disabled
 
+  @typedoc "Whose bot posts: the installation's shared bot, or the organiser's own."
+  @type bot_mode :: :shared | :own
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
           name: String.t() | nil,
-          bot_mode: String.t(),
+          bot_mode: bot_mode(),
           bot_token_encrypted: binary() | nil,
           bot_token: String.t() | nil,
           chat_id: String.t() | nil,
@@ -37,12 +40,11 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
 
   @valid_events EventTypes.all()
 
-  @valid_bot_modes ["shared", "own"]
   @max_failure_count 10
 
   schema "telegram_integrations" do
     field(:name, :string)
-    field(:bot_mode, :string, default: "own")
+    field(:bot_mode, Ecto.Enum, values: [:shared, :own], default: :own)
     field(:bot_token_encrypted, :binary)
     field(:chat_id, :string)
     # The one-time `/start` token of the shared bot's deep link. It is only
@@ -92,7 +94,6 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     %__MODULE__{}
     |> cast(attrs, [:user_id, :bot_mode])
     |> validate_required([:user_id, :bot_mode])
-    |> validate_inclusion(:bot_mode, @valid_bot_modes)
     |> user_changeset(attrs)
     |> foreign_key_constraint(:user_id)
   end
@@ -146,7 +147,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     ])
   end
 
-  defp user_link_fields("own"), do: @own_bot_fields
+  defp user_link_fields(:own), do: @own_bot_fields
   defp user_link_fields(_bot_mode), do: []
 
   @spec derive_status(t()) :: t()

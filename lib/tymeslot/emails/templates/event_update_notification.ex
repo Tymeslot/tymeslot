@@ -2,8 +2,10 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   @moduledoc """
   Email template for notifying attendees of calendar event updates from the dashboard.
 
-  Sent when an organiser edits an existing event (title, time, location, description).
-  Includes a highlighted change summary and an updated ICS attachment with SEQUENCE=1.
+  Sent when an organiser edits an existing event (title, time, location,
+  description, video room). Includes a highlighted change summary, the join
+  section for the event's video link, and an updated ICS attachment that
+  carries the link, so the guest's calendar entry keeps it.
   """
 
   import Swoosh.Email
@@ -12,6 +14,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   alias Tymeslot.Emails.Shared.Stack
 
   alias Tymeslot.Emails.Shared.{
+    CalendarEventContent,
     Formatting,
     MeetingComponents,
     MjmlEmail,
@@ -46,6 +49,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       - `:last_date`: an all-day event's inclusive last day, for display
       - `:location`: location string or nil
       - `:description`: description string or nil
+      - `:video_link`: the event's join link, or nil
       - `:organizer_name`: organiser display name
       - `:organizer_email`: organiser email address
       - `:changes`: list of `{field, old_value, new_value}` tuples
@@ -63,17 +67,8 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     locale = RecipientLocale.attendee_locale(details)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      meeting_details =
-        details
-        |> Map.take([:all_day, :last_date])
-        |> Map.merge(%{
-          date: details.date,
-          start_time: details.start_time,
-          duration: details.duration,
-          location: details.location,
-          location_type: if(details.location, do: :in_person),
-          meeting_type: details.event_title
-        })
+      meeting_details = CalendarEventContent.hero_details(details)
+      video_link = CalendarEventContent.join_link(details)
 
       changes_table =
         if first_notification?(details),
@@ -84,6 +79,8 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       #{changes_table}
+
+      #{MeetingComponents.video_meeting_section(@intent, video_link)}
       """
 
       details_for_organizer = Map.put_new(details, :organizer_title, nil)
@@ -100,23 +97,10 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
       date_short = Formatting.format_date_short(details.date, locale)
 
-      ics_details = %{
-        all_day: Map.get(details, :all_day, false),
-        start_date: Map.get(details, :start_date),
-        end_date: Map.get(details, :end_date),
-        title: details.event_title,
-        start_time: details.start_time,
-        end_time: details.end_time,
-        uid: details.event_uid,
-        location: details.location,
-        description: details.description,
-        organizer_name: details.organizer_name,
-        organizer_email: details.organizer_email,
-        organizer_user_id: Map.get(details, :organizer_user_id),
-        attendee_email: attendee_email
-      }
+      ics_details = CalendarEventContent.ics_details(details, attendee_email)
 
       MjmlEmail.base_email()
+      |> CalendarEventContent.from_organiser(details)
       |> to(attendee_email)
       |> MjmlEmail.put_reply_to(details.organizer_name, details.organizer_email)
       |> subject(
@@ -126,7 +110,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
         )
       )
       |> html_body(html_body)
-      |> text_body(build_text_body(details, meeting_details, locale))
+      |> text_body(build_text_body(details, meeting_details, video_link, locale))
       |> attachment(build_ics_attachment(ics_details, details, locale))
     end)
   end
@@ -276,6 +260,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   defp detail_cells({:description, _from, to}, _locale),
     do: {dgettext("emails_booking_changes", "Description"), escape(Formatting.plain_excerpt(to))}
 
+  defp detail_cells({:video_link, _from, to}, _locale),
+    do: {dgettext("emails_booking_changes", "Video call"), escape(to)}
+
   defp detail_cells({:time, _from, to}, locale),
     do:
       {dgettext("emails_booking_changes", "Time"),
@@ -287,11 +274,13 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   defp change_to_row({:location, from, to}, _locale),
     do: {dgettext("emails_booking_changes", "Location"), escape(from), escape(to)}
 
-  defp change_to_row({:description, _from, _to}, _locale),
+  defp change_to_row({:description, from, to}, _locale),
     do:
-      {dgettext("emails_booking_changes", "Description"),
-       dgettext("emails_booking_changes", "(previous)"),
-       dgettext("emails_booking_changes", "(updated)")}
+      {dgettext("emails_booking_changes", "Description"), escape_excerpt(from),
+       escape_excerpt(to)}
+
+  defp change_to_row({:video_link, from, to}, _locale),
+    do: {dgettext("emails_booking_changes", "Video call"), escape(from), escape(to)}
 
   defp change_to_row({:time, from_start, to_start}, locale),
     do:
@@ -301,10 +290,17 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   defp change_to_row(_other, _locale), do: nil
 
+  defp escape_excerpt(text) do
+    case Formatting.plain_excerpt(text) do
+      "" -> escape(nil)
+      excerpt -> escape(excerpt)
+    end
+  end
+
   defp escape(nil), do: dgettext("emails_booking_changes", "(none)")
   defp escape(val), do: val |> to_string() |> Sanitise.sanitize_for_email()
 
-  defp build_text_body(details, meeting_details, locale) do
+  defp build_text_body(details, meeting_details, video_link, locale) do
     {changes_heading, changes_text} =
       if first_notification?(details),
         do:
@@ -324,6 +320,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
     #{changes_heading}
     #{changes_text}
+    #{TextBodyHelper.format_video_section(video_link, locale)}
 
     #{details.organizer_name}
     """

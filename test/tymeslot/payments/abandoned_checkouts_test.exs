@@ -11,7 +11,7 @@ defmodule Tymeslot.Payments.AbandonedCheckoutsTest do
   end
 
   defp pending(user, age_seconds, attrs \\ []) do
-    tx = insert(:payment_transaction, [user: user, status: "pending"] ++ attrs)
+    tx = insert(:payment_transaction, [user: user, status: :pending] ++ attrs)
     at = DateTime.add(DateTime.utc_now(), -age_seconds, :second)
 
     Repo.update_all(from(t in PaymentTransactionSchema, where: t.id == ^tx.id),
@@ -28,7 +28,7 @@ defmodule Tymeslot.Payments.AbandonedCheckoutsTest do
     test "lists users whose pending checkout is older than the cutoff", %{cutoff: cutoff} do
       user = insert(:user)
       pending(user, 700)
-      insert(:payment_transaction, user: user, status: "completed")
+      insert(:payment_transaction, user: user, status: :completed)
       fresh = insert(:user)
       pending(fresh, 60)
 

@@ -308,7 +308,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlotsFlowTest do
       uid: "busy-#{iso}",
       start_time: DateTime.new!(date, from, @timezone),
       end_time: DateTime.new!(date, to, @timezone),
-      status: "confirmed",
+      status: :confirmed,
       transparency: "opaque",
       summary: "Busy"
     }

@@ -344,7 +344,7 @@ defmodule Tymeslot.Notifications.EventsTest do
           is_active: true
         )
 
-      meeting = insert(:meeting, organizer_user_id: user.id, status: "confirmed")
+      meeting = insert(:meeting, organizer_user_id: user.id, status: :confirmed)
 
       %{meeting: meeting, telegram_integration: telegram_integration}
     end

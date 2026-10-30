@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Shared.ApiResponse
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
@@ -130,14 +131,27 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     ]
   end
 
-  defp handle_api_response({:ok, response}), do: handle_http_response(response)
   defp handle_api_response({:error, error}), do: handle_http_error(error)
 
-  defp handle_http_response(%Req.Response{status: 200}) do
+  # Every status is either named below or reported as unexpected, so no
+  # status counts as success: a connection test answers with a sentence for
+  # the organiser, never a decoded body.
+  defp handle_api_response(response) do
+    response
+    |> ApiResponse.handle_tagged(
+      label: "MiroTalk",
+      custom: &connection_status/1,
+      success: [],
+      log_level: :warning
+    )
+    |> connection_result()
+  end
+
+  defp connection_status({:ok, %{status: 200}}) do
     {:ok, dgettext("integrations_video", "Connection successful - API key is valid")}
   end
 
-  defp handle_http_response(%Req.Response{status: 401, body: body}) do
+  defp connection_status({:ok, %{status: 401, body: body}}) do
     handle_auth_error(
       body,
       dgettext("integrations_video", "Authentication failed - Please check your API key")
@@ -146,7 +160,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   # A 403 is not the server calling the key invalid — a reverse proxy in front
   # of the wrong base URL answers the same way — so it stays on `:unreachable`.
-  defp handle_http_response(%Req.Response{status: 403}) do
+  defp connection_status({:ok, %{status: 403}}) do
     {:error,
      {:unreachable,
       dgettext(
@@ -155,7 +169,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       )}}
   end
 
-  defp handle_http_response(%Req.Response{status: 404}) do
+  defp connection_status({:ok, %{status: 404}}) do
     {:error,
      {:unreachable,
       dgettext(
@@ -164,7 +178,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       )}}
   end
 
-  defp handle_http_response(%Req.Response{status: 406}) do
+  defp connection_status({:ok, %{status: 406}}) do
     {:error,
      {:unreachable,
       dgettext(
@@ -173,12 +187,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       )}}
   end
 
-  defp handle_http_response(%Req.Response{status: status, body: body})
-       when status >= 500 do
-    redacted_body = Redactor.redact_and_truncate(body)
+  defp connection_status(_response), do: :default
 
-    Logger.error("MiroTalk server error", status: status, body: redacted_body)
-
+  defp connection_result({:error, {:http_error, status, _message}}) when status >= 500 do
     {:error,
      {:unreachable,
       dgettext(
@@ -188,7 +199,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       )}}
   end
 
-  defp handle_http_response(%Req.Response{status: status}) do
+  defp connection_result({:error, {:http_error, status, _message}}) do
     {:error,
      {:unreachable,
       dgettext(
@@ -197,6 +208,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         status: status
       )}}
   end
+
+  defp connection_result(result), do: result
 
   defp handle_auth_error(body, default_message) do
     if String.contains?(body || "", "Unauthorized") do
@@ -259,25 +272,17 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     ]
 
     # Try HTTPS first, then HTTP
-    case HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
-           Config.http_client_module().post(url, "", headers, SsrfOptions.request_options())
-         end) do
-      {:ok, %Req.Response{status: 200, body: body}} ->
-        case Jason.decode(body) do
-          {:ok, response} ->
-            build_room_data(response, config)
+    response =
+      HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
+        Config.http_client_module().post(url, "", headers, SsrfOptions.request_options())
+      end)
 
-          {:error, _decode_error} ->
-            Logger.error("Invalid JSON response from MiroTalk API")
-            {:error, :invalid_json}
-        end
+    case ApiResponse.handle_tagged(response, label: "MiroTalk", success: [200]) do
+      {:ok, response} ->
+        build_room_data(response, config)
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        redacted_body = Redactor.redact_and_truncate(body)
-
-        Logger.error("MiroTalk API error", status: status, body: redacted_body)
-
-        {:error, {:http_error, status, "MiroTalk API error (see logs for details)"}}
+      {:error, {:http_error, _status, _message}} = error ->
+        error
 
       {:error, reason} ->
         Logger.error("Failed to create MiroTalk room", error: Redactor.redact(reason))

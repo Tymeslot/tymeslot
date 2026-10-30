@@ -25,7 +25,7 @@ defmodule Tymeslot.Notifications.Email.GuestReminderTest do
       :meeting,
       Map.merge(
         %{
-          status: "scheduled",
+          status: :confirmed,
           start_time: start_time,
           end_time: DateTime.add(start_time, 1, :hour)
         },
@@ -141,7 +141,7 @@ defmodule Tymeslot.Notifications.Email.GuestReminderTest do
 
       {:ok, _guest} =
         GuestQueries.update_rsvp(declined, %{
-          status: "declined",
+          status: :declined,
           responded_at: DateTime.utc_now(:second)
         })
 

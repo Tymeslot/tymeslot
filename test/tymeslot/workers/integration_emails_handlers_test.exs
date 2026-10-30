@@ -255,30 +255,6 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmailsTest do
                  "method" => "request"
                })
     end
-
-    test "discards with a partial-failure reason when some deliveries fail", %{
-      user: user,
-      integration: integration,
-      event: event
-    } do
-      stub(EmailServiceMock, :send_event_update_notification, fn email, _details ->
-        if email == "fail@example.com", do: {:error, :smtp_down}, else: {:ok, "sent"}
-      end)
-
-      assert {:discard, "Partial delivery failure:" <> _rest} =
-               EmailHandlers.execute_email_action("send_event_update_notification", %{
-                 "user_id" => user.id,
-                 "integration_id" => integration.id,
-                 "event_uid" => event.uid,
-                 "attendee_emails" => ["ok@example.com", "fail@example.com"],
-                 "before_title" => "Old Title",
-                 "before_location" => nil,
-                 "before_description" => nil,
-                 "before_start_at" => nil,
-                 "before_end_at" => nil,
-                 "method" => "request"
-               })
-    end
   end
 
   describe "handle_integration_unhealthy_notification/1" do

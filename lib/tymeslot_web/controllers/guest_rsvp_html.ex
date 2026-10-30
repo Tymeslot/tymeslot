@@ -19,7 +19,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   @spec confirm(map()) :: Phoenix.LiveView.Rendered.t()
   def confirm(assigns) do
     ~H"""
-    <% accepting? = @status == "accepted" %>
+    <% accepting? = @status == :accepted %>
     <TokenPage.shell>
       <.rsvp_badge accepted?={accepting?} />
 
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   @spec confirmation(map()) :: Phoenix.LiveView.Rendered.t()
   def confirmation(assigns) do
     ~H"""
-    <% accepted? = @status == "accepted" %>
+    <% accepted? = @status == :accepted %>
     <TokenPage.shell>
       <.rsvp_badge accepted?={accepted?} />
 

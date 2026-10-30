@@ -50,7 +50,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueries do
     |> ConnectAccountSchema.changeset(%{
       user_id: user_id,
       country: country,
-      status: "creating"
+      status: :creating
     })
     |> Repo.insert()
   end
@@ -74,7 +74,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueries do
       set: [
         deleted_at: now,
         charges_enabled: false,
-        status: "deleted",
+        status: :deleted,
         user_id: nil,
         updated_at: now
       ]

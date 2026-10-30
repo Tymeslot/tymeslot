@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
             end_time: DateTime.add(start, 45, :minute),
             duration: 45,
             attendee_timezone: "UTC",
-            status: "confirmed"
+            status: :confirmed
           )
 
         {:ok, view, _html} =

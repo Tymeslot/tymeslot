@@ -11,8 +11,9 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Retry
+  alias Tymeslot.Integrations.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.HttpAuth
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.IdToken
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
@@ -112,47 +113,34 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   end
 
   defp fetch_user_profile(token, opts) do
-    headers = [
-      {"Authorization", "Bearer #{token}"},
-      {"Content-Type", "application/json"}
-    ]
+    headers = [HttpAuth.bearer(token), {"Content-Type", "application/json"}]
 
     # The reason stays structured inside the retry, so a 5xx or a dropped
-    # connection is retried and the message names what failed last.
+    # connection is retried and the message names what failed last; a 429 is
+    # retried after the wait the provider names, when it names one.
     fn ->
-      case Config.http_client_module().get("https://graph.microsoft.com/v1.0/me", headers, []) do
-        {:ok, %Req.Response{status: 200, body: body}} ->
-          case Jason.decode(body) do
-            {:ok, %{"id" => id} = profile} when is_binary(id) and id != "" ->
-              {:ok, profile}
-
-            {:ok, _result} ->
-              {:error, "Microsoft profile missing unique ID"}
-
-            {:error, _reason} ->
-              {:error, "Invalid JSON response from Microsoft profile API"}
-          end
-
-        # Retried after the wait the provider names, when it names one.
-        {:ok, %Req.Response{status: 429} = response} ->
-          Logger.warning("Microsoft user profile request rate limited")
-          {:error, {:rate_limited, Retry.retry_after_seconds(response)}}
-
-        {:ok, %Req.Response{status: status, body: body}} ->
-          Logger.error("Failed to fetch Microsoft user profile",
-            status: status,
-            body: Redactor.redact_and_truncate(body)
-          )
-
-          {:error, {:http_error, status, body}}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      "https://graph.microsoft.com/v1.0/me"
+      |> Config.http_client_module().get(headers, [])
+      |> ApiResponse.handle_tagged(
+        label: "Microsoft profile",
+        success: [200],
+        custom: &ApiResponse.rate_limited/1
+      )
+      |> profile()
     end
     |> Retry.with_backoff(Keyword.merge(@profile_retry, Keyword.get(opts, :profile_retry, [])))
     |> profile_error_message()
   end
+
+  defp profile({:ok, %{"id" => id} = profile}) when is_binary(id) and id != "",
+    do: {:ok, profile}
+
+  defp profile({:ok, _other}), do: {:error, "Microsoft profile missing unique ID"}
+
+  defp profile({:error, :malformed_response}),
+    do: {:error, "Invalid JSON response from Microsoft profile API"}
+
+  defp profile(error), do: error
 
   defp profile_error_message({:error, {:http_error, status, _body}}),
     do: {:error, "Failed to fetch user profile: HTTP #{status}"}

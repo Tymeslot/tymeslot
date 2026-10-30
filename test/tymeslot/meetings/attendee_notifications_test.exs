@@ -65,6 +65,22 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       )
     end
 
+    test "an event's video link travels with its invitation" do
+      event =
+        insert(:provider_calendar_event, video_link: "https://meet.google.com/abc-defg-hij")
+
+      assert {:ok, :sent} = AttendeeNotifications.event_created(event, [%{email: "a@x.com"}])
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "a@x.com",
+          "event_video_link" => "https://meet.google.com/abc-defg-hij"
+        }
+      )
+    end
+
     test "enqueues a :request invitation for a MeetingSchema attendee" do
       meeting = insert(:meeting, attendee_email: "guest@example.com")
       attendees = [%{email: "guest@example.com"}]
@@ -459,6 +475,30 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       assert job.state == "available"
       refute DateTime.after?(job.scheduled_at, DateTime.utc_now())
       assert all_enqueued(worker: Worker) == []
+    end
+
+    test "carries the video link before and after the edit" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      original =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          video_link: "https://zoom.example/j/old",
+          attendees: [%{"email" => "a@x.com"}]
+        )
+
+      updated = %{original | video_link: "https://zoom.example/j/new"}
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+
+      assert %{
+               "before_video_link" => "https://zoom.example/j/old",
+               "event" => %{"video_link" => "https://zoom.example/j/new"}
+             } = job.args
     end
 
     test "returns {:ok, :noop} when nobody is left to tell" do

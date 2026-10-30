@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
 
         # And the booking really is held, not merely described as one.
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
-        assert meeting.status == "awaiting_approval"
+        assert meeting.status == :awaiting_approval
       end
     end
 
@@ -143,13 +143,13 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
             "America/New_York"
           )
 
-        meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+        meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
         payment =
           insert(:booking_payment,
             meeting: meeting,
             host_user_id: user.id,
-            status: "pending",
+            status: :pending,
             stripe_checkout_session_id: "cs_TEST"
           )
 
@@ -166,12 +166,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         # gate instead of being confirmed outright.
         {:ok, _payment} =
           BookingPaymentQueries.update(payment, %{
-            status: "paid",
+            status: :paid,
             paid_at: DateTime.utc_now(:second)
           })
 
         meeting
-        |> Changeset.change(status: "awaiting_approval")
+        |> Changeset.change(status: :awaiting_approval)
         |> Repo.update!()
 
         PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
@@ -209,7 +209,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         refute confirmation_heading(html) == held_headline(unquote(theme.key))
 
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
-        assert meeting.status == "confirmed"
+        assert meeting.status == :confirmed
       end
     end
   end

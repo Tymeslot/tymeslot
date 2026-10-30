@@ -60,7 +60,7 @@ defmodule Tymeslot.MeetingPayments.HeldMeetings do
          true <- MeetingState.awaiting_payment?(meeting) do
       # A status write only, so a row whose other fields fail today's full
       # validation is still expired.
-      case MeetingQueries.update_meeting_status(meeting, %{status: "expired"}) do
+      case MeetingQueries.update_meeting_status(meeting, %{status: :expired}) do
         {:ok, expired} -> {:ok, :expired, expired}
         {:error, _changeset} = error -> error
       end

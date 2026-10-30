@@ -12,17 +12,17 @@ defmodule Tymeslot.Bookings.Reschedule do
   the gate with an obvious hole in it.
 
   That only applies, though, when the booking's current status is one the
-  gate is meaningful for: `"confirmed"` (the host answered, and the reschedule
-  asks them again) or `"awaiting_approval"` (a held request being moved before
-  anyone has answered). A booking that never paid (`"awaiting_payment"`) or
-  one whose window already lapsed (`"expired"`, already released and
-  refunded) has nothing to gate; forcing either into `"awaiting_approval"`
+  gate is meaningful for: `:confirmed` (the host answered, and the reschedule
+  asks them again) or `:awaiting_approval` (a held request being moved before
+  anyone has answered). A booking that never paid (`:awaiting_payment`) or
+  one whose window already lapsed (`:expired`, already released and
+  refunded) has nothing to gate; forcing either into `:awaiting_approval`
   would let the host approve a booking nobody paid for, or one the invitee
   has already been refunded for. Their status is left untouched instead,
   exactly as an ungated meeting type's is.
 
   So a reschedule on such a meeting type, from one of those two statuses,
-  re-enters `"awaiting_approval"` with a fresh window, the provider event
+  re-enters `:awaiting_approval` with a fresh window, the provider event
   goes back to tentative, and the invitee is told a request was made rather
   than that their meeting has moved.
   """
@@ -286,8 +286,8 @@ defmodule Tymeslot.Bookings.Reschedule do
   # approval's commit with the approval, or the reschedule fails and is
   # retried whole.
   defp activate_if_confirmed_outright(
-         %{status: "confirmed"} = updated,
-         %{status: "awaiting_approval"}
+         %{status: :confirmed} = updated,
+         %{status: :awaiting_approval}
        ),
        do: Activation.activate_in_transaction(updated, with_video_room: true)
 
@@ -298,7 +298,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   # would tell them their meeting has moved to a time nobody has agreed to,
   # which is the confusion the whole feature exists to remove.
   #
-  # Known gap: when the booking being re-gated came from `"confirmed"`, the
+  # Known gap: when the booking being re-gated came from `:confirmed`, the
   # invitee's calendar client may already hold an event from the original
   # confirmation's ICS attachment (`AppointmentConfirmation`'s
   # `IcsGenerator.generate_ics_attachment/2`). The request email sent below
@@ -314,7 +314,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   # analogous to `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling,
   # which lives outside this module's booking-email templates and is left for
   # that work rather than bolted on here.
-  defp announce(%{status: "awaiting_approval"} = updated, original, _pending) do
+  defp announce(%{status: :awaiting_approval} = updated, original, _pending) do
     GuestNotifications.reset_for_new_time(updated)
 
     case Events.meeting_requested(updated, previous_start_opts(updated, original)) do
@@ -358,7 +358,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   # `apply_time_update_and_schedule_job/5`'s own is harmless:
   # `CalendarJobs.schedule_job/2` is uniqueness-guarded and reports the second
   # insert as `:already_scheduled`.
-  defp announce(%{status: "confirmed"} = updated, %{status: "awaiting_approval"}, pending) do
+  defp announce(%{status: :confirmed} = updated, %{status: :awaiting_approval}, pending) do
     Approval.activate_confirmed(updated, pending)
   end
 
@@ -405,10 +405,10 @@ defmodule Tymeslot.Bookings.Reschedule do
     exception -> {:error, {:reminders_not_settled, exception}}
   end
 
-  defp reminder_step(%{status: "awaiting_approval"} = updated, _meeting),
+  defp reminder_step(%{status: :awaiting_approval} = updated, _meeting),
     do: Orchestrator.cancel_reminder_notifications(updated)
 
-  defp reminder_step(%{status: "confirmed"}, %{status: "awaiting_approval"}), do: :ok
+  defp reminder_step(%{status: :confirmed}, %{status: :awaiting_approval}), do: :ok
 
   defp reminder_step(updated, _meeting),
     do: Orchestrator.schedule_reminder_notifications(updated, replace: true)

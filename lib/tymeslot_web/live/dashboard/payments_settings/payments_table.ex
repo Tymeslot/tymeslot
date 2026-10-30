@@ -77,14 +77,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
     LocaleFormat.format_short_date_with_year(inserted_at, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
-  defp format_status("paid"), do: dgettext("dashboard_payments", "Paid")
+  defp format_status(:paid), do: dgettext("dashboard_payments", "Paid")
 
-  defp format_status("partially_refunded"),
+  defp format_status(:partially_refunded),
     do: dgettext("dashboard_payments", "Partially refunded")
 
-  defp format_status("refunded"), do: dgettext("dashboard_payments", "Refunded")
-  defp format_status("disputed"), do: dgettext("dashboard_payments", "Disputed")
-  defp format_status("pending"), do: dgettext("dashboard_payments", "Pending")
-  defp format_status("failed"), do: dgettext("dashboard_payments", "Failed")
-  defp format_status(other), do: other
+  defp format_status(:refunded), do: dgettext("dashboard_payments", "Refunded")
+  defp format_status(:disputed), do: dgettext("dashboard_payments", "Disputed")
+  defp format_status(:pending), do: dgettext("dashboard_payments", "Pending")
+  defp format_status(:failed), do: dgettext("dashboard_payments", "Failed")
 end

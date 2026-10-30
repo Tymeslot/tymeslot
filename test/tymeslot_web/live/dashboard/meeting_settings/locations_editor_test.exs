@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
   defp office do
     %LocationOption{
       id: "loc-office",
-      kind: "in_person",
+      kind: :in_person,
       label: "Our office",
       position: 0
     }
@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
           office(),
           %LocationOption{
             id: "loc-call",
-            kind: "phone",
+            kind: :phone,
             label: "Ring us",
             details: "+44",
             position: 1
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
       reloaded = reload(view, meeting_type, user)
 
       assert [_office, video] = reloaded.locations
-      assert video.kind == "video"
+      assert video.kind == :video
       assert video.video_integration_ids == [integration.id]
 
       # The pair every pre-list reader still consults is projected from it.
@@ -355,7 +355,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
           %{office() | venue_ids: [gone.id, berlin.id]},
           %LocationOption{
             id: "loc-call",
-            kind: "phone",
+            kind: :phone,
             label: "Ring us",
             details: "+44",
             position: 1
@@ -565,7 +565,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
           office(),
           %LocationOption{
             id: "loc-call",
-            kind: "phone",
+            kind: :phone,
             label: "Ring us",
             details: "+44",
             position: 1
@@ -596,7 +596,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
           office(),
           %LocationOption{
             id: "loc-call",
-            kind: "phone",
+            kind: :phone,
             label: "Ring us",
             details: "+44",
             position: 1

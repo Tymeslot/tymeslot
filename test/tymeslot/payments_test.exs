@@ -52,7 +52,7 @@ defmodule Tymeslot.PaymentsTest do
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: "pending",
+          status: :pending,
           stripe_id: "sess_one_time",
           metadata: %{"payment_type" => "one_time"}
         )
@@ -85,7 +85,7 @@ defmodule Tymeslot.PaymentsTest do
 
       updated_pending = Repo.get!(PaymentTransactionSchema, pending_tx.id)
 
-      assert updated_pending.status == "failed"
+      assert updated_pending.status == :failed
       assert updated_pending.metadata["superseded"] == true
     end
 
@@ -94,7 +94,7 @@ defmodule Tymeslot.PaymentsTest do
 
       Factory.insert(:payment_transaction,
         user: user,
-        status: "completed",
+        status: :completed,
         stripe_id: "cs_sub_conflict"
       )
 
@@ -124,10 +124,10 @@ defmodule Tymeslot.PaymentsTest do
                  %{success: "https://s", cancel: "https://c"}
                )
 
-      assert %{status: "pending", stripe_id: nil} =
+      assert %{status: :pending, stripe_id: nil} =
                Repo.get_by(PaymentTransactionSchema,
                  user_id: user.id,
-                 status: "pending"
+                 status: :pending
                )
     end
   end

@@ -102,7 +102,7 @@ defmodule Tymeslot.TestHelpers.Eventually do
 
       # Custom timeout for slow operations
       eventually(fn ->
-        assert Repo.get(Meeting, id).status == "confirmed"
+        assert Repo.get(Meeting, id).status == :confirmed
       end, timeout: 5000)
 
       # Custom interval for very fast operations

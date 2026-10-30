@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
+  alias TymeslotWeb.Live.Shared.RateLimit
   require Logger
 
   @impl Phoenix.LiveComponent
@@ -173,7 +174,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     if socket.assigns.toggling_type_id == type_id do
       {:noreply, socket}
     else
-      with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
         socket
         |> assign(:toggling_type_id, type_id)
         |> do_toggle_type(type_id, user_id)
@@ -185,7 +186,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     user_id = socket.assigns.current_user.id
     type_id = String.to_integer(id)
 
-    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       do_toggle_private(socket, type_id, user_id)
     end)
   end
@@ -220,7 +221,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     ModalHook.with_modal_data(socket, :slug, fn type ->
-      with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
         do_confirm_slug_change(socket, type, user_id)
       end)
     end)
@@ -248,7 +249,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   def handle_event("confirm_delete_meeting_type", _params, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       ModalHook.with_modal_data(socket, :delete_meeting_type, fn type ->
         case MeetingTypes.delete_meeting_type(type) do
           {:ok, _result} ->
@@ -267,7 +268,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   def handle_event("reorder_meeting_types", %{"ids" => ids}, socket) when is_list(ids) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       # Convert to integers safely
       meeting_type_ids =
         ids
@@ -405,13 +406,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     |> ModalHook.hide_modal(:slug)
     |> assign(:slug_draft, "")
   end
-
-  defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
-    Flash.error(message)
-    {:noreply, socket}
-  end
-
-  defp with_rate_limit(:ok, _socket, action), do: action.()
 
   @impl Phoenix.LiveComponent
   def render(assigns), do: ComponentView.settings(assigns)

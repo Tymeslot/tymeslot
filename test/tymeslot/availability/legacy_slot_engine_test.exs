@@ -22,6 +22,12 @@ defmodule Tymeslot.Availability.LegacySlotEngineTest do
   # one did not guarantee in a fall-back hour, so the comparison is against
   # those labels.
   #
+  # A break lying wholly in a spring-forward gap never happens that day: both
+  # its ends resolve to the instant after the gap. The new engine lets a
+  # meeting run across that instant; the old one rejected any slot spanning
+  # it, an artefact of comparing against an empty interval (pinned by example
+  # in `SlotGridTest`). Those runs are left out.
+  #
   # Windows ending at 23:59 or 23:59:59 are generated as stored, unflagged:
   # the editor never offered such an end, but a row written through the
   # database can hold one, and the new engine must read it exactly as the old
@@ -48,7 +54,8 @@ defmodule Tymeslot.Availability.LegacySlotEngineTest do
       config =
         pure_config(days: days, overrides: overrides, time_off: time_off, interval: interval)
 
-      unless LegacySlotEngine.cuts_window?(date, owner_tz, user_tz, config) do
+      unless LegacySlotEngine.cuts_window?(date, owner_tz, user_tz, config) or
+               LegacySlotEngine.empty_break?(date, owner_tz, user_tz, config) do
         legacy = LegacySlotEngine.round_trip_slots(date, duration, owner_tz, user_tz, config)
         if legacy != [], do: Process.put(@compared, Process.get(@compared) + 1)
 

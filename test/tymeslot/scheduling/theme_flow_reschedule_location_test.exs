@@ -19,7 +19,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleLocationTest do
       insert(:meeting,
         organizer_user_id: user.id,
         organizer_email: user.email,
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-offices",
         venue_id: venue.id
       )
@@ -38,7 +38,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleLocationTest do
         organizer_user_id: user.id,
         organizer_email: user.email,
         location: "Our offices",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-offices",
         address_to_arrange: true
       )

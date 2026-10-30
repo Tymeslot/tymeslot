@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.Automation.PausedCardsTest do
             build(:telegram_integration,
               id: 1,
               name: "Buchungen",
-              bot_mode: "shared",
+              bot_mode: :shared,
               status: :active
             )
         },

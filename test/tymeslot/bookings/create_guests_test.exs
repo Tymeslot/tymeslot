@@ -82,7 +82,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
     {:ok, meeting} = Create.execute(meeting_params, form_data)
     [guest | _rest] = Guests.list_for_meeting(meeting.id)
 
-    assert guest.status == "pending"
+    assert guest.status == :pending
     assert byte_size(guest.rsvp_token) >= 20
   end
 

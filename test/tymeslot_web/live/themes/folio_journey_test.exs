@@ -318,7 +318,7 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
             payment_required: true,
             price_cents: 12_000,
             locations: [
-              %LocationOption{id: "office", kind: "in_person", label: "My studio", position: 0}
+              %LocationOption{id: "office", kind: :in_person, label: "My studio", position: 0}
             ]
           ]
         ]
@@ -435,7 +435,7 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
         uid: uid,
         start_time: DateTime.new!(from, ~T[00:00:00], "Etc/UTC"),
         end_time: DateTime.new!(until, ~T[00:00:00], "Etc/UTC"),
-        status: "confirmed",
+        status: :confirmed,
         transparency: "opaque",
         summary: "Busy"
       }

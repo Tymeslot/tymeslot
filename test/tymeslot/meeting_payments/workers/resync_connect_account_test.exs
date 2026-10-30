@@ -21,7 +21,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
     {:ok, account} =
       ConnectAccountQueries.update(account, %{
         stripe_account_id: stripe_account_id,
-        status: "active",
+        status: :active,
         charges_enabled: false,
         payouts_enabled: false,
         details_submitted: false
@@ -112,7 +112,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
       {:ok, _account} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_RESTAMP",
-          status: "active",
+          status: :active,
           charges_enabled: false,
           payouts_enabled: false,
           details_submitted: false,

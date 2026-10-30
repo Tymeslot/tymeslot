@@ -406,7 +406,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
       {1, nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          status: "unhealthy",
+          status: :unhealthy,
           failures: 3,
           became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour)
         )
@@ -462,7 +462,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
       {1, nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          status: "unhealthy",
+          status: :unhealthy,
           failures: 3,
           became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour)
         )

@@ -347,7 +347,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   @doc "Whether the chosen location asks the booker for their phone number."
   @spec phone_required?(map()) :: boolean()
   def phone_required?(assigns) do
-    match?(%LocationOption{kind: "phone", collect_from_guest: true}, selected(assigns))
+    match?(%LocationOption{kind: :phone, collect_from_guest: true}, selected(assigns))
   end
 
   @doc """
@@ -370,7 +370,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   # The written location of an in-person booking, once there is one.
   defp booked_in_person(assigns) do
     with true <- in_person?(assigns),
-         %{location_kind: "in_person"} = booked <- assigns[:booked_location] do
+         %{location_kind: :in_person} = booked <- assigns[:booked_location] do
       booked
     else
       _not_booked_in_person -> nil
@@ -430,7 +430,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
       in_person?(assigns)
   end
 
-  defp in_person?(assigns), do: match?(%LocationOption{kind: "in_person"}, selected(assigns))
+  defp in_person?(assigns), do: match?(%LocationOption{kind: :in_person}, selected(assigns))
 
   # The option the page states. On a group participant's seat move it is the
   # type's one location even though none is submitted: a group type's

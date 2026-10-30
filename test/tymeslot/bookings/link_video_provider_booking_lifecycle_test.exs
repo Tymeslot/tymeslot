@@ -105,7 +105,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
       assert_enqueued(worker: VideoSyncWorker, args: sync_args(booked, "delete"))
       assert %{success: 1, failure: 0} = drain_video_rooms()
 
-      assert %{status: "cancelled", video_room_id: nil} = Repo.reload!(booked)
+      assert %{status: :cancelled, video_room_id: nil} = Repo.reload!(booked)
       refute_received {:http_request, _method, _url}
     end
 
@@ -194,7 +194,7 @@ defmodule Tymeslot.Bookings.LinkVideoProviderBookingLifecycleTest do
       assert {:ok, _cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: booked.uid))
       assert %{success: 1, failure: 0} = drain_video_rooms()
 
-      assert %{status: "cancelled", video_room_id: nil} = Repo.reload!(booked)
+      assert %{status: :cancelled, video_room_id: nil} = Repo.reload!(booked)
       refute_received {:http_request, _method, _url}
     end
   end

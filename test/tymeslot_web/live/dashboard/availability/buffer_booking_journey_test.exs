@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
     meeting =
       Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
 
     assert DateTime.compare(meeting.start_time, DateTime.new!(date, ~T[11:30:00], @timezone)) ==
              :eq

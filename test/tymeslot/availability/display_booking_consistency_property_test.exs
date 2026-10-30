@@ -120,7 +120,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
             }
           )
 
-        assert {:ok, %MeetingSchema{status: "confirmed"}} = result,
+        assert {:ok, %MeetingSchema{status: :confirmed}} = result,
                "display offered #{chosen} for #{timezone}/#{duration}min under " <>
                  "#{inspect(rules)} with #{length(events)} event(s), " <>
                  "but booking failed: #{inspect(result)}"
@@ -242,7 +242,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
         uid: "prop-#{System.unique_integer([:positive])}",
         start_time: start_dt,
         end_time: end_dt,
-        status: "confirmed",
+        status: :confirmed,
         transparency: "opaque",
         summary: "Generated block"
       }

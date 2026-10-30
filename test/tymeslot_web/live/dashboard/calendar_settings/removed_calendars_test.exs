@@ -55,10 +55,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RemovedCalendarsTest do
   } do
     %IntegrationHealthStateSchema{}
     |> IntegrationHealthStateSchema.changeset(%{
-      integration_type: "calendar",
+      integration_type: :calendar,
       integration_id: integration.id,
       user_id: user.id,
-      status: "unhealthy"
+      status: :unhealthy
     })
     |> Repo.insert!()
 

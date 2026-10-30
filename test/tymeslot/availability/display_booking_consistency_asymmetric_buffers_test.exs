@@ -80,7 +80,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAsymmetricBuffersTest d
         uid: "busy-#{System.unique_integer([:positive])}",
         start_time: DateTime.new!(date, ~T[12:00:00], "Etc/UTC"),
         end_time: DateTime.new!(date, ~T[12:30:00], "Etc/UTC"),
-        status: "confirmed",
+        status: :confirmed,
         transparency: "opaque",
         summary: "Busy"
       }
@@ -109,7 +109,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAsymmetricBuffersTest d
 
       assert {:error, :slot_taken} = book_at(user, meeting_type, date, "12:45 PM")
 
-      assert {:ok, %MeetingSchema{status: "confirmed"}} =
+      assert {:ok, %MeetingSchema{status: :confirmed}} =
                book_at(user, meeting_type, date, "11:15 AM")
     end
 

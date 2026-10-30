@@ -20,12 +20,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationFieldTest do
   @note "The address will be arranged with you after booking."
 
   defp in_person(id, label \\ "In person"),
-    do: %LocationOption{id: id, kind: "in_person", label: label, position: 0}
+    do: %LocationOption{id: id, kind: :in_person, label: label, position: 0}
 
   defp call_me,
     do: %LocationOption{
       id: "loc-call",
-      kind: "phone",
+      kind: :phone,
       label: "Phone call",
       collect_from_guest: true,
       position: 1

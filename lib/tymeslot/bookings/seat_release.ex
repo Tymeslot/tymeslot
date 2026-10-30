@@ -114,7 +114,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
     locked = GroupMeetingQueries.lock_for_update(meeting.id)
 
     cond do
-      is_nil(locked) or locked.status == "cancelled" ->
+      is_nil(locked) or locked.status == :cancelled ->
         {:ok, :seats_remain}
 
       # A session the host planned exists because it was planned, not because
@@ -132,7 +132,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
   end
 
   defp flip_to_cancelled(meeting) do
-    attrs = %{status: "cancelled", cancelled_at: DateTime.truncate(Clock.utc_now(), :second)}
+    attrs = %{status: :cancelled, cancelled_at: DateTime.truncate(Clock.utc_now(), :second)}
 
     case MeetingQueries.update_meeting_status(meeting, attrs) do
       {:ok, cancelled} -> {:ok, {:cancelled, cancelled}}

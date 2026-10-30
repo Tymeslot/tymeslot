@@ -153,7 +153,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
       {:ok, _meeting} =
         ctx.meeting
         |> Changeset.change(
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           meeting_url: "https://meet.example.com/intro",
           show_as_free: true
         )

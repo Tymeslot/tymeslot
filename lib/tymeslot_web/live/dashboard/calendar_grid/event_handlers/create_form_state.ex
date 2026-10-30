@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateRecurrence
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Live.Shared.Flash
 
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -175,61 +176,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   @spec handle_update_create_guest_name(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_create_guest_name(%{"value" => name}, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
-
-      creating ->
-        case UniversalSanitizer.sanitize_and_validate(name, mode: :plain_text, max_length: 200) do
-          {:ok, sanitised} ->
-            {:noreply, assign(socket, :creating_event, Map.put(creating, :guest_name, sanitised))}
-
-          {:error, _reason} ->
-            {:noreply, socket}
-        end
-    end
-  end
+  def handle_update_create_guest_name(%{"value" => name}, socket),
+    do: put_sanitised(socket, :guest_name, name, 200)
 
   @spec handle_toggle_create_note(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_toggle_create_note(_params, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
+  def handle_toggle_create_note(_params, socket), do: update_creating(socket, &toggle_note/1)
 
-      # Removing the note discards what was typed, so a hidden field can never
-      # send a note the organiser no longer sees.
-      %{note_open: true} = creating ->
-        {:noreply,
-         assign(socket, :creating_event, %{creating | note_open: false, organizer_note: ""})}
+  # Removing the note discards what was typed, so a hidden field can never
+  # send a note the organiser no longer sees.
+  defp toggle_note(%{note_open: true} = creating),
+    do: %{creating | note_open: false, organizer_note: ""}
 
-      creating ->
-        {:noreply, assign(socket, :creating_event, Map.put(creating, :note_open, true))}
-    end
-  end
+  defp toggle_note(creating), do: Map.put(creating, :note_open, true)
 
   @spec handle_update_create_note(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_create_note(%{"value" => note}, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
-
-      creating ->
-        case UniversalSanitizer.sanitize_and_validate(note,
-               mode: :plain_text,
-               max_length: MeetingSchema.organizer_note_max_length()
-             ) do
-          {:ok, sanitised} ->
-            {:noreply,
-             assign(socket, :creating_event, Map.put(creating, :organizer_note, sanitised))}
-
-          {:error, _reason} ->
-            {:noreply, socket}
-        end
-    end
-  end
+  def handle_update_create_note(%{"value" => note}, socket),
+    do: put_sanitised(socket, :organizer_note, note, MeetingSchema.organizer_note_max_length())
 
   @doc """
   Adds one more guest to an ad-hoc meeting.
@@ -243,37 +207,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   def handle_add_create_guest(%{"email" => raw_email}, socket) do
     email = raw_email |> String.trim() |> String.downcase()
 
-    case socket.assigns.creating_event do
-      %{} = creating ->
-        case check_extra_guest(creating, email) do
-          :ok ->
-            {:noreply,
-             assign(socket, :creating_event, %{
-               creating
-               | guest_emails: creating.guest_emails ++ [email],
-                 guest_email_input: ""
-             })}
+    update_creating(socket, fn creating ->
+      case check_extra_guest(creating, email) do
+        :ok ->
+          %{creating | guest_emails: creating.guest_emails ++ [email], guest_email_input: ""}
 
-          {:error, message} ->
-            send(self(), {:flash, {:error, message}})
-            {:noreply, socket}
-        end
-
-      nil ->
-        {:noreply, socket}
-    end
+        {:error, message} ->
+          Flash.error(message)
+          creating
+      end
+    end)
   end
 
   @spec handle_remove_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_remove_create_guest(%{"email" => email}, socket) do
-    case socket.assigns.creating_event do
-      %{} = creating ->
-        put_field(socket, :guest_emails, List.delete(creating.guest_emails, email))
-
-      nil ->
-        {:noreply, socket}
-    end
+    update_creating(socket, fn creating ->
+      Map.put(creating, :guest_emails, List.delete(creating.guest_emails, email))
+    end)
   end
 
   @spec handle_update_create_guest_input(map(), Phoenix.LiveView.Socket.t()) ::
@@ -323,24 +274,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     end
   end
 
-  defp put_field(socket, key, value) do
+  # Applies `fun` to the event being created and assigns what it returns; a
+  # no-op while no create form is open. A `fun` that returns the map it was
+  # given leaves the socket as it was (`assign/3` skips an equal value).
+  defp update_creating(socket, fun) do
     case socket.assigns.creating_event do
       nil -> {:noreply, socket}
-      creating -> {:noreply, assign(socket, :creating_event, Map.put(creating, key, value))}
+      creating -> {:noreply, assign(socket, :creating_event, fun.(creating))}
     end
+  end
+
+  defp put_field(socket, key, value), do: update_creating(socket, &Map.put(&1, key, value))
+
+  # Puts `value` under `key` once sanitised as plain text of at most
+  # `max_length`; a value the sanitiser refuses leaves the form as it was.
+  defp put_sanitised(socket, key, value, max_length) do
+    update_creating(socket, fn creating ->
+      case UniversalSanitizer.sanitize_and_validate(value,
+             mode: :plain_text,
+             max_length: max_length
+           ) do
+        {:ok, sanitised} -> Map.put(creating, key, sanitised)
+        {:error, _reason} -> creating
+      end
+    end)
   end
 
   @spec handle_update_create_guest_email(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_guest_email(%{"value" => email}, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
-
-      creating ->
-        trimmed = email |> String.trim() |> String.slice(0, 320)
-        {:noreply, assign(socket, :creating_event, Map.put(creating, :guest_email, trimmed))}
-    end
+    update_creating(socket, fn creating ->
+      Map.put(creating, :guest_email, email |> String.trim() |> String.slice(0, 320))
+    end)
   end
 
   @spec handle_close_create_form(map(), Phoenix.LiveView.Socket.t()) ::
@@ -357,58 +322,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   @spec handle_update_create_title(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_create_title(%{"value" => title}, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
-
-      creating_event ->
-        case UniversalSanitizer.sanitize_and_validate(title, mode: :plain_text, max_length: 500) do
-          {:ok, sanitised} ->
-            creating = Map.put(creating_event, :title, sanitised)
-            {:noreply, assign(socket, :creating_event, creating)}
-
-          {:error, _reason} ->
-            {:noreply, socket}
-        end
-    end
-  end
+  def handle_update_create_title(%{"value" => title}, socket),
+    do: put_sanitised(socket, :title, title, 500)
 
   @spec handle_update_create_time(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_time(params, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
-
-      creating ->
-        updated =
-          creating
-          |> maybe_update_date(params["start-date"], :date)
-          |> maybe_update_date(params["end-date"], :end_date)
-          |> maybe_update_time(params["start-time"], :start_hour, :start_minute)
-          |> maybe_update_time(params["end-time"], :end_hour, :end_minute)
-          |> CreateRecurrence.recompose(socket.assigns.user_timezone)
-
-        {:noreply, assign(socket, :creating_event, updated)}
-    end
+    update_creating(socket, fn creating ->
+      creating
+      |> maybe_update_date(params["start-date"], :date)
+      |> maybe_update_date(params["end-date"], :end_date)
+      |> maybe_update_time(params["start-time"], :start_hour, :start_minute)
+      |> maybe_update_time(params["end-time"], :end_hour, :end_minute)
+      |> CreateRecurrence.recompose(socket.assigns.user_timezone)
+    end)
   end
 
   @spec handle_toggle_create_all_day(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_toggle_create_all_day(_params, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
-
-      creating ->
-        updated =
-          creating
-          |> toggle_all_day()
-          |> CreateRecurrence.recompose(socket.assigns.user_timezone)
-
-        {:noreply, assign(socket, :creating_event, updated)}
-    end
+    update_creating(socket, fn creating ->
+      creating
+      |> toggle_all_day()
+      |> CreateRecurrence.recompose(socket.assigns.user_timezone)
+    end)
   end
 
   # Switching All-day on collapses the range to the start's day. The timed
@@ -433,17 +370,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @spec handle_meeting_reminder_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_meeting_reminder_event(event, params, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
-
-      creating ->
-        state = Map.get(creating, :meeting_reminders) || ReminderPickerState.new()
-        {_changed, updated} = apply_meeting_reminder_event(event, state, params)
-
-        {:noreply,
-         assign(socket, :creating_event, Map.put(creating, :meeting_reminders, updated))}
-    end
+    update_creating(socket, fn creating ->
+      state = Map.get(creating, :meeting_reminders) || ReminderPickerState.new()
+      {_changed, updated} = apply_meeting_reminder_event(event, state, params)
+      Map.put(creating, :meeting_reminders, updated)
+    end)
   end
 
   defp apply_meeting_reminder_event("meeting_add_quick_reminder", state, params),
@@ -467,137 +398,92 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @spec handle_add_create_reminder(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_add_create_reminder(params, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
+    update_creating(socket, fn creating ->
+      case Shared.parse_reminder(params) do
+        {:ok, reminder} ->
+          existing = Map.get(creating, :reminders, [])
+          Map.put(creating, :reminders, Shared.add_reminder(existing, reminder))
 
-      creating ->
-        case Shared.parse_reminder(params) do
-          {:ok, reminder} ->
-            existing = Map.get(creating, :reminders, [])
-            new_reminders = Shared.add_reminder(existing, reminder)
-            updated = Map.put(creating, :reminders, new_reminders)
-            {:noreply, assign(socket, :creating_event, updated)}
-
-          :error ->
-            {:noreply, socket}
-        end
-    end
+        :error ->
+          creating
+      end
+    end)
   end
 
   @spec handle_remove_create_reminder(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_remove_create_reminder(params, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
+    update_creating(socket, fn creating ->
+      case Shared.parse_int(params["index"]) do
+        {:ok, index} ->
+          reminders = creating |> Map.get(:reminders, []) |> List.delete_at(index)
+          Map.put(creating, :reminders, reminders)
 
-      creating ->
-        case Shared.parse_int(params["index"]) do
-          {:ok, index} ->
-            reminders = creating |> Map.get(:reminders, []) |> List.delete_at(index)
-            {:noreply, assign(socket, :creating_event, Map.put(creating, :reminders, reminders))}
-
-          :error ->
-            {:noreply, socket}
-        end
-    end
+        :error ->
+          creating
+      end
+    end)
   end
 
   @spec handle_update_create_integration(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_integration(params, socket) do
-    case socket.assigns.creating_event do
-      nil ->
-        {:noreply, socket}
+    id_str = params["integration-id"] || params["integration_id"]
+    cal_id = params["calendar-id"]
 
-      creating_event ->
-        id_str = params["integration-id"] || params["integration_id"]
-        cal_id = params["calendar-id"]
+    update_creating(socket, fn creating ->
+      case Shared.parse_int(id_str) do
+        {:ok, id} ->
+          creating
+          |> Map.put(:integration_id, id)
+          |> Map.put(
+            :calendar_id,
+            cal_id || EditWorkflow.default_calendar_id(socket.assigns.integrations, id)
+          )
 
-        case Shared.parse_int(id_str) do
-          {:ok, id} ->
-            creating =
-              creating_event
-              |> Map.put(:integration_id, id)
-              |> Map.put(
-                :calendar_id,
-                cal_id || EditWorkflow.default_calendar_id(socket.assigns.integrations, id)
-              )
-
-            {:noreply, assign(socket, :creating_event, creating)}
-
-          :error ->
-            {:noreply, socket}
-        end
-    end
+        :error ->
+          creating
+      end
+    end)
   end
 
   @spec handle_add_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_add_create_attendee(%{"email" => raw_email}, socket) do
-    creating = socket.assigns.creating_event
-
-    if is_nil(creating) do
-      {:noreply, socket}
-    else
+    update_creating(socket, fn creating ->
       email = raw_email |> String.trim() |> String.downcase()
 
       if Shared.valid_email?(email) and email not in creating.attendees do
-        updated =
-          creating
-          |> Map.put(:attendees, creating.attendees ++ [email])
-          |> Map.put(:attendee_input, "")
-
-        {:noreply, assign(socket, :creating_event, updated)}
+        creating
+        |> Map.put(:attendees, creating.attendees ++ [email])
+        |> Map.put(:attendee_input, "")
       else
-        {:noreply, socket}
+        creating
       end
-    end
+    end)
   end
 
   @spec handle_remove_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_remove_create_attendee(%{"email" => email}, socket) do
-    creating = socket.assigns.creating_event
-
-    if is_nil(creating) do
-      {:noreply, socket}
-    else
-      updated = Map.put(creating, :attendees, List.delete(creating.attendees, email))
-      {:noreply, assign(socket, :creating_event, updated)}
-    end
+    update_creating(socket, fn creating ->
+      Map.put(creating, :attendees, List.delete(creating.attendees, email))
+    end)
   end
 
   @spec handle_update_create_attendee_input(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_create_attendee_input(%{"email" => value}, socket) do
-    creating = socket.assigns.creating_event
-
-    if is_nil(creating) do
-      {:noreply, socket}
-    else
-      {:noreply, assign(socket, :creating_event, Map.put(creating, :attendee_input, value))}
-    end
-  end
+  def handle_update_create_attendee_input(%{"email" => value}, socket),
+    do: put_field(socket, :attendee_input, value)
 
   @spec handle_update_create_video(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_video(params, socket) do
-    creating = socket.assigns.creating_event
-
-    if is_nil(creating) do
-      {:noreply, socket}
-    else
-      updated =
-        Map.put(
-          creating,
-          :video_integration_id,
-          Shared.parse_optional_int(params["video_integration_id"])
-        )
-
-      {:noreply, assign(socket, :creating_event, updated)}
-    end
+    put_field(
+      socket,
+      :video_integration_id,
+      Shared.parse_optional_int(params["video_integration_id"])
+    )
   end
 
   defp maybe_update_date(creating, date_str, key)

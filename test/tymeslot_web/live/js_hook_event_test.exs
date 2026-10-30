@@ -96,6 +96,7 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
+  alias TymeslotWeb.Hooks.ModalHook
 
   setup :setup_dashboard_user
 
@@ -269,6 +270,80 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
       # the filter and Ecto update run.
       assert Repo.get!(MeetingTypeSchema, mt1.id).sort_order == 0
       assert Repo.get!(MeetingTypeSchema, mt2.id).sort_order == 1
+    end
+  end
+
+  describe "ServiceSettingsComponent — meeting_type_write rate limit" do
+    setup %{user: user} do
+      {:ok,
+       mt: insert(:meeting_type, user: user, name: "Intro", is_active: true, is_private: false)}
+    end
+
+    test "toggle_type is refused and leaves the status unchanged", %{user: user, mt: mt} do
+      refusal = exhaust_limit!(:meeting_type_write, user.id)
+
+      socket =
+        user
+        |> build_component_socket()
+        |> Component.assign(toggling_type_id: nil, meeting_types: [mt])
+
+      assert {:noreply, _socket} =
+               ServiceSettingsComponent.handle_event(
+                 "toggle_type",
+                 %{"id" => to_string(mt.id)},
+                 socket
+               )
+
+      assert_received {:flash, {:error, ^refusal}}
+      assert Repo.get!(MeetingTypeSchema, mt.id).is_active
+    end
+
+    test "toggle_private is refused and leaves the visibility unchanged", %{user: user, mt: mt} do
+      refusal = exhaust_limit!(:meeting_type_write, user.id)
+
+      assert {:noreply, _socket} =
+               ServiceSettingsComponent.handle_event(
+                 "toggle_private",
+                 %{"id" => to_string(mt.id)},
+                 build_component_socket(user)
+               )
+
+      assert_received {:flash, {:error, ^refusal}}
+      refute Repo.get!(MeetingTypeSchema, mt.id).is_private
+    end
+
+    test "confirm_slug_change is refused and leaves the slug unchanged", %{user: user, mt: mt} do
+      refusal = exhaust_limit!(:meeting_type_write, user.id)
+
+      socket =
+        user
+        |> build_component_socket()
+        |> ModalHook.show_modal(:slug, mt)
+        |> Component.assign(:slug_draft, "a-brand-new-slug")
+
+      assert {:noreply, _socket} =
+               ServiceSettingsComponent.handle_event("confirm_slug_change", %{}, socket)
+
+      assert_received {:flash, {:error, ^refusal}}
+      assert Repo.get!(MeetingTypeSchema, mt.id).slug == mt.slug
+    end
+
+    test "confirm_delete_meeting_type is refused and keeps the meeting type", %{
+      user: user,
+      mt: mt
+    } do
+      refusal = exhaust_limit!(:meeting_type_write, user.id)
+
+      socket =
+        user
+        |> build_component_socket()
+        |> ModalHook.show_modal(:delete_meeting_type, mt)
+
+      assert {:noreply, _socket} =
+               ServiceSettingsComponent.handle_event("confirm_delete_meeting_type", %{}, socket)
+
+      assert_received {:flash, {:error, ^refusal}}
+      assert Repo.get(MeetingTypeSchema, mt.id)
     end
   end
 

@@ -8,7 +8,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   reschedule request no longer overwrites `status`, so a `pending` or
   `awaiting_payment` meeting keeps that status while a request is pending.
 
-  `status == "reschedule_requested"` is a legacy value: no code writes it any
+  `status: :reschedule_requested` is a legacy value: no code writes it any
   more, but it remains a valid enum member so historical (or unmigrated) rows
   keep reading correctly here.
   """
@@ -18,27 +18,69 @@ defmodule Tymeslot.Meetings.MeetingState do
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
-  @active_statuses ["confirmed", "pending", "awaiting_approval", "reschedule_requested"]
+  @pending :pending
+  @awaiting_payment :awaiting_payment
+  # Held pending the host's manual approval. Occupies its slot like a pending
+  # booking does, but is not a booking anyone has agreed to yet.
+  @awaiting_approval :awaiting_approval
+  @confirmed :confirmed
+  @cancelled :cancelled
+  @completed :completed
+  @expired :expired
+  @reschedule_requested :reschedule_requested
+
+  @active_statuses [@confirmed, @pending, @awaiting_approval, @reschedule_requested]
 
   # Statuses that occupy a calendar slot for conflict-detection purposes.
   # Combined with `exclude_voided_slots/1`, this is the query-side mirror of
   # `slot_void?/1`: a meeting only actually blocks a time window while it
   # holds one of these statuses AND has no pending reschedule request.
-  @occupying_statuses ["confirmed", "pending", "awaiting_payment", "awaiting_approval"]
-
-  @awaiting_approval "awaiting_approval"
-  @awaiting_payment "awaiting_payment"
-  @cancelled "cancelled"
-  @confirmed "confirmed"
-  @expired "expired"
+  @occupying_statuses [@confirmed, @pending, @awaiting_payment, @awaiting_approval]
 
   # Statuses a booking is released in without taking place: cancelled, or a
   # request that expired unanswered. Releasing one deletes its video room.
-  @released_statuses ["cancelled", "expired"]
+  @released_statuses [@cancelled, @expired]
 
   # Statuses a meeting never leaves: it is over, one way or another, so
   # nothing may cancel, move or confirm it again.
-  @terminal_statuses ["cancelled", "completed", "expired"]
+  @terminal_statuses [@cancelled, @completed, @expired]
+
+  @typedoc "Where a meeting stands in the booking lifecycle."
+  @type status ::
+          :pending
+          | :awaiting_payment
+          | :awaiting_approval
+          | :confirmed
+          | :cancelled
+          | :completed
+          | :expired
+          | :reschedule_requested
+
+  @doc """
+  Every status a meeting can hold: the values `MeetingSchema` declares for its
+  `status` enum, which the groupings below are drawn from.
+  """
+  @spec statuses() :: [status()]
+  def statuses, do: Ecto.Enum.values(Meeting, :status)
+
+  @doc "The statuses `active?/1` accepts."
+  @spec active() :: [status()]
+  def active, do: @active_statuses
+
+  @doc """
+  The statuses that occupy a calendar slot for conflict detection; see
+  `where_slot_live/1`, which also excludes voided slots.
+  """
+  @spec occupying() :: [status()]
+  def occupying, do: @occupying_statuses
+
+  @doc "The statuses `released_status?/1` accepts."
+  @spec released() :: [status()]
+  def released, do: @released_statuses
+
+  @doc "The statuses `terminal?/1` accepts."
+  @spec terminal() :: [status()]
+  def terminal, do: @terminal_statuses
 
   @doc """
   Whether the meeting still represents a live booking a user should be able
@@ -63,8 +105,8 @@ defmodule Tymeslot.Meetings.MeetingState do
   it, nor a calendar event referencing it.
   """
   @spec slot_void?(Meeting.t()) :: boolean()
-  def slot_void?(%{status: "cancelled"}), do: true
-  def slot_void?(%{status: "reschedule_requested"}), do: true
+  def slot_void?(%{status: @cancelled}), do: true
+  def slot_void?(%{status: @reschedule_requested}), do: true
   def slot_void?(%{reschedule_requested_at: nil}), do: false
   def slot_void?(%{reschedule_requested_at: %DateTime{}}), do: true
 
@@ -75,7 +117,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   still hold", and this is "should we expect a provider event on the
   organizer's calendar right now". A meeting can be active yet have a void
   slot (an organizer reschedule request pending, or the legacy
-  `"reschedule_requested"` status) — in that case we deliberately deleted or
+  `:reschedule_requested` status) — in that case we deliberately deleted or
   never created the provider event, so its absence must never be treated as
   an external deletion.
 
@@ -91,7 +133,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   time for this meeting.
   """
   @spec awaiting_new_time?(Meeting.t()) :: boolean()
-  def awaiting_new_time?(%{status: "reschedule_requested"}), do: true
+  def awaiting_new_time?(%{status: @reschedule_requested}), do: true
   def awaiting_new_time?(%{reschedule_requested_at: %DateTime{}}), do: true
   def awaiting_new_time?(_meeting), do: false
 
@@ -120,7 +162,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec where_expects_calendar_event(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_expects_calendar_event(query) do
     query
-    |> where([m], m.status in ^(@active_statuses -- ["reschedule_requested"]))
+    |> where([m], m.status in ^(@active_statuses -- [@reschedule_requested]))
     |> exclude_voided_slots()
   end
 
@@ -168,14 +210,14 @@ defmodule Tymeslot.Meetings.MeetingState do
     do: DateTime.compare(now, deadline) != :lt
 
   @doc """
-  Status-string counterpart of `awaiting_approval?/1`.
+  Status counterpart of `awaiting_approval?/1`.
 
   For callers that hold the status alone rather than a meeting — the themes'
   confirmation screens read it off their assigns — so they need not fabricate
   a meeting-shaped map to ask the question, and the status literal stays
   defined once in this module.
   """
-  @spec awaiting_approval_status?(String.t() | nil) :: boolean()
+  @spec awaiting_approval_status?(status() | nil) :: boolean()
   def awaiting_approval_status?(@awaiting_approval), do: true
   def awaiting_approval_status?(_status), do: false
 
@@ -183,7 +225,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   Whether a meeting with `status` was released without taking place, so its
   video room is to be deleted rather than kept in step with the booking.
   """
-  @spec released_status?(String.t() | nil) :: boolean()
+  @spec released_status?(status() | nil) :: boolean()
   def released_status?(status), do: status in @released_statuses
 
   @doc """
@@ -259,16 +301,16 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   @doc """
   Composes onto `query` the contract "this is a live, confirmed booking a
-  user should see as upcoming": `status == "confirmed"` and no pending
+  user should see as upcoming": `status == :confirmed` and no pending
   reschedule request. A meeting under a pending reschedule request has
   already had its calendar event deleted and its attendee told the
   appointment is cancelled, so it must not resurface here even though
-  `status` is left untouched at `"confirmed"`.
+  `status` is left untouched at `:confirmed`.
   """
   @spec where_live_booking(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_live_booking(query) do
     query
-    |> where([m], m.status == "confirmed")
+    |> where([m], m.status == ^@confirmed)
     |> exclude_voided_slots()
   end
 end

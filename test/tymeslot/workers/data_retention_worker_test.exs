@@ -10,12 +10,10 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
 
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Analytics.SaltSchema
-  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlowSchema
   alias Tymeslot.Payments.Webhooks.StripeEventSchema
-  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Slack.SlackIntegrationSchema
@@ -386,7 +384,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
     defp telegram_stub(user, attrs \\ []) do
       defaults = [
         user: user,
-        bot_mode: "shared",
+        bot_mode: :shared,
         chat_id: nil,
         link_token: "tok-#{System.unique_integer([:positive])}"
       ]
@@ -450,7 +448,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:availability_override,
           schedule: schedule,
           date: date,
-          override_type: "extra_hours",
+          override_type: :extra_hours,
           start_time: ~T[09:00:00],
           end_time: ~T[10:00:00]
         )
@@ -465,114 +463,6 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
                  order_by: o.date
                )
              ) == [~D[2031-03-09], today, ~D[2031-04-01]]
-    end
-  end
-
-  describe "perform/1 - unverified account cleanup" do
-    defp days_ago(days), do: DateTime.add(DateTime.utc_now(:second), -days, :day)
-
-    test "deletes accounts still unverified 30 days after sign-up, keeps verified and newer ones" do
-      stale = insert(:unverified_user, inserted_at: days_ago(31), signup_ip: "203.0.113.9")
-      fresh = insert(:unverified_user, inserted_at: days_ago(10))
-      verified = insert(:user, inserted_at: days_ago(400))
-
-      assert :ok = perform_job(DataRetentionWorker, %{})
-
-      refute Repo.get(UserSchema, stale.id)
-      assert Repo.get(UserSchema, fresh.id)
-      assert Repo.get(UserSchema, verified.id)
-    end
-
-    test "spares an old account its owner was sent a fresh link for within the window" do
-      user =
-        insert(:unverified_user,
-          inserted_at: days_ago(60),
-          verification_sent_at: days_ago(2)
-        )
-
-      assert :ok = perform_job(DataRetentionWorker, %{})
-
-      assert Repo.get(UserSchema, user.id)
-    end
-
-    test "spares a social account left unverified when sign-in started requiring a verified email" do
-      legacy =
-        insert(:unverified_user,
-          provider: "oauth",
-          provider_uid: "sub-legacy",
-          password_hash: nil,
-          inserted_at: days_ago(400)
-        )
-
-      github =
-        insert(:unverified_user,
-          provider: "github",
-          github_user_id: "7001",
-          password_hash: nil,
-          inserted_at: days_ago(400)
-        )
-
-      assert :ok = perform_job(DataRetentionWorker, %{})
-
-      assert Repo.get(UserSchema, legacy.id)
-      assert Repo.get(UserSchema, github.id)
-    end
-
-    test "spares an admin, however long unverified" do
-      admin = insert(:unverified_user, is_admin: true, inserted_at: days_ago(400))
-
-      assert :ok = perform_job(DataRetentionWorker, %{})
-
-      assert Repo.get(UserSchema, admin.id)
-    end
-
-    test "spares an account that has had a session or finished onboarding" do
-      signed_in =
-        insert(:unverified_user, inserted_at: days_ago(400), last_active_at: days_ago(200))
-
-      onboarded =
-        insert(:unverified_user,
-          inserted_at: days_ago(400),
-          onboarding_completed_at: days_ago(399)
-        )
-
-      assert :ok = perform_job(DataRetentionWorker, %{})
-
-      assert Repo.get(UserSchema, signed_in.id)
-      assert Repo.get(UserSchema, onboarded.id)
-    end
-
-    test "deletes the account's dependent rows with it, as an erasure request would" do
-      stale = insert(:unverified_user, inserted_at: days_ago(31))
-      profile = insert(:profile, user: stale)
-
-      assert :ok = perform_job(DataRetentionWorker, %{})
-
-      refute Repo.get(UserSchema, stale.id)
-      refute Repo.get(ProfileSchema, profile.id)
-    end
-
-    test "respects the unverified_account_retention_days argument" do
-      user = insert(:unverified_user, inserted_at: days_ago(10))
-
-      assert :ok =
-               perform_job(DataRetentionWorker, %{"unverified_account_retention_days" => 40})
-
-      assert Repo.get(UserSchema, user.id)
-
-      assert :ok = perform_job(DataRetentionWorker, %{"unverified_account_retention_days" => 7})
-      refute Repo.get(UserSchema, user.id)
-    end
-
-    test "a zero or negative window deletes nothing" do
-      user = insert(:unverified_user, inserted_at: days_ago(1))
-
-      for days <- [0, -1] do
-        assert :ok =
-                 perform_job(DataRetentionWorker, %{"unverified_account_retention_days" => days})
-      end
-
-      assert Repo.get(UserSchema, user.id)
     end
   end
 
@@ -606,14 +496,14 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:meeting,
           start_time: DateTime.add(old_end, -1, :hour),
           end_time: old_end,
-          status: "completed"
+          status: :completed
         )
 
       recent =
         insert(:meeting,
           start_time: DateTime.add(recent_end, -1, :hour),
           end_time: recent_end,
-          status: "completed"
+          status: :completed
         )
 
       assert :ok = perform_job(DataRetentionWorker, %{})
@@ -630,7 +520,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:meeting,
           start_time: DateTime.add(ended, -1, :hour),
           end_time: ended,
-          status: "completed"
+          status: :completed
         )
 
       assert :ok = perform_job(DataRetentionWorker, %{"invitee_data_retention_days" => 30})

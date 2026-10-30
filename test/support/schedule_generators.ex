@@ -153,12 +153,12 @@ defmodule Tymeslot.Test.ScheduleGenerators do
     override =
       ExUnitProperties.gen all(
                              offset <- integer(-3..3),
-                             kind <- member_of(["unavailable", "custom_hours", "available"]),
+                             kind <- member_of([:unavailable, :custom_hours, :available]),
                              window <- window_gen
                            ) do
         base = %{date: Date.add(around, offset), override_type: kind}
 
-        if kind == "custom_hours",
+        if kind == :custom_hours,
           do: Map.merge(base, Map.take(window, [:start_time, :end_time, :ends_next_day])),
           else: base
       end

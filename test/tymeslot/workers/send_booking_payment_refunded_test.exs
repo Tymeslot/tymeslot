@@ -31,7 +31,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       amount_cents: 5000,
       refunded_amount_cents: 5000,
       currency: "eur",
-      status: "refunded",
+      status: :refunded,
       stripe_account_id: "acct_TEST",
       paid_at: DateTime.utc_now(:second)
     }
@@ -56,7 +56,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
     end
 
     test "delivers a partial refund email when amounts differ" do
-      payment = insert_payment(%{refunded_amount_cents: 2000, status: "partially_refunded"})
+      payment = insert_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
       assert :ok =
                perform_job(SendBookingPaymentRefunded, %{
@@ -135,7 +135,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
     end
 
     test "no-ops when refunded_amount_cents is zero" do
-      payment = insert_payment(%{refunded_amount_cents: 0, status: "paid"})
+      payment = insert_payment(%{refunded_amount_cents: 0, status: :paid})
 
       assert :ok =
                perform_job(SendBookingPaymentRefunded, %{

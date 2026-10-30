@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     if can_add?(socket.assigns.locations, socket.assigns.group_bookings_enabled) do
       empty = %LocationOption{
         id: UUID.generate(),
-        kind: "in_person",
+        kind: :in_person,
         position: length(socket.assigns.locations)
       }
 
@@ -251,7 +251,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   # room lands on, with several the providers the booker picks between, and
   # for an in-person option its venue, its venues, or the fact that the
   # address comes later.
-  defp summary(%LocationOption{kind: "video"} = location, video_integrations, _venues) do
+  defp summary(%LocationOption{kind: :video} = location, video_integrations, _venues) do
     case Enum.filter(video_integrations, &(&1.id in location.video_integration_ids)) do
       [] ->
         dgettext("dashboard_meeting_locations", "Video call: integration no longer available")
@@ -268,7 +268,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     end
   end
 
-  defp summary(%LocationOption{kind: "in_person", venue_ids: ids}, _integrations, venues) do
+  defp summary(%LocationOption{kind: :in_person, venue_ids: ids}, _integrations, venues) do
     # `venues` is the library, already in the organiser's order.
     case Enum.filter(venues, &(&1.id in ids)) do
       [] ->
@@ -284,14 +284,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     end
   end
 
-  defp summary(%LocationOption{kind: "phone", collect_from_guest: true}, _integrations, _venues),
+  defp summary(%LocationOption{kind: :phone, collect_from_guest: true}, _integrations, _venues),
     do: dgettext("dashboard_meeting_locations", "Phone call: the booker gives their number")
 
   defp summary(%LocationOption{details: details}, _integrations, _venues)
        when is_binary(details) and details != "",
        do: details
 
-  defp summary(%LocationOption{kind: "phone"}, _integrations, _venues),
+  defp summary(%LocationOption{kind: :phone}, _integrations, _venues),
     do: dgettext("dashboard_meeting_locations", "Phone call")
 
   defp summary(_location, _integrations, _venues),

@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsPaidBookingTest do
 
         # Held for the hour while the visitor pays.
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
-        assert meeting.status == "awaiting_payment"
+        assert meeting.status == :awaiting_payment
         assert_hour(meeting)
 
         {:ok, view, _html} = live(conn, success_url)
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsPaidBookingTest do
         assert has_element?(view, "#{shell} h1", "Booking confirmed")
 
         confirmed = Repo.reload!(meeting)
-        assert confirmed.status == "confirmed"
+        assert confirmed.status == :confirmed
         assert_hour(confirmed)
         assert confirmed.end_time == meeting.end_time
       end

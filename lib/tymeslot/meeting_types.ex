@@ -2,20 +2,20 @@ defmodule Tymeslot.MeetingTypes do
   @moduledoc """
   Context for managing meeting types.
   """
-  alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.BookingCalendar
+  alias Tymeslot.MeetingTypes.Defaults
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
   alias Tymeslot.MeetingTypes.GroupAccess
+  alias Tymeslot.MeetingTypes.LocationChoices
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
@@ -44,161 +44,30 @@ defmodule Tymeslot.MeetingTypes do
   @spec group_type?(MeetingTypeSchema.t() | map() | nil) :: boolean()
   defdelegate group_type?(meeting_type), to: MeetingTypeSchema, as: :group?
 
-  @typedoc """
-  What a booker submitted about where to meet. Every key is optional, and
-  each is honoured only where the host's own meeting type offers it:
-
-    * `:option_id`, the location option chosen
-    * `:phone`, the booker's number, for a phone option that asks for it
-    * `:video_integration_id`, the provider picked within a video option
-    * `:venue_id`, the venue picked within an in-person option
-    * `:current_venue_id`, on a reschedule the meeting's own venue, kept
-      when `:venue_id` is not one the option offers
-  """
-  @type location_choice :: %{
-          optional(:option_id) => String.t() | nil,
-          optional(:phone) => String.t() | nil,
-          optional(:video_integration_id) => integer() | String.t() | nil,
-          optional(:venue_id) => integer() | String.t() | nil,
-          optional(:current_venue_id) => integer() | nil
-        }
-
   @doc """
   Resolves a booker's location choice into the meeting fields that follow
-  from it.
-
-  A video location can outlive an integration it names: the host
-  disconnected it, and the location keeps its id until the host next edits
-  the meeting type. Such an id is resolved as if the location did not list
-  it, so the meeting lands on the location's next listed integration, or on
-  none, and is booked without a room, just as a booking on a deactivated
-  integration is. A deactivated integration still resolves: the room job
-  checks it when it runs, and it may be switched back on by then.
-
-  An in-person location can likewise list a venue that has since gone. Only
-  venues that still exist are offered (`location_venue_choices/1`), so the
-  meeting lands on the one the booker picked while it is offered, otherwise
-  on the location's first remaining venue, or on none, as a booking whose
-  address is arranged afterwards.
+  from it, honouring only what the host's current integrations and venues
+  still offer; see `Tymeslot.MeetingTypes.LocationChoices.resolve_location/2`.
   """
-  @spec resolve_location(map() | nil, location_choice()) :: LocationSelection.resolution()
-  def resolve_location(meeting_type, choice) when is_map(choice) do
-    meeting_type = without_removed_video_integrations(meeting_type)
-
-    resolution =
-      LocationSelection.resolve(
-        meeting_type,
-        choice[:option_id],
-        choice[:phone],
-        choice[:video_integration_id]
-      )
-
-    venues =
-      meeting_type
-      |> location_venue_choices()
-      |> Map.get(resolution.location_option_id, [])
-
-    LocationSelection.place_at_venue(resolution, venues, [
-      choice[:venue_id],
-      choice[:current_venue_id]
-    ])
-  end
-
-  # Only a stored list can name a removed integration: the option a meeting
-  # type without one derives comes from its `video_integration_id`, which the
-  # foreign key nils when the integration goes.
-  defp without_removed_video_integrations(
-         %{user_id: user_id, locations: [_first | _rest] = locations} = meeting_type
-       )
-       when is_integer(user_id) do
-    if Enum.any?(locations, &(&1.video_integration_ids != [])) do
-      held = user_id |> Video.list_integrations() |> MapSet.new(& &1.id)
-
-      locations =
-        Enum.map(locations, fn location ->
-          %{
-            location
-            | video_integration_ids: Enum.filter(location.video_integration_ids, &(&1 in held))
-          }
-        end)
-
-      %{meeting_type | locations: locations}
-    else
-      meeting_type
-    end
-  end
-
-  defp without_removed_video_integrations(meeting_type), do: meeting_type
+  @spec resolve_location(map() | nil, LocationChoices.location_choice()) ::
+          LocationSelection.resolution()
+  defdelegate resolve_location(meeting_type, choice), to: LocationChoices
 
   @doc """
-  The video providers the booker can pick between, per video location:
-  a map from option id to the host's active integrations that option
-  lists, in the host's order.
-
-  An integration the host has since deactivated or deleted is left out, so
-  the booker is never offered a provider that cannot create a room. A
-  location left with nothing active is absent from the map.
+  The video providers the booker can pick between, per video location; see
+  `Tymeslot.MeetingTypes.LocationChoices.location_video_choices/1`.
   """
   @spec location_video_choices(map() | nil) :: %{
           String.t() => [%{id: integer(), name: String.t(), provider: String.t()}]
         }
-  def location_video_choices(%{user_id: user_id} = meeting_type) when is_integer(user_id) do
-    video_options =
-      meeting_type |> LocationSelection.options() |> Enum.filter(&(&1.kind == "video"))
-
-    if video_options == [] do
-      %{}
-    else
-      active =
-        user_id
-        |> Video.list_integrations()
-        |> Enum.filter(& &1.is_active)
-        |> Map.new(&{&1.id, %{id: &1.id, name: &1.name, provider: &1.provider}})
-
-      for option <- video_options,
-          choices =
-            option.video_integration_ids |> Enum.map(&active[&1]) |> Enum.reject(&is_nil/1),
-          choices != [],
-          into: %{},
-          do: {option.id, choices}
-    end
-  end
-
-  def location_video_choices(_meeting_type), do: %{}
+  defdelegate location_video_choices(meeting_type), to: LocationChoices
 
   @doc """
-  The venues the booker can pick between, per in-person location: a map
-  from option id to the owner's venues that option lists, as
-  `Tymeslot.Venues.choice/0` maps, in the organiser's library order (the
-  order dragged on the Locations page), so reordering the library reorders
-  every picker. The first is the one the picker opens on.
-
-  A venue that no longer exists, or is not the owner's, is left out, and a
-  location left with none is absent from the map: its address is arranged
-  after booking. Loaded once when the booking page mounts, next to
-  `location_video_choices/1`, so rendering runs no query.
+  The venues the booker can pick between, per in-person location; see
+  `Tymeslot.MeetingTypes.LocationChoices.location_venue_choices/1`.
   """
   @spec location_venue_choices(map() | nil) :: %{String.t() => [Venues.choice()]}
-  def location_venue_choices(%{user_id: user_id} = meeting_type) when is_integer(user_id) do
-    in_person =
-      meeting_type
-      |> LocationSelection.options()
-      |> Enum.filter(&(&1.kind == "in_person" and &1.venue_ids != []))
-
-    if in_person == [] do
-      %{}
-    else
-      library = user_id |> Venues.list_venues() |> Enum.map(&Venues.to_choice/1)
-
-      for option <- in_person,
-          choices = Enum.filter(library, &(&1.id in option.venue_ids)),
-          choices != [],
-          into: %{},
-          do: {option.id, choices}
-    end
-  end
-
-  def location_venue_choices(_meeting_type), do: %{}
+  defdelegate location_venue_choices(meeting_type), to: LocationChoices
 
   @doc """
   Gets all active meeting types for a user. A pure read: a host may have
@@ -578,71 +447,5 @@ defmodule Tymeslot.MeetingTypes do
   meets types already there (a retried sign-up) inserts nothing.
   """
   @spec seed_default_meeting_types(integer(), Ecto.Repo.t()) :: :ok
-  def seed_default_meeting_types(user_id, repo \\ Repo) when is_integer(user_id) do
-    now = DateTime.utc_now(:second)
-
-    user_id
-    |> default_meeting_type_templates(nil, nil, now)
-    |> MeetingTypeQueries.insert_defaults(repo)
-
-    :ok
-  end
-
-  # Private functions
-
-  defp default_meeting_type_templates(
-         user_id,
-         calendar_integration_id,
-         target_calendar_id,
-         now
-       ) do
-    [
-      %{
-        user_id: user_id,
-        name: "15 Minutes",
-        description: "Quick chat or brief consultation",
-        duration_minutes: 15,
-        icon: "hero-bolt",
-        sort_order: 0,
-        is_active: true,
-        allow_video: false,
-        locations: [default_in_person_location()],
-        calendar_integration_id: calendar_integration_id,
-        target_calendar_id: target_calendar_id,
-        reminder_config: [%{value: 30, unit: "minutes"}],
-        inserted_at: now,
-        updated_at: now
-      },
-      %{
-        user_id: user_id,
-        name: "30 Minutes",
-        description: "In-depth discussion or detailed review",
-        duration_minutes: 30,
-        icon: "hero-rocket-launch",
-        sort_order: 1,
-        is_active: true,
-        allow_video: false,
-        locations: [default_in_person_location()],
-        calendar_integration_id: calendar_integration_id,
-        target_calendar_id: target_calendar_id,
-        reminder_config: [%{value: 30, unit: "minutes"}],
-        inserted_at: now,
-        updated_at: now
-      }
-    ]
-  end
-
-  # These templates are bulk-inserted, so they bypass the changeset. Ecto
-  # still dumps the embed on the way to the database and refuses anything but
-  # the struct, so the struct is what the template carries.
-  # The label is stored as the English default on purpose:
-  # `LocationSelection.options/1` shows it in the reader's language.
-  defp default_in_person_location do
-    %LocationOption{
-      id: UUID.generate(),
-      kind: "in_person",
-      label: "In person",
-      position: 0
-    }
-  end
+  defdelegate seed_default_meeting_types(user_id, repo \\ Repo), to: Defaults
 end

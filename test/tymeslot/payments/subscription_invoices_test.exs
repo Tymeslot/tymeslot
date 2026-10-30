@@ -46,7 +46,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
     test "resolves the owning user via the invoice's subscription id", %{user: user} do
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_sub_fallback",
         subscription_id: "sub_fallback"
       })
@@ -62,7 +62,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
          %{user: user} do
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_customer_fallback",
         stripe_customer_id: "cus_customer_fallback"
       })
@@ -81,7 +81,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
     test "never attributes ownership from a pending or failed transaction", %{user: user} do
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_id: "sess_pending_only",
         subscription_id: "sub_pending_only",
         stripe_customer_id: "cus_pending_only"
@@ -145,7 +145,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
       transaction =
         PaymentTestHelpers.create_test_transaction(%{
           user_id: user.id,
-          status: "completed",
+          status: :completed,
           subscription_id: "sub_create",
           stripe_id: "sess_create"
         })
@@ -166,7 +166,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
          %{user: user} do
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_cycle",
         stripe_id: "sess_cycle",
         amount: 1000
@@ -184,7 +184,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
 
       assert renewal.stripe_id == "in_cycle_2"
       assert renewal.amount == 1200
-      assert renewal.status == "completed"
+      assert renewal.status == :completed
       assert renewal.metadata[:renewal_invoice_id] == "in_cycle_2"
       assert renewal.metadata[:renewal_date] == 1_700_000_000
     end
@@ -200,7 +200,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
     } do
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_dupe",
         stripe_id: "sess_dupe"
       })
@@ -225,7 +225,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
       legacy =
         PaymentTestHelpers.create_test_transaction(%{
           user_id: user.id,
-          status: "completed",
+          status: :completed,
           subscription_id: "sub_legacy",
           stripe_id: "cs_legacy_checkout",
           amount: 1000
@@ -255,7 +255,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
       # the read model must reflect the invoice's own values, not these.
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         amount: 999,
         subscription_id: "sub_list",
         stripe_id: "sess_list",

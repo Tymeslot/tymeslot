@@ -242,7 +242,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
       meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-      timezone: clock.timezone,
+      timezone: host_time.time_zone,
       time_format: clock.time_format,
       audience: :host
     }
@@ -250,8 +250,12 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
 
   defp attendee_time_sentence(meeting, attendee_time, clock, locale) do
     formatted = Formatting.format_datetime(attendee_time, locale, clock.time_format)
-    zone = meeting.attendee_timezone || "UTC"
-    time_with_zone = if zone != "UTC", do: "#{formatted} (#{zone})", else: formatted
+    # Named by the zone the time is actually in: an unresolvable attendee
+    # zone leaves it in UTC, which must not be labelled with the failed name.
+    time_with_zone =
+      if attendee_time.time_zone == "Etc/UTC",
+        do: formatted,
+        else: "#{formatted} (#{attendee_time.time_zone})"
 
     dgettext("emails_booking_requests", "For %{name}, that's %{time}.",
       name: meeting.attendee_name,

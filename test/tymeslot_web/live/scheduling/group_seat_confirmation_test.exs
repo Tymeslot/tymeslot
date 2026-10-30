@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatConfirmationTest do
       meeting =
         insert(:group_meeting,
           organizer_user: user,
-          status: "confirmed",
+          status: :confirmed,
           start_time: start_time,
           end_time: DateTime.add(start_time, 3600)
         )
@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatConfirmationTest do
                  "This is a group session, so it cannot be changed from this link. " <>
                    "To cancel or move your spot, use the links in your confirmation email."
 
-        assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+        assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
       end
     end
   end

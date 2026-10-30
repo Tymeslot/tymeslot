@@ -71,11 +71,13 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.CalendarGrid.EventVideoDiscard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Meetings.AttendeeNotifications
 
@@ -313,6 +315,15 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
        ) do
     context = %{user_id: user_id, calendar_integration_id: integration_id}
 
+    # Read before the rows go, which name the uids of a series' occurrences.
+    after_delete("forget the event's undelivered update notices", context, fn ->
+      UndeliveredUpdates.events_deleted(
+        user_id,
+        integration_id,
+        purged_uids(integration_id, uid, removal)
+      )
+    end)
+
     after_delete("delete the cached event rows", context, fn ->
       purge_cached_rows(integration_id, uid, removal)
     end)
@@ -349,6 +360,18 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   defp delete_recorded_rooms(_event, _stored, {:caldav_occurrence, _href, _document}), do: :ok
   defp delete_recorded_rooms(_event, stored, _series), do: EventVideoRooms.series_deleted(stored)
+
+  # The uids of the cached rows `purge_cached_rows/3` deletes.
+  defp purged_uids(_integration_id, uid, removal) when removal in [:single, :occurrence],
+    do: [uid]
+
+  defp purged_uids(integration_id, _uid, {:caldav_occurrence, href, nil}),
+    do: purged_uids(integration_id, nil, {:resource, href})
+
+  defp purged_uids(_integration_id, uid, {:caldav_occurrence, _href, _document}), do: [uid]
+
+  defp purged_uids(integration_id, _uid, address),
+    do: integration_id |> ProviderCalendarSeriesQueries.list_rows(address) |> Enum.map(& &1.uid)
 
   defp purge_cached_rows(integration_id, uid, removal) when removal in [:single, :occurrence] do
     {:ok, _deleted_or_missing} = ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
@@ -394,9 +417,9 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   end
 
   # Runs once the provider has deleted the event, and before the cached rows
-  # go, although the cancellation reads only `stored`, already in memory. Like
-  # the local tidying, a failure here cannot undo the delete, so it is
-  # reported rather than raised.
+  # go: a cancellation of the whole series reads them for the occurrences the
+  # guests were emailed about on their own. Like the local tidying, a failure
+  # here cannot undo the delete, so it is reported rather than raised.
   defp notify_attendees(false, _stored, _user_id, _scope), do: :none
 
   defp notify_attendees(true, stored, user_id, scope) do

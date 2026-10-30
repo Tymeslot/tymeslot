@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   ## Staged, then saved
 
   Each change of the editor's controls is kept in the `:recurrence_edit`
-  assign (`Shared.recurrence_edit/1`), not written: a pattern such as
+  assign (`RecurrenceFields.recurrence_edit/1`), not written: a pattern such as
   "monthly on the second Tuesday, six times" takes several controls, and
   writing each one would ask for a scope and rewrite the series every time.
   "Save repeat" writes the staged pattern, through one scope prompt for a
@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
 
   A rule written to a whole series is read from the series' first start, so
   the editor shows and builds the pattern from that start
-  (`Shared.series_anchor/3`). "This and following events" splits the series
+  (`RecurrenceFields.series_anchor/3`). "This and following events" splits the series
   where the series put the opened occurrence, its original start
   (`CalendarGrid.occurrence_slot/1`), whether or not it was moved on its
   own since, and starts a new series there; so the same fields are built
@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceFields
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
@@ -67,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   def handle_save_event_recurrence(_params, socket) do
     event = socket.assigns.selected_event
     edit = socket.assigns[:recurrence_edit]
-    draft = event && Shared.recurrence_draft(event, edit)
+    draft = event && RecurrenceFields.recurrence_draft(event, edit)
 
     case draft && draft_rule(event, draft, edit, socket.assigns.user_timezone) do
       nil -> {:noreply, socket}
@@ -93,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
 
   @doc """
   The rule the pattern staged for `event` makes from the start the editor
-  builds it from now (`Shared.series_anchor/3`), `{:ok, nil}` for "Does not
+  builds it from now (`RecurrenceFields.series_anchor/3`), `{:ok, nil}` for "Does not
   repeat". The fields are composed again rather than the rule kept, since
   the start may have moved since they were picked: fields that no longer
   make a rule, an end now before the start, are
@@ -103,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   @spec draft_rule(map(), map(), map() | nil, String.t()) ::
           {:ok, String.t() | nil} | {:error, :until_before_start}
   def draft_rule(event, draft, edit, user_timezone) do
-    {anchor, _known?} = Shared.series_anchor(event, edit, user_timezone)
+    {anchor, _known?} = RecurrenceFields.series_anchor(event, edit, user_timezone)
 
     case compose(draft.params, event, anchor, user_timezone) do
       {:error, :until_before_start} = error -> error
@@ -125,9 +126,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   """
   @spec editor(map(), map() | nil, String.t()) :: map()
   def editor(event, edit, user_timezone) do
-    {start, known?} = Shared.series_anchor(event, edit, user_timezone)
-    timezone = Shared.recurrence_timezone(event, user_timezone)
-    draft = Shared.recurrence_draft(event, edit)
+    {start, known?} = RecurrenceFields.series_anchor(event, edit, user_timezone)
+    timezone = RecurrenceFields.recurrence_timezone(event, user_timezone)
+    draft = RecurrenceFields.recurrence_draft(event, edit)
 
     {rule, notice, blocked?} =
       case draft && draft_rule(event, draft, edit, user_timezone) do
@@ -180,17 +181,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   end
 
   # The editor is shown only for a calendar the grid writes rules to, whose
-  # event was opened with its series' start read (`Shared.recurrence_edit/1`).
+  # event was opened with its series' start read (`RecurrenceFields.recurrence_edit/1`).
   defp edit_for(socket, event) do
     case socket.assigns[:recurrence_edit] do
       %{event_id: id} = edit when id == event.id -> edit
-      _other -> Shared.recurrence_edit(event)
+      _other -> RecurrenceFields.recurrence_edit(event)
     end
   end
 
   defp stage(socket, event, edit, params) do
     tz = socket.assigns.user_timezone
-    {anchor, _known?} = Shared.series_anchor(event, edit, tz)
+    {anchor, _known?} = RecurrenceFields.series_anchor(event, edit, tz)
 
     case compose(params, event, anchor, tz) do
       {:error, :until_before_start} = error ->
@@ -209,10 +210,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   end
 
   defp compose(params, event, start, user_timezone, opts \\ []) do
-    Shared.compose_recurrence_rule(params, %{
+    RecurrenceFields.compose_recurrence_rule(params, %{
       all_day: Map.get(event, :all_day, false),
       start_date: date_of(start),
-      timezone: Shared.recurrence_timezone(event, user_timezone),
+      timezone: RecurrenceFields.recurrence_timezone(event, user_timezone),
       rule: event.recurrence_rule,
       check_until: Keyword.get(opts, :check_until, true)
     })
@@ -240,8 +241,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   # stores in the event's own zone so it keeps its local time across DST.
   defp write_single(socket, event, rule) do
     tz = socket.assigns.user_timezone
-    timezone = Shared.recurrence_timezone(event, tz)
-    start = Shared.recurrence_start(event, tz)
+    timezone = RecurrenceFields.recurrence_timezone(event, tz)
+    start = RecurrenceFields.recurrence_start(event, tz)
 
     case CalendarGrid.repeat_refusal(Map.get(event, :provider), rule, date_of(start), timezone) do
       nil ->
@@ -294,7 +295,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
           scope_rules: scopes,
           # The zone the editor ended the rule's UNTIL day in, which the
           # series' writers read the end date back in.
-          until_timezone: Shared.recurrence_timezone(event, socket.assigns.user_timezone),
+          until_timezone:
+            RecurrenceFields.recurrence_timezone(event, socket.assigns.user_timezone),
           original_event: event,
           following_notes: following_notes(event, scopes)
         }
@@ -336,7 +338,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   # (`CalendarGrid.following_rule/3`).
   defp scope_rules(socket, event, draft) do
     tz = socket.assigns.user_timezone
-    {series_start, known?} = Shared.series_anchor(event, socket.assigns[:recurrence_edit], tz)
+
+    {series_start, known?} =
+      RecurrenceFields.series_anchor(event, socket.assigns[:recurrence_edit], tz)
 
     following = following_rule(event, draft, tz)
 
@@ -356,10 +360,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
 
   defp following_rule(event, draft, tz) do
     with %{} = at <- CalendarGrid.occurrence_slot(event),
-         slot = Shared.in_recurrence_zone(at, event, tz),
+         slot = RecurrenceFields.in_recurrence_zone(at, event, tz),
          rule when is_binary(rule) <- compose(draft.params, event, slot, tz),
          {:ok, left} <-
-           CalendarGrid.following_rule(event, rule, Shared.recurrence_timezone(event, tz)) do
+           CalendarGrid.following_rule(
+             event,
+             rule,
+             RecurrenceFields.recurrence_timezone(event, tz)
+           ) do
       :following |> scope_rule(left, slot, event, tz) |> Map.put(:written_rule, rule)
     else
       {:error, :until_before_start} -> unavailable(:following, :ends_before)
@@ -370,7 +378,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   end
 
   defp scope_rule(scope, rule, start, event, tz) do
-    timezone = Shared.recurrence_timezone(event, tz)
+    timezone = RecurrenceFields.recurrence_timezone(event, tz)
 
     %{
       scope: scope,

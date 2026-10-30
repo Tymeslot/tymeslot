@@ -27,7 +27,7 @@ defmodule Tymeslot.MeetingPayments.LifetimeStatsQueriesTest do
     insert(:paid_booking_payment,
       host_user_id: 7,
       currency: "eur",
-      status: "partially_refunded",
+      status: :partially_refunded,
       amount_cents: 2_000,
       refunded_amount_cents: 500,
       application_fee_cents: 10
@@ -47,7 +47,7 @@ defmodule Tymeslot.MeetingPayments.LifetimeStatsQueriesTest do
   end
 
   test "leaves out pending payments and other hosts' payments" do
-    insert(:booking_payment, host_user_id: 7, status: "pending")
+    insert(:booking_payment, host_user_id: 7, status: :pending)
     insert(:paid_booking_payment, host_user_id: 8)
 
     assert MeetingPayments.lifetime_stats_for_host(7) == []

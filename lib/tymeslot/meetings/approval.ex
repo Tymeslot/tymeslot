@@ -3,7 +3,7 @@ defmodule Tymeslot.Meetings.Approval do
   The manual-approval gate: bookings a host holds before agreeing to them.
 
   A meeting type with `requires_approval` set does not confirm its bookings on
-  submission. The meeting is inserted as `"awaiting_approval"`, which occupies
+  submission. The meeting is inserted as `:awaiting_approval`, which occupies
   its slot exactly as a confirmed booking does, and waits for the host to
   answer. Four things can end that wait, and this module owns all four.
 
@@ -29,7 +29,7 @@ defmodule Tymeslot.Meetings.Approval do
 
   ## What each exit means
 
-    * `approve/1` — the host agrees. The meeting becomes `"confirmed"` and
+    * `approve/1` — the host agrees. The meeting becomes `:confirmed` and
       joins the ordinary booking pipeline through `Bookings.Activation`: the
       same video room, the same confirmation emails, the same reminders and
       webhooks an ungated booking would have produced. The invitee's second
@@ -37,7 +37,7 @@ defmodule Tymeslot.Meetings.Approval do
       other Tymeslot booking. Answering after the request's own
       `approval_deadline_at` does not confirm it — see "The deadline" below.
 
-    * `decline/2` — the host says no. The meeting becomes `"cancelled"`, which
+    * `decline/2` — the host says no. The meeting becomes `:cancelled`, which
       is not a compromise but the accurate status: the slot is released, the
       tentative calendar event removed, and the attendee told. A booking that
       was paid for but never approved gave the attendee nothing, so `release/3`
@@ -50,7 +50,7 @@ defmodule Tymeslot.Meetings.Approval do
       stamps; ask `declined?/1` rather than reading it directly.
 
     * `expire/1` — nobody answered in time. Identical to a decline apart from
-      the status (`"expired"`) and the wording the invitee receives: the host
+      the status (`:expired`) and the wording the invitee receives: the host
       did not refuse, the window simply lapsed. Silence never means yes.
 
     * `withdraw/2` — the invitee changes their mind, or the host deletes the
@@ -71,7 +71,7 @@ defmodule Tymeslot.Meetings.Approval do
   already passed helps nobody. `approve/1` enforces that deadline itself
   rather than trusting that the expiry sweep gets there first: a host
   answering after the window the invitee was promised gets the same outcome
-  the sweep would have produced (the request is released as `"expired"`),
+  the sweep would have produced (the request is released as `:expired`),
   not a late confirmation.
   """
 
@@ -118,7 +118,7 @@ defmodule Tymeslot.Meetings.Approval do
   The one question three call sites need answered — the `meeting.cancelled`
   webhook body, the invitee's request page and the paid return page — and one
   they must not answer for themselves. A decline is deliberately stored as
-  `status: "cancelled"` so the ordinary cancellation pipeline applies to it,
+  `status: :cancelled` so the ordinary cancellation pipeline applies to it,
   which leaves `status` unable to tell the two apart, and
   `approval_resolved_at` cannot either: `approve/1` stamps it too, so an
   approved booking that is later cancelled normally carries it for the rest of
@@ -202,7 +202,7 @@ defmodule Tymeslot.Meetings.Approval do
 
   A request answered after its own `approval_deadline_at` is treated the same
   way: the host missed the window the invitee was promised, so this releases
-  the request as `"expired"` exactly as the sweep would have, instead of
+  the request as `:expired` exactly as the sweep would have, instead of
   confirming a meeting past its deadline. The caller sees
   `{:error, :not_awaiting_approval}` either way — the same race-loss outcome
   shown whenever somebody else answered first — because by the time this
@@ -276,7 +276,7 @@ defmodule Tymeslot.Meetings.Approval do
     Repo.transaction(fn ->
       with {:ok, confirmed} <-
              MeetingQueries.transition_from_awaiting_approval(meeting.id,
-               status: "confirmed",
+               status: :confirmed,
                approval_resolved_at: DateTime.truncate(now, :second)
              ),
            {:ok, pending} <- Activation.activate_in_transaction(confirmed, with_video_room: true) do
@@ -347,7 +347,7 @@ defmodule Tymeslot.Meetings.Approval do
   """
   @spec decline(Meeting.t(), String.t() | nil) :: {:ok, Meeting.t()} | {:error, error()}
   def decline(%Meeting{} = meeting, reason \\ nil) do
-    release(meeting, "cancelled",
+    release(meeting, :cancelled,
       decline_reason: normalise_reason(reason),
       approval_declined_at: DateTime.truncate(Clock.utc_now(), :second)
     )
@@ -361,7 +361,7 @@ defmodule Tymeslot.Meetings.Approval do
   """
   @spec expire(Meeting.t()) :: {:ok, Meeting.t()} | {:error, error()}
   def expire(%Meeting{} = meeting) do
-    release(meeting, "expired", [])
+    release(meeting, :expired, [])
   end
 
   @doc """
@@ -372,8 +372,8 @@ defmodule Tymeslot.Meetings.Approval do
 
   Guarded exactly like `decline/2` and `expire/1` — the same
   `transition_from_awaiting_approval/2` — so a withdrawal cannot race a
-  host's answer or the expiry sweep into overwriting `"confirmed"` back to
-  `"cancelled"`, and cannot double-refund a request the sweep already
+  host's answer or the expiry sweep into overwriting `:confirmed` back to
+  `:cancelled`, and cannot double-refund a request the sweep already
   released. Neither `approval_resolved_at` nor `approval_declined_at` is set:
   the first means "the host decided" and the second "the host refused", and a
   withdrawal is neither. `declined?/1` is what the request page and the
@@ -389,7 +389,7 @@ defmodule Tymeslot.Meetings.Approval do
   @spec withdraw(Meeting.t(), keyword()) :: {:ok, Meeting.t()} | {:error, error()}
   def withdraw(%Meeting{} = meeting, extra_changes \\ []) do
     now = DateTime.truncate(Clock.utc_now(), :second)
-    changes = [status: "cancelled", cancelled_at: now] ++ extra_changes
+    changes = [status: :cancelled, cancelled_at: now] ++ extra_changes
 
     with_released_meeting(meeting, changes, fn released ->
       best_effort(released, "cancel request notifications", fn ->
@@ -508,14 +508,14 @@ defmodule Tymeslot.Meetings.Approval do
     :ok
   end
 
-  defp announce_release(meeting, "expired"), do: Events.meeting_request_expired(meeting)
+  defp announce_release(meeting, :expired), do: Events.meeting_request_expired(meeting)
   defp announce_release(meeting, _declined), do: Events.meeting_declined(meeting)
 
   # Mirrors `Bookings.Cancel`'s own video cleanup. A held request's video
   # room used to depend entirely on the daily orphan sweep
   # (`OrphanedVideoRoomScanWorker`, via `MeetingListQueries.list_cancelled_with_video_room/2`),
-  # which only looks at `status == "cancelled"` — so a request released as
-  # `"expired"` left its room behind forever. Enqueuing the delete directly
+  # which only looks at `status == :cancelled` — so a request released as
+  # `:expired` left its room behind forever. Enqueuing the delete directly
   # here, for every release regardless of status, means the room's fate no
   # longer depends on which of the two statuses this happened to end in.
   defp release_video_room(%Meeting{video_room_id: nil}), do: :ok

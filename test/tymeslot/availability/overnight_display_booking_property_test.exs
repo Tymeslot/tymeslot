@@ -208,7 +208,7 @@ defmodule Tymeslot.Availability.OvernightDisplayBookingPropertyTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 30, :minute),
       duration: 30,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 end

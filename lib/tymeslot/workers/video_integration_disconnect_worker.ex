@@ -41,6 +41,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
   alias Tymeslot.Workers.VideoSyncWorker
@@ -98,15 +99,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     do: reason in [@already_removed]
 
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt}) do
-    # Matches VideoSyncWorker: 30s, 60s, 120s, then 180s.
-    case attempt do
-      1 -> 30
-      2 -> 60
-      3 -> 120
-      _later -> 180
-    end
-  end
+  def backoff(%Oban.Job{attempt: attempt}), do: Backoff.ladder(attempt, [30, 60, 120, 180])
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"integration_id" => integration_id}, attempt: attempt} = job) do

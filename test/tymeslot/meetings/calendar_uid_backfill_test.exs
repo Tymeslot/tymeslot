@@ -24,7 +24,8 @@ defmodule Tymeslot.Meetings.CalendarUidBackfillTest do
   @version 20_260_928_144_321
 
   test "gives every existing meeting its uid as its calendar uid" do
-    meetings = for status <- ~w(confirmed cancelled pending), do: insert(:meeting, status: status)
+    meetings =
+      for status <- ~w(confirmed cancelled pending)a, do: insert(:meeting, status: status)
 
     # The factory's calendar uid is independent of the uid, so a row whose
     # calendar uid equals its uid afterwards was written by the migration.

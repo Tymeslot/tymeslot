@@ -49,7 +49,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
   defp office do
     %LocationOption{
       id: "loc-office",
-      kind: "in_person",
+      kind: :in_person,
       label: "Our office",
       position: 0
     }
@@ -58,7 +58,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
   defp call_me(position) do
     %LocationOption{
       id: "loc-call",
-      kind: "phone",
+      kind: :phone,
       label: "Phone call",
       collect_from_guest: true,
       position: position
@@ -68,7 +68,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
   defp video(id, integration, position) do
     %LocationOption{
       id: id,
-      kind: "video",
+      kind: :video,
       label: "Video #{id}",
       video_integration_ids: [integration.id],
       position: position
@@ -87,14 +87,14 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
     insert_meeting_for_user(
       user,
-      Map.merge(%{meeting_type_id: meeting_type.id, status: "confirmed"}, meeting_attrs)
+      Map.merge(%{meeting_type_id: meeting_type.id, status: :confirmed}, meeting_attrs)
     )
   end
 
   defp zoom_meeting_attrs(zoom, option_id) do
     %{
       location: "https://zoom.us/j/123456789",
-      location_kind: "video",
+      location_kind: :video,
       location_option_id: option_id,
       video_integration_id: zoom.id,
       video_provider: "zoom",
@@ -109,7 +109,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
   defp office_meeting_attrs do
     %{
       location: "Our office",
-      location_kind: "in_person",
+      location_kind: :in_person,
       location_option_id: "loc-office"
     }
   end
@@ -164,7 +164,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       meeting =
         meeting_on(user, [office(), call_me(1)], %{
           location: "Phone call (+1 555 0100)",
-          location_kind: "phone",
+          location_kind: :phone,
           location_option_id: "loc-call",
           attendee_phone: "+1 555 0100"
         })
@@ -203,7 +203,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
         reschedule(meeting, %{location_option_id: "loc-call", location_phone: " +1 555 0100 "})
 
       assert updated.location == "Phone call (+1 555 0100)"
-      assert updated.location_kind == "phone"
+      assert updated.location_kind == :phone
       assert updated.location_option_id == "loc-call"
       assert updated.attendee_phone == "+1 555 0100"
 
@@ -215,7 +215,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       meeting =
         meeting_on(user, [office(), call_me(1)], %{
           location: "Phone call (+1 555 0100)",
-          location_kind: "phone",
+          location_kind: :phone,
           location_option_id: "loc-call",
           attendee_phone: "+1 555 0100"
         })
@@ -240,7 +240,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       updated = reschedule(meeting, %{location_option_id: "loc-office"})
 
       assert updated.location == "Our office"
-      assert updated.location_kind == "in_person"
+      assert updated.location_kind == :in_person
       assert updated.video_integration_id == nil
 
       # No join link survives for a meeting that is no longer online, not even
@@ -389,7 +389,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
 
       assert updated.video_integration_id == zoom.id
-      assert updated.location_kind == "video"
+      assert updated.location_kind == :video
 
       assert_enqueued(
         worker: VideoRoomWorker,
@@ -520,7 +520,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
 
-      assert updated.status == "awaiting_approval"
+      assert updated.status == :awaiting_approval
       assert updated.video_integration_id == zoom.id
       refute_enqueued(worker: VideoRoomWorker)
     end
@@ -531,12 +531,12 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
         meeting_on(
           user,
           [office(), video("loc-zoom", zoom, 1)],
-          Map.put(office_meeting_attrs(), :status, "awaiting_payment")
+          Map.put(office_meeting_attrs(), :status, :awaiting_payment)
         )
 
       updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
 
-      assert updated.status == "awaiting_payment"
+      assert updated.status == :awaiting_payment
       assert updated.video_integration_id == zoom.id
       refute_enqueued(worker: VideoRoomWorker)
     end
@@ -554,7 +554,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       updated = reschedule(meeting, %{location_option_id: "loc-office"})
 
-      assert updated.status == "awaiting_approval"
+      assert updated.status == :awaiting_approval
       assert updated.video_room_id == nil
 
       assert_enqueued(
@@ -598,7 +598,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
 
       assert updated.location_option_id == "loc-zoom"
-      assert updated.location_kind == "video"
+      assert updated.location_kind == :video
       assert updated.video_integration_id == nil
       refute_enqueued(worker: VideoRoomWorker)
     end

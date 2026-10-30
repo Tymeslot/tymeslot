@@ -158,7 +158,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     assert requests() == [{:delete, server <> @room_path <> "/" <> @token, nil}]
 
     assert %{
-             status: "cancelled",
+             status: :cancelled,
              video_room_id: nil,
              video_room_enabled: false,
              organizer_video_url: nil,
@@ -351,7 +351,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     assert %{discard: 1, failure: 0} = drain_video_rooms()
 
     assert requests() == []
-    assert %{status: "cancelled", video_room_id: @token} = Repo.reload!(meeting)
+    assert %{status: :cancelled, video_room_id: @token} = Repo.reload!(meeting)
 
     # Reconnecting with a new app password deletes the conversation the
     # cancellation could not.

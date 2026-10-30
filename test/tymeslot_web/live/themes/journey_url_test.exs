@@ -204,7 +204,7 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
       start_time: start,
       end_time: DateTime.add(start, 30, :minute),
       duration: 30,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 end

@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthEventErrorContractTest do
     end
 
     test "cancelling succeeds when the event is already gone", %{meeting: meeting} do
-      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
 
       expect(GoogleCalendarAPIMock, :delete_event, fn _int, "primary", "google-event-gone" ->
         {:error, :not_found, "Event not found"}

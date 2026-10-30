@@ -82,8 +82,8 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
              }
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.status == "cancelled"
-      assert updated.calendar_sync_status == "externally_deleted"
+      assert updated.status == :cancelled
+      assert updated.calendar_sync_status == :externally_deleted
     end
 
     test "reconciles an event the calendar no longer has, marked already gone", %{
@@ -121,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
       assert %{already_gone: true, reconcile_result: :ok} = result
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert {updated.status, updated.calendar_sync_status} == {"cancelled", "externally_deleted"}
+      assert {updated.status, updated.calendar_sync_status} == {:cancelled, :externally_deleted}
     end
 
     test "omits the attendee when no meeting is linked", %{integration: integration} do

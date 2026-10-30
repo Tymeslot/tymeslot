@@ -35,9 +35,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestFixtures
 
+  alias Plug.HTML
   alias Plug.Test, as: PlugTest
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Onboarding.OnboardingQueries
+  alias Tymeslot.RateLimiterTestHelpers
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Webhooks
 
@@ -56,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
     {:ok, conn: conn, user: user}
   end
 
+  # The rendered page escapes apostrophes in the limiter's message.
   describe "handle_create — rate limit hit" do
     @tag :capture_log
     test "surfaces a flash and creates no webhook once the write limit is exhausted",
@@ -93,6 +96,63 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
     end
   end
 
+  describe "handle_update — rate limit hit" do
+    @tag :capture_log
+    test "flashes the refusal and leaves the webhook unchanged", %{conn: conn, user: user} do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Original Name",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      message = RateLimiterTestHelpers.exhaust_limit!(:webhook_write, user.id)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      view |> element("button[title='Edit Webhook']") |> render_click()
+
+      view
+      |> form("#webhook-form", %{
+        "webhook" => %{
+          "name" => "Renamed Webhook",
+          "url" => "https://example.com/webhook",
+          "events" => ["meeting.created"]
+        }
+      })
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ HTML.html_escape(message)
+      refute html =~ "Webhook updated successfully"
+      assert {:ok, %{name: "Original Name"}} = Webhooks.get_webhook(webhook.id, user.id)
+    end
+  end
+
+  describe "handle_regenerate_token — rate limit hit" do
+    @tag :capture_log
+    test "flashes the refusal and keeps the existing token", %{conn: conn, user: user} do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Token Webhook",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      message = RateLimiterTestHelpers.exhaust_limit!(:webhook_token_regen, user.id)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      view |> element("button[title='Edit Webhook']") |> render_click()
+      view |> element("button[phx-click='show_regenerate_token_modal']") |> render_click()
+      view |> element("#regenerate-token-modal .action-button--danger") |> render_click()
+
+      html = render(view)
+      assert html =~ HTML.html_escape(message)
+      refute html =~ "Security token regenerated"
+      assert [%{webhook_token: token}] = Webhooks.list_webhooks(user.id)
+      assert token == webhook.webhook_token
+    end
+  end
+
   describe "handle_test_connection" do
     test "a webhook deleted since the page loaded is reported as not found",
          %{conn: conn, user: user} do
@@ -113,6 +173,26 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
       html = render(view)
       assert html =~ "Webhook not found"
       refute html =~ "Unable to perform this action"
+    end
+
+    @tag :capture_log
+    test "flashes the refusal instead of testing once the test limit is exhausted",
+         %{conn: conn, user: user} do
+      {:ok, _webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Limited Webhook",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      message = RateLimiterTestHelpers.exhaust_limit!(:webhook_test, user.id)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      view |> element("button[title='Test Connection']") |> render_click()
+
+      html = render(view)
+      assert html =~ HTML.html_escape(message)
+      refute html =~ "Webhook test successful"
     end
   end
 end

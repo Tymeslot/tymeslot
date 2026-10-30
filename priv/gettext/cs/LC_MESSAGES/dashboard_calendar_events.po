@@ -521,7 +521,7 @@ msgstr "Vytvoření se nezdařilo – zkusíme to znovu při příští synchron
 msgid "Delete failed - queued to retry on next sync"
 msgstr "Smazání se nezdařilo – zkusíme to znovu při příští synchronizaci"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
 msgstr "Událost se nepodařilo aktualizovat – změny byly vráceny zpět"
@@ -606,32 +606,32 @@ msgstr "před událostí"
 msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
 msgstr "Tento kalendář je jen pro čtení. Události v něm nelze měnit z Tymeslotu."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Could not change the video link - changes reverted"
 msgstr "Odkaz na videoschůzku se nepodařilo změnit – změny byly vráceny zpět"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Could not move the event. It is still on its original calendar."
 msgstr "Událost se nepodařilo přesunout. Zůstává v původním kalendáři."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
 msgstr "Událost byla zkopírována do nového kalendáře, ale původní událost se nepodařilo odstranit. Smažte ji prosím z původního kalendáře."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar. The original will be removed on the next sync."
 msgstr "Událost byla zkopírována do nového kalendáře. Původní událost bude odstraněna při příští synchronizaci."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Event moved to the new calendar."
 msgstr "Událost byla přesunuta do nového kalendáře."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider did not return a meeting link, so the video link was not changed."
 msgstr "Poskytovatel videa nevrátil odkaz na schůzku, takže odkaz na videoschůzku nebyl změněn."
@@ -651,7 +651,7 @@ msgstr "Místnost pro videoschůzku byla vytvořena."
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
 msgstr "K vašemu kalendáři se nepodařilo připojit. Změna je uložena a synchronizuje se při příštím pokusu."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
 msgstr "Událost byla zkopírována do nového kalendáře, ale přesun se nedokončil. Zkontrolujte prosím původní kalendář a smažte původní událost, pokud tam stále je."
@@ -661,7 +661,7 @@ msgstr "Událost byla zkopírována do nového kalendáře, ale přesun se nedok
 msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
 msgstr "Tato událost je rezervace, takže její odkaz na video patří k rezervaci. Chcete-li jej změnit, přeplánujte nebo zrušte rezervaci."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
 msgstr "Kalendář Google přidal k události Google Meet, ale zatím nevrátil jeho odkaz. Vyberte Google Meet znovu, abyste jej získali."
@@ -711,13 +711,13 @@ msgstr "Opakující se událost byla smazána. Účastníci byli informováni."
 msgid "This event could not be deleted here. Please delete it in your calendar app."
 msgstr "Tuto událost se zde nepodařilo smazat. Smažte ji prosím ve své kalendářové aplikaci."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Events of a repeating series cannot be switched between all-day and timed here. Please make this change in your calendar app."
 msgstr "Události opakující se série zde nelze přepnout mezi celodenní a časovanou. Proveďte prosím tuto změnu ve své kalendářové aplikaci."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/recurrence_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
 msgstr "Tuto změnu nelze u zvolených událostí provést. Pravidlo opakování lze změnit jen pro všechny události, nebo pro tuto a následující, a zde jej nelze odstranit."
@@ -740,12 +740,12 @@ msgstr[2] "Série byla aktualizována, ale %{count} změn provedených během uk
 msgid "This event could not be matched to its series. Refresh your calendars and try again."
 msgstr "Tuto událost se nepodařilo přiřadit k její sérii. Obnovte své kalendáře a zkuste to znovu."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This series repeats on fixed days, such as the second Monday of the month, so it cannot be moved like this. Please make this change in your calendar app."
 msgstr "Tato série se opakuje v pevné dny, například druhé pondělí v měsíci, a proto ji nelze takto přesunout. Proveďte prosím tuto změnu ve své kalendářové aplikaci."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This series' repeat rule cannot be split here. Please make this change in your calendar app."
 msgstr "Pravidlo opakování této série zde nelze rozdělit. Proveďte prosím tuto změnu ve své kalendářové aplikaci."
@@ -820,12 +820,12 @@ msgstr "Do tohoto kalendáře nelze zapisovat. Vyberte prosím jiný kalendář.
 msgid "The series is already on that calendar."
 msgstr "Série už v tomto kalendáři je."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar."
 msgstr "Série byla zkopírována do %{calendar}, ale původní sérii se nepodařilo odstranit. Smažte ji prosím z původního kalendáře."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The series was moved to %{calendar}."
 msgstr "Série byla přesunuta do %{calendar}."
@@ -957,7 +957,7 @@ msgstr "Informovat účastníky"
 msgid "Send cancellation"
 msgstr "Odeslat oznámení o zrušení"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting at this time. Please choose a different time."
 msgstr "V tuto dobu už máte schůzku. Vyberte prosím jiný čas."
@@ -973,12 +973,12 @@ msgid "Outlook can't skip the months that don't have this series' day, and would
 msgstr ""
 "Outlook neumí přeskočit měsíce, které nemají den této série, a takové události by přesunul na poslední den měsíce. Začněte prosím sérii nejpozději 28. dne nebo ji uložte do jiného kalendáře."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This series changed while you were editing it, and nothing is left of it from this event on. Nothing was saved."
 msgstr "Tato série se během vašich úprav změnila a od této události z ní už nic nezbývá. Nic se neuložilo."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This series changed while you were editing it, so the events left in it can no longer be counted. Nothing was saved. Refresh the calendar and try again."
 msgstr "Tato série se během vašich úprav změnila, takže už nelze spočítat, kolik událostí v ní zbývá. Nic se neuložilo. Obnovte kalendář a zkuste to znovu."
@@ -1012,3 +1012,16 @@ msgstr "Účastník byl přidán. Bude pozván, jakmile se změna synchronizuje 
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They will be notified once the change has synced to your calendar."
 msgstr "Účastník byl odebrán. Bude informován, jakmile se změna synchronizuje s vaším kalendářem."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss"
+msgstr "Skrýt"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The latest update could not be emailed to this guest. Let them know another way."
+msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
+msgstr[0] "Nejnovější změnu se tomuto hostovi nepodařilo odeslat e-mailem. Dejte mu vědět jinak."
+msgstr[1] "Nejnovější změnu se těmto hostům nepodařilo odeslat e-mailem. Dejte jim vědět jinak."
+msgstr[2] "Nejnovější změnu se těmto hostům nepodařilo odeslat e-mailem. Dejte jim vědět jinak."

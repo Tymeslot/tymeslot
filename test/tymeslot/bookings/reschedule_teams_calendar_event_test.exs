@@ -86,14 +86,14 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
         locations: [
           %LocationOption{
             id: "loc-teams",
-            kind: "video",
+            kind: :video,
             label: "Teams",
             video_integration_ids: [teams.id],
             position: 0
           },
           %LocationOption{
             id: "loc-office",
-            kind: "in_person",
+            kind: :in_person,
             label: "Our office",
             details: "12 High Street",
             position: 1
@@ -105,7 +105,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
       insert_meeting_for_user(user, %{
         meeting_type_id: meeting_type.id,
         location: "https://teams.microsoft.com/l/meetup-join/19%3ameeting",
-        location_kind: "video",
+        location_kind: :video,
         location_option_id: "loc-teams",
         video_integration_id: teams.id,
         video_provider: "teams",
@@ -151,7 +151,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
 
     updated = Repo.get!(MeetingSchema, meeting.id)
     assert updated.provider_event_id == @replacement_event
-    assert updated.status == "confirmed"
+    assert updated.status == :confirmed
     assert updated.calendar_sync_status == nil
     assert updated.video_room_id == nil
   end
@@ -192,7 +192,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
 
     updated = Repo.get!(MeetingSchema, meeting.id)
     assert updated.provider_event_id == @replacement_event
-    assert updated.status == "confirmed"
+    assert updated.status == :confirmed
   end
 
   test "the old event's removal arriving through inbound sync leaves the booking standing",
@@ -205,7 +205,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
              Sync.reconcile_deletions(calendar, [%{provider_event_id: @teams_event, uid: nil}])
 
     updated = Repo.get!(MeetingSchema, meeting.id)
-    assert updated.status == "confirmed"
+    assert updated.status == :confirmed
     assert updated.calendar_sync_status == nil
   end
 

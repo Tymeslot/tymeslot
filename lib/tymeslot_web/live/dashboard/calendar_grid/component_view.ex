@@ -197,6 +197,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           pending_attendees={@pending_attendees}
           video_integrations={@video_integrations}
           pending_notification={@pending_notification}
+          undelivered_updates={@undelivered_updates}
           recurrence_edit={@recurrence_edit}
         />
         <BookingDetailModal.booking_detail_modal

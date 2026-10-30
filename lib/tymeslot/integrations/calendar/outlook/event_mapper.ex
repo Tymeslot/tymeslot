@@ -17,6 +17,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   A repeat rule Graph has no pattern for, or one Graph would write with
   other dates (`{:error, :day_missing_in_some_months}`), is refused rather
   than written as another (see `Outlook.RecurrenceConverter`).
+
+  `:online_meeting`, the Graph fields of a Teams meeting the event is to
+  carry (`MeetingProvisioning.booking_online_meeting/1`), are written as
+  they are; event data without it leaves the event's online meeting alone.
   """
   @spec format_event_data(map()) ::
           {:ok, map()}
@@ -42,6 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
       {:ok,
        base
        |> add_reminder(event_data)
+       |> add_online_meeting(event_data)
        |> Map.put("recurrence", recurrence)
        |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
        |> Map.new()}
@@ -71,6 +76,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   end
 
   # Private helpers
+
+  defp add_online_meeting(body, %{online_meeting: %{} = fields}),
+    do: Map.merge(body, Map.new(fields, fn {key, value} -> {to_string(key), value} end))
+
+  defp add_online_meeting(body, _event_data), do: body
 
   # Graph's `PATCH` replaces the event's whole `attendees` collection with the
   # one it is sent, and an attendee's `status` cannot be written: Graph fills

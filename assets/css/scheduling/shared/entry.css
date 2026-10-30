@@ -57,6 +57,7 @@
 @source "../../../js";
 @source "../../../../lib/tymeslot_web.ex";
 @source "../../../../lib/tymeslot_web/themes";
+@source "../../../../lib/tymeslot_web/analytics/providers.ex";
 @source "../../../../lib/tymeslot_web/components/background_motion_toggle.ex";
 @source "../../../../lib/tymeslot_web/components/core_components.ex";
 @source "../../../../lib/tymeslot_web/components/core_components";

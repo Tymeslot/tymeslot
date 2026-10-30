@@ -60,7 +60,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
     test "sends cancellation emails for a cancelled meeting" do
       profile = insert(:profile)
-      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+      meeting = insert(:meeting, organizer_user: profile.user, status: :cancelled)
 
       Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email,
                                                                                       _details ->
@@ -89,7 +89,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       meeting =
         insert(:meeting,
           organizer_user: profile.user,
-          status: "cancelled",
+          status: :cancelled,
           first_announced_at: DateTime.utc_now(:second)
         )
 
@@ -128,7 +128,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       meeting =
         insert(:meeting,
           organizer_user: profile.user,
-          status: "cancelled",
+          status: :cancelled,
           first_announced_at: DateTime.utc_now(:second)
         )
 
@@ -175,7 +175,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
         insert(:group_meeting,
           capacity: 4,
           organizer_user_id: profile.user.id,
-          status: "cancelled"
+          status: :cancelled
         )
 
       participant = insert(:participant, meeting: meeting)
@@ -209,7 +209,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
     test "a retry after a total failure sends the cancellation again" do
       profile = insert(:profile)
-      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+      meeting = insert(:meeting, organizer_user: profile.user, status: :cancelled)
 
       expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 1, fn _email,
                                                                                      _details ->
@@ -243,7 +243,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
     test "a partial failure errors the job and the retry sends only the copy that failed" do
       profile = insert(:profile)
-      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+      meeting = insert(:meeting, organizer_user: profile.user, status: :cancelled)
 
       # The organiser's copy goes out on the first run only; the attendee's
       # fails once and is the only one sent again.
@@ -278,7 +278,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       meeting =
         insert(:meeting,
           organizer_user: profile.user,
-          status: "cancelled",
+          status: :cancelled,
           first_announced_at: DateTime.utc_now(:second)
         )
 
@@ -312,7 +312,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
     test "returns error on total failure so job is retried" do
       profile = insert(:profile)
-      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+      meeting = insert(:meeting, organizer_user: profile.user, status: :cancelled)
 
       Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email,
                                                                                       _details ->
@@ -338,7 +338,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
     # email.
     test "retries rather than discarding when one recipient is rejected and the other fails transiently" do
       profile = insert(:profile)
-      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+      meeting = insert(:meeting, organizer_user: profile.user, status: :cancelled)
 
       Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email,
                                                                                       _details ->
@@ -394,7 +394,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
     test "discards job if meeting is cancelled for reminders" do
       profile = insert(:profile)
-      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+      meeting = insert(:meeting, organizer_user: profile.user, status: :cancelled)
 
       assert {:discard, "Meeting cancelled"} =
                perform_job(EmailWorker, %{

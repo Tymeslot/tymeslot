@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organizer_email: user.email,
       start_time: tomorrow_noon,
       end_time: DateTime.add(tomorrow_noon, 3600, :second),
-      status: "confirmed",
+      status: :confirmed,
       title: "Quarterly review"
     )
 
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organizer_email: user.email,
       start_time: first,
       end_time: DateTime.add(first, 3600, :second),
-      status: "confirmed",
+      status: :confirmed,
       title: "Team retro"
     )
 
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organizer_email: user.email,
       start_time: later,
       end_time: DateTime.add(later, 3600, :second),
-      status: "confirmed",
+      status: :confirmed,
       title: "Roadmap review"
     )
 
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organizer_email: user.email,
       start_time: start,
       end_time: DateTime.add(start, 45 * 60, :second),
-      status: "confirmed",
+      status: :confirmed,
       title: "Quarterly review",
       attendee_name: "Dana Lee",
       location: "Room 3B",
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organizer_email: user.email,
       start_time: start,
       end_time: DateTime.add(start, 3600, :second),
-      status: "confirmed",
+      status: :confirmed,
       title: "Quarterly review"
     )
 
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organizer_email: user.email,
       start_time: start,
       end_time: DateTime.add(start, 3600, :second),
-      status: "confirmed",
+      status: :confirmed,
       title: "Freshly booked"
     )
 
@@ -268,7 +268,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
         organizer_email: user.email,
         start_time: early,
         end_time: DateTime.add(early, 3600, :second),
-        status: "confirmed",
+        status: :confirmed,
         title: "Standup"
       )
 

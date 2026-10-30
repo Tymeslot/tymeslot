@@ -106,7 +106,7 @@ defmodule Tymeslot.Meetings.SchedulingConcurrencyTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, minutes, :minute),
       duration: minutes,
-      status: "confirmed",
+      status: :confirmed,
       organizer_user_id: user.id,
       organizer_name: "Organiser",
       organizer_email: "organiser-#{user.id}@example.com",

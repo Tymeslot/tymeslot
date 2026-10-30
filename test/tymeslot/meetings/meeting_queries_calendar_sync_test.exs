@@ -181,10 +181,10 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
       assert {:ok, updated} =
                MeetingQueries.update_calendar_sync_status_if_changed(
                  meeting.id,
-                 "externally_deleted"
+                 :externally_deleted
                )
 
-      assert updated.calendar_sync_status == "externally_deleted"
+      assert updated.calendar_sync_status == :externally_deleted
     end
 
     test "returns :already_set when status matches" do
@@ -192,12 +192,12 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
 
       # Set status first
       {:ok, _meeting} =
-        MeetingQueries.update_calendar_sync_status_if_changed(meeting.id, "externally_deleted")
+        MeetingQueries.update_calendar_sync_status_if_changed(meeting.id, :externally_deleted)
 
       assert {:ok, :already_set} =
                MeetingQueries.update_calendar_sync_status_if_changed(
                  meeting.id,
-                 "externally_deleted"
+                 :externally_deleted
                )
     end
 
@@ -205,7 +205,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
       assert {:error, :not_found} =
                MeetingQueries.update_calendar_sync_status_if_changed(
                  UUID.generate(),
-                 "externally_deleted"
+                 :externally_deleted
                )
     end
   end

@@ -128,7 +128,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerOfflineQueueTest do
       %{integration: integration, meeting: meeting} =
         setup_calendar_scenario_with_paths()
 
-      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
       uid = meeting.calendar_uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _meeting, _opts ->

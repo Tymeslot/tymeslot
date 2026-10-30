@@ -23,12 +23,12 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
 
   describe "ApprovalDisplay.awaiting_approval?/1" do
     test "true when the meeting's own status is awaiting_approval" do
-      assert ApprovalDisplay.awaiting_approval?(%{meeting_status: "awaiting_approval"})
+      assert ApprovalDisplay.awaiting_approval?(%{meeting_status: :awaiting_approval})
     end
 
     test "false when the meeting's own status is confirmed, even on a gated type" do
       refute ApprovalDisplay.awaiting_approval?(%{
-               meeting_status: "confirmed",
+               meeting_status: :confirmed,
                meeting_type: build(:meeting_type, requires_approval: true)
              })
     end
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
     test "owner preview always answers from the meeting type, not the mock status" do
       assert ApprovalDisplay.awaiting_approval?(%{
                owner_preview: true,
-               meeting_status: "confirmed",
+               meeting_status: :confirmed,
                meeting_type: build(:meeting_type, requires_approval: true)
              })
     end
@@ -162,11 +162,11 @@ defmodule TymeslotWeb.Themes.ConfirmationApprovalTest do
   end
 
   defp held_assigns do
-    Map.put(base_assigns(), :meeting_status, "awaiting_approval")
+    Map.put(base_assigns(), :meeting_status, :awaiting_approval)
   end
 
   defp confirmed_assigns do
-    Map.put(base_assigns(), :meeting_status, "confirmed")
+    Map.put(base_assigns(), :meeting_status, :confirmed)
   end
 
   defp base_assigns do

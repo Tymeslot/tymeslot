@@ -120,7 +120,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   def refusal(payment) do
     cond do
       not within_refund_window?(payment) -> {:error, :outside_refund_window}
-      payment.status == "disputed" -> {:error, :under_dispute}
+      payment.status == :disputed -> {:error, :under_dispute}
       true -> :ok
     end
   end
@@ -228,7 +228,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     end)
   end
 
-  defp validate_amount(%{status: "refunded"}, _amount_cents), do: {:error, :already_refunded}
+  defp validate_amount(%{status: :refunded}, _amount_cents), do: {:error, :already_refunded}
 
   defp validate_amount(
          %{amount_cents: amount, refunded_amount_cents: refunded},
@@ -286,8 +286,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
     new_status =
       cond do
-        new_total >= payment.amount_cents -> "refunded"
-        new_total > 0 -> "partially_refunded"
+        new_total >= payment.amount_cents -> :refunded
+        new_total > 0 -> :partially_refunded
         true -> payment.status
       end
 

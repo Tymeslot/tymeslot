@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.FeedCalendar
+  alias Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubs
   alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesMaster
@@ -268,7 +269,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
       synced_at: read_at
     }
 
-    {:ok, calendar_events} = OutlookProvider.normalise_events(events, context)
+    {:ok, calendar_events} =
+      events
+      |> OccurrenceStubs.complete(integration)
+      |> OutlookProvider.normalise_events(context)
+
     calendar_events
   end
 

@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection
   alias TymeslotWeb.Live.Scheduling.PreviewToken
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   require Logger
 
@@ -309,8 +310,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   defp perform_domain_update(socket, domains_payload, success_message) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:embed_domain_update, user_id) do
-      :ok ->
+    # The limiter's own message is English; this one is translated.
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:embed_domain_update, user_id),
+      socket,
+      fn ->
         case Profiles.update_allowed_embed_domains(socket.assigns.profile, domains_payload) do
           {:ok, updated_profile} ->
             # Notify parent of profile update
@@ -345,18 +349,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             Flash.error(dgettext("dashboard_embed", "Failed to save: %{errors}", errors: errors))
             {:noreply, socket}
         end
-
-      # The limiter logs the rejection; the flash stays translated rather than
-      # showing its English message.
-      {:error, :rate_limited, _message} ->
-        Flash.error(
-          dgettext(
-            "dashboard_embed",
-            "Too many updates. Please wait a moment before trying again."
-          )
-        )
-
-        {:noreply, socket}
-    end
+      end,
+      message:
+        dgettext("dashboard_embed", "Too many updates. Please wait a moment before trying again.")
+    )
   end
 end

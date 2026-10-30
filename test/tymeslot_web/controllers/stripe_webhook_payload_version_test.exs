@@ -200,7 +200,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
           stripe_account_id: "acct_fixtureHost",
           stripe_payment_intent_id: "pi_1SfixtureBookingIntent",
           stripe_charge_id: nil,
-          status: "paid"
+          status: :paid
         )
 
       body = StripeWebhookFixtures.body("charge.dispute.created")
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
                ""
 
       reloaded = Repo.reload!(payment)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.last_event_id == "evt_1SfixtureDisputeCreated"
     end
 
@@ -219,7 +219,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
         insert(:booking_payment,
           stripe_account_id: "acct_fixtureHost",
           stripe_payment_intent_id: "pi_1SfixtureBookingIntent",
-          status: "paid"
+          status: :paid
         )
 
       body = StripeWebhookFixtures.body("charge.dispute.created")
@@ -230,7 +230,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
              |> post_signed("/webhooks/stripe/connect", tampered, signature)
              |> response(400) == ""
 
-      assert Repo.reload!(payment).status == "paid"
+      assert Repo.reload!(payment).status == :paid
     end
   end
 end

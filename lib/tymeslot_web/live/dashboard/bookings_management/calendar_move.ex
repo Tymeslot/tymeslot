@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @event [:tymeslot, :dashboard, :meetings, :calendar_move]
 
@@ -76,19 +77,19 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
   def confirm(socket, reload) when is_function(reload, 1) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:dashboard_reschedule, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        socket
-
-      :ok ->
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:dashboard_reschedule, user_id),
+      socket,
+      fn ->
         {:noreply, socket} =
           ModalHook.with_modal_data(socket, :calendar_move, fn %{meeting: meeting, offer: offer} ->
             {:noreply, move(socket, meeting.id, user_id, offer, reload)}
           end)
 
         socket
-    end
+      end,
+      reply: :socket
+    )
   end
 
   defp move(socket, meeting_id, user_id, offer, reload) do

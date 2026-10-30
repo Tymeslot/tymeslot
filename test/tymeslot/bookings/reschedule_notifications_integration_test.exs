@@ -256,7 +256,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
                  user.id
                )
 
-      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: "cancelled"])
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: :cancelled])
 
       assert %{success: 0, discard: 1} = Oban.drain_queue(queue: :emails)
       refute_received {:email, _email}
@@ -271,7 +271,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
                  user.id
                )
 
-      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: "awaiting_approval"])
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: :awaiting_approval])
 
       assert %{success: 0, discard: 1} = Oban.drain_queue(queue: :emails)
       refute_received {:email, _email}
@@ -485,7 +485,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 30, :minute),
       duration: 30,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 

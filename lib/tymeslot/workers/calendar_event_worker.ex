@@ -32,6 +32,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.Bounded
   alias Tymeslot.Workers.RetryHelpers
   alias Tymeslot.Workers.SnoozePolicy
@@ -155,16 +156,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   end
 
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt}) do
-    # Progressive backoff: 30s, 60s, 120s, 180s
-    case attempt do
-      1 -> 30
-      2 -> 60
-      3 -> 120
-      4 -> 180
-      _other_attempt -> 30
-    end
-  end
+  def backoff(%Oban.Job{attempt: attempt}), do: Backoff.ladder(attempt, [30, 60, 120, 180])
 
   # ---------------------------------------------------------------------------
   # One write at a time per event
@@ -342,27 +334,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp maybe_invalidate_availability_cache(_action, _meeting), do: :ok
 
   # Group all handle_error_result/2 clauses together
-  defp handle_error_result(:rate_limited, job) do
-    # If provider supplied Retry-After in error message, honor it
-    retry_after = parse_retry_after(job)
-
-    snooze_seconds =
-      if is_integer(retry_after) do
-        min(600, max(10, retry_after))
-      else
-        # Fallback heuristic. Paced by executions rather than `job.attempt`, so
-        # a provider that keeps rate limiting is backed off further each time
-        # rather than being retried every minute forever: from Oban 2.24 a
-        # snooze no longer advances `attempt`.
-        min(300, 60 * SnoozePolicy.executions(job))
-      end
-
-    Logger.warning("Calendar service rate limited, snoozing",
-      snooze_seconds: snooze_seconds
-    )
-
-    {:snooze, snooze_seconds}
-  end
+  defp handle_error_result(:rate_limited, job), do: handle_error_result(:rate_limited, job, nil)
 
   defp handle_error_result(:unauthorized, _job) do
     Logger.error("Calendar authentication failed, discarding job")
@@ -462,12 +434,21 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   # Group all handle_error_result/3 clauses together, after the /2 clauses
   defp handle_error_result(:rate_limited, job, message) do
-    retry_after = RetryHelpers.parse_retry_after_from_message(message) || parse_retry_after(job)
+    # Honour a provider-supplied Retry-After, from this error or the last one.
+    # Without one, the fallback is paced by executions rather than
+    # `job.attempt`, so a provider that keeps rate limiting is backed off
+    # further each time rather than being retried every minute forever: from
+    # Oban 2.24 a snooze no longer advances `attempt`.
+    retry_after =
+      RetryHelpers.parse_retry_after_from_message(message) ||
+        RetryHelpers.parse_retry_after_from_last_error(job)
 
     snooze_seconds =
-      if is_integer(retry_after),
-        do: min(600, max(10, retry_after)),
-        else: min(300, 60 * SnoozePolicy.executions(job))
+      RetryHelpers.clamp_retry_after(retry_after,
+        min: 10,
+        max: 600,
+        default: min(300, 60 * SnoozePolicy.executions(job))
+      )
 
     Logger.warning("Calendar service rate limited, snoozing", snooze_seconds: snooze_seconds)
     {:snooze, snooze_seconds}
@@ -476,17 +457,6 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp handle_error_result(error_type, job, _message), do: handle_error_result(error_type, job)
 
   # Helpers
-  defp parse_retry_after(%Oban.Job{errors: errors}) do
-    # Try to extract retry_after:N from last error message (if present)
-    case List.last(errors) do
-      %{"attempt" => _attempt_number, "error" => msg} when is_binary(msg) ->
-        RetryHelpers.parse_retry_after_from_message(msg)
-
-      _no_error ->
-        nil
-    end
-  end
-
   defp handle_unexpected_result(result) do
     Logger.error("Unexpected result from calendar job", result: result)
     {:error, "Unexpected result"}

@@ -153,7 +153,7 @@ defmodule Tymeslot.Bookings.CalendarUidJourneyTest do
       assert updated_identifier == meeting.uid
       assert event_data.uid == meeting.uid
 
-      {:ok, cancelled} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, cancelled} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
       assert :ok = CalendarEventSync.delete(cancelled.id, 1)
       assert_received {:calendar_delete, deleted_identifier}
       assert deleted_identifier == meeting.uid

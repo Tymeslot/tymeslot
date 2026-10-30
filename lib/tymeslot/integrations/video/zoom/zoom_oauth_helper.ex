@@ -19,8 +19,9 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   @behaviour Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperBehaviour
 
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Retry
+  alias Tymeslot.Integrations.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.HttpAuth
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.OAuth.Refresh
@@ -183,34 +184,20 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   end
 
   defp fetch_user_profile(token, opts) do
-    headers = [
-      {"Authorization", "Bearer #{token}"},
-      {"Content-Type", "application/json"}
-    ]
+    headers = [HttpAuth.bearer(token), {"Content-Type", "application/json"}]
 
     # The reason stays structured inside the retry, so a 5xx or a dropped
-    # connection is retried and the message names what failed last.
+    # connection is retried and the message names what failed last; a 429 is
+    # retried after the wait the provider names, when it names one.
     fn ->
-      case Config.http_client_module().get(@user_profile_url, headers, []) do
-        {:ok, %Req.Response{status: 200, body: body}} ->
-          parse_profile_body(body)
-
-        # Retried after the wait the provider names, when it names one.
-        {:ok, %Req.Response{status: 429} = response} ->
-          Logger.warning("Zoom user profile request rate limited")
-          {:error, {:rate_limited, Retry.retry_after_seconds(response)}}
-
-        {:ok, %Req.Response{status: status, body: body}} ->
-          Logger.error("Failed to fetch Zoom user profile",
-            status: status,
-            body: Redactor.redact_and_truncate(body)
-          )
-
-          {:error, {:http_error, status, body}}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      @user_profile_url
+      |> Config.http_client_module().get(headers, [])
+      |> ApiResponse.handle_tagged(
+        label: "Zoom profile",
+        success: [200],
+        custom: &ApiResponse.rate_limited/1
+      )
+      |> profile()
     end
     |> Retry.with_backoff(Keyword.merge(@profile_retry, Keyword.get(opts, :profile_retry, [])))
     |> profile_error_message()
@@ -233,18 +220,15 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
 
   defp profile_error_message(result), do: result
 
-  defp parse_profile_body(body) do
-    case Jason.decode(body) do
-      {:ok, %{"id" => id} = profile} when is_binary(id) and id != "" ->
-        {:ok, profile}
+  defp profile({:ok, %{"id" => id} = profile}) when is_binary(id) and id != "",
+    do: {:ok, profile}
 
-      {:ok, _other} ->
-        {:error, "Zoom profile missing unique ID"}
+  defp profile({:ok, _other}), do: {:error, "Zoom profile missing unique ID"}
 
-      {:error, _reason} ->
-        {:error, "Invalid JSON response from Zoom profile API"}
-    end
-  end
+  defp profile({:error, :malformed_response}),
+    do: {:error, "Invalid JSON response from Zoom profile API"}
+
+  defp profile(error), do: error
 
   @doc """
   Revokes the Zoom app authorisation behind `access_token` (Zoom revokes by

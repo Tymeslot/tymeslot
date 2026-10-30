@@ -40,91 +40,34 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Webhooks
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.MeetingNotificationJob
 
   alias Tymeslot.Webhooks.{
     HttpDelivery,
+    MeetingSnapshot,
     PayloadBuilder,
     WebhookQueries,
     WebhookSchema
   }
 
-  # The event-defining fields of a meeting, captured at the moment a webhook
-  # fires and replayed at delivery time instead of being re-derived. Without
-  # this, a `meeting.requested` delivery retried after the host has since
-  # approved or declined re-reads the meeting fresh and reports its *current*
-  # state under the original event's envelope — the event says one thing and
-  # the body says another. Kept to the handful of scalar/datetime fields that
-  # actually drive `PayloadBuilder`'s status-dependent sections, rather than
-  # snapshotting the whole meeting into the job args.
-  @snapshot_fields ~w(
-    status cancelled_at cancellation_reason decline_reason
-    approval_requested_at approval_deadline_at approval_resolved_at
-    approval_declined_at
-  )a
-
   @delivery_id_header "X-Tymeslot-Delivery-Id"
-
-  @datetime_snapshot_fields ~w(
-    cancelled_at approval_requested_at approval_deadline_at approval_resolved_at
-    approval_declined_at
-  )a
-
-  @doc """
-  Captures the event-defining fields of a meeting for `schedule_delivery/4`.
-
-  Called by the trigger site at the moment the event fires, so a retried
-  delivery can replay what that event asserted rather than whatever the
-  meeting looks like by the time the retry runs.
-
-  A group meeting's seat (`Tymeslot.Meetings.SeatView`) also pins the seats
-  taken on the slot when the event fired, under `"seats_taken"`, and the
-  seat a move replaced, under `"previous_seat"`.
-  """
-  @spec snapshot(MeetingSchema.t()) :: map()
-  def snapshot(%MeetingSchema{} = meeting) do
-    meeting
-    |> Map.take(@snapshot_fields)
-    |> Map.new(fn {field, value} -> {Atom.to_string(field), encode_snapshot_field(value)} end)
-    |> maybe_put_seats_taken(SeatView.seats_taken(meeting))
-    |> maybe_put_previous_seat(SeatView.previous_seat(meeting))
-  end
-
-  defp maybe_put_seats_taken(snapshot, nil), do: snapshot
-  defp maybe_put_seats_taken(snapshot, seats), do: Map.put(snapshot, "seats_taken", seats)
-
-  defp maybe_put_previous_seat(snapshot, nil), do: snapshot
-
-  defp maybe_put_previous_seat(snapshot, previous) do
-    Map.put(snapshot, "previous_seat", %{
-      "seat_id" => previous.seat_id,
-      "meeting_id" => previous.meeting_id,
-      "start_time" => DateTime.to_iso8601(previous.start_time)
-    })
-  end
-
-  defp encode_snapshot_field(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
-  defp encode_snapshot_field(value), do: value
 
   @behaviour ExpectedJobOutcome
 
   # The work no longer applies, or the user's own endpoint refuses it: a
   # blocked or broken redirect, or a 4xx it answers for good. Missing
   # parameters and a 5xx are recorded.
-  @blocked_by_ssrf :blocked_by_ssrf
-  @blocked_redirect :blocked_redirect
-  @too_many_redirects :too_many_redirects
-  @redirect_missing_location :redirect_missing_location
-  @refused_destinations [
-    @blocked_by_ssrf,
-    @blocked_redirect,
-    @too_many_redirects,
-    @redirect_missing_location
-  ]
+  @refused_destination_messages %{
+    blocked_by_ssrf: "Webhook delivery discarded - SSRF blocked",
+    blocked_redirect: "Webhook delivery discarded - redirect blocked",
+    too_many_redirects: "Webhook delivery discarded - too many redirects",
+    redirect_missing_location: "Webhook delivery discarded - redirect missing Location header"
+  }
+  @refused_destinations Map.keys(@refused_destination_messages)
   @http_status_prefix "HTTP "
   @gone "Webhook or meeting not found"
   @disabled "Webhook is disabled"
@@ -225,45 +168,14 @@ defmodule Tymeslot.Workers.WebhookWorker do
     {:error, :feature_access_checker_failed}
   end
 
-  defp handle_delivery_error({:error, :blocked_by_ssrf}, webhook_id, _meeting_id, event_type) do
-    Logger.info("Webhook delivery discarded - SSRF blocked",
+  defp handle_delivery_error({:error, reason}, webhook_id, _meeting_id, event_type)
+       when is_map_key(@refused_destination_messages, reason) do
+    Logger.info(Map.fetch!(@refused_destination_messages, reason),
       webhook_id: webhook_id,
       event_type: event_type
     )
 
-    {:discard, @blocked_by_ssrf}
-  end
-
-  defp handle_delivery_error({:error, :blocked_redirect}, webhook_id, _meeting_id, event_type) do
-    Logger.info("Webhook delivery discarded - redirect blocked",
-      webhook_id: webhook_id,
-      event_type: event_type
-    )
-
-    {:discard, @blocked_redirect}
-  end
-
-  defp handle_delivery_error({:error, :too_many_redirects}, webhook_id, _meeting_id, event_type) do
-    Logger.info("Webhook delivery discarded - too many redirects",
-      webhook_id: webhook_id,
-      event_type: event_type
-    )
-
-    {:discard, @too_many_redirects}
-  end
-
-  defp handle_delivery_error(
-         {:error, :redirect_missing_location},
-         webhook_id,
-         _meeting_id,
-         event_type
-       ) do
-    Logger.info("Webhook delivery discarded - redirect missing Location header",
-      webhook_id: webhook_id,
-      event_type: event_type
-    )
-
-    {:discard, @redirect_missing_location}
+    {:discard, reason}
   end
 
   defp handle_delivery_error({:error, reason} = error, webhook_id, _meeting_id, event_type) do
@@ -281,9 +193,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
   @doc """
   Schedules a webhook delivery via Oban.
 
-  `snapshot`, from `snapshot/1`, is what a retried delivery replays instead of
-  re-deriving the meeting's current state; omit it (or pass `nil`) only where
-  the event has no status-dependent payload section to protect.
+  `snapshot`, from `Tymeslot.Webhooks.MeetingSnapshot.snapshot/1`, is what a
+  retried delivery replays instead of re-deriving the meeting's current state;
+  omit it (or pass `nil`) only where the event has no status-dependent
+  payload section to protect.
 
   `participant_id` names the seat of a group meeting the event is about (see
   `Tymeslot.Meetings.SeatView`); the delivery then describes that seat's
@@ -327,12 +240,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
   # after the first, so a receiver down for a deploy or a short outage still
   # receives the event, while any 4xx but a 408, 425 or 429 is discarded at
   # once.
-  @backoff_seconds {30, 120, 600, 1_800, 3_600, 10_800, 21_600}
+  @backoff_seconds [30, 120, 600, 1_800, 3_600, 10_800, 21_600]
 
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt}) do
-    elem(@backoff_seconds, min(attempt, tuple_size(@backoff_seconds)) - 1)
-  end
+  def backoff(%Oban.Job{attempt: attempt}), do: Backoff.ladder(attempt, @backoff_seconds)
 
   # Private functions
 
@@ -355,7 +266,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   defp fetch_meeting(meeting_id, participant_id, snapshot) do
     with {:ok, meeting} <- MeetingQueries.get_meeting_with_guests(meeting_id),
          {:ok, meeting} <- maybe_seat_view(meeting, participant_id, snapshot) do
-      {:ok, apply_snapshot(meeting, snapshot)}
+      {:ok, MeetingSnapshot.replay(meeting, snapshot)}
     end
   end
 
@@ -365,60 +276,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
     SeatView.load(
       meeting,
       participant_id,
-      snapshot_seats_taken(snapshot),
-      snapshot_previous_seat(snapshot)
+      MeetingSnapshot.seats_taken(snapshot),
+      MeetingSnapshot.previous_seat(snapshot)
     )
   end
-
-  defp snapshot_seats_taken(%{"seats_taken" => seats}) when is_integer(seats), do: seats
-  defp snapshot_seats_taken(_snapshot), do: nil
-
-  defp snapshot_previous_seat(%{
-         "previous_seat" => %{
-           "seat_id" => seat_id,
-           "meeting_id" => meeting_id,
-           "start_time" => start_time
-         }
-       }) do
-    case DateTime.from_iso8601(start_time) do
-      {:ok, start_time, _offset} ->
-        %{seat_id: seat_id, meeting_id: meeting_id, start_time: start_time}
-
-      {:error, _reason} ->
-        nil
-    end
-  end
-
-  defp snapshot_previous_seat(_snapshot), do: nil
-
-  defp apply_snapshot(meeting, nil), do: meeting
-
-  defp apply_snapshot(%MeetingSchema{} = meeting, snapshot) when is_map(snapshot) do
-    overrides =
-      Enum.map(@snapshot_fields, fn field ->
-        {field, snapshot_field_value(snapshot, field, Map.get(meeting, field))}
-      end)
-
-    struct(meeting, overrides)
-  end
-
-  defp snapshot_field_value(snapshot, field, default) do
-    case Map.fetch(snapshot, Atom.to_string(field)) do
-      {:ok, value} -> decode_snapshot_field(field, value)
-      :error -> default
-    end
-  end
-
-  defp decode_snapshot_field(_field, nil), do: nil
-
-  defp decode_snapshot_field(field, value) when field in @datetime_snapshot_fields do
-    case DateTime.from_iso8601(value) do
-      {:ok, dt, _offset} -> dt
-      {:error, _reason} -> nil
-    end
-  end
-
-  defp decode_snapshot_field(_field, value), do: value
 
   # The claim covers the post alone. Recording the outcome happens once the
   # claim has settled: a delivered post keeps its claim whatever the log write

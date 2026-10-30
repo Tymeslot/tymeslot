@@ -99,7 +99,7 @@ defmodule Tymeslot.Bookings.Activation do
   # The request still has to reach people — the invitee needs telling their
   # booking is not final, and the host cannot approve what they never heard
   # about — so it takes the request fan-out instead.
-  def activate_in_transaction(%Meeting{status: "awaiting_approval"} = meeting, _opts) do
+  def activate_in_transaction(%Meeting{status: :awaiting_approval} = meeting, _opts) do
     meeting
     |> Events.meeting_requested_deferred()
     |> settle(meeting, "Failed to schedule booking request emails")

@@ -97,7 +97,7 @@ defmodule TymeslotWeb.SeatControllerTest do
       meeting: meeting
     } do
       meeting
-      |> Changeset.change(%{location_kind: "custom", location: "Studio 4, 1 High Street"})
+      |> Changeset.change(%{location_kind: :custom, location: "Studio 4, 1 High Street"})
       |> Repo.update!()
 
       conn = get(conn, ~p"/seat/#{leaver.management_token}/cancel")
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.SeatControllerTest do
       meeting: meeting
     } do
       meeting
-      |> Changeset.change(%{location_kind: "video", location: "Video Call"})
+      |> Changeset.change(%{location_kind: :video, location: "Video Call"})
       |> Repo.update!()
 
       conn = post(conn, ~p"/seat/#{leaver.management_token}/cancel")
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.SeatControllerTest do
     # email that nothing sends. The GET said the link was no longer valid.
     test "a meeting the host cancelled gets the same page from GET and POST, with no promised email",
          %{conn: conn, leaver: leaver, meeting: meeting} do
-      assert {:ok, %{status: "cancelled"}} = Cancel.execute(meeting, caller: :organizer)
+      assert {:ok, %{status: :cancelled}} = Cancel.execute(meeting, caller: :organizer)
 
       {get_conn, post_conn} = get_and_post(conn, leaver.management_token)
 

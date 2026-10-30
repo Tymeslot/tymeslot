@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingLinkRedirectTest do
 
     insert(:meeting,
       organizer_user_id: user.id,
-      status: "confirmed",
+      status: :confirmed,
       start_time: start_time,
       end_time: DateTime.add(start_time, 3600)
     )

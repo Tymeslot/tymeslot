@@ -32,7 +32,7 @@ defmodule TymeslotWeb.DashboardGuestRsvpTest do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     :erlang.trace(lv.pid, true, [:receive])
 
-    {:ok, _guest} = Meetings.record_guest_rsvp(guest.rsvp_token, "accepted")
+    {:ok, _guest} = Meetings.record_guest_rsvp(guest.rsvp_token, :accepted)
 
     meeting_id = meeting.id
     assert_receive {:trace, _pid, :receive, {:guest_rsvp_updated, ^meeting_id}}

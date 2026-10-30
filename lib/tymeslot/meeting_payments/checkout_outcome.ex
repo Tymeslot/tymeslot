@@ -13,7 +13,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
 
     * `payment.paid_at` proves this checkout's payment cycle completed. The
       status cannot, because refunding a released request flips it to
-      `"refunded"` while the booking's story is still "paid, then declined".
+      `:refunded` while the booking's story is still "paid, then declined".
     * The meeting's own status and gate fields say what became of the booking
       once paid. `Approval.declined?/1` is the only proof of a decline:
       `approval_resolved_at` is stamped by an approval as well.
@@ -34,14 +34,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
           | :cancelled
 
   # A booking in one of these is on, whatever else happened to it since.
-  @live_statuses ["confirmed", "completed", "reschedule_requested"]
+  @live_statuses [:confirmed, :completed, :reschedule_requested]
 
   # The booking has not caught up with a payment that cleared yet. The webhook
   # writes both rows in one transaction, so this is a moment, not a state.
-  @pre_payment_statuses ["pending", "awaiting_payment"]
-
-  # An unpaid checkout whose booking is gone will never complete.
-  @ended_statuses ["expired", "cancelled"]
+  @pre_payment_statuses [:pending, :awaiting_payment]
 
   @doc """
   Classifies a checkout for the attendee. `nil` for either row means there is
@@ -51,11 +48,13 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
   def classify(nil, _meeting), do: :processing
   def classify(_payment, nil), do: :processing
 
-  def classify(%{paid_at: nil, status: "failed"}, _meeting), do: :failed
-  def classify(%{paid_at: nil}, %{status: status}) when status in @ended_statuses, do: :failed
-  def classify(%{paid_at: nil}, _meeting), do: :processing
+  def classify(%{paid_at: nil, status: :failed}, _meeting), do: :failed
+  # An unpaid checkout whose booking was released will never complete.
+  def classify(%{paid_at: nil}, %{status: status}) do
+    if MeetingState.released_status?(status), do: :failed, else: :processing
+  end
 
-  def classify(_paid, %{status: "expired", approval_resolved_at: %DateTime{}}), do: :expired
+  def classify(_paid, %{status: :expired, approval_resolved_at: %DateTime{}}), do: :expired
 
   def classify(_paid, meeting) do
     cond do

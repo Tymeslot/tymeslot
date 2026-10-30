@@ -34,7 +34,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
       start_time: start_time,
       end_time: DateTime.add(start_time, 30, :minute),
       duration: 30,
-      status: "confirmed",
+      status: :confirmed,
       organizer_user_id: user.id,
       organizer_name: "Organiser",
       organizer_email: "organiser@example.com",
@@ -65,7 +65,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
       assert meeting.attendee_email == nil
       assert meeting.attendee_name == nil
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
       assert participant.meeting_id == meeting.id
       assert participant.email == "one@example.com"
       assert [_only] = ParticipantQueries.list_live_for_meeting(meeting.id)
@@ -123,7 +123,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
         organizer_user_id: ctx.user.id,
         start_time: blocker_start,
         end_time: DateTime.add(blocker_start, 30, :minute),
-        status: "confirmed"
+        status: :confirmed
       )
 
       attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
@@ -233,7 +233,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
       assert {:ok, %{meeting: meeting, created_meeting?: true}} =
                GroupScheduling.book_seat(attrs_without_status, seat_request("one@example.com"))
 
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
 
       assert {:ok, %{meeting: joined, created_meeting?: false}} =
                GroupScheduling.book_seat(

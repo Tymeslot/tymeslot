@@ -59,7 +59,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
              slug: "introduction-to-x"
            } = type
 
-    assert [%{kind: "in_person", venue_ids: [venue_id]}] = type.locations
+    assert [%{kind: :in_person, venue_ids: [venue_id]}] = type.locations
     assert venue_id == ctx.venue.id
 
     assert session.planned

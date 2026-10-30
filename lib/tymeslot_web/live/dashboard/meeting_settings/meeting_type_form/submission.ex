@@ -301,7 +301,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   defp location_param(location, venues) do
     %{
       "id" => location.id,
-      "kind" => location.kind,
+      "kind" => to_string(location.kind),
       "label" => location.label,
       "details" => location.details || "",
       "collect_from_guest" => to_string(location.collect_from_guest),

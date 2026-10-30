@@ -44,7 +44,7 @@ defmodule Tymeslot.Availability.ExtraAvailabilityOfferTest do
     insert(:availability_override,
       schedule: host.schedule,
       date: weekday,
-      override_type: "custom_hours",
+      override_type: :custom_hours,
       start_time: ~T[10:00:00],
       end_time: ~T[11:00:00]
     )

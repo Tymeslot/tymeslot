@@ -316,7 +316,7 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
       submit(view, "video@example.com")
 
       meeting = booked("video@example.com")
-      assert meeting.location_kind == "video"
+      assert meeting.location_kind == :video
       assert meeting.video_integration_id == ctx.integration.id
       assert meeting.venue_id == nil
       assert meeting.address_to_arrange == false
@@ -354,9 +354,9 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
           start_time: start,
           end_time: DateTime.add(start, 30, :minute),
           duration: 30,
-          status: "confirmed",
+          status: :confirmed,
           location: "Berlin office (Friedrichstrasse 1)",
-          location_kind: "in_person",
+          location_kind: :in_person,
           location_option_id: "loc-offices",
           venue_id: berlin.id
         )
@@ -444,8 +444,8 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
                 start_time: start,
                 end_time: DateTime.add(start, 30, :minute),
                 duration: 30,
-                status: "confirmed",
-                location_kind: "in_person",
+                status: :confirmed,
+                location_kind: :in_person,
                 location_option_id: "loc-offices"
               },
               meeting_attrs

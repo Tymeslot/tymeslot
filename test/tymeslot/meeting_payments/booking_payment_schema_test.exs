@@ -78,11 +78,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
         |> BookingPaymentSchema.create_changeset()
         |> Repo.insert()
 
-      cs = BookingPaymentSchema.update_changeset(payment, %{status: "paid"})
+      cs = BookingPaymentSchema.update_changeset(payment, %{status: :paid})
       assert cs.valid?
 
       {:ok, updated} = Repo.update(cs)
-      assert updated.status == "paid"
+      assert updated.status == :paid
     end
 
     test "DB CHECK rejects refunded > amount" do

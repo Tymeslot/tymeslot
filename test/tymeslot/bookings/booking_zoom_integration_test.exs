@@ -105,7 +105,7 @@ defmodule Tymeslot.Bookings.BookingZoomIntegrationTest do
       assert {:ok, meeting} =
                Orchestrator.submit_booking(params, organizer_user_id: user.id)
 
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
       assert meeting.video_integration_id == zoom_integration.id
 
       assert_enqueued(

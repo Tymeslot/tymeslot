@@ -137,8 +137,8 @@ defmodule Tymeslot.Meetings.SeatView do
   defp seat_guests(not_loaded, _participant_id), do: not_loaded
 
   defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: nil}), do: meeting
-  defp put_seat_status(%MeetingSchema{status: "cancelled"} = meeting, _participant), do: meeting
+  defp put_seat_status(%MeetingSchema{status: :cancelled} = meeting, _participant), do: meeting
 
   defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: cancelled_at}),
-    do: %{meeting | status: "cancelled", cancelled_at: cancelled_at}
+    do: %{meeting | status: :cancelled, cancelled_at: cancelled_at}
 end

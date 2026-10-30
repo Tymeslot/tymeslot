@@ -66,6 +66,21 @@ defmodule Tymeslot.MeetingTypes.FormVenueOwnershipTest do
                )
     end
 
+    test "rejects a foreign venue when the location's kind arrives as an atom" do
+      user = insert(:user)
+      foreign = insert(:venue)
+
+      params =
+        Map.update!(in_person_params([to_string(foreign.id)]), "locations", fn [location] ->
+          [Map.put(location, "kind", :in_person)]
+        end)
+
+      assert {:error, :invalid_venue} =
+               MeetingTypes.create_meeting_type_from_form(user.id, params, %{
+                 selected_icon: "hero-clock"
+               })
+    end
+
     test "rejects a venue id that is not a number" do
       user = insert(:user)
 

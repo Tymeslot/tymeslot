@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Live.Scheduling.CalendarDays
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
@@ -39,7 +40,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     days =
-      CalendarHelpers.get_calendar_days(
+      CalendarDays.get_calendar_days(
         assigns.user_timezone,
         assigns.current_year,
         assigns.current_month,

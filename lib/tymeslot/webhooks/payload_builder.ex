@@ -64,7 +64,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       start_time: format_datetime(meeting.start_time),
       end_time: format_datetime(meeting.end_time),
       duration: meeting.duration,
-      status: meeting.status,
+      status: Atom.to_string(meeting.status),
       meeting_type: meeting.meeting_type,
       location: meeting.location,
       organizer: build_organizer_data(meeting),
@@ -110,7 +110,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       %{
         email: guest.email,
         name: guest.name,
-        status: guest.status,
+        status: Atom.to_string(guest.status),
         responded_at: format_datetime(guest.responded_at)
       }
     end)
@@ -163,7 +163,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
 
   defp maybe_add_approval_data(data, _meeting), do: data
 
-  # A decline and an ordinary cancellation share `status: "cancelled"` (see
+  # A decline and an ordinary cancellation share `status: :cancelled` (see
   # the comment on `MeetingSchema.approval_declined_at`), but they mean
   # different things to a consumer: a decline is the host refusing a request
   # that was never accepted, not the withdrawal of one that was. Only
@@ -173,7 +173,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   # subscribers already parse. The reason comes from `decline_reason` — the
   # field the host actually filled in — rather than the unrelated
   # `cancellation_reason`.
-  defp maybe_add_cancellation_data(data, %MeetingSchema{status: "cancelled"} = meeting) do
+  defp maybe_add_cancellation_data(data, %MeetingSchema{status: :cancelled} = meeting) do
     if Approval.declined?(meeting) do
       Map.put(data, :decline, %{
         declined_at: format_datetime(meeting.approval_declined_at),

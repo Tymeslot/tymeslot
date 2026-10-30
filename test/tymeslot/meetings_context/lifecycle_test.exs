@@ -43,7 +43,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       assert {:ok, meeting} =
                Create.execute(meeting_params, form_data)
 
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     test "fails when time slot has conflict", %{user: user} do
@@ -60,7 +60,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
           organizer_email: user.email,
           start_time: start_time,
           end_time: DateTime.add(start_time, 60, :minute),
-          status: "confirmed"
+          status: :confirmed
         )
 
       meeting_params =
@@ -85,7 +85,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       assert {:ok, cancelled} =
                Meetings.cancel_meeting(Repo.get_by!(MeetingSchema, uid: meeting.uid))
 
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
     end
 
     test "past meeting cannot be cancelled" do
@@ -98,7 +98,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
     test "already cancelled meeting returns error" do
       %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user, %{status: "cancelled"})
+      meeting = insert_meeting_for_user(user, %{status: :cancelled})
 
       assert {:error, :already_cancelled} =
                Meetings.cancel_meeting(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -124,7 +124,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
                Meetings.reschedule_meeting(meeting.uid, new_params, user.id)
 
       assert DateTime.to_date(rescheduled.start_time) == new_date
-      assert rescheduled.status in ["rescheduled", "confirmed"]
+      assert rescheduled.status == :confirmed
     end
 
     test "past meeting cannot be rescheduled" do
@@ -132,7 +132,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
       meeting =
         insert_meeting_for_user(user, %{
-          status: "completed",
+          status: :completed,
           start_offset: -86_400,
           duration: 3_600
         })

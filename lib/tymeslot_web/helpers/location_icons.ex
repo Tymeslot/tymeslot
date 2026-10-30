@@ -6,15 +6,17 @@ defmodule TymeslotWeb.Helpers.LocationIcons do
   see the same glyph for the same kind of place.
   """
 
+  alias Tymeslot.MeetingTypes.LocationOption
+
   @icons %{
-    "in_person" => "hero-building-office",
-    "video" => "hero-video-camera",
-    "phone" => "hero-phone"
+    in_person: "hero-building-office",
+    video: "hero-video-camera",
+    phone: "hero-phone"
   }
 
   @fallback "hero-map-pin"
 
   @doc "The `hero-*` icon name for a location kind; custom and unknown kinds get a map pin."
-  @spec icon(String.t() | nil) :: String.t()
+  @spec icon(LocationOption.kind() | nil) :: String.t()
   def icon(kind), do: Map.get(@icons, kind, @fallback)
 end

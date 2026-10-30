@@ -31,9 +31,11 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Plug.HTML
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -71,7 +73,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: profile.timezone,
-        status: "cancelled"
+        status: :cancelled
       )
 
     # The dispatcher's `validate_and_load_meeting/3` blocks before the
@@ -95,7 +97,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: profile.timezone,
-        status: "confirmed"
+        status: :confirmed
       )
 
     {:ok, view, _html} =
@@ -124,7 +126,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: profile.timezone,
-        status: "confirmed",
+        status: :confirmed,
         start_time: past_start,
         end_time: DateTime.add(past_start, 30 * 60, :second)
       )
@@ -148,7 +150,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: profile.timezone,
-        status: "confirmed"
+        status: :confirmed
       )
 
     {:ok, view, _html} =
@@ -171,7 +173,34 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
 
     # Meeting must NOT be cancelled — otherwise a rate-limited attacker
     # is still succeeding, which defeats the limiter.
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
+  end
+
+  @tag :capture_log
+  test "keep-click when the rate limit is exhausted flashes the limiter's message and does not show the kept state",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        organizer_name: user.name,
+        attendee_timezone: profile.timezone,
+        status: :confirmed
+      )
+
+    {:ok, view, _html} =
+      live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+    client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip] || "unknown"
+    refusal = exhaust_limit!(:meeting_keep, client_ip)
+
+    view |> element("[data-testid='keep-meeting']") |> render_click()
+
+    rendered = render(view)
+    assert rendered =~ HTML.html_escape(refusal)
+    refute rendered =~ "still scheduled as planned"
+    assert has_element?(view, "[data-testid='cancel-meeting']")
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
   end
 
   @tag :capture_log
@@ -183,7 +212,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: profile.timezone,
-        status: "confirmed"
+        status: :confirmed
       )
 
     {:ok, view, _html} =
@@ -209,7 +238,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: profile.timezone,
-        status: "confirmed"
+        status: :confirmed
       )
 
     {:ok, view, _html} =
@@ -220,7 +249,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     rendered = render(view)
     assert rendered =~ "still scheduled as planned"
 
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
   end
 
   # The cancel page has no booking journey: a booking event pushed at it is
@@ -234,7 +263,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         organizer_user_id: user.id,
         organizer_name: user.name,
         attendee_timezone: profile.timezone,
-        status: "confirmed"
+        status: :confirmed
       )
 
     {:ok, view, _html} =
@@ -246,7 +275,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     assert has_element?(view, "[data-testid='cancel-meeting']")
     assert has_element?(view, "[data-testid='keep-meeting']")
     refute has_element?(view, "#scheduling-error")
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
   end
 
   for theme <- ThemeTestMatrix.all() do
@@ -269,7 +298,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
   test "a refused cancel explains itself in the visitor's language",
        %{conn: conn, user: user, profile: profile} do
     meeting =
-      insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: "cancelled")
+      insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: :cancelled)
 
     assert {:error, {:redirect, %{to: "/", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")
@@ -290,7 +319,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
   test "an expired meeting's refusal is translated too",
        %{conn: conn, user: user, profile: profile} do
     meeting =
-      insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: "expired")
+      insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: :expired)
 
     assert {:error, {:redirect, %{to: "/", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")

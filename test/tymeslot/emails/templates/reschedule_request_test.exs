@@ -245,7 +245,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
 
       meeting =
         insert(:meeting,
-          location_kind: "in_person",
+          location_kind: :in_person,
           address_to_arrange: true,
           location: "In person"
         )

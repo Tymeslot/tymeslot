@@ -9,11 +9,8 @@ defmodule Tymeslot.Profiles do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  require Logger
-
   alias Tymeslot.Availability
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.EmbedDomains
@@ -26,9 +23,7 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Profiles.Usernames
   alias Tymeslot.Repo
   alias Tymeslot.Security.EncryptedString
-  alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Themes.Catalog
-  alias Tymeslot.Timezones
 
   @type user_id :: pos_integer()
   @type username :: String.t()
@@ -66,13 +61,13 @@ defmodule Tymeslot.Profiles do
   Gets a profile for a user, returning a tagged result tuple.
   """
   @spec get_profile_by_user_id(user_id) :: result(profile)
-  def get_profile_by_user_id(user_id), do: ProfileQueries.get_by_user_id(user_id)
+  defdelegate get_profile_by_user_id(user_id), to: ProfileQueries, as: :get_by_user_id
 
   @doc """
   Gets a profile by its database ID.
   """
   @spec get_profile_by_id(integer()) :: profile | nil
-  def get_profile_by_id(profile_id), do: ProfileQueries.get_with_user(profile_id)
+  defdelegate get_profile_by_id(profile_id), to: ProfileQueries, as: :get_with_user
 
   @doc """
   Gets or creates a profile for a user.
@@ -187,8 +182,7 @@ defmodule Tymeslot.Profiles do
   """
   @spec provision_identity(profile, %{full_name: String.t(), avatar: String.t() | nil}) ::
           result(profile)
-  def provision_identity(%ProfileSchema{} = profile, attrs),
-    do: ProfileQueries.update_identity(profile, attrs)
+  defdelegate provision_identity(profile, attrs), to: ProfileQueries, as: :update_identity
 
   @doc """
   Records whether the profile's booking page carries a theme customisation.
@@ -210,8 +204,7 @@ defmodule Tymeslot.Profiles do
   Updates the booking page's introductory text and its on/off switch.
   """
   @spec update_booking_text(profile, map()) :: result(profile)
-  def update_booking_text(%ProfileSchema{} = profile, attrs),
-    do: ProfileQueries.update_booking_text(profile, attrs)
+  defdelegate update_booking_text(profile, attrs), to: ProfileQueries
 
   @doc """
   Updates the organiser's headline and bio, the introduction a theme may show
@@ -220,8 +213,7 @@ defmodule Tymeslot.Profiles do
   the caps and the clean-up.
   """
   @spec update_intro(profile, map()) :: result(profile)
-  def update_intro(%ProfileSchema{} = profile, attrs),
-    do: ProfileQueries.update_intro(profile, attrs)
+  defdelegate update_intro(profile, attrs), to: ProfileQueries
 
   @doc """
   Updates the full name for a profile.
@@ -233,15 +225,11 @@ defmodule Tymeslot.Profiles do
   # --- Timezone Management ---
 
   @doc """
-  Prefills the timezone for a profile based on a detected timezone.
+  Prefills the timezone for a profile based on a detected timezone; see
+  `Tymeslot.Profiles.Timezone.prefill_profile/2`.
   """
   @spec prefill_timezone(profile() | nil, String.t() | nil) :: profile() | nil
-  def prefill_timezone(nil, _detected_timezone), do: nil
-
-  def prefill_timezone(profile, detected_timezone) do
-    prefilled_tz = Timezone.prefill_timezone(profile.timezone, detected_timezone)
-    %{profile | timezone: prefilled_tz}
-  end
+  defdelegate prefill_timezone(profile, detected_timezone), to: Timezone, as: :prefill_profile
 
   @doc """
   Gives a profile with no timezone one, persisted: the detected (browser)
@@ -252,62 +240,27 @@ defmodule Tymeslot.Profiles do
   loaded, so a caller never holds a timezone that was not saved.
   """
   @spec ensure_timezone(profile(), String.t() | nil) :: {:ok, profile()}
-  def ensure_timezone(%ProfileSchema{} = profile, detected_timezone) do
-    case Timezone.prefill_timezone(profile.timezone, detected_timezone) do
-      unchanged when unchanged == profile.timezone ->
-        {:ok, profile}
-
-      timezone ->
-        case update_timezone(profile, timezone) do
-          {:ok, updated} ->
-            {:ok, updated}
-
-          {:error, reason} ->
-            Logger.warning("Could not persist a prefilled profile timezone",
-              profile_id: profile.id,
-              reason: LogFormat.reason(reason)
-            )
-
-            {:ok, profile}
-        end
-    end
-  end
+  defdelegate ensure_timezone(profile, detected_timezone), to: Timezone
 
   @doc """
   Gets the timezone for a user, returning the default if no profile exists.
   """
   @spec get_user_timezone(user_id) :: timezone
-  def get_user_timezone(user_id) do
-    case ProfileQueries.get_by_user_id(user_id) do
-      {:error, :not_found} -> get_default_timezone()
-      {:ok, profile} -> timezone(profile)
-    end
-  end
+  defdelegate get_user_timezone(user_id), to: Timezone, as: :for_user
 
   @doc """
-  A profile's timezone, or the default for a profile that has none set.
-
-  `profiles.timezone` is nullable, so this is the one rule for reading an
-  owner's clock: the booking page, time off, the free/busy feed and booking
-  limits all go through it, and so agree on where a nil-timezone host's day
-  begins. Takes anything carrying `:timezone`, or `nil` for no profile.
-
-  A blank zone, or one the time-zone database does not know
-  (`Timezones.valid?/1`), counts as none: every caller can shift into
-  whatever this returns.
+  A profile's timezone, or the default for a profile that has none set; see
+  `Tymeslot.Profiles.Timezone.of/1`, the one rule for reading an owner's
+  clock.
   """
   @spec timezone(map() | nil) :: timezone
-  def timezone(%{timezone: timezone}) when is_binary(timezone) do
-    if Timezones.valid?(timezone), do: timezone, else: get_default_timezone()
-  end
-
-  def timezone(_profile), do: get_default_timezone()
+  defdelegate timezone(profile), to: Timezone, as: :of
 
   @doc """
   Gets the default timezone.
   """
   @spec get_default_timezone() :: timezone
-  def get_default_timezone, do: "Europe/Tallinn"
+  defdelegate get_default_timezone, to: Timezone, as: :default
 
   @doc """
   Updates the timezone for a profile.
@@ -322,60 +275,21 @@ defmodule Tymeslot.Profiles do
   Generates a unique default username for a user.
   """
   @spec generate_default_username(user_id) :: username
-  def generate_default_username(user_id), do: Usernames.generate_default_username(user_id)
+  defdelegate generate_default_username(user_id), to: Usernames
 
   @doc """
   Checks if a username is available.
   """
   @spec username_available?(username) :: boolean()
-  def username_available?(username), do: ProfileQueries.username_available?(username)
+  defdelegate username_available?(username), to: ProfileQueries
 
   @doc """
-  Whether `username` can become `profile`'s username, and if not, why.
-
-  Surrounding whitespace is ignored. The profile's own current username is
-  `:unchanged` and is never re-checked, so a handle chosen before its word was
-  reserved keeps working. Otherwise the format is checked first, then the
-  reserved list, then whether another profile already holds it. `profile` may
-  be `nil` when there is no profile yet.
-
-  The profile changeset enforces the same rules again on write, which is what
-  settles a username taken between this check and the save.
+  Whether `username` can become `profile`'s username, and if not, why; see
+  `Tymeslot.Profiles.Usernames.status/2`.
   """
   @spec username_status(profile() | map() | nil, term()) ::
           :unchanged | :ok | {:invalid, String.t()} | :reserved | :taken
-  def username_status(profile, username) when is_binary(username) do
-    candidate = String.trim(username)
-
-    if current_username?(profile, candidate),
-      do: :unchanged,
-      else: new_username_status(candidate)
-  end
-
-  def username_status(_profile, username), do: new_username_status(username)
-
-  defp current_username?(%{username: current}, candidate) when is_binary(current),
-    do: current == candidate
-
-  defp current_username?(_profile, _candidate), do: false
-
-  defp new_username_status(username) do
-    with :ok <- username_format_status(username),
-         :ok <- username_reserved_status(username) do
-      if ProfileQueries.username_available?(username), do: :ok, else: :taken
-    end
-  end
-
-  defp username_format_status(username) do
-    case UsernameValidator.validate(username) do
-      :ok -> :ok
-      {:error, message} -> {:invalid, message}
-    end
-  end
-
-  defp username_reserved_status(username) do
-    if ReservedPaths.reserved?(username), do: :reserved, else: :ok
-  end
+  defdelegate username_status(profile, username), to: Usernames, as: :status
 
   @doc """
   Why a profile changeset refused its username: `:taken` when another profile
@@ -383,19 +297,7 @@ defmodule Tymeslot.Profiles do
   else (a malformed username, or an error on another field).
   """
   @spec username_error(Ecto.Changeset.t()) :: :reserved | :taken | nil
-  def username_error(%Ecto.Changeset{errors: errors}) do
-    errors
-    |> Keyword.get_values(:username)
-    |> Enum.find_value(&username_error_kind/1)
-  end
-
-  defp username_error_kind({_message, opts}) do
-    cond do
-      opts[:constraint] == :unique -> :taken
-      opts[:validation] == :reserved -> :reserved
-      true -> nil
-    end
-  end
+  defdelegate username_error(changeset), to: Usernames, as: :error
 
   @doc """
   Changes a profile's username: the one path every username write takes, so
@@ -427,7 +329,7 @@ defmodule Tymeslot.Profiles do
   Returns a list of reserved paths.
   """
   @spec reserved_paths() :: [String.t()]
-  def reserved_paths, do: ReservedPaths.list()
+  defdelegate reserved_paths, to: ReservedPaths, as: :list
 
   # --- Scheduling Preferences ---
 
@@ -456,74 +358,58 @@ defmodule Tymeslot.Profiles do
   end
 
   @spec update_booking_limit(profile, atom(), String.t() | integer() | nil) :: result(profile)
-  def update_booking_limit(profile, field, value),
-    do: Scheduling.update_booking_limit(profile, field, value)
+  defdelegate update_booking_limit(profile, field, value), to: Scheduling
 
   # --- Avatar Management ---
 
   @doc """
-  Consumption callback for avatar upload.
-  Validates the upload using security policies before updating the profile.
+  Consumption callback for avatar upload; see
+  `Tymeslot.Profiles.Avatars.consume_upload/4`.
   """
   @spec consume_avatar_upload(profile(), map(), map(), map()) ::
           {:ok, profile() | {:error, any()}}
-  def consume_avatar_upload(profile, %{path: path}, entry, _metadata) do
-    uploaded_entry = %{
-      "path" => path,
-      "client_name" => entry.client_name,
-      "size" => entry.client_size
-    }
-
-    case Avatars.validate_upload(uploaded_entry) do
-      {:ok, validated_entry} ->
-        atom_entry = %{path: validated_entry["path"], client_name: validated_entry["client_name"]}
-
-        case Avatars.update_avatar(profile, atom_entry) do
-          {:ok, updated_profile} -> {:ok, updated_profile}
-          {:error, reason} -> {:ok, {:error, reason}}
-        end
-
-      {:error, validation_error} ->
-        {:ok, {:error, validation_error}}
-    end
-  end
+  defdelegate consume_avatar_upload(profile, upload, entry, metadata),
+    to: Avatars,
+    as: :consume_upload
 
   @spec delete_avatar(profile) :: result(profile)
-  def delete_avatar(profile), do: Avatars.delete_avatar(profile)
+  defdelegate delete_avatar(profile), to: Avatars
 
   @doc """
   Removes every avatar file stored for a deleted profile. See
   `Avatars.delete_all_files/1`.
   """
   @spec delete_avatar_files(pos_integer()) :: :ok | {:error, File.posix(), Path.t()}
-  def delete_avatar_files(profile_id), do: Avatars.delete_all_files(profile_id)
+  defdelegate delete_avatar_files(profile_id), to: Avatars, as: :delete_all_files
 
   @spec avatar_url(profile | nil, atom()) :: String.t()
-  def avatar_url(profile, version \\ :original), do: Avatars.avatar_url(profile, version)
+  defdelegate avatar_url(profile, version \\ :original), to: Avatars
 
   @doc """
   The generated fallback avatar as a data URI, for a profile or profile-shaped
   map without an uploaded image. See `Avatars.fallback_data_uri/2`.
   """
   @spec fallback_avatar_data_uri(map() | nil, non_neg_integer()) :: String.t()
-  def fallback_avatar_data_uri(profile, size \\ 300), do: Avatars.fallback_data_uri(profile, size)
+  defdelegate fallback_avatar_data_uri(profile, size \\ 300),
+    to: Avatars,
+    as: :fallback_data_uri
 
   @doc """
   Returns the public path to a profile's uploaded avatar image, or `nil` when
   none has been uploaded. Never returns a data URI (see `Avatars.uploaded_avatar_path/1`).
   """
   @spec uploaded_avatar_path(profile | nil) :: String.t() | nil
-  def uploaded_avatar_path(profile), do: Avatars.uploaded_avatar_path(profile)
+  defdelegate uploaded_avatar_path(profile), to: Avatars
 
   @doc """
   Returns the absolute URL of a profile's uploaded avatar image, or `nil` when
   none has been uploaded (see `Avatars.uploaded_avatar_url/1`).
   """
   @spec uploaded_avatar_url(profile | nil) :: String.t() | nil
-  def uploaded_avatar_url(profile), do: Avatars.uploaded_avatar_url(profile)
+  defdelegate uploaded_avatar_url(profile), to: Avatars
 
   @spec avatar_alt_text(profile | nil) :: String.t()
-  def avatar_alt_text(profile), do: Avatars.avatar_alt_text(profile)
+  defdelegate avatar_alt_text(profile), to: Avatars
 
   @doc """
   Gets a display name for greeting text.
@@ -592,8 +478,7 @@ defmodule Tymeslot.Profiles do
   """
   @spec add_embed_domains(profile, String.t()) ::
           {:ok, [String.t()]} | {:error, :empty_input | {:duplicates, [String.t()]}}
-  def add_embed_domains(%ProfileSchema{} = profile, domains_str),
-    do: EmbedDomains.add_embed_domains(profile, domains_str)
+  defdelegate add_embed_domains(profile, domains_str), to: EmbedDomains
 
   @doc """
   Updates the allowed embed domains for a profile.
@@ -608,6 +493,5 @@ defmodule Tymeslot.Profiles do
   Resolves organizer context from username, including profile and meeting types.
   """
   @spec resolve_organizer_context(username) :: {:ok, map()} | {:error, :profile_not_found}
-  def resolve_organizer_context(username),
-    do: OrganizerContext.resolve_organizer_context(username)
+  defdelegate resolve_organizer_context(username), to: OrganizerContext
 end

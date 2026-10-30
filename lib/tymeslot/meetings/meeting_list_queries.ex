@@ -190,7 +190,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   one deleted. Ended meetings are left to the clean-up jobs.
   """
   @spec list_upcoming_video_rooms_for_integration(pos_integer(), DateTime.t(), pos_integer()) ::
-          [%{id: String.t(), status: String.t()}]
+          [%{id: String.t(), status: MeetingState.status()}]
   def list_upcoming_video_rooms_for_integration(integration_id, %DateTime{} = now, limit) do
     Meeting
     |> where([m], m.video_integration_id == ^integration_id)
@@ -214,7 +214,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   @spec list_cancelled_with_video_room(DateTime.t(), pos_integer()) :: [Meeting.t()]
   def list_cancelled_with_video_room(cancelled_before, limit \\ 200) do
     Meeting
-    |> where([m], m.status == "cancelled")
+    |> where([m], m.status == :cancelled)
     |> where([m], not is_nil(m.video_room_id))
     |> where([m], m.cancelled_at < ^cancelled_before)
     |> order_by([m], asc: m.cancelled_at)
@@ -244,7 +244,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> join(:left, [m], vi in assoc(m, :video_integration))
     |> where([m], m.video_provider in ^providers)
     |> where([m], not is_nil(m.video_room_id))
-    |> where([m], m.status != "cancelled")
+    |> where([m], m.status != :cancelled)
     |> where(
       [m, vi],
       is_nil(m.video_integration_id) or (not vi.needs_reauth and is_nil(vi.deleted_at))
@@ -390,7 +390,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     from(p in ParticipantSchema,
       join: m in Meeting,
       on: m.id == p.meeting_id,
-      where: is_nil(p.cancelled_at) or m.status == "cancelled",
+      where: is_nil(p.cancelled_at) or m.status == :cancelled,
       order_by: [asc: p.inserted_at, asc: p.id]
     )
   end

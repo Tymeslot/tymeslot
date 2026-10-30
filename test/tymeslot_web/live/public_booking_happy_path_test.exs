@@ -125,7 +125,7 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     meeting =
       Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
   end
 
   @tag :capture_log
@@ -229,7 +229,7 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     meeting =
       Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
     assert meeting.duration == 60, "Expected 60-minute duration but got #{meeting.duration}"
   end
 end

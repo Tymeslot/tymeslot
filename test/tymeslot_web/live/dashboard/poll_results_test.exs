@@ -420,7 +420,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       # The host already has a confirmed meeting at the slot time.
       insert(:meeting,
         organizer_user_id: user.id,
-        status: "confirmed",
+        status: :confirmed,
         start_time: slot1.start_time,
         end_time: slot1.end_time
       )

@@ -7,17 +7,19 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
   alias Tymeslot.Availability.AvailabilityOverrideSchema
 
   describe "changeset/2 - override type validation" do
-    test "accepts valid override types (unavailable, custom_hours, available)" do
+    test "accepts every override type" do
       schedule = insert(:availability_schedule)
-      valid_types = ["unavailable", "custom_hours", "available"]
+      valid_types = [:unavailable, :custom_hours, :available, :extra_hours]
 
       for override_type <- valid_types do
+        timed? = override_type in [:custom_hours, :extra_hours]
+
         attrs = %{
           schedule_id: schedule.id,
           date: ~D[2025-01-15],
           override_type: override_type,
-          start_time: if(override_type == "custom_hours", do: ~T[09:00:00], else: nil),
-          end_time: if(override_type == "custom_hours", do: ~T[17:00:00], else: nil)
+          start_time: if(timed?, do: ~T[09:00:00], else: nil),
+          end_time: if(timed?, do: ~T[17:00:00], else: nil)
         }
 
         changeset = AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs)
@@ -59,7 +61,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
 
       attrs = %{
         schedule_id: schedule.id,
-        override_type: "unavailable"
+        override_type: :unavailable
       }
 
       changeset = AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs)
@@ -71,14 +73,14 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       schedule = insert(:availability_schedule)
       date = ~D[2025-01-15]
 
-      insert(:availability_override, schedule: schedule, date: date, override_type: "unavailable")
+      insert(:availability_override, schedule: schedule, date: date, override_type: :unavailable)
 
       {:error, changeset} =
         %AvailabilityOverrideSchema{}
         |> AvailabilityOverrideSchema.changeset(%{
           schedule_id: schedule.id,
           date: date,
-          override_type: "available"
+          override_type: :available
         })
         |> Repo.insert()
 
@@ -93,7 +95,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       insert(:availability_override,
         schedule: schedule1,
         date: date,
-        override_type: "unavailable"
+        override_type: :unavailable
       )
 
       {:ok, _override} =
@@ -101,7 +103,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
         |> AvailabilityOverrideSchema.changeset(%{
           schedule_id: schedule2.id,
           date: date,
-          override_type: "unavailable"
+          override_type: :unavailable
         })
         |> Repo.insert()
     end
@@ -114,7 +116,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "custom_hours"
+        override_type: :custom_hours
       }
 
       changeset = AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs)
@@ -129,7 +131,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[17:00:00],
         end_time: ~T[09:00:00]
       }
@@ -143,7 +145,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: 1,
         date: ~D[2027-06-14],
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[22:00:00],
         end_time: ~T[03:00:00]
       }
@@ -162,7 +164,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2027-06-14],
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00],
         ends_next_day: nil
@@ -182,7 +184,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[09:00:00],
         end_time: ~T[09:00:00]
       }
@@ -198,7 +200,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[09:00:00],
         end_time: ~T[17:00:00]
       }
@@ -215,7 +217,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "unavailable"
+        override_type: :unavailable
       }
 
       changeset = AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs)
@@ -228,7 +230,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "available"
+        override_type: :available
       }
 
       changeset = AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs)
@@ -243,7 +245,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "unavailable",
+        override_type: :unavailable,
         reason: "Vacation day"
       }
 
@@ -257,7 +259,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "unavailable",
+        override_type: :unavailable,
         reason: String.duplicate("a", 101)
       }
 
@@ -272,7 +274,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: schedule.id,
         date: ~D[2025-01-15],
-        override_type: "unavailable",
+        override_type: :unavailable,
         reason: nil
       }
 
@@ -285,7 +287,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     test "requires schedule_id to be present" do
       attrs = %{
         date: ~D[2025-01-15],
-        override_type: "unavailable"
+        override_type: :unavailable
       }
 
       changeset = AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs)
@@ -297,7 +299,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       attrs = %{
         schedule_id: 999_999,
         date: ~D[2025-01-15],
-        override_type: "unavailable"
+        override_type: :unavailable
       }
 
       {:error, changeset} =

@@ -37,7 +37,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
 
       {1, _nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          status: "degraded",
+          status: :degraded,
           failures: 2,
           successes: 0,
           backoff_ms: :timer.minutes(5),
@@ -67,7 +67,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
       assert {1, _nil} = Monitor.put_state(:calendar, integration.id, health_state)
 
       {:ok, record} = IntegrationHealthStateQueries.get(:calendar, integration.id)
-      assert record.status == "degraded"
+      assert record.status == :degraded
       assert record.failures == 1
     end
 
@@ -108,7 +108,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
 
       {1, _nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          status: "unhealthy",
+          status: :unhealthy,
           became_unhealthy_at: became_unhealthy_at
         )
 
@@ -116,7 +116,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
 
       {1, _nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          status: "healthy",
+          status: :healthy,
           became_unhealthy_at: nil
         )
 
@@ -124,7 +124,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
       assert {1, _nil} = Monitor.put_sync_state(:calendar, integration.id, failed_sync)
 
       {:ok, record} = IntegrationHealthStateQueries.get(:calendar, integration.id)
-      assert record.status == "healthy"
+      assert record.status == :healthy
       assert record.became_unhealthy_at == nil
       assert record.consecutive_sync_failures == 1
     end
@@ -151,47 +151,8 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
       assert {1, _nil} = Monitor.put_state(:video, integration.id, health_state)
 
       {:ok, record} = IntegrationHealthStateQueries.get(:video, integration.id)
-      assert record.status == "degraded"
+      assert record.status == :degraded
       assert record.failures == 2
-    end
-  end
-
-  describe "from_db_record/1" do
-    test "degrades an unrecognised status to :degraded and logs it, instead of raising" do
-      # A row's status can no longer be poisoned through the app (the
-      # database CHECK constraint added alongside this change rejects it,
-      # see `StatusCheckMigrationTest`), so the only way left to exercise
-      # this read path is a record that never touched the database at all —
-      # standing in for a row a hand-edited backup or a rolled-back release
-      # could still produce.
-      record = %IntegrationHealthStateSchema{
-        integration_type: "calendar",
-        integration_id: 123,
-        status: "some_future_status"
-      }
-
-      log =
-        capture_log(fn ->
-          assert Monitor.from_db_record(record).status == :degraded
-        end)
-
-      assert log =~ "Unrecognised integration health status"
-    end
-
-    test "handles unexpected last_error_class string without crashing" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
-
-      {:ok, _record} =
-        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
-
-      {1, _nil} =
-        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          last_error_class: "unknown_class"
-        )
-
-      health = Monitor.get_state(:calendar, integration.id, user.id)
-      assert health.last_error_class == :hard
     end
   end
 

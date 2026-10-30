@@ -140,8 +140,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
         {:ok, %Req.Response{status: 201, body: "not valid json{{"}}
       end)
 
-      assert {:error, message} = ZoomProvider.create_meeting_room(config)
-      assert String.contains?(message, "Invalid JSON")
+      assert {:error, :malformed_response} = ZoomProvider.create_meeting_room(config)
+    end
+
+    test "carries Zoom's own error code and message, redacted, with the status" do
+      config = valid_config()
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body: ~s({"code":300,"message":"Invalid start_time access_token=ya29.leaked"})
+         }}
+      end)
+
+      assert {:error, {:http_error, 400, message}} = ZoomProvider.create_meeting_room(config)
+      assert message =~ "Zoom API error (400): code 300 - Invalid start_time"
+      refute message =~ "ya29.leaked"
     end
 
     test "returns error on network failure" do

@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
         meeting =
           Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-        assert meeting.status == "confirmed"
+        assert meeting.status == :confirmed
       end
 
       # With a week of notice the first bookable day always falls in a later week
@@ -579,7 +579,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             organizer_user_id: user.id,
             organizer_name: user.name,
             attendee_timezone: profile.timezone,
-            status: "confirmed"
+            status: :confirmed
           )
 
         {:ok, view, _html} =
@@ -610,7 +610,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             organizer_user_id: user.id,
             organizer_name: user.name,
             attendee_timezone: profile.timezone,
-            status: "confirmed"
+            status: :confirmed
           )
 
         {:ok, view, _html} =
@@ -625,7 +625,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
         assert String.contains?(to, "/cancel-confirmed")
 
-        assert Repo.get_by!(MeetingSchema, uid: meeting.uid).status == "cancelled"
+        assert Repo.get_by!(MeetingSchema, uid: meeting.uid).status == :cancelled
       end
     end
   end

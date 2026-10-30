@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
       name: "Site Visit",
       duration_minutes: 45,
       locations: [
-        %LocationOption{id: "office", kind: "in_person", label: "Our studio", position: 0}
+        %LocationOption{id: "office", kind: :in_person, label: "Our studio", position: 0}
       ]
     )
 

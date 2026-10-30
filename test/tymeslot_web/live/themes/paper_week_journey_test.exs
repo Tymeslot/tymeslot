@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
         attendee_email: "paper-week@example.com"
       )
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
     assert DateTime.compare(meeting.start_time, at(day, ~T[10:00:00])) == :eq
   end
 
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
         start_time: original_start,
         end_time: DateTime.add(original_start, 30, :minute),
         duration: 30,
-        status: "confirmed"
+        status: :confirmed
       )
 
     day = linked_day()
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Live.Themes.PaperWeekJourneyTest do
     moved = Repo.get!(MeetingSchema, meeting.id)
 
     assert DateTime.compare(moved.start_time, at(day, ~T[14:00:00])) == :eq
-    assert moved.status == "confirmed"
+    assert moved.status == :confirmed
 
     assert Repo.aggregate(
              from(m in MeetingSchema, where: m.organizer_user_id == ^user.id),

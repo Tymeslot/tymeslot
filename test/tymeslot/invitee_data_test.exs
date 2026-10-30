@@ -34,7 +34,7 @@ defmodule Tymeslot.InviteeDataTest do
   end
 
   defp past_meeting(attrs) do
-    insert(:meeting, Keyword.merge(ended(10) ++ [status: "completed"], attrs))
+    insert(:meeting, Keyword.merge(ended(10) ++ [status: :completed], attrs))
   end
 
   defp add_guest(meeting, email, attrs \\ %{}) do
@@ -72,7 +72,7 @@ defmodule Tymeslot.InviteeDataTest do
           cancellation_reason: "Something came up"
         )
 
-      group = insert(:group_meeting, [organizer_user: host, status: "completed"] ++ ended(10))
+      group = insert(:group_meeting, [organizer_user: host, status: :completed] ++ ended(10))
       seat = insert(:participant, meeting: group, email: @email, name: "Ada", phone: "123")
       other_seat = insert(:participant, meeting: group, email: "bob@example.com", name: "Bob")
 
@@ -131,7 +131,7 @@ defmodule Tymeslot.InviteeDataTest do
                custom_field_answers: %{},
                visitor_hash: nil,
                cancellation_reason: nil,
-               status: "completed",
+               status: :completed,
                meeting_type: "Intro call"
              } = meeting
 
@@ -182,7 +182,7 @@ defmodule Tymeslot.InviteeDataTest do
     end
 
     test "erases despite an upcoming booking that was cancelled", ctx do
-      insert(:future_meeting, attendee_email: @email, status: "cancelled")
+      insert(:future_meeting, attendee_email: @email, status: :cancelled)
 
       assert {:ok, %{meetings: 2}} = InviteeData.erase(@email)
       assert %{attendee_email: nil} = Repo.get!(MeetingSchema, ctx.booked.id)
@@ -293,7 +293,7 @@ defmodule Tymeslot.InviteeDataTest do
     end
 
     test "anonymises and stamps every expired meeting when there is more than one batch" do
-      template = build(:meeting, ended(800) ++ [status: "completed"])
+      template = build(:meeting, ended(800) ++ [status: :completed])
 
       ids =
         insert_copies(MeetingSchema, template, @over_one_batch, fn i ->
@@ -375,14 +375,14 @@ defmodule Tymeslot.InviteeDataTest do
       end_time = DateTime.add(cutoff(), -1, :day)
 
       statuses = [
-        "pending",
-        "awaiting_approval",
-        "confirmed",
-        "cancelled",
-        "completed",
-        "reschedule_requested",
-        "awaiting_payment",
-        "expired"
+        :pending,
+        :awaiting_approval,
+        :confirmed,
+        :cancelled,
+        :completed,
+        :reschedule_requested,
+        :awaiting_payment,
+        :expired
       ]
 
       meetings =
@@ -392,7 +392,7 @@ defmodule Tymeslot.InviteeDataTest do
 
       declined =
         meeting_ending_at(end_time,
-          status: "cancelled",
+          status: :cancelled,
           decline_reason: "Fully booked",
           approval_declined_at: end_time
         )
@@ -453,7 +453,7 @@ defmodule Tymeslot.InviteeDataTest do
       [
         start_time: DateTime.add(now, start_offset_minutes, :minute),
         end_time: DateTime.add(now, end_offset_minutes, :minute),
-        status: "confirmed"
+        status: :confirmed
       ] ++ attrs
     )
   end
@@ -461,7 +461,7 @@ defmodule Tymeslot.InviteeDataTest do
   defp meeting_ending_at(end_time, attrs \\ []) do
     insert(
       :meeting,
-      [start_time: DateTime.add(end_time, -60, :minute), end_time: end_time, status: "completed"] ++
+      [start_time: DateTime.add(end_time, -60, :minute), end_time: end_time, status: :completed] ++
         attrs
     )
   end

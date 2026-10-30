@@ -21,7 +21,7 @@ defmodule Tymeslot.FinancialRetentionTest do
   describe "anonymise_host/1" do
     test "scrubs attendee PII, retains host PII, soft-deletes connect, touches both tables" do
       user = insert(:user, email: "host@example.com")
-      insert(:connect_account, user: user, status: "active")
+      insert(:connect_account, user: user, status: :active)
 
       bp =
         insert(:booking_payment,

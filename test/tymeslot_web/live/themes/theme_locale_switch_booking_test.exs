@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeLocaleSwitchBookingTest do
       meeting =
         Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     @tag :capture_log

@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
     <%= if Config.logo_links_to_marketing?() do %>
       <a
         href={Config.site_home_path()}
-        class="hidden sm:flex fixed top-6 left-6 items-center px-6 py-3 text-base font-bold bg-linear-to-br from-turquoise-600 to-cyan-600 text-white rounded-token-2xl shadow-lg shadow-turquoise-500/20 hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40 transition-glass duration-300 group z-50"
+        class="hidden sm:flex absolute top-6 left-6 items-center px-6 py-3 text-base font-bold bg-linear-to-br from-turquoise-600 to-cyan-600 text-white rounded-token-2xl shadow-lg shadow-turquoise-500/20 hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40 transition-glass duration-300 group z-50"
       >
         <.icon
           name="hero-arrow-left-mini"
@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
       |> assign_new(:video, fn -> true end)
 
     ~H"""
-    <main class="min-h-screen relative overflow-hidden flex items-center justify-center p-4 sm:p-6">
+    <main class="min-h-screen relative overflow-hidden flex items-center justify-center p-4 pb-20 sm:p-6 sm:pt-24">
       <%!-- Video Background --%>
       <div :if={!@video} class="video-background-container fallback">
         <div class="absolute inset-0 bg-linear-to-br from-turquoise-600 to-blue-600 opacity-20"></div>
@@ -133,6 +133,16 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
             </div>
           <% end %>
         </div>
+
+        <%!-- Phones have no room for the button above, so offer a quiet text link. --%>
+        <a
+          :if={Config.logo_links_to_marketing?()}
+          href={Config.site_home_path()}
+          class="sm:hidden mx-auto mt-4 flex w-fit items-center gap-1 rounded-token-full bg-white/80 px-3 py-1.5 text-sm font-semibold text-tymeslot-700 hover:bg-white transition-colors"
+        >
+          <.icon name="hero-arrow-left-mini" class="h-4 w-4" />
+          {dgettext("auth", "Back to Website")}
+        </a>
       </div>
     </main>
     """

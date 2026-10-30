@@ -97,7 +97,7 @@ msgstr "Zamknij"
 msgid "Enter a valid partial refund amount."
 msgstr "Podaj prawidłową kwotę częściowego zwrotu."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr "Nie udało się odwołać spotkania. Spróbuj ponownie."
@@ -152,7 +152,7 @@ msgstr "Notatki ze spotkania"
 msgid "Meeting cancelled and refund issued."
 msgstr "Spotkanie odwołane, zwrot zrealizowany."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Spotkanie odwołane, ale nie udało się zrealizować zwrotu. Wykonaj zwrot ręcznie w panelu Stripe."

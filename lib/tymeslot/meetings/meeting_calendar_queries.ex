@@ -19,10 +19,6 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
 
-  @externally_deleted "externally_deleted"
-  @externally_modified "externally_modified"
-  @valid_sync_statuses [@externally_deleted, @externally_modified]
-
   @doc """
   Finds a meeting by its external provider event ID and calendar integration.
 
@@ -185,7 +181,7 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   @spec clear_external_modification(String.t()) :: :ok
   def clear_external_modification(meeting_id) do
     Meeting
-    |> where([m], m.id == ^meeting_id and m.calendar_sync_status == @externally_modified)
+    |> where([m], m.id == ^meeting_id and m.calendar_sync_status == :externally_modified)
     |> Repo.update_all(
       set: [
         calendar_sync_status: nil,
@@ -305,10 +301,10 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   Returns `{:ok, meeting}` if the row was updated, `{:ok, :already_set}` if the
   status already matched (no email should be sent), or `{:error, :not_found}`.
   """
-  @spec update_calendar_sync_status_if_changed(String.t(), String.t()) ::
+  @spec update_calendar_sync_status_if_changed(String.t(), Meeting.calendar_sync_status()) ::
           {:ok, Meeting.t()} | {:ok, :already_set} | {:error, :not_found}
   def update_calendar_sync_status_if_changed(meeting_id, status)
-      when status in @valid_sync_statuses do
+      when status in [:externally_deleted, :externally_modified] do
     {count, _rows} =
       Meeting
       |> where([m], m.id == ^meeting_id)

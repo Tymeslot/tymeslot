@@ -31,7 +31,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
   setup do
     host = insert(:user)
-    meeting = insert(:meeting, status: "expired", organizer_user_id: host.id)
+    meeting = insert(:meeting, status: :expired, organizer_user_id: host.id)
 
     payment =
       insert(:paid_booking_payment,
@@ -56,7 +56,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     assert :ok = perform(payment)
 
-    assert Repo.reload!(payment).status == "refunded"
+    assert Repo.reload!(payment).status == :refunded
     assert refund_emails(payment) == 1
     refute_received {:send_alert, _type, _payload}
   end
@@ -66,7 +66,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     assert {:error, :stripe_down} = perform(payment, attempt: 3)
 
-    assert Repo.reload!(payment).status == "paid"
+    assert Repo.reload!(payment).status == :paid
     assert refund_emails(payment) == 0
     refute_received {:send_alert, _type, _payload}
   end
@@ -84,7 +84,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     assert alert.summary =~ "could not be refunded"
     assert is_integer(alert.oban_job_id)
-    assert Repo.reload!(payment).status == "paid"
+    assert Repo.reload!(payment).status == :paid
     assert refund_emails(payment) == 0
     assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
   end
@@ -118,7 +118,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     refunded = Repo.reload!(payment)
     assert refunded.stripe_charge_id == "ch_BACKFILLED"
-    assert refunded.status == "refunded"
+    assert refunded.status == :refunded
     assert refund_emails(payment) == 1
   end
 
@@ -127,11 +127,11 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   # on the outstanding-refunds list.
   test "a disputed payment is left to the dispute at once, without retries or an alert",
        %{payment: payment} do
-    payment |> Changeset.change(status: "disputed") |> Repo.update!()
+    payment |> Changeset.change(status: :disputed) |> Repo.update!()
 
     assert {:discard, :under_dispute} = perform(payment)
 
-    assert Repo.reload!(payment).status == "disputed"
+    assert Repo.reload!(payment).status == :disputed
     assert refund_emails(payment) == 0
     refute_received {:send_alert, _type, _payload}
   end
@@ -167,7 +167,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     stale = DateTime.add(DateTime.utc_now(:second), -61, :day)
 
     for {changes, reason} <- [
-          {[status: "disputed"], :under_dispute},
+          {[status: :disputed], :under_dispute},
           {[paid_at: stale], :outside_refund_window},
           {[paid_at: nil], :not_paid}
         ] do
@@ -176,7 +176,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
       |> Repo.update!()
 
       assert {:discard, ^reason} = perform(payment)
-      payment |> Changeset.change(status: "paid", paid_at: payment.paid_at) |> Repo.update!()
+      payment |> Changeset.change(status: :paid, paid_at: payment.paid_at) |> Repo.update!()
     end
 
     assert refund_emails(payment) == 0
@@ -212,7 +212,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     end)
 
     assert {:error, %DBConnection.ConnectionError{}} = perform(payment)
-    assert Repo.reload!(payment).status == "paid"
+    assert Repo.reload!(payment).status == :paid
     assert refund_emails(payment) == 0
 
     assert :ok = perform(payment, attempt: 2)
@@ -220,7 +220,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     %{refunds: refunds, keys: keys} = Agent.get(stripe, & &1)
     assert map_size(refunds) == 1
     assert [key, key] = keys
-    assert Repo.reload!(payment).status == "refunded"
+    assert Repo.reload!(payment).status == :refunded
     assert refund_emails(payment) == 1
   end
 
@@ -304,7 +304,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
   defp record_refunded(payment) do
     payment
-    |> Changeset.change(status: "refunded", refunded_amount_cents: payment.amount_cents)
+    |> Changeset.change(status: :refunded, refunded_amount_cents: payment.amount_cents)
     |> Repo.update!()
   end
 end

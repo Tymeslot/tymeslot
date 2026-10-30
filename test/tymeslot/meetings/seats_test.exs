@@ -117,7 +117,7 @@ defmodule Tymeslot.Meetings.SeatsTest do
 
       # A declined guest gives their seat back.
       Repo.update_all(from(g in GuestSchema, where: g.email == "two@example.com"),
-        set: [status: "declined"]
+        set: [status: :declined]
       )
 
       assert Seats.counts_by_meeting([meeting.id, empty.id]) == %{

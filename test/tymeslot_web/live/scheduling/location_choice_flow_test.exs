@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   defp office do
     %LocationOption{
       id: "loc-office",
-      kind: "in_person",
+      kind: :in_person,
       label: "Our office",
       position: 0
     }
@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   defp call_me do
     %LocationOption{
       id: "loc-call",
-      kind: "phone",
+      kind: :phone,
       label: "Phone call",
       collect_from_guest: true,
       position: 1
@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   defp booked_by_phone do
     %{
       location: "Phone call (+1 555 0100)",
-      location_kind: "phone",
+      location_kind: :phone,
       location_option_id: "loc-call",
       attendee_phone: "+1 555 0100"
     }
@@ -255,7 +255,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
         assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "phone@example.com")
         assert meeting.location == "Phone call (+1 555 0100)"
-        assert meeting.location_kind == "phone"
+        assert meeting.location_kind == :phone
         assert meeting.location_option_id == "loc-call"
         assert meeting.attendee_phone == "+1 555 0100"
       end
@@ -368,7 +368,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
         assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "gone@example.com")
         assert meeting.location_option_id == "loc-video"
-        assert meeting.location_kind == "video"
+        assert meeting.location_kind == :video
         assert meeting.video_integration_id == nil
       end
     end
@@ -401,7 +401,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
         assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "single@example.com")
         assert meeting.location == "Our office"
-        assert meeting.location_kind == "in_person"
+        assert meeting.location_kind == :in_person
       end
     end
 
@@ -468,7 +468,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
                 start_time: start,
                 end_time: DateTime.add(start, 30, :minute),
                 duration: 30,
-                status: "confirmed"
+                status: :confirmed
               },
               meeting_attrs
             )
@@ -506,7 +506,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
         assert moved.location == "Our office"
         assert moved.location_option_id == "loc-office"
-        assert moved.location_kind == "in_person"
+        assert moved.location_kind == :in_person
         assert moved.attendee_phone == nil
 
         # Moved, not rebooked.
@@ -520,7 +520,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
         meeting =
           book.([office()], %{
             location: "The old office",
-            location_kind: "in_person",
+            location_kind: :in_person,
             location_option_id: "loc-old-office"
           })
 
@@ -570,9 +570,9 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
             start_time: start,
             end_time: DateTime.add(start, 30, :minute),
             duration: 30,
-            status: "confirmed",
+            status: :confirmed,
             location: "#{venue.name} (#{venue.description})",
-            location_kind: "in_person",
+            location_kind: :in_person,
             location_option_id: "loc-offices",
             venue_id: venue.id
           )

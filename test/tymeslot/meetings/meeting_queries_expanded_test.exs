@@ -86,10 +86,10 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
     end
 
     test "updates meeting status" do
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
 
-      assert {:ok, updated} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
-      assert updated.status == "cancelled"
+      assert {:ok, updated} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
+      assert updated.status == :cancelled
     end
   end
 
@@ -109,7 +109,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       insert(:meeting,
         organizer_user: user,
         organizer_user_id: user.id,
-        status: "confirmed",
+        status: :confirmed,
         video_integration_id: video_integration.id,
         video_room_id: nil,
         start_time: start_time,
@@ -138,7 +138,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         insert(:meeting,
           organizer_user: user,
           organizer_user_id: user.id,
-          status: "confirmed",
+          status: :confirmed,
           video_integration_id: video_integration.id,
           video_room_id: "room-already-created",
           start_time: start_time,
@@ -161,7 +161,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         insert(:meeting,
           organizer_user: user,
           organizer_user_id: user.id,
-          status: "cancelled",
+          status: :cancelled,
           video_integration_id: video_integration.id,
           video_room_id: nil,
           start_time: start_time,
@@ -188,7 +188,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         insert(:meeting,
           organizer_user: user,
           organizer_user_id: user.id,
-          status: "confirmed",
+          status: :confirmed,
           video_integration_id: video_integration.id,
           video_room_id: nil,
           start_time: past_start,
@@ -210,7 +210,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         insert(:meeting,
           organizer_user: user,
           organizer_user_id: user.id,
-          status: "confirmed",
+          status: :confirmed,
           video_integration_id: nil,
           video_room_id: nil,
           start_time: start_time,
@@ -247,7 +247,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         insert(:meeting,
           organizer_user: user,
           organizer_user_id: user.id,
-          status: "confirmed",
+          status: :confirmed,
           reschedule_requested_at: DateTime.utc_now(),
           video_integration_id: video_integration.id,
           video_room_id: nil,

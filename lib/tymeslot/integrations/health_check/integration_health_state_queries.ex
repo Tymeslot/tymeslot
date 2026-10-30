@@ -11,7 +11,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Clock
-  alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Shared.IntegrationTypes
 
@@ -21,13 +20,11 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   Retrieves the health state record for a specific integration.
   Returns `{:ok, record}` or `{:error, :not_found}`.
   """
-  @spec get(String.t() | atom(), integer()) ::
+  @spec get(IntegrationTypes.kind(), integer()) ::
           {:ok, IntegrationHealthStateSchema.t()} | {:error, :not_found}
   def get(type, integration_id) do
-    type_str = to_string(type)
-
     case Repo.get_by(IntegrationHealthStateSchema,
-           integration_type: type_str,
+           integration_type: type,
            integration_id: integration_id
          ) do
       nil -> {:error, :not_found}
@@ -43,19 +40,18 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   """
   @spec seed_missing(IntegrationTypes.kind()) :: non_neg_integer()
   def seed_missing(kind) do
-    type_str = IntegrationTypes.db_value(kind)
     now = DateTime.truncate(Clock.utc_now(), :second)
 
     missing =
       from(i in IntegrationTypes.queries(kind).active_query(),
         left_join: s in IntegrationHealthStateSchema,
-        on: s.integration_type == ^type_str and s.integration_id == i.id,
+        on: s.integration_type == ^kind and s.integration_id == i.id,
         where: is_nil(s.id),
         select: %{
-          integration_type: ^type_str,
+          integration_type: type(^kind, s.integration_type),
           integration_id: i.id,
           user_id: i.user_id,
-          status: ^HealthStatus.to_db_value(:healthy),
+          status: type(^:healthy, s.status),
           failures: 0,
           consecutive_hard_failures: 0,
           consecutive_sync_failures: 0,
@@ -90,7 +86,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
           %{id: integer(), provider: String.t(), base_url: String.t() | nil}
         ]
   def due(kind, %DateTime{} = now) do
-    type_str = IntegrationTypes.db_value(kind)
     now = DateTime.to_naive(now)
 
     Repo.all(
@@ -99,7 +94,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
         on: i.id == s.integration_id,
         join: u in UserSchema,
         on: u.id == i.user_id,
-        where: s.integration_type == ^type_str,
+        where: s.integration_type == ^kind,
         where: is_nil(u.deletion_scheduled_at),
         where:
           fragment(
@@ -119,16 +114,14 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   If no record exists, inserts a default healthy state using `on_conflict: :nothing`
   and returns the (possibly just-created) record.
   """
-  @spec get_or_init(String.t() | atom(), integer(), integer()) ::
+  @spec get_or_init(IntegrationTypes.kind(), integer(), integer()) ::
           {:ok, IntegrationHealthStateSchema.t()} | {:error, :not_found}
   def get_or_init(type, integration_id, user_id) do
-    type_str = to_string(type)
-
     seed_attrs = %{
-      integration_type: type_str,
+      integration_type: type,
       integration_id: integration_id,
       user_id: user_id,
-      status: HealthStatus.to_db_value(:healthy),
+      status: :healthy,
       failures: 0,
       consecutive_hard_failures: 0,
       consecutive_sync_failures: 0,
@@ -140,13 +133,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
     |> IntegrationHealthStateSchema.changeset(seed_attrs)
     |> Repo.insert(on_conflict: :nothing, conflict_target: [:integration_type, :integration_id])
 
-    case Repo.get_by(IntegrationHealthStateSchema,
-           integration_type: type_str,
-           integration_id: integration_id
-         ) do
-      nil -> {:error, :not_found}
-      record -> {:ok, record}
-    end
+    get(type, integration_id)
   end
 
   @doc """
@@ -157,15 +144,13 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   state and write it back. Each doing so under this lock means neither can
   write over a state the other wrote after it read.
   """
-  @spec get_or_init_for_update(String.t() | atom(), integer(), integer()) ::
+  @spec get_or_init_for_update(IntegrationTypes.kind(), integer(), integer()) ::
           {:ok, IntegrationHealthStateSchema.t()} | {:error, :not_found}
   def get_or_init_for_update(type, integration_id, user_id) do
-    type_str = to_string(type)
-
     with {:ok, _record} <- get_or_init(type, integration_id, user_id) do
       case Repo.one(
              from(s in IntegrationHealthStateSchema,
-               where: s.integration_type == ^type_str and s.integration_id == ^integration_id,
+               where: s.integration_type == ^type and s.integration_id == ^integration_id,
                lock: "FOR UPDATE"
              )
            ) do
@@ -183,18 +168,17 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   clean no-op rather than a raise.
   Returns the number of records updated (0 if no record exists).
 
-  A `status` value outside `HealthStatus.values/0` is rejected by the
-  `status_must_be_known` database constraint. Every writer, including
+  `status` is an `Ecto.Enum`, so a value outside its atoms is refused when
+  the update is built, and the `status_must_be_known` database constraint
+  backstops anything written outside Ecto. Every writer, including
   `Monitor.put_state/3` (the sole path that writes a runtime-derived
   status), goes through this one function.
   """
-  @spec update_fields(String.t() | atom(), integer(), keyword()) :: {non_neg_integer(), nil}
+  @spec update_fields(IntegrationTypes.kind(), integer(), keyword()) :: {non_neg_integer(), nil}
   def update_fields(type, integration_id, field_updates) do
-    type_str = to_string(type)
-
     Repo.update_all(
       from(s in IntegrationHealthStateSchema,
-        where: s.integration_type == ^type_str and s.integration_id == ^integration_id
+        where: s.integration_type == ^type and s.integration_id == ^integration_id
       ),
       set: field_updates ++ [updated_at: Clock.utc_now()]
     )
@@ -221,10 +205,10 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   Safe to call when no row exists (no-op).
   """
-  @spec reset(String.t() | atom(), integer()) :: {non_neg_integer(), nil}
+  @spec reset(IntegrationTypes.kind(), integer()) :: {non_neg_integer(), nil}
   def reset(type, integration_id) do
     update_fields(type, integration_id,
-      status: HealthStatus.to_db_value(:healthy),
+      status: :healthy,
       failures: 0,
       consecutive_hard_failures: 0,
       consecutive_sync_failures: 0,
@@ -260,7 +244,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   Safe to call when no row exists (no-op).
   """
-  @spec clear_sync_failures(String.t() | atom(), integer()) :: {non_neg_integer(), nil}
+  @spec clear_sync_failures(IntegrationTypes.kind(), integer()) :: {non_neg_integer(), nil}
   def clear_sync_failures(type, integration_id) do
     update_fields(type, integration_id, consecutive_sync_failures: 0)
   end
@@ -298,14 +282,14 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
         dynamic(
           [s],
           ^acc or
-            (s.integration_type == ^IntegrationTypes.db_value(kind) and
+            (s.integration_type == ^kind and
                s.integration_id in subquery(active_ids))
         )
       end)
 
     Repo.all(
       from(s in IntegrationHealthStateSchema,
-        where: s.user_id == ^user_id and s.status == ^HealthStatus.to_db_value(:unhealthy),
+        where: s.user_id == ^user_id and s.status == :unhealthy,
         where: ^of_active_integration
       )
     )
@@ -327,19 +311,17 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   Used by `Tymeslot.Workers.IntegrationAutoPauseWorker`. Both triggers carry
   the same outcome (pause + notify) but the worker logs which one fired.
   """
-  @spec list_pausable(String.t() | atom(), DateTime.t(), non_neg_integer()) ::
+  @spec list_pausable(IntegrationTypes.kind(), DateTime.t(), non_neg_integer()) ::
           [IntegrationHealthStateSchema.t()]
   def list_pausable(type, %DateTime{} = calendar_cutoff, hard_failure_count)
       when is_integer(hard_failure_count) and hard_failure_count >= 0 do
-    {:ok, kind} = IntegrationTypes.parse(type)
-    type_str = IntegrationTypes.db_value(kind)
-    active_ids = active_integration_ids_subquery(kind)
+    active_ids = active_integration_ids_subquery(type)
 
     IntegrationHealthStateSchema
     |> where(
       [s],
-      s.integration_type == ^type_str and
-        s.status == ^HealthStatus.to_db_value(:unhealthy) and
+      s.integration_type == ^type and
+        s.status == :unhealthy and
         s.integration_id in subquery(active_ids) and
         ((not is_nil(s.became_unhealthy_at) and s.became_unhealthy_at < ^calendar_cutoff) or
            s.consecutive_hard_failures >= ^hard_failure_count)
@@ -357,16 +339,14 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   transient error) so that a mixed history of transient and hard failures
   does not incorrectly pause an integration.
   """
-  @spec list_ids_with_sustained_hard_failures(String.t() | atom(), non_neg_integer()) ::
+  @spec list_ids_with_sustained_hard_failures(IntegrationTypes.kind(), non_neg_integer()) ::
           [integer()]
   def list_ids_with_sustained_hard_failures(type, threshold) do
-    type_str = to_string(type)
-
     IntegrationHealthStateSchema
     |> where(
       [s],
-      s.integration_type == ^type_str and
-        s.last_error_class == "hard" and
+      s.integration_type == ^type and
+        s.last_error_class == :hard and
         s.consecutive_hard_failures >= ^threshold
     )
     |> select([s], s.integration_id)
@@ -379,7 +359,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   defp delete_orphaned_by_type(kind) do
     orphaned_query =
       from(s in IntegrationHealthStateSchema,
-        where: s.integration_type == ^IntegrationTypes.db_value(kind),
+        where: s.integration_type == ^kind,
         where:
           s.integration_id not in subquery(from(i in IntegrationTypes.schema(kind), select: i.id))
       )

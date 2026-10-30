@@ -7,6 +7,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   """
 
   alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.EmailWorker
 
   # Dedup window for identical admin alerts (24 hours, in seconds).
@@ -84,7 +85,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   """
   @spec backoff(Oban.Job.t()) :: pos_integer()
   def backoff(%Oban.Job{attempt: attempt}) do
-    min(@backoff_base_seconds * Integer.pow(2, attempt - 1), @backoff_cap_seconds)
+    Backoff.exponential(attempt, @backoff_base_seconds, @backoff_cap_seconds)
   end
 
   @doc """

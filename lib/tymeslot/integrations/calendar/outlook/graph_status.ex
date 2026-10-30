@@ -8,7 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
   shared envelope.
   """
 
-  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.ApiResponse
 
   @doc """
   The error a Graph `response` stands for, or `:default` when the shared

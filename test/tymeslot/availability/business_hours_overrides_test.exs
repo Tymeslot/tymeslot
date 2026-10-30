@@ -38,7 +38,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @monday,
-        override_type: "unavailable",
+        override_type: :unavailable,
         reason: "Public holiday"
       )
 
@@ -51,7 +51,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @saturday,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00]
       )
@@ -65,7 +65,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @saturday,
-        override_type: "available"
+        override_type: :available
       )
 
       refute BusinessHours.business_day?(@saturday, schedule.id)
@@ -77,7 +77,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @saturday,
-        override_type: "available"
+        override_type: :available
       )
 
       assert BusinessHours.owner_windows([@saturday], schedule.id, "Etc/UTC", %{}) == []
@@ -97,7 +97,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @saturday,
-        override_type: "available"
+        override_type: :available
       )
 
       assert BusinessHours.business_day?(@saturday, schedule.id)
@@ -117,7 +117,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
 
   describe "the booking page's reading of a day with no hours" do
     # The week strip renders each day through this function
-    # (`CalendarHelpers.business_hours_lookup/5`), so it is where an override
+    # (`CalendarDays.business_hours_lookup/5`), so it is where an override
     # that opens a day without hours becomes a day a visitor can click into and
     # find empty. The date is chosen forward of today and inside the advance
     # booking window, or the day is unbookable for reasons that have nothing to
@@ -136,7 +136,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: saturday,
-        override_type: "available"
+        override_type: :available
       )
 
       refute Calculate.day_bookable_by_business_hours?(saturday, "Etc/UTC", %{
@@ -151,7 +151,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: saturday,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00]
       )
@@ -175,7 +175,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @monday,
-        override_type: "unavailable",
+        override_type: :unavailable,
         reason: "Holiday"
       )
 
@@ -194,7 +194,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @monday,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00]
       )
@@ -212,7 +212,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @monday,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[22:00:00],
         end_time: ~T[02:00:00],
         ends_next_day: true
@@ -232,7 +232,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @saturday,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00]
       )
@@ -268,7 +268,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       insert(:availability_override,
         schedule: schedule,
         date: @monday,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[09:00:00],
         end_time: ~T[17:00:00]
       )
