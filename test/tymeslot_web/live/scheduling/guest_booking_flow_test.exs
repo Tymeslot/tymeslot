@@ -388,10 +388,10 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       } do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+        form_event(view, :toggle_guests, nil)
 
         for email <- ["first@example.com", "second@example.com", "third@example.com"] do
-          send(view.pid, {:step_event, :booking, :add_guest, email})
+          form_event(view, :add_guest, email)
         end
 
         _drain = :sys.get_state(view.pid)
@@ -524,19 +524,19 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       } do
         view = navigate_to_booking_form(conn, profile, nil)
 
-        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+        form_event(view, :toggle_guests, nil)
         _drain = :sys.get_state(view.pid)
         assert view |> element("[data-testid='guest-count']") |> render() =~ ~r/>\s*0\s*</
 
-        send(view.pid, {:step_event, :booking, :add_guest, "one@example.com"})
-        send(view.pid, {:step_event, :booking, :add_guest, "two@example.com"})
+        form_event(view, :add_guest, "one@example.com")
+        form_event(view, :add_guest, "two@example.com")
         _drain = :sys.get_state(view.pid)
 
         # At the cap the add input stays, since hiding it would give the count away too.
         assert view |> element("[data-testid='guest-count']") |> render() =~ ~r/>\s*2\s*</
         assert has_element?(view, "[data-testid='guest-input']")
 
-        send(view.pid, {:step_event, :booking, :add_guest, "three@example.com"})
+        form_event(view, :add_guest, "three@example.com")
         _drain = :sys.get_state(view.pid)
 
         html = render(view)
