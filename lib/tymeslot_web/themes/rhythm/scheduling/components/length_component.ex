@@ -32,7 +32,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
       )
 
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="length-step">
+    <div
+      class="scheduling-box booker-card"
+      data-locale={@locale}
+      data-testid="length-step"
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">

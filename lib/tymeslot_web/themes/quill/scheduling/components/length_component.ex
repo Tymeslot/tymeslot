@@ -34,7 +34,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
       )
 
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale} data-testid="length-step">
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      data-testid="length-step"
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         current_step={1}
