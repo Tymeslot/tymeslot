@@ -27,10 +27,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RepeatPatternsLiveViewTest do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
+  alias Tymeslot.Integrations.Calendar.Recurrence.Summary, as: RecurrenceSummary
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
   alias Tymeslot.Security.Encryption
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceSummary
 
   setup do: freeze_clock_midweek()
 

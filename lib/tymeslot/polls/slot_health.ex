@@ -15,12 +15,15 @@ defmodule Tymeslot.Polls.SlotHealth do
 
   alias Tymeslot.Availability.Events
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.TimeRange
 
   require Logger
+
+  @task_supervisor Tymeslot.TaskSupervisor
 
   @type slot_status :: :ok | :conflict
 
@@ -48,6 +51,23 @@ defmodule Tymeslot.Polls.SlotHealth do
         )
 
         Map.new(slots, &{&1.id, :ok})
+    end
+  end
+
+  @doc """
+  `check/1`, given at most `timeout` milliseconds. A check that runs longer,
+  or crashes, is abandoned and every slot comes back `:ok`, like a failed
+  calendar fetch.
+
+  Runs the check in a supervised task, so the caller is not linked to it.
+  """
+  @spec check_within(map(), timeout()) :: %{binary() => slot_status()}
+  def check_within(poll, timeout) do
+    task = Tasks.async_nolink(@task_supervisor, fn -> check(poll) end)
+
+    case Task.yield(task, timeout) || Task.shutdown(task) do
+      {:ok, health} -> health
+      _timeout_or_crash -> Map.new(poll.time_slots, &{&1.id, :ok})
     end
   end
 

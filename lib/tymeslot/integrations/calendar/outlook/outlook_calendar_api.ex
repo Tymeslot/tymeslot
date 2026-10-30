@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubs
   alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
+  alias Tymeslot.Integrations.Calendar.Shared.ReadPageSize
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.ApiResponse
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
@@ -24,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint
 
   @base_url "https://graph.microsoft.com/v1.0"
+  @list_page_size 1000
   @silent_event_headers [
     {"Content-Type", "application/json"},
     {"Prefer", "outlook.calendar-update.disableNotifications"}
@@ -244,8 +246,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   @doc """
   The series master `master_id`, with what its repeat rule is read from
-  (its type, `recurrence` and first start) and what its occurrences take
-  from it when Graph lists them as stubs (`Outlook.OccurrenceStubs`). Through the circuit breaker,
+  (its type, `recurrence` and first start), its `iCalUId`, which no
+  occurrence carries, and what its occurrences take from it when Graph lists
+  them as stubs (`Outlook.OccurrenceStubs`). Through the circuit breaker,
   which counts only failures that say Graph is unwell, so a master that is
   gone (404) does not trip it; an open breaker answers `{:error,
   :circuit_open}`.
@@ -255,7 +258,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, map()} | api_error() | {:error, term()}
   def get_series_master(%CalendarIntegrationSchema{} = integration, master_id) do
     params = %{
-      "$select" => Enum.join(~w(id type recurrence start) ++ OccurrenceStubs.master_fields(), ",")
+      "$select" =>
+        Enum.join(~w(id type recurrence start iCalUId) ++ OccurrenceStubs.master_fields(), ",")
     }
 
     Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
@@ -505,7 +509,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "startDateTime" => DateTime.to_iso8601(start_time),
       "endDateTime" => DateTime.to_iso8601(end_time),
       "$orderby" => "start/dateTime",
-      "$top" => "1000",
+      "$top" => Integer.to_string(ReadPageSize.get(@list_page_size)),
       "$select" =>
         "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone",
       "$expand" =>

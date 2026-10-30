@@ -198,9 +198,18 @@ defmodule Tymeslot.BookingTestHelpers do
   (`TymeslotWeb.Themes.Shared.ChoicesInUrl`). Every patch is a message to the
   test process, so the last one drained is the current URL; fails when the
   page never patched.
+
+  A patch reaches the test in two hops, the LiveView to the test's client
+  proxy and the proxy on to the test, so both are synced before draining: a
+  patch still in the proxy's mailbox would otherwise be missed and the URL
+  before it returned.
   """
   @spec last_patched_url(Phoenix.LiveViewTest.View.t()) :: String.t()
-  def last_patched_url(view), do: last_patched_url(view, nil)
+  def last_patched_url(view) do
+    Page.sync(view)
+    _html = render(view)
+    last_patched_url(view, nil)
+  end
 
   @doc """
   Waits for the page to patch to a URL the given function accepts and returns

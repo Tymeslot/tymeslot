@@ -78,16 +78,6 @@ msgstr[1] "%{taken} de %{count} vagas ocupadas"
 msgid "(none)"
 msgstr "(nenhum)"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(previous)"
-msgstr "(anterior)"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(updated)"
-msgstr "(atualizado)"
-
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
@@ -712,3 +702,8 @@ msgstr "Reunião cancelada - %{date}: %{title}"
 #, elixir-autogen, elixir-format
 msgid "Your guests have been notified of the cancellation."
 msgstr "Seus convidados foram avisados do cancelamento."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Chamada de vídeo"

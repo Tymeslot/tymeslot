@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   alias Tymeslot.Clock
   alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceFields
   alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok,
      socket
      |> assign(:selected_event, new_event)
-     |> assign(:recurrence_edit, Shared.recurrence_edit(new_event))}
+     |> assign(:recurrence_edit, RecurrenceFields.recurrence_edit(new_event))}
   end
 
   @doc """

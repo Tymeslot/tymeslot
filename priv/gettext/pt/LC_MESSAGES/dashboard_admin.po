@@ -235,7 +235,7 @@ msgstr "Promover usuário a administrador"
 msgid "Promoting..."
 msgstr "Promovendo…"
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/setting_row.ex
 #, elixir-autogen, elixir-format
 msgid "Recommended:"
 msgstr "Recomendado:"
@@ -250,11 +250,13 @@ msgstr "Cadastro ativado"
 msgid "Role"
 msgstr "Papel"
 
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "Salvar"
 
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -462,7 +464,7 @@ msgstr "Não foi possível remover o logo."
 msgid "Could not save the logo."
 msgstr "Não foi possível salvar o logo."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Current email logo"
 msgstr "Logo atual dos e-mails"
@@ -512,17 +514,17 @@ msgstr "Logo mostrado no topo de todos os e-mails transacionais. É convertido e
 msgid "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
 msgstr "Nome mostrado na linha de prévia da caixa de entrada, no texto alternativo do logo e no título do e-mail. Não muda o nome do remetente (para isso, defina EMAIL_FROM_NAME). Deixe em branco para usar “Tymeslot”."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a colour"
 msgstr "Escolha uma cor"
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr "Remover"
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Replace"
 msgstr "Substituir"
@@ -552,7 +554,7 @@ msgstr "Esse valor é longo demais."
 msgid "The logo could not be uploaded."
 msgstr "Não foi possível enviar o logo."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Upload"
 msgstr "Enviar"
@@ -562,7 +564,7 @@ msgstr "Enviar"
 msgid "Upload one logo at a time."
 msgstr "Envie um logo por vez."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "White button text on this colour has a contrast of only %{ratio}:1. Buttons may be hard to read."
 msgstr "O texto branco do botão sobre esta cor tem contraste de apenas %{ratio}:1. Os botões podem ficar difíceis de ler."

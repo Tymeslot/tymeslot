@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Live.Scheduling.CalendarDays
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.ChosenLength
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
 
                 <div class="calendar-grid">
-                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
+                  <%= for day <- CalendarDays.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
                     <button
                       class={[
                         "calendar-day",

@@ -11,11 +11,13 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRulesTest do
   @moduletag :integrations
 
   import ExUnit.CaptureLog
+  import Mox
 
   alias Ecto.Changeset
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Google.CacheSweep
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesMaster, as: OutlookSeriesMaster
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
@@ -23,6 +25,8 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRulesTest do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarCachePruneWorker
+
+  setup :verify_on_exit!
 
   setup do
     %{integration: insert(:calendar_integration, provider: "outlook")}
@@ -402,6 +406,58 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRulesTest do
 
       assert received_reads() == ["master-1"]
       assert stored_rule(integration, "master-2") == nil
+    end
+  end
+
+  # Outlook gives every occurrence an iCalUId of its own, so the series'
+  # (the one its invitation carried) is only the master's.
+  describe "ical_uid/2" do
+    test "is the iCalUId an Outlook master was read with", %{integration: integration} do
+      expect(OutlookCalendarAPIMock, :get_series_master, fn _integration, "master-1" ->
+        {:ok,
+         %{
+           "type" => "seriesMaster",
+           "iCalUId" => "series-ical-uid",
+           "recurrence" => %{
+             "pattern" => %{"type" => "weekly", "interval" => 1, "daysOfWeek" => ["monday"]},
+             "range" => %{"type" => "noEnd", "startDate" => "2026-10-05"}
+           },
+           "start" => %{"dateTime" => "2026-10-05T07:00:00.0000000", "timeZone" => "UTC"}
+         }}
+      end)
+
+      SeriesRules.refresh(
+        integration.id,
+        [occurrence(integration, "occ-1", "master-1")],
+        OutlookSeriesMaster.reader(integration)
+      )
+
+      assert SeriesRules.ical_uid(integration.id, "master-1") == "series-ical-uid"
+    end
+
+    test "is nil for a master never read, or read by a reader that gives none", %{
+      integration: integration
+    } do
+      assert SeriesRules.ical_uid(integration.id, "master-1") == nil
+
+      SeriesRules.refresh(
+        integration.id,
+        [occurrence(integration, "occ-1", "master-1")],
+        reader(%{"master-1" => {:ok, found("FREQ=DAILY")}})
+      )
+
+      assert SeriesRules.ical_uid(integration.id, "master-1") == nil
+    end
+
+    test "is forgotten once the master is found gone", %{integration: integration} do
+      events = [occurrence(integration, "occ-1", "master-1")]
+      found = Map.put(found("FREQ=DAILY"), :ical_uid, "series-ical-uid")
+
+      SeriesRules.refresh(integration.id, events, reader(%{"master-1" => {:ok, found}}))
+      assert SeriesRules.ical_uid(integration.id, "master-1") == "series-ical-uid"
+
+      SeriesRules.refresh(integration.id, events, reader(%{"master-1" => :gone}), changed: true)
+      assert SeriesRules.ical_uid(integration.id, "master-1") == nil
     end
   end
 

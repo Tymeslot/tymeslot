@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventsRead do
 
   require Logger
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Calendar.CalDAV.HostAddresses
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
@@ -108,7 +109,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventsRead do
 
   # Every provider maps its `list_events/2` answer into atom-keyed plain maps,
   # so downstream code can always read :uid, :start_time, etc.
-  defp normalize_events(client, events), do: client.provider_module.convert_events(events)
+  # A CalDAV client carries its host's addresses (`ClientManager`), so an
+  # invitation the host declined reads as declined here as it does in sync.
+  defp normalize_events(client, events) do
+    events
+    |> HostAddresses.mark_declined(Map.get(client, :host_addresses, []))
+    |> client.provider_module.convert_events()
+  end
 
   # Expands recurring events (those with a recurrence_rule) into individual
   # occurrences within the requested date range, through the same expansion

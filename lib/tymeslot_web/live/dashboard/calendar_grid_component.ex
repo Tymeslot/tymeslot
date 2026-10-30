@@ -562,6 +562,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   def handle_event("cancel_pending_notification", params, socket),
     do: NotificationFlows.handle_cancel_pending_notification(params, socket)
 
+  @impl Phoenix.LiveComponent
+  def handle_event("dismiss_undelivered_updates", params, socket),
+    do: NotificationFlows.handle_dismiss_undelivered_updates(params, socket)
+
   # --- Async results ---
 
   @impl Phoenix.LiveComponent

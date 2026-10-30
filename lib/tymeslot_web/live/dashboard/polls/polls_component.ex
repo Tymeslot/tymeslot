@@ -34,7 +34,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
-  alias Tymeslot.Meetings
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.Invitations
@@ -505,45 +504,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   # Runs the advisory calendar conflict check off the LiveView process so a slow
   # provider never freezes the dashboard. The panel renders immediately in a
   # "checking" state; the result arrives as a `{:poll_slot_health, …}` message
-  # routed back through `send_update/3`. The inner supervised task bounds the
+  # routed back through `send_update/3`. `SlotHealth.check_within/2` bounds the
   # calendar fetch and degrades to all-`:ok` on timeout or failure.
   defp request_slot_health(socket, poll) do
     parent = self()
 
     Tasks.start_child(@task_supervisor, fn ->
-      send(parent, {:poll_slot_health, poll.id, bounded_slot_health(poll)})
+      send(parent, {:poll_slot_health, poll.id, SlotHealth.check_within(poll, @health_timeout)})
     end)
 
     assign(socket, slot_health: %{}, slot_health_loading: true)
   end
 
-  defp bounded_slot_health(poll) do
-    task = Tasks.async_nolink(@task_supervisor, fn -> SlotHealth.check(poll) end)
-
-    case Task.yield(task, @health_timeout) || Task.shutdown(task) do
-      {:ok, health} -> health
-      _timeout_or_crash -> Map.new(poll.time_slots, &{&1.id, :ok})
-    end
-  end
-
-  defp assign_winning_slot(socket, %{status: :confirmed, confirmed_meeting_id: meeting_id} = poll)
-       when is_binary(meeting_id) do
-    winning_id =
-      case Meetings.get_meeting(meeting_id) do
-        {:ok, meeting} -> winning_slot_id(poll.time_slots, meeting.start_time)
-        {:error, _reason} -> nil
-      end
-
-    assign(socket, :winning_slot_id, winning_id)
-  end
-
-  defp assign_winning_slot(socket, _poll), do: assign(socket, :winning_slot_id, nil)
-
-  defp winning_slot_id(time_slots, start_time) do
-    Enum.find_value(time_slots, fn slot ->
-      DateTime.compare(slot.start_time, start_time) == :eq && slot.id
-    end)
-  end
+  defp assign_winning_slot(socket, poll),
+    do: assign(socket, :winning_slot_id, Polls.winning_slot_id(poll))
 
   defp put_slot_error(socket, slot_id, message) do
     assign(socket, :slot_errors, Map.put(socket.assigns.slot_errors, slot_id, message))

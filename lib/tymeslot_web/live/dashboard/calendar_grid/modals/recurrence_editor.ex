@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   Every control change dispatches `change_event` back to the owning
   LiveComponent via `phx-target`, carrying the raw form fields (`freq`,
   `interval`, `by_day[]`, `on`, `end_type`, `count`, `until`). The owner
-  composes the rule from them (`Shared.compose_recurrence_rule/2`). An
+  composes the rule from them (`RecurrenceFields.compose_recurrence_rule/2`). An
   owner that stages the rule rather than writing it at once (an existing
   event's details, `RecurrenceEdit`) passes `pending` while one is staged,
   and the editor offers "Save repeat" (`save_event`) and "Discard changes"
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceSummary
+  alias Tymeslot.Integrations.Calendar.Recurrence.Summary, as: RecurrenceSummary
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :recurrence_rule, :string, default: nil
@@ -299,15 +299,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   attr), as the editor shows it; nil for no rule.
   """
   @spec summary(String.t() | nil, Date.t() | DateTime.t()) :: String.t() | nil
-  def summary(rule, start) do
-    read =
-      case Pattern.read(rule, start) do
-        {:ok, pattern} -> pattern
-        :custom -> :custom
-      end
-
-    RecurrenceSummary.summary(read, start_date(start))
-  end
+  def summary(rule, start), do: RecurrenceSummary.describe(rule, start)
 
   # The day choices a monthly or yearly pattern offers for this start, each
   # as `{field value, label, on}`.

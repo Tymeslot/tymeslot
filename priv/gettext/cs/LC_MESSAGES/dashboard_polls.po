@@ -200,8 +200,7 @@ msgstr "Zatím žádné ankety"
 msgid "Open"
 msgstr "Otevřeno"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Placené typy schůzek nelze použít v anketách"
@@ -232,8 +231,7 @@ msgstr "Ankety"
 msgid "Remove time"
 msgstr "Odebrat termín"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Tento typ schůzky není dostupný"
@@ -266,8 +264,7 @@ msgstr "Tento termín se překrývá s událostí ve vašem kalendáři"
 msgid "This time is no longer free"
 msgstr "Tento termín už není volný"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Termíny musí být v budoucnosti"
@@ -288,8 +285,7 @@ msgstr "Časové pásmo"
 msgid "Title"
 msgstr "Název"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Až %{max} termínů"
@@ -541,8 +537,7 @@ msgstr "Odebrat %{name} i s odpověďmi z této ankety? Dotyčný o tom nedos
 msgid "Remove from the poll"
 msgstr "Odebrat z ankety"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "Termín ukončení musí být v budoucnosti"

@@ -22,12 +22,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.HTTP
+  alias Tymeslot.Integrations.Calendar.Shared.ReadPageSize
 
   # Google's own maximum per page. Set here rather than by any caller, so the
   # page size cannot drift between listings again: the incremental path was
   # taking Google's default of 250 where bootstrap asked for 2500, about 18
   # sequential round-trips for a 4,465-event backlog where 2 would do.
-  @max_results "2500"
+  @max_results 2500
 
   # No listing loop had any bound on iterations: a provider echoing the same
   # page token would occupy one of the ten `calendar_events` queue slots
@@ -73,13 +74,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
   defp fetch_page(_request, _token, _path, _base_params, _page_token, _acc, page)
        when page > @max_pages do
     {:error, :too_many_pages,
-     "Event listing exceeded #{@max_pages} pages of #{@max_results} events"}
+     "Event listing exceeded #{@max_pages} pages of #{ReadPageSize.get(@max_results)} events"}
   end
 
   defp fetch_page(request, token, path, base_params, page_token, acc, page) do
     params =
       base_params
-      |> Map.put("maxResults", @max_results)
+      |> Map.put("maxResults", Integer.to_string(ReadPageSize.get(@max_results)))
       |> maybe_put_page_token(page_token)
 
     result =

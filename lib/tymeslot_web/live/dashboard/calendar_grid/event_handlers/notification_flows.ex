@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Meetings.AttendeeNotifications
 
   @spec handle_notify_prompt_confirm(map(), Phoenix.LiveView.Socket.t()) ::
@@ -145,6 +146,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
         )
 
         {:noreply, assign(socket, :pending_notification, false)}
+    end
+  end
+
+  @doc """
+  The guests of `event` whose latest update email could not be delivered,
+  for the notice in its details. Read when the details open.
+  """
+  @spec undelivered_updates(Phoenix.LiveView.Socket.t(), map() | nil) :: [String.t()]
+  def undelivered_updates(socket, %{calendar_integration_id: integration_id, uid: uid})
+      when is_integer(integration_id) and is_binary(uid),
+      do: UndeliveredUpdates.list_for_event(socket.assigns.current_user.id, integration_id, uid)
+
+  def undelivered_updates(_socket, _event), do: []
+
+  @spec handle_dismiss_undelivered_updates(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_dismiss_undelivered_updates(_params, socket) do
+    case socket.assigns.selected_event do
+      %{calendar_integration_id: integration_id, uid: uid} when is_integer(integration_id) ->
+        :ok = UndeliveredUpdates.dismiss(socket.assigns.current_user.id, integration_id, uid)
+        {:noreply, assign(socket, :undelivered_updates, [])}
+
+      _no_event ->
+        {:noreply, socket}
     end
   end
 

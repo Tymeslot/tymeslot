@@ -21,10 +21,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   `:keep_server` would report a change as made that is not on the calendar.
   """
 
-  alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, ProviderBreakers}
-
   alias Tymeslot.Integrations.Calendar.CalDAV.{
     Base,
+    Breaker,
     ConditionalWrite,
     Http,
     Scheduling,
@@ -95,7 +94,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
           {:ok, moved()} | {:error, term()}
   def move_series(source_client, destination_client, source, calendar_path, opts \\ []) do
     with {:ok, collection} <- writable_collection(destination_client, calendar_path),
-         {:ok, source_url} <- event_url(source_client, nil, source.href) do
+         {:ok, source_url} <- UrlBuilder.event_url(source_client, nil, nil, source.href) do
       clients = {source_client, destination_client}
       copy_then_delete(clients, source_url, source, collection, opts, true)
     end
@@ -156,7 +155,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   # through it as one.
   defp series_document(client, url, source, opts) do
     result =
-      with_breaker(client, opts, fn ->
+      Breaker.run(client, opts, fn ->
         case starting_copy(client, url, source, opts) do
           {:ok, document, etag} -> {:ok, {document, etag}}
           other -> other
@@ -183,15 +182,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
     url = UrlBuilder.build_event_url(client.base_url, collection, copy.tail_uid)
 
     with {:ok, created} <-
-           with_breaker(client, opts, fn -> create_tail(client, url, copy, opts) end),
+           Breaker.run(client, opts, fn -> create_tail(client, url, copy, opts) end),
          do: {:ok, Map.put(created, :url, url)}
   end
 
   defp delete_original(client, url, etag, opts) do
-    delete_opts = Keyword.merge(write_opts(client, opts), if_match: etag)
+    delete_opts = Keyword.merge(Scheduling.write_opts(client, opts), if_match: etag)
 
     result =
-      with_breaker(client, opts, fn ->
+      Breaker.run(client, opts, fn ->
         Http.delete_event(url, client.username, client.password, delete_opts)
       end)
 
@@ -206,8 +205,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   # changed since the copy was made.
   defp discard_copy(client, created, opts) do
     result =
-      with_breaker(client, opts, fn ->
-        Http.delete_event(created.url, client.username, client.password, write_opts(client, opts))
+      Breaker.run(client, opts, fn ->
+        Http.delete_event(
+          created.url,
+          client.username,
+          client.password,
+          Scheduling.write_opts(client, opts)
+        )
       end)
 
     case result do
@@ -273,8 +277,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
     split = &Series.split(&1, occurrence.key, changes, occurrence.timezone, mode)
 
     result =
-      with_breaker(client, opts, fn ->
-        with {:ok, url} <- event_url(client, calendar_path, href) do
+      Breaker.run(client, opts, fn ->
+        with {:ok, url} <- UrlBuilder.event_url(client, calendar_path, nil, href) do
           split_and_write(client, url, occurrence, split, opts)
         end
       end)
@@ -338,7 +342,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   end
 
   defp delete_tail(client, tail_url, opts) do
-    case Http.delete_event(tail_url, client.username, client.password, write_opts(client, opts)) do
+    case Http.delete_event(
+           tail_url,
+           client.username,
+           client.password,
+           Scheduling.write_opts(client, opts)
+         ) do
       {:ok, %Req.Response{}} ->
         :ok
 
@@ -354,24 +363,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   defp tail_url(url, uid), do: String.replace(url, ~r{[^/]*$}, "") <> uid <> ".ics"
 
   defp create_tail(client, tail_url, halves, opts) do
-    put_opts = Keyword.merge([operation: :create], write_opts(client, opts))
+    put_opts = Keyword.merge([operation: :create], Scheduling.write_opts(client, opts))
 
     case Http.put_event(tail_url, client.username, client.password, halves.tail, put_opts) do
       {:ok, %Req.Response{status: status}} when status in 200..299 ->
-        {:ok, %{uid: halves.tail_uid, href: href_path(tail_url), document: halves.tail}}
+        {:ok,
+         %{uid: halves.tail_uid, href: UrlBuilder.href_path(tail_url), document: halves.tail}}
 
       {:ok, %Req.Response{status: status}} ->
         {:error, {:unexpected_status, status}}
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  defp href_path(url) do
-    case URI.parse(url) do
-      %URI{path: path} when is_binary(path) and path != "" -> path
-      _no_path -> url
     end
   end
 
@@ -398,8 +401,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   # become errors out here.
   defp rewrite_series(client, calendar_path, %{href: href} = occurrence, fun, opts) do
     result =
-      with_breaker(client, opts, fn ->
-        with {:ok, url} <- event_url(client, calendar_path, href) do
+      Breaker.run(client, opts, fn ->
+        with {:ok, url} <- UrlBuilder.event_url(client, calendar_path, nil, href) do
           rewrite_and_write(client, url, occurrence, fun, opts)
         end
       end)
@@ -456,23 +459,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   end
 
   defp delete_resource(client, url, opts) do
-    case Http.delete_event(url, client.username, client.password, write_opts(client, opts)) do
+    case Http.delete_event(
+           url,
+           client.username,
+           client.password,
+           Scheduling.write_opts(client, opts)
+         ) do
       {:ok, %Req.Response{}} -> {:ok, %{document: nil}}
       {:error, reason} -> {:error, reason}
     end
-  end
-
-  # Every PUT and DELETE here goes out as `CalDAV.Scheduling` says writes to
-  # the client's server must.
-  defp write_opts(client, opts),
-    do: Keyword.take(opts, [:timeout]) ++ Scheduling.write_opts(client)
-
-  defp event_url(client, calendar_path, href),
-    do: UrlBuilder.resolve_event_url(client.base_url, calendar_path, nil, href)
-
-  defp with_breaker(client, opts, fun) do
-    provider = Map.get(client, :provider, :caldav)
-    opts = Keyword.put(opts, :host, ProviderBreakers.host_from_base_url(client.base_url))
-    CalendarCircuitBreaker.with_breaker(provider, opts, fun)
   end
 end

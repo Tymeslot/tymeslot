@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
   alias TymeslotWeb.Dashboard.Automation.SlackCard
-  alias TymeslotWeb.Dashboard.CalendarSettings.Components, as: CalendarComponents
+  alias TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow
 
   defp render_card(overrides \\ []) do
     assigns =
@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCardTe
       }
 
       html =
-        render_component(&CalendarComponents.calendar_connection_row/1,
+        render_component(&ConnectionRow.calendar_connection_row/1,
           integration: integration,
           health_state: nil,
           myself: "target"
