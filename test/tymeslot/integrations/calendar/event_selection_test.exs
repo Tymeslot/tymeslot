@@ -1,9 +1,9 @@
-defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
+defmodule Tymeslot.Integrations.Calendar.EventSelectionTest do
   @moduledoc """
-  `Selection`'s two event-facing questions: whether a cached event should be
-  shown, and whether it may be written back.
+  `EventSelection`'s two event-facing questions: whether a cached event should
+  be shown, and whether it may be written back.
 
-  Split from `SelectionTest`, which covers the selection list itself — what a
+  Kept apart from `SelectionTest`, which covers the selection list itself — what a
   discovery run does to it, what a form submission does to it, what is
   persisted. These two ask the opposite question, of one event against an
   already-settled list, and share the CalDAV-versus-id matching rule that
@@ -14,17 +14,17 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
   @moduletag :calendar
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.Calendar.EventSelection
 
   describe "event_visible?/2" do
     test "returns true for legacy integrations with nil calendar_list" do
       event = %{provider_calendar_id: "anything", provider_event_id: "anything"}
-      assert Selection.event_visible?(event, %{calendar_list: nil}) == true
+      assert EventSelection.event_visible?(event, %{calendar_list: nil}) == true
     end
 
     test "returns true for legacy integrations with empty calendar_list" do
       event = %{provider_calendar_id: "anything", provider_event_id: "anything"}
-      assert Selection.event_visible?(event, %{calendar_list: []}) == true
+      assert EventSelection.event_visible?(event, %{calendar_list: []}) == true
     end
 
     test "returns false when no calendar is selected" do
@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
         calendar_list: Enum.map([%{id: "primary", selected: false}], &CalendarEntry.normalize/1)
       }
 
-      assert Selection.event_visible?(event, integration) == false
+      assert EventSelection.event_visible?(event, integration) == false
     end
 
     test "matches by provider_calendar_id against the selected entries' ids" do
@@ -51,7 +51,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           )
       }
 
-      assert Selection.event_visible?(event, integration) == true
+      assert EventSelection.event_visible?(event, integration) == true
     end
 
     test "excludes events whose provider_calendar_id matches a deselected entry" do
@@ -68,7 +68,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           )
       }
 
-      assert Selection.event_visible?(event, integration) == false
+      assert EventSelection.event_visible?(event, integration) == false
     end
 
     test "falls back to provider_event_id prefix for CalDAV multi-calendar integrations" do
@@ -96,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           )
       }
 
-      assert Selection.event_visible?(event, integration) == true
+      assert EventSelection.event_visible?(event, integration) == true
     end
 
     test "excludes CalDAV events whose href is under a deselected path" do
@@ -124,7 +124,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           )
       }
 
-      assert Selection.event_visible?(event, integration) == false
+      assert EventSelection.event_visible?(event, integration) == false
     end
   end
 
@@ -137,7 +137,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
         calendar_list: Enum.map([%{id: "feed", selected: true}], &CalendarEntry.normalize/1)
       }
 
-      refute Selection.event_writable?(event, integration)
+      refute EventSelection.event_writable?(event, integration)
     end
 
     test "refuses a read-only calendar on a writable provider" do
@@ -155,7 +155,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           )
       }
 
-      refute Selection.event_writable?(event, integration)
+      refute EventSelection.event_writable?(event, integration)
     end
 
     test "allows a writable calendar on the same account" do
@@ -173,7 +173,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           )
       }
 
-      assert Selection.event_writable?(event, integration)
+      assert EventSelection.event_writable?(event, integration)
     end
 
     test "resolves a CalDAV event by href prefix rather than provider_calendar_id" do
@@ -202,7 +202,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           )
       }
 
-      refute Selection.event_writable?(event, integration)
+      refute EventSelection.event_writable?(event, integration)
     end
 
     test "allows an event whose originating calendar cannot be resolved" do
@@ -216,13 +216,13 @@ defmodule Tymeslot.Integrations.Calendar.SelectionEventsTest do
           Enum.map([%{id: "own@example.com", selected: true}], &CalendarEntry.normalize/1)
       }
 
-      assert Selection.event_writable?(event, integration)
+      assert EventSelection.event_writable?(event, integration)
     end
 
     test "still refuses an untaggable event on a read-only provider" do
       event = %{provider_calendar_id: nil, provider_event_id: "evt-1"}
 
-      refute Selection.event_writable?(event, %{provider: "ics_url", calendar_list: []})
+      refute EventSelection.event_writable?(event, %{provider: "ics_url", calendar_list: []})
     end
   end
 end

@@ -32,6 +32,7 @@ defmodule Tymeslot.MeetingPayments do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments.AccountCurrency
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.CheckoutOutcome
@@ -44,11 +45,8 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Payments.Config, as: PaymentsConfig
-  alias Tymeslot.Repo
 
   @type account :: ConnectAccountSchema.t()
   @type booking_payment :: BookingPaymentSchema.t()
@@ -205,47 +203,25 @@ defmodule Tymeslot.MeetingPayments do
 
   @doc """
   Returns `true` if the user's Connect account has charges enabled, in a
-  currency checkout can charge: an allowlisted one, or a legacy one counted
-  in hundredths (see `Currency.support/1`).
+  currency checkout can charge. See
+  `Tymeslot.MeetingPayments.AccountCurrency.charges_enabled_for_user?/1`.
   """
   @spec charges_enabled_for_user?(integer()) :: boolean()
-  def charges_enabled_for_user?(user_id), do: charge_currency(user_id) != nil
+  defdelegate charges_enabled_for_user?(user_id), to: AccountCurrency
 
   @doc """
-  The currency checkout charges the user in: their live Connect account's
-  default currency, while the account has charges enabled in a currency
-  checkout can charge (see `charges_enabled_for_user?/1`), and `nil` otherwise.
-  This is the currency to show a stored price in to someone about to pay it.
+  The currency checkout charges the user in, or `nil` while it cannot charge
+  them. See `Tymeslot.MeetingPayments.AccountCurrency.charge_currency/1`.
   """
   @spec charge_currency(integer()) :: String.t() | nil
-  def charge_currency(user_id) do
-    case ConnectAccountQueries.live_for_user(user_id) do
-      %{charges_enabled: true, default_currency: currency} ->
-        if Currency.chargeable?(currency), do: currency
-
-      _other ->
-        nil
-    end
-  end
+  defdelegate charge_currency(user_id), to: AccountCurrency
 
   @doc """
-  Returns `true` if the user may set or change a meeting type's price: their
-  Connect account has charges enabled in an allowlisted currency. A legacy
-  currency is still charged at checkout (`charges_enabled_for_user?/1`), but
-  no new price is set in it.
+  Returns `true` if the user may set or change a meeting type's price. See
+  `Tymeslot.MeetingPayments.AccountCurrency.price_settable?/1`.
   """
   @spec price_settable?(integer() | nil) :: boolean()
-  def price_settable?(nil), do: false
-
-  def price_settable?(user_id) do
-    case ConnectAccountQueries.live_for_user(user_id) do
-      %{charges_enabled: true, default_currency: currency} ->
-        Currency.support(currency) == :supported
-
-      _other ->
-        false
-    end
-  end
+  defdelegate price_settable?(user_id), to: AccountCurrency
 
   @doc """
   Returns `true` if the user can take a payment right now: their Connect
@@ -482,45 +458,18 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate currency_allowlist(), to: Currency, as: :allowlist
 
   @doc """
-  Returns the host's pricing currency: the default currency of their live
-  (non-deleted) Connect account, or the fallback currency when there is no
-  such account, the account carries no currency yet or one outside the
-  allowlist, or there is no user. This is the currency new prices are set
-  and checked against; `account_currency/1` is the one stored prices are
-  shown in.
-
-  Checkout charges the account's currency directly and never reaches the
-  fallback; the fallback only labels prices and minimums shown to a host who
-  cannot currently set them.
+  Returns the host's pricing currency, the one new prices are set and checked
+  against. See `Tymeslot.MeetingPayments.AccountCurrency.host_currency/1`.
   """
   @spec host_currency(integer() | nil) :: String.t()
-  def host_currency(nil), do: Currency.fallback()
-
-  def host_currency(user_id) do
-    case ConnectAccountQueries.live_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" ->
-        if Currency.allowed?(currency), do: currency, else: Currency.fallback()
-
-      _no_currency ->
-        Currency.fallback()
-    end
-  end
+  defdelegate host_currency(user_id), to: AccountCurrency
 
   @doc """
-  The currency the host's stored prices are in, for showing them: their live
-  Connect account's default currency, whether or not meeting payments
-  support it (see `currency_support/1`), or the fallback where
-  `host_currency/1` would use it.
+  The currency the host's stored prices are in, for showing them. See
+  `Tymeslot.MeetingPayments.AccountCurrency.account_currency/1`.
   """
   @spec account_currency(integer() | nil) :: String.t()
-  def account_currency(nil), do: Currency.fallback()
-
-  def account_currency(user_id) do
-    case ConnectAccountQueries.live_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" -> currency
-      _no_currency -> Currency.fallback()
-    end
-  end
+  defdelegate account_currency(user_id), to: AccountCurrency
 
   @doc """
   How far meeting payments support an account currency: `:supported`,
@@ -545,53 +494,13 @@ defmodule Tymeslot.MeetingPayments do
   @doc """
   Changes the host's default currency on their Connect account and resets all
   paid meeting types to free, since their prices were in the old currency.
-
-  Returns `{:ok, :reset}` when paid meeting types were cleared, `{:ok,
-  :no_reset}` when the account had none, `{:ok, :unchanged}` when `currency`
-  is already the account's, `{:error, :unsupported_currency}` for a currency
-  outside the allowlist, `{:error, :pending_payments_exist}` while the host
-  has meetings awaiting payment (they must be resolved first), or
-  `{:error, reason}` on other failures.
-
-  The account row is locked for the whole change, as a checkout locks it to
-  read the currency and price (`CheckoutSessions`), so a booking either
-  starts its checkout first, and then counts as awaiting payment here, or
-  finds its meeting type already free.
+  See `Tymeslot.MeetingPayments.AccountCurrency.change_default_currency/2`.
   """
   @spec change_default_currency(account(), String.t()) ::
           {:ok, :reset | :no_reset | :unchanged}
           | {:error, :unsupported_currency | :pending_payments_exist}
           | {:error, term()}
-  def change_default_currency(%ConnectAccountSchema{user_id: user_id}, currency) do
-    if Currency.allowed?(currency) do
-      Repo.transaction(fn ->
-        case change_locked_currency(ConnectAccountQueries.lock_live_for_user(user_id), currency) do
-          {:ok, outcome} -> outcome
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-    else
-      {:error, :unsupported_currency}
-    end
-  end
-
-  defp change_locked_currency(nil, _currency), do: {:error, :not_found}
-
-  defp change_locked_currency(%{default_currency: currency}, currency), do: {:ok, :unchanged}
-
-  defp change_locked_currency(%ConnectAccountSchema{user_id: user_id} = account, currency) do
-    with :ok <- check_no_pending_payments(user_id),
-         {:ok, _updated} <- ConnectAccountQueries.update(account, %{default_currency: currency}) do
-      {count, _rows} = MeetingTypeQueries.clear_payments_for_user(user_id)
-      {:ok, if(count > 0, do: :reset, else: :no_reset)}
-    end
-  end
-
-  defp check_no_pending_payments(user_id) do
-    if MeetingQueries.count_awaiting_payment_for_organizer(user_id) > 0,
-      do: {:error, :pending_payments_exist},
-      else: :ok
-  end
+  defdelegate change_default_currency(account, currency), to: AccountCurrency
 
   # ---------------------------------------------------------------------------
   # Stripe receipt URL

@@ -33,9 +33,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
-  alias Tymeslot.Integrations.Calendar.ColourResolver
-  alias Tymeslot.Integrations.Calendar.ColourWriteBack
+  alias Tymeslot.Integrations.Calendar.ColourOverrides
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Defaults
@@ -56,14 +54,13 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
   alias Tymeslot.Integrations.Shared.Providers.Directory
-  alias Tymeslot.Meetings
   alias Tymeslot.Security.EncryptedString
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
   @type integration :: CalendarIntegrationSchema.t()
   @type calendar_selection_params :: %{required(:selected_calendars) => [String.t()]}
-  @type colour_target :: {:meeting, Ecto.UUID.t()} | {:external, integration_id(), String.t()}
+  @type colour_target :: ColourOverrides.colour_target()
 
   @typedoc """
   One block of busy time read from a provider's free/busy view. It carries no
@@ -232,9 +229,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Returns {:ok, calendars} with standardized calendar entries.
   """
   @spec discover_calendars_for_integration(integration()) :: {:ok, list()} | {:error, any()}
-  def discover_calendars_for_integration(integration) do
-    Discovery.discover_calendars_for_integration(integration)
-  end
+  defdelegate discover_calendars_for_integration(integration), to: Discovery
 
   @doc "See `Tymeslot.Integrations.Calendar.OwnerActions.set_calendar_state/4`."
   @spec set_calendar_state(user_id(), integration_id(), String.t(), Blocking.state()) ::
@@ -402,9 +397,9 @@ defmodule Tymeslot.Integrations.Calendar do
           {:ok, integration()}
           | {:error,
              {:form_errors, %{String.t() => term()}} | {:changeset, Ecto.Changeset.t()} | any()}
-  def create_integration_with_validation(user_id, params, opts \\ []) do
-    Creation.create_with_validation(user_id, params, opts)
-  end
+  defdelegate create_integration_with_validation(user_id, params, opts \\ []),
+    to: Creation,
+    as: :create_with_validation
 
   @doc """
   Validates and creates a read-only calendar subscription from a feed URL.
@@ -416,9 +411,7 @@ defmodule Tymeslot.Integrations.Calendar do
              | {:changeset, Ecto.Changeset.t()}
              | {:rate_limited, String.t()}
              | :unattributable}
-  def create_subscription_with_validation(user_id, params, opts \\ []) do
-    Creation.create_subscription_with_validation(user_id, params, opts)
-  end
+  defdelegate create_subscription_with_validation(user_id, params, opts \\ []), to: Creation
 
   @doc """
   Validates and creates a read-only Exchange (EWS) integration.
@@ -431,18 +424,18 @@ defmodule Tymeslot.Integrations.Calendar do
              | {:rate_limited, String.t()}
              | :unattributable
              | :duplicate_integration}
-  def create_exchange_with_validation(user_id, params, opts) do
-    ExchangeCreation.create_with_validation(user_id, params, opts)
-  end
+  defdelegate create_exchange_with_validation(user_id, params, opts),
+    to: ExchangeCreation,
+    as: :create_with_validation
 
   @doc """
   Prepare selection params from selected paths and discovered calendars.
   """
   @spec prepare_selection_params([String.t()], list()) ::
           %{required(String.t()) => [String.t()] | [CalendarEntry.t()]}
-  def prepare_selection_params(selected_paths, discovered) do
-    Selection.prepare_selected_params(selected_paths, discovered)
-  end
+  defdelegate prepare_selection_params(selected_paths, discovered),
+    to: Selection,
+    as: :prepare_selected_params
 
   @doc "See `Tymeslot.Integrations.Calendar.OwnerActions.delete_integration/2`."
   @spec delete_with_primary_reassignment_and_invalidate(user_id(), integration_id()) ::
@@ -495,9 +488,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Checks if a Google integration needs scope upgrade.
   """
   @spec needs_scope_upgrade?(integration()) :: boolean()
-  def needs_scope_upgrade?(integration) do
-    OAuth.needs_scope_upgrade?(integration)
-  end
+  defdelegate needs_scope_upgrade?(integration), to: OAuth
 
   # ---------------------------
   # Public API: Orchestration helpers
@@ -507,9 +498,7 @@ defmodule Tymeslot.Integrations.Calendar do
   List available providers for calendar integrations.
   """
   @spec list_available_providers(atom()) :: list()
-  def list_available_providers(type) do
-    Directory.list(type)
-  end
+  defdelegate list_available_providers(type), to: Directory, as: :list
 
   @doc "See `Tymeslot.Integrations.Calendar.OwnerActions.refresh_all_integrations/1`."
   @spec refresh_all_integrations(user_id()) ::
@@ -532,9 +521,15 @@ defmodule Tymeslot.Integrations.Calendar do
         ) ::
           {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
           | {:error, any()}
-  def discover_and_filter_calendars(provider, url, username, password, user_id, opts \\ []) do
-    Workflows.discover_and_filter_calendars(provider, url, username, password, user_id, opts)
-  end
+  defdelegate discover_and_filter_calendars(
+                provider,
+                url,
+                username,
+                password,
+                user_id,
+                opts \\ []
+              ),
+              to: Workflows
 
   # ---------------------------
   # Public API: Reconnection
@@ -575,75 +570,21 @@ defmodule Tymeslot.Integrations.Calendar do
   # Public API: Event colour
   # ---------------------------
 
-  @doc """
-  Sets a durable per-event colour override for `user_id` on `target`, then
-  (for external events) best-effort writes it back to the provider. Returns the
-  persisted override.
-  """
+  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.set_event_colour/3`."
   @spec set_event_colour(user_id(), colour_target(), String.t()) ::
           {:ok, term()} | {:error, :not_found | Ecto.Changeset.t()}
-  def set_event_colour(user_id, target, colour) do
-    with :ok <- verify_colour_target(user_id, target) do
-      put_event_colour(user_id, target, colour)
-    end
-  end
+  defdelegate set_event_colour(user_id, target, colour), to: ColourOverrides
 
-  defp put_event_colour(user_id, {:meeting, meeting_id}, colour),
-    do: ColourOverrideQueries.set_meeting(user_id, meeting_id, colour)
-
-  defp put_event_colour(user_id, {:external, integration_id, uid}, colour) do
-    with {:ok, override} <-
-           ColourOverrideQueries.set_external(user_id, integration_id, uid, colour) do
-      ColourWriteBack.enqueue(user_id, integration_id, uid, colour)
-      {:ok, override}
-    end
-  end
-
-  @doc """
-  Clears a per-event colour override for `user_id` on `target`. For external
-  events the host calendar is left untouched; the next sync reconciles.
-  """
+  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.clear_event_colour/2`."
   @spec clear_event_colour(user_id(), colour_target()) :: :ok | {:error, :not_found}
-  def clear_event_colour(user_id, target) do
-    with :ok <- verify_colour_target(user_id, target) do
-      remove_event_colour(user_id, target)
-    end
-  end
+  defdelegate clear_event_colour(user_id, target), to: ColourOverrides
 
-  defp remove_event_colour(user_id, {:meeting, meeting_id}),
-    do: ColourOverrideQueries.clear_meeting(user_id, meeting_id)
-
-  # Clearing drops the override only; the host calendar is left untouched and
-  # the next sync reconciles — so no write-back is enqueued here.
-  defp remove_event_colour(user_id, {:external, integration_id, uid}),
-    do: ColourOverrideQueries.clear_external(user_id, integration_id, uid)
-
-  # The target arrives from the browser, so the meeting or integration it
-  # names must be the user's own; one that is not is not found.
-  defp verify_colour_target(user_id, {:meeting, meeting_id}) do
-    with {:ok, _meeting} <- Meetings.get_meeting_for_organizer(meeting_id, user_id), do: :ok
-  end
-
-  defp verify_colour_target(user_id, {:external, integration_id, _uid}) do
-    if CalendarIntegrationQueries.owned_by?(integration_id, user_id),
-      do: :ok,
-      else: {:error, :not_found}
-  end
-
-  @doc """
-  Returns a user's colour overrides as a lookup map keyed for the resolver:
-  `{:meeting, id}` / `{:external, integration_id, uid}` => palette key.
-  """
+  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.overrides_for/1`."
   @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t()}
-  def overrides_for(user_id), do: ColourOverrideQueries.for_user(user_id)
+  defdelegate overrides_for(user_id), to: ColourOverrides
 
-  @doc """
-  Resolves the palette key to display for an event: the user's durable
-  override wins, else the provider-synced colour, else `nil` (caller applies
-  its own source/integration default).
-  """
+  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.resolve_event_colour/2`."
   @spec resolve_event_colour(override :: String.t() | nil, provider_colour :: String.t() | nil) ::
           String.t() | nil
-  def resolve_event_colour(override, provider_colour),
-    do: ColourResolver.resolve(override, provider_colour)
+  defdelegate resolve_event_colour(override, provider_colour), to: ColourOverrides
 end

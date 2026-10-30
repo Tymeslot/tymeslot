@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   Every control change dispatches `change_event` back to the owning
   LiveComponent via `phx-target`, carrying the raw form fields (`freq`,
   `interval`, `by_day[]`, `on`, `end_type`, `count`, `until`). The owner
-  composes the rule from them (`Shared.compose_recurrence_rule/2`). An
+  composes the rule from them (`RecurrenceFields.compose_recurrence_rule/2`). An
   owner that stages the rule rather than writing it at once (an existing
   event's details, `RecurrenceEdit`) passes `pending` while one is staged,
   and the editor offers "Save repeat" (`save_event`) and "Discard changes"

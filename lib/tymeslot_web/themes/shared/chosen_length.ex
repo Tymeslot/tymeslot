@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Shared.ChosenLength do
   @doc """
   The meeting type as booked for the length in `minutes/1`, for code that
   reads a type's length from its `duration_minutes`, such as the calendar
-  grids (`CalendarHelpers`): how long the booking is also decides how late a
+  grids (`CalendarDays`): how long the booking is also decides how late a
   day can still start. `Offer.duration_minutes/3` decides, so a length the
   type does not offer leaves it at its primary one. Nil without a type.
   """

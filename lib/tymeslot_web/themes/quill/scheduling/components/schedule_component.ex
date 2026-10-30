@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Live.Scheduling.CalendarDays
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.ChosenLength
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             </button>
                           </div>
                           <div class="week-day-strip">
-                            <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
+                            <%= for day <- CalendarDays.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
                               <button
                                 class={[
                                   "week-day-cell",
@@ -291,7 +291,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               </div>
                             </div>
                             <div class="calendar-month-grid grid grid-cols-7 gap-0.5">
-                              <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, ChosenLength.meeting_type(assigns)) do %>
+                              <%= for day <- CalendarDays.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, ChosenLength.meeting_type(assigns)) do %>
                                 <.calendar_day
                                   phx-click="select_date"
                                   phx-target={@myself}

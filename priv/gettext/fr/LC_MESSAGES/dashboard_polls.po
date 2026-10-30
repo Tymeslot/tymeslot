@@ -197,8 +197,7 @@ msgstr "Aucun sondage pour l'instant"
 msgid "Open"
 msgstr "Ouvert"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Les types de réunion payants ne peuvent pas être utilisés pour les sondages"
@@ -229,8 +228,7 @@ msgstr "Sondages"
 msgid "Remove time"
 msgstr "Supprimer le créneau"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Ce type de réunion n'est pas disponible"
@@ -263,8 +261,7 @@ msgstr "Ce créneau chevauche un événement de votre agenda"
 msgid "This time is no longer free"
 msgstr "Ce créneau n'est plus libre"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Les créneaux doivent être dans le futur"
@@ -285,8 +282,7 @@ msgstr "Fuseau horaire"
 msgid "Title"
 msgstr "Titre"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Jusqu'à %{max} créneaux"
@@ -534,8 +530,7 @@ msgstr "Retirer %{name} et ses réponses de ce sondage ? La personne n'est pas p
 msgid "Remove from the poll"
 msgstr "Retirer du sondage"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "La date limite doit être dans le futur"

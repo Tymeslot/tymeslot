@@ -25,15 +25,18 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   alias Tymeslot.Polls.PollSchema
 
   alias TymeslotWeb.Dashboard.Polls.{
+    CandidateTimes,
     LocalTime,
     PollAccess,
+    PollFormErrors,
     PollParticipantList,
     PollReminders,
     PollsComponent
   }
 
-  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
+
+  import PollFormErrors, only: [error_list: 2]
 
   @reminder_events PollReminders.Events.all()
 
@@ -255,28 +258,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
        notify_on_vote: Map.get(params, "notify_on_vote", "false") == "true",
        access: access,
        meeting_type_id: parse_id(Map.get(params, "meeting_type_id")),
-       new_times: merge_times(socket.assigns.new_times, Map.get(params, "new_times", %{}))
+       new_times:
+         CandidateTimes.merge(socket.assigns.new_times, Map.get(params, "new_times", %{}))
      )}
   end
 
   def handle_event("add_time", _params, socket) do
-    key = socket.assigns.time_counter
+    {new_times, counter} =
+      CandidateTimes.add(socket.assigns.new_times, socket.assigns.time_counter)
 
-    {:noreply,
-     assign(socket,
-       new_times: socket.assigns.new_times ++ [%{key: key, value: ""}],
-       time_counter: key + 1
-     )}
+    {:noreply, assign(socket, new_times: new_times, time_counter: counter)}
   end
 
   def handle_event("remove_time", %{"key" => key}, socket) do
-    case Integer.parse(key) do
-      {key, ""} ->
-        {:noreply,
-         assign(socket, :new_times, Enum.reject(socket.assigns.new_times, &(&1.key == key)))}
-
-      _forged ->
-        {:noreply, socket}
+    case CandidateTimes.remove(socket.assigns.new_times, key) do
+      {:ok, new_times, _key} -> {:noreply, assign(socket, :new_times, new_times)}
+      :error -> {:noreply, socket}
     end
   end
 
@@ -380,12 +377,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   defp kept_selected?(nil, _meeting_type_id), do: false
   defp kept_selected?(kept, meeting_type_id), do: kept.id == meeting_type_id
 
-  defp merge_times(times, values) do
-    Enum.map(times, fn %{key: key} = time ->
-      %{time | value: Map.get(values, Integer.to_string(key), time.value)}
-    end)
-  end
-
   defp valid_access(value, _previous) when value in ["anyone", "invited"], do: value
   defp valid_access(_value, previous), do: previous
 
@@ -416,51 +407,27 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
   defp withdraw_hint(_poll, _access, _count), do: nil
 
-  defp errors_for(:too_many_slots),
-    do: %{
-      new_times: [
-        dgettext("dashboard_polls", "Up to %{max} times", max: PollSchema.max_slots())
-      ]
-    }
+  defp errors_for(reason) do
+    if PollFormErrors.shared_reason?(reason),
+      do: PollFormErrors.errors_for(reason, :new_times),
+      else: editor_errors_for(reason)
+  end
 
-  defp errors_for(:meeting_type_not_found),
-    do: %{meeting_type_id: [dgettext("dashboard_polls", "That meeting type is unavailable")]}
-
-  defp errors_for(:payment_required_type),
-    do: %{
-      meeting_type_id: [
-        dgettext("dashboard_polls", "Paid meeting types can't be used for polls")
-      ]
-    }
-
-  defp errors_for(:slot_in_past),
-    do: %{new_times: [dgettext("dashboard_polls", "Times must be in the future")]}
-
-  defp errors_for(:voting_closed),
+  defp editor_errors_for(:voting_closed),
     do: %{
       new_times: [
         dgettext("dashboard_polls", "Voting has closed. Move the deadline to add times.")
       ]
     }
 
-  defp errors_for(%Changeset{data: %PollSchema{}} = changeset) do
-    errors = FormErrors.to_map(changeset)
-
-    if Map.has_key?(errors, :deadline_at),
-      do:
-        Map.put(errors, :deadline_at, [
-          dgettext("dashboard_polls", "The deadline must be in the future")
-        ]),
-      else: errors
-  end
+  defp editor_errors_for(%Changeset{data: %PollSchema{}} = changeset),
+    do: PollFormErrors.changeset_errors(changeset)
 
   # A time clashing with one the poll already has fails on the slot's unique
   # index.
-  defp errors_for(%Changeset{}),
+  defp editor_errors_for(%Changeset{}),
     do: %{new_times: [dgettext("dashboard_polls", "The poll already has this time")]}
 
-  defp errors_for(_reason),
+  defp editor_errors_for(_reason),
     do: %{base: [dgettext("dashboard_polls", "Couldn't save this poll. Please try again.")]}
-
-  defp error_list(errors, field), do: Map.get(errors, field, [])
 end

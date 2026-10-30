@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceFields
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
@@ -41,7 +42,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   attr :recurrence_edit, :map,
     default: nil,
-    doc: "the repeat editor's series start and staged pattern (`Shared.recurrence_edit/1`)"
+    doc:
+      "the repeat editor's series start and staged pattern (`RecurrenceFields.recurrence_edit/1`)"
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
@@ -425,7 +427,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   defp recurrence_summary(event, recurrence_edit, user_timezone) do
     case Map.get(event, :recurrence_rule) do
       rule when is_binary(rule) and rule != "" ->
-        {start, _known?} = Shared.series_anchor(event, recurrence_edit, user_timezone)
+        {start, _known?} = RecurrenceFields.series_anchor(event, recurrence_edit, user_timezone)
         RecurrenceEditor.summary(rule, start)
 
       _none ->

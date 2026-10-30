@@ -15,13 +15,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
-  alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.WriteOutcomeMessages
   alias TymeslotWeb.Dashboard.CalendarGridComponent
-  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
 
   require Logger
 
@@ -44,12 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_events_updated(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_events_updated(socket) do
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :events_updated
-      )
-    end
+    to_grid(socket, action: :events_updated)
 
     {:noreply, socket}
   end
@@ -58,12 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_sync_complete(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_sync_complete(socket) do
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :integration_synced
-      )
-    end
+    to_grid(socket, action: :integration_synced)
 
     {:noreply, socket}
   end
@@ -80,12 +69,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_reset_calendar_sync(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_reset_calendar_sync(socket) do
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :refresh_events
-      )
-    end
+    to_grid(socket, action: :refresh_events)
 
     {:noreply, socket}
   end
@@ -141,7 +125,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, socket}
   end
 
-  # A write's result reaches the grid only while it is on screen. Once the
+  # Anything meant for the grid reaches it only while it is on screen, and a
+  # write's result most of all. Once the
   # organiser has left the calendar, the LiveView's write guardian drives
   # the queue (`Tymeslot.CalendarGrid.WriteGuardian.detach/0`) and hears
   # every result itself, and a grid component LiveView has yet to delete
@@ -171,77 +156,10 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
     # The inline edit announces its save up front, before the write runs.
     {:noreply,
-     socket |> clear_flash(:info) |> put_flash(:error, update_failed_message(payload[:reason]))}
+     socket
+     |> clear_flash(:info)
+     |> put_flash(:error, WriteOutcomeMessages.update_failed_message(payload[:reason]))}
   end
-
-  # A refusal the domain made names its own reason; everything else is a
-  # provider failure the organiser can do nothing about. The scoped edits of
-  # a recurring series refuse before anything is written, so each of their
-  # reasons says what the organiser can do instead (see
-  # `Tymeslot.CalendarGrid.SeriesEdit`).
-  defp update_failed_message(:value_type_change) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Events of a repeating series cannot be switched between all-day and timed here. Please make this change in your calendar app."
-    )
-  end
-
-  defp update_failed_message(reason) when reason in [:unsupported_scope, :rule_removal] do
-    dgettext(
-      "dashboard_calendar_events",
-      "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
-    )
-  end
-
-  defp update_failed_message(:rule_pins_occurrences) do
-    dgettext(
-      "dashboard_calendar_events",
-      "This series repeats on fixed days, such as the second Monday of the month, so it cannot be moved like this. Please make this change in your calendar app."
-    )
-  end
-
-  defp update_failed_message(:unsupported_rule) do
-    dgettext(
-      "dashboard_calendar_events",
-      "This series' repeat rule cannot be split here. Please make this change in your calendar app."
-    )
-  end
-
-  # What is left of a count is counted again when the change is written, from
-  # the series as it is then, which a sync may have changed since the scope
-  # was chosen. The prompt offered that scope, so these say the series moved
-  # on under the organiser rather than repeating why a scope is not offered.
-  defp update_failed_message(:ends_before) do
-    dgettext(
-      "dashboard_calendar_events",
-      "This series changed while you were editing it, and nothing is left of it from this event on. Nothing was saved."
-    )
-  end
-
-  # Either the series' first start can no longer be read, or a sync cleared
-  # its rule while it is still marked a series: both leave nothing to count
-  # from.
-  defp update_failed_message(:start_unknown) do
-    dgettext(
-      "dashboard_calendar_events",
-      "This series changed while you were editing it, so the events left in it can no longer be counted. Nothing was saved. Refresh the calendar and try again."
-    )
-  end
-
-  defp update_failed_message(:rule_not_supported_by_outlook),
-    do: EditWorkflow.rule_not_supported_by_outlook_message()
-
-  defp update_failed_message(:day_missing_in_some_months),
-    do: EditWorkflow.month_end_refused_message()
-
-  defp update_failed_message(:not_organiser), do: EditWorkflow.not_organiser_message()
-
-  defp update_failed_message(reason)
-       when reason in [:unaddressable_occurrence, :unreadable_timing, :not_recurring],
-       do: EditWorkflow.unmatched_series_message()
-
-  defp update_failed_message(_reason),
-    do: dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")
 
   @doc """
   Handles the result of an event move: shows the moved event and says where
@@ -268,7 +186,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           new_event_integration_id: new_event_info[:integration_id]
         )
 
-        {level, message} = moved_flash(new_event_info[:source])
+        {level, message} = WriteOutcomeMessages.moved_flash(new_event_info[:source])
         {:noreply, put_flash(socket, level, message)}
 
       calendar ->
@@ -277,7 +195,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           moved_event: new_event_info[:original_event]
         )
 
-        {level, message} = series_moved_flash(new_event_info[:source], calendar)
+        {level, message} =
+          WriteOutcomeMessages.series_moved_flash(new_event_info[:source], calendar)
+
         {:noreply, socket |> clear_flash(:info) |> put_flash(level, message)}
     end
   end
@@ -290,7 +210,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           original_event: payload[:original_event]
         )
 
-        {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
+        {:noreply,
+         put_flash(socket, :error, WriteOutcomeMessages.move_failed_message(payload[:reason]))}
 
       _calendar ->
         to_grid(socket,
@@ -301,60 +222,6 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         message = EditWorkflow.series_move_failed_message(payload[:reason])
         {:noreply, socket |> clear_flash(:info) |> put_flash(:error, message)}
     end
-  end
-
-  defp moved_flash(nil),
-    do: {:info, dgettext("dashboard_calendar_events", "Event moved to the new calendar.")}
-
-  defp moved_flash(:queued_delete) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "Event copied to the new calendar. The original will be removed on the next sync."
-     )}
-  end
-
-  defp moved_flash(:left_behind) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
-     )}
-  end
-
-  # Something failed once the new calendar had accepted the event, so it is
-  # there, and whether the original is too cannot be said.
-  defp moved_flash(:unknown) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
-     )}
-  end
-
-  defp series_moved_flash(nil, calendar) do
-    {:info,
-     dgettext("dashboard_calendar_events", "The series was moved to %{calendar}.",
-       calendar: calendar
-     )}
-  end
-
-  defp series_moved_flash(:left_behind, calendar) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar.",
-       calendar: calendar
-     )}
-  end
-
-  defp move_failed_message(:recurring_event), do: EditWorkflow.recurring_move_refused_message()
-
-  defp move_failed_message(_reason) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Could not move the event. It is still on its original calendar."
-    )
   end
 
   @doc "Spawns a supervised task to create a calendar event."
@@ -490,21 +357,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       action: :ad_hoc_meeting_failed
     )
 
-    {:noreply, put_flash(socket, :error, ad_hoc_failed_message(reason))}
+    {:noreply, put_flash(socket, :error, WriteOutcomeMessages.ad_hoc_failed_message(reason))}
   end
-
-  # The reason is a domain term, never copy: an atom such as `:time_conflict`
-  # would otherwise reach the flash verbatim. `CreateAdHoc`'s own refusals are
-  # atoms `BookingErrorMessage` renders, and anything it does not recognise
-  # falls back to a generic sentence there.
-  defp ad_hoc_failed_message(:time_conflict) do
-    dgettext(
-      "dashboard_calendar_events",
-      "You already have a meeting at this time. Please choose a different time."
-    )
-  end
-
-  defp ad_hoc_failed_message(reason), do: BookingErrorMessage.message(reason)
 
   @doc """
   Handles the result of changing an event's video room: shows the new link,
@@ -546,39 +400,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       original_event: payload[:original_event]
     )
 
-    {:noreply, put_flash(socket, :error, video_failed_message(payload[:reason]))}
+    {:noreply,
+     put_flash(socket, :error, WriteOutcomeMessages.video_failed_message(payload[:reason]))}
   end
-
-  defp video_failed_message(:meet_link_pending) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
-    )
-  end
-
-  defp video_failed_message(:linked_to_booking),
-    do: EditWorkflow.booking_video_refused_message()
-
-  defp video_failed_message(:missing_meeting_url) do
-    dgettext(
-      "dashboard_calendar_events",
-      "The video provider did not return a meeting link, so the video link was not changed."
-    )
-  end
-
-  # A provider that refuses to create rooms because of a setting on its own
-  # server says which one, and that is what the organiser has to change; the
-  # same words their video integration's row shows. Anything else is a failure
-  # they can only try again.
-  defp video_failed_message({:configuration_error, code}) when is_atom(code) do
-    if code in RoomCreationError.codes(),
-      do: RoomCreationError.message(code),
-      else: video_failed_message(:unknown)
-  end
-
-  defp video_failed_message(_reason),
-    do:
-      dgettext("dashboard_calendar_events", "Could not change the video link - changes reverted")
 
   @doc """
   Deletes the event `payload` names, in the scope it names, in the background

@@ -101,7 +101,7 @@ msgstr "Ausblenden"
 msgid "Enter a valid partial refund amount."
 msgstr "Bitte geben Sie einen gültigen Teilrückerstattungsbetrag ein."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr "Termin konnte nicht abgesagt werden. Bitte versuchen Sie es erneut."
@@ -156,7 +156,7 @@ msgstr "Terminnotizen"
 msgid "Meeting cancelled and refund issued."
 msgstr "Termin abgesagt und Rückerstattung veranlasst."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Termin abgesagt, aber die Rückerstattung konnte nicht veranlasst werden. Bitte veranlassen Sie die Rückerstattung manuell in Ihrem Stripe-Dashboard."

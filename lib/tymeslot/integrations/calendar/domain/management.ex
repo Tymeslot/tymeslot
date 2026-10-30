@@ -9,19 +9,16 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Availability
-  alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Preferences
   alias Tymeslot.Integrations.Calendar.PrimaryElection
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
-  alias Tymeslot.Locales.WeekStart
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   require Logger
@@ -73,40 +70,9 @@ defmodule Tymeslot.Integrations.Calendar.Management do
     |> decrypt_or_flag()
   end
 
-  @doc """
-  The user's calendar display preferences. Returns the stored row if one
-  exists, otherwise an unsaved struct populated with defaults — callers that
-  need the defaults persisted must call `save_preferences/2` themselves.
-  """
-  @spec get_or_create_preferences(user_id()) :: struct()
-  def get_or_create_preferences(user_id) do
-    CalendarPreferencesQueries.get_or_create(user_id)
-  end
-
-  @doc """
-  The day the user's week starts on, as set in their calendar settings:
-  `:monday` unless they chose Sunday.
-
-  Governs their weekly booking caps, and is their booking page's fallback
-  when a visitor's language does not settle it.
-  """
-  @spec get_week_start(user_id() | nil) :: WeekStart.t()
-  def get_week_start(nil), do: :monday
-
-  def get_week_start(user_id) do
-    user_id
-    |> CalendarPreferencesQueries.get_or_create()
-    |> Map.get(:week_start_day)
-    |> WeekStart.parse()
-  end
-
-  @doc """
-  Upserts the user's calendar display preferences.
-  """
-  @spec save_preferences(user_id(), map()) :: {:ok, struct()} | {:error, Ecto.Changeset.t()}
-  def save_preferences(user_id, attrs) do
-    CalendarPreferencesQueries.upsert(user_id, attrs)
-  end
+  defdelegate get_or_create_preferences(user_id), to: Preferences
+  defdelegate get_week_start(user_id), to: Preferences
+  defdelegate save_preferences(user_id, attrs), to: Preferences
 
   @doc """
   Gets a single calendar integration, returning a two-outcome tuple.
@@ -160,7 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   def create_calendar_integration(attrs) do
     with {:ok, discovered_attrs} <- Discovery.maybe_discover_calendars(attrs),
          {:ok, integration} <- insert_integration(discovered_attrs),
-         {:ok, final_integration} <- ensure_default_booking_calendar(integration) do
+         {:ok, final_integration} <- Defaults.ensure_default_booking_calendar(integration) do
       :telemetry.execute([:tymeslot, :calendar, :connected], %{count: 1}, %{
         provider: final_integration.provider
       })
@@ -460,86 +426,6 @@ defmodule Tymeslot.Integrations.Calendar.Management do
     fields = CalendarIntegrationSchema.credential_fields()
 
     Enum.any?(fields, fn f -> Map.has_key?(attrs, f) or Map.has_key?(attrs, Atom.to_string(f)) end)
-  end
-
-  # Private helpers
-
-  defp ensure_default_booking_calendar(%{default_booking_calendar_id: nil} = integration) do
-    # Only set a default booking calendar automatically if the user doesn't
-    # already have one (to satisfy the unique_booking_calendar_per_user constraint
-    # and keep the existing primary unchanged when adding more integrations).
-    if has_existing_default?(integration.user_id) do
-      {:ok, integration}
-    else
-      set_default_booking_calendar(integration)
-    end
-  end
-
-  defp ensure_default_booking_calendar(integration), do: {:ok, integration}
-
-  defp has_existing_default?(user_id) do
-    CalendarIntegrationQueries.user_has_default_booking_calendar?(user_id)
-  end
-
-  defp set_default_booking_calendar(integration) do
-    case Defaults.resolve_default_calendar_id(integration) do
-      nil ->
-        {:ok, integration}
-
-      default_id ->
-        update_default_booking_calendar(integration, default_id)
-    end
-  end
-
-  # The booking calendar must block availability, so storing one makes it
-  # block in the same write (see `Blocking`).
-  defp update_default_booking_calendar(integration, default_id) do
-    case Blocking.set_default_booking_calendar(integration, default_id) do
-      {:ok, updated} ->
-        {:ok, updated}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        handle_booking_calendar_update_error(integration, changeset)
-
-      # Deleted, or no longer decrypting, between the insert and this write.
-      # The integration was still created, so it is kept without a default,
-      # as on a unique conflict; the owner can pick one from the dashboard.
-      {:error, reason} ->
-        Logger.warning("Could not set default booking calendar",
-          user_id: integration.user_id,
-          integration_id: integration.id,
-          error: LogFormat.reason(reason)
-        )
-
-        {:ok, integration}
-    end
-  end
-
-  defp handle_booking_calendar_update_error(integration, changeset) do
-    if unique_booking_calendar_conflict?(changeset) do
-      # If the unique constraint is hit (another integration already has a default),
-      # keep the existing primary/default and proceed without error.
-      {:ok, integration}
-    else
-      Logger.error("Failed to set default booking calendar",
-        user_id: integration.user_id,
-        integration_id: integration.id,
-        errors: changeset.errors
-      )
-
-      {:error, changeset}
-    end
-  end
-
-  defp unique_booking_calendar_conflict?(%Ecto.Changeset{} = changeset) do
-    Enum.any?(changeset.errors, fn
-      {:default_booking_calendar_id, {_msg, opts}} ->
-        opts[:constraint] == :unique &&
-          to_string(opts[:constraint_name]) == "unique_booking_calendar_per_user"
-
-      _other ->
-        false
-    end)
   end
 
   defp maybe_rebalance_primary(%{is_active: false, id: id, user_id: uid}, current_primary_id)

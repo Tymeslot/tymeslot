@@ -235,7 +235,7 @@ msgstr "Udělit uživateli oprávnění správce"
 msgid "Promoting..."
 msgstr "Udělování oprávnění…"
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/setting_row.ex
 #, elixir-autogen, elixir-format
 msgid "Recommended:"
 msgstr "Doporučeno:"
@@ -250,11 +250,13 @@ msgstr "Povolení registrace"
 msgid "Role"
 msgstr "Role"
 
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "Uložit"
 
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -462,7 +464,7 @@ msgstr "Logo se nepodařilo odebrat."
 msgid "Could not save the logo."
 msgstr "Logo se nepodařilo uložit."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Current email logo"
 msgstr "Aktuální logo e-mailů"
@@ -512,17 +514,17 @@ msgstr "Logo zobrazené v záhlaví každého transakčního e-mailu. Před nahr
 msgid "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
 msgstr "Název zobrazený v náhledovém řádku doručené pošty, v alternativním textu loga a v titulku e-mailu. Nemění jméno odesílatele, k tomu slouží EMAIL_FROM_NAME. Ponechte prázdné pro použití názvu „Tymeslot“."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a colour"
 msgstr "Vyberte barvu"
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr "Odebrat"
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Replace"
 msgstr "Nahradit"
@@ -552,7 +554,7 @@ msgstr "Tato hodnota je příliš dlouhá."
 msgid "The logo could not be uploaded."
 msgstr "Logo se nepodařilo nahrát."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "Upload"
 msgstr "Nahrát"
@@ -562,7 +564,7 @@ msgstr "Nahrát"
 msgid "Upload one logo at a time."
 msgstr "Nahrávejte prosím jen jedno logo najednou."
 
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #, elixir-autogen, elixir-format
 msgid "White button text on this colour has a contrast of only %{ratio}:1. Buttons may be hard to read."
 msgstr "Bílý text tlačítek na této barvě má kontrast pouze %{ratio}:1. Tlačítka mohou být špatně čitelná."

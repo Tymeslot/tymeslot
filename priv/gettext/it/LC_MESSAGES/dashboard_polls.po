@@ -197,8 +197,7 @@ msgstr "Ancora nessun sondaggio"
 msgid "Open"
 msgstr "Aperto"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "I tipi di riunione a pagamento non possono essere usati per i sondaggi"
@@ -229,8 +228,7 @@ msgstr "Sondaggi"
 msgid "Remove time"
 msgstr "Rimuovi orario"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Quel tipo di riunione non è disponibile"
@@ -263,8 +261,7 @@ msgstr "Questo orario si sovrappone a un evento nel tuo calendario"
 msgid "This time is no longer free"
 msgstr "Questo orario non è più libero"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Gli orari devono essere nel futuro"
@@ -285,8 +282,7 @@ msgstr "Fuso orario"
 msgid "Title"
 msgstr "Titolo"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Fino a %{max} orari"
@@ -534,8 +530,7 @@ msgstr "Rimuovere %{name} e le sue risposte da questo sondaggio? La persona non 
 msgid "Remove from the poll"
 msgstr "Rimuovi dal sondaggio"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "La scadenza deve essere nel futuro"

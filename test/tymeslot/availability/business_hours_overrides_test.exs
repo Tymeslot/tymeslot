@@ -117,7 +117,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
 
   describe "the booking page's reading of a day with no hours" do
     # The week strip renders each day through this function
-    # (`CalendarHelpers.business_hours_lookup/5`), so it is where an override
+    # (`CalendarDays.business_hours_lookup/5`), so it is where an override
     # that opens a day without hours becomes a day a visitor can click into and
     # find empty. The date is chosen forward of today and inside the advance
     # booking window, or the day is unbookable for reasons that have nothing to

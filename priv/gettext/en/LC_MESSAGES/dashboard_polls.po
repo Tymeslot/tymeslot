@@ -197,8 +197,7 @@ msgstr ""
 msgid "Open"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr ""
@@ -229,8 +228,7 @@ msgstr ""
 msgid "Remove time"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr ""
@@ -263,8 +261,7 @@ msgstr ""
 msgid "This time is no longer free"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr ""
@@ -285,8 +282,7 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr ""
@@ -534,8 +530,7 @@ msgstr ""
 msgid "Remove from the poll"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr ""

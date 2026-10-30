@@ -1,7 +1,8 @@
 defmodule Tymeslot.Profiles.Usernames do
   @moduledoc """
   Subcomponent for managing profile usernames: generating the system
-  default, and the write path every username change takes (see
+  default, whether a username can be taken and why a write refused one, and
+  the write path every username change takes (see
   `Tymeslot.Profiles.change_username/2` and
   `Tymeslot.Profiles.ensure_default_username/1`).
   """
@@ -111,5 +112,72 @@ defmodule Tymeslot.Profiles.Usernames do
 
   defp random_suffix do
     Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)
+  end
+
+  @doc """
+  Whether `username` can become `profile`'s username, and if not, why.
+
+  Surrounding whitespace is ignored. The profile's own current username is
+  `:unchanged` and is never re-checked, so a handle chosen before its word was
+  reserved keeps working. Otherwise the format is checked first, then the
+  reserved list, then whether another profile already holds it. `profile` may
+  be `nil` when there is no profile yet.
+
+  The profile changeset enforces the same rules again on write, which is what
+  settles a username taken between this check and the save.
+  """
+  @spec status(ProfileSchema.t() | map() | nil, term()) ::
+          :unchanged | :ok | {:invalid, String.t()} | :reserved | :taken
+  def status(profile, username) when is_binary(username) do
+    candidate = String.trim(username)
+
+    if current_username?(profile, candidate),
+      do: :unchanged,
+      else: new_username_status(candidate)
+  end
+
+  def status(_profile, username), do: new_username_status(username)
+
+  defp current_username?(%{username: current}, candidate) when is_binary(current),
+    do: current == candidate
+
+  defp current_username?(_profile, _candidate), do: false
+
+  defp new_username_status(username) do
+    with :ok <- username_format_status(username),
+         :ok <- username_reserved_status(username) do
+      if ProfileQueries.username_available?(username), do: :ok, else: :taken
+    end
+  end
+
+  defp username_format_status(username) do
+    case UsernameValidator.validate(username) do
+      :ok -> :ok
+      {:error, message} -> {:invalid, message}
+    end
+  end
+
+  defp username_reserved_status(username) do
+    if ReservedPaths.reserved?(username), do: :reserved, else: :ok
+  end
+
+  @doc """
+  Why a profile changeset refused its username: `:taken` when another profile
+  holds it, `:reserved` when it is on the reserved list, `nil` for anything
+  else (a malformed username, or an error on another field).
+  """
+  @spec error(Ecto.Changeset.t()) :: :reserved | :taken | nil
+  def error(%Ecto.Changeset{errors: errors}) do
+    errors
+    |> Keyword.get_values(:username)
+    |> Enum.find_value(&username_error_kind/1)
+  end
+
+  defp username_error_kind({_message, opts}) do
+    cond do
+      opts[:constraint] == :unique -> :taken
+      opts[:validation] == :reserved -> :reserved
+      true -> nil
+    end
   end
 end

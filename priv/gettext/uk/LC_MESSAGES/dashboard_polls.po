@@ -200,8 +200,7 @@ msgstr "Ще немає опитувань"
 msgid "Open"
 msgstr "Відкрито"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Платні типи зустрічей не можна використовувати для опитувань"
@@ -232,8 +231,7 @@ msgstr "Опитування"
 msgid "Remove time"
 msgstr "Видалити час"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Цей тип зустрічі недоступний"
@@ -266,8 +264,7 @@ msgstr "Цей час перетинається з подією у вашому
 msgid "This time is no longer free"
 msgstr "Цей час більше не вільний"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Час має бути в майбутньому"
@@ -288,8 +285,7 @@ msgstr "Часовий пояс"
 msgid "Title"
 msgstr "Назва"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "До %{max} варіантів часу"
@@ -541,8 +537,7 @@ msgstr "Видалити %{name} разом із відповідями з ць�
 msgid "Remove from the poll"
 msgstr "Видалити з опитування"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "Кінцевий термін має бути в майбутньому"

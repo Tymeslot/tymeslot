@@ -185,4 +185,36 @@ defmodule Tymeslot.Polls.SlotHealthTest do
       assert SlotHealth.check(%{time_slots: []}) == %{}
     end
   end
+
+  describe "check_within/2" do
+    setup do
+      poll = insert(:poll)
+
+      slot =
+        insert(:poll_time_slot, poll: poll, start_time: at(10), end_time: at(11), position: 0)
+
+      %{poll: %{poll | time_slots: [slot]}, slot: slot}
+    end
+
+    test "returns the check's result when it finishes in time", %{poll: poll, slot: slot} do
+      TestMocks.setup_calendar_mocks(events: [event(at(10), at(11))])
+
+      assert SlotHealth.check_within(poll, 5_000) == %{slot.id => :conflict}
+    end
+
+    test "degrades to all-:ok when the check outlasts the timeout", %{poll: poll, slot: slot} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        send(test_pid, :fetch_started)
+
+        receive do
+          :never -> {:ok, [event(at(10), at(11))]}
+        end
+      end)
+
+      assert SlotHealth.check_within(poll, 50) == %{slot.id => :ok}
+      assert_received :fetch_started
+    end
+  end
 end

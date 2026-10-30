@@ -29,10 +29,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   Callers receive parsed domain types — never raw HTTP responses, XML, or iCal.
   """
 
-  alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, ProviderBreakers, Retry}
+  alias Tymeslot.Infrastructure.Retry
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{
     Base,
+    Breaker,
     ConditionalWrite,
     ConflictResolution,
     EventProcessor,
@@ -91,7 +92,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # 2xx answer; a 2xx other than the `expected` one is logged.
   defp report(client, calendar_path, report_body, opts, {expected, parse}) do
     result =
-      with_events_breaker(client, opts, fn ->
+      Breaker.run(client, opts, fn ->
         url = UrlBuilder.build_calendar_url(client.base_url, calendar_path)
 
         retry_opts = Base.retry_opts(opts)
@@ -171,12 +172,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   end
 
   defp put_ical(client, calendar_path, uid, ical_data, opts) do
-    with_events_breaker(client, opts, fn ->
+    Breaker.run(client, opts, fn ->
       url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
 
-      put_opts =
-        Keyword.merge([operation: :create], Keyword.take(opts, [:timeout])) ++
-          Scheduling.write_opts(client)
+      put_opts = Keyword.merge([operation: :create], Scheduling.write_opts(client, opts))
 
       case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
         {:ok, %Req.Response{status: status, headers: headers}} when status in [200, 201, 204] ->
@@ -190,7 +189,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   # The PUT just addressed the resource, so its href is known without asking:
   # it is the URL reduced to a path, which is how sync spells a CalDAV
-  # `provider_event_id` and what `event_url/4` expects back.
+  # `provider_event_id` and what `UrlBuilder.event_url/4` expects back.
   #
   # The ETag is genuinely optional. RFC 4791 §5.3.4 only says a server SHOULD
   # return one, and a server that normalised the submitted document must not,
@@ -198,17 +197,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # the probe (HEAD, then GET) and then to `If-Match: *`.
   defp created_event(uid, calendar_path, url, headers) do
     CreatedEvent.new(uid,
-      provider_event_id: href_path(url),
+      provider_event_id: UrlBuilder.href_path(url),
       calendar_id: calendar_path,
       etag: EventProcessor.clean_etag(ConditionalWrite.etag_from_headers(headers))
     )
-  end
-
-  defp href_path(url) do
-    case URI.parse(url) do
-      %URI{path: path} when is_binary(path) and path != "" -> path
-      _no_path -> url
-    end
   end
 
   @doc """
@@ -251,8 +243,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
-      with_events_breaker(client, opts, fn ->
-        with {:ok, url} <- event_url(client, calendar_path, uid, event_data[:provider_event_id]) do
+      Breaker.run(client, opts, fn ->
+        with {:ok, url} <-
+               UrlBuilder.event_url(client, calendar_path, uid, event_data[:provider_event_id]) do
           write_update(client, url, uid, event_data, policy, opts)
         end
       end)
@@ -413,8 +406,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     opts = ConditionalWrite.with_deadline(opts)
 
     if ConflictResolution.valid?(policy) do
-      with_events_breaker(client, opts, fn ->
-        with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
+      Breaker.run(client, opts, fn ->
+        with {:ok, url} <-
+               UrlBuilder.event_url(client, calendar_path, uid, opts[:provider_event_id]) do
           ical_data = ICalBuilder.replace_colour_property(raw_ical, colour)
           etag = ConditionalWrite.resolve_etag(url, client, opts)
 
@@ -440,9 +434,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @spec delete_calendar_event(Base.client(), String.t(), String.t(), keyword()) ::
           :ok | {:error, Base.error_reason()}
   def delete_calendar_event(client, calendar_path, uid, opts) do
-    with_events_breaker(client, opts, fn ->
-      with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
-        delete_opts = Keyword.take(opts, [:timeout]) ++ Scheduling.write_opts(client)
+    Breaker.run(client, opts, fn ->
+      with {:ok, url} <-
+             UrlBuilder.event_url(client, calendar_path, uid, opts[:provider_event_id]) do
+        delete_opts = Scheduling.write_opts(client, opts)
 
         case Http.delete_event(url, client.username, client.password, delete_opts) do
           {:ok, %Req.Response{}} -> :ok
@@ -553,12 +548,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @spec fetch_calendar_event(Base.client(), String.t() | nil, String.t() | nil, String.t() | nil) ::
           {:ok, [map()]} | {:error, :not_found} | {:error, term()}
   def fetch_calendar_event(client, calendar_path, uid, href) do
-    with {:ok, url} <- event_url(client, calendar_path, uid, href) do
+    with {:ok, url} <- UrlBuilder.event_url(client, calendar_path, uid, href) do
       # A missing resource is a per-event answer, not a host outage, so it
       # travels back through the breaker as a success and becomes an error
       # again out here.
       result =
-        with_events_breaker(client, [], fn -> get_event_resource(client, url, href) end)
+        Breaker.run(client, [], fn -> get_event_resource(client, url, href) end)
 
       case result do
         {:ok, :not_found} -> {:error, :not_found}
@@ -582,7 +577,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     # As in `fetch_calendar_event/4`, a missing calendar travels back through
     # the breaker as a success.
     result =
-      with_events_breaker(client, [], fn ->
+      Breaker.run(client, [], fn ->
         case Http.report(url, client.username, client.password, XmlHandler.build_uid_query(uid),
                max_response_bytes: Base.max_report_bytes()
              ) do
@@ -630,19 +625,5 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       {:error, reason} ->
         {:error, {:unparseable_event, reason}}
     end
-  end
-
-  # Every event URL in this module resolves through `UrlBuilder`, which knows
-  # that a server-supplied href is server-root-relative and must therefore be
-  # joined to the base *origin*, never appended to a `base_url` that already
-  # carries the same DAV path.
-  defp event_url(client, calendar_path, uid, href),
-    do: UrlBuilder.resolve_event_url(client.base_url, calendar_path, uid, href)
-
-  defp with_events_breaker(client, opts, fun) when is_function(fun, 0) do
-    provider = Map.get(client, :provider, :caldav)
-    host = ProviderBreakers.host_from_base_url(client.base_url)
-    opts = Keyword.put(opts, :host, host)
-    CalendarCircuitBreaker.with_breaker(provider, opts, fun)
   end
 end
