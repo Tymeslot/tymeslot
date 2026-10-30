@@ -277,6 +277,25 @@ defmodule Tymeslot.BookingPages do
   end
 
   @doc """
+  Whether `page` serves `meeting_type` at `/<page>/<slug>`: the type is listed
+  on it, or it is unlisted everywhere (hidden from `/<username>` and on no
+  page), so its direct link is the only way in and any of the host's
+  addresses may carry it. A type listed only on `/<username>` or on another
+  page belongs to that address, and booking it here would record this page
+  against a type it does not offer.
+  """
+  @spec serves?(page(), map()) :: boolean()
+  def serves?(%BookingPageSchema{id: page_id}, %{id: type_id, is_private: private?})
+      when is_integer(type_id) do
+    case BookingPageQueries.page_ids_for_meeting_type(type_id) do
+      [] -> private? == true
+      page_ids -> page_id in page_ids
+    end
+  end
+
+  def serves?(_page, _meeting_type), do: false
+
+  @doc """
   Which extra pages each of the profile's meeting types is listed on. A type
   on none of them has no key.
   """

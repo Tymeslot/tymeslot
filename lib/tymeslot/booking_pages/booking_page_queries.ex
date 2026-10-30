@@ -146,6 +146,18 @@ defmodule Tymeslot.BookingPages.BookingPageQueries do
     Repo.all(query)
   end
 
+  @doc "The ids of the pages a meeting type is listed on."
+  @spec page_ids_for_meeting_type(integer()) :: [integer()]
+  def page_ids_for_meeting_type(meeting_type_id) do
+    query =
+      from(l in BookingPageMeetingTypeSchema,
+        where: l.meeting_type_id == ^meeting_type_id,
+        select: l.booking_page_id
+      )
+
+    Repo.all(query)
+  end
+
   @doc "Every `{meeting_type_id, page_id}` listing among a profile's pages."
   @spec memberships_for_profile(integer()) :: [{integer(), integer()}]
   def memberships_for_profile(profile_id) do

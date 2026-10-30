@@ -130,6 +130,29 @@ defmodule TymeslotWeb.BookingPagePublicTest do
     end
   end
 
+  # Booked under the page, it would be recorded against a page that does not
+  # offer it, and the booking's "book another time" link would lead there.
+  test "a type listed on the username's page only goes to its link there", %{conn: conn} do
+    assert {:error, {:redirect, %{to: "/joern/automation-call"}}} =
+             live(conn, ~p"/einfachiso/automation-call?timezone=#{@timezone}")
+  end
+
+  test "a type listed on another page only goes to its link under the username", %{
+    conn: conn,
+    user: user,
+    profile: profile
+  } do
+    other = insert(:booking_page, profile: profile, slug: "coaching")
+    session = insert(:meeting_type, user: user, name: "Coaching session", is_private: true)
+    :ok = BookingPages.set_meeting_type(other, session.id, true)
+
+    assert {:error, {:redirect, %{to: "/joern/coaching-session"}}} =
+             live(conn, ~p"/einfachiso/coaching-session?timezone=#{@timezone}")
+
+    {:ok, view, _html} = live(conn, ~p"/coaching/coaching-session?timezone=#{@timezone}")
+    assert :sys.get_state(view.pid).socket.assigns.meeting_type.id == session.id
+  end
+
   test "links inside the flow stay under the page's address", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/einfachiso/iso-audit?timezone=#{@timezone}")
 

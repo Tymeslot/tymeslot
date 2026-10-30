@@ -19,6 +19,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
+  alias Tymeslot.BookingPages
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
@@ -144,27 +146,38 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # custom-field snapshot, schedule, buffers and booking limits, and leaving
   # the duration to an unbounded parse of the slug itself.
   #
-  # Returns `{:unresolvable, socket}` — already flashed and redirected — when
-  # the organiser has no type for this slug.
+  # Returns `{:unresolvable, socket}`, already redirected, when the organiser
+  # has no type for this slug (flashed), or when the booking page in the URL
+  # does not serve the type (`BookingPages.serves?/2`): that goes to the same
+  # type under the host's username, so the link still books it but the
+  # booking is not recorded against a page that does not offer it.
   defp resolve_slug_meeting_type(socket, slug) do
     if is_binary(socket.assigns[:username_context]) and is_binary(slug) do
       socket.assigns[:organizer_user_id]
       |> ThemeFlow.resolve_meeting_type_for_slug(slug)
-      |> assign_resolved_meeting_type(socket)
+      |> assign_resolved_meeting_type(socket, slug)
     else
       {:ok, socket}
     end
   end
 
-  defp assign_resolved_meeting_type(nil, socket) do
+  defp assign_resolved_meeting_type(nil, socket, _slug) do
     {:unresolvable,
      socket
      |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
      |> redirect(to: invalid_meeting_type_redirect_path(socket))}
   end
 
-  defp assign_resolved_meeting_type(meeting_type, socket) do
-    {:ok, assign_meeting_type(socket, meeting_type)}
+  defp assign_resolved_meeting_type(meeting_type, socket, slug) do
+    case socket.assigns[:organizer_profile] do
+      %{booking_page: %BookingPageSchema{} = page, username: username} ->
+        if BookingPages.serves?(page, meeting_type),
+          do: {:ok, assign_meeting_type(socket, meeting_type)},
+          else: {:unresolvable, redirect(socket, to: ~p"/#{username}/#{slug}")}
+
+      _no_page ->
+        {:ok, assign_meeting_type(socket, meeting_type)}
+    end
   end
 
   # Carries the reschedule context across the redirect so a bad slug doesn't
