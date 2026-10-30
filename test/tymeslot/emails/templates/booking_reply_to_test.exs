@@ -40,6 +40,10 @@ defmodule Tymeslot.Emails.Templates.BookingReplyToTest do
 
   defp instance_sender, do: {configured(:from_name), configured(:from_email)}
 
+  # A calendar event's guest was added by a person: the organiser's name on
+  # the instance's address.
+  defp organiser_sender, do: {"Test Organiser", configured(:from_email)}
+
   for template <- @templates do
     describe "#{inspect(template)}" do
       test "the attendee's copy replies to the organiser" do
@@ -106,7 +110,7 @@ defmodule Tymeslot.Emails.Templates.BookingReplyToTest do
       email = CalendarInvitation.render("guest@example.com", build_invitation_details())
 
       assert email.reply_to == {"Test Organiser", "organiser@example.com"}
-      assert email.from == instance_sender()
+      assert email.from == organiser_sender()
     end
   end
 
@@ -115,7 +119,7 @@ defmodule Tymeslot.Emails.Templates.BookingReplyToTest do
       email = EventUpdateNotification.render("guest@example.com", build_event_update_details())
 
       assert email.reply_to == {"Test Organiser", "organiser@example.com"}
-      assert email.from == instance_sender()
+      assert email.from == organiser_sender()
     end
   end
 

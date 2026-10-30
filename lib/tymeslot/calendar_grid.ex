@@ -457,6 +457,22 @@ defmodule Tymeslot.CalendarGrid do
     end
   end
 
+  @doc """
+  A cached event as an attendee update email describes it: the
+  `CalendarEvent` fields as a map, plus the `video_link` the row keeps
+  beside them, which the struct does not carry.
+  """
+  @spec get_cached_event_with_video(integer(), String.t()) :: {:ok, map()} | {:error, :not_found}
+  def get_cached_event_with_video(integration_id, uid) do
+    with {:ok, record} <- ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok,
+       record
+       |> ProviderCalendarEventSchema.to_calendar_event()
+       |> Map.from_struct()
+       |> Map.put(:video_link, record.video_link)}
+    end
+  end
+
   # --- Video rooms of grid events (see `EventVideoRooms`) ---
 
   @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/1`."

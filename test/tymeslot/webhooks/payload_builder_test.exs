@@ -27,7 +27,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
       assert payload.data.meeting.id == meeting.id
       assert payload.data.meeting.title == meeting.title
-      assert payload.data.meeting.status == meeting.status
+      assert payload.data.meeting.status == "confirmed"
     end
 
     test "includes organizer data from the meeting" do
@@ -104,7 +104,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
       meeting =
         build(:meeting,
-          status: "cancelled",
+          status: :cancelled,
           cancelled_at: cancelled_at,
           cancellation_reason: "Schedule conflict"
         )
@@ -117,7 +117,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     end
 
     test "does not include cancellation data for non-cancelled meetings" do
-      meeting = build(:meeting, status: "confirmed")
+      meeting = build(:meeting, status: :confirmed)
       payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
 
       refute Map.has_key?(payload.data.meeting, :cancellation)
@@ -126,7 +126,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     test "handles nil cancelled_at and nil reason for cancelled meetings without crashing" do
       meeting =
         build(:meeting,
-          status: "cancelled",
+          status: :cancelled,
           cancelled_at: nil,
           cancellation_reason: nil
         )
@@ -143,7 +143,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
       meeting =
         build(:meeting,
-          status: "cancelled",
+          status: :cancelled,
           approval_requested_at: ~U[2026-01-14 09:00:00Z],
           approval_deadline_at: ~U[2026-01-15 09:00:00Z],
           approval_resolved_at: resolved_at,
@@ -163,7 +163,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     test "reports an ordinary cancellation as cancellation, not decline, when the host never held it for approval" do
       meeting =
         build(:meeting,
-          status: "cancelled",
+          status: :cancelled,
           approval_resolved_at: nil,
           cancellation_reason: "Schedule conflict"
         )
@@ -182,7 +182,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       # subscribers already parse.
       meeting =
         build(:meeting,
-          status: "cancelled",
+          status: :cancelled,
           approval_requested_at: ~U[2026-01-14 09:00:00Z],
           approval_deadline_at: ~U[2026-01-15 09:00:00Z],
           approval_resolved_at: ~U[2026-01-14 10:00:00Z],
@@ -201,7 +201,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     test "includes the approval deadline on a booking request" do
       meeting =
         build(:meeting,
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: ~U[2026-01-14 09:00:00Z],
           approval_deadline_at: ~U[2026-01-15 09:00:00Z]
         )
@@ -215,7 +215,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     end
 
     test "omits approval data for an ordinary booking that never needed approval" do
-      meeting = build(:meeting, status: "confirmed", approval_requested_at: nil)
+      meeting = build(:meeting, status: :confirmed, approval_requested_at: nil)
 
       payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
 
@@ -248,7 +248,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
             %GuestSchema{
               email: "colleague@example.com",
               name: "A Colleague",
-              status: "accepted",
+              status: :accepted,
               responded_at: ~U[2026-09-01 10:00:00Z]
             }
           ]

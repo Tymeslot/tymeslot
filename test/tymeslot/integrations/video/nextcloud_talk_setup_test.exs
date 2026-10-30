@@ -241,7 +241,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
       upcoming = insert_meeting_with_room(integration, 2)
       running = insert_meeting_with_room(integration, 0)
       insert_meeting_with_room(integration, -2)
-      cancelled = insert_meeting_with_room(integration, 3, status: "cancelled")
+      cancelled = insert_meeting_with_room(integration, 3, status: :cancelled)
 
       insert_meeting_with_room(
         insert(:talk_video_integration, user: user, base_url: "https://b.example.com"),

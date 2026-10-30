@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Themes.Shared.ApprovalDisplay do
   def awaiting_approval?(%{owner_preview: true} = assigns),
     do: Approval.required?(assigns[:meeting_type])
 
-  def awaiting_approval?(%{meeting_status: status}) when is_binary(status),
+  def awaiting_approval?(%{meeting_status: status}) when is_atom(status) and status != nil,
     do: MeetingState.awaiting_approval_status?(status)
 
   def awaiting_approval?(assigns), do: Approval.required?(assigns[:meeting_type])

@@ -20,7 +20,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           stripe_charge_id: "ch_DISPUTED"
         )
@@ -30,7 +30,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       assert :ok = ChargeDisputeCreated.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.last_event_id == "evt_DISPUTE"
     end
 
@@ -38,7 +38,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "partially_refunded",
+          status: :partially_refunded,
           amount_cents: 5000,
           refunded_amount_cents: 1500,
           stripe_charge_id: "ch_PART_DISP"
@@ -49,7 +49,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       assert :ok = ChargeDisputeCreated.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.refunded_amount_cents == 1500
     end
 
@@ -57,7 +57,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           stripe_charge_id: "ch_REPLAY_DISP",
           last_event_id: "evt_REPLAY_DISP"
@@ -68,7 +68,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       assert :ok = ChargeDisputeCreated.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.last_event_id == "evt_REPLAY_DISP"
     end
 
@@ -84,7 +84,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           stripe_charge_id: nil,
           stripe_payment_intent_id: "pi_RACE_DISP"
@@ -110,7 +110,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       assert :ok = ChargeDisputeCreated.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.last_event_id == "evt_RACE_DISP"
     end
 
@@ -118,7 +118,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           stripe_charge_id: "ch_EMAIL_DISP"
         )
@@ -137,7 +137,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           stripe_charge_id: "ch_REPLAY_NOEMAIL",
           last_event_id: "evt_REPLAY_NOEMAIL"
@@ -159,7 +159,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           stripe_charge_id: "ch_FOREIGN_DISP"
         )
@@ -172,7 +172,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       assert :ok = ChargeDisputeCreated.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.last_event_id == nil
       refute_enqueued(worker: SendChargeDisputeOpened)
     end

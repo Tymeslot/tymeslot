@@ -76,7 +76,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # Booking path
       assert {:ok, %MeetingSchema{} = meeting} = Create.execute(meeting_params, form_data)
       assert meeting.organizer_user_id == user.id
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     test "a slot hidden by a blocking event is rejected by the booking API" do
@@ -91,7 +91,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
         uid: "blocking-#{System.unique_integer([:positive])}",
         start_time: DateTime.new!(target_date, ~T[00:00:00], timezone),
         end_time: DateTime.new!(target_date, ~T[23:59:59], timezone),
-        status: "confirmed",
+        status: :confirmed,
         transparency: "opaque",
         summary: "All-day focus block"
       }
@@ -285,7 +285,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
                  form_data
                )
 
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
   end
 
@@ -383,7 +383,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       assert {:error, :slot_taken} = book.(old_grid_start)
 
       assert {:ok, meeting} = book.(List.first(booker_slots))
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
   end
 
@@ -433,7 +433,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
                    }
                  )
 
-        assert meeting.status == "confirmed"
+        assert meeting.status == :confirmed
         assert DateTime.compare(meeting.start_time, ~U[2027-09-06 03:30:00Z]) == :eq
         assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == duration
       end
@@ -481,7 +481,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
         uid: "busy-#{System.unique_integer([:positive])}",
         start_time: DateTime.new!(target_date, ~T[12:00:00], timezone),
         end_time: DateTime.new!(target_date, ~T[12:30:00], timezone),
-        status: "confirmed",
+        status: :confirmed,
         transparency: "opaque",
         summary: "Busy"
       }
@@ -510,7 +510,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # 1:15 PM exists only on the 15-minute grid, and clears the buffer.
       assert "1:15 PM" in slots
       assert {:ok, meeting} = book(user, meeting_type, date, "1:15 PM")
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     test "a day inside the minimum notice offers nothing and is refused",

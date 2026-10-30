@@ -34,12 +34,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ExtensionsTest do
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
       {:ok, _profile} = Profiles.update_booking_theme(profile, unquote(id))
-      meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+      meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
       insert(:booking_payment,
         meeting: meeting,
         host_user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_checkout_session_id: "cs_TEST"
       )
 

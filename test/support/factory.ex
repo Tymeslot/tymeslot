@@ -76,7 +76,7 @@ defmodule Tymeslot.Factory do
       attendee_timezone: "America/New_York",
       attendee_locale: "en",
       reschedule_url: sequence(:reschedule_url, &"https://example.com/reschedule/token#{&1}"),
-      status: "confirmed",
+      status: :confirmed,
       ical_sequence: 0,
       last_notified_state: %{}
     }
@@ -102,7 +102,7 @@ defmodule Tymeslot.Factory do
     build(:meeting,
       start_time: start_time,
       end_time: end_time,
-      status: "completed"
+      status: :completed
     )
   end
 
@@ -114,18 +114,18 @@ defmodule Tymeslot.Factory do
     build(:meeting,
       start_time: start_time,
       end_time: end_time,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 
   @spec cancelled_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def cancelled_meeting_factory do
-    build(:meeting, status: "cancelled")
+    build(:meeting, status: :cancelled)
   end
 
   @spec pending_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def pending_meeting_factory do
-    build(:meeting, status: "pending")
+    build(:meeting, status: :pending)
   end
 
   @spec group_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
@@ -223,7 +223,7 @@ defmodule Tymeslot.Factory do
     struct!(
       %LocationOption{
         id: UUID.generate(),
-        kind: "video",
+        kind: :video,
         label: "Video call",
         video_integration_ids: integrations |> List.wrap() |> Enum.map(& &1.id),
         position: 0
@@ -244,7 +244,7 @@ defmodule Tymeslot.Factory do
     struct!(
       %LocationOption{
         id: UUID.generate(),
-        kind: "in_person",
+        kind: :in_person,
         label: "In person",
         venue_ids: Enum.map(venues, & &1.id),
         position: 0
@@ -341,7 +341,7 @@ defmodule Tymeslot.Factory do
   def availability_override_factory do
     %AvailabilityOverrideSchema{
       date: Date.add(Date.utc_today(), 1),
-      override_type: "unavailable",
+      override_type: :unavailable,
       reason: "Out of office",
       schedule: build(:availability_schedule)
     }
@@ -410,7 +410,7 @@ defmodule Tymeslot.Factory do
   def telegram_integration_factory(attrs) do
     %TelegramIntegrationSchema{
       name: sequence(:telegram_name, &"Telegram #{&1}"),
-      bot_mode: "own",
+      bot_mode: :own,
       bot_token_encrypted: Encryption.encrypt("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"),
       chat_id: sequence(:telegram_chat_id, &"#{&1 + 100_000}"),
       events: ["meeting.created", "meeting.cancelled"],
@@ -426,7 +426,7 @@ defmodule Tymeslot.Factory do
   def slack_integration_factory do
     %SlackIntegrationSchema{
       name: sequence(:slack_name, &"Slack #{&1}"),
-      app_mode: "oauth",
+      app_mode: :oauth,
       bot_token_encrypted: Encryption.encrypt("xoxb-test-token"),
       team_id: sequence(:slack_team_id, &"T#{&1 + 100_000}"),
       team_name: "Test Workspace",
@@ -480,7 +480,7 @@ defmodule Tymeslot.Factory do
       user: build(:user),
       amount: 1000,
       product_identifier: "pro_plan",
-      status: "pending",
+      status: :pending,
       metadata: %{},
       stripe_id: sequence(:stripe_id, &"sess_#{&1}")
     }
@@ -495,7 +495,7 @@ defmodule Tymeslot.Factory do
       charges_enabled: false,
       payouts_enabled: false,
       details_submitted: false,
-      status: "active",
+      status: :active,
       user: build(:user)
     }
   end
@@ -514,7 +514,7 @@ defmodule Tymeslot.Factory do
       amount_cents: 5000,
       currency: "eur",
       application_fee_cents: 25,
-      status: "pending",
+      status: :pending,
       refunded_amount_cents: 0
     }
   end
@@ -524,7 +524,7 @@ defmodule Tymeslot.Factory do
   def paid_booking_payment_factory do
     struct!(booking_payment_factory(),
       stripe_charge_id: sequence(:bp_stripe_charge_id, &"ch_#{&1}"),
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     )
   end

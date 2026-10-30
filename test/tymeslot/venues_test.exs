@@ -259,7 +259,7 @@ defmodule Tymeslot.VenuesTest do
     test "takes it off every location listing it, keeping everything else", ctx do
       phone = %LocationOption{
         id: "loc-call",
-        kind: "phone",
+        kind: :phone,
         label: "Phone call",
         details: "+44 20 7946 0000",
         position: 0
@@ -301,7 +301,7 @@ defmodule Tymeslot.VenuesTest do
 
       assert {:ok, _deleted} = Venues.delete_venue(ctx.berlin)
 
-      assert [%LocationOption{kind: "in_person", venue_ids: []}] =
+      assert [%LocationOption{kind: :in_person, venue_ids: []}] =
                Repo.reload!(meeting_type).locations
     end
 
@@ -392,7 +392,7 @@ defmodule Tymeslot.VenuesTest do
       assert Venues.blocking_group_types(ctx.munich) == []
       assert {:ok, _deleted} = Venues.delete_venue(ctx.munich)
 
-      assert [%LocationOption{kind: "in_person", venue_ids: []}] =
+      assert [%LocationOption{kind: :in_person, venue_ids: []}] =
                Repo.reload!(consultation).locations
 
       assert [%LocationOption{venue_ids: [berlin_id]}] = Repo.reload!(ctx.workshop).locations

@@ -150,7 +150,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     Repo.one(
       from(p in Participant,
         left_join: g in Guest,
-        on: g.participant_id == p.id and g.status != "declined",
+        on: g.participant_id == p.id and g.status != :declined,
         where: p.meeting_id == ^meeting_id and is_nil(p.cancelled_at),
         select: count(p.id, :distinct) + count(g.id)
       )
@@ -170,7 +170,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   def counts_by_meeting(meeting_ids) when is_list(meeting_ids) do
     from(p in Participant,
       left_join: g in Guest,
-      on: g.participant_id == p.id and g.status != "declined",
+      on: g.participant_id == p.id and g.status != :declined,
       where: p.meeting_id in ^meeting_ids and is_nil(p.cancelled_at),
       group_by: p.meeting_id,
       select: {p.meeting_id, count(p.id, :distinct), count(p.id, :distinct) + count(g.id)}
@@ -202,7 +202,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> where([m], m.meeting_type_id == ^meeting_type_id)
     |> where([m], m.start_time >= ^from_utc and m.start_time < ^to_utc)
     |> join(:inner, [m], p in Participant, on: p.meeting_id == m.id and is_nil(p.cancelled_at))
-    |> join(:left, [m, p], g in Guest, on: g.participant_id == p.id and g.status != "declined")
+    |> join(:left, [m, p], g in Guest, on: g.participant_id == p.id and g.status != :declined)
     |> group_by([m], m.start_time)
     |> select([m, p, g], {m.start_time, count(p.id, :distinct) + count(g.id)})
     |> Repo.all()

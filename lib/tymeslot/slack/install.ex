@@ -92,7 +92,7 @@ defmodule Tymeslot.Slack.Install do
   defp install_to_attrs(user_id, install) do
     %{
       user_id: user_id,
-      app_mode: "oauth",
+      app_mode: :oauth,
       name: install[:team_name] || "Slack",
       bot_token: install[:bot_token],
       team_id: install[:team_id],

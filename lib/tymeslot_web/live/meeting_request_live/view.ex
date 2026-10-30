@@ -204,7 +204,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   end
 
   # The deadline has passed but the expiry sweep has not yet run, so the
-  # meeting row still reads "awaiting_approval". Distinct from `:expired`
+  # meeting row still reads :awaiting_approval. Distinct from `:expired`
   # (the sweep already released it) so the host is never told the slot is
   # free again before it actually is.
   defp outcome_body(:lapsed, meeting) do

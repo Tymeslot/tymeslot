@@ -21,7 +21,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
 
   defp cancelled_meeting(opts \\ []) do
     cancelled_at = Keyword.get(opts, :cancelled_at, DateTime.utc_now(:second))
-    insert(:meeting, status: "cancelled", cancelled_at: cancelled_at)
+    insert(:meeting, status: :cancelled, cancelled_at: cancelled_at)
   end
 
   defp payment_for(host_user_id, meeting, attrs \\ %{}) do
@@ -40,7 +40,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
     test "lists a partially refunded booking, for the balance that remains" do
       payment =
         payment_for(1, cancelled_meeting(), %{
-          status: "partially_refunded",
+          status: :partially_refunded,
           amount_cents: 5000,
           refunded_amount_cents: 2000
         })
@@ -52,7 +52,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
 
     test "omits a booking that has been refunded in full" do
       payment_for(1, cancelled_meeting(), %{
-        status: "refunded",
+        status: :refunded,
         amount_cents: 5000,
         refunded_amount_cents: 5000
       })
@@ -61,19 +61,19 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
     end
 
     test "omits a meeting that is still going ahead" do
-      payment_for(1, insert(:meeting, status: "confirmed"))
+      payment_for(1, insert(:meeting, status: :confirmed))
 
       assert MeetingPayments.list_outstanding_refunds_for_host(1) == []
     end
 
     test "omits a disputed payment, since Stripe owns the decision" do
-      payment_for(1, cancelled_meeting(), %{status: "disputed"})
+      payment_for(1, cancelled_meeting(), %{status: :disputed})
 
       assert MeetingPayments.list_outstanding_refunds_for_host(1) == []
     end
 
     test "omits a payment that never settled" do
-      payment_for(1, cancelled_meeting(), %{status: "pending", paid_at: nil})
+      payment_for(1, cancelled_meeting(), %{status: :pending, paid_at: nil})
 
       assert MeetingPayments.list_outstanding_refunds_for_host(1) == []
     end
@@ -94,12 +94,12 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
       days_ago = &DateTime.add(now, -&1, :day)
 
       expired_20 =
-        payment_for(1, insert(:meeting, status: "expired"), %{paid_at: days_ago.(20)})
+        payment_for(1, insert(:meeting, status: :expired), %{paid_at: days_ago.(20)})
 
       cancelled_10 = payment_for(1, cancelled_meeting(cancelled_at: days_ago.(10)))
 
       expired_5 =
-        payment_for(1, insert(:meeting, status: "expired"), %{paid_at: days_ago.(5)})
+        payment_for(1, insert(:meeting, status: :expired), %{paid_at: days_ago.(5)})
 
       cancelled_1 = payment_for(1, cancelled_meeting(cancelled_at: days_ago.(1)))
 
@@ -186,7 +186,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
 
     test "totals only the balance left after a partial refund" do
       payment_for(1, cancelled_meeting(), %{
-        status: "partially_refunded",
+        status: :partially_refunded,
         amount_cents: 5000,
         refunded_amount_cents: 2000
       })
@@ -211,7 +211,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
     end
 
     test "is empty when the host owes nothing" do
-      payment_for(1, insert(:meeting, status: "confirmed"))
+      payment_for(1, insert(:meeting, status: :confirmed))
 
       assert MeetingPayments.outstanding_refunds_summary_for_host(1) == %{count: 0, totals: []}
     end

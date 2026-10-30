@@ -35,9 +35,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
       insert(:meeting,
         organizer_user_id: user.id,
         organizer_email: user.email,
-        status: "confirmed",
+        status: :confirmed,
         attendee_name: "Ada Attendee",
-        calendar_sync_status: "externally_modified",
+        calendar_sync_status: :externally_modified,
         calendar_integration_id: integration.id,
         provider_event_id: "evt-1"
       )
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
     refute html =~ "Booking moved to"
     {:ok, unmoved} = MeetingQueries.get_meeting(meeting.id)
     assert unmoved.start_time == meeting.start_time
-    assert unmoved.calendar_sync_status == "externally_modified"
+    assert unmoved.calendar_sync_status == :externally_modified
   end
 
   test "a confirm refused after the modal opened says why and leaves the booking", %{
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
 
     {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
     assert unchanged.start_time == meeting.start_time
-    assert unchanged.calendar_sync_status == "externally_modified"
+    assert unchanged.calendar_sync_status == :externally_modified
   end
 
   test "a calendar time changed after the modal opened is offered again, not applied", %{
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
 
     {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
     assert unchanged.start_time == meeting.start_time
-    assert unchanged.calendar_sync_status == "externally_modified"
+    assert unchanged.calendar_sync_status == :externally_modified
 
     view |> element("[data-testid=confirm-calendar-move]") |> render_click()
 
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
 
     insert(:meeting,
       organizer_user_id: user.id,
-      status: "confirmed",
+      status: :confirmed,
       start_time: DateTime.truncate(event.start_at, :second),
       end_time: DateTime.truncate(event.end_at, :second)
     )
@@ -255,8 +255,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
     foreign =
       insert(:meeting,
         organizer_user_id: other.id,
-        status: "confirmed",
-        calendar_sync_status: "externally_modified",
+        status: :confirmed,
+        calendar_sync_status: :externally_modified,
         calendar_integration_id: other_integration.id,
         provider_event_id: "evt-foreign"
       )
@@ -276,7 +276,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
 
     {:ok, unchanged} = MeetingQueries.get_meeting(foreign.id)
     assert unchanged.start_time == foreign.start_time
-    assert unchanged.calendar_sync_status == "externally_modified"
+    assert unchanged.calendar_sync_status == :externally_modified
     refute render(view) =~ "Your calendar now has this meeting at"
   end
 

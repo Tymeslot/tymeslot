@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
         insert(:telegram_integration,
           user: user,
           name: "Original Bot",
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token_encrypted: Encryption.encrypt(@bot_token),
           chat_id: @chat_id,
           events: ["meeting.created"],
@@ -339,7 +339,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
         insert(:telegram_integration,
           user: user,
           name: "Linked Chat",
-          bot_mode: "shared",
+          bot_mode: :shared,
           bot_token_encrypted: nil,
           chat_id: @chat_id,
           events: ["meeting.created"]
@@ -368,7 +368,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
         insert(:telegram_integration,
           user: user,
           name: "Own Bot",
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token_encrypted: Encryption.encrypt(@bot_token),
           chat_id: @chat_id,
           events: ["meeting.created"]
@@ -385,7 +385,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
 
       assert {:ok, saved} = Telegram.get_integration(integration.id, user.id)
       assert saved.name == "Renamed Own Bot"
-      assert saved.bot_mode == "own"
+      assert saved.bot_mode == :own
       assert saved.chat_id == @chat_id
     end
   end
@@ -405,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
         insert(:telegram_integration,
           user: user,
           name: "Own Bot",
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token_encrypted: Encryption.encrypt(@bot_token),
           chat_id: @chat_id,
           events: ["meeting.created"]
@@ -431,7 +431,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
       })
 
       assert {:ok, saved} = Telegram.get_integration(integration.id, user.id)
-      assert saved.bot_mode == "own"
+      assert saved.bot_mode == :own
       assert saved.chat_id == "200002"
       assert Encryption.decrypt(saved.bot_token_encrypted) == new_token
     end
@@ -486,7 +486,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
       insert(:telegram_integration,
         user: user,
         name: "Linked Chat",
-        bot_mode: "shared",
+        bot_mode: :shared,
         bot_token_encrypted: nil,
         chat_id: @chat_id,
         events: ["meeting.created"]
@@ -500,7 +500,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
         insert(:telegram_integration,
           user: user,
           name: "Toggle Me",
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token_encrypted: Encryption.encrypt(@bot_token),
           chat_id: @chat_id,
           events: ["meeting.created"],

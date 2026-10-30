@@ -1,7 +1,7 @@
 defmodule Tymeslot.Meetings.MeetingStateTest do
   @moduledoc """
   Unit tests for the meeting-state predicates, including the legacy
-  `status == "reschedule_requested"` value the moduledoc claims to keep
+  `status == :reschedule_requested` value the moduledoc claims to keep
   reading correctly.
   """
 
@@ -16,31 +16,52 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
 
   describe "active?/1" do
     test "true for confirmed and pending meetings" do
-      assert MeetingState.active?(%{status: "confirmed"})
-      assert MeetingState.active?(%{status: "pending"})
+      assert MeetingState.active?(%{status: :confirmed})
+      assert MeetingState.active?(%{status: :pending})
     end
 
     test "true for the legacy reschedule_requested status" do
-      assert MeetingState.active?(%{status: "reschedule_requested"})
+      assert MeetingState.active?(%{status: :reschedule_requested})
     end
 
     test "false for cancelled, completed, awaiting_payment, and expired" do
-      refute MeetingState.active?(%{status: "cancelled"})
-      refute MeetingState.active?(%{status: "completed"})
-      refute MeetingState.active?(%{status: "awaiting_payment"})
-      refute MeetingState.active?(%{status: "expired"})
+      refute MeetingState.active?(%{status: :cancelled})
+      refute MeetingState.active?(%{status: :completed})
+      refute MeetingState.active?(%{status: :awaiting_payment})
+      refute MeetingState.active?(%{status: :expired})
+    end
+  end
+
+  describe "status groupings" do
+    test "each grouping agrees with its predicate" do
+      for status <- MeetingState.active(), do: assert(MeetingState.active?(%{status: status}))
+      for status <- MeetingState.terminal(), do: assert(MeetingState.terminal?(%{status: status}))
+      for status <- MeetingState.released(), do: assert(MeetingState.released_status?(status))
+    end
+
+    test "every grouping is drawn from the statuses the schema accepts" do
+      groupings =
+        MeetingState.active() ++
+          MeetingState.occupying() ++ MeetingState.released() ++ MeetingState.terminal()
+
+      assert Enum.uniq(groupings) -- MeetingState.statuses() == []
+    end
+
+    test "a released booking is terminal, and neither occupies a slot" do
+      assert MeetingState.released() -- MeetingState.terminal() == []
+      assert Enum.filter(MeetingState.terminal(), &(&1 in MeetingState.occupying())) == []
     end
   end
 
   describe "released_status?/1" do
     test "true for a cancelled booking and an expired request" do
-      assert MeetingState.released_status?("cancelled")
-      assert MeetingState.released_status?("expired")
+      assert MeetingState.released_status?(:cancelled)
+      assert MeetingState.released_status?(:expired)
     end
 
     test "false for every status that may still take place, and for none" do
-      for status <- ["pending", "awaiting_payment", "awaiting_approval", "confirmed", "completed"] do
-        refute MeetingState.released_status?(status), status
+      for status <- [:pending, :awaiting_payment, :awaiting_approval, :confirmed, :completed] do
+        refute MeetingState.released_status?(status), inspect(status)
       end
 
       refute MeetingState.released_status?(nil)
@@ -48,38 +69,38 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
   end
 
   describe "cancelled?/1, confirmed?/1 and expired?/1" do
-    @statuses ~w(pending awaiting_payment awaiting_approval confirmed cancelled completed expired)
+    @statuses ~w(pending awaiting_payment awaiting_approval confirmed cancelled completed expired)a
 
     test "each holds for its own status alone" do
-      assert Enum.filter(@statuses, &MeetingState.cancelled?(%{status: &1})) == ["cancelled"]
-      assert Enum.filter(@statuses, &MeetingState.confirmed?(%{status: &1})) == ["confirmed"]
-      assert Enum.filter(@statuses, &MeetingState.expired?(%{status: &1})) == ["expired"]
+      assert Enum.filter(@statuses, &MeetingState.cancelled?(%{status: &1})) == [:cancelled]
+      assert Enum.filter(@statuses, &MeetingState.confirmed?(%{status: &1})) == [:confirmed]
+      assert Enum.filter(@statuses, &MeetingState.expired?(%{status: &1})) == [:expired]
     end
   end
 
   describe "awaiting_approval?/1" do
     test "true only for the held status" do
-      assert MeetingState.awaiting_approval?(%{status: "awaiting_approval"})
+      assert MeetingState.awaiting_approval?(%{status: :awaiting_approval})
 
-      refute MeetingState.awaiting_approval?(%{status: "confirmed"})
-      refute MeetingState.awaiting_approval?(%{status: "pending"})
-      refute MeetingState.awaiting_approval?(%{status: "awaiting_payment"})
+      refute MeetingState.awaiting_approval?(%{status: :confirmed})
+      refute MeetingState.awaiting_approval?(%{status: :pending})
+      refute MeetingState.awaiting_approval?(%{status: :awaiting_payment})
     end
 
     test "a held request is active, so the invitee may still cancel or move it" do
-      assert MeetingState.active?(%{status: "awaiting_approval"})
+      assert MeetingState.active?(%{status: :awaiting_approval})
     end
 
     test "a held request expects a calendar event, because a tentative one is written" do
       assert MeetingState.expects_calendar_event?(%{
-               status: "awaiting_approval",
+               status: :awaiting_approval,
                reschedule_requested_at: nil
              })
     end
 
     test "a held request is not awaiting a new time from the attendee" do
       refute MeetingState.awaiting_new_time?(%{
-               status: "awaiting_approval",
+               status: :awaiting_approval,
                reschedule_requested_at: nil
              })
     end
@@ -87,64 +108,64 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
 
   describe "slot_void?/1" do
     test "true when cancelled, regardless of reschedule_requested_at" do
-      assert MeetingState.slot_void?(%{status: "cancelled", reschedule_requested_at: nil})
+      assert MeetingState.slot_void?(%{status: :cancelled, reschedule_requested_at: nil})
     end
 
     test "true for the legacy reschedule_requested status" do
       assert MeetingState.slot_void?(%{
-               status: "reschedule_requested",
+               status: :reschedule_requested,
                reschedule_requested_at: nil
              })
     end
 
     test "true when an organizer reschedule request is pending" do
       assert MeetingState.slot_void?(%{
-               status: "confirmed",
+               status: :confirmed,
                reschedule_requested_at: DateTime.utc_now()
              })
     end
 
     test "false for a live meeting with no pending request" do
-      refute MeetingState.slot_void?(%{status: "confirmed", reschedule_requested_at: nil})
-      refute MeetingState.slot_void?(%{status: "pending", reschedule_requested_at: nil})
+      refute MeetingState.slot_void?(%{status: :confirmed, reschedule_requested_at: nil})
+      refute MeetingState.slot_void?(%{status: :pending, reschedule_requested_at: nil})
     end
   end
 
   describe "expects_calendar_event?/1" do
     test "true for a plain confirmed meeting with no pending reschedule request" do
       assert MeetingState.expects_calendar_event?(%{
-               status: "confirmed",
+               status: :confirmed,
                reschedule_requested_at: nil
              })
     end
 
     test "false when a reschedule request is pending, even though the meeting is active" do
       refute MeetingState.expects_calendar_event?(%{
-               status: "confirmed",
+               status: :confirmed,
                reschedule_requested_at: DateTime.utc_now()
              })
     end
 
     test "false for the legacy reschedule_requested status" do
       refute MeetingState.expects_calendar_event?(%{
-               status: "reschedule_requested",
+               status: :reschedule_requested,
                reschedule_requested_at: nil
              })
     end
 
     test "false for cancelled, completed, and awaiting_payment meetings" do
       refute MeetingState.expects_calendar_event?(%{
-               status: "cancelled",
+               status: :cancelled,
                reschedule_requested_at: nil
              })
 
       refute MeetingState.expects_calendar_event?(%{
-               status: "completed",
+               status: :completed,
                reschedule_requested_at: nil
              })
 
       refute MeetingState.expects_calendar_event?(%{
-               status: "awaiting_payment",
+               status: :awaiting_payment,
                reschedule_requested_at: nil
              })
     end
@@ -153,20 +174,20 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
   describe "awaiting_new_time?/1" do
     test "true when reschedule_requested_at is set" do
       assert MeetingState.awaiting_new_time?(%{
-               status: "confirmed",
+               status: :confirmed,
                reschedule_requested_at: DateTime.utc_now()
              })
     end
 
     test "true for the legacy reschedule_requested status, even without the timestamp" do
       assert MeetingState.awaiting_new_time?(%{
-               status: "reschedule_requested",
+               status: :reschedule_requested,
                reschedule_requested_at: nil
              })
     end
 
     test "false for a meeting with no pending request" do
-      refute MeetingState.awaiting_new_time?(%{status: "confirmed", reschedule_requested_at: nil})
+      refute MeetingState.awaiting_new_time?(%{status: :confirmed, reschedule_requested_at: nil})
     end
   end
 

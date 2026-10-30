@@ -101,7 +101,7 @@ defmodule Tymeslot.MeetingTypes.LocationVenuesTest do
 
   describe "resolve_location/2 with venues" do
     test "books the venue the booker picked", ctx do
-      assert %{venue_id: venue_id, location: "Munich office", location_kind: "in_person"} =
+      assert %{venue_id: venue_id, location: "Munich office", location_kind: :in_person} =
                resolve(ctx.meeting_type, %{venue_id: ctx.munich.id})
 
       assert venue_id == ctx.munich.id

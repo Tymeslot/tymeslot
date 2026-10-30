@@ -355,7 +355,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       # The host's calendar already holds a confirmed meeting at the winning slot.
       insert(:meeting,
         organizer_user_id: user.id,
-        status: "confirmed",
+        status: :confirmed,
         start_time: start_time,
         end_time: end_time
       )

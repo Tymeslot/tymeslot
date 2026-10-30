@@ -32,7 +32,7 @@ defmodule Tymeslot.Bookings.DemoOrchestratorTest do
       assert meeting.attendee_name == "John Doe"
       assert meeting.organizer_user_id == user.id
       assert meeting.organizer_name == "Test Organizer"
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
       assert meeting.duration == 30
       assert meeting.attendee_email == "john@example.com"
     end
@@ -54,7 +54,7 @@ defmodule Tymeslot.Bookings.DemoOrchestratorTest do
       }
 
       assert {:ok, meeting} = DemoOrchestrator.submit_booking(params)
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     test "mocks status awaiting_approval for a preview of a gated meeting type" do
@@ -74,7 +74,7 @@ defmodule Tymeslot.Bookings.DemoOrchestratorTest do
       }
 
       assert {:ok, meeting} = DemoOrchestrator.submit_booking(params)
-      assert meeting.status == "awaiting_approval"
+      assert meeting.status == :awaiting_approval
     end
 
     test "returns error for invalid duration" do

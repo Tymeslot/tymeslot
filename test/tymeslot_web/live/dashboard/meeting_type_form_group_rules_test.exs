@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
       phone = %{
         office
         | id: UUID.generate(),
-          kind: "phone",
+          kind: :phone,
           label: "Phone",
           venue_ids: [],
           details: "+44 20 7946 0000",

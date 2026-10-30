@@ -301,7 +301,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       profile: profile,
       meeting: meeting
     } do
-      {:ok, _expired} = meeting |> Changeset.change(%{status: "expired"}) |> Repo.update()
+      {:ok, _expired} = meeting |> Changeset.change(%{status: :expired}) |> Repo.update()
       conn = put_req_header(conn, "accept-language", "de-DE,de;q=0.9")
 
       assert {:error, {_redirect, %{to: to, flash: flash}}} =

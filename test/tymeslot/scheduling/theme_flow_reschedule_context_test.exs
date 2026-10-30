@@ -75,7 +75,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleContextTest do
     user: user,
     meeting: meeting
   } do
-    meeting |> Changeset.change(%{status: "cancelled"}) |> Repo.update!()
+    meeting |> Changeset.change(%{status: :cancelled}) |> Repo.update!()
 
     assert ThemeFlow.reschedule_context(meeting.uid, user.id) ==
              {:error, {:not_reschedulable, :cancelled}}

@@ -47,7 +47,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
+  alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviders
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviders
   alias Tymeslot.Meetings.MeetingSchema
 
   # How long a booking's Teams meeting waits for the booking's own calendar
@@ -173,10 +175,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   def teams_room_placement(%MeetingSchema{} = meeting) do
     with %{video_integration_id: vid_id, organizer_user_id: user_id}
          when is_integer(vid_id) and is_integer(user_id) <- meeting,
-         {:ok, %{provider: "teams"} = video} <- Video.fetch_integration_for_user(vid_id, user_id),
+         {:ok, video} <- Video.fetch_integration_for_user(vid_id, user_id),
+         {:attach, calendar_provider} <- same_account_rule(video),
          {:ok, %{integration_id: cal_id}} <- Events.get_booking_integration_info(meeting),
          {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
-         true <- same_microsoft_account?(calendar, video) do
+         true <- same_account?(calendar, video, calendar_provider) do
       booking_event_placement(meeting, cal_id)
     else
       _other -> :own_event
@@ -205,29 +208,38 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
       else: :own_event
   end
 
-  # Both integrations record the account's Microsoft Entra object id (`oid`).
-  defp same_microsoft_account?(%{provider: "outlook", provider_account_id: account_id}, %{
-         provider_account_id: account_id
-       })
-       when is_binary(account_id) and account_id != "",
-       do: true
+  # The video providers whose meeting the calendar of the same account can
+  # carry, and how. Google Calendar and Google Meet: Google makes the
+  # conference with the event. Teams on an Outlook calendar: the meeting goes
+  # on the calendar event, the rule `teams_room_placement/1` applies to
+  # bookings.
+  @same_account_rules %{google_meet: {:inline, :google}, teams: {:attach, :outlook}}
 
-  defp same_microsoft_account?(_calendar, _video), do: false
-
-  # Google Calendar and Google Meet on the same Google account: Google makes
-  # the conference with the event.
-  defp placement(
-         %{provider: "google", provider_account_id: account_id},
-         %{provider: "google_meet", provider_account_id: account_id}
-       )
-       when is_binary(account_id) and account_id != "",
-       do: :inline
-
-  # Teams on the Outlook calendar's own Microsoft account: the meeting goes on
-  # the calendar event, the rule `teams_room_placement/1` applies to bookings.
-  defp placement(calendar, %{provider: "teams"} = video) do
-    if same_microsoft_account?(calendar, video), do: :attach, else: :separate
+  defp placement(calendar, video) do
+    with {how, calendar_provider} <- same_account_rule(video),
+         true <- same_account?(calendar, video, calendar_provider) do
+      how
+    else
+      _other -> :separate
+    end
   end
 
-  defp placement(_calendar, _video), do: :separate
+  defp same_account_rule(%{provider: provider}) do
+    case VideoProviders.parse_known(provider) do
+      {:ok, video_provider} -> Map.get(@same_account_rules, video_provider)
+      {:error, :unknown} -> nil
+    end
+  end
+
+  # Both integrations record the same account id: the Google account, or the
+  # Microsoft Entra object id (`oid`).
+  defp same_account?(
+         %{provider: provider, provider_account_id: account_id},
+         %{provider_account_id: account_id},
+         calendar_provider
+       )
+       when is_binary(account_id) and account_id != "",
+       do: CalendarProviders.parse_known(provider) == {:ok, calendar_provider}
+
+  defp same_account?(_calendar, _video, _calendar_provider), do: false
 end

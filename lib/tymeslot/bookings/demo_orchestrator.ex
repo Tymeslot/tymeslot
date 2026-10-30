@@ -15,8 +15,8 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
   ## Mock status contract
 
   The mock meeting's `status` mirrors what a real submission would produce:
-  `"awaiting_approval"` when `meeting_params[:requires_approval]` is true,
-  `"confirmed"` otherwise. Callers previewing a real, approval-gated meeting
+  `:awaiting_approval` when `meeting_params[:requires_approval]` is true,
+  `:confirmed` otherwise. Callers previewing a real, approval-gated meeting
   type must set that flag (`Tymeslot.Meetings.Approval.required?/1` on the
   meeting type) rather than relying on a default, so the previewed status
   matches the type actually being previewed.
@@ -224,9 +224,9 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
   # `Tymeslot.Meetings.Approval.required?/1`, since demo meeting types can be
   # plain maps with no such key). A gated type mocks the same status a real
   # submission would land on, so a host previewing their own approval-gated
-  # page sees the request flow rather than a false "confirmed".
+  # page sees the request flow rather than a false :confirmed.
   defp mock_status(meeting_params) do
-    if meeting_params[:requires_approval], do: "awaiting_approval", else: "confirmed"
+    if meeting_params[:requires_approval], do: :awaiting_approval, else: :confirmed
   end
 
   defp generate_demo_meeting_url(rng) do

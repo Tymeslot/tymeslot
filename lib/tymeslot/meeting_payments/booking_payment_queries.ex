@@ -114,7 +114,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
       from b in BookingPaymentSchema,
         where:
           b.host_user_id == ^host_user_id and
-            b.status == "pending" and
+            b.status == :pending and
             not is_nil(b.stripe_checkout_session_id)
 
     Repo.all(query)
@@ -135,7 +135,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     query =
       from b in BookingPaymentSchema,
         where:
-          b.status == "pending" and
+          b.status == :pending and
             b.inserted_at <= ^cutoff and
             not is_nil(b.stripe_checkout_session_id),
         order_by: [asc: b.inserted_at],
@@ -262,7 +262,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   def count_pending_for_host(host_user_id) do
     query =
       from b in BookingPaymentSchema,
-        where: b.host_user_id == ^host_user_id and b.status == "pending",
+        where: b.host_user_id == ^host_user_id and b.status == :pending,
         select: count(b.id)
 
     Repo.one(query)
@@ -287,7 +287,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
       from b in BookingPaymentSchema,
         where:
           b.host_user_id == ^host_user_id and
-            b.status in ["paid", "partially_refunded", "refunded"],
+            b.status in [:paid, :partially_refunded, :refunded],
         group_by: b.currency,
         order_by: [asc: b.currency],
         select: %{
@@ -333,9 +333,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   def cancel_if_pending(id, now) do
     query =
       from b in BookingPaymentSchema,
-        where: b.id == ^id and b.status == "pending"
+        where: b.id == ^id and b.status == :pending
 
-    case Repo.update_all(query, set: [status: "failed", updated_at: now]) do
+    case Repo.update_all(query, set: [status: :failed, updated_at: now]) do
       {1, _rows} -> {:ok, :cancelled}
       {0, _rows} -> {:ok, :skipped}
     end

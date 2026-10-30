@@ -154,9 +154,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser.Expansion do
     }
 
     exdates = parse_exdates(raw[:exdate] || raw[:exdates] || [])
+    rdates = parse_exdates(raw[:rdates] || [])
 
     expander_event
-    |> RecurrenceExpander.expand(range_start, range_end, exdates: exdates)
+    |> RecurrenceExpander.expand(range_start, range_end, exdates: exdates, rdates: rdates)
     |> Enum.map(&{&1, occurrence_suffix(&1.start_time)})
     |> Enum.reject(fn {_occurrence, suffix} ->
       MapSet.member?(overrides, {raw[:uid], suffix})

@@ -10,13 +10,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   that tracking survives process restarts.
   """
 
-  require Logger
-
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
 
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
-  alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
 
   @failure_threshold 3
@@ -37,7 +34,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   # so we don't hammer a genuinely broken server.
   @first_unhealthy_recovery_probe_ms :timer.minutes(15)
 
-  @type health_status :: :healthy | :degraded | :unhealthy
+  @type health_status :: IntegrationHealthStateSchema.status()
   @type integration_type :: :calendar | :video
   @type health_state :: %{
           user_id: integer() | nil,
@@ -48,7 +45,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
           last_check_at: DateTime.t() | nil,
           status: health_status(),
           backoff_ms: pos_integer(),
-          last_error_class: :transient | :hard | nil,
+          last_error_class: IntegrationHealthStateSchema.error_class() | nil,
           became_unhealthy_at: DateTime.t() | nil,
           notification_sent_at: DateTime.t() | nil
         }
@@ -106,9 +103,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   Updates the existing record (created by get_state/get_or_init) with a
   single atomic statement; a no-op if the row was deleted concurrently
   (e.g. by `Scheduler.schedule_all/1`'s orphan cleanup, or a cascading user
-  deletion). `health_state.status` is closed to `HealthStatus.values/0` by
-  `to_db_attrs/1` (via `HealthStatus.to_db_value/1`, which pattern-matches
-  only the valid atoms) before it ever reaches this call, and the
+  deletion). `health_state.status` is dumped through the schema's
+  `Ecto.Enum`, which refuses anything but its atoms, and the
   `status_must_be_known` database constraint backstops it.
   """
   @spec put_state(integration_type(), integer(), health_state()) :: {non_neg_integer(), nil}
@@ -206,7 +202,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   defp forced_status_fields(health_state) do
     if health_state.consecutive_sync_failures >= sync_failure_threshold(),
       do: [
-        status: HealthStatus.to_db_value(health_state.status),
+        status: health_state.status,
         became_unhealthy_at: health_state.became_unhealthy_at
       ],
       else: []
@@ -376,9 +372,9 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       consecutive_sync_failures: record.consecutive_sync_failures,
       successes: record.successes,
       last_check_at: record.last_check_at,
-      status: safe_to_status(record.status, record),
+      status: record.status,
       backoff_ms: record.backoff_ms,
-      last_error_class: safe_to_error_class(record.last_error_class),
+      last_error_class: record.last_error_class,
       became_unhealthy_at: record.became_unhealthy_at,
       notification_sent_at: record.notification_sent_at
     }
@@ -395,14 +391,13 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   # the probe read would erase that stamp and the 30-day cooldown with it.
   defp to_db_attrs(health_state) do
     base = %{
-      status: HealthStatus.to_db_value(health_state.status),
+      status: health_state.status,
       failures: health_state.failures,
       consecutive_hard_failures: health_state.consecutive_hard_failures,
       successes: health_state.successes,
       backoff_ms: health_state.backoff_ms,
       last_check_at: health_state.last_check_at,
-      last_error_class:
-        health_state.last_error_class && Atom.to_string(health_state.last_error_class),
+      last_error_class: health_state.last_error_class,
       became_unhealthy_at: health_state.became_unhealthy_at
     }
 
@@ -411,36 +406,4 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       user_id -> Map.put(base, :user_id, user_id)
     end
   end
-
-  # The canonical status set lives in `HealthCheck.HealthStatus`, and the
-  # `status_must_be_known` database constraint closes it for every writer,
-  # so a row with a status outside that set means the invariant broke
-  # upstream — an operator edit, a restored backup predating the
-  # constraint, or a status retired by a rolled-back release. This is a
-  # read path reached from the scheduling sweep and dashboard rendering, so
-  # it must stay total: log and degrade gracefully rather than raise. The
-  # coerced value self-heals on the next `put_state/3` write for that row.
-  defp safe_to_status(str, record) when is_binary(str) do
-    case HealthStatus.parse(str) do
-      {:ok, status} ->
-        status
-
-      :error ->
-        Logger.error("Unrecognised integration health status in database, defaulting to degraded",
-          integration_type: record.integration_type,
-          integration_id: record.integration_id,
-          status: str
-        )
-
-        :degraded
-    end
-  end
-
-  @valid_error_classes ~w(transient hard)a
-  @error_classes_by_name Map.new(@valid_error_classes, &{Atom.to_string(&1), &1})
-
-  defp safe_to_error_class(nil), do: nil
-
-  defp safe_to_error_class(str) when is_binary(str),
-    do: Map.get(@error_classes_by_name, str, :hard)
 end

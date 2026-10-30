@@ -132,7 +132,7 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
       AvailabilityOverrideQueries.create_override(%{
         schedule_id: evenings.id,
         date: @date,
-        override_type: "unavailable",
+        override_type: :unavailable,
         reason: "Closed"
       })
 

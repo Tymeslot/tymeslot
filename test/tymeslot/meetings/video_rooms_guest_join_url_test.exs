@@ -230,7 +230,7 @@ defmodule Tymeslot.Meetings.VideoRoomsGuestJoinUrlTest do
           start_time: start_time,
           end_time: DateTime.add(start_time, 60, :minute),
           duration: 60,
-          status: "confirmed",
+          status: :confirmed,
           organizer_email_sent: false,
           attendee_email_sent: false,
           video_integration_id: integration.id,

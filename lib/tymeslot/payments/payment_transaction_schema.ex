@@ -9,11 +9,13 @@ defmodule Tymeslot.Payments.PaymentTransactionSchema do
 
   alias Tymeslot.Auth.UserSchema
 
+  @type status :: :pending | :completed | :failed | :pending_reconciliation
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
           amount: integer() | nil,
-          status: String.t() | nil,
+          status: status() | nil,
           stripe_id: String.t() | nil,
           stripe_customer_id: String.t() | nil,
           product_identifier: String.t() | nil,
@@ -40,7 +42,7 @@ defmodule Tymeslot.Payments.PaymentTransactionSchema do
 
     # Payment details
     field :amount, :integer
-    field :status, :string
+    field :status, Ecto.Enum, values: [:pending, :completed, :failed, :pending_reconciliation]
     field :stripe_id, :string
     field :stripe_customer_id, :string
     field :product_identifier, :string
@@ -98,7 +100,6 @@ defmodule Tymeslot.Payments.PaymentTransactionSchema do
       :host_deleted_at
     ])
     |> validate_required([:user_id, :amount, :status])
-    |> validate_inclusion(:status, ~w(pending completed failed pending_reconciliation))
     |> validate_length(:country_code, is: 2)
     |> validate_number(:amount, greater_than_or_equal_to: 0)
     |> validate_number(:tax_amount, greater_than_or_equal_to: 0)

@@ -36,14 +36,14 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
       first =
         PaymentTestHelpers.create_test_transaction(%{
           user_id: user.id,
-          status: "completed",
+          status: :completed,
           subscription_id: "sub_tie"
         })
 
       second =
         PaymentTestHelpers.create_test_transaction(%{
           user_id: user.id,
-          status: "completed",
+          status: :completed,
           subscription_id: "sub_tie"
         })
 
@@ -68,7 +68,7 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
       older =
         PaymentTestHelpers.create_test_transaction(%{
           user_id: user.id,
-          status: "completed",
+          status: :completed,
           stripe_id: "cs_older",
           stripe_customer_id: "cus_shared"
         })
@@ -77,7 +77,7 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
       # the completed row must win even though it isn't the latest.
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_id: "cs_newer",
         stripe_customer_id: "cus_shared"
       })
@@ -89,7 +89,7 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
     test "returns error when the only match is not completed", %{user: user} do
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "pending",
+        status: :pending,
         stripe_id: "cs_pending_only",
         stripe_customer_id: "cus_pending_only"
       })
@@ -109,9 +109,9 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
       transaction = PaymentTestHelpers.create_test_transaction(%{user_id: user.id})
 
       assert {:ok, updated} =
-               PaymentQueries.update_transaction(transaction, %{status: "completed"})
+               PaymentQueries.update_transaction(transaction, %{status: :completed})
 
-      assert updated.status == "completed"
+      assert updated.status == :completed
     end
 
     test "updates tax information", %{user: user} do
@@ -185,7 +185,7 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
           ] do
         PaymentTestHelpers.create_test_transaction(%{
           user_id: owner.id,
-          status: "completed",
+          status: :completed,
           stripe_customer_id: customer
         })
       end

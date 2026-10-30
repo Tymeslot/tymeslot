@@ -225,7 +225,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       amount_cents: meeting_type.price_cents,
       currency: account.default_currency,
       application_fee_cents: fee_cents,
-      status: "pending"
+      status: :pending
     }
   end
 

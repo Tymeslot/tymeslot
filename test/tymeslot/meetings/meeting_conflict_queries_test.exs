@@ -20,7 +20,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueriesTest do
         organizer_user_id: user.id,
         start_time: start_time,
         end_time: end_time,
-        status: "awaiting_payment"
+        status: :awaiting_payment
       )
 
       Repo.transaction(fn ->
@@ -43,7 +43,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueriesTest do
         organizer_user_id: user.id,
         start_time: start_time,
         end_time: end_time,
-        status: "expired"
+        status: :expired
       )
 
       Repo.transaction(fn ->
@@ -66,7 +66,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueriesTest do
         organizer_user_id: user.id,
         start_time: start_time,
         end_time: end_time,
-        status: "confirmed",
+        status: :confirmed,
         reschedule_requested_at: DateTime.utc_now()
       )
 

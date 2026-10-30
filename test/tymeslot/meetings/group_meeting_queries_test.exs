@@ -26,7 +26,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueriesTest do
           meeting_type_ref: meeting_type,
           start_time: start_time,
           end_time: DateTime.add(start_time, 30, :minute),
-          status: "confirmed"
+          status: :confirmed
         },
         attrs
       )
@@ -58,7 +58,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueriesTest do
          %{user: user, meeting_type: meeting_type} do
       start_time = start_at(3, 10)
       other_type = insert(:meeting_type, user: user, max_participants: 4)
-      insert_group_meeting(user, meeting_type, start_time, %{status: "cancelled"})
+      insert_group_meeting(user, meeting_type, start_time, %{status: :cancelled})
       insert_group_meeting(user, other_type, DateTime.add(start_time, 2, :hour))
 
       {:ok, found} =
@@ -106,7 +106,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueriesTest do
       _outside = insert_group_meeting(user, meeting_type, start_at(9, 9))
 
       _cancelled =
-        insert_group_meeting(user, meeting_type, start_at(3, 16), %{status: "cancelled"})
+        insert_group_meeting(user, meeting_type, start_at(3, 16), %{status: :cancelled})
 
       result =
         GroupMeetingQueries.list_live_for_type_in_range(

@@ -83,7 +83,7 @@ defmodule Tymeslot.Bookings.RescheduleRemindersTest do
       )
 
     meeting =
-      insert_meeting_for_user(user, %{meeting_type_id: meeting_type.id, status: "confirmed"})
+      insert_meeting_for_user(user, %{meeting_type_id: meeting_type.id, status: :confirmed})
 
     params = %{
       date: Date.to_string(Date.add(Date.utc_today(), 2)),
@@ -115,9 +115,9 @@ defmodule Tymeslot.Bookings.RescheduleRemindersTest do
         restore_email_worker(original_worker)
       end
 
-      assert %{status: "confirmed"} = reload(meeting)
+      assert %{status: :confirmed} = reload(meeting)
 
-      assert {:ok, %{status: "awaiting_approval"}} =
+      assert {:ok, %{status: :awaiting_approval}} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
       refute_enqueued(

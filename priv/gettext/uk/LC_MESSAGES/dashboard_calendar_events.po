@@ -1013,3 +1013,16 @@ msgstr "Учасника додано. Його буде запрошено, щ�
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They will be notified once the change has synced to your calendar."
 msgstr "Учасника видалено. Його буде сповіщено, щойно зміну синхронізовано з вашим календарем."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss"
+msgstr "Закрити"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The latest update could not be emailed to this guest. Let them know another way."
+msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
+msgstr[0] "Не вдалося надіслати останню зміну цьому гостю електронною поштою. Повідомте його іншим способом."
+msgstr[1] "Не вдалося надіслати останню зміну цим гостям електронною поштою. Повідомте їх іншим способом."
+msgstr[2] "Не вдалося надіслати останню зміну цим гостям електронною поштою. Повідомте їх іншим способом."

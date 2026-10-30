@@ -17,19 +17,19 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationTextTest do
   describe "status/1" do
     test "a held booking is :held, even when it is a reschedule" do
       assert ConfirmationText.status(%{
-               meeting_status: "awaiting_approval",
+               meeting_status: :awaiting_approval,
                is_rescheduling: true
              }) ==
                :held
     end
 
     test "a reschedule that is not held is :rescheduled" do
-      assert ConfirmationText.status(%{meeting_status: "confirmed", is_rescheduling: true}) ==
+      assert ConfirmationText.status(%{meeting_status: :confirmed, is_rescheduling: true}) ==
                :rescheduled
     end
 
     test "any other booking is :confirmed" do
-      assert ConfirmationText.status(%{meeting_status: "confirmed"}) == :confirmed
+      assert ConfirmationText.status(%{meeting_status: :confirmed}) == :confirmed
     end
   end
 

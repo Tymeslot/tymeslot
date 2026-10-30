@@ -66,19 +66,19 @@ defmodule Tymeslot.Availability.OfferBookedSlotsTest do
       # confirms, so this status has no mirror to be blocked by even on a host
       # whose calendar works perfectly. It occupies the slot at the submit
       # (`MeetingState.where_slot_live/1`), so it has to occupy it here too.
-      book(context, ~T[11:00:00], status: "awaiting_payment")
+      book(context, ~T[11:00:00], status: :awaiting_payment)
 
       refute "11:00 AM" in slots(context)
     end
 
     test "a booking awaiting the host's approval holds its slot", context do
-      book(context, ~T[11:00:00], status: "awaiting_approval")
+      book(context, ~T[11:00:00], status: :awaiting_approval)
 
       refute "11:00 AM" in slots(context)
     end
 
     test "a cancelled booking gives its slot back", context do
-      book(context, ~T[11:00:00], status: "cancelled")
+      book(context, ~T[11:00:00], status: :cancelled)
 
       assert "11:00 AM" in slots(context)
     end
@@ -195,7 +195,7 @@ defmodule Tymeslot.Availability.OfferBookedSlotsTest do
         start_time: blocker_start,
         end_time: DateTime.add(blocker_start, 30, :minute),
         duration: 30,
-        status: "confirmed"
+        status: :confirmed
       )
 
       request = %{

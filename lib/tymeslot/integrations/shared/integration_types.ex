@@ -25,16 +25,16 @@ defmodule Tymeslot.Integrations.Shared.IntegrationTypes do
   @spec kinds() :: [kind()]
   def kinds, do: @kinds
 
-  @doc "The kind stored as `value` in an `integration_type` column, or `:error`."
+  @doc """
+  The kind `kind` names, or `:error`. For job args and other boundaries
+  that carry the kind as a string; the `integration_type` columns load it as
+  an atom already.
+  """
   @spec parse(String.t() | atom()) :: {:ok, kind()} | :error
   def parse(kind) when kind in @kinds, do: {:ok, kind}
   def parse("calendar"), do: {:ok, :calendar}
   def parse("video"), do: {:ok, :video}
   def parse(_other), do: :error
-
-  @doc "The kind as stored in an `integration_type` column."
-  @spec db_value(kind()) :: String.t()
-  def db_value(kind) when kind in @kinds, do: Atom.to_string(kind)
 
   @doc "The kind's integration queries module."
   @spec queries(kind()) :: module()

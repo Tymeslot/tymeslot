@@ -35,7 +35,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     user = insert(:user)
 
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       approval_requested_at: DateTime.utc_now(:second),
@@ -57,7 +57,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       amount_cents: 5000,
       refunded_amount_cents: 0,
       application_fee_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     })
 
@@ -165,10 +165,10 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       meeting = held_meeting()
 
       assert {:ok, confirmed} = Approval.approve(meeting)
-      assert confirmed.status == "confirmed"
+      assert confirmed.status == :confirmed
 
       stored = reload(meeting)
-      assert stored.status == "confirmed"
+      assert stored.status == :confirmed
       assert %DateTime{} = stored.approval_resolved_at
     end
 
@@ -236,7 +236,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:ok, _expired} = Approval.expire(meeting)
       assert {:error, :not_awaiting_approval} = Approval.approve(meeting)
 
-      assert reload(meeting).status == "expired"
+      assert reload(meeting).status == :expired
 
       # The losing approval must not have sent a confirmation email for a
       # request that already lapsed.
@@ -252,7 +252,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
       assert {:error, :not_awaiting_approval} = Approval.approve(meeting)
 
-      assert reload(meeting).status == "cancelled"
+      assert reload(meeting).status == :cancelled
 
       refute_enqueued(
         worker: Tymeslot.Workers.EmailWorker,
@@ -264,12 +264,12 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       meeting = held_meeting()
 
       assert {:ok, withdrawn} = Cancel.execute(meeting)
-      assert withdrawn.status == "cancelled"
+      assert withdrawn.status == :cancelled
 
       # The caller still holds the pre-withdrawal struct — the host approving
       # a request the invitee already pulled must not resurrect it.
       assert {:error, :not_awaiting_approval} = Approval.approve(meeting)
-      assert reload(meeting).status == "cancelled"
+      assert reload(meeting).status == :cancelled
 
       refute_enqueued(
         worker: Tymeslot.Workers.EmailWorker,
@@ -285,7 +285,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
         })
 
       assert {:error, :meeting_started} = Approval.approve(meeting)
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
   end
 
@@ -323,7 +323,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       meeting = held_meeting()
 
       assert {:ok, declined} = Approval.decline(meeting, "  Double-booked that morning  ")
-      assert declined.status == "cancelled"
+      assert declined.status == :cancelled
 
       stored = reload(meeting)
       assert stored.decline_reason == "Double-booked that morning"
@@ -358,7 +358,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:ok, _confirmed} = Approval.approve(meeting)
       assert {:error, :not_awaiting_approval} = Approval.decline(meeting, "changed my mind")
 
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
     end
   end
 
@@ -383,7 +383,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
 
       cancelled =
         approved
-        |> Changeset.change(status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+        |> Changeset.change(status: :cancelled, cancelled_at: DateTime.utc_now(:second))
         |> Repo.update!()
 
       refute Approval.declined?(cancelled)
@@ -422,7 +422,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       meeting = held_meeting()
 
       assert {:ok, expired} = Approval.expire(meeting)
-      assert expired.status == "expired"
+      assert expired.status == :expired
 
       stored = reload(meeting)
       assert stored.decline_reason == nil
@@ -444,7 +444,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
 
       assert_enqueued(
@@ -486,7 +486,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:ok, _expired} = Approval.expire(meeting)
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
     end
 
@@ -515,7 +515,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
         stripe_charge_id: nil,
         amount_cents: 5000,
         refunded_amount_cents: 0,
-        status: "pending",
+        status: :pending,
         paid_at: nil
       })
 
@@ -532,7 +532,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
         stripe_charge_id: "ch_TEST_already_refunded",
         amount_cents: 5000,
         refunded_amount_cents: 5000,
-        status: "refunded",
+        status: :refunded,
         paid_at: DateTime.utc_now(:second)
       })
 
@@ -549,11 +549,11 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       end)
 
       assert {:ok, expired} = Approval.expire(meeting)
-      assert expired.status == "expired"
-      assert reload(meeting).status == "expired"
+      assert expired.status == :expired
+      assert reload(meeting).status == :expired
 
       reloaded_payment = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert reloaded_payment.status == "paid"
+      assert reloaded_payment.status == :paid
       assert reloaded_payment.refunded_amount_cents == 0
     end
   end

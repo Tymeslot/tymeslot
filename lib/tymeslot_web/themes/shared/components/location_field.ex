@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
   def location_field(assigns) do
     selected = Enum.find(assigns.location_options, &(&1.id == assigns.selected_location_id))
 
-    in_person = match?(%LocationOption{kind: "in_person"}, selected)
+    in_person = match?(%LocationOption{kind: :in_person}, selected)
     kept = if in_person, do: assigns.kept_location
 
     assigns =
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
               phx-value-id={choice.id}
               phx-target={@target}
             />
-            <Icons.icon name={LocationIcons.icon("video")} class="location-option__icon" />
+            <Icons.icon name={LocationIcons.icon(:video)} class="location-option__icon" />
             <span class="location-option__title">{choice.name}</span>
           </label>
         </div>
@@ -307,10 +307,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
   # join link does not exist until the booking is made, and an in-person
   # option's detail is its venue or the arranged-after-booking note, rendered
   # above.
-  defp detail_line(%LocationOption{kind: "video"}), do: nil
-  defp detail_line(%LocationOption{kind: "in_person"}), do: nil
+  defp detail_line(%LocationOption{kind: :video}), do: nil
+  defp detail_line(%LocationOption{kind: :in_person}), do: nil
 
-  defp detail_line(%LocationOption{kind: "phone", collect_from_guest: true}),
+  defp detail_line(%LocationOption{kind: :phone, collect_from_guest: true}),
     do: dgettext("booking", "We'll call you")
 
   defp detail_line(%LocationOption{details: details})

@@ -64,16 +64,16 @@ defmodule Tymeslot.WorkerTestHelpers do
 
     %IntegrationHealthStateSchema{}
     |> IntegrationHealthStateSchema.changeset(%{
-      integration_type: Atom.to_string(type),
+      integration_type: type,
       integration_id: integration_id,
       user_id: user.id,
-      status: "unhealthy",
+      status: :unhealthy,
       failures: max(consecutive_hard_failures, 5),
       consecutive_hard_failures: consecutive_hard_failures,
       successes: 0,
       backoff_ms: :timer.hours(1),
       last_check_at: DateTime.utc_now(),
-      last_error_class: "hard",
+      last_error_class: :hard,
       became_unhealthy_at: became_unhealthy_at,
       notification_sent_at: DateTime.add(became_unhealthy_at, 2 * 24 * 3600, :second)
     })

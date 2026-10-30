@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
 
     view |> element("[data-testid='remove-session']") |> render_click()
 
-    assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, session.id).status == :cancelled
     refute has_element?(view, "[data-testid='planned-session']")
   end
 
@@ -171,12 +171,12 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
 
     view |> element("[data-testid='remove-session']") |> render_click()
 
-    assert Repo.get!(MeetingSchema, session.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, session.id).status == :confirmed
     assert render(view) =~ "1 person is booked and will be told"
 
     view |> element("[data-testid='confirm-cancel-session']") |> render_click()
 
-    assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, session.id).status == :cancelled
   end
 
   defp book_seat(user, meeting_type, starts_at) do
@@ -266,7 +266,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
     |> render_click()
 
     assert reload(meeting_type) == nil
-    assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, session.id).status == :cancelled
 
     # Everyone booked on the date hears about it through the cancel path.
     assert [_cancellation] =

@@ -76,7 +76,7 @@ defmodule Tymeslot.MeetingTypes.Defaults do
   defp default_in_person_location do
     %LocationOption{
       id: UUID.generate(),
-      kind: "in_person",
+      kind: :in_person,
       label: "In person",
       position: 0
     }

@@ -25,7 +25,7 @@ defmodule Tymeslot.Meetings.ApprovalTokenTest do
     user = insert(:user)
 
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       approval_requested_at: DateTime.utc_now(:second),

@@ -120,7 +120,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_cancellation_emails(%{"meeting_id" => meeting_id}, job_id) do
     with_meeting(meeting_id, "cancellation emails", fn meeting ->
-      if meeting.status == "cancelled" do
+      if meeting.status == :cancelled do
         send_cancellation_emails_for_meeting(meeting, job_id)
       else
         Logger.info("Skipping cancellation emails - meeting is not cancelled",

@@ -117,13 +117,13 @@ defmodule Tymeslot.Bookings.ConfirmationCommitsWithBookingTest do
       assert {:error, :not_scheduled} = quietly(fn -> Approval.approve(meeting) end)
     end)
 
-    assert %{status: "awaiting_approval", announced_at: nil, approval_resolved_at: nil} =
+    assert %{status: :awaiting_approval, announced_at: nil, approval_resolved_at: nil} =
              reload(meeting)
 
     assert all_enqueued(worker: EmailWorker, args: %{"action" => "send_confirmation_emails"}) ==
              []
 
-    assert {:ok, %{status: "confirmed"}} = Approval.approve(meeting)
+    assert {:ok, %{status: :confirmed}} = Approval.approve(meeting)
     assert_one_confirmation(meeting)
   end
 
@@ -137,7 +137,7 @@ defmodule Tymeslot.Bookings.ConfirmationCommitsWithBookingTest do
     meeting =
       insert_meeting_for_user(user, %{
         meeting_type_id: meeting_type.id,
-        status: "awaiting_approval",
+        status: :awaiting_approval,
         approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
         approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
       })
@@ -154,10 +154,10 @@ defmodule Tymeslot.Bookings.ConfirmationCommitsWithBookingTest do
                quietly(fn -> Reschedule.execute(meeting.uid, params, user.id) end)
     end)
 
-    assert %{status: "awaiting_approval", announced_at: nil} = reload(meeting)
+    assert %{status: :awaiting_approval, announced_at: nil} = reload(meeting)
     assert DateTime.compare(reload(meeting).start_time, meeting.start_time) == :eq
 
-    assert {:ok, %{status: "confirmed"}} = Reschedule.execute(meeting.uid, params, user.id)
+    assert {:ok, %{status: :confirmed}} = Reschedule.execute(meeting.uid, params, user.id)
     assert_one_confirmation(meeting)
   end
 
@@ -212,7 +212,7 @@ defmodule Tymeslot.Bookings.ConfirmationCommitsWithBookingTest do
     insert(:profile, user: user)
 
     insert(:meeting,
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       organizer_email: user.email,

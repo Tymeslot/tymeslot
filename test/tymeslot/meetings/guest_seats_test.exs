@@ -51,47 +51,47 @@ defmodule Tymeslot.Meetings.GuestSeatsTest do
     assert seats_taken_in_range(ctx) == 3
     refute GroupScheduling.join_target(ctx.meeting_type.id, ctx.meeting.start_time, 1)
 
-    assert {:ok, %{status: "accepted"}} = Guests.record_rsvp(ctx.charles.rsvp_token, "accepted")
+    assert {:ok, %{status: :accepted}} = Guests.record_rsvp(ctx.charles.rsvp_token, :accepted)
     assert Seats.seats_taken(ctx.meeting.id) == 3
 
-    assert {:ok, %{status: "declined"}} = Guests.record_rsvp(ctx.charles.rsvp_token, "declined")
+    assert {:ok, %{status: :declined}} = Guests.record_rsvp(ctx.charles.rsvp_token, :declined)
     assert Seats.seats_taken(ctx.meeting.id) == 2
     assert seats_taken_in_range(ctx) == 2
     assert GroupScheduling.join_target(ctx.meeting_type.id, ctx.meeting.start_time, 1)
   end
 
   test "counts loaded lists the same way" do
-    assert Seats.seats_taken([:ada], [%{status: "pending"}, %{status: "accepted"}]) == 3
-    assert Seats.seats_taken([:ada], [%{status: "declined"}]) == 1
+    assert Seats.seats_taken([:ada], [%{status: :pending}, %{status: :accepted}]) == 3
+    assert Seats.seats_taken([:ada], [%{status: :declined}]) == 1
   end
 
   test "a decline tells open booking pages that a seat is free", ctx do
     Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatBroadcast.topic(ctx.meeting_type.id))
 
-    {:ok, _declined} = Guests.record_rsvp(ctx.charles.rsvp_token, "declined")
+    {:ok, _declined} = Guests.record_rsvp(ctx.charles.rsvp_token, :declined)
 
     meeting_type_id = ctx.meeting_type.id
     assert_receive {:seat_update, ^meeting_type_id}
   end
 
   test "a guest who declined can answer yes again while a seat is free", ctx do
-    {:ok, _declined} = Guests.record_rsvp(ctx.charles.rsvp_token, "declined")
+    {:ok, _declined} = Guests.record_rsvp(ctx.charles.rsvp_token, :declined)
     {:ok, guest} = Guests.get_open_invitation(ctx.charles.rsvp_token)
     assert Guests.can_accept?(guest)
 
-    assert {:ok, %{status: "accepted"}} = Guests.record_rsvp(ctx.charles.rsvp_token, "accepted")
+    assert {:ok, %{status: :accepted}} = Guests.record_rsvp(ctx.charles.rsvp_token, :accepted)
     assert Seats.seats_taken(ctx.meeting.id) == 3
   end
 
   test "but not once their seat has gone to someone else", ctx do
-    {:ok, _declined} = Guests.record_rsvp(ctx.charles.rsvp_token, "declined")
+    {:ok, _declined} = Guests.record_rsvp(ctx.charles.rsvp_token, :declined)
     insert(:participant, meeting: ctx.meeting, name: "Grace", email: "grace@example.com")
 
     {:ok, guest} = Guests.get_open_invitation(ctx.charles.rsvp_token)
     refute Guests.can_accept?(guest)
 
-    assert {:error, :full} = Guests.record_rsvp(ctx.charles.rsvp_token, "accepted")
-    assert {:ok, %{status: "declined"}} = GuestQueries.get_by_token(ctx.charles.rsvp_token)
+    assert {:error, :full} = Guests.record_rsvp(ctx.charles.rsvp_token, :accepted)
+    assert {:ok, %{status: :declined}} = GuestQueries.get_by_token(ctx.charles.rsvp_token)
     assert Seats.seats_taken(ctx.meeting.id) == 3
   end
 end

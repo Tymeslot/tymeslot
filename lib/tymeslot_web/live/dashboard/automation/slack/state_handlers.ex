@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_disconnect(%{"id" => id}, socket) do
     case AutomationHelpers.get_slack_for_user(socket, id) do
-      {:ok, %{app_mode: "oauth"} = integration} ->
+      {:ok, %{app_mode: :oauth} = integration} ->
         case Slack.disconnect(integration) do
           {:ok, _updated} ->
             Flash.info(

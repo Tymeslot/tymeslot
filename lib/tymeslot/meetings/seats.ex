@@ -42,7 +42,7 @@ defmodule Tymeslot.Meetings.Seats do
 
   @doc "Whether a guest holds a seat: every guest does, until they decline."
   @spec holds_seat?(map()) :: boolean()
-  def holds_seat?(%{status: "declined"}), do: false
+  def holds_seat?(%{status: :declined}), do: false
   def holds_seat?(_guest), do: true
 
   @doc """

@@ -193,7 +193,7 @@ defmodule Tymeslot.Integrations.VideoTest do
          %{user: user, integration: integration} do
       room_booking(user, integration, 24)
       room_booking(user, integration, -24)
-      room_booking(user, integration, 72, %{status: "cancelled"})
+      room_booking(user, integration, 72, %{status: :cancelled})
 
       drained =
         MeetingListQueries.list_with_video_room_for_integration(
@@ -222,7 +222,7 @@ defmodule Tymeslot.Integrations.VideoTest do
       other = insert(:video_integration, user: user, provider: "zoom")
 
       room_booking(user, integration, -24)
-      room_booking(user, integration, 24, %{status: "cancelled"})
+      room_booking(user, integration, 24, %{status: :cancelled})
       room_booking(user, integration, 48, %{video_room_id: nil})
       room_booking(user, integration, 72, %{reschedule_requested_at: DateTime.utc_now()})
       room_booking(user, other, 96)
@@ -299,10 +299,10 @@ defmodule Tymeslot.Integrations.VideoTest do
       # Seed an unhealthy row so we can verify the reset fires.
       %IntegrationHealthStateSchema{}
       |> IntegrationHealthStateSchema.changeset(%{
-        integration_type: "video",
+        integration_type: :video,
         integration_id: integration.id,
         user_id: user.id,
-        status: "unhealthy",
+        status: :unhealthy,
         failures: 5,
         consecutive_hard_failures: 5,
         successes: 0,
@@ -317,7 +317,7 @@ defmodule Tymeslot.Integrations.VideoTest do
 
       # Health row is reset to a healthy baseline.
       {:ok, row} = IntegrationHealthStateQueries.get(:video, integration.id)
-      assert row.status == "healthy"
+      assert row.status == :healthy
       assert row.failures == 0
 
       # Immediate verification probe is enqueued.

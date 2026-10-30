@@ -124,7 +124,7 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   def organisers_with_real_booking(organizer_user_ids) when is_list(organizer_user_ids) do
     Meeting
     |> where([m], m.organizer_user_id in ^organizer_user_ids)
-    |> where([m], m.status != "cancelled")
+    |> where([m], m.status != :cancelled)
     |> where(
       [m],
       m.attendee_email != m.organizer_email or

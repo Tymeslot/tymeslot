@@ -133,7 +133,7 @@ defmodule Tymeslot.Bookings.GroupBookingsPausedTest do
     end
 
     test "the existing booking is left intact", ctx do
-      assert Repo.get!(MeetingSchema, ctx.existing.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, ctx.existing.id).status == :confirmed
       assert live_emails(ctx.existing) == ["first@example.com"]
     end
 

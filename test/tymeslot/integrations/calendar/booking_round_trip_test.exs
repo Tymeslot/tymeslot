@@ -68,7 +68,7 @@ defmodule Tymeslot.Integrations.Calendar.BookingRoundTripTest do
       assert :ok = Sync.persist_normalised_events(integration, [moved])
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.calendar_sync_status == :externally_modified
     end
   end
 

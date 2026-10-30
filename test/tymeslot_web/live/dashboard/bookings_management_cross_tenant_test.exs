@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
 
   defp meeting_for(user, attrs \\ %{}) do
     defaults = %{
-      status: "confirmed",
+      status: :confirmed,
       organizer_user: user,
       organizer_user_id: user.id,
       organizer_email: user.email,
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
       push_to_component(view, "show_cancel_modal", %{"id" => theirs.id})
 
       refute cancel_modal_open?(view)
-      assert reload(theirs).status == "confirmed"
+      assert reload(theirs).status == :confirmed
     end
 
     test "and the stranger's invitee is not named on the page either", %{
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
       |> with_target("#bookings-management")
       |> render_submit("confirm_cancel_meeting", %{"id" => theirs.id})
 
-      assert reload(theirs).status == "confirmed"
+      assert reload(theirs).status == :confirmed
     end
   end
 
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
       push_to_component(view, "show_cancel_modal", %{"id" => booked_on.id})
 
       refute cancel_modal_open?(view)
-      assert reload(booked_on).status == "confirmed"
+      assert reload(booked_on).status == :confirmed
     end
 
     test "nor may a third party who is neither organizer nor attendee", %{conn: conn} do
@@ -236,7 +236,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
       push_to_component(view, "show_cancel_modal", %{"id" => theirs.id})
 
       refute cancel_modal_open?(view)
-      assert reload(theirs).status == "confirmed"
+      assert reload(theirs).status == :confirmed
     end
   end
 
@@ -287,7 +287,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
 
       push_to_component(view, "show_cancel_modal", %{"id" => mine.id})
       refute cancel_modal_open?(view)
-      assert reload(mine).status == "confirmed"
+      assert reload(mine).status == :confirmed
     end
   end
 

@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       attendee_email: "ada@example.com",
       start_time: start_time,
       end_time: DateTime.add(start_time, 3600, :second),
-      status: "confirmed"
+      status: :confirmed
     }
 
     insert(:meeting, Map.merge(defaults, attrs))

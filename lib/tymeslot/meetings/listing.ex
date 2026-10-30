@@ -89,20 +89,20 @@ defmodule Tymeslot.Meetings.Listing do
         "upcoming" ->
           [
             time_filter: :upcoming,
-            exclude_status: ["cancelled", "awaiting_approval", "expired"],
+            exclude_status: [:cancelled, :awaiting_approval, :expired],
             # Soonest first, the order a host works through them; every
             # other list stays newest first.
             order: :asc
           ]
 
         "past" ->
-          [time_filter: :past, exclude_status: "cancelled"]
+          [time_filter: :past, exclude_status: :cancelled]
 
         "cancelled" ->
-          [status: "cancelled"]
+          [status: :cancelled]
 
         "awaiting_approval" ->
-          [status: "awaiting_approval"]
+          [status: :awaiting_approval]
 
         _other ->
           []

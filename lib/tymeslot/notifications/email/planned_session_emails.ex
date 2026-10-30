@@ -93,7 +93,7 @@ defmodule Tymeslot.Notifications.Email.PlannedSessionEmails do
       guests:
         for(
           guest <- participant.guests,
-          guest.status != "declined",
+          guest.status != :declined,
           do: %{name: guest.name, email: guest.email}
         ),
       answers:

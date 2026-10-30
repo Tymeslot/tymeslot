@@ -64,7 +64,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
 
-  defp ensure_meeting_on(%{status: "cancelled"}), do: {:error, :meeting_cancelled}
+  defp ensure_meeting_on(%{status: :cancelled}), do: {:error, :meeting_cancelled}
   defp ensure_meeting_on(%{}), do: :ok
   defp ensure_meeting_on(nil), do: {:error, :not_found}
 

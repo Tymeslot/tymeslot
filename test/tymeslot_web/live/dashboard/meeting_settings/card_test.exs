@@ -223,7 +223,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
     defp in_person(venue_ids),
       do: %LocationOption{
         id: "loc-office",
-        kind: "in_person",
+        kind: :in_person,
         label: "Our office",
         venue_ids: venue_ids,
         position: 0

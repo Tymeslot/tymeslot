@@ -34,7 +34,7 @@ defmodule TymeslotWeb.AccountDeletion.FrozenPublicPagesTest do
 
   defp held_meeting(user) do
     insert(:meeting,
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       attendee_name: "Alex Guest",
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.AccountDeletion.FrozenPublicPagesTest do
 
       assert html =~ "Link not recognised"
       refute html =~ "changed since"
-      assert Repo.get!(MeetingSchema, meeting.id).status == "awaiting_approval"
+      assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_approval
     end
   end
 

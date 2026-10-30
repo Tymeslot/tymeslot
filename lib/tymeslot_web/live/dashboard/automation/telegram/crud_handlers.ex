@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_create(%{"telegram" => params}, socket) do
     with_telegram_write(params, :create, socket, fn bot_mode, sanitized ->
-      if bot_mode == "own" do
+      if bot_mode == :own do
         test_and_save_telegram(socket.assigns.current_user.id, sanitized, socket)
       else
         test_and_update_telegram(sanitized, socket)
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
          |> assign(:telegram_form_values, %{
            "name" => integration.name,
            "events" => integration.events,
-           "chat_id" => if(integration.bot_mode == "own", do: integration.chat_id || "", else: "")
+           "chat_id" => if(integration.bot_mode == :own, do: integration.chat_id || "", else: "")
          })}
 
       {:error, _reason} ->
@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
   defp test_and_save_telegram(user_id, sanitized, socket) do
     test_integration = %TelegramIntegrationSchema{
       user_id: user_id,
-      bot_mode: "own",
+      bot_mode: :own,
       bot_token: sanitized[:bot_token],
       chat_id: sanitized[:chat_id]
     }

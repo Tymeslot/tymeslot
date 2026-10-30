@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
 
       refute has_element?(view, "#refund-modal")
       assert reload(theirs).refunded_amount_cents == 0
-      assert reload(theirs).status == "paid"
+      assert reload(theirs).status == :paid
     end
 
     test "a malformed payment id is refused without crashing the page", %{conn: conn} do
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
 
       assert reload(mine).refunded_amount_cents == 5000
       assert reload(theirs).refunded_amount_cents == 0
-      assert reload(theirs).status == "paid"
+      assert reload(theirs).status == :paid
     end
 
     test "a payment that changes hands while the modal is open is not refunded",
@@ -216,7 +216,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       render_async(view, 2_000)
 
       assert reload(payment).refunded_amount_cents == 0
-      assert reload(payment).status == "paid"
+      assert reload(payment).status == :paid
     end
 
     test "a submit with no modal open refunds nothing at all", %{conn: conn} do
@@ -242,7 +242,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       render_async(view, 2_000)
 
       assert reload(theirs).refunded_amount_cents == 0
-      assert reload(theirs).status == "paid"
+      assert reload(theirs).status == :paid
     end
   end
 end

@@ -9,8 +9,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   ## Semantics
 
-    * `event_created/2` — sends invitations immediately, one per attendee.
-      Used for newly-created events that already have attendees attached.
+    * `event_created/2` — sends invitations immediately, one per attendee,
+      less the organiser's own addresses. Used for newly-created events that
+      already have attendees attached.
     * `event_updated/3` — pure diff. Returns `{:ok, :no_changes}` when nothing
       notifiable has changed or the event has no attendees; otherwise returns
       `{:needs_confirmation, ChangeSummary.t}` so the caller can show a
@@ -27,6 +28,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       the grid carries neither the organiser nor its integration. Sends
       nothing, returning `{:ok, :not_organiser}`, for an event the user only
       attends, and `{:error, reason}` when an email could not be scheduled.
+      Neither writes to the organiser's own addresses or to anyone who
+      declined, and a removal says so rather than that the event was
+      cancelled.
     * `membership_changed/3` — the same, worked out from the event before
       and after a write that changed who attends: called once the calendar
       has accepted that write or saved it to sync later, never before; a
@@ -56,6 +60,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity
 
   @type event :: map
   @type attendee ::
@@ -68,8 +73,19 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {method, sequence} =
       IcalMethod.for(:event_created, current_sequence: current_sequence(event))
 
-    send_immediate(event, attendees, method, sequence)
-    {:ok, :sent}
+    case without_excluded(attendees, event, user_id_for(event)) do
+      [] ->
+        {:ok, :noop}
+
+      recipients ->
+        # Only here is the event known to be the series as a whole: the grid
+        # has just created it. A cached row can be one occurrence carrying
+        # its series' rule (CalDAV sets no `recurring_event_id`), so no other
+        # invitation says the event repeats.
+        extra = %{event_recurrence_rule: Map.get(event, :recurrence_rule)}
+        send_immediate(event, recipients, method, sequence, extra)
+        {:ok, :sent}
+    end
   end
 
   @spec event_updated(event, event, [attendee]) ::
@@ -140,11 +156,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     params = %{
       user_id: owner_user_id,
       event_uid: Map.get(updated, :uid),
+      ical_uid: SeriesIdentity.entry_uid(original),
+      other_entries: other_entries(scope == :all, original, updated),
       integration_id: Map.get(updated, :calendar_integration_id),
       attendee_emails: recipients,
       before_title: title_for(original),
       before_location: Map.get(original, :location),
       before_description: Map.get(original, :description),
+      before_video_link: video_link_for(original),
       before_start_at: start_at_for(original),
       before_end_at: end_at_for(original),
       before_start_date: iso_date(Map.get(original, :start_date)),
@@ -161,6 +180,25 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     end
   end
 
+  # An email about every occurrence, sent from another one, changes the
+  # entry the series' invitation made too. One about this occurrence and the
+  # following ones leaves it: the series' first is never among them.
+  defp other_entries(true = _whole_series, original, updated) do
+    case SeriesIdentity.series_entry(original, updated) do
+      nil -> []
+      entry -> SeriesIdentity.to_arg([entry])
+    end
+  end
+
+  defp other_entries(false, _original, _updated), do: []
+
+  # A cancellation of every occurrence removes every entry of the series the
+  # guest holds; one of a single occurrence, that occurrence's own.
+  defp cancelled_entries(:series, event),
+    do: event |> SeriesIdentity.cancelled_entries() |> SeriesIdentity.to_arg()
+
+  defp cancelled_entries(_scope, _event), do: []
+
   # The event as the update email describes it, in the job's JSON args.
   defp event_snapshot(event) do
     %{
@@ -168,6 +206,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       "summary" => title_for(event),
       "location" => Map.get(event, :location),
       "description" => Map.get(event, :description),
+      "video_link" => video_link_for(event),
       "all_day" => Map.get(event, :all_day) == true,
       "start_at" => iso(start_at_for(event)),
       "end_at" => iso(end_at_for(event)),
@@ -195,15 +234,30 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   # cancelling for its attendees is the organiser's to do, as on delete.
   defp notify_membership(event, attendees, owner_user_id, change) do
     if Recipients.organised_by?(event, owner_user_id) do
-      {method, sequence} = IcalMethod.for(change, current_sequence: current_sequence(event))
-
-      case send_immediate(event, attendees, method, sequence, %{user_id: owner_user_id}) do
-        :ok -> {:ok, :sent}
-        {:error, reason} -> {:error, reason}
-      end
+      attendees
+      |> without_excluded(event, owner_user_id)
+      |> send_membership(event, owner_user_id, change)
     else
       {:ok, :not_organiser}
     end
+  end
+
+  defp send_membership([], _event, _owner_user_id, _change), do: {:ok, :noop}
+
+  defp send_membership(recipients, event, owner_user_id, change) do
+    {method, sequence} = IcalMethod.for(change, current_sequence: current_sequence(event))
+    extra = %{user_id: owner_user_id, removed: change == :attendees_removed}
+
+    case send_immediate(event, recipients, method, sequence, extra) do
+      :ok -> {:ok, :sent}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # The organiser's own addresses and anyone who declined (`Recipients.excluded/2`).
+  defp without_excluded(attendees, event, owner_user_id) do
+    excluded = Recipients.excluded(event, owner_user_id)
+    Enum.reject(attendees, &(Recipients.email(&1) in excluded))
   end
 
   @doc """
@@ -326,8 +380,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   `event` is the cached row as it was before the delete, whose attendees are
   the recipients, less anyone who declined and the user `owner_user_id`
   (who made the delete). `scope` is `:series` when the whole series was
-  deleted, which the email says; anything else cancels the one event.
-  `{:ok, :noop}` when nobody is left to tell, and for an event someone else
+  deleted, which the email says, and which also cancels every other entry
+  of the series the guests were sent, read from the series' cached rows
+  (`SeriesIdentity.cancelled_entries/1`), so call it before those rows are
+  purged; anything else cancels the one event. `{:ok, :noop}` when nobody is left to tell, and for an event someone else
   organises, whose cancellation is not the user's to send (see
   `event_deleted/3`).
   """
@@ -360,7 +416,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {method, sequence} =
       IcalMethod.for(:event_deleted, current_sequence: current_sequence(event))
 
-    extra = %{user_id: owner_user_id, series: scope == :series}
+    extra = %{
+      user_id: owner_user_id,
+      series: scope == :series,
+      other_entries: cancelled_entries(scope, event)
+    }
 
     case send_immediate(event, recipients, method, sequence, extra) do
       :ok -> {:ok, :sent}
@@ -389,11 +449,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   ## Internal helpers
 
-  # `extra` overrides the defaults: the organiser a caller already knows, and
-  # whether a cancellation takes the whole series. Returns the first failure
-  # to enqueue, after trying every attendee.
-  defp send_immediate(event, attendees, method, sequence, extra \\ %{}) do
+  # `extra` overrides the defaults: the organiser a caller already knows,
+  # whether a cancellation takes the whole series, and a new series' rule.
+  # Returns the first failure to enqueue, after trying every attendee.
+  defp send_immediate(event, attendees, method, sequence, extra) do
     timing = invitation_timing(event)
+    ical_uid = SeriesIdentity.entry_uid(event)
 
     attendees
     |> Enum.map(fn attendee ->
@@ -404,6 +465,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
           attendee_email: Map.get(attendee, :email),
           event_title: title_for(event),
           event_uid: Map.get(event, :uid),
+          ical_uid: ical_uid,
           event_location: Map.get(event, :location),
           event_video_link: video_link_for(event),
           event_description: Map.get(event, :description),

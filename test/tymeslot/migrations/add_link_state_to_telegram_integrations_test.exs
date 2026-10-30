@@ -108,7 +108,7 @@ defmodule Tymeslot.Migrations.AddLinkStateToTelegramIntegrationsTest do
     integration =
       insert(
         :telegram_integration,
-        Keyword.merge([bot_mode: "shared", updated_at: @updated_at], attrs)
+        Keyword.merge([bot_mode: :shared, updated_at: @updated_at], attrs)
       )
 
     Repo.query!("UPDATE telegram_integrations SET link_token = $1 WHERE id = $2", [

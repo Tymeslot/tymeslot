@@ -59,7 +59,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       capacity: meeting.capacity,
       planned: meeting.planned,
       seats_taken: seats_taken(meeting),
-      status: meeting.status
+      # Event-shaped, like a provider copy: the grid reads statuses as strings.
+      status: Atom.to_string(meeting.status)
     }
   end
 

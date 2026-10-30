@@ -291,7 +291,7 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
       meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
       first_id = participant_id!(meeting.id, "first@example.com")
 
-      assert {:ok, %{status: "cancelled"}} = Cancel.execute(meeting, caller: :organizer)
+      assert {:ok, %{status: :cancelled}} = Cancel.execute(meeting, caller: :organizer)
 
       # No mock expectation: any send would fail on the unexpected call.
       assert {:discard, _reason} =
@@ -308,7 +308,7 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
       Repo.delete_all(Oban.Job)
 
       assert {:ok, cancelled} =
-               MeetingQueries.update_meeting_status(meeting, %{status: "cancelled"})
+               MeetingQueries.update_meeting_status(meeting, %{status: :cancelled})
 
       assert :ok = Events.announce_video_room_outcome(cancelled)
 

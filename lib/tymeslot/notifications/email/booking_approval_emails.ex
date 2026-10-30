@@ -152,8 +152,8 @@ defmodule Tymeslot.Notifications.Email.BookingApprovalEmails do
     end
   end
 
-  defp outcome_still_true?(%{status: "cancelled"}, :declined), do: true
-  defp outcome_still_true?(%{status: "expired"}, :expired), do: true
+  defp outcome_still_true?(%{status: :cancelled}, :declined), do: true
+  defp outcome_still_true?(%{status: :expired}, :expired), do: true
   defp outcome_still_true?(_meeting, _variant), do: false
 
   defp deliver_outcome(meeting, variant) do
@@ -176,7 +176,7 @@ defmodule Tymeslot.Notifications.Email.BookingApprovalEmails do
   end
 
   defp send_reschedule_request_expired(
-         %{status: "expired", first_announced_at: %DateTime{}} = meeting
+         %{status: :expired, first_announced_at: %DateTime{}} = meeting
        ) do
     locale = RecipientLocale.locale_for_user_id(meeting.organizer_user_id)
 

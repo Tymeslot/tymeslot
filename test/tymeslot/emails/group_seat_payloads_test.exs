@@ -33,7 +33,7 @@ defmodule Tymeslot.Emails.GroupSeatPayloadsTest do
         organizer_name: "Host",
         attendee_locale: "en",
         meeting_type: "Workshop",
-        location_kind: "in_person",
+        location_kind: :in_person,
         address_to_arrange: true
       )
 

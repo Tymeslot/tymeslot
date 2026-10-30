@@ -22,6 +22,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
   @moduletag :emails
 
   import Tymeslot.Factory
+  import Tymeslot.Test.AttendeeEmailDelivery
 
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
@@ -126,7 +127,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
       assert email.text_body =~ "Current Details"
       # Stated in the organiser's timezone: with no profile, the platform
       # default (Europe/Tallinn).
-      assert email.text_body =~ "Time: 03 Nov 2026, 11:30 EET"
+      assert email.text_body =~ "Time: 03 Nov 2026, 11:30 – 11:45 EET"
       assert email.text_body =~ "Title: Standup"
       refute email.text_body =~ "What Changed"
       refute email.text_body =~ "→"
@@ -150,7 +151,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
 
       email = run_update_to_delivery(event)
 
-      assert email.text_body =~ "Time: 04 Nov 2026, 16:00 EET"
+      assert email.text_body =~ "Time: 04 Nov 2026, 16:00 – 17:00 EET"
       refute email.text_body =~ "Title:"
     end
 
@@ -290,7 +291,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
   end
 
   describe "a removed attendee" do
-    test "receives a cancellation, not an invitation", %{user: user, integration: integration} do
+    test "is told they were removed, not that the event was cancelled", %{
+      user: user,
+      integration: integration
+    } do
       event =
         insert_timed_event(integration,
           summary: "Standup",
@@ -307,8 +311,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
 
       assert [email] = deliver_all("send_calendar_invitation")
       assert email.to == [{"", "gone@example.com"}]
-      assert email.subject == "Cancelled - Standup on 3 Nov"
+      assert email.subject == "Removed from Standup on 3 Nov"
+      assert email.text_body =~ "Olive Organiser has removed you from an event."
+      refute email.text_body =~ "cancelled"
       refute email.text_body =~ "You're Invited"
+      assert email.text_body =~ "If the event is still in your calendar, you can delete it there."
       assert calendar_attachment(email).data =~ "STATUS:CANCELLED"
     end
   end
@@ -358,92 +365,5 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
       assert email.to == [{"", "gone@example.com"}]
       assert calendar_attachment(email).data =~ "STATUS:CANCELLED"
     end
-  end
-
-  # Performs every enqueued email job of `action` with its own args and
-  # returns the emails they delivered, one per job.
-  defp deliver_all(action) do
-    jobs = enqueued_jobs(action)
-    assert jobs != []
-
-    for job <- jobs do
-      assert :ok = perform_job(EmailWorker, job.args)
-      assert_received {:email, email}
-      email
-    end
-  end
-
-  # Runs the debounced Worker for an edited event, performs the email job it
-  # enqueued with the job's own args, and returns the one delivered email.
-  defp run_update_to_delivery(event, inspect_job \\ fn _job -> :ok end) do
-    assert :ok =
-             perform_job(Worker, %{
-               "event_id" => event.id,
-               "kind" => "provider_calendar_event",
-               "action" => "update"
-             })
-
-    assert [job] = enqueued_jobs("send_event_update_notification")
-    inspect_job.(job)
-    assert :ok = perform_job(EmailWorker, job.args)
-
-    assert_received {:email, email}
-    refute_received {:email, _another}
-    email
-  end
-
-  defp calendar_attachment(email) do
-    assert [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
-    ics
-  end
-
-  defp enqueued_jobs(action) do
-    [worker: EmailWorker]
-    |> all_enqueued()
-    |> Enum.filter(&(&1.args["action"] == action))
-  end
-
-  defp insert_all_day_event(integration, attrs) do
-    insert(
-      :provider_calendar_event,
-      Keyword.merge(
-        [
-          calendar_integration: integration,
-          all_day: true,
-          start_date: ~D[2026-10-12],
-          end_date: ~D[2026-10-15],
-          start_at: nil,
-          end_at: nil,
-          location: "",
-          description: "",
-          attendees: [%{"email" => "guest@example.com"}],
-          last_notified_state: %{}
-        ],
-        attrs
-      )
-    )
-  end
-
-  defp insert_timed_event(integration, attrs) do
-    insert(
-      :provider_calendar_event,
-      Keyword.merge(
-        [
-          calendar_integration: integration,
-          location: "",
-          description: "",
-          attendees: [%{"email" => "guest@example.com"}],
-          last_notified_state: %{}
-        ],
-        attrs
-      )
-    )
-  end
-
-  defp all_day_baseline(title, start_date, end_date) do
-    LastNotifiedState.serialise(
-      %{title: title, start_date: start_date, end_date: end_date, location: "", description: ""},
-      [%{email: "guest@example.com"}]
-    )
   end
 end

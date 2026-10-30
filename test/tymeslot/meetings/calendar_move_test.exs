@@ -36,8 +36,8 @@ defmodule Tymeslot.Meetings.CalendarMoveTest do
       Keyword.merge(
         [
           organizer_user_id: user.id,
-          status: "confirmed",
-          calendar_sync_status: "externally_modified",
+          status: :confirmed,
+          calendar_sync_status: :externally_modified,
           calendar_integration_id: integration.id,
           provider_event_id: event_id
         ],
@@ -95,7 +95,7 @@ defmodule Tymeslot.Meetings.CalendarMoveTest do
     end
 
     test "a meeting that is not confirmed", %{meeting: meeting} do
-      meeting = change_meeting(meeting, status: "awaiting_approval")
+      meeting = change_meeting(meeting, status: :awaiting_approval)
       assert CalendarMove.offer(meeting) == {:error, :not_confirmed}
     end
 
@@ -184,7 +184,7 @@ defmodule Tymeslot.Meetings.CalendarMoveTest do
 
       {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
       assert unchanged.start_time == meeting.start_time
-      assert unchanged.calendar_sync_status == "externally_modified"
+      assert unchanged.calendar_sync_status == :externally_modified
 
       {:ok, fresh} = CalendarMove.offer(meeting)
       assert {:ok, moved} = CalendarMove.move(meeting.id, user.id, fresh)
@@ -229,7 +229,7 @@ defmodule Tymeslot.Meetings.CalendarMoveTest do
       {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
       assert unchanged.start_time == meeting.start_time
       assert unchanged.end_time == meeting.end_time
-      assert unchanged.calendar_sync_status == "externally_modified"
+      assert unchanged.calendar_sync_status == :externally_modified
     end
 
     test "refuses another organiser's meeting", %{meeting: meeting} do
@@ -240,7 +240,7 @@ defmodule Tymeslot.Meetings.CalendarMoveTest do
 
       {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
       assert unchanged.start_time == meeting.start_time
-      assert unchanged.calendar_sync_status == "externally_modified"
+      assert unchanged.calendar_sync_status == :externally_modified
     end
   end
 end

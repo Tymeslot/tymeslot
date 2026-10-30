@@ -243,7 +243,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   # it would silently disable Telegram for the whole deployment, one
   # integration at a time, requiring a manual per-user re-enable. Surface it
   # to the operator instead and leave the integration active.
-  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "own"} = integration) do
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: :own} = integration) do
     auto_disable(integration, "invalid_token")
     {:discard, @unauthorized}
   end
@@ -253,7 +253,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   # `AdminAlerts` already deduplicates repeat alerts for 24h. A job that spent
   # its first attempt on an unrelated transient failure and only reaches the
   # shared token on attempt 2+ must not lose its alert.
-  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "shared"} = integration) do
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: :shared} = integration) do
     Logger.warning("Shared Telegram bot token rejected (401 Unauthorized)",
       integration_id: integration.id
     )

@@ -24,7 +24,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       seed_health(user.id, integration.id,
         failures: SyncGating.threshold(),
         consecutive_hard_failures: SyncGating.threshold(),
-        last_error_class: "hard"
+        last_error_class: :hard
       )
 
       ids = SyncGating.paused_integration_ids(:calendar)
@@ -36,7 +36,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       seed_health(user.id, integration.id,
         failures: SyncGating.threshold() * 5,
         consecutive_hard_failures: 0,
-        last_error_class: "transient"
+        last_error_class: :transient
       )
 
       refute MapSet.member?(
@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       seed_health(user.id, integration.id,
         failures: SyncGating.threshold() - 1,
         consecutive_hard_failures: SyncGating.threshold() - 1,
-        last_error_class: "hard"
+        last_error_class: :hard
       )
 
       refute MapSet.member?(
@@ -66,7 +66,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       seed_health(user.id, integration.id,
         failures: 10,
         consecutive_hard_failures: 2,
-        last_error_class: "hard"
+        last_error_class: :hard
       )
 
       refute MapSet.member?(
@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       seed_health(user.id, integration.id,
         failures: 3,
         consecutive_hard_failures: 3,
-        last_error_class: "hard"
+        last_error_class: :hard
       )
 
       assert MapSet.member?(
@@ -109,7 +109,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       IntegrationHealthStateQueries.update_fields(
         :calendar,
         integration_id,
-        Keyword.merge([status: "unhealthy", last_check_at: DateTime.utc_now()], fields)
+        Keyword.merge([status: :unhealthy, last_check_at: DateTime.utc_now()], fields)
       )
   end
 end

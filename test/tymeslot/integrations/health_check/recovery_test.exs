@@ -39,13 +39,13 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
         integration_type: type,
         integration_id: integration_id,
         user_id: user.id,
-        status: "unhealthy",
+        status: :unhealthy,
         failures: 5,
         consecutive_hard_failures: 5,
         successes: 0,
         backoff_ms: :timer.hours(1),
         last_check_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-        last_error_class: "hard",
+        last_error_class: :hard,
         became_unhealthy_at: DateTime.add(DateTime.utc_now(), -3 * 24 * 3600, :second),
         notification_sent_at: DateTime.add(DateTime.utc_now(), -2 * 24 * 3600, :second)
       })
@@ -61,7 +61,7 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
       :ok = HealthCheck.mark_user_recovered(:calendar, 200)
 
       {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 200)
-      assert row.status == "healthy"
+      assert row.status == :healthy
       assert row.failures == 0
       assert row.consecutive_hard_failures == 0
       assert row.became_unhealthy_at == nil
@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
       |> then(&Monitor.put_state(:calendar, 202, &1))
 
       {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 202)
-      assert row.status == "healthy"
+      assert row.status == :healthy
       assert row.successes == 1
     end
 
@@ -136,7 +136,7 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
       # has. A server answering roughly one sync a day would otherwise reset
       # `became_unhealthy_at` daily and never reach the 48-hour notification.
       {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 300)
-      assert row.status == "unhealthy"
+      assert row.status == :unhealthy
       assert row.became_unhealthy_at == inserted.became_unhealthy_at
       assert row.notification_sent_at == inserted.notification_sent_at
       assert row.failures == inserted.failures
@@ -180,14 +180,14 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
       fail_whole_streak(integration)
 
       {:ok, raised} = IntegrationHealthStateQueries.get(:calendar, integration.id)
-      assert raised.status == "unhealthy"
+      assert raised.status == :unhealthy
       assert %DateTime{} = raised.became_unhealthy_at
 
       :ok = HealthCheck.mark_synced_successfully(:calendar, integration.id)
 
       {:ok, after_success} = IntegrationHealthStateQueries.get(:calendar, integration.id)
       assert after_success.consecutive_sync_failures == 0
-      assert after_success.status == "unhealthy"
+      assert after_success.status == :unhealthy
       assert after_success.became_unhealthy_at == raised.became_unhealthy_at
     end
 
@@ -244,7 +244,7 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
       assert probe_success(integration, user).status == :healthy
 
       {:ok, row} = IntegrationHealthStateQueries.get(:calendar, integration.id)
-      assert row.status == "healthy"
+      assert row.status == :healthy
       assert row.became_unhealthy_at == nil
       assert row.notification_sent_at == nil
     end

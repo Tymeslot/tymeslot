@@ -43,7 +43,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
     user = insert(:user)
 
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       attendee_name: "Alex Guest",
@@ -121,7 +121,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       refute render(view) =~ "color: white"
 
       # The whole point: a crawler that fetched this URL has not answered.
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
 
     test "the decline intent still decides nothing", %{conn: conn} do
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       {:ok, _view, html} = live(conn, request_path(meeting, "?intent=decline"))
 
       assert html =~ "Decline booking"
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
 
     test "warns what happens if the host does not answer", %{conn: conn} do
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
 
       # Purely a rendering fix: the row itself is still whatever the sweep
       # job left it as.
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
   end
 
@@ -181,7 +181,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       assert view |> element("[data-testid='approve-request']") |> render_click() =~
                "Booking confirmed"
 
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
     end
 
     test "the outcome badge renders the heroicon rather than nesting one svg inside another",
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
              |> render_submit() =~ "Booking declined"
 
       stored = reload(meeting)
-      assert stored.status == "cancelled"
+      assert stored.status == :cancelled
       assert stored.decline_reason == "Away that week"
     end
 
@@ -251,7 +251,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       assert render(view) =~ "changed since this page was opened"
 
       stored = reload(meeting)
-      assert stored.status == "awaiting_approval"
+      assert stored.status == :awaiting_approval
       assert DateTime.compare(stored.start_time, rerequested.start_time) == :eq
     end
 
@@ -271,14 +271,14 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       {:ok, view, _html} = live(conn, request_path(meeting))
 
       {:ok, rerequested} = Reschedule.execute(meeting.uid, reschedule_params(), user.id)
-      assert rerequested.status == "awaiting_approval"
+      assert rerequested.status == :awaiting_approval
 
       # Dispatched directly, as the older DOM the host is looking at would:
       # the page itself now renders the lapsed state, without the button.
       render_click(view, "approve", %{})
 
       stored = reload(meeting)
-      assert stored.status == "awaiting_approval"
+      assert stored.status == :awaiting_approval
       assert is_nil(stored.approval_resolved_at)
     end
 
@@ -320,7 +320,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
         end
 
       assert html =~ "Please wait a moment and try again."
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
 
       assert view |> element("[data-testid='approve-request']") |> render_click() =~
                "Booking confirmed"
@@ -357,7 +357,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       html = view |> element("[data-testid='approve-request']") |> render_click()
 
       assert html =~ "Too many attempts"
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
   end
 
@@ -380,7 +380,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
     end
 
     test "a request the invitee withdrew is not shown as declined by the host", %{conn: conn} do
-      meeting = held_meeting(%{status: "cancelled"})
+      meeting = held_meeting(%{status: :cancelled})
 
       {:ok, _view, html} = live(conn, request_path(meeting))
 
@@ -423,7 +423,7 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       {:ok, approved} = Approval.approve(meeting)
 
       approved
-      |> Changeset.change(status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      |> Changeset.change(status: :cancelled, cancelled_at: DateTime.utc_now(:second))
       |> Repo.update!()
 
       {:ok, _view, html} = live(conn, request_path(meeting))

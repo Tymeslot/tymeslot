@@ -304,6 +304,18 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
+  The URL of the event `uid` in the primary configured calendar, the
+  resource `put_raw_event/3` writes. `nil` when no calendar is configured.
+  """
+  @spec primary_event_url(caldav_client(), String.t()) :: String.t() | nil
+  def primary_event_url(client, uid) do
+    case primary_calendar_path(client) do
+      nil -> nil
+      path -> UrlBuilder.build_event_url(client.base_url, path, uid)
+    end
+  end
+
+  @doc """
   Update an event by UID in the primary configured calendar.
 
   `opts` may carry `:etag` (the caller's cached ETag for the event, used

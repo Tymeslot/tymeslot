@@ -11,7 +11,7 @@ defmodule Tymeslot.Webhooks.MeetingSnapshotTest do
     test "captures the event-defining fields as JSON-safe values" do
       meeting =
         insert(:meeting,
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: ~U[2026-01-14 09:00:00Z],
           approval_deadline_at: ~U[2026-01-15 09:00:00Z]
         )

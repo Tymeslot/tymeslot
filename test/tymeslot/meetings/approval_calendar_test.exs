@@ -30,7 +30,7 @@ defmodule Tymeslot.Meetings.ApprovalCalendarTest do
     user = insert(:user)
 
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       provider_event_id: "provider-event-1",
@@ -133,7 +133,7 @@ defmodule Tymeslot.Meetings.ApprovalCalendarTest do
 
     calendar_meeting
     |> Changeset.change(
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_email: user.email,
       video_integration_id: video.id,
       provider_event_id: "provider-event-1",

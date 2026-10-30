@@ -49,7 +49,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
   defp video_on(integration) do
     %LocationOption{
       id: "loc-video",
-      kind: "video",
+      kind: :video,
       label: "Video call",
       video_integration_ids: [integration.id],
       position: 1
@@ -67,7 +67,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
 
     insert_meeting_for_user(
       user,
-      Map.merge(%{meeting_type_id: meeting_type.id, status: "confirmed"}, meeting_attrs)
+      Map.merge(%{meeting_type_id: meeting_type.id, status: :confirmed}, meeting_attrs)
     )
   end
 
@@ -93,7 +93,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
   defp booked_in_berlin(berlin) do
     %{
       location: "Berlin office (Friedrichstrasse 1)",
-      location_kind: "in_person",
+      location_kind: :in_person,
       location_option_id: "loc-offices",
       venue_id: berlin.id
     }
@@ -102,7 +102,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
   defp booked_in_munich(munich) do
     %{
       location: "Munich office (Marienplatz 8)",
-      location_kind: "in_person",
+      location_kind: :in_person,
       location_option_id: "loc-offices",
       venue_id: munich.id
     }
@@ -119,7 +119,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
 
     assert updated.venue_id == ctx.munich.id
     assert updated.location == "Munich office (Marienplatz 8)"
-    assert updated.location_kind == "in_person"
+    assert updated.location_kind == :in_person
 
     # A venue switch has no provider side at all.
     refute_enqueued(worker: VideoSyncWorker)
@@ -222,7 +222,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
     meeting =
       meeting_on(ctx.user, [ctx.offices, branches], %{
         location: "Munich office (Marienplatz 8)",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-offices",
         venue_id: ctx.munich.id
       })
@@ -244,7 +244,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
 
     updated = reschedule(meeting, %{location_option_id: "loc-video"})
 
-    assert updated.location_kind == "video"
+    assert updated.location_kind == :video
     assert updated.video_integration_id == ctx.mirotalk.id
     assert updated.venue_id == nil
   end
@@ -258,7 +258,7 @@ defmodule Tymeslot.Bookings.RescheduleVenueTest do
     defp booked_to_arrange do
       %{
         location: "In person",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-arranged",
         venue_id: nil,
         address_to_arrange: true

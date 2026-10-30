@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Live.SchedulingLayoutTest do
       meeting =
         insert(:future_meeting,
           organizer_user: user,
-          status: "confirmed"
+          status: :confirmed
         )
 
       {:ok, conn: conn, username: profile.username, meeting_uid: meeting.uid}

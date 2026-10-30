@@ -36,17 +36,25 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
 
   alias Ecto.UUID
 
-  @kinds ~w(video in_person phone custom)
+  # The `meetings_location_kind_must_be_known` CHECK constraint spells this
+  # list out in SQL, so a new kind needs a migration widening it; stored
+  # `locations` with an unknown kind are repaired by
+  # `RepairUnknownMeetingTypeLocationKinds`.
+  @kinds [:video, :in_person, :phone, :custom]
+  @kinds_by_name Map.new(@kinds, &{Atom.to_string(&1), &1})
 
   @label_max_length 120
   @details_max_length 500
+
+  @typedoc "What an option does at booking time."
+  @type kind :: :video | :in_person | :phone | :custom
 
   @type t :: %__MODULE__{}
 
   @primary_key false
   embedded_schema do
     field :id, :string
-    field :kind, :string
+    field :kind, Ecto.Enum, values: @kinds
     field :label, :string
     field :details, :string
     field :collect_from_guest, :boolean, default: false
@@ -73,7 +81,6 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
     |> dedupe(:video_integration_ids)
     |> dedupe(:venue_ids)
     |> validate_required([:kind, :label])
-    |> validate_inclusion(:kind, @kinds)
     |> validate_length(:label, max: @label_max_length)
     |> validate_length(:details, max: @details_max_length)
     |> clear_irrelevant_kind_config(option)
@@ -81,9 +88,21 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
     |> then(fn cs -> if cs.valid?, do: validate_kind_specific(cs), else: cs end)
   end
 
-  @doc "All known location kinds."
-  @spec kinds() :: [String.t()]
+  @doc """
+  All known location kinds. `meetings.location_kind` records one of these
+  too, so its schema reads the list from here.
+  """
+  @spec kinds() :: [kind()]
   def kinds, do: @kinds
+
+  @doc """
+  The kind `value` names, or `:error`. For raw form input, which carries the
+  kind as a string; a cast `kind` field is an atom already.
+  """
+  @spec parse_kind(term()) :: {:ok, kind()} | :error
+  def parse_kind(kind) when kind in @kinds, do: {:ok, kind}
+  def parse_kind(kind) when is_binary(kind), do: Map.fetch(@kinds_by_name, kind)
+  def parse_kind(_kind), do: :error
 
   @doc """
   The one-line location string written to the meeting, the calendar event
@@ -136,28 +155,28 @@ defmodule Tymeslot.MeetingTypes.LocationOption do
     end
   end
 
-  defp maybe_clear_video_integration(cs, "video"), do: cs
+  defp maybe_clear_video_integration(cs, :video), do: cs
   defp maybe_clear_video_integration(cs, _kind), do: put_change(cs, :video_integration_ids, [])
 
-  defp maybe_clear_venues(cs, "in_person"), do: cs
+  defp maybe_clear_venues(cs, :in_person), do: cs
   defp maybe_clear_venues(cs, _kind), do: put_change(cs, :venue_ids, [])
 
-  defp maybe_clear_collect_from_guest(cs, "phone"), do: cs
+  defp maybe_clear_collect_from_guest(cs, :phone), do: cs
   defp maybe_clear_collect_from_guest(cs, _kind), do: put_change(cs, :collect_from_guest, false)
 
   # An in-person option's address lives in its venues. A `details` value left
   # on one, by an older form or a kind change, would be a second address
   # source that nothing reads, so it is dropped.
   defp clear_in_person_details(cs) do
-    if get_field(cs, :kind) == "in_person" and not is_nil(get_field(cs, :details)),
+    if get_field(cs, :kind) == :in_person and not is_nil(get_field(cs, :details)),
       do: put_change(cs, :details, nil),
       else: cs
   end
 
   defp validate_kind_specific(cs) do
     case get_field(cs, :kind) do
-      "video" -> validate_has_video_integration(cs)
-      "phone" -> validate_phone_reachable(cs)
+      :video -> validate_has_video_integration(cs)
+      :phone -> validate_phone_reachable(cs)
       _kind -> cs
     end
   end

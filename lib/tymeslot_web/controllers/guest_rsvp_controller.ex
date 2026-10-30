@@ -17,7 +17,7 @@ defmodule TymeslotWeb.GuestRsvpController do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
 
-  @responses %{"accept" => "accepted", "decline" => "declined"}
+  @responses %{"accept" => :accepted, "decline" => :declined}
 
   # ---------------------------------------------------------------------------
   # GET — confirmation landing page (read-only)

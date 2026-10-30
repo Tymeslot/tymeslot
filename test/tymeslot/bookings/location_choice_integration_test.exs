@@ -61,14 +61,14 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
         locations: [
           %LocationOption{
             id: "loc-office",
-            kind: "in_person",
+            kind: :in_person,
             label: "Our office",
             position: 0
           },
           video_location(integration, id: "loc-video", label: "Zoom", position: 1),
           %LocationOption{
             id: "loc-call",
-            kind: "phone",
+            kind: :phone,
             label: "Phone call",
             collect_from_guest: true,
             position: 2
@@ -108,7 +108,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
                book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-office"})
 
       assert meeting.location == "Our office"
-      assert meeting.location_kind == "in_person"
+      assert meeting.location_kind == :in_person
       assert meeting.location_option_id == "loc-office"
       assert meeting.video_integration_id == nil
 
@@ -150,7 +150,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
                book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-video"})
 
       assert meeting.location == "Zoom"
-      assert meeting.location_kind == "video"
+      assert meeting.location_kind == :video
       assert meeting.video_integration_id == ctx.integration.id
 
       assert_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => meeting.id})
@@ -218,7 +218,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
                })
 
       assert meeting.location == "Phone call (+44 7700 900123)"
-      assert meeting.location_kind == "phone"
+      assert meeting.location_kind == :phone
       assert meeting.attendee_phone == "+44 7700 900123"
       assert meeting.video_integration_id == nil
     end
@@ -327,7 +327,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
 
       assert meeting.venue_id == ctx.munich.id
       assert meeting.location == "Munich office (Marienplatz 8)"
-      assert meeting.location_kind == "in_person"
+      assert meeting.location_kind == :in_person
       assert Repo.get!(MeetingSchema, meeting.id).address_to_arrange == false
       refute_enqueued(worker: VideoRoomWorker)
     end
@@ -418,7 +418,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
 
       assert {:ok, meeting} = book(legacy, ctx.user, %{})
 
-      assert meeting.location_kind == "video"
+      assert meeting.location_kind == :video
       assert meeting.video_integration_id == ctx.integration.id
       assert_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => meeting.id})
     end

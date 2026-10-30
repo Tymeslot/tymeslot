@@ -142,14 +142,14 @@ defmodule Tymeslot.Workers.SlackWorker do
       else: {:error, :disabled}
   end
 
-  defp deliver(%SlackIntegrationSchema{app_mode: "oauth"} = integration, blocks) do
+  defp deliver(%SlackIntegrationSchema{app_mode: :oauth} = integration, blocks) do
     case Slack.resolve_bot_token(integration) do
       {:ok, token} -> API.post_message_via_token(token, integration.channel_id, blocks)
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp deliver(%SlackIntegrationSchema{app_mode: "webhook_url"} = integration, blocks) do
+  defp deliver(%SlackIntegrationSchema{app_mode: :webhook_url} = integration, blocks) do
     case SlackIntegrationSchema.webhook_url(integration) do
       nil -> {:error, :no_webhook_url}
       url -> API.post_message_via_webhook(url, blocks)

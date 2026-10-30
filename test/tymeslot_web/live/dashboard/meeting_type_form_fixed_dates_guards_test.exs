@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesGuardsTest do
 
       forge(view, "cancel_session", %{"id" => ctx.other_session.id})
 
-      assert Repo.get!(MeetingSchema, ctx.other_session.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, ctx.other_session.id).status == :confirmed
     end
 
     test "neither open the date for editing nor move it", ctx do
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesGuardsTest do
     book_seat(ctx.user, ctx.meeting_type, starts_at)
     view |> element("[data-testid='remove-session']") |> render_click()
 
-    assert Repo.get!(MeetingSchema, session.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, session.id).status == :confirmed
     assert render(view) =~ "1 person is booked and will be told"
   end
 

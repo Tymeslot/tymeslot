@@ -33,7 +33,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
     meeting =
       insert(:meeting,
         organizer_user_id: user.id,
-        status: "confirmed",
+        status: :confirmed,
         calendar_integration_id: integration.id,
         provider_event_id: "evt-pending"
       )
@@ -85,7 +85,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
 
       assert :ok = ExternalCalendarChanges.apply_change_to_meeting(meeting, :modified)
 
-      assert reload(meeting).calendar_sync_status == "externally_modified"
+      assert reload(meeting).calendar_sync_status == :externally_modified
       organizer_email = meeting.organizer_email
       assert_received {:email, %{to: [{_name, ^organizer_email}]}}
     end
@@ -98,7 +98,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
 
         assert :ok = ExternalCalendarChanges.apply_change_to_meeting(meeting, :modified)
 
-        assert reload(meeting).calendar_sync_status == "externally_modified"
+        assert reload(meeting).calendar_sync_status == :externally_modified
       end
     end
 
@@ -107,7 +107,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
 
       assert :ok = ExternalCalendarChanges.apply_change_to_meeting(meeting, :deleted)
 
-      assert %{calendar_sync_status: "externally_deleted", status: "cancelled"} = reload(meeting)
+      assert %{calendar_sync_status: :externally_deleted, status: :cancelled} = reload(meeting)
     end
   end
 
@@ -134,7 +134,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
 
       assert :ok = modified_from_read_at(integration, read_at)
 
-      assert reload(meeting).calendar_sync_status == "externally_modified"
+      assert reload(meeting).calendar_sync_status == :externally_modified
       organizer_email = meeting.organizer_email
       assert_received {:email, %{to: [{_name, ^organizer_email}]}}
     end
@@ -148,7 +148,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
 
       assert :ok = modified_from_read_at(integration, read_at)
 
-      assert reload(meeting).calendar_sync_status == "externally_modified"
+      assert reload(meeting).calendar_sync_status == :externally_modified
     end
 
     test "a deletion is applied all the same", %{meeting: meeting, integration: integration} do
@@ -160,7 +160,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
                  snapshot_at: read_at
                )
 
-      assert %{calendar_sync_status: "externally_deleted", status: "cancelled"} = reload(meeting)
+      assert %{calendar_sync_status: :externally_deleted, status: :cancelled} = reload(meeting)
     end
   end
 end

@@ -84,7 +84,7 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
     end
 
     test "advances ical_sequence and clears the external-change flag", %{user: user} do
-      meeting = insert_future_meeting(user, calendar_sync_status: "externally_modified")
+      meeting = insert_future_meeting(user, calendar_sync_status: :externally_modified)
       {new_start, new_end} = new_times(meeting)
 
       assert {:ok, updated} = FollowCalendar.execute(meeting, new_start, new_end)
@@ -113,7 +113,7 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
     end
 
     test "a guard refusing the locked row writes and sends nothing", %{user: user} do
-      stale = insert_future_meeting(user, calendar_sync_status: "externally_modified")
+      stale = insert_future_meeting(user, calendar_sync_status: :externally_modified)
       {new_start, new_end} = new_times(stale)
 
       # A confirm from another tab moved the booking after `stale` was read,
@@ -123,7 +123,7 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
       |> Repo.update!()
 
       still_flagged = fn
-        %{calendar_sync_status: "externally_modified"} -> :ok
+        %{calendar_sync_status: :externally_modified} -> :ok
         _current -> {:error, :not_flagged}
       end
 
@@ -229,11 +229,11 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
       {:ok, guest} =
         GuestQueries.insert_guest(%{meeting_id: meeting.id, email: "guest@example.com"})
 
-      {:ok, _rsvp} = GuestQueries.update_rsvp(guest, %{status: "accepted"})
+      {:ok, _rsvp} = GuestQueries.update_rsvp(guest, %{status: :accepted})
 
       assert {:ok, _updated} = FollowCalendar.execute(meeting, new_start, new_end)
 
-      assert [%{status: "pending"}] = GuestQueries.list_for_meeting(meeting.id)
+      assert [%{status: :pending}] = GuestQueries.list_for_meeting(meeting.id)
       send_reschedule_emails()
       assert_received {:email, %{to: [{_name, "guest@example.com"}]}}
     end
@@ -297,7 +297,7 @@ defmodule Tymeslot.Bookings.FollowCalendarTest do
           start_time: start_time,
           end_time: DateTime.add(start_time, 30, :minute),
           duration: 30,
-          status: "confirmed"
+          status: :confirmed
         ],
         attrs
       )

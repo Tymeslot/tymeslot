@@ -27,7 +27,7 @@ defmodule Tymeslot.Repo.Migrations.HashTelegramLinkTokensTest do
   test "a link the previous release handed out still links the chat" do
     integration =
       insert(:telegram_integration,
-        bot_mode: "shared",
+        bot_mode: :shared,
         chat_id: nil,
         link_token_issued_at: DateTime.utc_now(:second)
       )

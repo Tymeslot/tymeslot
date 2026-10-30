@@ -92,7 +92,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
 
     reloaded = Repo.get!(MeetingSchema, meeting.id)
-    assert reloaded.status == "confirmed"
+    assert reloaded.status == :confirmed
     assert Seats.seats_left(reloaded, meeting_type.max_participants) == seats_before + 1
 
     assert_receive {:seat_update, _meeting_type_id}
@@ -140,7 +140,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     assert {:ok, :meeting_cancelled} = CancelSeat.execute(stayer.management_token)
 
     reloaded = Repo.get!(MeetingSchema, meeting.id)
-    assert reloaded.status == "cancelled"
+    assert reloaded.status == :cancelled
 
     assert_enqueued(
       worker: CalendarEventWorker,
@@ -187,7 +187,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
 
     # The status flip rolled back — still confirmed, not cancelled and not
     # left in some third, undefined state.
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
 
     assert_enqueued(
       worker: CalendarEventWorker,
@@ -233,7 +233,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
     assert {:ok, :meeting_cancelled} = CancelSeat.execute(stayer.management_token)
 
-    assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
     assert ParticipantQueries.count_live_for_meeting(meeting.id) == 0
   end
 
@@ -243,7 +243,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
   # to cancel a live group meeting out from under everyone else on it.
   test "the public path refuses to cancel a live group meeting", %{meeting: meeting} do
     assert {:error, :group_meeting_not_cancellable} = Cancel.execute(meeting)
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
   end
 
   # The guard above distinguishes the two paths by an explicit `:caller` opt,
@@ -257,14 +257,14 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     assert {:ok, cancelled} =
              Meetings.cancel_meeting_with_refund(meeting, meeting.organizer_user_id, :none)
 
-    assert cancelled.status == "cancelled"
-    assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
+    assert cancelled.status == :cancelled
+    assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
   end
 
   test "the participant-facing cancel link is refused for a group meeting",
        %{meeting: meeting} do
     assert {:error, :group_meeting_not_cancellable} = Meetings.cancel_meeting(meeting)
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
   end
 
   test "organiser cancel-all emails every live participant and voids guest RSVPs",
@@ -273,10 +273,10 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
       Guests.create_for_participant(meeting.id, stayer.id, ["stayers.guest@example.com"])
 
     {:ok, guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
-    assert {:ok, _accepted} = Meetings.record_guest_rsvp(guest.rsvp_token, "accepted")
+    assert {:ok, _accepted} = Meetings.record_guest_rsvp(guest.rsvp_token, :accepted)
 
     assert {:ok, cancelled_meeting} = Cancel.execute(meeting, caller: :organizer)
-    assert cancelled_meeting.status == "cancelled"
+    assert cancelled_meeting.status == :cancelled
 
     # Regression coverage for the enqueue path itself, not just the handler:
     # a group meeting has no meeting-row attendee, and the notification
@@ -354,7 +354,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
              })
 
     # The guest's RSVP link, live a moment ago, is inert on a cancelled meeting.
-    assert {:error, :meeting_closed} = Meetings.record_guest_rsvp(guest.rsvp_token, "declined")
+    assert {:error, :meeting_closed} = Meetings.record_guest_rsvp(guest.rsvp_token, :declined)
   end
 
   # A participant's guests are guests of their seat: when the seat goes,
@@ -373,7 +373,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
       {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
     end
 
-    assert {:ok, _declined} = Meetings.record_guest_rsvp(declined.rsvp_token, "declined")
+    assert {:ok, _declined} = Meetings.record_guest_rsvp(declined.rsvp_token, :declined)
 
     assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
 
@@ -477,7 +477,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
 
           MeetingSchema
           |> Repo.get!(meeting.id)
-          |> Changeset.change(status: "cancelled")
+          |> Changeset.change(status: :cancelled)
           |> Repo.update!()
         end
       end,
@@ -534,7 +534,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     assert Enum.count(results, &(&1 == {:ok, :meeting_cancelled})) == 1
     assert Enum.count(results, &(&1 == {:error, :already_cancelled})) == 1
 
-    assert Repo.get!(MeetingSchema, solo_meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, solo_meeting.id).status == :cancelled
 
     assert_enqueued(
       worker: CalendarEventWorker,

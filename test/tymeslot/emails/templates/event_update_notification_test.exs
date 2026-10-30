@@ -71,12 +71,13 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       assert email.html_body =~ "14:00"
     end
 
-    test "description change shows updated without diff" do
+    test "a description change shows the description before and after" do
       details = build_event_update_details(%{changes: [{:description, "Old text", "New text"}]})
       email = EventUpdateNotification.render("a@example.com", details)
 
-      assert email.html_body =~ "(updated)"
-      refute email.html_body =~ "Old text"
+      assert email.html_body =~ "Old text"
+      assert email.html_body =~ "New text"
+      assert email.text_body =~ "Description: Old text → New text"
     end
 
     test "multiple simultaneous changes all appear" do
@@ -93,7 +94,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       assert email.html_body =~ "Old Title"
       assert email.html_body =~ "New Title"
       assert email.html_body =~ "Room A"
-      assert email.html_body =~ "(updated)"
+      assert email.html_body =~ "Room B"
     end
 
     test "translates the subject, heading and change summary for every supported locale" do

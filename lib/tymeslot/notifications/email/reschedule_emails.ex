@@ -107,7 +107,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
     do: DateTime.compare(meeting.start_time, parse_datetime(rescheduled_to)) != :eq
 
   defp status_changed?(_meeting, nil), do: false
-  defp status_changed?(meeting, status), do: meeting.status != status
+  defp status_changed?(meeting, status), do: Atom.to_string(meeting.status) != status
 
   # Each copy, the organiser's, the attendee's and each guest's, is claimed
   # for the job, so the guests are told on this run whatever became of the

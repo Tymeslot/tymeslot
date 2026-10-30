@@ -33,7 +33,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
         {:ok, :transaction_not_found}
 
       {:ok, transaction} ->
-        case PaymentQueries.update_transaction_status(transaction, "failed") do
+        case PaymentQueries.update_transaction_status(transaction, :failed) do
           {:ok, updated_transaction} ->
             Logger.info("Payment updates processed", stripe_id: updated_transaction.stripe_id)
 
@@ -49,7 +49,12 @@ defmodule Tymeslot.Payments.DatabaseOperations do
   Updates a transaction when subscription checkout is completed.
   Links the transaction to the actual Stripe subscription ID.
   """
-  @spec update_transaction_for_subscription(String.t(), String.t(), String.t(), map()) ::
+  @spec update_transaction_for_subscription(
+          String.t(),
+          String.t(),
+          PaymentTransaction.status(),
+          map()
+        ) ::
           {:ok, transaction()} | {:error, term()}
   def update_transaction_for_subscription(checkout_session_id, subscription_id, status, metadata) do
     case PaymentQueries.get_transaction_by_stripe_id(checkout_session_id) do
@@ -113,7 +118,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
 
         attrs = %{
           metadata: updated_metadata,
-          status: "pending_reconciliation"
+          status: :pending_reconciliation
         }
 
         case PaymentQueries.update_transaction(transaction, attrs) do

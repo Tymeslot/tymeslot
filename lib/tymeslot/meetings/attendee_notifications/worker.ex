@@ -54,6 +54,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity
   alias Tymeslot.Repo
 
   require Logger
@@ -216,11 +217,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     EmailScheduler.schedule_event_update_notification(%{
       user_id: user_id_for(event),
       event_uid: event.uid,
+      ical_uid: SeriesIdentity.entry_uid(event),
       integration_id: integration_id_for(event),
       attendee_emails: recipient_emails,
       before_title: last_state_string(event, "title"),
       before_location: last_state_string(event, "location"),
       before_description: last_state_string(event, "description"),
+      before_video_link: last_state_string(event, "video_link"),
       before_start_at: last_state_datetime(event, "starts_at"),
       before_end_at: last_state_datetime(event, "ends_at"),
       before_start_date: last_state_string(event, "start_date"),

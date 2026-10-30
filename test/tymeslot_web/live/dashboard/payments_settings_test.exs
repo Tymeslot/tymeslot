@@ -372,7 +372,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
           paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)
         })
 
-      _pending = paid_payment_for(user, %{status: "pending", paid_at: nil})
+      _pending = paid_payment_for(user, %{status: :pending, paid_at: nil})
 
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
@@ -418,7 +418,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       render_async(view, 5_000)
 
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
     end
 
@@ -492,7 +492,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       render_async(view, 5_000)
 
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "partially_refunded"
+      assert reloaded.status == :partially_refunded
       assert reloaded.refunded_amount_cents == 1500
     end
 

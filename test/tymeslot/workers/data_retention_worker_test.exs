@@ -384,7 +384,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
     defp telegram_stub(user, attrs \\ []) do
       defaults = [
         user: user,
-        bot_mode: "shared",
+        bot_mode: :shared,
         chat_id: nil,
         link_token: "tok-#{System.unique_integer([:positive])}"
       ]
@@ -448,7 +448,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:availability_override,
           schedule: schedule,
           date: date,
-          override_type: "extra_hours",
+          override_type: :extra_hours,
           start_time: ~T[09:00:00],
           end_time: ~T[10:00:00]
         )
@@ -496,14 +496,14 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:meeting,
           start_time: DateTime.add(old_end, -1, :hour),
           end_time: old_end,
-          status: "completed"
+          status: :completed
         )
 
       recent =
         insert(:meeting,
           start_time: DateTime.add(recent_end, -1, :hour),
           end_time: recent_end,
-          status: "completed"
+          status: :completed
         )
 
       assert :ok = perform_job(DataRetentionWorker, %{})
@@ -520,7 +520,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
         insert(:meeting,
           start_time: DateTime.add(ended, -1, :hour),
           end_time: ended,
-          status: "completed"
+          status: :completed
         )
 
       assert :ok = perform_job(DataRetentionWorker, %{"invitee_data_retention_days" => 30})

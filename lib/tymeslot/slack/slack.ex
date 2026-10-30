@@ -88,7 +88,7 @@ defmodule Tymeslot.Slack do
              | :feature_access_checker_failed
              | :feature_disabled}
   def create_webhook_integration(user_id, attrs) do
-    create_integration(user_id, Map.put(attrs, :app_mode, "webhook_url"))
+    create_integration(user_id, Map.put(attrs, :app_mode, :webhook_url))
   end
 
   @spec update_integration(SlackIntegrationSchema.t(), map()) ::
@@ -240,8 +240,8 @@ defmodule Tymeslot.Slack do
   def test_integration(%SlackIntegrationSchema{} = integration) do
     with :ok <- Features.check_access(integration.user_id, :automations_allowed) do
       case integration.app_mode do
-        "oauth" -> send_test_via_oauth(integration)
-        "webhook_url" -> send_test_via_webhook(integration)
+        :oauth -> send_test_via_oauth(integration)
+        :webhook_url -> send_test_via_webhook(integration)
         other -> {:error, {:unknown_mode, other}}
       end
     end

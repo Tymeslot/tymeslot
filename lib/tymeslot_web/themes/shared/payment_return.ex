@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   `FailAndExpire`), so the page renders what the webhook actually wrote.
 
   Re-fetches the meeting, not just the payment: paid does not always mean
-  confirmed (a paid, approval-gated booking moves to `"awaiting_approval"`),
+  confirmed (a paid, approval-gated booking moves to `:awaiting_approval`),
   and a failed checkout expires the meeting rather than the payment alone.
   """
   @spec refresh(LiveView.Socket.t()) :: LiveView.Socket.t()

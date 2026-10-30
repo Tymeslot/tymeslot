@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   defp webhook_integration(user, attrs \\ %{}) do
     defaults = %{
       user: user,
-      app_mode: "webhook_url",
+      app_mode: :webhook_url,
       webhook_url_encrypted:
         Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
       bot_token_encrypted: nil,
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   defp oauth_integration(user, attrs \\ %{}) do
     defaults = %{
       user: user,
-      app_mode: "oauth",
+      app_mode: :oauth,
       bot_token_encrypted: Encryption.encrypt("xoxb-test-token"),
       channel_id: "C123",
       channel_name: "#bookings",

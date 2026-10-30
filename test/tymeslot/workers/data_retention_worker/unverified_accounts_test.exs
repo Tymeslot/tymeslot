@@ -83,7 +83,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker.UnverifiedAccountsTest do
         insert(:meeting,
           organizer_user: host,
           organizer_email: host.email,
-          status: "confirmed",
+          status: :confirmed,
           start_time: starts,
           end_time: DateTime.add(starts, 30, :minute)
         )
@@ -91,7 +91,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker.UnverifiedAccountsTest do
       assert :ok = perform_job(DataRetentionWorker, %{})
       assert Repo.get(UserSchema, host.id)
 
-      meeting |> Changeset.change(status: "cancelled") |> Repo.update!()
+      meeting |> Changeset.change(status: :cancelled) |> Repo.update!()
 
       assert :ok = perform_job(DataRetentionWorker, %{})
       refute Repo.get(UserSchema, host.id)
@@ -105,7 +105,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker.UnverifiedAccountsTest do
         insert(:meeting,
           organizer_user: host,
           organizer_email: host.email,
-          status: "completed",
+          status: :completed,
           start_time: DateTime.add(ended, -30, :minute),
           end_time: ended
         )

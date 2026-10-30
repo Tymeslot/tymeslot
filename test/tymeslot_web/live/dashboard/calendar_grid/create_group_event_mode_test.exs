@@ -289,7 +289,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
       |> render_click()
 
       assert Repo.get(MeetingTypeSchema, event.id) == nil
-      assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+      assert Repo.get!(MeetingSchema, session.id).status == :cancelled
     end
 
     test "shows a cancelled event without its link", %{conn: conn, event: event, user: user} do

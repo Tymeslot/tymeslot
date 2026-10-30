@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
     insert(
       :meeting,
       Keyword.merge(
-        [status: "confirmed", start_time: start_time, end_time: end_time],
+        [status: :confirmed, start_time: start_time, end_time: end_time],
         attrs
       )
     )
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
         insert(
           :meeting,
           organizer_user: owner_user,
-          status: "cancelled",
+          status: :cancelled,
           start_time: DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second),
           end_time: DateTime.utc_now() |> DateTime.add(7200) |> DateTime.truncate(:second)
         )
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
         insert(
           :meeting,
           organizer_user: owner_user,
-          status: "confirmed",
+          status: :confirmed,
           start_time: DateTime.utc_now() |> DateTime.add(-7200) |> DateTime.truncate(:second),
           end_time: DateTime.utc_now() |> DateTime.add(-3600) |> DateTime.truncate(:second)
         )

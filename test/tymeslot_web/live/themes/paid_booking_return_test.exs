@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
             success_url
           ) || flunk("expected a #{slug} processing URL, got #{success_url}")
 
-        assert Repo.get!(MeetingSchema, meeting_id).status == "awaiting_payment"
+        assert Repo.get!(MeetingSchema, meeting_id).status == :awaiting_payment
 
         {:ok, view, _html} = live(conn, success_url)
         shell = "[data-testid='#{slug}-payment-processing']"
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
 
         assert has_element?(view, "#{shell} h1", "Booking confirmed")
         assert has_element?(view, "#{shell} [data-testid='payment-paid-amount']", "Paid: $50.00")
-        assert Repo.get!(MeetingSchema, meeting_id).status == "confirmed"
+        assert Repo.get!(MeetingSchema, meeting_id).status == :confirmed
       end
 
       @tag :capture_log

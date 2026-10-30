@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.CallbackPersistenceRaceTest do
 
         Repo.delete_all(
           from(h in IntegrationHealthStateSchema,
-            where: h.integration_type == "calendar" and h.integration_id in ^integration_ids
+            where: h.integration_type == :calendar and h.integration_id in ^integration_ids
           )
         )
 

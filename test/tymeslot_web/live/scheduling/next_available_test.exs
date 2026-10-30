@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
         insert(:availability_override,
           schedule: schedule,
           date: date,
-          override_type: "unavailable"
+          override_type: :unavailable
         )
       end)
 
@@ -246,7 +246,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       insert(:availability_override,
         schedule: schedule,
         date: chosen,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[14:00:00],
         end_time: ~T[16:00:00]
       )

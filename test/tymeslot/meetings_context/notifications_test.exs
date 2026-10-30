@@ -36,7 +36,7 @@ defmodule Tymeslot.MeetingsContext.NotificationsTest do
       {:ok, updated} = MeetingQueries.get_meeting_by_uid(meeting.uid)
       # `status` is left untouched — only `reschedule_requested_at` marks
       # the meeting as awaiting a new time (see `Bookings.RescheduleRequest`).
-      assert updated.status == "confirmed"
+      assert updated.status == :confirmed
       assert %DateTime{} = updated.reschedule_requested_at
     end
 
@@ -45,7 +45,7 @@ defmodule Tymeslot.MeetingsContext.NotificationsTest do
 
       meeting =
         insert_meeting_for_user(user, %{
-          status: "completed",
+          status: :completed,
           start_offset: -86_400,
           duration: 3_600
         })

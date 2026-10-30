@@ -48,7 +48,7 @@ defmodule Tymeslot.Bookings.Cancel do
   @spec execute(Meeting.t(), keyword()) :: {:ok, Meeting.t()} | {:error, term()}
   def execute(meeting, opts \\ [])
 
-  def execute(%Meeting{status: "cancelled"} = meeting, _opts) do
+  def execute(%Meeting{status: :cancelled} = meeting, _opts) do
     Logger.info("Skipping cancellation for already-cancelled meeting",
       meeting_id: meeting.id
     )
@@ -218,7 +218,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   # Private functions
 
-  # A group slot is shared, so flipping the meeting row to "cancelled" here
+  # A group slot is shared, so flipping the meeting row to :cancelled here
   # would cancel every other participant's seat, not just whoever is asking.
   # The public, unauthenticated meeting-level surface
   # (`/:username/meeting/:uid/cancel`) never passes `caller: :organizer`, so

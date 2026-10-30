@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceSummary
+  alias Tymeslot.Integrations.Calendar.Recurrence.Summary, as: RecurrenceSummary
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :recurrence_rule, :string, default: nil
@@ -299,15 +299,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   attr), as the editor shows it; nil for no rule.
   """
   @spec summary(String.t() | nil, Date.t() | DateTime.t()) :: String.t() | nil
-  def summary(rule, start) do
-    read =
-      case Pattern.read(rule, start) do
-        {:ok, pattern} -> pattern
-        :custom -> :custom
-      end
-
-    RecurrenceSummary.summary(read, start_date(start))
-  end
+  def summary(rule, start), do: RecurrenceSummary.describe(rule, start)
 
   # The day choices a monthly or yearly pattern offers for this start, each
   # as `{field value, label, on}`.

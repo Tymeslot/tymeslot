@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
       start_time: start,
       end_time: DateTime.add(start, 60, :minute),
       duration: 60,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 
@@ -309,7 +309,7 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
             start_time: start,
             end_time: DateTime.add(start, 60, :minute),
             duration: 60,
-            status: "confirmed"
+            status: :confirmed
           )
 
         {:ok, view, _html} =

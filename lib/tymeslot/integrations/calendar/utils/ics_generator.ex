@@ -109,14 +109,17 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       dtstart: dtstart(meeting_details),
       dtend: dtend(meeting_details),
       location: determine_location(meeting_details),
-      uid:
-        "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
+      uid: ics_uid(Map.get(meeting_details, :ical_uid) || Map.get(meeting_details, :uid)),
       organizer: format_organizer(meeting_details),
       attendee: format_attendees(meeting_details),
       conference: conference_uri(meeting_details),
-      status: Map.get(meeting_details, :status, "CONFIRMED")
+      status: Map.get(meeting_details, :status, "CONFIRMED"),
+      other_entries: Map.get(meeting_details, :other_entries, [])
     }
   end
+
+  defp ics_uid(nil), do: ics_uid(UUID.uuid4())
+  defp ics_uid(uid), do: "#{uid}@#{Application.get_env(:tymeslot, :email)[:domain]}"
 
   # An all-day event has dates and no instants: RFC 5545 §3.3.4 date-only
   # values, with the exclusive end date the iCal convention already uses.
@@ -157,25 +160,43 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       "VERSION:2.0",
       if(method != :none, do: "METHOD:PUBLISH"),
       "PRODID:-//Tymeslot//Tymeslot 1.0//EN",
-      "CALSCALE:GREGORIAN",
-      "BEGIN:VEVENT",
-      "UID:#{event.uid}",
-      "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
-      "DTSTART#{format_ical_time(event.dtstart)}",
-      "DTEND#{format_ical_time(event.dtend)}",
-      if(is_integer(sequence), do: "SEQUENCE:#{sequence}"),
-      "SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}",
-      "DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}",
-      "LOCATION#{tag_language(location_text, lang)}:#{location_text}",
-      build_conference_line(event.conference),
-      "ORGANIZER;#{event.organizer}",
-      event.attendee && "ATTENDEE;#{event.attendee}",
-      "STATUS:#{status_for(method, event.status)}",
-      "END:VEVENT",
-      "END:VCALENDAR"
+      "CALSCALE:GREGORIAN"
     ]
+    |> Enum.concat(
+      Enum.flat_map(entries(event), fn entry ->
+        [
+          "BEGIN:VEVENT",
+          "UID:#{entry.uid}",
+          "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
+          "DTSTART#{format_ical_time(entry.dtstart)}",
+          "DTEND#{format_ical_time(entry.dtend)}",
+          if(is_integer(sequence), do: "SEQUENCE:#{sequence}"),
+          "SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}",
+          "DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}",
+          "LOCATION#{tag_language(location_text, lang)}:#{location_text}",
+          build_conference_line(event.conference),
+          "ORGANIZER;#{event.organizer}",
+          event.attendee && "ATTENDEE;#{event.attendee}",
+          "STATUS:#{status_for(method, event.status)}",
+          "END:VEVENT"
+        ]
+      end)
+    )
+    |> Enum.concat(["END:VCALENDAR"])
     |> Enum.reject(&is_nil/1)
     |> ContentLines.join()
+  end
+
+  # The event, then each further entry in the guest's calendar the email
+  # changes alike (`:other_entries`): the entry the invitation of a series
+  # made, when an email about every occurrence is sent from another one
+  # (`Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity.series_entry/2`).
+  # Each is a VEVENT of its own, differing only in its UID and timing.
+  defp entries(event) do
+    others =
+      Enum.map(event.other_entries, &%{uid: ics_uid(&1.uid), dtstart: &1.start, dtend: &1.end})
+
+    [Map.take(event, [:uid, :dtstart, :dtend]) | others]
   end
 
   # RFC 7986 §5.11 — `CONFERENCE` advertises an online-meeting access URI so

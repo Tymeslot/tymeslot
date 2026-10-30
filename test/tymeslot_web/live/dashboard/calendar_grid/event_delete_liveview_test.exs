@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
 
       assert render(lv) =~ "Event and linked meeting cancelled."
       {:ok, cancelled} = MeetingQueries.get_meeting(meeting.id)
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
     end
 
     test "a delete the calendar could not take is queued and says so", %{

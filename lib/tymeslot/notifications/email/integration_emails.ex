@@ -8,22 +8,19 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Infrastructure.Config
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
-  alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Shared.IntegrationTypes
   alias Tymeslot.Integrations.Video.RoomCreationError
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Notifications.Email.CalendarEventDetails
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Workers.DeliveryClaims
 
   # The user, integration or event is gone, or the condition the email was
-  # about has cleared. Unknown error codes, unreadable dates and partial
-  # delivery failures are recorded.
+  # about has cleared. Unknown error codes and unreadable dates are recorded.
   @gone "User or integration not found"
   @reauth_resolved "Integration no longer needs reauth"
   @deletion_pending "Account pending deletion"
@@ -61,23 +58,21 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
       {user_id, integration_type, integration_id},
       "unhealthy notification",
       fn
-        user, integration ->
-          type_atom = safe_integration_type_atom(integration_type)
-
+        user, integration, kind ->
           case Config.email_service_module().send_integration_unhealthy_notification(
                  user,
                  integration,
-                 type_atom
+                 kind
                ) do
             {:ok, _result} ->
               Logger.info("Integration unhealthy notification sent",
                 user_id: user_id,
                 integration_id: integration_id,
-                type: integration_type
+                type: kind
               )
 
               IntegrationHealthStateQueries.update_fields(
-                integration_type,
+                kind,
                 integration_id,
                 notification_sent_at: DateTime.utc_now()
               )
@@ -107,17 +102,17 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     with_user_and_integration(
       {user_id, integration_type, integration_id},
       "reauth notification",
-      &send_reauth_notification(&1, &2, integration_type)
+      &send_reauth_notification/3
     )
   end
 
   # The integration is re-read at send time rather than trusted from the job
   # args, so a user who reconnected between the flag and the send is not told
   # to reconnect something that already works.
-  defp send_reauth_notification(_user, %{needs_reauth: false} = integration, integration_type) do
+  defp send_reauth_notification(_user, %{needs_reauth: false} = integration, kind) do
     Logger.info("Integration no longer needs reauth, discarding notification",
       integration_id: integration.id,
-      type: integration_type
+      type: kind
     )
 
     {:discard, @reauth_resolved}
@@ -137,19 +132,17 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     {:discard, @deletion_pending}
   end
 
-  defp send_reauth_notification(user, integration, integration_type) do
-    type_atom = safe_integration_type_atom(integration_type)
-
+  defp send_reauth_notification(user, integration, kind) do
     case Config.email_service_module().send_integration_reauth_notification(
            user,
            integration,
-           type_atom
+           kind
          ) do
       {:ok, _result} ->
         Logger.info("Integration reauth notification sent",
           user_id: user.id,
           integration_id: integration.id,
-          type: integration_type
+          type: kind
         )
 
         :ok
@@ -177,20 +170,18 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
       {user_id, integration_type, integration_id},
       "paused notification",
       fn
-        user, integration ->
-          type_atom = safe_integration_type_atom(integration_type)
-
+        user, integration, kind ->
           case Config.email_service_module().send_integration_paused_notification(
                  user,
                  integration,
-                 type_atom,
+                 kind,
                  cutoff_days
                ) do
             {:ok, _result} ->
               Logger.info("Integration paused notification sent",
                 user_id: user_id,
                 integration_id: integration_id,
-                type: integration_type
+                type: kind
               )
 
               :ok
@@ -218,9 +209,9 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     case RoomCreationError.parse(error_code) do
       {:ok, code} ->
         with_user_and_integration(
-          {user_id, "video", integration_id},
+          {user_id, :video, integration_id},
           "room creation error notification",
-          fn user, integration ->
+          fn user, integration, _kind ->
             with :ok <- still_worth_sending(integration, code),
                  do: deliver_room_creation_error_notification(user, integration, code)
           end
@@ -300,10 +291,10 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
         "calendar_names" => [_first | _rest] = calendar_names
       }) do
     with_user_and_integration(
-      {user_id, "calendar", integration_id},
+      {user_id, :calendar, integration_id},
       "calendars removed notification",
       fn
-        user, integration ->
+        user, integration, _kind ->
           case Config.email_service_module().send_calendars_removed_notification(
                  user,
                  integration,
@@ -366,7 +357,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   # separately (`DeliveryClaims`): a job the Oban lifeline rescues part-way
   # through re-mails nobody it already reached.
   @spec handle_event_update_notification(%{String.t() => term()}, DeliveryClaims.job_id()) ::
-          :ok | {:discard, String.t()}
+          :ok | {:error, term()} | {:discard, String.t()}
   def handle_event_update_notification(
         %{"event_uid" => event_uid, "integration_id" => integration_id} = args,
         job_id
@@ -377,7 +368,12 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
          false <- nothing_to_announce?(changes, args),
          {:ok, details} <-
            CalendarEventDetails.update_details(user, current_event, changes, args) do
-      deliver_event_update(args["attendee_emails"], details, event_uid, job_id)
+      deliver_event_update(
+        args["attendee_emails"],
+        details,
+        {integration_id, event_uid},
+        job_id
+      )
     else
       {:error, :not_found} ->
         Logger.warning("Event or user not found for update notification",
@@ -408,7 +404,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     do: CalendarEventDetails.snapshot_event(snapshot)
 
   defp updated_event(_args, integration_id, event_uid),
-    do: CalendarGrid.get_cached_event(integration_id, event_uid)
+    do: CalendarGrid.get_cached_event_with_video(integration_id, event_uid)
 
   # An empty diff against a recorded baseline is a genuine no-op (an Oban
   # retry of a change already applied lands here) and stays `:ok`. A first
@@ -419,40 +415,41 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   defp nothing_to_announce?([], args), do: not CalendarEventDetails.first_notification?(args)
   defp nothing_to_announce?(_changes, _args), do: false
 
-  defp deliver_event_update(attendee_emails, details, event_uid, job_id) do
+  # A guest the email fails for is recorded on the event for the organiser
+  # (`UndeliveredUpdates`), and a guest it reaches cleared, so a retry that
+  # gets through takes the notice down again. A failure retries the job,
+  # snoozes it past an open circuit, or discards it when every remaining
+  # address is rejected outright; the guests already reached are not
+  # re-mailed, as each holds its claim.
+  defp deliver_event_update(attendee_emails, details, {integration_id, event_uid}, job_id) do
     results =
       Enum.map(attendee_emails, fn email ->
-        DeliveryClaims.once(job_id, "attendee:#{email}", fn ->
-          Config.email_service_module().send_event_update_notification(email, details)
-        end)
+        result =
+          DeliveryClaims.once(job_id, "attendee:#{email}", fn ->
+            Config.email_service_module().send_event_update_notification(email, details)
+          end)
+
+        UndeliveredUpdates.note_delivery(integration_id, event_uid, email, result)
+        result
       end)
 
-    errors = Enum.filter(results, &match?({:error, _reason}, &1))
+    metadata = [event_uid: event_uid, attendee_count: length(attendee_emails)]
 
-    if errors == [] do
-      Logger.info("Event update notifications sent",
-        event_uid: event_uid,
-        attendee_count: length(attendee_emails)
-      )
-
-      :ok
-    else
-      Logger.error("Some event update notifications failed",
-        event_uid: event_uid,
-        error_count: length(errors)
-      )
-
-      {:discard,
-       "Partial delivery failure: #{length(errors)} of #{length(attendee_emails)} failed"}
+    with :ok <- DeliveryOutcome.from_results("event update", metadata, results) do
+      Logger.info("Event update notifications sent", metadata)
     end
   end
 
   # The owner and the integration a notice is about, both re-read at send
   # time; either one gone discards the job, as there is nobody left to tell.
+  # A notice's kind arrives as a job-arg string and is parsed here, once; one
+  # this build does not know names no integration it can find, so it is gone
+  # too.
   defp with_user_and_integration({user_id, integration_type, integration_id}, label, fun) do
-    with {:ok, user} <- UserQueries.get_user(user_id),
-         {:ok, integration} <- fetch_integration(integration_type, integration_id) do
-      fun.(user, integration)
+    with {:ok, kind} <- parse_kind(integration_type),
+         {:ok, user} <- UserQueries.get_user(user_id),
+         {:ok, integration} <- fetch_integration(kind, integration_id) do
+      fun.(user, integration, kind)
     else
       {:error, :not_found} ->
         Logger.warning("User or integration not found for an integration notice",
@@ -465,8 +462,15 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     end
   end
 
-  defp fetch_integration("calendar", integration_id) do
-    case CalendarIntegrationQueries.get(integration_id) do
+  defp parse_kind(integration_type) do
+    case IntegrationTypes.parse(integration_type) do
+      {:ok, _kind} = ok -> ok
+      :error -> {:error, :not_found}
+    end
+  end
+
+  defp fetch_integration(kind, integration_id) do
+    case IntegrationTypes.queries(kind).get(integration_id) do
       {:ok, _integration} = ok ->
         ok
 
@@ -474,32 +478,8 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
         not_found
 
       {:error, :requires_reencryption, integration} ->
-        Management.handle_reauth_required(integration)
+        IntegrationTypes.domain(kind).handle_reauth_required(integration)
         {:error, :not_found}
     end
-  end
-
-  defp fetch_integration("video", integration_id) do
-    case VideoIntegrationQueries.get(integration_id) do
-      {:ok, _integration} = ok ->
-        ok
-
-      {:error, :not_found} = not_found ->
-        not_found
-
-      {:error, :requires_reencryption, integration} ->
-        Video.handle_reauth_required(integration)
-        {:error, :not_found}
-    end
-  end
-
-  defp fetch_integration(_type, _id), do: {:error, :not_found}
-
-  defp safe_integration_type_atom("calendar"), do: :calendar
-  defp safe_integration_type_atom("video"), do: :video
-
-  defp safe_integration_type_atom(type) do
-    Logger.warning("Unknown integration type in email worker", type: type)
-    :unknown
   end
 end
