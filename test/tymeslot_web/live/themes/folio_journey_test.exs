@@ -13,9 +13,11 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
   import Tymeslot.JourneyFixtureHelpers
 
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
@@ -49,6 +51,10 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     :ok
   end
 
+  # The path of the page's address after its last patch; the choices the
+  # path cannot say ride in its query (`Shared.ChoicesInUrl`).
+  defp patched_path(view), do: URI.parse(BookingTestHelpers.last_patched_url(view)).path
+
   defp ahead, do: Date.utc_today() |> Date.add(3) |> Date.to_iso8601()
 
   test "opens on the masthead and the meeting types, nothing below them yet", %{conn: conn} do
@@ -67,7 +73,7 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     {:ok, view, _html} = live(conn, "/#{profile.username}")
 
     BookingDriver.choose_meeting_type(view, "quick-chat")
-    assert_patch(view, "/#{profile.username}/quick-chat")
+    assert patched_path(view) == "/#{profile.username}/quick-chat"
 
     assert has_element?(view, "#offer-step[data-moment-state='done']")
     assert has_element?(view, "#when-step [data-fact='date']")
@@ -95,9 +101,9 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     {:ok, view, _html} = live(conn, "/#{profile.username}")
 
     BookingDriver.choose_meeting_type(view, "quick-chat")
-    assert_patch(view, "/#{profile.username}/quick-chat")
+    assert patched_path(view) == "/#{profile.username}/quick-chat"
     {day, _time} = BookingDriver.pick_first_slot(view, on: ahead())
-    assert_patch(view, "/#{profile.username}/quick-chat/book")
+    assert patched_path(view) == "/#{profile.username}/quick-chat/book"
 
     assert has_element?(view, "#you-step form[data-fact='attendee']")
     assert has_element?(view, "#you-step h2", "A little about you")
@@ -324,7 +330,14 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
         ]
       )
 
-    insert(:connect_account, user: user, default_currency: "chf")
+    # A paid type is offered, and so priced, only while the organiser can
+    # take payments (`Tymeslot.MeetingTypes.PaymentAccess`).
+    setup_config(:tymeslot,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true
+    )
+
+    insert(:connect_account, user: user, default_currency: "chf", charges_enabled: true)
     {:ok, view, _html} = live(conn, "/#{profile.username}")
 
     entry = "#offer-step [data-fact='meeting_type'][data-value='strategy-session']"
@@ -390,7 +403,14 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
         ]
       )
 
-    insert(:connect_account, user: user, default_currency: "chf")
+    # A paid type is offered, and so priced, only while the organiser can
+    # take payments (`Tymeslot.MeetingTypes.PaymentAccess`).
+    setup_config(:tymeslot,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true
+    )
+
+    insert(:connect_account, user: user, default_currency: "chf", charges_enabled: true)
     {:ok, view, _html} = live(conn, "/#{profile.username}")
     BookingDriver.choose_meeting_type(view, "strategy-session")
     BookingDriver.pick_first_slot(view, on: ahead())

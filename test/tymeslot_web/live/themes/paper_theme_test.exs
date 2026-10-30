@@ -16,10 +16,12 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
   @moduletag :live
 
   import Mox
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
@@ -44,6 +46,10 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
     seed_booking_account(@theme_id, "paper-organiser", "Etc/UTC")
   end
+
+  # The path of the page's address after its last patch; the choices the
+  # path cannot say ride in its query (`Shared.ChoicesInUrl`).
+  defp patched_path(view), do: URI.parse(BookingTestHelpers.last_patched_url(view)).path
 
   defp customise(profile, settings),
     do: insert(:theme_customization, profile: profile, theme_id: @theme_id, settings: settings)
@@ -107,7 +113,14 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
   test "a paid meeting type shows its price in the organiser's currency",
        %{conn: conn, user: user, profile: profile} do
-    insert(:connect_account, user: user, default_currency: "chf")
+    # A paid type is offered, and so priced, only while the organiser can
+    # take payments (`Tymeslot.MeetingTypes.PaymentAccess`).
+    setup_config(:tymeslot,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true
+    )
+
+    insert(:connect_account, user: user, default_currency: "chf", charges_enabled: true)
 
     insert(:meeting_type,
       user: user,
@@ -408,7 +421,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
       {:ok, view, _html} = live(conn, "/#{user}")
 
       BookingDriver.choose_meeting_type(view, "quick-chat")
-      assert_patch(view, "/#{user}/quick-chat")
+      assert patched_path(view) == "/#{user}/quick-chat"
 
       BookingDriver.continue(view)
 
@@ -416,7 +429,7 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
         on: Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
       )
 
-      assert_patch(view, "/#{user}/quick-chat/book")
+      assert patched_path(view) == "/#{user}/quick-chat/book"
     end
 
     @tag :capture_log
