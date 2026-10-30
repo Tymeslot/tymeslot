@@ -6,7 +6,9 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
   the card-less page, with the band edge to edge and the body in the reading
   column. The masthead carries the organiser's portrait and name below the
   band when the page has their profile, and the band alone when it does
-  not (a payment page's dead render, before the profile is read).
+  not (a payment page's dead render, before the profile is read). The
+  payment pages leave out the theme extensions (branding banner, analytics
+  beacon): a return page is not a booking-page impression.
   """
   use Phoenix.Component
 
@@ -34,6 +36,7 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={@locale != nil}
+      show_extensions={not @plain}
     >
       <section
         class={[
