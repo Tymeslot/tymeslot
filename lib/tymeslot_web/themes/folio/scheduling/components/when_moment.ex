@@ -10,6 +10,12 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
   type's seats). Picking a time opens the details below by itself; there is
   no Next.
 
+  A fixed-date type lists its planned sessions under the timezone picker
+  (the shared `SessionList`); choosing one picks its day, as a day in the
+  calendar does, and the calendar follows it to its month. With no session
+  left to choose, the calendar and the times are not drawn and the list
+  says why.
+
   The month buttons are labelled with the month they open, so they need no
   string of their own; they carry `calendar-nav-button` and the period
   intents (`data-intent="earlier"`, `"later"`), and the days `calendar-day`,
@@ -23,6 +29,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
@@ -109,7 +116,14 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
         </TimezonePicker.timezone_picker>
       </div>
 
-      <div class="folio-calendar">
+      <SessionList.session_list
+        sessions={assigns[:planned_sessions]}
+        selected_date={@selected_date}
+        timezone={@user_timezone}
+        target={@myself}
+      />
+
+      <div :if={SessionList.show_calendar?(assigns[:planned_sessions])} class="folio-calendar">
         <div class="folio-calendar__header">
           <button
             type="button"
@@ -229,6 +243,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
       </div>
 
       <SlotList.slot_list
+        :if={SessionList.show_calendar?(assigns[:planned_sessions])}
         selected_date={@selected_date}
         selected_time={@selected_time}
         available_slots={@available_slots}

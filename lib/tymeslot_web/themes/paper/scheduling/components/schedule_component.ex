@@ -24,6 +24,13 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   compact row above it before (`week.css`), and the actions bar names the
   chosen day and time (`data-testid="paper-selection"`, announced politely).
 
+  A fixed-date type lists its planned sessions under the timezone picker
+  (the shared `SessionList`), and always on the month, whatever the
+  calendar view: choosing a session picks its day, as a day in the
+  calendar does, and the month follows it there, which a week would not.
+  With no session left to choose, the calendar and the times are not drawn
+  and the list says why.
+
   For a group type the details say how many people it takes
   (`GroupSession.hint`), and a seat move names the spot it is moving above
   both views (`GroupSession.seat_move_notice`, right under the brand). Each
@@ -62,6 +69,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Paper.Scheduling.Details
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.Components.WeekGrid
@@ -105,7 +113,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    view = calendar_view(assigns.theme_tokens)
+    view = calendar_view(assigns.theme_tokens, assigns[:planned_sessions])
     days = month_days(view, assigns)
 
     assigns =
@@ -211,7 +219,15 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             target={@myself}
           />
 
+          <SessionList.session_list
+            sessions={assigns[:planned_sessions]}
+            selected_date={@selected_date}
+            timezone={@user_timezone}
+            target={@myself}
+          />
+
           <.calendar
+            :if={SessionList.show_calendar?(assigns[:planned_sessions])}
             days={@days}
             year={@current_year}
             month={@current_month}
@@ -224,7 +240,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             target={@myself}
           />
 
-          <div class="paper-slots">
+          <div :if={SessionList.show_calendar?(assigns[:planned_sessions])} class="paper-slots">
             <SlotList.slot_list
               selected_date={@selected_date}
               selected_time={@selected_time}
@@ -284,9 +300,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
 
   defp stage(_assigns), do: :none
 
-  # The organiser's calendar view; no tokens, or none resolved, is a month.
-  defp calendar_view(%{media: %{calendar_view: "week"}}), do: "week"
-  defp calendar_view(_theme_tokens), do: "month"
+  # The organiser's calendar view; no tokens, or none resolved, is a month,
+  # and so is every fixed-date type's (its sessions are a list of days).
+  defp calendar_view(%{media: %{calendar_view: "week"}}, nil), do: "week"
+  defp calendar_view(_theme_tokens, _planned_sessions), do: "month"
 
   # The month calendar's days, worked out only when the month is on show.
   defp month_days("week", _assigns), do: []
