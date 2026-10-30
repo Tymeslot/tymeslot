@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.Dashboard.BookingPages.DeletePageModal
   alias TymeslotWeb.Dashboard.ThemeSettingsComponent
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -129,23 +129,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
         </div>
       </.card>
 
-      <Modal.confirm_modal
+      <DeletePageModal.delete_page_modal
         :if={@page}
         id={"#{@id}-delete"}
         show={@show_delete}
-        title={dgettext("dashboard_appearance", "Delete booking page")}
-        confirm_label={dgettext("dashboard_appearance", "Delete page")}
+        address={@page.slug}
         on_cancel={JS.push("hide_delete", target: @myself)}
         on_confirm={JS.push("confirm_delete", target: @myself)}
-      >
-        <p>
-          {dgettext(
-            "dashboard_appearance",
-            "Delete %{address}? Bookings made through it keep working and show your main page's look. Its colours and uploaded backgrounds are removed.",
-            address: "/" <> @page.slug
-          )}
-        </p>
-      </Modal.confirm_modal>
+      />
     </div>
     """
   end

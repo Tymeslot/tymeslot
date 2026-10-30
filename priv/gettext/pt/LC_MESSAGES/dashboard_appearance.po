@@ -695,8 +695,8 @@ msgstr "Este tipo de arquivo não é compatível. Envie um vídeo MP4 ou WebM."
 msgid "You are customising %{theme}, but your booking page uses %{current}. These changes appear on your booking page once you choose %{theme} as your style."
 msgstr "Você está personalizando o tema %{theme}, mas sua página de agendamento usa o %{current}. Essas alterações aparecerão na sua página de agendamento quando você escolher o %{theme} como seu estilo."
 
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
-#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
 #, elixir-autogen, elixir-format
 msgid "Address"
 msgstr "Endereço"
@@ -721,7 +721,7 @@ msgstr "Página de agendamento salva"
 msgid "Booking pages"
 msgstr "Páginas de agendamento"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Cancelar"
@@ -751,21 +751,22 @@ msgstr "Não foi possível excluir a página de agendamento. Tente novamente."
 msgid "Could not update this page's meeting types. Please try again."
 msgstr "Não foi possível atualizar os tipos de reunião desta página. Tente novamente."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Create page"
 msgstr "Criar página"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{address}? Bookings made through it keep working and show your main page's look. Its colours and uploaded backgrounds are removed."
 msgstr "Excluir %{address}? Os agendamentos feitos por esta página continuam válidos e passam a ter a aparência da sua página principal. As cores e os fundos enviados desta página são removidos."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete booking page"
 msgstr "Excluir página de agendamento"
 
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete page"
@@ -781,7 +782,7 @@ msgstr "Inativo: não é oferecido em lugar nenhum até você reativá-lo."
 msgid "Meeting types on this page"
 msgstr "Tipos de reunião nesta página"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
 #, elixir-autogen, elixir-format
 msgid "New booking page"
 msgstr "Nova página de agendamento"
@@ -801,8 +802,8 @@ msgstr "Nenhum tipo de reunião ainda."
 msgid "Open"
 msgstr "Abrir"
 
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
-#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
 #, elixir-autogen, elixir-format
 msgid "Page name"
 msgstr "Nome da página"
@@ -812,7 +813,7 @@ msgstr "Nome da página"
 msgid "Save"
 msgstr "Salvar"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The page starts with your main page's theme and colours, its own texts switched off, and no meeting types."
 msgstr "A página começa com o tema e as cores da sua página principal, sem textos próprios e sem tipos de reunião."

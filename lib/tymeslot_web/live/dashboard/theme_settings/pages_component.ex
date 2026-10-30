@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal
   alias TymeslotWeb.Dashboard.ThemeSettingsComponent
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -70,48 +70,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
         {limit_message()}
       </p>
 
-      <Modal.modal
-        id="new-booking-page-modal"
+      <NewPageModal.new_page_modal
         show={@show_new_page}
+        form={@form}
+        target={@myself}
         on_cancel={JS.push("hide_new_page", target: @myself)}
-      >
-        <:header>{dgettext("dashboard_appearance", "New booking page")}</:header>
-
-        <.form
-          for={@form}
-          id="new-booking-page-form"
-          phx-change="validate_new_page"
-          phx-submit="create_page"
-          phx-target={@myself}
-          class="space-y-6"
-        >
-          <.input
-            field={@form[:name]}
-            label={dgettext("dashboard_appearance", "Page name")}
-            maxlength={BookingPageSchema.name_max_length()}
-          />
-          <.input field={@form[:slug]} label={dgettext("dashboard_appearance", "Address")} />
-          <p class="text-token-sm text-tymeslot-500">
-            {dgettext(
-              "dashboard_appearance",
-              "The page starts with your main page's theme and colours, its own texts switched off, and no meeting types."
-            )}
-          </p>
-          <div class="flex justify-end gap-3">
-            <.action_button
-              type="button"
-              variant={:secondary}
-              phx-click="hide_new_page"
-              phx-target={@myself}
-            >
-              {dgettext("dashboard_appearance", "Cancel")}
-            </.action_button>
-            <.action_button type="submit">
-              {dgettext("dashboard_appearance", "Create page")}
-            </.action_button>
-          </div>
-        </.form>
-      </Modal.modal>
+      />
     </div>
     """
   end
