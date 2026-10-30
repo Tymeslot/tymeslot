@@ -394,6 +394,14 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
+  # A component that finds, while updating, that the URL names something gone
+  # (a booking page deleted in another tab) cannot patch from `update/2`, so it
+  # asks here. Only dashboard paths, so a component cannot send the user away.
+  @spec handle_info({:patch, String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:patch, "/dashboard" <> _rest = path}, socket),
+    do: {:noreply, push_patch(socket, to: path)}
+
   @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:reload_schedule}, socket) do

@@ -46,7 +46,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
         assigns[:show_customization] || false
 
     pages = BookingPages.list(assigns.profile.id)
-    selected_page = Enum.find(pages, &(to_string(&1.id) == assigns[:params]["page"]))
+    page_param = assigns[:params]["page"]
+    selected_page = Enum.find(pages, &(to_string(&1.id) == page_param))
 
     socket =
       socket
@@ -58,9 +59,23 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
       |> assign(:selected_page, selected_page)
       |> assign(:page_profile, page_profile(assigns.profile, selected_page))
       |> assign_new(:customization_timestamp, fn -> System.system_time() end)
+      |> leave_missing_page(page_param, selected_page)
 
     {:ok, socket}
   end
+
+  # A `page` the profile does not have (deleted in another tab, or never its
+  # own) would otherwise leave the editors on the main page's settings without
+  # a word, and the next edit would change `/<username>` instead.
+  defp leave_missing_page(socket, page_param, nil) when is_binary(page_param) do
+    # `update/2` cannot patch, so the dashboard does it. The patch goes first:
+    # the flash is put after it, as a component event's would be.
+    send(self(), {:patch, theme_path(nil)})
+    Flash.error(dgettext("dashboard_appearance", "This booking page no longer exists."))
+    socket
+  end
+
+  defp leave_missing_page(socket, _page_param, _selected_page), do: socket
 
   @impl Phoenix.LiveComponent
   def render(assigns) do

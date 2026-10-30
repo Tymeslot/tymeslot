@@ -167,6 +167,18 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     assert Repo.reload!(ctx.profile).booking_theme == "2"
   end
 
+  # Left on the deleted page's colour editor, the next edit would silently
+  # change the main page's colours instead.
+  test "a page deleted in another tab is announced and its tab left", ctx do
+    page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
+    {:ok, _deleted} = BookingPages.delete(page)
+
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme/customize/1?#{[page: page.id]}")
+
+    assert_patch(view, ~p"/dashboard/theme")
+    assert has_element?(view, "#app-flash-group-error", "This booking page no longer exists.")
+  end
+
   test "ticking a meeting type lists it on the page, and unticking removes it", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
     # A public page shows its meeting types only once a calendar is connected.
