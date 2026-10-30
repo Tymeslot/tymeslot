@@ -3,7 +3,9 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
   A declared journey's address follows the booking's facts (spec, "URLs
   follow facts"): the meeting type moves it to the type's own path, the
   slot to `/book`, the booking to `/thank-you`, each replacing the history
-  entry. The page's own patch enters nothing again, so nothing chosen is
+  entry. The choices the path cannot say ride in its query (`ChoicesInUrl`,
+  `PathHandlers.facts_address/1`), so a reconnect lands where the visitor
+  was. The page's own patch enters nothing again, so nothing chosen is
   lost. The classic journey keeps the route the visit arrived on.
   """
   use TymeslotWeb.LiveCase, async: false
@@ -15,6 +17,7 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
   import Tymeslot.Factory
   import Tymeslot.JourneyFixtureHelpers
 
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.TestMocks
@@ -37,6 +40,12 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
 
   defp ahead, do: Date.utc_today() |> Date.add(3) |> Date.to_iso8601()
 
+  # The page's address after its last patch, as its path and its query.
+  defp address(view) do
+    uri = view |> BookingTestHelpers.last_patched_url() |> URI.parse()
+    {uri.path, URI.decode_query(uri.query || "")}
+  end
+
   @tag :capture_log
   test "a continuous page moves its address with each fact", %{conn: conn} do
     %{profile: profile} = seed_organiser("96", "url-scroll")
@@ -44,17 +53,55 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
     {:ok, view, _html} = live(conn, "/#{user}")
 
     BookingDriver.choose_meeting_type(view, "quick-chat")
-    assert_patch(view, "/#{user}/quick-chat")
+    {path, query} = address(view)
+    assert path == "/#{user}/quick-chat"
+    # The path names the type; the query says the visit came through the types.
+    refute Map.has_key?(query, "duration")
+    assert query["via"] == "overview"
 
-    {_day, time} = BookingDriver.pick_first_slot(view, on: ahead())
-    assert_patch(view, "/#{user}/quick-chat/book")
+    {day, time} = BookingDriver.pick_first_slot(view, on: ahead())
+    {path, query} = address(view)
+    assert path == "/#{user}/quick-chat/book"
+    # The path says only that a slot is known; the query says which.
+    assert %{"date" => ^day, "time" => ^time} = query
 
     # The page's own patch entered nothing again: the time is still chosen.
     assert live_assigns(view).selected_time == time
 
     BookingDriver.submit(view, %{name: "Ana Silva", email: "ana-url@example.com"})
     await(view, "[data-testid='confirmation-heading']")
-    assert_patch(view, "/#{user}/thank-you")
+    {path, query} = address(view)
+    assert path == "/#{user}/thank-you"
+    assert Map.take(query, ~w(date time duration via step)) == %{}
+  end
+
+  @tag :capture_log
+  test "a reconnect on a continuous page lands on the time chosen, the way back kept",
+       %{conn: conn} do
+    %{profile: profile} = seed_organiser("96", "url-scroll-back")
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+    BookingDriver.choose_meeting_type(view, "quick-chat")
+    {day, time} = BookingDriver.pick_first_slot(view, on: ahead())
+    url = BookingTestHelpers.last_patched_url(view)
+
+    {:ok, again, _html} = live(build_conn(), url)
+    assigns = live_assigns(again)
+    assert {assigns.selected_date, assigns.selected_time} == {day, time}
+    assert assigns.entered_via_overview
+  end
+
+  test "a private type's address opens nothing with the overview's mark", %{conn: conn} do
+    %{profile: profile} =
+      seed_organiser("96", "url-private-mark",
+        types: [
+          [name: "Quick Chat", duration_minutes: 30],
+          [name: "Secret", duration_minutes: 30, is_private: true]
+        ]
+      )
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}/secret?via=overview")
+    refute live_assigns(view).entered_via_overview
   end
 
   @tag :capture_log
@@ -64,11 +111,15 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
     {:ok, view, _html} = live(conn, "/#{user}?timezone=Etc%2FUTC")
 
     BookingDriver.choose_meeting_type(view, "quick-chat")
-    assert_patch(view, "/#{user}/quick-chat?timezone=Etc%2FUTC")
+    {path, query} = address(view)
+    assert path == "/#{user}/quick-chat"
+    assert query["timezone"] == "Etc/UTC"
 
     BookingDriver.continue(view)
     BookingDriver.pick_first_slot(view, on: ahead())
-    assert_patch(view, "/#{user}/quick-chat/book?timezone=Etc%2FUTC")
+    {path, query} = address(view)
+    assert path == "/#{user}/quick-chat/book"
+    assert query["timezone"] == "Etc/UTC"
     assert has_element?(view, "#pick-step form[data-fact='attendee']")
   end
 
@@ -84,7 +135,9 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
     [other | _rest] = Page.attribute(view, "[data-fact='time']", "data-value") -- ["10:00 AM"]
     BookingDriver.pick_time(view, other)
 
-    assert_patch(view, "/#{user}/quick-chat/book?timezone=Etc%2FUTC")
+    {path, query} = address(view)
+    assert path == "/#{user}/quick-chat/book"
+    assert %{"time" => ^other, "timezone" => "Etc/UTC"} = query
     assert live_assigns(view).selected_time == other
   end
 
@@ -150,7 +203,8 @@ defmodule TymeslotWeb.Live.Themes.JourneyUrlTest do
     # No meeting type is known, so the booking starts on the types, not on a
     # time screen with none chosen.
     assert live_assigns(view).current_state == :offer
-    assert_patch(view, "/#{profile.username}")
+    {path, _query} = address(view)
+    assert path == "/#{profile.username}"
   end
 
   @tag :capture_log

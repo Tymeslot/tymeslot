@@ -46,16 +46,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   """
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
-  import Phoenix.LiveView, only: [connected?: 1, push_patch: 2]
 
   alias Phoenix.LiveView.Socket
   alias Tymeslot.MeetingPayments
+  alias TymeslotWeb.Themes.Shared.ChoicesInUrl
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Ambient
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Progress
-  alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
 
   @type reply :: {:noreply, Socket.t()}
@@ -160,28 +159,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   @doc """
   On a journey whose address follows its facts (`url: :facts`), moves the
-  address to the path the booking's facts give (`PathHandlers.facts_path/1`)
-  with the page's own query (`PathHandlers.facts_query/1`), replacing the
-  history entry, so the browser's Back leaves the page. Records it in
-  `:journey_url`, by which the patch's `handle_params` knows it for the
-  page's own. Any other journey, and a page not yet connected, keeps its
-  address.
+  address with them through `ChoicesInUrl.sync/1`, the one writer of a
+  booking page's address (`PathHandlers.facts_address/1`), replacing the
+  history entry, so the browser's Back leaves the page. A socket already
+  redirecting or patching, any other journey, and a page not yet connected
+  keep their address.
   """
   @spec follow_url(Socket.t()) :: Socket.t()
-  # A socket already redirecting or patching (a restart that patched a
-  # reschedule out of the address, a fact that redirected) is left alone: a
-  # second push_patch would raise, and that move's own handle_params records
-  # the address it lands on.
-  def follow_url(%Socket{redirected: redirected} = socket) when redirected != nil,
-    do: socket
-
-  def follow_url(%Socket{assigns: %{journey: %Journey{url: :facts}}} = socket) do
-    address = PathHandlers.facts_address(socket.assigns)
-
-    if connected?(socket) and is_binary(address) and address != socket.assigns[:journey_url],
-      do: socket |> assign(:journey_url, address) |> push_patch(to: address, replace: true),
-      else: socket
-  end
+  def follow_url(%Socket{assigns: %{journey: %Journey{url: :facts}}} = socket),
+    do: ChoicesInUrl.sync(socket)
 
   def follow_url(socket), do: socket
 

@@ -66,7 +66,6 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
 
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
         BookingDriver.choose_meeting_type(view, "quick-chat")
-        BookingDriver.continue(view)
         BookingDriver.choose_length(view, 15)
         BookingDriver.continue(view)
         {day, time} = BookingDriver.pick_first_slot(view, on: a_few_days_ahead())
@@ -221,8 +220,11 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
       BookingDriver.choose_meeting_type(view, "long-chat")
       {day, time} = BookingDriver.pick_first_slot(view, on: a_few_days_ahead())
 
+      # Its address follows the facts: the path names the type, the query
+      # the day and time, and that the visit came through the types.
       url = BookingTestHelpers.last_patched_url(view)
-      assert %{"duration" => "long-chat", "date" => ^day, "time" => ^time} = query(url)
+      assert URI.parse(url).path == "/#{profile.username}/long-chat/book"
+      assert %{"date" => ^day, "time" => ^time, "via" => "overview"} = query(url)
       refute Map.has_key?(query(url), "step")
 
       view = remount(url)

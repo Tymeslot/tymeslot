@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     address = address(url)
 
     if follows_facts?(socket) and address == socket.assigns[:journey_url] do
-      {:noreply, socket}
+      {:noreply, assign(socket, :page_query_params, PathHandlers.query_params(params))}
     else
       socket
       |> remember_address(address)
@@ -186,6 +186,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
         socket
         |> ThemeUtils.assign_theme_with_preview(params)
         |> assign_owner_preview(params)
+        |> resume_overview_entry(params)
         |> Runtime.transition_to(initial_state, params)
         |> Runtime.resume(params)
 
@@ -197,6 +198,24 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       end
     end
   end
+
+  # A journey whose address follows its facts leaves the overview's route,
+  # so a visit that came through it carries `via=overview`
+  # (`PathHandlers.facts_address/1`) and a reconnect keeps the way back to
+  # the meeting types. Honoured only for a type the overview lists: on a
+  # private type's link it opens nothing, and the type stays locked.
+  defp resume_overview_entry(socket, %{"via" => "overview"}) do
+    if follows_facts?(socket) and listed_on_overview?(socket.assigns),
+      do: socket |> assign(:entered_via_overview, true) |> assign(:entry_action, :overview),
+      else: socket
+  end
+
+  defp resume_overview_entry(socket, _params), do: socket
+
+  defp listed_on_overview?(%{meeting_type: %{id: id}} = assigns) when not is_nil(id),
+    do: Enum.any?(assigns[:meeting_types] || [], &(&1.id == id))
+
+  defp listed_on_overview?(_assigns), do: false
 
   # Owner-preview gate: a booking submitted on a page loaded with a valid,
   # owner-bound preview token is SIMULATED rather than persisted. The booking

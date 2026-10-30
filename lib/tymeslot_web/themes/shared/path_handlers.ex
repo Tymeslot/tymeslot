@@ -20,6 +20,11 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # a facts address's query.
   @fact_params ~w(date time duration name email meeting_uid)
 
+  # What a page carries of the visitor's choices: the deep-link parameters
+  # `put_choices/2` writes, the chosen length, and a facts address's mark of
+  # a visit that came through the overview (`facts_address/1`).
+  @choice_params ["duration", "date", "time", "minutes", "visitor_timezone", "step", "via"]
+
   @doc """
   Builds a path with locale and theme query parameters.
   """
@@ -66,12 +71,38 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   def facts_path(_assigns), do: nil
 
   @doc """
-  `facts_path/1` with `facts_query/1`: the whole address a journey whose
-  address follows its facts moves to. `nil` without an organiser.
+  The whole address a journey whose address follows its facts moves to
+  (`ChoicesInUrl`): `facts_path/1`, with the page's own query
+  (`facts_query/1`) and the choices the path cannot say, as
+  `choices_query/1` carries them on any other journey: the day and the time
+  (the path says only that both are known), a timezone the visitor chose,
+  the length and the moment on screen. The meeting type is the path's, so
+  it never goes as `duration`; an outcome carries no choices. A visit that
+  came through the overview, whose route the path has left, goes as
+  `via=overview`, so a reconnect keeps the way back to the meeting types
+  (`LiveHelpers.Mount` honours it only for a type the overview lists).
+  `nil` without an organiser.
   """
   @spec facts_address(map()) :: String.t() | nil
   def facts_address(assigns) do
-    if path = facts_path(assigns), do: with_query_string(path, facts_query(assigns))
+    if path = facts_path(assigns) do
+      query =
+        assigns
+        |> facts_query_params()
+        |> Map.drop(@choice_params)
+        |> maybe_put_query_param("minutes", chosen_length(assigns))
+        |> put_choices(assigns)
+        |> Map.delete("duration")
+        |> maybe_put_query_param("via", overview_mark(path, assigns))
+
+      with_query(path, query)
+    end
+  end
+
+  defp overview_mark(path, assigns) do
+    if assigns[:entered_via_overview] == true and path != "/#{assigns[:username_context]}" and
+         assigns[:current_state] not in [:confirmation, :awaiting_payment],
+       do: "overview"
   end
 
   @doc """
@@ -104,9 +135,6 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   defp slot_known?(assigns),
     do: is_binary(assigns[:selected_date]) and is_binary(assigns[:selected_time])
 
-  defp with_query_string(path, nil), do: path
-  defp with_query_string(path, query), do: "#{path}?#{query}"
-
   @doc """
   The query string a journey whose address follows its facts keeps: the
   page's own parameters (`:page_query_params`) less the day, the time and
@@ -117,15 +145,19 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   """
   @spec facts_query(map()) :: String.t() | nil
   def facts_query(assigns) do
+    case facts_query_params(assigns) do
+      empty when map_size(empty) == 0 -> nil
+      query -> URI.encode_query(query)
+    end
+  end
+
+  defp facts_query_params(assigns) do
     dropped =
       if is_nil(assigns[:reschedule_meeting_uid]) and is_nil(assigns[:reschedule_seat_token]),
         do: @fact_params ++ @reschedule_params,
         else: @fact_params
 
-    case Map.drop(assigns[:page_query_params] || %{}, dropped) do
-      empty when map_size(empty) == 0 -> nil
-      query -> URI.encode_query(query)
-    end
+    Map.drop(assigns[:page_query_params] || %{}, dropped)
   end
 
   @doc "`path` with `query` appended, or `path` alone when `query` is empty."
@@ -195,10 +227,6 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
     |> put_choices(socket.assigns)
   end
-
-  # What a page carries of the visitor's choices: the deep-link parameters
-  # `put_choices/2` writes, and the chosen length.
-  @choice_params ["duration", "date", "time", "minutes", "visitor_timezone", "step"]
 
   # What a fresh booking forgets of them: everything built on the meeting
   # type, which a restart keeps (`Journey.Runtime.restart/1`).
