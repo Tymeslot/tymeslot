@@ -24,6 +24,19 @@
   justify-content: center;
 }
 
+/* --- Top bar: the schedule's Back, heading the card --- */
+
+.paper-topbar {
+  display: flex;
+  margin-bottom: var(--space-sm);
+}
+
+/* The quiet button's own padding pulled back, so its arrow lines up with
+   the card's content edge below it. */
+.paper-topbar__back {
+  margin-inline-start: calc(-1 * var(--space-sm));
+}
+
 /* --- Buttons --- */
 
 .paper-button {

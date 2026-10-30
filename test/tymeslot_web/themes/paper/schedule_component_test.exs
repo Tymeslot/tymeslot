@@ -235,7 +235,10 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
       assert [_actions] = Floki.find(doc, "[data-testid='schedule-actions']")
 
       assert [_back] =
-               Floki.find(doc, "[data-testid='schedule-actions'] [data-testid='back-step']")
+               Floki.find(
+                 doc,
+                 "[data-testid='paper-schedule'] > .paper-topbar [data-testid='back-step']"
+               )
     end
 
     test "words the sending state 'Sending…', which fits a request or a payment too" do
@@ -305,7 +308,7 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
         |> Floki.find("[data-testid='schedule-actions'] > *")
         |> Enum.flat_map(&Floki.attribute(&1, "data-testid"))
 
-      assert ids == ["back-step", "paper-selection"]
+      assert ids == ["paper-selection"]
     end
   end
 end

@@ -30,9 +30,11 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   time shows its free seats, the month's through `SlotList` and the week's
   through `WeekGrid`, both given the meeting type.
 
-  There is no Next: picking a time opens the details part. The actions bar
-  (`data-testid="schedule-actions"`) holds the one Back, shown to a visitor
-  who came through the overview, which goes straight to the meeting types.
+  There is no Next: picking a time opens the details part. The one Back,
+  shown to a visitor who came through the overview, heads the card above the
+  brand, so it stays in reach however long the details part grows below,
+  and goes straight to the meeting types. The week's actions bar
+  (`data-testid="schedule-actions"`) holds only the chosen day and time.
   The questions' events (`answer`, `multi_toggle`, each naming its
   question) go to the shared questions engine (`CustomQuestions.Events`);
   the `next_step` a question's form sends on Enter is dropped, so the
@@ -131,6 +133,21 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
       data-moment={@moment}
       data-moment-state={@moment_state}
     >
+      <div :if={@show_back} class="paper-topbar">
+        <button
+          type="button"
+          class="paper-button paper-button--quiet paper-topbar__back"
+          phx-click="back_step"
+          phx-target={@myself}
+          data-testid="back-step"
+          data-intent="back"
+          disabled={assigns[:submitting]}
+        >
+          <.icon name="hero-arrow-left-mini" class="paper-button__icon" />
+          {dgettext("booking", "Back")}
+        </button>
+      </div>
+
       <Components.brand theme_tokens={@theme_tokens} />
 
       <GroupSession.seat_move_notice from={assigns[:reschedule_seat_from]} timezone={@user_timezone} />
@@ -229,24 +246,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
         <Details.book :if={@stage != :none} {assigns} target={@myself} />
       </div>
 
-      <div
-        :if={@show_back or @view == "week"}
-        class={["paper-actions", @show_back && "paper-actions--split"]}
-        data-testid="schedule-actions"
-      >
-        <button
-          :if={@show_back}
-          type="button"
-          class="paper-button paper-button--quiet"
-          phx-click="back_step"
-          phx-target={@myself}
-          data-testid="back-step"
-          data-intent="back"
-          disabled={assigns[:submitting]}
-        >
-          <.icon name="hero-arrow-left-mini" class="paper-button__icon" />
-          {dgettext("booking", "Back")}
-        </button>
+      <div :if={@view == "week"} class="paper-actions" data-testid="schedule-actions">
         <p
           :if={@view == "week"}
           class="paper-selection"

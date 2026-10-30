@@ -36,12 +36,12 @@ defmodule TymeslotWeb.E2E.BookerSteps do
       |> pick_first("[data-testid='duration-option']")
       |> assert_has(css("[data-fact='date'], [data-fact='time'], [data-fact='slot']", minimum: 1))
 
-    # The full two-button row the overflow checks are meant to prove: a Back
-    # that never rendered would leave only the primary action to measure. A
-    # continuous page (Folio) has no actions row and no page to go back to.
+    # The Back the overflow checks are meant to prove: one that never
+    # rendered would leave only the primary action to measure. A continuous
+    # page (Folio) has no page to go back to.
     if has?(session, css(".journey--continuous")),
       do: session,
-      else: assert_has(session, css("[data-testid='schedule-actions'] [data-testid='back-step']"))
+      else: assert_has(session, css("[data-testid='back-step']"))
   end
 
   @doc """
