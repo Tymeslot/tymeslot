@@ -568,11 +568,24 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
     test "delete_event/3 keeps a `/` inside the calendar id", %{integration: integration} do
       expect(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
-        assert url == "#{@base}/calendars/team%2Fshared/events/abc123"
+        assert url == "#{@base}/calendars/team%2Fshared/events/abc123?sendUpdates=none"
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
       assert :ok = CalendarAPI.delete_event(integration, "team/shared", "abc123")
+    end
+
+    # A delete is the one write Google notifies attendees of by default, so a
+    # cancelled booking reached its guest twice: Google's notice and Tymeslot's.
+    test "delete_event/3 tells Google not to mail the attendees", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+        assert %{"sendUpdates" => "none"} =
+                 url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = CalendarAPI.delete_event(integration, "primary", "abc123")
     end
   end
 end
