@@ -101,6 +101,21 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.PagingTest do
       assert {:error, :delta_link_expired, _message} = Paging.delta_all("token", {:link, @delta})
     end
 
+    test "a 400 that only mentions a token is refused as before" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "error" => %{"code" => "BadRequest", "message" => "Invalid $skiptoken value."}
+             })
+         }}
+      end)
+
+      assert {:error, :refused, _message} = Paging.delta_all("token", {:link, @delta})
+    end
+
     test "any other 400 on a delta read is refused as before" do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok,
