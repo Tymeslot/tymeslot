@@ -18,8 +18,8 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
 
   import Ecto.Changeset
 
-  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Themes.Catalog
 
@@ -108,7 +108,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
     validate_change(changeset, :slug, fn :slug, slug ->
       cond do
         UsernameValidator.validate(slug) != :ok -> [slug: address_format_message()]
-        slug in Profiles.reserved_paths() -> [slug: {"is reserved", validation: :reserved}]
+        ReservedPaths.reserved?(slug) -> [slug: {"is reserved", validation: :reserved}]
         true -> []
       end
     end)
