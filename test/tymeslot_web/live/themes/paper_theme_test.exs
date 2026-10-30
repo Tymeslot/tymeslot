@@ -557,6 +557,60 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     end
   end
 
+  describe "a meeting type offering several lengths" do
+    setup %{user: user} do
+      offer_lengths(user, [60, 15])
+      :ok
+    end
+
+    test "the overview names the span, and choosing the type asks the length",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+
+      assert has_element?(
+               view,
+               "button.paper-type[data-duration='quick-chat'] .paper-type__duration",
+               "15–60 min"
+             )
+
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      assert has_element?(view, "[data-testid='length-step'].booker-card h1", "Quick Chat")
+      assert BookingDriver.lengths(view) == ["15", "30", "60"]
+      refute has_element?(view, "[data-testid='paper-schedule']")
+    end
+
+    test "choosing a length goes straight on, and Back returns to it still chosen",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.continue(view)
+
+      BookingDriver.choose_length(view, 60)
+      BookingDriver.continue(view)
+
+      assert has_element?(view, "[data-testid='paper-schedule']")
+      assert Page.assigns(view).duration_minutes == 60
+
+      BookingDriver.back(view)
+
+      assert has_element?(view, "[data-fact='length'][data-value='60'][aria-current='true']")
+      BookingDriver.back(view)
+      assert has_element?(view, "[data-testid='paper-overview']")
+    end
+
+    test "a type's own link opens on the length, with no way back", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}/quick-chat")
+
+      assert has_element?(view, "[data-testid='length-step']")
+      refute has_element?(view, "[data-intent='back']")
+    end
+  end
+
   test "the colour mode decides the page's style block", %{conn: conn, profile: profile} do
     {:ok, _view, auto} = live(conn, ~p"/#{profile.username}")
 
@@ -646,6 +700,15 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
         "position" => 1
       }
     ])
+  end
+
+  # The organiser's meeting type offers `extra` lengths beside its own 30 minutes.
+  defp offer_lengths(user, extra) do
+    meeting_type = Repo.get_by!(MeetingTypeSchema, user_id: user.id)
+
+    meeting_type
+    |> Changeset.change(extra_lengths_minutes: extra)
+    |> Repo.update!()
   end
 
   # The organiser's meeting type asks `questions`.

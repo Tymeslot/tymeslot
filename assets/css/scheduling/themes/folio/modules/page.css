@@ -147,14 +147,16 @@
   outline-offset: var(--border-width-medium);
 }
 
-/* --- The ways to work: ruled entries, not boxes --- */
+/* --- The ways to work, and a type's lengths: ruled entries, not boxes --- */
 
-.folio-offer .folio-meetings {
+.folio-offer .folio-meetings,
+.folio-length .folio-meetings {
   gap: 0;
   border-bottom: var(--border-width-thin) solid var(--folio-line);
 }
 
-.folio-offer .folio-meeting {
+.folio-offer .folio-meeting,
+.folio-length .folio-meeting {
   padding: var(--space-lg) var(--space-md);
   border: 0;
   border-top: var(--border-width-thin) solid var(--folio-line);
@@ -162,11 +164,13 @@
   background: transparent;
 }
 
-.folio-offer .folio-meeting:hover {
+.folio-offer .folio-meeting:hover,
+.folio-length .folio-meeting:hover {
   background: var(--folio-tint);
 }
 
 .folio-offer .folio-meeting[aria-current="true"],
+.folio-length .folio-meeting[aria-current="true"],
 .folio-offer .folio-meeting--chosen {
   background: var(--folio-tint);
   box-shadow: inset var(--border-width-thick) 0 0 var(--theme-primary);
@@ -176,7 +180,8 @@
   cursor: default;
 }
 
-.folio-offer .folio-meeting:focus-visible {
+.folio-offer .folio-meeting:focus-visible,
+.folio-length .folio-meeting:focus-visible {
   outline: var(--border-width-medium) solid var(--theme-primary);
   outline-offset: calc(-1 * var(--border-width-medium));
 }

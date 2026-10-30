@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OfferMoment do
   The ways to work with the organiser: the page's heading (the organiser's
   own, or Folio's voice, "Ways to work with me"), the instruction when the
   organiser wrote one, and each meeting type as a full-width entry with its
-  name and approval pill, the facts a guest decides on (its length, each
+  name and approval pill, the facts a guest decides on (its length, or the
+  span of lengths for a type that offers several, each
   place it is held, `MeetingTypes.location_options/1`, and for a paid type
   its price), a group type's size (`GroupSession.hint`) and its whole
   description, a button for the meeting type fact
@@ -119,7 +120,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OfferMoment do
     </span>
     <span class="folio-meeting__facts">
       <span class="folio-meeting__duration">
-        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)}
+        {LocalizationHelpers.format_length_badge(@meeting_type)}
       </span>
       <span
         :for={location <- @locations}

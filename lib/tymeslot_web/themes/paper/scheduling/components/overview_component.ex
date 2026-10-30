@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   `Paper.Voice`, which greets nobody; an organiser's own greeting still
   shows). On the right the
   meeting types as one bordered list, each row with its name, approval
-  pill and description, then its facts with their icons: length, each
+  pill and description, then its facts with their icons: length (the span
+  of lengths for a type that offers several), each
   location (`MeetingTypes.location_options/1`, drawn with
   `LocationIcons.icon/1`) and, for a paid type, its price, then, for a
   group type, how many people it takes (`GroupSession.hint`). With no
@@ -136,7 +137,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
         <span class="paper-facts paper-type__meta">
           <Components.fact tag="span" icon="hero-clock">
             <span class="paper-type__duration">
-              {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)}
+              {LocalizationHelpers.format_length_badge(@meeting_type)}
             </span>
           </Components.fact>
           <Components.fact

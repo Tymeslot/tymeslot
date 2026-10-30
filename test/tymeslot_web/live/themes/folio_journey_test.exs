@@ -314,6 +314,54 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     assert has_element?(view, "#when-step [data-fact='date']")
   end
 
+  describe "a meeting type offering several lengths" do
+    setup do
+      seed_organiser(@theme_id, "folio-lengths-#{System.unique_integer([:positive])}",
+        types: [[name: "Quick Chat", duration_minutes: 30, extra_lengths_minutes: [60, 15]]]
+      )
+    end
+
+    test "its entry names the span, and choosing it opens the lengths before the calendar",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+      assert has_element?(
+               view,
+               "#offer-step [data-value='quick-chat'] .folio-meeting__duration",
+               "15–60 min"
+             )
+
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+
+      assert has_element?(view, "#length-step[data-moment-state='current'] h2")
+      assert BookingDriver.lengths(view) == ["15", "30", "60"]
+      refute has_element?(view, "#when-step")
+
+      BookingDriver.choose_length(view, 60)
+
+      assert has_element?(view, "#length-step[data-moment-state='done']")
+      assert has_element?(view, "#when-step [data-fact='date']")
+      assert live_assigns(view).duration_minutes == 60
+    end
+
+    test "another length after a time is picked takes the time away", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, "/#{profile.username}")
+      BookingDriver.choose_meeting_type(view, "quick-chat")
+      BookingDriver.choose_length(view, 15)
+      BookingDriver.pick_first_slot(view, on: ahead())
+      assert has_element?(view, "#you-step")
+
+      BookingDriver.choose_length(view, 60)
+
+      assert live_assigns(view).selected_time == nil
+      refute has_element?(view, "#you-step")
+      assert has_element?(view, "[data-fact='length'][data-value='60'][aria-current='true']")
+    end
+  end
+
   test "each entry names its length, where it is held and its price", %{conn: conn} do
     %{user: user, profile: profile} =
       seed_organiser(@theme_id, "folio-facts",
