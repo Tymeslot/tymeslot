@@ -218,6 +218,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
             guest_error={@guest_error}
             guests_open={@guests_open}
             max_guests={@max_guests}
+            show_cap={@guest_cap_visible}
             target={@myself}
           />
         </BookingForm.booking_form>
