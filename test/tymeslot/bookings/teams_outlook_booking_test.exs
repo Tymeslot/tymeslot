@@ -10,6 +10,11 @@ defmodule Tymeslot.Bookings.TeamsOutlookBookingTest do
   reported. The two jobs run on separate queues and either can go first, so
   both orders are walked here, through the real Outlook calendar client and
   Teams provider with only Microsoft Graph (HTTP) mocked.
+
+  Graph mails the attendees of an organiser's event on every write to it, so
+  the event is also written only once: an event written to switch the meeting
+  on, and again to add its link, reached the guest as an invitation and two
+  updates (#191).
   """
 
   # Not async: the calendar module is swapped application-wide for the real
@@ -120,21 +125,16 @@ defmodule Tymeslot.Bookings.TeamsOutlookBookingTest do
   defp assert_one_event_carrying_the_meeting(meeting) do
     requests = graph_requests()
 
-    # One event in the organiser's calendar: the booking's, written by the
-    # calendar job. A POST to /me/events would be the Teams meeting's own.
-    assert [{:post, post_url, _created}] = for({:post, _url, _body} = req <- requests, do: req)
+    # One write in all: the calendar job creating the booking's event, with
+    # the guest and the Teams meeting on it, so Graph sends one invitation
+    # that carries the meeting. A POST to /me/events would be the Teams
+    # meeting's own event, and any PATCH an update mailed to the guest.
+    assert [{:post, post_url, created}] =
+             for({method, _url, _body} = req <- requests, method != :get, do: req)
+
     assert post_url == "#{@graph}/me/calendars/#{@calendar_id}/events"
-
-    # The Teams meeting is switched on for that very event, and only once.
-    assert [online_meeting] =
-             for(
-               {:patch, url, body} <- requests,
-               url == "#{@graph}/me/events/#{@booking_event}",
-               do: body
-             )
-
-    assert online_meeting["isOnlineMeeting"] == true
-    refute Enum.any?(requests, &match?({:delete, _url, _body}, &1))
+    assert created["isOnlineMeeting"] == true
+    assert ["ada@example.com"] = for(a <- created["attendees"], do: a["emailAddress"]["address"])
 
     updated = Repo.get!(MeetingSchema, meeting.id)
     assert updated.provider_event_id == @booking_event
@@ -176,11 +176,14 @@ defmodule Tymeslot.Bookings.TeamsOutlookBookingTest do
     assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :calendar_events)
   end
 
-  # Graph answers every request, reporting it to the test. A created event is
-  # the booking's; any other write addresses an existing event by the id at
-  # the end of its path, and carries the Teams meeting once it is switched on.
+  # Graph answers every request, reporting it to the test, and keeps the
+  # events it is given, so a read sees what the writes before it left. A
+  # created event is the booking's; any other request addresses an existing
+  # event by the id at the end of its path. An event carries the Teams
+  # meeting once it is switched on.
   defp report_graph_requests do
     test_pid = self()
+    {:ok, events} = Agent.start_link(fn -> %{} end)
 
     stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
       sent = if is_binary(body) and body != "", do: Jason.decode!(body), else: %{}
@@ -188,14 +191,22 @@ defmodule Tymeslot.Bookings.TeamsOutlookBookingTest do
 
       id = if method == :post, do: @booking_event, else: url |> String.split("/") |> List.last()
 
+      event =
+        Agent.get_and_update(events, fn stored ->
+          event =
+            stored
+            |> Map.get(id, %{})
+            |> Map.merge(sent)
+            |> Map.merge(%{"id" => id, "iCalUId" => "ical-#{id}"})
+
+          event = Map.merge(event, online_meeting(event))
+          {event, Map.put(stored, id, event)}
+        end)
+
       {:ok,
        %Req.Response{
          status: if(method == :post, do: 201, else: 200),
-         body:
-           sent
-           |> Map.merge(%{"id" => id, "iCalUId" => "ical-#{id}"})
-           |> Map.merge(online_meeting(sent))
-           |> Jason.encode!()
+         body: Jason.encode!(event)
        }}
     end)
   end

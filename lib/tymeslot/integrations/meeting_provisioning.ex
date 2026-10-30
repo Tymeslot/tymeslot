@@ -37,7 +37,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   so a booking on Google Calendar with Google Meet gets a standalone Meet
   space whose link is written into the event, not inline conference data.
   The one decision bookings share is where a Teams meeting goes
-  (`teams_room_placement/1`).
+  (`teams_room_placement/1`), and with it whether the booking's Outlook event
+  is created carrying the meeting (`booking_online_meeting/1`).
   """
 
   require Logger
@@ -50,11 +51,17 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviders
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviders
+  alias Tymeslot.Integrations.Video.Providers.TeamsProvider
   alias Tymeslot.Meetings.MeetingSchema
 
   # How long a booking's Teams meeting waits for the booking's own calendar
   # event before giving up on it (see `teams_room_placement/1`).
   @calendar_event_grace_seconds 120
+
+  # A create that may still be in flight when that wait ends would put a
+  # second Teams meeting on the account, so a calendar create adds the meeting
+  # only while the wait has this long left (see `booking_online_meeting/1`).
+  @create_margin_seconds 30
 
   @type plan ::
           {:inline, video_id :: integer()}
@@ -173,6 +180,46 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   @spec teams_room_placement(MeetingSchema.t()) ::
           {:calendar_event, String.t()} | :awaiting_calendar_event | :own_event
   def teams_room_placement(%MeetingSchema{} = meeting) do
+    case teams_on_booking_calendar(meeting) do
+      {:ok, _video, cal_id} ->
+        booking_event_placement(meeting, cal_id, @calendar_event_grace_seconds)
+
+      :error ->
+        :own_event
+    end
+  end
+
+  @doc """
+  The Graph fields a booking's Outlook event is created with so that it
+  carries the booking's Teams meeting from the start, or nil when it should
+  be created without one.
+
+  Graph mails the attendees of an organiser's event on every write to it.
+  Created without the meeting, the event is written again to switch the
+  meeting on, so the guest gets an invitation without the meeting and then
+  an update with it (issue #191). Created with it, the one invitation carries
+  the meeting, and the Teams provider finds it there
+  (`teams_room_placement/1`'s `{:calendar_event, id}`) instead of writing.
+
+  Fields are answered only while the meeting is still waiting for the event,
+  and not in the last `@create_margin_seconds` of that wait, after which the
+  Teams job may give up and make a meeting of its own.
+  """
+  @spec booking_online_meeting(MeetingSchema.t()) :: map() | nil
+  def booking_online_meeting(%MeetingSchema{} = meeting) do
+    grace = @calendar_event_grace_seconds - @create_margin_seconds
+
+    with {:ok, video, cal_id} <- teams_on_booking_calendar(meeting),
+         :awaiting_calendar_event <- booking_event_placement(meeting, cal_id, grace) do
+      TeamsProvider.online_meeting_fields(video)
+    else
+      _other -> nil
+    end
+  end
+
+  # The booking's Teams integration and the calendar integration it is
+  # written to, when both are the same Microsoft account.
+  defp teams_on_booking_calendar(meeting) do
     with %{video_integration_id: vid_id, organizer_user_id: user_id}
          when is_integer(vid_id) and is_integer(user_id) <- meeting,
          {:ok, video} <- Video.fetch_integration_for_user(vid_id, user_id),
@@ -180,9 +227,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
          {:ok, %{integration_id: cal_id}} <- Events.get_booking_integration_info(meeting),
          {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
          true <- same_account?(calendar, video, calendar_provider) do
-      booking_event_placement(meeting, cal_id)
+      {:ok, video, cal_id}
     else
-      _other -> :own_event
+      _other -> :error
     end
   end
 
@@ -193,7 +240,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   # account may not even be able to see.
   defp booking_event_placement(
          %MeetingSchema{provider_event_id: event_id, calendar_integration_id: cal_id},
-         cal_id
+         cal_id,
+         _grace_seconds
        )
        when is_binary(event_id) and event_id != "",
        do: {:calendar_event, event_id}
@@ -202,8 +250,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   # One that has not after the grace period is failing, and may never succeed,
   # so the meeting takes an event of its own rather than leave the booking
   # without a link: a second calendar entry is the lesser harm.
-  defp booking_event_placement(%MeetingSchema{inserted_at: inserted_at}, _cal_id) do
-    if DateTime.diff(Clock.utc_now(), inserted_at, :second) < @calendar_event_grace_seconds,
+  defp booking_event_placement(%MeetingSchema{inserted_at: inserted_at}, _cal_id, grace_seconds) do
+    if DateTime.diff(Clock.utc_now(), inserted_at, :second) < grace_seconds,
       do: :awaiting_calendar_event,
       else: :own_event
   end

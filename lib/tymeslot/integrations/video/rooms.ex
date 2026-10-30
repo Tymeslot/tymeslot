@@ -32,6 +32,10 @@ defmodule Tymeslot.Integrations.Video.Rooms do
       or a calendar grid event's), for a provider that can host the meeting on
       it (Teams on the same Microsoft account) instead of creating an event of
       its own
+    - `:adopt_calendar_meeting`: true when that event may have been created
+      with the meeting already on it (a booking's, see
+      `MeetingProvisioning.booking_online_meeting/1`), so the provider reads
+      it first and writes only when the meeting is not there
   """
   # The outcome is kept on the integration: a refusal its server will repeat
   # for every booking is recorded for the owner, and a created room clears one.
@@ -45,6 +49,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
         config
         |> maybe_attach_event_details(opts)
         |> maybe_put(:calendar_event_id, Keyword.get(opts, :calendar_event_id))
+        |> maybe_put(:adopt_calendar_meeting, Keyword.get(opts, :adopt_calendar_meeting))
 
       result = create_room_with_provider(provider_type, config)
       RoomCreationError.track(integration, result)
