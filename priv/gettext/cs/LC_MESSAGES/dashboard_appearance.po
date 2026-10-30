@@ -820,6 +820,7 @@ msgstr "Stránka začne s motivem a barvami vaší hlavní stránky, bez vlast
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This booking page no longer exists."
 msgstr "Tato rezervační stránka již neexistuje."

@@ -820,6 +820,7 @@ msgstr "A página começa com o tema e as cores da sua página principal, sem te
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This booking page no longer exists."
 msgstr "Esta página de agendamento não existe mais."

@@ -816,6 +816,7 @@ msgstr "Strona otrzyma motyw i kolory strony głównej, bez własnych tekstów i
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This booking page no longer exists."
 msgstr "Ta strona rezerwacji już nie istnieje."
