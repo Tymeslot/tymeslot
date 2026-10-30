@@ -35,6 +35,22 @@ defmodule Tymeslot.Auth.AccountDeletion.HookTest do
     end
   end
 
+  defmodule ProtectingHook do
+    @behaviour Tymeslot.Auth.Behaviours.AccountDeletionHook
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_requested(_user_id, _feedback), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_restored(_user_id), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_account_deletion(_user_id), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def purge_protected_user_ids, do: Process.get(:protected).()
+  end
+
   test "with no hook configured every call is a no-op" do
     with_config(:tymeslot, :account_deletion_hook, nil)
 
@@ -91,5 +107,40 @@ defmodule Tymeslot.Auth.AccountDeletion.HookTest do
 
     assert Hook.deleted(7) == {:error, :stripe_down}
     assert_received {:deleted, 7}
+  end
+
+  describe "purge_protected_user_ids/0" do
+    test "protects nobody with no hook, or a hook without the callback" do
+      with_config(:tymeslot, :account_deletion_hook, nil)
+      assert Hook.purge_protected_user_ids() == {:ok, []}
+
+      with_config(:tymeslot, :account_deletion_hook, RecordingHook)
+      assert Hook.purge_protected_user_ids() == {:ok, []}
+    end
+
+    test "returns the ids the hook names" do
+      with_config(:tymeslot, :account_deletion_hook, ProtectingHook)
+      Process.put(:protected, fn -> {:ok, [3, 5]} end)
+
+      assert Hook.purge_protected_user_ids() == {:ok, [3, 5]}
+    end
+
+    test "fails closed on an error, a raise, an exit, a throw or a malformed answer" do
+      with_config(:tymeslot, :account_deletion_hook, ProtectingHook)
+
+      failures = [
+        fn -> {:error, :db_down} end,
+        fn -> raise "boom" end,
+        fn -> exit(:gone) end,
+        fn -> throw(:thrown) end,
+        fn -> {:ok, ["7"]} end,
+        fn -> [7] end
+      ]
+
+      for failure <- failures do
+        Process.put(:protected, failure)
+        assert {:error, _reason} = Hook.purge_protected_user_ids()
+      end
+    end
   end
 end

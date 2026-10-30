@@ -175,7 +175,10 @@ defmodule Tymeslot.Auth.UserQueries do
 
   @doc """
   Lists up to `limit` abandoned sign-ups: accounts still unverified and
-  signed up before `cutoff`, oldest first.
+  signed up before `cutoff`, oldest first, leaving out the ids in
+  `excluded_ids` (accounts the deployment protects from the purge, such as
+  paying subscribers), so a protected account never takes a place in the
+  batch.
 
   An account sent a verification link since `cutoff` is left out, so a link
   its owner asked for recently still works when it is followed. So is an
@@ -186,16 +189,38 @@ defmodule Tymeslot.Auth.UserQueries do
   vouches for the email, or is refused and sent a fresh link), so one used
   under older rules is as locked out as one never used.
   """
-  @spec list_stale_unverified_users(DateTime.t(), pos_integer()) :: [UserSchema.t()]
-  def list_stale_unverified_users(%DateTime{} = cutoff, limit) do
+  @spec list_stale_unverified_users(DateTime.t(), pos_integer(), [integer()]) :: [UserSchema.t()]
+  def list_stale_unverified_users(%DateTime{} = cutoff, limit, excluded_ids \\ [])
+      when is_list(excluded_ids) do
+    cutoff
+    |> stale_unverified_users()
+    |> where([u], u.id not in ^excluded_ids)
+    |> order_by([u], asc: u.inserted_at, asc: u.id)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  Whether user `id` still meets every condition of
+  `list_stale_unverified_users/3` for `cutoff`: still unverified, not an
+  admin, not sent a fresh link, and with no meeting still to come. Run under
+  the row lock just before a purge deletes the account, it catches one that
+  was verified, promoted or booked since the list was read.
+  """
+  @spec stale_unverified_user?(integer(), DateTime.t()) :: boolean()
+  def stale_unverified_user?(id, %DateTime{} = cutoff) do
+    cutoff
+    |> stale_unverified_users()
+    |> where([u], u.id == ^id)
+    |> Repo.exists?()
+  end
+
+  defp stale_unverified_users(cutoff) do
     from(u in UserSchema, as: :user)
     |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
     |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
     |> where([u], not u.is_admin)
     |> where([u], not exists(upcoming_meetings_of_user(DateTime.utc_now())))
-    |> order_by([u], asc: u.inserted_at, asc: u.id)
-    |> limit(^limit)
-    |> Repo.all()
   end
 
   defp upcoming_meetings_of_user(now) do
