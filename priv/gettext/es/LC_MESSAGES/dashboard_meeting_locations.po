@@ -19,7 +19,7 @@ msgstr "+ Nuevo lugar guardado"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "12 High Street, London EC1A 1BB"
-msgstr "Calle Mayor 12, 28013 Madrid"
+msgstr "Calle Principal 12, Ciudad"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
@@ -257,9 +257,9 @@ msgstr "Todavía no tienes lugares guardados. Agrega uno aquí: las reservas de 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Berlin office"
-msgstr "p. ej., Oficina de Bogotá"
+msgstr "p. ej., Oficina central"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
-msgstr "p. ej., Nuestra oficina de Madrid"
+msgstr "p. ej., Nuestra oficina del centro"

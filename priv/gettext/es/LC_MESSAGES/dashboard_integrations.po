@@ -317,7 +317,7 @@ msgstr "%{status}: requiere atención"
 #: lib/tymeslot/integrations/shared/reauth_handling.ex
 #, elixir-autogen, elixir-format
 msgid "Access to the connected account has expired or been revoked. Please reconnect the integration."
-msgstr "El acceso a la cuenta conectada venció o se revocó. Vuelve a conectar la integración."
+msgstr "El acceso a la cuenta conectada expiró o se revocó. Vuelve a conectar la integración."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format

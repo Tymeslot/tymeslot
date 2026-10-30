@@ -212,7 +212,7 @@ msgstr "HTTP %{status} (más detalles en los registros)"
 #: lib/tymeslot/integrations/video/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Infomaniak's hosted video meetings, Swiss-based"
-msgstr "Reuniones por video alojadas por Infomaniak, con sede en Suiza"
+msgstr "Videollamadas alojadas por Infomaniak, con sede en Suiza"
 
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
@@ -413,7 +413,7 @@ msgstr "La URL procesada supera la longitud máxima de %{max_length} caracteres 
 #: lib/tymeslot/integrations/video/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Self-hosted peer-to-peer video meetings"
-msgstr "Reuniones por video autoalojadas, de igual a igual"
+msgstr "Videollamadas autoalojadas, de igual a igual"
 
 #: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format

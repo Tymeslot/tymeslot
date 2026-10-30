@@ -352,7 +352,7 @@ msgstr "Arrastra aquí un archivo .ics para importar sus eventos"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{count}/%{capacity} seats taken"
-msgstr "%{count}/%{capacity} plazas ocupadas"
+msgstr "%{count}/%{capacity} lugares ocupados"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
 #, elixir-autogen, elixir-format

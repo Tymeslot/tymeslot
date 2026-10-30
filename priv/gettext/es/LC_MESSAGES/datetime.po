@@ -19,7 +19,7 @@ msgstr "%{date}, %{time}"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{days} days in advance"
-msgstr "con %{days} días de antelación"
+msgstr "%{days} días"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -34,7 +34,7 @@ msgstr "%{hour_text} %{minute_text}"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{months} months in advance"
-msgstr "con %{months} meses de antelación"
+msgstr "%{months} meses"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -64,47 +64,47 @@ msgstr "%{weekday}, %{day} de %{month} de %{year}, %{time} %{timezone}"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{weeks} weeks in advance"
-msgstr "con %{weeks} semanas de antelación"
+msgstr "%{weeks} semanas"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{years} years in advance"
-msgstr "con %{years} años de antelación"
+msgstr "%{years} años"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
-msgstr "con 1 día de antelación"
+msgstr "1 día"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 month in advance"
-msgstr "con 1 mes de antelación"
+msgstr "1 mes"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 week in advance"
-msgstr "con 1 semana de antelación"
+msgstr "1 semana"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 year in advance"
-msgstr "con 1 año de antelación"
+msgstr "1 año"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
-msgstr "con 90 días de antelación"
+msgstr "90 días"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Afternoon"
-msgstr "Tarde"
+msgstr "Por la tarde"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Early Morning"
-msgstr "Primera hora"
+msgstr "A primera hora"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -114,7 +114,7 @@ msgstr "Termina el %{weekday} %{day} de %{month}, %{time}"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Evening"
-msgstr "Noche"
+msgstr "Por la noche"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -139,7 +139,7 @@ msgstr "Fecha u hora no válidas"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Late Night"
-msgstr "Madrugada"
+msgstr "De madrugada"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -159,7 +159,7 @@ msgstr "lunes"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Morning"
-msgstr "Mañana"
+msgstr "Por la mañana"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -247,15 +247,15 @@ msgid "same day only"
 msgstr "solo el mismo día"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{count} hour"
 msgid_plural "%{count} hours"
-msgstr[0] "%{count} horas"
+msgstr[0] "%{count} hora"
 msgstr[1] "%{count} horas"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{count} minute"
 msgid_plural "%{count} minutes"
-msgstr[0] "%{count} minutos"
+msgstr[0] "%{count} minuto"
 msgstr[1] "%{count} minutos"

@@ -201,12 +201,12 @@ msgstr "Correo electrónico"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "End date must not be before start date"
-msgstr "La fecha de fin no puede ser anterior a la de inicio"
+msgstr "La fecha de finalización no puede ser anterior a la de inicio"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
-msgstr "La hora en que termina debe ser posterior a la hora en que empieza"
+msgstr "La hora de finalización debe ser posterior a la hora de inicio"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #, elixir-autogen, elixir-format
@@ -532,7 +532,7 @@ msgstr "Debes volver a conectar tu calendario desde la página «Integraciones»
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "A valid guest email is required"
-msgstr "Falta un correo electrónico válido del invitado"
+msgstr "Es obligatorio indicar un correo electrónico válido del invitado"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -562,7 +562,7 @@ msgstr "Nombre del invitado"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name is required"
-msgstr "Falta el nombre del invitado"
+msgstr "El nombre del invitado es obligatorio"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
@@ -975,29 +975,29 @@ msgstr "Esta serie cambió mientras la editabas, así que ya no se pueden contar
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee added. They were not invited, as you don't organise this event."
-msgstr ""
+msgstr "Se agregó al asistente. No se le envió la invitación porque no eres quien organiza este evento."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They were not notified, as you don't organise this event."
-msgstr ""
+msgstr "Se quitó al asistente. No se le avisó porque no eres quien organiza este evento."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee added, but their invitation could not be sent."
-msgstr ""
+msgstr "Se agregó al asistente, pero no se pudo enviar su invitación."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee removed, but they could not be notified."
-msgstr ""
+msgstr "Se quitó al asistente, pero no se le pudo avisar."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee added. They will be invited once the change has synced to your calendar."
-msgstr ""
+msgstr "Se agregó al asistente. Recibirá la invitación cuando el cambio se sincronice con tu calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They will be notified once the change has synced to your calendar."
-msgstr ""
+msgstr "Se quitó al asistente. Se le avisará cuando el cambio se sincronice con tu calendario."

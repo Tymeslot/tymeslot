@@ -506,8 +506,8 @@ msgstr "Nuestras comprobaciones de conexión con tu integración %{integration} 
 #, elixir-autogen, elixir-format
 msgid "Your %{integration} integration has been failing connection checks for %{count}+ day. We've paused it so it stops consuming resources and stops generating noise. Nothing has been deleted: your settings, calendar selections, and history are all preserved."
 msgid_plural "Your %{integration} integration has been failing connection checks for %{count}+ days. We've paused it so it stops consuming resources and stops generating noise. Nothing has been deleted: your settings, calendar selections, and history are all preserved."
-msgstr[0] "Tu integración %{integration} no supera las comprobaciones de conexión desde hace más de %{count} día. La pusimos en pausa para que deje de consumir recursos y de generar avisos innecesarios. No se eliminó nada: tu configuración, tu selección de calendarios y tu historial se conservan."
-msgstr[1] "Tu integración %{integration} no supera las comprobaciones de conexión desde hace más de %{count} días. La pusimos en pausa para que deje de consumir recursos y de generar avisos innecesarios. No se eliminó nada: tu configuración, tu selección de calendarios y tu historial se conservan."
+msgstr[0] "Tu integración %{integration} no supera las comprobaciones de conexión desde hace %{count} día o más. La pusimos en pausa para que deje de consumir recursos y de generar avisos innecesarios. No se eliminó nada: tu configuración, tu selección de calendarios y tu historial se conservan."
+msgstr[1] "Tu integración %{integration} no supera las comprobaciones de conexión desde hace %{count} días o más. La pusimos en pausa para que deje de consumir recursos y de generar avisos innecesarios. No se eliminó nada: tu configuración, tu selección de calendarios y tu historial se conservan."
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
@@ -519,29 +519,29 @@ msgstr[1] "Por ahora es el único correo que recibirás sobre esto. Si el mismo 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar this event should go to could not be found."
-msgstr ""
+msgstr "No se encontró el calendario en el que debía guardarse este evento."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "The event exists in your calendar but could not be updated, so it may still show the old details."
-msgstr ""
+msgstr "El evento está en tu calendario, pero no se pudo actualizar, así que puede que todavía muestre los datos anteriores."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar declined to add this event. The calendar may be read-only, or the event was rejected by the calendar service."
-msgstr ""
+msgstr "Tu calendario no aceptó este evento. Puede que el calendario sea de solo lectura o que el servicio de calendario lo haya rechazado."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar service could not be reached or did not answer properly, even after several attempts."
-msgstr ""
+msgstr "No se pudo conectar con tu servicio de calendario o no respondió correctamente, incluso después de varios intentos."
 
 #: lib/tymeslot/emails/templates/integration_reauth_required.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected."
-msgstr "Tymeslot ya no puede usar tu integración %{integration}, y seguirá así hasta que vuelvas a conectarla. El motivo aparece arriba. Tus reservas existentes no se ven afectadas."
+msgstr "Tymeslot ya no puede usar tu integración %{integration}, y seguirá así hasta que vuelvas a conectarla. El motivo aparece arriba. Hasta entonces, puede que tu página de reservas no ofrezca horarios ni acepte reservas, porque Tymeslot no ofrece ningún horario que no pueda comprobar en este calendario ni agregar a él. Tus reservas existentes no se ven afectadas."
 
 #: lib/tymeslot/emails/templates/integration_reauth_required.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Until then your booking page may not offer times or take bookings, because Tymeslot will not offer a time it cannot check against this calendar or book one into it. Your existing bookings are not affected."
-msgstr "Tymeslot ya no puede usar tu integración %{integration}, y seguirá así hasta que la sustituyas. El motivo aparece arriba. Tus reservas existentes no se ven afectadas."
+msgstr "Tymeslot ya no puede usar tu integración %{integration}, y seguirá así hasta que la sustituyas. El motivo aparece arriba. Hasta entonces, puede que tu página de reservas no ofrezca horarios ni acepte reservas, porque Tymeslot no ofrece ningún horario que no pueda comprobar en este calendario ni agregar a él. Tus reservas existentes no se ven afectadas."

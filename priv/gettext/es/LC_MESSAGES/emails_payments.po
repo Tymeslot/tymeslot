@@ -75,7 +75,7 @@ msgstr "Detalles de la disputa"
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
 #, elixir-autogen, elixir-format
 msgid "Disputed amount:"
-msgstr "Importe disputado:"
+msgstr "Cantidad reclamada:"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
 #, elixir-autogen, elixir-format

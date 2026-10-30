@@ -14,44 +14,44 @@ msgstr ""
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "Dates"
-msgstr ""
+msgstr "Fechas"
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "Fully booked"
-msgstr ""
+msgstr "Sin lugares"
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "No dates are planned at the moment."
-msgstr ""
+msgstr "Por ahora no hay fechas previstas."
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "Registration closed"
-msgstr ""
+msgstr "Inscripción cerrada"
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "Registration is closed."
-msgstr ""
+msgstr "La inscripción está cerrada."
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "Registration until %{datetime}"
-msgstr ""
+msgstr "Inscripción hasta el %{datetime}"
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "This event has ended."
-msgstr ""
+msgstr "Este evento ya terminó."
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "All dates are fully booked."
-msgstr ""
+msgstr "Ya no quedan lugares en ninguna fecha."
 
 #: lib/tymeslot_web/themes/shared/components/session_list.ex
 #, elixir-autogen, elixir-format
 msgid "None of the dates can be booked any more."
-msgstr ""
+msgstr "Ya no se puede reservar ninguna de las fechas."

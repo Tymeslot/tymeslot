@@ -24,7 +24,7 @@ msgstr "DATOS DEL ASISTENTE:"
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel:"
-msgstr "Cancelar:"
+msgstr "Cancelar la reunión:"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -212,7 +212,7 @@ msgstr "Tienes una invitación"
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "(none)"
-msgstr "(ninguno)"
+msgstr "(sin datos)"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -242,7 +242,7 @@ msgstr "viernes"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Invited"
-msgstr "Invitado"
+msgstr "Invitación"
 
 #: lib/tymeslot/emails/shared/meeting/hero.ex
 #, elixir-autogen, elixir-format
@@ -307,7 +307,7 @@ msgstr "miércoles"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
-msgstr "Enviado por"
+msgstr "Enviado con esmero por"
 
 #: lib/tymeslot/emails/shared/layouts.ex
 #: lib/tymeslot/emails/shared/mjml_email.ex
@@ -436,12 +436,12 @@ msgstr "inicio de sesión único"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has cancelled a recurring event you were invited to. Every occurrence is cancelled."
-msgstr "%{name} canceló un evento periódico al que estabas invitado. Se cancelan todas las repeticiones."
+msgstr "%{name} canceló un evento periódico al que te había invitado. Se cancelan todas las repeticiones."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has cancelled an event you were invited to."
-msgstr "%{name} canceló un evento al que estabas invitado."
+msgstr "%{name} canceló un evento al que te había invitado."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -519,8 +519,8 @@ msgstr "Abrir en el panel:"
 #, elixir-autogen, elixir-format
 msgid "Group session: you have one of %{count} spot."
 msgid_plural "Group session: you have one of %{count} spots."
-msgstr[0] "Sesión de grupo: tienes una de %{count} plaza."
-msgstr[1] "Sesión de grupo: tienes una de %{count} plazas."
+msgstr[0] "Sesión de grupo: tienes uno de %{count} lugar."
+msgstr[1] "Sesión de grupo: tienes uno de %{count} lugares."
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -540,7 +540,7 @@ msgstr "Reservado con %{brand}: %{url}"
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "GUESTS:"
-msgstr ""
+msgstr "INVITADOS:"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
@@ -550,17 +550,17 @@ msgstr "Invitados"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has removed you from an event."
-msgstr ""
+msgstr "%{name} te quitó de un evento."
 
 #: lib/tymeslot/emails/shared/calendar_event_content.ex
 #, elixir-autogen, elixir-format
 msgid "DESCRIPTION:"
-msgstr ""
+msgstr "DESCRIPCIÓN:"
 
 #: lib/tymeslot/emails/shared/calendar_event_content.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Description"
-msgstr "Descripción:"
+msgstr "Descripción"
 
 #: lib/tymeslot/emails/shared/meeting/hero.ex
 #, elixir-autogen, elixir-format
@@ -570,29 +570,29 @@ msgstr "Evento"
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Event:"
-msgstr ""
+msgstr "Evento:"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "If the event is still in your calendar, you can delete it there."
-msgstr ""
+msgstr "Si el evento sigue en tu calendario, puedes eliminarlo allí."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Removed"
-msgstr ""
+msgstr "Invitación retirada"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Removed from %{title} on %{date}"
-msgstr ""
+msgstr "Invitación retirada – %{title} el %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Removed from Event"
-msgstr ""
+msgstr "Ya no formas parte del evento"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Video call:"
-msgstr "Videollamada"
+msgstr "Videollamada:"

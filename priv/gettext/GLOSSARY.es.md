@@ -49,8 +49,12 @@ Sentence case for headings and buttons: `Confirmar la reserva`, not `Confirmar L
 | to book | **reservar** |
 | to book / arrange (marketing register) | **agendar** is Latin-American only → use **reservar** or **programar** |
 | **meeting type / event type** | **tipo de reunión** **[DECIDED]** (never `tipo de evento`) |
-| slot / time slot | **franja horaria** in the dashboard; **tiempo de horario** in texts guests read (booking page, guest and organiser emails) **[DECIDED]** (never `espacio`, never `slot`) |
-| end time / ends at | **la hora en que termina** **[DECIDED]**, also in field labels (`Hora en que termina`); never `hora de fin` |
+| slot / time slot | **franja horaria** in the dashboard; **horario** in texts guests read (booking page, guest and organiser emails) **[DECIDED]** (never `tiempo de horario`, which is not Spanish; never `espacio`, never `slot`) |
+| end time (label or noun) | **hora de finalización**, paired with **hora de inicio** **[DECIDED]** (`Hora de finalización`, `La hora de finalización debe ser posterior a la hora de inicio`); inside a sentence a verb is fine (`la reunión termina a las…`, `termina al día siguiente`). Where a label is too narrow, check the template before shortening; `Fin` / `Inicio` only as a pair |
+| end date | **fecha de finalización**, paired with **fecha de inicio** |
+| seat / spot (a place in a group session or poll) | **lugar** **[DECIDED]** (`Quedan 3 lugares`, `5 de 8 lugares ocupados`, `Dejó su lugar`); never `plaza`, which reads as Spain, never `cupo`, which reads as Latin America |
+| registration (sign-ups for a group session) | **inscripciones**, plural (`Inscripciones abiertas`, `Inscripciones cerradas`, `Cierre de inscripciones`) |
+| fixed dates (planned group sessions) | **fechas fijas**; to plan one: **planificar** |
 | (a meeting) takes place / is held | **realizarse** **[DECIDED]** (`si la reunión ya no se realiza`); never `celebrarse`, which also reads as "celebrate" |
 | **organiser / organizer** | **organizador** **[DECIDED]** |
 | **host** (noun) | **anfitrión**, a distinct role from `organizador`; keep them distinct |
@@ -155,7 +159,9 @@ comment, so the ambiguity is visible rather than silently resolved.
 | booking window / advance booking (how far ahead) | **antelación máxima** **[DECIDED]** (never `periodo de reserva`, which reads as the length of a booking) |
 | lead time | **antelación** |
 | per day / per week | **al día** / **a la semana** |
-| no-show | **ausencia** |
+| no-show | **ausencia** (reserved for this sense) |
+| time off (days away, possibly with times on the first and last day) | **días libres** **[DECIDED]** (`Agregar días libres`, `Este horario cae dentro de tus días libres`); never `periodo de ausencia`, since `ausencia` means a no-show |
+| extra available times (dated additions to a schedule) | **franjas adicionales** (`Franjas horarias adicionales` as the heading) |
 | waiting room / lobby | **sala de espera** |
 | join (a meeting) | **unirse a** |
 | copy link | **copiar enlace** |
@@ -169,6 +175,15 @@ comment, so the ambiguity is visible rather than silently resolved.
 | failed | **falló** (event) / **fallida** (state) |
 | retry | **reintentar** |
 | required | **obligatorio** **[DECIDED]** (never `requerido`, an English calque) |
+| "X is required" (validation) | **X es obligatorio / obligatoria** **[DECIDED]** (`El nombre es obligatorio`, `La fecha es obligatoria`); not `Falta X`. `Falta…` stays for something genuinely missing from a value or a response (`Falta el dominio del correo`, `Falta el token del bot`) |
+| expire (links, sessions, invitations, tokens, access) | **expirar** / **expiró** / **expirado**, or **ya no es válido** **[DECIDED]** (`El enlace expiró`, `Tu sesión expiró`, `Token no válido o expirado`); never `caducar` (Spain) |
+| lapse at a deadline / be due (requests, payments) | **vencer** / **vencida**, only here (`la solicitud vence`, a booking request or unpaid booking that lapsed: `Vencida`) |
+| contact (someone) | **ponerse en contacto con** **[DECIDED]** (`ponte en contacto con el administrador`); never `comunícate`, which is Latin-American leaning |
+| click (a button or link) | **hacer clic en** **[DECIDED]** (`Haz clic en el botón de abajo`) |
+| press (a keyboard key) | **pulsar** (`pulsa Enter`), only for keys; never `presionar` |
+| amount (of money) | **cantidad**, or a rephrase (`la cantidad del reembolso`, `lo que se pagó por la reserva`) **[DECIDED]**; never `importe` (Spain) or `monto` (Latin America) |
+| video | **video**, without an accent **[DECIDED]**; prefer **videollamada** where the meeting is meant (`las videollamadas están activadas`), keep `video` for the provider, link or file (`proveedor de video`, `enlace de video`) |
+| unlisted (a meeting type off the public page) | **oculto** **[DECIDED]** (never `no listado`, a calque) |
 | optional | **opcional** |
 | save changes | **guardar los cambios** |
 | unsaved changes | **cambios sin guardar** |
@@ -229,14 +244,18 @@ mailbox.org: **[OPEN]**, see section 9.
 
 - **Localise prose-shaped samples:** `yourname` → `tunombre`, `your-username` →
   `tu-usuario`, `e.g. Jane Smith` → a Spanish name (`p. ej. Ana García`).
+- **Keep samples neutral** where a neutral one works: a sample city, street or postcode
+  format marks one country, so `e.g. Berlin office` → `p. ej., Oficina central` and
+  `12 High Street, London EC1A 1BB` → `Calle Principal 12, Ciudad`, not Madrid or Bogotá.
 - **Keep format-shaped samples verbatim:** email addresses (`your.email@example.com`), URLs
   and hosts (`https://caldav.example.com`), API keys (`your-api-key-here`), anything
   `example.com`. These are formats, not words.
 
 **Common UI labels:** Save→Guardar · Continue→Continuar · Back→Atrás · Next→Siguiente ·
-Submit→Enviar · Done/Finish→Listo · Add→Agregar · Close→Cerrar · Skip→Omitir ·
+Submit→Enviar · Done/Finish→Listo · Add→Agregar **[DECIDED]** (never `Añadir`) · Close→Cerrar · Skip→Omitir ·
 Got it→Entendido · Welcome→Te damos la bienvenida (never `Bienvenido`, which assumes a
-gender) · Required fields→Campos obligatorios · Select→Seleccionar ·
+gender) · Welcome back→Hola de nuevo **[DECIDED]** (not `Te damos de nuevo la
+bienvenida`, which is stiff) · Required fields→Campos obligatorios · Select→Seleccionar ·
 Privacy Policy→Política de privacidad · Terms of Service→Términos del servicio ·
 Enabled/Disabled→Activado/Desactivado · Analytics→Analítica · Loading…→Cargando… ·
 Search→Buscar · Edit→Editar · Copy→Copiar.
@@ -426,9 +445,11 @@ router can actually serve. Section 7 is what makes that single variant defensibl
 ## 10. ONE-LINE SUMMARY
 
 Informal **tú**, plural **ustedes**, never `vosotros` or `vos`. **reunión** (booked meeting) ·
-**reserva** · **tipo de reunión** · **franja horaria** (panel) / **tiempo de horario** (guest
-texts) · **la hora en que termina** · **realizarse** · **organizador** (organiser) vs
-**anfitrión** (host) · **asistente** · **invitado** · **configuración**. `cancelar` always
+**reserva** · **tipo de reunión** · **franja horaria** (panel) / **horario** (guest
+texts) · **hora de inicio** / **hora de finalización** · **lugar** (seat) · **días libres** ·
+**expiró** (links, sessions) · **cantidad** · **Agregar** · **haz clic en** · **realizarse** ·
+**organizador** (organiser) vs **anfitrión** (host) · **asistente** · **invitado** ·
+**configuración**. `cancelar` always
 carries its object when a meeting is meant. Months and weekdays lowercase. Opening `¿` and
 `¡` are mandatory. Keep **Tymeslot / brand names / env vars / `%{…}`** verbatim. Use
 `«…»`, `–` for ranges, no `—`, `…`, decimal comma, 24-hour clock,

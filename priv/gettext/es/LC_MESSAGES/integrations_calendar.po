@@ -201,7 +201,7 @@ msgstr "No se pudo acceder al feed del calendario. Revisa la URL e inténtalo de
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Double-check your credentials and ensure they haven't expired"
-msgstr "Revisa tus datos de acceso y asegúrate de que no hayan vencido"
+msgstr "Revisa tus datos de acceso y asegúrate de que no hayan expirado"
 
 #: lib/tymeslot/integrations/calendar/exchange/provider.ex
 #, elixir-autogen, elixir-format
@@ -271,7 +271,7 @@ msgstr "Proveedor de demostración para la página de inicio"
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "If the problem persists, contact your calendar server administrator"
-msgstr "Si el problema continúa, comunícate con el administrador de tu servidor de calendario"
+msgstr "Si el problema continúa, ponte en contacto con el administrador de tu servidor de calendario"
 
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
@@ -766,7 +766,7 @@ msgstr "Espera 60 segundos antes de volver a intentarlo"
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar access has expired. Please reconnect."
-msgstr "Tu acceso al calendario venció. Vuelve a conectarlo."
+msgstr "Tu acceso al calendario expiró. Vuelve a conectarlo."
 
 #: lib/tymeslot/integrations/calendar/zimbra/provider.ex
 #, elixir-autogen, elixir-format
@@ -806,19 +806,19 @@ msgstr "Conexión con mailbox.org correcta"
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} refused the change. The connection is working, but the calendar would not accept this request."
-msgstr ""
+msgstr "%{provider} rechazó el cambio. La conexión funciona, pero el calendario no aceptó esta solicitud."
 
 #: lib/tymeslot/integrations/calendar/domain/management.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar connection does not allow Tymeslot to add bookings to it. Please reconnect the integration and allow Tymeslot to create and edit events."
-msgstr ""
+msgstr "La conexión con tu calendario no permite que Tymeslot agregue reservas. Vuelve a conectar la integración y permite que Tymeslot cree y edite eventos."
 
 #: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "Nextcloud refused the stored app password. It was most likely revoked, or the account password was changed. Create a new app password and reconnect."
-msgstr ""
+msgstr "Nextcloud rechazó la contraseña de aplicación guardada. Lo más probable es que se haya revocado o que se haya cambiado la contraseña de la cuenta. Crea una contraseña de aplicación nueva y vuelve a conectar la integración."
 
 #: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud refused the stored app-specific password. It was most likely revoked, or your Apple ID password was changed, which revokes every app-specific password. Generate a new one and reconnect."
-msgstr ""
+msgstr "iCloud rechazó la contraseña específica para la app guardada. Lo más probable es que se haya revocado o que se haya cambiado la contraseña de tu Apple ID, lo que revoca todas las contraseñas específicas para apps. Genera una nueva y vuelve a conectar la integración."

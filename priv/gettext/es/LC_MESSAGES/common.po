@@ -189,7 +189,7 @@ msgstr "Abrir o cerrar el menú"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
-msgstr "Reservas de reuniones con tu propia imagen. Sin publicidad y sin rastreo."
+msgstr "Programación de reuniones elegante y con tu propia imagen. Sin publicidad ni rastreo."
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
@@ -280,7 +280,7 @@ msgstr "Agregar"
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Add Custom"
-msgstr "Agregar personalizado"
+msgstr "Agregar uno personalizado"
 
 #: lib/tymeslot_web/components/shared/reminder_picker_state.ex
 #, elixir-autogen, elixir-format
@@ -290,7 +290,7 @@ msgstr "Se agregó: %{label} antes"
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Custom"
-msgstr "Cancelar personalizado"
+msgstr "Descartar"
 
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
 #, elixir-autogen, elixir-format

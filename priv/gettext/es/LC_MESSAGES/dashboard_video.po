@@ -150,7 +150,7 @@ msgstr "Escribe una nueva clave de API"
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
-msgstr "Escribe la URL de tu reunión por video. Usa {{meeting_id}} para tener una sala distinta en cada reunión"
+msgstr "Escribe la URL de tu videollamada. Usa {{meeting_id}} para tener una sala distinta en cada reunión"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #, elixir-autogen, elixir-format
@@ -200,7 +200,7 @@ msgstr "Integraciones de video inactivas"
 #: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #, elixir-autogen, elixir-format
 msgid "Infomaniak's hosted video meetings"
-msgstr "Reuniones por video alojadas por Infomaniak"
+msgstr "Videollamadas alojadas por Infomaniak"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex
 #, elixir-autogen, elixir-format

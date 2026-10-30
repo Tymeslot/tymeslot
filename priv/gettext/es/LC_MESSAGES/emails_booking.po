@@ -44,7 +44,7 @@ msgstr "¡Cita confirmada!"
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee paid: %{amount}"
-msgstr "El asistente pagó: %{amount}"
+msgstr "Pago del asistente: %{amount}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
@@ -106,7 +106,7 @@ msgstr "¿No te sirve el nuevo horario?"
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Funds will arrive on your usual Stripe payout schedule."
-msgstr "El dinero llegará según tu calendario habitual de pagos de Stripe."
+msgstr "El dinero llegará según tu calendario habitual de transferencias de Stripe."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -133,7 +133,7 @@ msgstr "Hola %{guest}:"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting."
-msgstr "Hola %{name}: ya bloqueé el horario en mi calendario y espero con gusto nuestra reunión."
+msgstr "Hola %{name}: ya bloqueé el horario en mi calendario. Será un gusto reunirnos."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -157,12 +157,12 @@ msgstr "Iniciar la videollamada"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our conversation!"
-msgstr "Espero con gusto nuestra conversación."
+msgstr "¡Será un gusto hablar contigo!"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
-msgstr "Espero con gusto nuestra reunión. Ya bloqueé el horario en mi calendario y estaré disponible."
+msgstr "Será un gusto reunirnos. Ya bloqueé el horario en mi calendario y estaré disponible."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
@@ -183,7 +183,7 @@ msgstr "Entrar a la videollamada"
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
-msgstr "Entra cuando estés listo"
+msgstr "Entra cuando quieras"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
@@ -296,7 +296,7 @@ msgstr "Recibo de pago"
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Previously scheduled for"
-msgstr "Antes estaba prevista para"
+msgstr "Horario anterior"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -511,7 +511,7 @@ msgstr "Tienes una invitación"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "You've been added as a guest"
-msgstr "Te agregaron como invitado"
+msgstr "Te agregaron a la lista de invitados"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -569,67 +569,67 @@ msgstr "Abrir en el panel"
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - your spot has moved from %{from} to %{to}."
-msgstr "Hola %{name}: tu plaza cambió del %{from} al %{to}."
+msgstr "Hola %{name}: tu lugar pasó del %{from} al %{to}."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - your spot has moved to %{to}."
-msgstr "Hola %{name}: tu plaza cambió al %{to}."
+msgstr "Hola %{name}: tu lugar pasó al %{to}."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Spot moved - %{date} with %{name}"
-msgstr "Plaza cambiada – %{date} con %{name}"
+msgstr "Cambio de lugar – %{date} con %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved from %{from} to %{to}."
-msgstr "Tu plaza cambió del %{from} al %{to}."
+msgstr "Tu lugar pasó del %{from} al %{to}."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved to %{to}."
-msgstr "Tu plaza cambió al %{to}."
+msgstr "Tu lugar pasó al %{to}."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Your spot has moved."
-msgstr "Tu plaza cambió."
+msgstr "Tu lugar cambió de horario."
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest} - the meeting with %{organizer} now ends at %{to} instead of %{from}. It still starts at the same time, so your answer stands."
-msgstr "Hola %{guest}: la hora en que termina la reunión con %{organizer} cambió de %{from} a %{to}. La reunión empieza a la misma hora, así que tu respuesta sigue siendo válida."
+msgstr "Hola %{guest}: la hora de finalización de la reunión con %{organizer} cambió de %{from} a %{to}. La reunión empieza a la misma hora, así que tu respuesta sigue siendo válida."
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - our meeting now ends at %{to} instead of %{from}. It still starts at the same time, and my calendar is already updated."
-msgstr "Hola %{name}: la hora en que termina nuestra reunión cambió de %{from} a %{to}. La reunión empieza a la misma hora, y mi calendario ya está actualizado."
+msgstr "Hola %{name}: la hora de finalización de nuestra reunión cambió de %{from} a %{to}. La reunión empieza a la misma hora, y mi calendario ya está actualizado."
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "New end time"
-msgstr "Nueva hora en que termina"
+msgstr "Nueva hora de finalización"
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "New end time - %{date} with %{name}"
-msgstr "Nueva hora en que termina – %{date} con %{name}"
+msgstr "Nueva hora de finalización – %{date} con %{name}"
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "Previously ended at"
-msgstr "Hora en que terminaba antes"
+msgstr "Hora de finalización anterior"
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "Same link, new end time"
-msgstr "Mismo enlace, nueva hora en que termina"
+msgstr "Mismo enlace, nueva hora de finalización"
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting now ends at %{time}."
-msgstr "Nueva hora en que termina la reunión: %{time}."
+msgstr "Nueva hora de finalización de la reunión: %{time}."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -689,7 +689,7 @@ msgstr "Prueba el video y el audio si la reunión es en línea"
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "You received: %{amount} (before Stripe processing fees)"
-msgstr "Recibiste: %{amount} (antes de las comisiones de procesamiento de Stripe)"
+msgstr "Recibiste %{amount} (antes de las comisiones de procesamiento de Stripe)"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -697,58 +697,58 @@ msgid "You moved this meeting in your calendar."
 msgstr "Cambiaste el horario de esta reunión en tu calendario."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Poll confirmed"
-msgstr "Confirmada"
+msgstr "Votación confirmada"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Poll confirmed: %{title} - %{date}"
-msgstr ""
+msgstr "Votación confirmada: %{title} – %{date}"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You moved this meeting."
-msgstr "Cambiaste el horario de esta reunión en tu calendario."
+msgstr "Cambiaste el horario de esta reunión."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Your guests have been notified of the new time."
-msgstr ""
+msgstr "Se avisó a tus invitados del nuevo horario."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Your poll is confirmed, and everyone on it is invited."
-msgstr ""
+msgstr "Se confirmó tu votación y todos sus participantes recibieron la invitación."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "⏰ %{title} in %{time_until}"
-msgstr ""
+msgstr "⏰ %{title} en %{time_until}"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{guest} - the meeting %{organizer} invited you to is coming up."
-msgstr "Hola %{guest}: la reunión a la que %{organizer} te invitó cambió de horario."
+msgstr "Hola %{guest}: se acerca la reunión a la que %{organizer} te invitó."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The meeting %{organizer} invited you to is coming up."
-msgstr "La reunión a la que %{organizer} te invitó cambió de horario."
+msgstr "Se acerca la reunión a la que %{organizer} te invitó."
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} person signed up for %{event}. Here is who is coming."
 msgid_plural "%{count} people signed up for %{event}. Here is who is coming."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Se inscribió %{count} persona en %{event}. Esta es la lista de asistentes."
+msgstr[1] "Se inscribieron %{count} personas en %{event}. Esta es la lista de asistentes."
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "%{taken} of %{count} spot taken"
 msgid_plural "%{taken} of %{count} spots taken"
-msgstr[0] "%{taken} de %{count} plaza ocupada"
-msgstr[1] "%{taken} de %{count} plazas ocupadas"
+msgstr[0] "%{taken} de %{count} lugar ocupado"
+msgstr[1] "%{taken} de %{count} lugares ocupados"
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
@@ -768,7 +768,7 @@ msgstr "Invitados"
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Guests: %{guests}"
-msgstr ""
+msgstr "Invitados: %{guests}"
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
@@ -778,7 +778,7 @@ msgstr "Mensaje"
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Message: %{message}"
-msgstr ""
+msgstr "Mensaje: %{message}"
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
@@ -788,7 +788,7 @@ msgstr "Nombre"
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody signed up for %{event}. If it is not going ahead, you can cancel it in your dashboard."
-msgstr ""
+msgstr "Nadie se inscribió en %{event}. Si ya no se va a realizar, puedes cancelar la reunión en tu panel."
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
@@ -803,19 +803,19 @@ msgstr "Teléfono"
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Registration closed"
-msgstr ""
+msgstr "Inscripciones cerradas"
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Registration closed: %{event} - %{date}"
-msgstr ""
+msgstr "Inscripciones cerradas: %{event} – %{date}"
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Registration has closed"
-msgstr ""
+msgstr "Se cerraron las inscripciones"
 
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
-msgstr ""
+msgstr "La lista también va adjunta como archivo CSV para abrirla en una hoja de cálculo."

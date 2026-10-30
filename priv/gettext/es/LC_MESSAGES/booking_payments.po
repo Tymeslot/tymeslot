@@ -29,7 +29,7 @@ msgstr "Reserva no aceptada"
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Booking request expired"
-msgstr "La solicitud de reserva venció"
+msgstr "La solicitud de reserva expiró"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -39,22 +39,22 @@ msgstr "Confirmando el pago…"
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
-msgstr "Si no hay respuesta antes del %{deadline}, la solicitud vence y se te devuelve el importe automáticamente."
+msgstr "Si no hay respuesta antes del %{deadline}, la solicitud expira y se te reembolsa el pago automáticamente."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "If there's no answer by %{deadline}, the request lapses."
-msgstr "Si no hay respuesta antes del %{deadline}, la solicitud vence."
+msgstr "Si no hay respuesta antes del %{deadline}, la solicitud expira."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody responded to this request in time, so it has lapsed."
-msgstr "Nadie respondió a tiempo, así que la solicitud venció."
+msgstr "Nadie respondió a tiempo, así que la solicitud expiró."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
-msgstr "Nadie respondió a tiempo, así que la solicitud venció. Te estamos devolviendo el importe."
+msgstr "Nadie respondió a tiempo, así que la solicitud expiró. Te estamos reembolsando el pago."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -84,7 +84,7 @@ msgstr "Volver a la reserva"
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Thank you, your booking is confirmed for %{date}."
-msgstr "Gracias, tu reserva quedó confirmada para %{date}."
+msgstr "Gracias, tu reserva quedó confirmada para el %{date}."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -104,7 +104,7 @@ msgstr "Esta reserva no se aceptó, así que no se llevará a cabo."
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
-msgstr "Esta reserva no se aceptó, así que no se llevará a cabo. Te estamos devolviendo el importe."
+msgstr "Esta reserva no se aceptó, así que no se llevará a cabo. Te estamos reembolsando el pago."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -114,4 +114,4 @@ msgstr "Tu reserva no está confirmada. Puedes volver e intentarlo cuando quiera
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
 msgid "Paid: %{amount}"
-msgstr ""
+msgstr "Pagado: %{amount}"

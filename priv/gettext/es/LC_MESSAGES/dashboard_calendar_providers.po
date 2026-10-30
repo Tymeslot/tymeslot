@@ -219,7 +219,7 @@ msgstr "URL del servidor"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Session expired. Please start the reconnect process again."
-msgstr "La sesión venció. Empieza de nuevo a conectar la integración."
+msgstr "La sesión expiró. Empieza de nuevo a conectar la integración."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
@@ -634,9 +634,9 @@ msgstr "Los calendarios de festivos y vacaciones escolares marcan sus eventos co
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "If you revoked the old app-specific password or changed your Apple ID password since connecting, the old one will not work again: generate a new one and enter it here."
-msgstr ""
+msgstr "Si revocaste la contraseña específica para la app anterior o cambiaste la contraseña de tu Apple ID después de conectar, la anterior ya no volverá a funcionar: genera una nueva y escríbela aquí."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Keep this password for as long as you use Tymeslot. Revoking it, or changing your Apple ID password, disconnects iCloud, and your booking page offers no times until you reconnect."
-msgstr ""
+msgstr "Conserva esta contraseña mientras uses Tymeslot. Si la revocas o cambias la contraseña de tu Apple ID, iCloud se desconecta y tu página de reservas no ofrece horarios hasta que vuelvas a conectarlo."

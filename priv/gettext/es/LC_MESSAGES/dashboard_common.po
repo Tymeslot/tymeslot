@@ -20,7 +20,7 @@ msgstr "Cuenta"
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Add a meeting type so guests have something to book"
-msgstr "Añade un tipo de reunión para que los invitados tengan algo que reservar"
+msgstr "Agrega un tipo de reunión para que los invitados tengan algo que reservar"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
@@ -296,7 +296,7 @@ msgstr "En curso"
 #: lib/tymeslot_web/components/dashboard/appointments/join_link.ex
 #, elixir-autogen, elixir-format
 msgid "Join meeting"
-msgstr "Entrar a la reunión"
+msgstr "Unirse a la reunión"
 
 #: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
 #, elixir-autogen, elixir-format
@@ -368,10 +368,10 @@ msgstr "Volver a conectar"
 #, elixir-autogen, elixir-format
 msgid "%{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
 msgid_plural "%{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Hay que volver a conectar %{names}. Hasta que lo hagas, puede que tu página de reservas no ofrezca horarios ni acepte reservas."
+msgstr[1] "Hay que volver a conectar %{names}. Hasta que lo hagas, puede que tu página de reservas no ofrezca horarios ni acepte reservas."
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
-msgstr ""
+msgstr "Vuelve a conectar %{names}: hasta que lo hagas, puede que tu página de reservas no acepte reservas"

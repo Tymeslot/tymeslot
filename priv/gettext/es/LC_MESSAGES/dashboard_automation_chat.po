@@ -108,7 +108,7 @@ msgstr "Indicación del canal (opcional)"
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
 #, elixir-autogen, elixir-format
 msgid "Channel needed"
-msgstr "Falta el canal"
+msgstr "El canal es obligatorio"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
@@ -357,7 +357,7 @@ msgstr "Déjalo vacío para conservar la URL del webhook actual. Pega una nueva 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Link Expired"
-msgstr "Enlace vencido"
+msgstr "Enlace expirado"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
@@ -594,7 +594,7 @@ msgstr "Probando y guardando…"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "The link has expired. Click below to generate a new one."
-msgstr "El enlace venció. Haz clic abajo para generar uno nuevo."
+msgstr "El enlace expiró. Haz clic abajo para generar uno nuevo."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
@@ -615,7 +615,7 @@ msgstr "Actualiza la URL del webhook o los eventos suscritos de esta integració
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for Telegram connection... (link expires in 10 minutes)"
-msgstr "Esperando la conexión con Telegram… (el enlace vence en 10 minutos)"
+msgstr "Esperando la conexión con Telegram… (el enlace expira en 10 minutos)"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
@@ -656,7 +656,7 @@ msgstr "La respuesta de Slack no coincide con tu sesión. Inténtalo de nuevo."
 #: lib/tymeslot_web/controllers/slack_oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Slack connection expired. Please try again."
-msgstr "La conexión con Slack venció. Inténtalo de nuevo."
+msgstr "La conexión con Slack expiró. Inténtalo de nuevo."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format

@@ -236,7 +236,7 @@ msgstr "¿Quieres contarnos algo más? (opcional)"
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar events and video links that already exist stay as they are. If a meeting will not take place, contact your guests yourself."
-msgstr "Los eventos de calendario y los enlaces de video que ya existen quedan como están. Si una reunión no se va a realizar, comunícate tú con tus invitados."
+msgstr "Los eventos de calendario y los enlaces de video que ya existen quedan como están. Si una reunión no se va a realizar, ponte en contacto tú con tus invitados."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format

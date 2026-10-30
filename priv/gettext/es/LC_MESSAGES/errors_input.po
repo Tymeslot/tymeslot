@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot/security/field_validators/yes_no_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Answer is required"
-msgstr "Falta la respuesta"
+msgstr "La respuesta es obligatoria"
 
 #: lib/tymeslot/security/field_validators/yes_no_validator.ex
 #, elixir-autogen, elixir-format
@@ -49,7 +49,7 @@ msgstr "La fecha no es válida"
 #: lib/tymeslot/security/field_validators/date_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Date is required"
-msgstr "Falta la fecha"
+msgstr "La fecha es obligatoria"
 
 #: lib/tymeslot/security/field_validators/date_validator.ex
 #, elixir-autogen, elixir-format
@@ -159,7 +159,7 @@ msgstr "El correo tiene una terminación de dominio desconocida (.%{tld}). Si es
 #: lib/tymeslot/security/field_validators/email_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Email is required"
-msgstr "Falta el correo electrónico"
+msgstr "El correo electrónico es obligatorio"
 
 #: lib/tymeslot/security/field_validators/email_validator.ex
 #, elixir-autogen, elixir-format
@@ -179,7 +179,7 @@ msgstr "Escribe la dirección completa, empezando por https://, por ejemplo http
 #: lib/tymeslot/security/field_validators/integration_name_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Integration name is required"
-msgstr "Falta el nombre de la integración"
+msgstr "El nombre de la integración es obligatorio"
 
 #: lib/tymeslot/security/field_validators/integration_name_validator.ex
 #, elixir-autogen, elixir-format
@@ -199,7 +199,7 @@ msgstr "El mensaje no puede estar en blanco"
 #: lib/tymeslot/security/field_validators/message_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Message is required"
-msgstr "Falta el mensaje"
+msgstr "El mensaje es obligatorio"
 
 #: lib/tymeslot/security/field_validators/message_validator.ex
 #, elixir-autogen, elixir-format
@@ -249,7 +249,7 @@ msgstr "El nombre contiene caracteres no válidos"
 #: lib/tymeslot/security/field_validators/name_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Name is required"
-msgstr "Falta el nombre"
+msgstr "El nombre es obligatorio"
 
 #: lib/tymeslot/security/field_validators/name_validator.ex
 #, elixir-autogen, elixir-format
@@ -274,7 +274,7 @@ msgstr "El número no es válido"
 #: lib/tymeslot/security/field_validators/number_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Number is required"
-msgstr "Falta el número"
+msgstr "El número es obligatorio"
 
 #: lib/tymeslot/security/field_validators/number_validator.ex
 #, elixir-autogen, elixir-format
@@ -309,7 +309,7 @@ msgstr "El número de teléfono contiene caracteres no válidos"
 #: lib/tymeslot/security/field_validators/phone_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Phone number is required"
-msgstr "Falta el número de teléfono"
+msgstr "El número de teléfono es obligatorio"
 
 #: lib/tymeslot/security/field_validators/phone_validator.ex
 #, elixir-autogen, elixir-format
@@ -389,7 +389,7 @@ msgstr "El texto no puede estar en blanco"
 #: lib/tymeslot/security/field_validators/text_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Text is required"
-msgstr "Falta el texto"
+msgstr "El texto es obligatorio"
 
 #: lib/tymeslot/security/field_validators/text_validator.ex
 #, elixir-autogen, elixir-format
@@ -424,7 +424,7 @@ msgstr "La hora es anterior a la primera hora permitida"
 #: lib/tymeslot/security/field_validators/time_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Time is required"
-msgstr "Falta la hora"
+msgstr "La hora es obligatoria"
 
 #: lib/tymeslot/security/field_validators/time_validator.ex
 #, elixir-autogen, elixir-format
@@ -444,7 +444,7 @@ msgstr "La configuración del intervalo de horas no es válida"
 #: lib/tymeslot/security/field_validators/url_validator.ex
 #, elixir-autogen, elixir-format
 msgid "URL is required"
-msgstr "Falta la URL"
+msgstr "La URL es obligatoria"
 
 #: lib/tymeslot/security/url_validation.ex
 #, elixir-autogen, elixir-format

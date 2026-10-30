@@ -112,7 +112,7 @@ msgstr "Te damos la bienvenida"
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome back"
-msgstr "Te damos de nuevo la bienvenida"
+msgstr "Hola de nuevo"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format

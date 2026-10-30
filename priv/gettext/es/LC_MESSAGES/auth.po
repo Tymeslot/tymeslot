@@ -29,7 +29,7 @@ msgstr "Se creó la cuenta. Revisa tu correo para ver cómo verificarla."
 #: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
 #, elixir-autogen, elixir-format
 msgid "Almost There!"
-msgstr "Ya casi está"
+msgstr "Ya casi terminas"
 
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
@@ -159,7 +159,7 @@ msgstr "Únete a Tymeslot"
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
 msgid "Link Expired or Invalid"
-msgstr "Enlace vencido o no válido"
+msgstr "Enlace expirado o no válido"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
@@ -320,7 +320,7 @@ msgstr "Registrando…"
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Start scheduling your meetings with ease. Zero friction, total control."
-msgstr "Organiza tus reuniones y mantén el control de tu agenda."
+msgstr "Programa tus reuniones sin complicaciones y con control total."
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -350,7 +350,7 @@ msgstr "El enlace de seguridad que abriste ya no es válido. Pide uno nuevo para
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "This verification link has expired. Please request a new verification email to continue."
-msgstr "Este enlace de verificación venció. Pide un correo de verificación nuevo para continuar."
+msgstr "Este enlace de verificación expiró. Pide un correo de verificación nuevo para continuar."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
@@ -425,7 +425,7 @@ msgstr "Te enviamos a tu correo las instrucciones para restablecer la contraseñ
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome Back!"
-msgstr "Te damos de nuevo la bienvenida"
+msgstr "Hola de nuevo"
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -568,7 +568,7 @@ msgstr "Tienes que iniciar sesión para abrir esta página."
 #: lib/tymeslot_web/hooks/auth_live_session_hook.ex
 #, elixir-autogen, elixir-format
 msgid "Your session has expired. Please log in again."
-msgstr "Tu sesión venció. Vuelve a iniciar sesión."
+msgstr "Tu sesión expiró. Vuelve a iniciar sesión."
 
 #: lib/tymeslot_web/components/auth/shared/auth_form_components.ex
 #, elixir-autogen, elixir-format
@@ -603,7 +603,7 @@ msgstr "Se creó la cuenta, pero no se pudo crear el perfil: %{reason}"
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired token"
-msgstr "Token no válido o vencido"
+msgstr "Token no válido o expirado"
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -633,7 +633,7 @@ msgstr "Se deben aceptar los términos del servicio"
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "This link has expired. Please request a new one"
-msgstr "Este enlace venció. Pide uno nuevo"
+msgstr "Este enlace expiró. Pide uno nuevo"
 
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
@@ -668,12 +668,12 @@ msgstr "Se cambió el correo. Inicia sesión con el nuevo."
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired password reset token."
-msgstr "El token para restablecer la contraseña no es válido o venció."
+msgstr "El token para restablecer la contraseña no es válido o expiró."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired verification link"
-msgstr "Enlace de verificación no válido o vencido"
+msgstr "Enlace de verificación no válido o expirado"
 
 #: lib/tymeslot/auth/password_update.ex
 #, elixir-autogen, elixir-format
@@ -738,12 +738,12 @@ msgstr "No se pudo enviar el correo para restablecer la contraseña. Inténtalo 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
 msgid "Verification link has expired"
-msgstr "El enlace de verificación venció"
+msgstr "El enlace de verificación expiró"
 
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your reset token has expired. Please request a new password reset."
-msgstr "El token para restablecer la contraseña venció. Vuelve a pedir el restablecimiento de la contraseña."
+msgstr "El token para restablecer la contraseña expiró. Vuelve a pedir el restablecimiento de la contraseña."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -825,7 +825,7 @@ msgstr "Confirma tu correo electrónico"
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Press the button below to finish verifying your email address."
-msgstr "Pulsa el botón de abajo para terminar de verificar tu correo electrónico."
+msgstr "Haz clic en el botón de abajo para terminar de verificar tu correo electrónico."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
@@ -840,7 +840,7 @@ msgstr "Confirma tu nuevo correo electrónico"
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Press the button below to switch your account to this email address."
-msgstr "Pulsa el botón de abajo para que tu cuenta use este correo electrónico."
+msgstr "Haz clic en el botón de abajo para que tu cuenta use este correo electrónico."
 
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
@@ -870,7 +870,7 @@ msgstr "Verifica tu correo electrónico antes de iniciar sesión. Te enviamos un
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Your sign-up session has expired. Please sign in again."
-msgstr "Tu sesión de registro venció. Vuelve a iniciar sesión."
+msgstr "Tu sesión de registro expiró. Vuelve a iniciar sesión."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -895,7 +895,7 @@ msgstr "Terminar el registro"
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Press the button below to confirm your email address and create your account."
-msgstr "Pulsa el botón de abajo para confirmar tu correo electrónico y crear tu cuenta."
+msgstr "Haz clic en el botón de abajo para confirmar tu correo electrónico y crear tu cuenta."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -930,7 +930,7 @@ msgstr "Cerrar sesión"
 #: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome back. Your account has been restored and will not be deleted."
-msgstr "Te damos de nuevo la bienvenida. Tu cuenta se restauró y no se eliminará."
+msgstr "Hola de nuevo. Tu cuenta se restauró y no se eliminará."
 
 #: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
 #, elixir-autogen, elixir-format
@@ -972,5 +972,5 @@ msgstr "Falló la autenticación con %{provider}: falta el código de autorizaci
 #, elixir-autogen, elixir-format
 msgid "Welcome back. Your account has been restored, but %{names} needs reconnecting. Until you reconnect it, your booking page may not offer times or take bookings."
 msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Hola de nuevo. Tu cuenta se restauró, pero hay que volver a conectar %{names}. Hasta que lo hagas, puede que tu página de reservas no ofrezca horarios ni acepte reservas."
+msgstr[1] "Hola de nuevo. Tu cuenta se restauró, pero hay que volver a conectar %{names}. Hasta que lo hagas, puede que tu página de reservas no ofrezca horarios ni acepte reservas."

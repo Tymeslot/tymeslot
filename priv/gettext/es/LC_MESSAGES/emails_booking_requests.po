@@ -39,7 +39,7 @@ msgstr "%{name} quiere cambiar su reserva confirmada a otro horario."
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each booking personally, so this isn't final yet."
-msgstr "%{organizer} debe revisar cada reserva antes de confirmarla. Por eso, aún no ha sido confirmada."
+msgstr "%{organizer} revisa cada reserva antes de confirmarla. Por eso, aún no está confirmada."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -49,7 +49,7 @@ msgstr "%{organizer} revisa cada cambio antes de confirmarlo. Por eso, el nuevo 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot."
-msgstr "%{organizer} no llegó a responder a tiempo, así que el horario quedó libre. Puedes elegir otro tiempo de horario cuando quieras."
+msgstr "%{organizer} no llegó a responder a tiempo, así que el horario quedó libre. Puedes elegir otro horario cuando quieras."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -64,7 +64,7 @@ msgstr "%{organizer} no pudo aceptar el nuevo horario. Al pedir el cambio, tu ho
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} wasn't able to take this booking, so the time is no longer held for you."
-msgstr "%{organizer} no pudo aceptar esta reserva, así que el horario ya no queda apartado para ti."
+msgstr "%{organizer} no pudo aceptar esta reserva, así que el horario ya no está reservado para ti."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -79,12 +79,12 @@ msgstr "%{organizer} revisará tu solicitud y te responderá en breve."
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Approve"
-msgstr "Aceptar"
+msgstr "Aprobar"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Approve:"
-msgstr "Aceptar:"
+msgstr "Aprobar:"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -287,7 +287,7 @@ msgstr "Nueva solicitud de reserva"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "No longer held"
-msgstr "Ya no está apartado"
+msgstr "Ya no está reservado"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -297,7 +297,7 @@ msgstr "Sin confirmar"
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out."
-msgstr "En cuanto elijas otro tiempo de horario, recibirás un correo de confirmación con los datos al día. Si tienes preguntas o quieres ver otras opciones, escríbeme."
+msgstr "En cuanto elijas otro horario, recibirás un correo de confirmación con los datos al día. Si tienes preguntas o quieres ver otras opciones, escríbeme."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -452,32 +452,32 @@ msgstr "Gracias por tu comprensión y flexibilidad."
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
-msgstr "Mientras tanto, el nuevo horario queda apartado para ti, así que nadie más puede tomarlo. Recibirás un correo con el evento de calendario actualizado en cuanto %{organizer} acepte."
+msgstr "Mientras tanto, el nuevo horario queda reservado para ti, así que nadie más puede tomarlo. Recibirás un correo con el evento de calendario actualizado en cuanto %{organizer} acepte."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
-msgstr "El tiempo de horario queda apartado hasta que respondas. Si no contestas antes del %{deadline}, la solicitud vence. Entonces avisamos a %{name} de que el horario vuelve a estar libre."
+msgstr "La franja horaria queda reservada hasta que respondas. Si no contestas antes del %{deadline}, la solicitud vence. Entonces avisamos a %{name} de que el horario vuelve a estar libre."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "The slot stays held for %{name} until you answer."
-msgstr "El tiempo de horario queda apartado para %{name} hasta que respondas."
+msgstr "La franja horaria queda reservada para %{name} hasta que respondas."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "They added:"
-msgstr "Añadió lo siguiente:"
+msgstr "Agregó lo siguiente:"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "This time is held for you in the meantime, so nobody else can take it. You'll get a confirmation with the calendar invite as soon as %{organizer} accepts."
-msgstr "Mientras tanto el horario queda apartado para ti, así que nadie más puede tomarlo. Recibirás la confirmación con la invitación de calendario en cuanto %{organizer} acepte."
+msgstr "Mientras tanto, el horario queda reservado para ti, así que nadie más puede tomarlo. Recibirás la confirmación con la invitación de calendario en cuanto %{organizer} acepte."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "This time slot is available for booking again."
-msgstr "Este tiempo de horario vuelve a estar disponible para reservar."
+msgstr "Este horario vuelve a estar disponible para reservar."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format

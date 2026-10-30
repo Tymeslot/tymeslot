@@ -82,7 +82,7 @@ msgstr "Borrar toda la configuración"
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Clear Day"
-msgstr "Restablecer el día"
+msgstr "Borrar el día"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
@@ -98,7 +98,7 @@ msgstr "Fin"
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "End Time"
-msgstr "Hora en que termina"
+msgstr "Hora de finalización"
 
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
 #, elixir-autogen, elixir-format
@@ -226,7 +226,7 @@ msgstr "La duración debe ser mayor que 0 minutos"
 #: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
-msgstr "La hora en que termina debe ser posterior a la hora en que empieza"
+msgstr "La hora de finalización debe ser posterior a la hora de inicio"
 
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
@@ -845,7 +845,7 @@ msgstr "Antes de una nueva reserva"
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time. To run past midnight, pick an end time marked (+1)."
-msgstr "La hora en que termina debe ser posterior a la hora en que empieza. Para pasar de medianoche, elige una hora marcada con (+1)."
+msgstr "La hora de finalización debe ser posterior a la hora de inicio. Para pasar de medianoche, elige una hora de finalización marcada con (+1)."
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
@@ -873,14 +873,14 @@ msgid "Delete schedule"
 msgstr "Eliminar horario"
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{from}–%{to}"
-msgstr "Del %{from} al %{to}"
+msgstr "%{from}–%{to}"
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "A schedule can hold up to %{count} extra times."
-msgstr ""
+msgstr "Un horario puede incluir hasta %{count} franjas adicionales."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
@@ -890,62 +890,62 @@ msgstr "Fecha"
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Dates you can be booked besides your weekly hours, such as office hours once a month. With every weekday switched off, only these are offered. They apply to the meeting types using this schedule; past dates are removed automatically."
-msgstr ""
+msgstr "Fechas en las que se puede reservar contigo además de tu horario semanal, como un horario de consulta una vez al mes. Si desactivas todos los días de la semana, solo se ofrecen estas. Se aplican a los tipos de reunión que usan este horario; las fechas pasadas se eliminan automáticamente."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a date, a from and a to time."
-msgstr ""
+msgstr "Indica una fecha, una hora «Desde» y una hora «Hasta»."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a from time before the to time."
-msgstr ""
+msgstr "La hora «Desde» debe ser anterior a la hora «Hasta»."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Extra available times"
-msgstr ""
+msgstr "Franjas horarias adicionales"
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Extra time added"
-msgstr ""
+msgstr "Franja adicional agregada"
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "Extra time removed"
-msgstr ""
+msgstr "Franja adicional quitada"
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "No extra times added."
-msgstr ""
+msgstr "No hay franjas adicionales."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove this time"
-msgstr "Quitar días libres"
+msgstr "Quitar esta franja"
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Schedule duplicated. Its extra available times for specific dates were not copied."
-msgstr "Horario duplicado. Sus excepciones de fecha no se copiaron."
+msgstr "Horario duplicado. Sus franjas adicionales en fechas concretas no se copiaron."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "The date must be today or later."
-msgstr ""
+msgstr "La fecha debe ser hoy o posterior."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "This time overlaps another extra time on that date."
-msgstr ""
+msgstr "Esta franja se superpone a otra franja adicional en esa fecha."
 
 #: lib/tymeslot_web/live/dashboard/availability/extra_availability_card.ex
 #, elixir-autogen, elixir-format
 msgid "To"
-msgstr ""
+msgstr "Hasta"
 
 #: lib/tymeslot/availability/policy_validation.ex
 #, elixir-autogen, elixir-format

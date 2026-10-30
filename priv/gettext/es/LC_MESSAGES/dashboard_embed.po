@@ -354,7 +354,7 @@ msgstr "Al agregar %{domain} también se permite %{www_domain} (y al revés)"
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a domain and press enter to add it. Don't include %{scheme} or paths."
-msgstr "Escribe un dominio y presiona Enter para agregarlo. No incluyas %{scheme} ni rutas."
+msgstr "Escribe un dominio y pulsa Enter para agregarlo. No incluyas %{scheme} ni rutas."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format

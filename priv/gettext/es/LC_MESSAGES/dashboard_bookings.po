@@ -99,7 +99,7 @@ msgstr "Ocultar"
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
-msgstr "Escribe un importe de reembolso parcial válido."
+msgstr "Escribe una cantidad válida para el reembolso parcial."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
@@ -184,7 +184,7 @@ msgstr "No hay reuniones próximas"
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Partial amount"
-msgstr "Importe parcial"
+msgstr "Cantidad parcial"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -199,12 +199,12 @@ msgstr "Procesando…"
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
-msgstr "El importe del reembolso supera el saldo que queda por reembolsar."
+msgstr "La cantidad del reembolso supera el saldo que queda por reembolsar."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refund only part of the booking amount."
-msgstr "Reembolsar solo una parte del importe de la reserva."
+msgstr "Reembolsar solo una parte de lo que se pagó por la reserva."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -331,7 +331,7 @@ msgstr[1] "%{duration} minutos"
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
-msgstr "Esta reserva se pagó. Elige cómo gestionar el reembolso: el asistente siempre recibe el importe completo que reembolses."
+msgstr "Esta reserva se pagó. Elige cómo gestionar el reembolso: el asistente siempre recibe la cantidad completa que reembolses."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
 #, elixir-autogen, elixir-format
@@ -495,8 +495,8 @@ msgstr[1] "Se enviaron %{count} invitaciones."
 #, elixir-autogen, elixir-format
 msgid "Room for one more guest."
 msgid_plural "Room for %{count} more guests."
-msgstr[0] "Queda una plaza para otro invitado."
-msgstr[1] "Quedan plazas para %{count} invitados más."
+msgstr[0] "Queda un lugar para otro invitado."
+msgstr[1] "Quedan lugares para %{count} invitados más."
 
 #: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
 #, elixir-autogen, elixir-format
@@ -639,7 +639,7 @@ msgstr "Mostrar reuniones"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "%{count}/%{capacity} seats taken"
-msgstr "%{count}/%{capacity} plazas ocupadas"
+msgstr "%{count}/%{capacity} lugares ocupados"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
@@ -692,12 +692,12 @@ msgstr[1] "%{count} personas tenían reserva"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Every spot was released"
-msgstr "Se liberaron todas las plazas"
+msgstr "Se liberaron todos los lugares"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Left this slot"
-msgstr "Dejó su plaza"
+msgstr "Dejó su lugar"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -707,57 +707,57 @@ msgstr "Cancelar la reunión"
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Currently: %{date}, %{time}"
-msgstr ""
+msgstr "Horario actual: %{date}, %{time}"
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the new date and time."
-msgstr ""
+msgstr "Indica la nueva fecha y hora."
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "It was arranged by a poll, so you choose its new time. Everyone invited is sent the new time with an updated calendar entry and asked again whether they can come."
-msgstr ""
+msgstr "Se organizó con una votación, así que tú eliges el nuevo horario. Todas las personas invitadas reciben el nuevo horario con la invitación de calendario actualizada, y se les vuelve a preguntar si pueden asistir."
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting moved. Everyone invited has been told."
-msgstr ""
+msgstr "Reunión movida. Se avisó a todas las personas invitadas."
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Move meeting"
-msgstr ""
+msgstr "Mover la reunión"
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Move this meeting"
-msgstr ""
+msgstr "Mover esta reunión"
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "New start (%{timezone})"
-msgstr ""
+msgstr "Nuevo inicio (%{timezone})"
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting could not be moved. Please try again."
-msgstr ""
+msgstr "No se pudo mover la reunión. Inténtalo de nuevo."
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The new time must be in the future."
-msgstr ""
+msgstr "El nuevo horario debe estar en el futuro."
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting at that time."
-msgstr ""
+msgstr "Ya tienes una reunión a esa hora."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Poll"
-msgstr ""
+msgstr "Votación"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
@@ -855,19 +855,19 @@ msgstr "Tymeslot no pudo mover esta reserva. Inténtalo de nuevo."
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
-msgstr ""
+msgstr "Este horario cae dentro de tus días libres. Cambia o quita esos días libres para mover la reunión a ese horario."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Registration closed"
-msgstr ""
+msgstr "Inscripciones cerradas"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Move a fixed date from its meeting type."
-msgstr ""
+msgstr "Las fechas fijas se mueven desde su tipo de reunión."
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting is already at that time."
-msgstr ""
+msgstr "La reunión ya está a esa hora."

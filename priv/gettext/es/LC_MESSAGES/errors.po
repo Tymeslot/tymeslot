@@ -390,14 +390,14 @@ msgid "You already have a meeting type with this name"
 msgstr "Ya tienes un tipo de reunión con este nombre"
 
 #: lib/tymeslot/meeting_types/lengths.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "group bookings cannot offer more than one duration"
-msgstr "las reservas de grupo no pueden requerir pago"
+msgstr "las reservas de grupo no pueden ofrecer más de una duración"
 
 #: lib/tymeslot/meeting_types/fixed_dates.ex
 #, elixir-autogen, elixir-format
 msgid "fixed dates need group bookings"
-msgstr ""
+msgstr "las fechas fijas necesitan reservas de grupo"
 
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
@@ -467,7 +467,7 @@ msgstr "Ya tienes una reunión confirmada a esta hora."
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
-msgstr "ya tiene una plaza a esta hora"
+msgstr "ya tiene un lugar a esta hora"
 
 #: lib/tymeslot/availability/availability_override_schema.ex
 #, elixir-autogen, elixir-format
@@ -563,7 +563,7 @@ msgstr "es un dato obligatorio cuando se selecciona un calendario de destino"
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is required when video meetings are enabled"
-msgstr "es un dato obligatorio cuando las reuniones por video están activadas"
+msgstr "es un dato obligatorio cuando las videollamadas están activadas"
 
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
@@ -811,29 +811,29 @@ msgstr "Tipo de campo desconocido"
 #: lib/tymeslot/meeting_types/lengths.ex
 #, elixir-autogen, elixir-format
 msgid "allows at most %{max} durations"
-msgstr ""
+msgstr "admite como máximo %{max} duraciones"
 
 #: lib/tymeslot/meeting_types/lengths.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "must each be a multiple of %{step} minutes"
-msgstr "debe ser un múltiplo de %{step} minutos"
+msgstr "deben ser múltiplos de %{step} minutos"
 
 #: lib/tymeslot/meeting_types/lengths.ex
 #, elixir-autogen, elixir-format
 msgid "must each be between %{min} and %{max} minutes"
-msgstr ""
+msgstr "deben estar entre %{min} y %{max} minutos"
 
 #: lib/tymeslot/meeting_types/lengths.ex
 #, elixir-autogen, elixir-format
 msgid "must not repeat a duration"
-msgstr ""
+msgstr "no pueden incluir duraciones repetidas"
 
 #: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
-msgstr ""
+msgstr "cambios de horario de reuniones"
 
 #: lib/tymeslot/meeting_types/fixed_dates.ex
 #, elixir-autogen, elixir-format
 msgid "cancel the planned dates before turning fixed dates off"
-msgstr ""
+msgstr "cancela las fechas planificadas antes de desactivar las fechas fijas"

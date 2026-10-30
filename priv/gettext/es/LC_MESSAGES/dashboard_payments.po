@@ -19,12 +19,12 @@ msgstr "Ya reembolsado:"
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Amount"
-msgstr "Importe"
+msgstr "Cantidad"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Amount exceeds the remaining refundable balance."
-msgstr "El importe supera el saldo que queda por reembolsar."
+msgstr "La cantidad supera el saldo que queda por reembolsar."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
@@ -148,7 +148,7 @@ msgstr "En disputa"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid refund amount."
-msgstr "Escribe un importe de reembolso válido."
+msgstr "Escribe una cantidad de reembolso válida."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
@@ -209,7 +209,7 @@ msgstr "Pagado"
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Partial amount"
-msgstr "Importe parcial"
+msgstr "Cantidad parcial"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
@@ -260,7 +260,7 @@ msgstr "Reembolsar"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount must be greater than zero and within the remaining balance."
-msgstr "El importe del reembolso debe ser mayor que cero y no superar el saldo restante."
+msgstr "La cantidad del reembolso debe ser mayor que cero y no superar el saldo restante."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -331,7 +331,7 @@ msgstr "Stripe está revisando tu cuenta. Los cobros se activan automáticamente
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
-msgstr "El asistente recibe el importe completo que reembolsas. La comisión de la plataforma de Tymeslot se te devuelve en proporción. Las comisiones de procesamiento de Stripe del cargo original corren por tu cuenta."
+msgstr "El asistente recibe la cantidad completa que reembolsas. La comisión de la plataforma de Tymeslot se te devuelve en proporción. Las comisiones de procesamiento de Stripe del cargo original corren por tu cuenta."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
