@@ -234,7 +234,7 @@ The /for profession pages price in złoty at Polish market rates (written "300 P
 savings calculator's `hourly_rate` for `pl` is a złoty figure. Tymeslot's own plan prices stay as
 the placeholders give them.
 
-`profession_in_text` in `priv/professions/pl/*.exs` is the lowercase nominative plural
+`profession_in_text` in `priv/professions/*/pl.exs` is the lowercase nominative plural
 ("fizjoterapeuci", "konsultanci IT", "instruktorzy pilatesu"). Polish cannot put it after "dla",
 so the /for msgstrs that use it make the profession the subject: "Wszystko, czego potrzebują
 %{profession_in_text}.", "Konfiguracja, od której mogą zacząć %{profession_in_text}".
