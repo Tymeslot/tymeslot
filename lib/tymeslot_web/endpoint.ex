@@ -191,11 +191,13 @@ defmodule TymeslotWeb.Endpoint do
   # Derive client IP from proxy headers. RemoteIp reads no application config,
   # so its options belong here. `headers:` narrows its default list to the two
   # the socket path reads: `forwarded` and `x-client-ip` would let a client that
-  # a proxy does not strip them from name its own rate-limit key. `clients:` is
-  # an MFA so the `:trust_private_client_ips` flag is read at runtime.
+  # a proxy does not strip them from name its own rate-limit key. `clients:` and
+  # `proxies:` are MFAs so the `:trust_private_client_ips` flag and the
+  # `:trusted_proxies` ranges are read at runtime.
   plug RemoteIp,
     headers: ~w[x-forwarded-for x-real-ip],
-    clients: {__MODULE__, :remote_ip_clients, []}
+    clients: {__MODULE__, :remote_ip_clients, []},
+    proxies: {__MODULE__, :remote_ip_proxies, []}
 
   plug Plug.Telemetry,
     event_prefix: [:phoenix, :endpoint],
@@ -256,12 +258,16 @@ defmodule TymeslotWeb.Endpoint do
   defp path_prefix?([segment | pattern], [segment | rest]), do: path_prefix?(pattern, rest)
   defp path_prefix?(_pattern, _path_info), do: false
 
-  # Called by RemoteIp on every request. A local function rather than an MFA
+  # Called by RemoteIp on every request. Local functions rather than MFAs
   # naming `ClientIP` directly, so the plug options add no compile-time
   # dependency from the endpoint.
   @doc false
   @spec remote_ip_clients() :: [String.t()]
   def remote_ip_clients, do: ClientIP.remote_ip_clients()
+
+  @doc false
+  @spec remote_ip_proxies() :: [String.t()]
+  def remote_ip_proxies, do: ClientIP.remote_ip_proxies()
 
   # After telemetry, so the redirect is logged under the same suppression
   # rules as the page it points at.
