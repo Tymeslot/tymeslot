@@ -668,6 +668,13 @@ config :tymeslot, :hsts,
 # proxy's address.
 config :tymeslot, :trust_private_client_ips, false
 
+# Public address ranges that are proxy hops rather than visitors, such as a
+# CDN's edges. Empty, because no public range can be assumed to be a proxy. Set
+# from TRUSTED_PROXIES by config/runtime.exs; TymeslotWeb.Helpers.ClientIP reads
+# it for the LiveView socket path and hands the endpoint's RemoteIp plug its
+# `proxies:` list from it for the conn path.
+config :tymeslot, :trusted_proxies, []
+
 # Slack notifications — credentials supplied via env at runtime
 config :tymeslot,
   slack_notifications_allowed: false,

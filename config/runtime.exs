@@ -257,6 +257,15 @@ if config_env() == :prod do
            System.get_env("TRUST_PRIVATE_CLIENT_IPS")
          )
 
+  # Public proxy ranges (a CDN's edges, a cloud load balancer) whose addresses
+  # are proxy hops rather than visitors. Like the flag above, this one key drives
+  # the LiveView socket path and, through `ClientIP.remote_ip_proxies/0`, the
+  # `RemoteIp` plug. An entry that does not parse stops the release here rather
+  # than raising inside `RemoteIp` on every request.
+  config :tymeslot,
+         :trusted_proxies,
+         Tymeslot.Security.TrustedProxies.from_env(System.get_env("TRUSTED_PROXIES"))
+
   # Configure Oban for production
   # Queue definitions in config.exs are loaded at runtime by application.ex
   # This allows SaaS to extend Core queues via :oban_additional_queues config
