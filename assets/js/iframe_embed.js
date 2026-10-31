@@ -10,6 +10,9 @@
  *    shrinks between steps. Both inline and modal embeds report height
  *    continuously — the wrapper sizing differs (inline grows freely, modal
  *    is capped) but the measurement protocol is identical.
+ * 3. Posts a single "tymeslot-booked" message when the confirmation step
+ *    renders, so the embedding page can count the booking in its own
+ *    analytics (behind its own consent gate) without polling the page.
  *
  * Measurement protocol:
  * - Every pass measures the SAME thing — ceil(getComputedStyle(main).height +
@@ -163,12 +166,49 @@
     }
   }
 
+  // --- Booking confirmation announcement ---
+  // PUBLIC EMBED PROTOCOL — do not rename without updating consumers.
+  // The confirmation step is reached by LiveView patching the DOM, never by a
+  // page load, so the embedding page has no way to know a booking happened:
+  // until now the only message it received was "tymeslot-resize". Every theme
+  // marks the confirmation headline with data-testid="confirmation-heading";
+  // the first tick that finds it posts one message with the meeting type slug
+  // taken from the booking URL (/:username/:slug) and whether the booking is
+  // still awaiting the host's approval.
+  const CONFIRMATION_SELECTOR = '[data-testid="confirmation-heading"]';
+  const PENDING_SELECTOR = ".confirmation-badge--pending";
+  let bookedPosted = false;
+
+  function meetingTypeSlug() {
+    const match = window.location.pathname.match(/^\/[^/]+\/([^/?#]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function announceBooking() {
+    if (bookedPosted) return;
+    if (!document.querySelector(CONFIRMATION_SELECTOR)) return;
+    bookedPosted = true;
+    try {
+      window.parent.postMessage(
+        {
+          type: "tymeslot-booked",
+          meetingTypeSlug: meetingTypeSlug(),
+          pendingApproval: Boolean(document.querySelector(PENDING_SELECTOR)),
+        },
+        targetOrigin
+      );
+    } catch (_) {
+      // Parent unreachable — the resize loop keeps going regardless.
+    }
+  }
+
   function loop() {
     if (document.hidden) {
       setTimeout(loop, POLL_INTERVAL_MS);
       return;
     }
     postHeight();
+    announceBooking();
     setTimeout(loop, POLL_INTERVAL_MS);
   }
 
