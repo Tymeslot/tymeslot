@@ -8,6 +8,7 @@
  * - Grow immediately, settle a shrink for one tick, skip sub-pixel jitter
  * - Origin derivation from document.referrer / parent-origin param
  * - Graceful degradation when referrer is unavailable
+ * - One "tymeslot-booked" message when the confirmation step renders
  */
 
 import { beforeEach, afterEach, describe, expect, test, vi } from 'vitest'
@@ -33,6 +34,7 @@ function runScript({
   isEmbedded = true,
   referrer = 'https://embedder.com/page',
   search = '',
+  pathname = '/',
   scrollHeight = 800,
   mainHeight = 600,
   mainMarginTop = 0,
@@ -58,9 +60,9 @@ function runScript({
     configurable: true
   })
 
-  if (search) {
+  if (search || pathname !== '/') {
     delete window.location
-    window.location = new URL('http://localhost' + search)
+    window.location = new URL('http://localhost' + pathname + search)
   }
 
   // Mock the height measurements
@@ -557,5 +559,83 @@ describe('parent origin derivation', () => {
       expect.stringContaining('auto-resize disabled')
     )
     expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+})
+
+describe('booking confirmation announcement', () => {
+  const heading = '<main><h1 data-testid="confirmation-heading">Meeting Confirmed!</h1></main>'
+  const bookedCalls = () =>
+    window.parent.postMessage.mock.calls.filter(([message]) => message.type === 'tymeslot-booked')
+
+  test('posts tymeslot-booked once the confirmation heading is in the DOM', () => {
+    document.body.innerHTML = heading
+    runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      pathname: '/ayant-x/free-marketing-review'
+    })
+
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'tymeslot-booked', meetingTypeSlug: 'free-marketing-review', pendingApproval: false },
+      'https://embedder.com'
+    )
+  })
+
+  test('does not post tymeslot-booked while the booker is still on the schedule or form step', () => {
+    document.body.innerHTML = '<main><form data-testid="booking-form"></form></main>'
+    const { advance } = runScript({ isEmbedded: true, referrer: 'https://embedder.com/' })
+    advance()
+    advance()
+
+    expect(bookedCalls()).toHaveLength(0)
+  })
+
+  test('announces a booking that arrives by a later DOM patch, exactly once', () => {
+    const { advance } = runScript({ isEmbedded: true, referrer: 'https://embedder.com/' })
+    expect(bookedCalls()).toHaveLength(0)
+
+    document.body.innerHTML = heading
+    advance()
+    advance()
+    advance()
+
+    expect(bookedCalls()).toHaveLength(1)
+  })
+
+  test('reports a booking that still awaits the host approval', () => {
+    document.body.innerHTML =
+      '<main><span class="confirmation-badge confirmation-badge--pending"></span>' +
+      '<h1 data-testid="confirmation-heading">Request sent</h1></main>'
+    runScript({ isEmbedded: true, referrer: 'https://embedder.com/', pathname: '/host/consult' })
+
+    expect(bookedCalls()[0][0]).toEqual({
+      type: 'tymeslot-booked',
+      meetingTypeSlug: 'consult',
+      pendingApproval: true
+    })
+  })
+
+  test('uses a null slug when the path carries only the username', () => {
+    document.body.innerHTML = heading
+    runScript({ isEmbedded: true, referrer: 'https://embedder.com/', pathname: '/ayant-x' })
+
+    expect(bookedCalls()[0][0].meetingTypeSlug).toBeNull()
+  })
+
+  test('never posts tymeslot-booked to "*"', () => {
+    document.body.innerHTML = heading
+    runScript({ isEmbedded: true, referrer: 'https://embedder.com/' })
+
+    for (const [, origin] of bookedCalls()) {
+      expect(origin).not.toBe('*')
+    }
+    expect(bookedCalls()).toHaveLength(1)
+  })
+
+  test('does not announce when not embedded', () => {
+    document.body.innerHTML = heading
+    runScript({ isEmbedded: false })
+
+    expect(bookedCalls()).toHaveLength(0)
   })
 })
