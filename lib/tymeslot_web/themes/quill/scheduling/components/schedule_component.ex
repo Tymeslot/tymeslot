@@ -59,6 +59,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       disabled={!@available || !@current_month || @loading}
       aria-label={LocalizationHelpers.format_full_date_label(@day[:date] || @day["date"])}
       aria-current={@day.is_today && "date"}
+      aria-pressed={to_string(@selected)}
       {@rest}
     >
       <span class="calendar-day__number" aria-hidden="true">{@day.day}</span>
@@ -231,6 +232,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                 disabled={not day.available || day.loading}
                                 aria-label={LocalizationHelpers.format_full_date_label(day.date)}
                                 aria-current={day.today && "date"}
+                                aria-pressed={to_string(@selected_date == day.date)}
                               >
                                 <span class="week-day-name" aria-hidden="true">{day.day_name}</span>
                                 <span class="week-day-number" aria-hidden="true">{day.day_number}</span>

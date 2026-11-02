@@ -153,6 +153,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       disabled={not day.available || day.loading}
                       aria-label={LocalizationHelpers.format_full_date_label(day.date)}
                       aria-current={day.today && "date"}
+                      aria-pressed={to_string(@selected_date == day.date)}
                     >
                       <div class="day-name" aria-hidden="true">{day.day_name}</div>
                       <div class="day-number" aria-hidden="true">{day.day_number}</div>
