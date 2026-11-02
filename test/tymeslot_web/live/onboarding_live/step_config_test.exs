@@ -45,6 +45,8 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
       refute StepConfig.reachable?(:meeting, :connect_calendar)
       refute StepConfig.reachable?(:choose_theme, :connect_calendar)
       refute StepConfig.reachable?(:connect_calendar, :profile)
+      refute StepConfig.reachable?(:ready, :connect_calendar)
+      refute StepConfig.reachable?(:ready, :profile)
     end
 
     test "every step is reachable once the host resumes at the meeting" do

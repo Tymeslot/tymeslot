@@ -12,6 +12,9 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @typedoc "Represents an onboarding step in the flow."
   @type step :: :profile | :connect_calendar | :meeting | :choose_theme | :ready
 
+  @typedoc "A step a host can resume at: the first one their account has not done."
+  @type resume_step :: :profile | :connect_calendar | :meeting
+
   @typedoc "The account state `resume_step/1` reads."
   @type account_state :: %{username: String.t() | nil, bookable_calendar?: boolean()}
 
@@ -44,7 +47,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   without a username they start at the link; without a bookable calendar, at
   the calendar; otherwise at the meeting.
   """
-  @spec resume_step(account_state()) :: step()
+  @spec resume_step(account_state()) :: resume_step()
   def resume_step(%{username: username}) when username in [nil, ""], do: :profile
   def resume_step(%{bookable_calendar?: false}), do: :connect_calendar
   def resume_step(%{bookable_calendar?: true}), do: :meeting
@@ -55,7 +58,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   is done. The meeting is the last step the account can show as unfinished,
   so a host who resumes there may open any step.
   """
-  @spec reachable?(step(), step()) :: boolean()
+  @spec reachable?(step(), resume_step()) :: boolean()
   def reachable?(_step, :meeting), do: true
   def reachable?(step, resume_step), do: step_number(step) <= step_number(resume_step)
 

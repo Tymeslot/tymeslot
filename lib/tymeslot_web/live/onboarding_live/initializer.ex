@@ -92,7 +92,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       timezone_options: Timezones.all_options(),
       timezone_dropdown_open: false,
       timezone_search: "",
-      page_title: dgettext("onboarding_wizard", "Welcome"),
+      page_title: dgettext("onboarding_wizard", "Set up your page"),
       form_errors: %{},
       calendar_state: :selecting,
       calendar_choice: nil,

@@ -187,7 +187,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec base_path(String.t()) :: String.t()
   def base_path(uri) do
     case uri |> URI.parse() |> Map.get(:path) |> Kernel.||("") |> String.split("/", trim: true) do
-      [prefix, "onboarding" | _rest] -> "/" <> prefix <> "/onboarding"
+      [prefix, "onboarding" | _rest] when prefix != "onboarding" -> "/" <> prefix <> "/onboarding"
       _other -> "/onboarding"
     end
   end

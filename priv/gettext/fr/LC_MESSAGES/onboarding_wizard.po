@@ -408,11 +408,6 @@ msgstr "Nom d’utilisateur"
 msgid "Username is required"
 msgstr "Le nom d’utilisateur est requis"
 
-#: lib/tymeslot_web/live/onboarding_live/initializer.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome"
-msgstr "Bienvenue"
-
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot! Your account is now set up."
@@ -618,3 +613,8 @@ msgstr "Votre style"
 #, elixir-autogen, elixir-format
 msgid "Your meeting"
 msgstr "Votre rendez-vous"
+
+#: lib/tymeslot_web/live/onboarding_live/initializer.ex
+#, elixir-autogen, elixir-format
+msgid "Set up your page"
+msgstr "Configurez votre page"

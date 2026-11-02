@@ -408,11 +408,6 @@ msgstr "Uživatelské jméno"
 msgid "Username is required"
 msgstr "Uživatelské jméno je povinné"
 
-#: lib/tymeslot_web/live/onboarding_live/initializer.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome"
-msgstr "Vítejte"
-
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot! Your account is now set up."
@@ -618,3 +613,8 @@ msgstr "Váš vzhled"
 #, elixir-autogen, elixir-format
 msgid "Your meeting"
 msgstr "Vaše schůzka"
+
+#: lib/tymeslot_web/live/onboarding_live/initializer.ex
+#, elixir-autogen, elixir-format
+msgid "Set up your page"
+msgstr "Nastavte svou stránku"

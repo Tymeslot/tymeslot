@@ -104,64 +104,100 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
     end
   end
 
+  # A patch made while the LiveView mounts is not reported to the test, so
+  # each test mounts on a step the host may see and then navigates to the one
+  # under test, where the patch back can be asserted by its path.
   describe "resuming" do
     test "/onboarding resumes at the first incomplete step", %{conn: conn} do
-      {conn_new, _user} = onboarding_conn(conn)
-      assert {:ok, view, _html} = live(conn_new, ~p"/onboarding")
-      assert step_title(view) == "Your link"
-      assert has_element?(view, "#profile-form")
-
-      user = insert(:user, onboarding_completed_at: nil)
-      insert(:profile, user: user, username: "resumer#{System.unique_integer([:positive])}")
-      insert(:calendar_integration, user: user)
+      {:ok, view, _html} = live(host_conn(conn), ~p"/onboarding/profile")
+      render_patch(view, ~p"/onboarding")
+      assert_patch(view, ~p"/onboarding/profile")
 
       {:ok, view, _html} =
-        live(log_in_user(setup_onboarding_session(build_conn()), user), ~p"/onboarding")
+        live(host_conn(build_conn(), username: true, calendar: true), ~p"/onboarding/profile")
 
+      render_patch(view, ~p"/onboarding")
+      assert_patch(view, ~p"/onboarding/meeting")
       assert step_title(view) == "Your meeting"
     end
 
     test "a host with a username but no calendar resumes at the calendar", %{conn: conn} do
-      user = insert(:user, onboarding_completed_at: nil)
-      insert(:profile, user: user, username: "nocal#{System.unique_integer([:positive])}")
-
-      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding")
+      {:ok, view, _html} = live(host_conn(conn, username: true), ~p"/onboarding/profile")
+      render_patch(view, ~p"/onboarding")
+      assert_patch(view, ~p"/onboarding/connect_calendar")
       assert step_title(view) == "Your calendar"
     end
 
     test "a later step without a calendar patches back to the calendar step", %{conn: conn} do
-      user = insert(:user, onboarding_completed_at: nil)
-      insert(:profile, user: user, username: "deeplink#{System.unique_integer([:positive])}")
+      conn = host_conn(conn, username: true)
 
-      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/meeting")
-      assert step_title(view) == "Your calendar"
-      assert has_element?(view, ".onboarding-provider-cards")
+      for step <- ~w(meeting choose_theme ready) do
+        {:ok, view, _html} = live(conn, ~p"/onboarding/profile")
+        render_patch(view, "/onboarding/#{step}")
+        assert_patch(view, ~p"/onboarding/connect_calendar")
+        assert has_element?(view, ".onboarding-provider-cards")
+      end
+    end
 
-      {:ok, view, _html} =
-        live(
-          log_in_user(setup_onboarding_session(build_conn()), user),
-          ~p"/onboarding/choose_theme"
-        )
-
+    test "a deep link straight to a later step lands on the calendar step", %{conn: conn} do
+      {:ok, view, _html} = live(host_conn(conn, username: true), ~p"/onboarding/ready")
       assert step_title(view) == "Your calendar"
     end
 
-    test "an earlier step than the resume step stays where it was asked for", %{conn: conn} do
-      user = insert(:user, onboarding_completed_at: nil)
-      insert(:profile, user: user, username: "earlier#{System.unique_integer([:positive])}")
-      insert(:calendar_integration, user: user)
+    test "a host without a username is sent back to the link", %{conn: conn} do
+      conn = host_conn(conn, calendar: true)
 
-      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/profile")
+      {:ok, view, _html} = live(conn, ~p"/onboarding/profile")
+      render_patch(view, ~p"/onboarding/meeting")
+      assert_patch(view, ~p"/onboarding/profile")
+
+      {:ok, view, _html} = live(conn, ~p"/onboarding/meeting")
       assert has_element?(view, "#profile-form")
     end
 
-    test "a retired or unknown step resumes like /onboarding", %{conn: conn} do
-      user = insert(:user, onboarding_completed_at: nil)
+    test "an earlier step than the resume step stays where it was asked for", %{conn: conn} do
+      conn = host_conn(conn, username: true, calendar: true)
 
-      for step <- ~w(welcome buffer_time booking_window minimum_notice nonsense) do
-        {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/#{step}")
-        assert has_element?(view, "#profile-form"), "#{step} did not resume at the link"
+      {:ok, view, _html} = live(conn, ~p"/onboarding/profile")
+      assert has_element?(view, "#profile-form")
+
+      render_patch(view, ~p"/onboarding/connect_calendar")
+      assert step_title(view) == "Your calendar"
+    end
+
+    test "a retired or unknown step resumes like /onboarding", %{conn: conn} do
+      conn = host_conn(conn)
+
+      for step <- ~w(welcome buffer_time booking_window minimum_notice nonsense onboarding) do
+        {:ok, view, _html} = live(conn, ~p"/onboarding/profile")
+        render_patch(view, "/onboarding/#{step}")
+        assert_patch(view, ~p"/onboarding/profile")
       end
+    end
+
+    test "a debug fixture is ignored on the real routes", %{conn: conn} do
+      conn = host_conn(conn, username: true)
+
+      {:ok, view, _html} = live(conn, ~p"/onboarding/connect_calendar")
+      render_patch(view, "/onboarding/meeting?fixture=calendar")
+      assert_patch(view, "/onboarding/connect_calendar?fixture=calendar")
+
+      {:ok, view, _html} = live(conn, "/onboarding/meeting?fixture=calendar")
+      assert step_title(view) == "Your calendar"
+      refute has_element?(view, "div.onboarding-connected-calendar")
+    end
+
+    # Only the calendar provider's return path carries the flag; on any other
+    # step it would make the calendar step skip straight to going live later.
+    test "the share-step return flag only counts on the calendar step", %{conn: conn} do
+      conn = host_conn(conn, username: true, calendar: true)
+
+      {:ok, view, _html} = live(conn, "/onboarding/meeting?return=share")
+      view |> element("button[phx-click='previous_step']") |> render_click()
+      assert step_title(view) == "Your calendar"
+
+      click_continue(view)
+      assert step_title(view) == "Your meeting"
     end
   end
 
@@ -176,6 +212,24 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       assert NavigationHandlers.base_path("http://localhost:4000/onboarding/ready") ==
                "/onboarding"
     end
+
+    test "a step named onboarding on the real route is not read as a debug prefix" do
+      assert NavigationHandlers.base_path("http://localhost:4000/onboarding/onboarding") ==
+               "/onboarding"
+    end
+  end
+
+  # A logged-in host who has not finished onboarding, with a saved username
+  # and a bookable calendar when asked for.
+  defp host_conn(conn, opts \\ []) do
+    user = insert(:user, onboarding_completed_at: nil)
+
+    if opts[:username],
+      do: insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+
+    if opts[:calendar], do: insert(:calendar_integration, user: user)
+
+    log_in_user(setup_onboarding_session(conn), user)
   end
 
   describe "progress indicator" do

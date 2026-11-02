@@ -50,16 +50,18 @@ defmodule TymeslotWeb.OnboardingLive do
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_params(params, uri, socket) do
+    requested = requested_step(params["step"])
+
     socket =
       socket
       |> assign(
         base_path: NavigationHandlers.base_path(uri),
-        # Set by the OAuth return path of a host sent back from the share step.
-        returning_to_share: params["return"] == "share"
+        # Set by the OAuth return path of a host sent back from the share step
+        # to the calendar step, and honoured only there: anywhere else it
+        # would let a crafted link skip the steps in between later on.
+        returning_to_share: requested == :connect_calendar and params["return"] == "share"
       )
       |> maybe_apply_fixture(params["fixture"])
-
-    requested = requested_step(params["step"])
 
     cond do
       not connected?(socket) ->
