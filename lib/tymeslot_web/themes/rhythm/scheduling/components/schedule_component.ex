@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         class="timezone-flag"
                         fallback_icon="hero-globe-alt"
                       />
-                      <span class="timezone-text">{Timezones.format(@user_timezone)}</span>
+                      <span class="timezone-text">{Timezones.time_label(@user_timezone)}</span>
                     </div>
                     <.icon name="hero-chevron-down" class="timezone-arrow" />
                   </:trigger>

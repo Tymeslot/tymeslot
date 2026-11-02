@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   alias Calendar
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.MeetingTypes.Lengths
+  alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.ChosenLength
@@ -81,6 +82,33 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   def format_booking_datetime(_date, _time, _timezone),
     do: dgettext("datetime", "Invalid date/time")
+
+  @doc """
+  The visitor's zone named as a time, "Berlin time (UTC+1)", with the offset in
+  force at the slot starting at `time` on `date`; the offset now when no single
+  slot is chosen.
+  """
+  @spec format_zone_label(Date.t() | String.t() | nil, String.t() | nil, String.t()) ::
+          String.t()
+  def format_zone_label(date, time, timezone) when is_binary(timezone) do
+    case slot_instant(date, time, timezone) do
+      {:ok, at} -> Timezones.time_label(timezone, at)
+      _no_single_slot -> Timezones.time_label(timezone)
+    end
+  end
+
+  defp slot_instant(date, time, timezone) when is_binary(time) do
+    with {:ok, day} <- to_date(date),
+         {:ok, clock} <- DateTimeUtils.parse_time_string(time) do
+      DateTimeUtils.resolve_local(day, clock, timezone)
+    end
+  end
+
+  defp slot_instant(_date, _time, _timezone), do: :error
+
+  defp to_date(%Date{} = date), do: {:ok, date}
+  defp to_date(date) when is_binary(date), do: parse_date(date)
+  defp to_date(_other), do: :error
 
   @doc """
   When a meeting starting at `time` on `date` (the booker's clock) ends on a

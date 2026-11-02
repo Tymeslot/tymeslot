@@ -51,7 +51,8 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
 
         # Slot rows carry a compact date with no zone on it, so this line is
         # the only thing telling a voter which clock the times are on.
-        assert html =~ "Times shown in Europe/Berlin"
+        # It names the zone as a time, not a place; the offset is today's.
+        assert html =~ ~r/Times shown in Berlin time \(UTC\+[12]\)/
 
         # 08:00 UTC in June is 10:00 in Berlin (CEST). The row names the
         # weekday and drops the year the long format would carry.

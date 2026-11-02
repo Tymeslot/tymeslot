@@ -261,3 +261,8 @@ msgid_plural "%{count} minutes"
 msgstr[0] "%{count} minuta"
 msgstr[1] "%{count} minuty"
 msgstr[2] "%{count} minut"
+
+#: lib/tymeslot/timezones/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "%{city} time (%{offset})"
+msgstr "Čas: %{city} (%{offset})"

@@ -378,6 +378,26 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
   end
 
+  describe "format_zone_label/3" do
+    test "reads the offset on the chosen slot's day, not today" do
+      assert LocalizationHelpers.format_zone_label("2026-01-15", "10:00", "Europe/Berlin") ==
+               "Berlin time (UTC+1)"
+
+      assert LocalizationHelpers.format_zone_label("2026-07-15", "10:00", "Europe/Berlin") ==
+               "Berlin time (UTC+2)"
+
+      assert LocalizationHelpers.format_zone_label(~D[2026-07-15], "10:00", "Europe/Berlin") ==
+               "Berlin time (UTC+2)"
+    end
+
+    test "falls back to today's offset when no single slot is chosen" do
+      assert LocalizationHelpers.format_zone_label(nil, nil, "Asia/Tokyo") == "Tokyo time (UTC+9)"
+
+      assert LocalizationHelpers.format_zone_label("not-a-date", "10:00", "Asia/Tokyo") ==
+               "Tokyo time (UTC+9)"
+    end
+  end
+
   describe "format_next_day_end/4" do
     test "is nil when the meeting ends on the day it starts" do
       assert LocalizationHelpers.format_next_day_end(

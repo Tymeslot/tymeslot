@@ -71,4 +71,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.NextDayEndComponentTest
       end
     end
   end
+
+  test "the confirmation step names the visitor's zone as a time on the meeting's day" do
+    html = render_component(ConfirmationComponent, assigns("10:00 PM", 60))
+
+    # 14 June 2027 is in British Summer Time, whatever today is.
+    assert html =~ "London time (UTC+1)"
+    refute html =~ "London, United Kingdom"
+  end
 end

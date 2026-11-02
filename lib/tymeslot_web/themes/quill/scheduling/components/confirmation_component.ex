@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.BookingText
@@ -262,7 +261,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       |> assign_new(:timezone_label, fn -> dgettext("booking", "Timezone") end)
       |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
       |> assign_new(:formatted_time, fn -> LocalizationHelpers.format_slot_label(assigns.time) end)
-      |> assign_new(:formatted_timezone, fn -> Timezones.format(assigns.timezone) end)
+      |> assign_new(:formatted_timezone, fn ->
+        LocalizationHelpers.format_zone_label(assigns.date, assigns.time, assigns.timezone)
+      end)
 
     ~H"""
     <div class={@grid_class}>

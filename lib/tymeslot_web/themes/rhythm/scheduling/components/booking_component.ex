@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.Approval
-  alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.BookingLabels
@@ -62,24 +61,26 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     <div :if={@next_day_end} class="summary-label" data-testid="booking-next-day-end">
                       {@next_day_end}
                     </div>
+                    <div class="summary-label" data-testid="booking-timezone">
+                      {LocalizationHelpers.format_zone_label(
+                        @selected_date,
+                        @selected_time,
+                        @user_timezone
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div class="summary-item">
-                  <.icon name="hero-globe-alt" class="summary-icon hero-icon hero-icon--md" />
+                  <.icon name="hero-clock" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">
-                      {Timezones.format(@user_timezone)}
-                    </div>
-                    <div class="summary-label">
                       {BookingText.duration_label(%{
                         meeting_type: @meeting_type,
                         duration: @selected_duration,
                         chosen_length_minutes: ChosenLength.minutes(assigns)
-                      })} {dgettext(
-                        "booking",
-                        "meeting"
-                      )}
+                      })}
                     </div>
+                    <div class="summary-label">{dgettext("booking", "meeting")}</div>
                   </div>
                 </div>
               </div>
