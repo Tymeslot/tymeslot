@@ -53,14 +53,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingCancelDeleteTest do
 
     insert(:profile, user: user, primary_calendar_integration_id: integration.id)
 
+    # A week ahead of now: a meeting already started cannot be cancelled.
+    start_time = DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
+
     meeting =
       insert(:meeting,
         organizer_user_id: user.id,
         calendar_integration_id: integration.id,
         calendar_path: @calendar_path,
         calendar_uid: @event_uid,
-        start_time: ~U[2026-11-02 09:00:00Z],
-        end_time: ~U[2026-11-02 09:30:00Z]
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute)
       )
 
     %{meeting: meeting}
