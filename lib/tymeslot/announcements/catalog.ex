@@ -32,8 +32,8 @@ defmodule Tymeslot.Announcements.Catalog do
   @group_bookings_published_at ~U[2026-10-07 00:00:00Z]
   @group_bookings_expires_at ~U[2026-11-06 00:00:00Z]
 
-  @new_themes_published_at ~U[2026-10-18 00:00:00Z]
-  @new_themes_expires_at ~U[2026-11-17 00:00:00Z]
+  @new_themes_published_at ~U[2026-11-02 00:00:00Z]
+  @new_themes_expires_at ~U[2026-12-02 00:00:00Z]
 
   @meeting_polls_published_at ~U[2026-10-23 00:00:00Z]
   @meeting_polls_expires_at ~U[2026-11-22 00:00:00Z]
