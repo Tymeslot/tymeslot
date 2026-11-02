@@ -76,47 +76,49 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
     %{profile: profile, meeting_type: meeting_type}
   end
 
-  for theme <- ThemeTestMatrix.all() do
+  # A dead render of the calendar's day buttons. A week grid draws no days
+  # until it asks for its week, so a week-grid theme's linked day is
+  # covered by its own journey test.
+  for theme <- ThemeTestMatrix.all_where(&(&1.schedule_view == :calendar)) do
     @theme theme
 
-    # A dead render of the calendar's day buttons. A week grid draws no days
-    # until it asks for its week, so a week-grid theme's linked day is
-    # covered by its own journey test.
-    if theme.schedule_view == :calendar do
-      test "#{theme.slug} opens a link to a later month on that day's month and week",
-           %{conn: conn, profile: profile} do
-        {:ok, profile} = Profiles.update_booking_theme(profile, @theme.id)
-        # Sunday 31 January 2027 in Tallinn; the linked day is Wednesday 10 March.
-        freeze_clock(~U[2027-01-31 12:00:00Z])
+    test "#{theme.slug} opens a link to a later month on that day's month and week",
+         %{conn: conn, profile: profile} do
+      {:ok, profile} = Profiles.update_booking_theme(profile, @theme.id)
+      # Sunday 31 January 2027 in Tallinn; the linked day is Wednesday 10 March.
+      freeze_clock(~U[2027-01-31 12:00:00Z])
 
-        document =
-          conn
-          |> get("/#{profile.username}/30-minutes?timezone=#{@zone}&date=2027-03-10")
-          |> html_response(200)
-          |> Floki.parse_document!()
+      document =
+        conn
+        |> get("/#{profile.username}/30-minutes?timezone=#{@zone}&date=2027-03-10")
+        |> html_response(200)
+        |> Floki.parse_document!()
 
-        # Every day button the theme draws: Quill's month grid and narrow-screen
-        # week row, Rhythm's week strip, Paper's and Folio's month grids.
-        # A day's click may be a JS command (Folio's) that pushes select_date.
-        days = Floki.find(document, "button[phx-click*='select_date'][phx-value-date]")
+      # Every day button the theme draws: Quill's month grid and narrow-screen
+      # week row, Rhythm's week strip, Paper's and Folio's month grids.
+      # A day's click may be a JS command (Folio's) that pushes select_date.
+      days = Floki.find(document, "button[phx-click*='select_date'][phx-value-date]")
 
-        selected =
-          days
-          |> Enum.filter(&selected_day?/1)
-          |> Floki.attribute("phx-value-date")
-          |> Enum.uniq()
+      selected =
+        days
+        |> Enum.filter(&selected_day?/1)
+        |> Floki.attribute("phx-value-date")
+        |> Enum.uniq()
 
-        assert selected == ["2027-03-10"],
-               "expected the linked day to be drawn selected, found #{inspect(selected)}"
+      assert selected == ["2027-03-10"],
+             "expected the linked day to be drawn selected, found #{inspect(selected)}"
 
-        # A week strip still on today's week would draw 25 to 31 January.
-        stale_week = Enum.map(0..6, &Date.to_iso8601(Date.add(~D[2027-01-25], &1)))
-        drawn = Floki.attribute(days, "phx-value-date")
+      # A week strip still on today's week would draw 25 to 31 January.
+      stale_week = Enum.map(0..6, &Date.to_iso8601(Date.add(~D[2027-01-25], &1)))
+      drawn = Floki.attribute(days, "phx-value-date")
 
-        assert Enum.filter(drawn, &(&1 in stale_week)) == [],
-               "expected no day of today's week on a calendar opened on 10 March"
-      end
+      assert Enum.filter(drawn, &(&1 in stale_week)) == [],
+             "expected no day of today's week on a calendar opened on 10 March"
     end
+  end
+
+  for theme <- ThemeTestMatrix.all() do
+    @theme theme
 
     test "#{theme.slug} fetches the linked month's availability once connected",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do

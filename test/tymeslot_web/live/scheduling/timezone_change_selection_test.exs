@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
   # The day drawn selected on the calendar's day buttons; a week grid's week
   # follows a timezone change through WeekSlots (week_slots_flow_test.exs).
-  for theme <- ThemeTestMatrix.all(), theme.schedule_view == :calendar do
+  for theme <- ThemeTestMatrix.all_where(&(&1.schedule_view == :calendar)) do
     @theme theme
 
     describe "#{theme.slug}: a day the page picked" do

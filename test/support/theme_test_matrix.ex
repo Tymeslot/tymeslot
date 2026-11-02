@@ -226,6 +226,20 @@ defmodule TymeslotWeb.ThemeTestMatrix do
   def ids, do: Enum.map(all(), & &1.id)
 
   @doc """
+  The shipped themes' entries that pass `fun`, in numeric id order: for a
+  suite that needs a capability (`schedule_view: :calendar`) rather than a
+  theme. Raises when no shipped theme passes, so a suite whose capability
+  every theme has dropped fails at compile time instead of running nothing.
+  """
+  @spec all_where((entry() -> boolean())) :: [entry()]
+  def all_where(fun) when is_function(fun, 1) do
+    case Enum.filter(all(), fun) do
+      [] -> raise ArgumentError, "no shipped theme in ThemeTestMatrix passes the filter"
+      themes -> themes
+    end
+  end
+
+  @doc """
   The shipped theme ids whose customisation spec passes `fun`, in numeric
   order: for a suite that exercises one option group's settings and so runs
   only for the themes that offer them.

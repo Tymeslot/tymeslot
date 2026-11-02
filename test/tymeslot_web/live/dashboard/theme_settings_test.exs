@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Live.Scheduling.PreviewToken
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :setup_dashboard_user_with_theme
 
@@ -22,7 +24,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       # A card per offered theme, named in its heading, each with its own
       # customise button.
-      for {name, id} <- [{"Quill", "1"}, {"Rhythm", "2"}] do
+      # The picker hides beta themes, so only the shipped themes out of beta.
+      offered = Enum.reject(ThemeTestMatrix.all(), &beta?/1)
+      assert offered != []
+
+      for %{name: name, id: id} <- offered do
         assert has_element?(view, "h2", name)
 
         assert has_element?(
@@ -549,5 +555,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
     assert params["preview"] == "true"
     assert PreviewToken.owner?(params["preview_token"], user_id)
+  end
+
+  defp beta?(%{id: id}) do
+    {:ok, facts} = Catalog.get_by_id(id)
+    facts.status == :beta
   end
 end

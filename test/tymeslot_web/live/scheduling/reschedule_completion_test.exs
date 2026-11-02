@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   alias Tymeslot.RescheduleTestSetup
   alias Tymeslot.Workers.CalendarEventWorker
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -216,6 +217,41 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   # The page writes the booker's choices into its own URL, and a reconnect
   # mounts again from that URL. The reschedule is part of the URL too: lost
   # from a patch, the remounted page books a second meeting instead.
+  # The walk above runs on the default theme; each theme carries the
+  # reschedule context through its own journey (a continuous page keeps it
+  # across moments rather than across steps), so each completes one.
+  describe "completing a reschedule on each theme" do
+    for theme <- ThemeTestMatrix.registered() do
+      @tag theme: theme.id
+      @tag :capture_log
+      test "#{theme.name}: moves the existing meeting instead of creating a second one", %{
+        conn: conn,
+        user: user,
+        profile: profile,
+        meeting: meeting,
+        original_start: original_start
+      } do
+        {:ok, view, _html} =
+          live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+        html =
+          BookingDriver.book(view,
+            meeting_type: "quick-chat",
+            attendee: %{name: "Test Attendee", email: "attendee@example.com"}
+          )
+
+        assert html =~ ~s(data-intent="restart")
+
+        moved = Repo.get!(MeetingSchema, meeting.id)
+        assert DateTime.compare(moved.start_time, original_start) != :eq
+        assert moved.status == :confirmed
+
+        assert meeting_count_for(user) == 1,
+               "rescheduling must move the existing meeting, not book a duplicate"
+      end
+    end
+  end
+
   describe "a reschedule interrupted by a reconnect" do
     @tag :capture_log
     test "the remounted page still moves the meeting", %{
