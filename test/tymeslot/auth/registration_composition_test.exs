@@ -104,9 +104,15 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
         |> Enum.sort_by(& &1.day_of_week)
 
       assert length(weekly_rows) == 7
+
+      # Monday to Friday are open 09:00 to 17:00; the weekend is closed.
+      {weekdays, weekend} = Enum.split_with(weekly_rows, &(&1.day_of_week in 1..5))
+      assert Enum.all?(weekdays, &(&1.is_available and &1.start_time == ~T[09:00:00]))
+      assert Enum.all?(weekdays, &(&1.end_time == ~T[17:00:00]))
+      assert Enum.all?(weekend, &(not &1.is_available))
       assert Enum.map(weekly_rows, & &1.day_of_week) == Enum.to_list(1..7)
 
-      # The two default meeting types are seeded with the profile, once.
+      # The default meeting type is seeded with the profile, once.
       assert user.id |> MeetingTypes.get_all_meeting_types() |> Enum.map(& &1.name) |> Enum.sort() ==
                ["Intro call"]
 

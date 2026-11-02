@@ -189,6 +189,27 @@ defmodule Tymeslot.MeetingTypesTest do
              )
     end
 
+    # No catalogue carries a translation of the name yet, so a non-English
+    # locale stores the English msgid; this pins that the name goes through
+    # the gettext lookup at seed time, in the sign-up's locale.
+    test "stores the name and description as looked up in the seeding locale" do
+      user = insert(:user)
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        :ok = MeetingTypes.seed_default_meeting_types(user.id)
+
+        assert [type] = MeetingTypes.get_all_meeting_types(user.id)
+        assert type.name == Gettext.dgettext(TymeslotWeb.Gettext, "meeting_types", "Intro call")
+
+        assert type.description ==
+                 Gettext.dgettext(
+                   TymeslotWeb.Gettext,
+                   "meeting_types",
+                   "A short first conversation"
+                 )
+      end)
+    end
+
     test "seeding again inserts nothing more" do
       user = insert(:user)
 

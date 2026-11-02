@@ -5,20 +5,25 @@ defmodule Tymeslot.MeetingTypes.Defaults do
   `Tymeslot.MeetingTypes.seed_default_meeting_types/2`.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Ecto.UUID
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
 
-  # What the seeded types carry beyond the shared fields.
-  @templates [
-    %{
-      name: "Intro call",
-      description: "A short first conversation",
-      duration_minutes: 30,
-      icon: "hero-chat-bubble-left-right"
-    }
-  ]
+  # The name and description are translated when seeded (see `templates/0`),
+  # so they are stored in the sign-up's language.
+  defp templates do
+    [
+      %{
+        name: dgettext("meeting_types", "Intro call"),
+        description: dgettext("meeting_types", "A short first conversation"),
+        duration_minutes: 30,
+        icon: "hero-chat-bubble-left-right"
+      }
+    ]
+  end
 
   @doc """
   Seeds the default meeting type for a new user, once, as the profile is
@@ -44,7 +49,7 @@ defmodule Tymeslot.MeetingTypes.Defaults do
   # A new account has no calendar yet, so the defaults carry no booking
   # calendar.
   defp default_meeting_type_templates(user_id, now) do
-    @templates
+    templates()
     |> Enum.with_index()
     |> Enum.map(fn {template, sort_order} ->
       Map.merge(template, %{
