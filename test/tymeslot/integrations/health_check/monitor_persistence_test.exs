@@ -9,7 +9,6 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
-
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
 
