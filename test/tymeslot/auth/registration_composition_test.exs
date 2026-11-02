@@ -108,7 +108,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
 
       # The two default meeting types are seeded with the profile, once.
       assert user.id |> MeetingTypes.get_all_meeting_types() |> Enum.map(& &1.name) |> Enum.sort() ==
-               ["15 Minutes", "30 Minutes"]
+               ["Intro call"]
 
       # Weekdays are available by default; weekends are not.
       weekday_rows = Enum.filter(weekly_rows, &(&1.day_of_week in 1..5))

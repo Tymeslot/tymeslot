@@ -25,12 +25,15 @@ defmodule Tymeslot.Profiles.CreateProfileTest do
     end
 
     # The defaults are seeded here, once; nothing seeds them again.
-    test "seeds the two default meeting types" do
+    test "a new profile gets one Intro call meeting type" do
       user = insert(:user)
       {:ok, _profile} = Profiles.create_profile(user.id)
 
-      assert user.id |> MeetingTypes.get_all_meeting_types() |> Enum.map(& &1.name) |> Enum.sort() ==
-               ["15 Minutes", "30 Minutes"]
+      assert [type] = MeetingTypes.get_all_meeting_types(user.id)
+      assert type.name == "Intro call"
+      assert type.duration_minutes == 30
+      assert type.is_active
+      assert [%{kind: :in_person}] = type.locations
     end
   end
 

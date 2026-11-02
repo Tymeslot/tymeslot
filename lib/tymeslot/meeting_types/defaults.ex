@@ -1,6 +1,6 @@
 defmodule Tymeslot.MeetingTypes.Defaults do
   @moduledoc """
-  The two meeting types every new host starts with, seeded once as the
+  The meeting type every new host starts with, seeded once as the
   profile is created. Reached through
   `Tymeslot.MeetingTypes.seed_default_meeting_types/2`.
   """
@@ -10,29 +10,23 @@ defmodule Tymeslot.MeetingTypes.Defaults do
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
 
-  # What tells the defaults apart, in the order they are listed.
+  # What the seeded types carry beyond the shared fields.
   @templates [
     %{
-      name: "15 Minutes",
-      description: "Quick chat or brief consultation",
-      duration_minutes: 15,
-      icon: "hero-bolt"
-    },
-    %{
-      name: "30 Minutes",
-      description: "In-depth discussion or detailed review",
+      name: "Intro call",
+      description: "A short first conversation",
       duration_minutes: 30,
-      icon: "hero-rocket-launch"
+      icon: "hero-chat-bubble-left-right"
     }
   ]
 
   @doc """
-  Seeds the two default meeting types for a new user, once, as the profile is
+  Seeds the default meeting type for a new user, once, as the profile is
   created (`Tymeslot.Profiles.create_profile/1` and the OAuth sign-up, which
-  passes its transaction's `repo`). A host who later deletes them keeps none:
-  nothing seeds them again.
+  passes its transaction's `repo`). A host who later deletes it keeps none:
+  nothing seeds it again.
 
-  A new account has no calendar and no username yet, so the defaults carry
+  A new account has no calendar and no username yet, so the default carries
   no booking calendar and there is no booking page to publish. A seed that
   meets types already there (a retried sign-up) inserts nothing.
   """

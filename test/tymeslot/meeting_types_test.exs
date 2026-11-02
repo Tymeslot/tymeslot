@@ -175,15 +175,12 @@ defmodule Tymeslot.MeetingTypesTest do
   # =====================================
 
   describe "seed_default_meeting_types/2" do
-    test "seeds the two defaults, with no booking calendar" do
+    test "seeds one Intro call default, with no booking calendar" do
       user = insert(:user)
 
       assert :ok = MeetingTypes.seed_default_meeting_types(user.id)
 
-      assert [
-               %{name: "15 Minutes", duration_minutes: 15},
-               %{name: "30 Minutes", duration_minutes: 30}
-             ] =
+      assert [%{name: "Intro call", duration_minutes: 30}] =
                user.id |> MeetingTypes.get_all_meeting_types() |> Enum.sort_by(& &1.sort_order)
 
       assert Enum.all?(
@@ -198,7 +195,7 @@ defmodule Tymeslot.MeetingTypesTest do
       :ok = MeetingTypes.seed_default_meeting_types(user.id)
       :ok = MeetingTypes.seed_default_meeting_types(user.id)
 
-      assert length(MeetingTypes.get_all_meeting_types(user.id)) == 2
+      assert length(MeetingTypes.get_all_meeting_types(user.id)) == 1
     end
 
     # A new account has no username, so there is no page to publish.
