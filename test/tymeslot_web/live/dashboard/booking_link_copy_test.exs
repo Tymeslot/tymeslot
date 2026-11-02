@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
     assert is_nil(shared_at(profile))
 
+    assert has_element?(view, ~s{button[id^=setup-copy-][phx-hook="CopyOnClick"]})
     view |> element("button[id^=setup-copy-]") |> render_click()
 
     assert %DateTime{} = shared_at(profile)
@@ -55,6 +56,7 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
     view |> element("[phx-click=edit_type][phx-value-id='#{type.id}']") |> render_click()
     assert is_nil(shared_at(profile))
 
+    assert has_element?(view, ~s{#copy-booking-link-#{type.id}[phx-hook="CopyOnClick"]})
     view |> element("#copy-booking-link-#{type.id}") |> render_click()
 
     assert %DateTime{} = shared_at(profile)
@@ -85,9 +87,15 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
     assert is_nil(shared_at(profile))
 
+    assert has_element?(view, ~s{#copy-event-link-#{event.id}[phx-hook="CopyOnClick"]})
     view |> element("#copy-event-link-#{event.id}") |> render_click()
 
     assert %DateTime{} = shared_at(profile)
+
+    assert_push_event view, "ts:analytics", %{
+      name: "booking_link_shared",
+      props: %{channel: "settings"}
+    }
   end
 
   test "copying the embed code stamps the profile", %{conn: conn, profile: profile} do
@@ -108,6 +116,7 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
     assert is_nil(shared_at(profile))
 
+    assert has_element?(view, ~s{#copy-scheduling-link[phx-hook="CopyOnClick"]})
     view |> element("#copy-scheduling-link") |> render_click()
 
     assert %DateTime{} = shared_at(profile)
@@ -123,7 +132,9 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
     profile: profile
   } do
     {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+    assert is_nil(shared_at(profile))
 
+    assert has_element?(view, ~s{#copy-scheduling-link[phx-hook="CopyOnClick"]})
     view |> element("#copy-scheduling-link") |> render_click()
 
     assert %DateTime{} = shared_at(profile)

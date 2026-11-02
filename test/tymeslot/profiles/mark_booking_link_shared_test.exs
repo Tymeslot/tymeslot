@@ -1,11 +1,11 @@
 defmodule Tymeslot.Profiles.MarkBookingLinkSharedTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
 
   @moduletag :profiles
   @moduletag :database
 
-  alias Ecto.Adapters.SQL.Sandbox
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
   setup do
@@ -20,27 +20,25 @@ defmodule Tymeslot.Profiles.MarkBookingLinkSharedTest do
   end
 
   test "a second share keeps the first timestamp", %{profile: profile} do
-    assert {:ok, :shared} = Profiles.mark_booking_link_shared(profile)
-    first = Repo.reload!(profile)
+    first = ~U[2026-01-01 00:00:00Z]
 
-    # A stale struct (as a long-lived LiveView would hold) still cannot restamp.
-    later = DateTime.add(DateTime.utc_now(:second), 3600)
+    Repo.update_all(from(p in ProfileSchema, where: p.id == ^profile.id),
+      set: [booking_link_first_shared_at: first]
+    )
+
+    # `profile` still carries a nil column, as a long-lived LiveView's would,
+    # so this goes through the query rather than the struct short-circuit.
+    assert is_nil(profile.booking_link_first_shared_at)
     assert {:ok, :noop} = Profiles.mark_booking_link_shared(profile)
-    assert {:ok, :noop} = Profiles.mark_booking_link_shared(first)
 
-    stamped = Repo.reload!(profile).booking_link_first_shared_at
-    assert stamped == first.booking_link_first_shared_at
-    assert DateTime.compare(stamped, later) == :lt
+    assert Repo.reload!(profile).booking_link_first_shared_at == first
   end
 
   test "two concurrent shares stamp once", %{profile: profile} do
-    parent = self()
-
     results =
       1..2
       |> Enum.map(fn _attempt ->
         Task.async(fn ->
-          Sandbox.allow(Repo, parent, self())
           Profiles.mark_booking_link_shared(profile)
         end)
       end)

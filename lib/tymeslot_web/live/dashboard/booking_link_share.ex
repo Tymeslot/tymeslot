@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Dashboard.BookingLinkShare do
   alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Analytics
 
+  @event_channels ~w(checklist sidebar)
+
   @doc """
   Stamps the profile's first share and pushes `booking_link_shared` with the
   given channel (one of `ReadyStep.share_channels/0`, fixed by the caller).
@@ -25,8 +27,6 @@ defmodule TymeslotWeb.Dashboard.BookingLinkShare do
   end
 
   def record(socket, nil, _channel), do: socket
-
-  @event_channels ~w(checklist sidebar)
 
   @doc """
   The `booking_link_copied` event for LiveViews that render the dashboard layout.
