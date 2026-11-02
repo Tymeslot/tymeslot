@@ -80,6 +80,36 @@ if System.get_env("E2E") == "true" do
   config :tymeslot, TymeslotWeb.Endpoint, server: true
 end
 
+# Default legal links for booking pages, for single-organiser instances. An
+# organiser's own links override them, per link. Unset or blank leaves the
+# config.exs default (nil). Anything else must be an http(s) URL with a host, or
+# the boot fails: a typo would otherwise ship pages with a broken legal link.
+# This is only the shape check; the stricter https rule applies to values
+# organisers type, and the full URL validator is not available this early.
+booking_legal_link = fn var, key ->
+  case System.get_env(var) |> to_string() |> String.trim() do
+    "" ->
+      :ok
+
+    value ->
+      valid? =
+        match?(
+          {:ok, %URI{scheme: scheme, host: host}}
+          when scheme in ["http", "https"] and is_binary(host) and host != "",
+          URI.new(value)
+        )
+
+      unless valid? do
+        raise "#{var} must be an http(s) URL, got: #{inspect(value)}"
+      end
+
+      config :tymeslot, [{key, value}]
+  end
+end
+
+booking_legal_link.("BOOKING_LEGAL_NOTICE_URL", :booking_legal_notice_url)
+booking_legal_link.("BOOKING_PRIVACY_POLICY_URL", :booking_privacy_policy_url)
+
 if config_env() == :prod do
   # Set environment for runtime detection
   config :tymeslot, :environment, :prod
