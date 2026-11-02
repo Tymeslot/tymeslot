@@ -4,13 +4,13 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
   public page a guest reaches, on every shipped theme: the booking flow from
   the overview to the confirmation, the meeting pages, the poll and both
   payment return pages (which hide the theme extensions but keep the
-  footer), and the embedded booking page. With no links set, and no
-  instance default, nothing renders; with only a default, the default shows.
+  footer), and the embedded booking page. With no links set nothing renders.
 
-  Not async: the instance defaults are application-wide configuration.
+  The instance defaults are application-wide configuration and stay unset
+  here (nil in every test config); `LegalLinksDefaultsTest` covers them.
   """
 
-  use TymeslotWeb.LiveCase, async: false
+  use TymeslotWeb.LiveCase, async: true
 
   @moduletag :themes
   @moduletag :profiles
@@ -38,20 +38,6 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
     Tymeslot.CalendarMock
     |> stub(:get_events_for_range_fresh, fn _user_id, _start, _end -> {:ok, []} end)
     |> stub(:get_booking_integration_info, fn _user_id -> {:error, :no_integration} end)
-
-    # No instance defaults unless a test sets one, whatever the environment
-    # the suite runs in.
-    for key <- [:booking_legal_notice_url, :booking_privacy_policy_url] do
-      previous = Application.fetch_env(:tymeslot, key)
-      Application.delete_env(:tymeslot, key)
-
-      on_exit(fn ->
-        case previous do
-          {:ok, value} -> Application.put_env(:tymeslot, key, value)
-          :error -> Application.delete_env(:tymeslot, key)
-        end
-      end)
-    end
 
     :ok
   end
@@ -119,7 +105,7 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
         BookingDriver.book(view)
 
-        refute has_element?(view, "form[data-fact='attendee']")
+        assert has_element?(view, "[data-testid='confirmation-heading']")
         assert_footer(view)
       end
 
@@ -127,7 +113,8 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
         meeting = meeting(user)
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/cancel")
 
-        assert render(view) =~ "Cancel"
+        assert has_element?(view, "[data-testid='#{unquote(theme.slug)}-cancel']")
+        assert has_element?(view, "[data-testid='cancel-meeting']")
         assert_footer(view)
       end
 
@@ -138,7 +125,7 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
         {:ok, view, _html} =
           live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/cancel-confirmed")
 
-        assert render(view) =~ "Meeting Cancelled"
+        assert has_element?(view, "[data-testid='#{unquote(theme.slug)}-cancel-confirmed']")
         assert_footer(view)
       end
 
@@ -149,7 +136,7 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
         {:ok, view, _html} =
           live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/reschedule")
 
-        assert render(view) =~ "Reschedule"
+        assert has_element?(view, "[data-testid='#{unquote(theme.slug)}-reschedule']")
         assert_footer(view)
       end
 
@@ -181,7 +168,7 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
             "/themes/#{unquote(theme.slug)}/payment-processing/#{meeting.id}?session_id=cs_LEGAL"
           )
 
-        assert has_element?(view, "[data-booker-root] .booker-card")
+        assert has_element?(view, "[data-testid='#{unquote(theme.slug)}-payment-processing']")
         assert_footer(view)
       end
 
@@ -191,7 +178,7 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
         {:ok, view, _html} =
           live(conn, "/themes/#{unquote(theme.slug)}/payment-cancelled/#{meeting.id}")
 
-        assert has_element?(view, "[data-booker-root] .booker-card")
+        assert has_element?(view, "[data-testid='#{unquote(theme.slug)}-payment-cancelled']")
         assert_footer(view)
       end
 
@@ -204,21 +191,6 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
         refute has_element?(view, @footer)
       end
     end
-  end
-
-  test "falls back to the instance default", %{conn: conn} do
-    Application.put_env(:tymeslot, :booking_privacy_policy_url, "https://host.example/privacy")
-    %{profile: profile} = seed("1", "legal-default", %{})
-
-    {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
-
-    assert has_element?(
-             view,
-             "#{@footer} a[href='https://host.example/privacy']",
-             "Privacy policy"
-           )
-
-    refute has_element?(view, "#{@footer} a", "Legal notice")
   end
 
   test "embedded booking page keeps the footer", %{conn: conn} do

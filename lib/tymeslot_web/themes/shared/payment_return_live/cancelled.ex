@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
     else
       socket
       |> PaymentReturn.no_customization()
-      |> PaymentReturn.assign_organizer(nil)
+      |> PaymentReturn.no_organizer()
       |> assign(loading: true, meeting: nil, rebook_path: nil)
     end
   end

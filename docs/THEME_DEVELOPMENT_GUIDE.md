@@ -556,7 +556,7 @@ Shared across themes:
 - **`Shared.Components.TimezonePicker`** (`timezone_picker/1`): the timezone dropdown, search box and options. Classes `tz-picker`, `tz-picker__trigger`, `__panel`, `__search-wrapper`, `__search`, `__options` (which also carries your theme's `scroll-y`), `__option`, `__option-content`, `__option-flag`, `__option-text`, `__option-label`, `__option-offset`. The trigger's visible content is your `:trigger` slot; the screen-reader "Your timezone:" prefix is added for you. Render flags with `FlagHelpers.timezone_flag/1`.
 - **`Shared.Components.BookingForm`** (`booking_form/1`): the booking step's form (name, email, message, `id="booking-form"`, `data-testid="booking-form"`) with the honeypot, the reCAPTCHA hook and token, the per-field errors and blur validation (see [BookingFlow](#bookingflow)) and, after its inner block (put the guest field there), the reCAPTCHA notice. Pass `form={@form}`, `validation_errors={@validation_errors}` and `target={@myself}`; a theme sets `class`, `contact_class` (a wrapper around name and email), `message_rows` and `labels`, never the structure. `theme_booking_step_parity_test.exs` fails for a shipped theme whose booking step lacks the anti-spam fields.
 - **`Shared.Components.MeetingPageBodies`** (`cancel/1`, `reschedule/1`, `cancel_confirmed/1`) and **`Shared.DefaultPages`**: theme-neutral meeting page bodies (classes `manage-page`, `manage-page__*`, styled by `scheduling/shared/components/manage-pages.css` through contract tokens) and the six pages a theme with a `page_shell:` gets, each body inside the shell in `<div class="manage-page manage-page--<page>" data-testid="<theme key>-<page>">`: the payment pages too, under the meeting pages' status icon (`MeetingPageBodies.status_icon/1`), centred heading and language switcher, with their date and time in a `payment-page-date` span kept on one line.
-- **`Shared.Components.ThemeShell`**: what every booking page must carry, whatever its layout, as three function components your wrapper renders once each. `theme_shell/1` is your outermost element (`class`, `locale`, `theme_tokens`), marked `data-booker-root` for the shared embed rules, holding the customisation `<style>` block, your background (`:background` slot) and then your own markup. `chrome/1` (`language_class`, `locale`, `language_dropdown_open`, `show_language_switcher`, `owner_preview`) is the owner-preview notice and the language switcher, at the top of your content. `extensions/1` (`theme_id`, `organizer_user_id`, `should_show_branding`, and `demo_mode` spread with `{Map.take(assigns, [:demo_mode])}`) is the configured theme extensions, after your content. Between them the layout is yours: Quill and Rhythm keep a page grid (`.booker-page`) with a content area and the extensions as its footer row; the fixture puts all three straight inside the root. `style_attrs/1` spreads an optional inline style onto an element of your own (no attribute at all for `nil`). `booker_hook_classes_test.exs` holds every registered theme's booking page to the obligations.
+- **`Shared.Components.ThemeShell`**: what every booking page must carry, whatever its layout, as three function components your wrapper renders once each. `theme_shell/1` is your outermost element (`class`, `locale`, `theme_tokens`), marked `data-booker-root` for the shared embed rules, holding the customisation `<style>` block, your background (`:background` slot) and then your own markup. `chrome/1` (`language_class`, `locale`, `language_dropdown_open`, `show_language_switcher`, `owner_preview`) is the owner-preview notice and the language switcher, at the top of your content. `extensions/1` (`theme_id`, `organizer_user_id`, `should_show_branding`, and `demo_mode` spread with `{Map.take(assigns, [:demo_mode])}`) is the configured theme extensions, after your content. Between them the layout is yours: Quill and Rhythm keep a page grid (`.booker-page`) with a content area and the extensions as its footer row; the fixture puts all three straight inside the root. After the extensions, and outside any guard on them (the payment pages pass `show_extensions={false}` but keep it), your wrapper also renders the organiser's legal links once: `<Shared.Components.LegalLinks.footer links={@legal_links} />`, from a required `attr :legal_links, :map` every page passes (`Profiles.public_legal_links/1`, assigned with `:organizer_profile`). It renders nothing when neither link is set. Put it inside your page grid, as its last row, not after the grid: a grid sized to the viewport would push it below the fold and off the grid's background. It is styled once for every theme (`scheduling/shared/components/legal-links.css`, which your `theme.css` imports) through the contract roles. `style_attrs/1` spreads an optional inline style onto an element of your own (no attribute at all for `nil`). `booker_hook_classes_test.exs` holds every registered theme's booking page to the obligations.
 - **`Shared.Components.SessionList`** (`session_list/1`): the schedule step's list of a fixed-date meeting type's planned sessions, each with its seats and when registration closes; an open one sends `select_date` for its day, a full or closed one is listed but disabled, and with nothing left to choose a notice says why (ended, fully booked, registration closed, or nothing planned). Pass `sessions={assigns[:planned_sessions]}`, `selected_date`, `timezone={@user_timezone}` and `target={@myself}`; it renders nothing for any other type, and `SessionList.show_calendar?/1` says whether to render the calendar beside it. Classes `session-list`, `session-list-title`, `session-list-notice`, `session-list-items`, `session-list-item` (`is-selected`), `session-list-when`, `session-list-status`, styled by `scheduling/shared/components/group-session.css`. Tests select it by `data-testid="session-list"` and `"session-entry"`.
 - **Data utilities** (`TymeslotWeb.Components.MeetingUtils`): `normalize_slot_list/1`
   and `normalize_slot_time/1` normalise time-slot data.
@@ -989,7 +989,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
   use Phoenix.Component
 
   alias Tymeslot.Themes.Catalog
-  alias TymeslotWeb.Themes.Shared.Components.ThemeShell
+  alias TymeslotWeb.Themes.Shared.Components.{LegalLinks, ThemeShell}
   alias TymeslotWeb.Themes.Shared.ThemeStyle
 
   import TymeslotWeb.Themes.Shared.Customization.Helpers, only: [prepare_wrapper_assigns: 1]
@@ -1004,6 +1004,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
   attr :show_language_switcher, :boolean, default: nil
   attr :owner_preview, :boolean, default: false
   attr :demo_mode, :boolean
+  attr :legal_links, :map, required: true
   slot :inner_block, required: true
 
   def aurora_wrapper(assigns) do
@@ -1039,6 +1040,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
           should_show_branding={@should_show_branding}
           {Map.take(assigns, [:demo_mode])}
         />
+        <LegalLinks.footer links={@legal_links} />
       </div>
     </ThemeShell.theme_shell>
     """
@@ -1069,6 +1071,10 @@ Notes on the real pattern (matching Quill and Rhythm):
 - Pass `demo_mode` on with `{Map.take(assigns, [:demo_mode])}` rather than as
   `demo_mode={@demo_mode}`, so the extensions see it only when the page set it.
 - `ThemeShell.style_attrs/1` spreads an inline style, or no attribute at all for `nil`.
+- `LegalLinks.footer/1` is the organiser's legal notice and privacy policy links, the
+  last row of the page grid, after the extensions and never inside a `show_extensions`
+  guard. `legal_links` is required, so the compiler names any page that forgets to pass
+  it; a preview with no organiser passes `legal_links={nil}`.
 
 #### 4. **Step Components**
 
@@ -1261,6 +1267,8 @@ The readers are: `TymeslotWeb.BookingDriver` (`test/support/booking_driver.ex`, 
 | `[data-testid="preview-notice"]` | the owner-preview banner | shared (`ThemeShell.chrome/1`) | `owner_preview_booking_test.exs` |
 | `.lang-switcher button[phx-click="toggle_language_dropdown"]` and `button[phx-click="change_locale"][phx-value-locale]` | the language switcher | shared (`ThemeShell.chrome/1`) | `embed_primary_colour_test.exs` |
 | The configured theme extensions (an element with the id the extension chooses, `data-theme-id` set from `theme_id`) | where the theme places `ThemeShell.extensions/1` (a footer row in Quill and Rhythm) | shared (`ThemeShell.extensions/1`) | `layout_extension_test.exs`, the e2e branding-footer check |
+| `[data-testid="legal-links"]` (a `<footer>` holding an `<a>` per link set, legal notice first, each `target="_blank" rel="noopener noreferrer"`) | the last row of the page grid, after the extensions, on every page the wrapper draws, payment pages included; absent when neither link is set | shared (`LegalLinks.footer/1`), placed by the theme | `legal_links_footer_test.exs`, `profile_legal_links_form_test.exs` |
+| `[data-testid="<theme key>-<page>"]` (`cancel`, `cancel-confirmed`, `reschedule`, `payment-processing`, `payment-cancelled`) | the body of each meeting and payment page, once | shared for a theme with a `page_shell:` (`DefaultPages`), the theme's own page modules otherwise | `legal_links_footer_test.exs`, the payment return suite |
 | `[data-phx-main].phx-connected` | the LiveView root, once connected | Phoenix | e2e suites, visual harness |
 | `#background-motion-toggle` (`phx-hook="BackgroundMotionToggle"`, `aria-label`, `data-label-pause`, `data-label-play`) next to a `<video>` | the page, only when the theme's `video_background` is true | shared (`<.background_motion_toggle />`); you render the `<video>` | `booking_accessibility_test.exs`, the `BackgroundMotionToggle` hook |
 | `[data-visual-mask]`, `.timezone-time-display`, `.timezone-offset-badge` | text that changes between runs (the visitor's local clock, today's UTC offset) | theme (optional) | visual harness `MASKS`; a theme can add its own in its harness module's `masks` |

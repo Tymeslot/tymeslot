@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
       legal_links={@legal_links}
       show_language_switcher={true}
     >
-      <div class="scheduling-box booker-card">
+      <div class="scheduling-box booker-card" data-testid="rhythm-cancel">
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">

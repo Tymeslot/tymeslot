@@ -32,7 +32,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
       legal_links={@legal_links}
       show_language_switcher={true}
     >
-      <div class="min-h-screen flex items-center justify-center px-4 py-8">
+      <div
+        class="min-h-screen flex items-center justify-center px-4 py-8"
+        data-testid="quill-reschedule"
+      >
         <div class="w-full max-w-2xl">
           <.glass_morphism_card class="booker-card">
             <div class="p-8">
