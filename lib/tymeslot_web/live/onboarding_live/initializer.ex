@@ -17,19 +17,16 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
 
   alias Phoenix.Component
   alias Tymeslot.Auth
-  alias Tymeslot.Availability.Schedules
-  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.AvatarHandlers
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
-  alias TymeslotWeb.OnboardingLive.StepConfig
+  alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -58,43 +55,45 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     {customization, onboarding_choices} = ThemeHandlers.initial_theme_state(profile)
 
     socket
-    |> Component.assign(
-      profile: profile,
-      availability_schedule: load_default_schedule(profile),
-      time_format: load_time_format(socket, user)
-    )
+    |> Component.assign(:profile, profile)
     |> assign_form_data(profile)
     |> Component.assign(initial_ui_state())
-    |> ModalHook.mount_modal(skip: false, skip_calendar: false, theme_preview: false)
+    |> ModalHook.mount_modal(theme_preview: false)
     |> Component.assign(
-      steps: StepConfig.steps(connected_calendars != []),
       connected_calendars: connected_calendars,
       google_signup_email: Auth.google_signup_login_hint(user),
       booking_url: build_booking_url(profile),
       theme_customization: customization,
       onboarding_choices: onboarding_choices
     )
+    |> assign_booking_page_live(profile)
     |> allow_avatar_upload()
   end
+
+  # Whether the page accepts visitors decides where a host resumes, so it is
+  # known from the first connected render. The static render has no profile
+  # and leaves it unknown.
+  defp assign_booking_page_live(socket, nil), do: socket
+
+  defp assign_booking_page_live(socket, _profile),
+    do: NavigationHandlers.assign_booking_page_live(socket)
 
   # The wizard's state before the organiser has done anything: the first
   # step, every modal and dropdown closed, and every form empty.
   defp initial_ui_state do
     [
-      current_step: :welcome,
-      step_data: %{},
+      current_step: :profile,
       # Unknown until the connected render checks the calendars.
       booking_page_live: nil,
       returning_to_share: false,
-      # Whether that host skipped the calendar, and so never saw the theme step.
-      theme_unseen: false,
+      # The booking page's coming week, drawn on the stage once a calendar
+      # is connected.
+      stage_week: %{state: :placeholder, preview: nil},
       timezone_options: Timezones.all_options(),
       timezone_dropdown_open: false,
       timezone_search: "",
       page_title: dgettext("onboarding_wizard", "Welcome"),
       form_errors: %{},
-      rejected_inputs: %{},
-      custom_input_mode: CustomInputModeHelper.default_custom_mode(),
       calendar_state: :selecting,
       calendar_choice: nil,
       caldav_form_data: %{},
@@ -121,13 +120,6 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     Component.assign(socket, :form_data, BasicSettingsShared.build_form_data(socket))
   end
 
-  # The clock the organiser reads times in: their stored choice, or the one
-  # their language implies. The static render skips the query.
-  defp load_time_format(socket, user) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    CalendarGrid.get_user_time_format(if(connected?(socket), do: user.id), locale)
-  end
-
   defp load_profile(socket, user) do
     if connected?(socket) do
       with {:ok, loaded} <- Onboarding.get_or_create_profile(user.id) do
@@ -138,12 +130,6 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       nil
     end
   end
-
-  # The buffers, booking window and minimum notice edited by the preference
-  # steps live on the profile's default availability schedule. There is no
-  # profile during the disconnected render, so there is no schedule either.
-  defp load_default_schedule(nil), do: nil
-  defp load_default_schedule(profile), do: Schedules.get_default(profile.id)
 
   defp build_booking_url(nil), do: ""
   defp build_booking_url(profile), do: UrlBuilder.booking_url(profile.username)

@@ -432,7 +432,7 @@ defmodule TymeslotWeb.Router do
     live_session :onboarding,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: {TymeslotWeb.Router, :onboarding_hooks} do
-      live "/onboarding", OnboardingLive, :welcome
+      live "/onboarding", OnboardingLive, :index
       live "/onboarding/:step", OnboardingLive, :step
     end
   end

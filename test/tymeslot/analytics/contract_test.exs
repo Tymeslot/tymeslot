@@ -34,12 +34,6 @@ defmodule Tymeslot.Analytics.ContractTest do
     end
 
     assert :ok = Contract.validate!("onboarding_step_completed", %{step: "profile"})
-
-    assert :ok =
-             Contract.validate!("onboarding_step_completed", %{
-               step: "connect_calendar",
-               skipped: true
-             })
   end
 
   describe "non-strict mode (analytics_strict: false)" do

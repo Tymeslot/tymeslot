@@ -19,8 +19,6 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   ## Attributes
 
   * `current_step` - The current step atom
-  * `steps` - Ordered list of step atoms
-  * `show_skip_modal` - Whether the skip modal is visible
   * `booking_page_live` - Whether the booking page accepts visitors, which
     changes how the final step describes itself
 
@@ -29,8 +27,6 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   * `inner_block` - The step-specific content
   """
   attr :current_step, :atom, required: true
-  attr :steps, :list, required: true
-  attr :show_skip_modal, :boolean, default: false
   attr :next_disabled, :boolean, default: false
   attr :booking_page_live, :boolean, default: true
 
@@ -46,14 +42,14 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
           <%!-- Progress indicator --%>
           <div class="onboarding-progress">
             <div class="onboarding-progress-dots">
-              <%= for step <- @steps do %>
-                <div class={progress_dot_class(step, @current_step, @steps)} />
+              <%= for step <- StepConfig.steps() do %>
+                <div class={progress_dot_class(step, @current_step)} />
               <% end %>
             </div>
             <span class="onboarding-progress-label">
               {dgettext("onboarding_wizard", "Step %{current} of %{total}",
-                current: StepConfig.step_number(@current_step, @steps),
-                total: StepConfig.step_count(@steps)
+                current: StepConfig.step_number(@current_step),
+                total: StepConfig.step_count()
               )}
             </span>
           </div>
@@ -105,9 +101,9 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
     """
   end
 
-  defp progress_dot_class(step, current_step, steps) do
+  defp progress_dot_class(step, current_step) do
     cond do
-      StepConfig.step_completed?(step, current_step, steps) ->
+      StepConfig.step_completed?(step, current_step) ->
         "onboarding-progress-dot onboarding-progress-dot--completed"
 
       step == current_step ->

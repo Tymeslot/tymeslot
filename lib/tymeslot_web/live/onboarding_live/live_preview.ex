@@ -19,13 +19,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
   import TymeslotWeb.OnboardingLive.PreviewParts, only: [color: 3, divider_style: 1, ring: 2]
 
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.OnboardingLive.PreviewParts
-  alias TymeslotWeb.OnboardingLive.TextHelpers
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @default_theme_id Catalog.default_id()
@@ -46,10 +44,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     default: nil,
     doc: "the chosen theme's customisation; `nil` draws the theme's defaults"
 
-  attr :buffer_before_minutes, :integer, default: nil
-  attr :buffer_after_minutes, :integer, default: nil
-  attr :advance_booking_days, :integer, default: nil
-  attr :min_advance_hours, :integer, default: nil
   attr :calendar_connected, :boolean, default: false
   attr :booking_page_live, :boolean, default: true
   attr :booking_host, :string, required: true
@@ -97,14 +91,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
             </span>
 
             <div class="w-full h-px my-1" style={divider_style(@colors)} />
-
-            <%!-- Buffer callout: a labelled gap around meetings, never a slot --%>
-            <.buffer_callout
-              :if={@current_step == :buffer_time}
-              colors={@colors}
-              before_minutes={@buffer_before_minutes || 15}
-              after_minutes={@buffer_after_minutes || 15}
-            />
           </:header>
         </PreviewParts.theme_preview>
 
@@ -146,48 +132,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   end
 
   # -------------------------------------------------------------------
-  # Shared buffer piece
-  # -------------------------------------------------------------------
-
-  attr :colors, :map, required: true
-  attr :before_minutes, :integer, required: true
-  attr :after_minutes, :integer, required: true
-
-  defp buffer_callout(assigns) do
-    ~H"""
-    <div
-      class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-token-md text-token-2xs font-bold uppercase tracking-wide"
-      style={buffer_style(@colors)}
-    >
-      <.icon name="hero-arrows-up-down-mini" class="w-3 h-3" />
-      {buffer_callout_text(@before_minutes, @after_minutes)}
-    </div>
-    """
-  end
-
-  defp buffer_callout_text(0, 0),
-    do: dgettext("onboarding_wizard", "No buffer around meetings")
-
-  defp buffer_callout_text(0, after_minutes),
-    do:
-      dgettext("onboarding_wizard", "No buffer before, %{after_minutes} min after",
-        after_minutes: after_minutes
-      )
-
-  defp buffer_callout_text(before_minutes, 0),
-    do:
-      dgettext("onboarding_wizard", "%{before_minutes} min before, no buffer after",
-        before_minutes: before_minutes
-      )
-
-  defp buffer_callout_text(before_minutes, after_minutes),
-    do:
-      dgettext("onboarding_wizard", "%{before_minutes} min before, %{after_minutes} min after",
-        before_minutes: before_minutes,
-        after_minutes: after_minutes
-      )
-
-  # -------------------------------------------------------------------
   # Theme + slot resolution
   # -------------------------------------------------------------------
 
@@ -210,15 +154,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     do: :muted
 
   defp slot_state(%{current_step: :connect_calendar}, _index), do: :filled
-  defp slot_state(%{current_step: :minimum_notice}, index) when index <= 1, do: :muted
   defp slot_state(_assigns, _index), do: :default
 
   # -------------------------------------------------------------------
   # Captions
   # -------------------------------------------------------------------
-
-  defp caption(%{current_step: :welcome}),
-    do: dgettext("onboarding_wizard", "This is your live booking page")
 
   defp caption(%{current_step: :profile}),
     do: dgettext("onboarding_wizard", "Your page, your brand")
@@ -228,21 +168,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   defp caption(%{current_step: :connect_calendar}),
     do: dgettext("onboarding_wizard", "Connect your calendar to fill these slots")
-
-  defp caption(%{current_step: :buffer_time}),
-    do: dgettext("onboarding_wizard", "A breather around each meeting")
-
-  defp caption(%{current_step: :booking_window} = assigns) do
-    dgettext("onboarding_wizard", "Bookable up to %{days}",
-      days: TextHelpers.humanize_days(assigns.advance_booking_days)
-    )
-  end
-
-  defp caption(%{current_step: :minimum_notice} = assigns) do
-    dgettext("onboarding_wizard", "Earliest booking: %{hours}h from now",
-      hours: assigns.min_advance_hours || 0
-    )
-  end
 
   defp caption(%{current_step: :ready, booking_page_live: false}),
     do: dgettext("onboarding_wizard", "Goes live once a calendar is connected")
@@ -259,11 +184,9 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Highlight regions
   # -------------------------------------------------------------------
 
-  defp highlight?(:welcome, :card), do: true
   defp highlight?(:ready, :card), do: true
   defp highlight?(:profile, :avatar), do: true
   defp highlight?(:profile, :link), do: true
-  defp highlight?(:booking_window, :slots), do: true
   defp highlight?(_step, _region), do: false
 
   # -------------------------------------------------------------------
@@ -312,10 +235,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   defp link_style(colors, highlighted?) do
     "background: #{color(colors, :primary, "#14b8a6")}1a;color: #{color(colors, :text_secondary, "#475569")};" <>
       ring(highlighted?, colors)
-  end
-
-  defp buffer_style(colors) do
-    "background: #{color(colors, :accent, "#f59e0b")}26;color: #{color(colors, :text_secondary, "#475569")};"
   end
 
   defp caption_style(colors) do

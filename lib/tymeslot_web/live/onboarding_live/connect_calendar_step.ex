@@ -27,7 +27,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   * `calendar_state` - Current state atom (`:selecting` or `:connecting_caldav`)
   * `connected_calendars` - List of connected calendar integrations
   * `calendar_choice` - The currently selected option (`"google"`, `"outlook"`,
-    `"caldav"`, `"skip"`) or `nil` when nothing is selected yet
+    `"caldav"`) or `nil` when nothing is selected yet
   * `google_signup_email` - Google account email when the user signed up via
     Google (`nil` otherwise); surfaces the Recommended badge and one-click hint
   * `caldav_form_data` - CalDAV form field values
@@ -97,16 +97,6 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
             icon_class="bg-tymeslot-100 text-tymeslot-600"
             name="CalDAV"
             label={dgettext("onboarding_wizard", "Nextcloud, Radicale, or any CalDAV server")}
-          />
-
-          <.choice_card
-            :if={@connected_calendars == []}
-            option="skip"
-            selected={@calendar_choice == "skip"}
-            icon="hero-clock"
-            icon_class="bg-tymeslot-50 text-tymeslot-500"
-            name={dgettext("onboarding_wizard", "Not right now")}
-            label={dgettext("onboarding_wizard", "I'll connect a calendar later")}
           />
         </div>
       <% end %>

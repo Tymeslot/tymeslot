@@ -16,7 +16,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
-  alias TymeslotWeb.OnboardingLive.StepConfig
+  alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
 
   require Logger
@@ -46,11 +46,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   end
 
   # A host sent back from the share step keeps that through the provider's
-  # redirect, so connecting still leads straight back to the share step (by
-  # way of the theme step for a host who has not seen it).
-  defp oauth_return_path(%{assigns: %{returning_to_share: true, theme_unseen: true}}),
-    do: ~p"/onboarding/connect_calendar?#{[return: "theme"]}"
-
+  # redirect, so connecting still leads straight back to the share step.
   defp oauth_return_path(%{assigns: %{returning_to_share: true}}),
     do: ~p"/onboarding/connect_calendar?#{[return: "share"]}"
 
@@ -78,12 +74,12 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
 
   @doc """
   Records the user's pending calendar choice without connecting. The actual
-  connection (or skip) happens when the user presses Continue. Selecting the
+  connection happens when the user presses Continue. Selecting the
   already-chosen option toggles it off, clearing the selection.
   """
   @spec handle_select_option(String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_select_option(option, socket) when option in ~w(google outlook caldav skip) do
+  def handle_select_option(option, socket) when option in ~w(google outlook caldav) do
     choice = if socket.assigns.calendar_choice == option, do: nil, else: option
     {:noreply, Component.assign(socket, :calendar_choice, choice)}
   end
@@ -313,7 +309,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
 
     socket
     |> Component.assign(:connected_calendars, connected)
-    |> Component.assign(:steps, StepConfig.steps(connected != []))
+    |> NavigationHandlers.assign_booking_page_live()
   end
 
   # The async result can settle after the user has already navigated away from

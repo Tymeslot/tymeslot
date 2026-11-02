@@ -34,9 +34,6 @@ defmodule TymeslotWeb.OnboardingAvatarRateLimitTest do
     test "rate-limited upload clears the entry and frees the slot for retry", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
 
-      # Navigate to the profile step where the avatar upload form is present.
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       # Exhaust the avatar upload bucket (limit: 20 per hour).
       for _i <- 1..20 do
         RateLimiter.check(:avatar_upload, user.id)

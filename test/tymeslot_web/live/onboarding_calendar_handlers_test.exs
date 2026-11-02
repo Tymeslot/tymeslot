@@ -9,6 +9,9 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
   import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias TymeslotWeb.Hooks.ModalHook
+  alias TymeslotWeb.OnboardingLive.NavigationHandlers
+
   describe "caldav form" do
     test "switches to the inline credential form", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
@@ -195,8 +198,6 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       refute url =~ "login_hint="
     end
 
-    # This host skipped the calendar, so the way back runs through the theme
-    # step they have not seen.
     test "returns a host who came from the share step to it", %{conn: conn} do
       original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
 
@@ -214,14 +215,34 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
         end
       end)
 
-      {conn, _user} = onboarding_conn(conn)
-      {:ok, view, _html} = live(conn, "/onboarding/ready")
-      view |> element("#onboarding-return-to-calendar") |> render_click()
+      {:ok, view, _html} = live(conn_for_host_with_calendar(conn), "/onboarding/ready")
+      render_click(view, "return_to_calendar_step")
 
       assert {:error, {:redirect, %{to: url}}} = continue_with_google(view)
 
       assert URI.decode_query(URI.parse(url).query)["return_to"] ==
-               "/onboarding/connect_calendar?return=theme"
+               "/onboarding/connect_calendar?return=share"
+    end
+  end
+
+  describe "continuing from the calendar step" do
+    test "a connected calendar continues to the meeting step", %{conn: conn} do
+      {:ok, view, _html} =
+        live(conn_for_host_with_calendar(conn), "/onboarding/connect_calendar")
+
+      click_continue(view)
+
+      assert has_element?(view, ".onboarding-step-title", "Your meeting")
+    end
+
+    test "the OAuth return of a host sent back from the share step goes back to it",
+         %{conn: conn} do
+      {:ok, view, _html} =
+        live(conn_for_host_with_calendar(conn), "/onboarding/connect_calendar?return=share")
+
+      click_continue(view)
+
+      assert has_element?(view, ".onboarding-step-title", "You're live")
     end
   end
 
@@ -273,8 +294,10 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
         name: "Google Calendar"
       )
 
+      insert(:profile, user: user, username: "alice#{System.unique_integer([:positive])}")
+
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/onboarding?step=connect_calendar")
+      {:ok, view, _html} = live(conn, ~p"/onboarding/connect_calendar")
 
       html = render(view)
 
@@ -298,7 +321,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       assert has_element?(view, "button[phx-click='next_step'][disabled]")
 
       # Selecting any option enables Continue.
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element(~s{button[phx-value-option="outlook"]}) |> render_click()
 
       refute has_element?(view, "button[phx-click='next_step'][disabled]")
     end
@@ -318,46 +341,51 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
     end
   end
 
-  describe "skip advances the flow" do
-    test "selecting skip then Continue opens the nudge modal before advancing",
-         %{conn: conn} do
+  describe "no way past the calendar without one" do
+    test "the calendar step has no skip", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_calendar_step(view)
 
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # The nudge modal becomes visible and we're still on the calendar step.
-      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: flex"]})
       assert has_element?(view, ".onboarding-provider-cards")
-      refute has_element?(view, "button[phx-value-buffer_before_minutes]")
+      refute has_element?(view, ~s{[phx-value-option="skip"]})
+      refute has_element?(view, "#skip-calendar-modal")
+
+      # A forged skip choice is ignored, and Continue stays put.
+      render_click(view, "select_calendar_option", %{"option" => "skip"})
+      assert has_element?(view, "button[phx-click='next_step'][disabled]")
     end
 
-    test "confirming the nudge modal advances to buffer_time", %{conn: conn} do
+    test "the skip-setup events no longer exist", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_calendar_step(view)
+      refute has_element?(view, "#skip-onboarding-modal")
 
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
+      # Their modals are no longer registered, so nothing can open them.
+      for modal <- [:skip, :skip_calendar] do
+        assert_raise ArgumentError, fn ->
+          ModalHook.show_modal(%Phoenix.LiveView.Socket{}, modal)
+        end
+      end
 
-      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
+      Code.ensure_loaded!(NavigationHandlers)
+
+      for handler <- [
+            :handle_show_skip_modal,
+            :handle_hide_skip_modal,
+            :handle_skip_onboarding,
+            :handle_confirm_skip_calendar,
+            :handle_hide_skip_calendar_modal
+          ] do
+        refute function_exported?(NavigationHandlers, handler, 1),
+               "#{handler} should no longer exist"
+      end
     end
+  end
 
-    test "dismissing the nudge modal returns to the calendar step", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_calendar_step(view)
-
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "hide_skip_calendar_modal")
-
-      # Modal hidden, still on the calendar step and free to pick a provider.
-      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: none"]})
-      assert has_element?(view, ".onboarding-provider-cards")
-      assert has_element?(view, ~s{button[phx-value-option="google"]})
-      refute has_element?(view, "button[phx-value-buffer_before_minutes]")
-    end
+  defp conn_for_host_with_calendar(conn) do
+    user = insert(:user, onboarding_completed_at: nil)
+    insert(:profile, user: user, username: "calhost#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user)
+    log_in_user(conn, user)
   end
 end
 

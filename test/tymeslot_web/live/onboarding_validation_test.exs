@@ -4,8 +4,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
   Tests input validation for:
   - Basic settings (name, username)
-  - Scheduling preferences (buffer time, advance booking, min notice)
-  - Timezone selection
   - Real-time validation feedback
   """
 
@@ -33,11 +31,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "empty name is allowed (optional field)", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn, %{name: nil})
 
-      # Navigate to profile step
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Submit with empty name but valid username
       fill_basic_settings(view, "", "validuser123")
 
@@ -53,10 +46,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "name with only spaces is allowed (trimmed to empty)", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Submit with spaces only
       fill_basic_settings(view, "   ", "validuser456")
 
@@ -70,10 +59,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "valid name is accepted", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Valid name
       fill_basic_settings(view, "Valid Name", "validuser123")
@@ -98,10 +83,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "empty username shows error on submit", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Submit with empty username
       fill_basic_settings(view, "Valid Name", "")
 
@@ -118,10 +99,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "username with spaces is rejected", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Username with spaces
       fill_basic_settings(view, "Valid Name", "user with spaces")
 
@@ -135,10 +112,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "username with invalid characters is rejected", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Username with special characters
       fill_basic_settings(view, "Valid Name", "user@name!")
@@ -154,10 +127,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "username too short is rejected", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # 2 character username
       fill_basic_settings(view, "Valid Name", "ab")
 
@@ -171,10 +140,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "username too long is rejected", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # 31+ character username
       long_username = String.duplicate("a", 31)
@@ -191,10 +156,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "valid username with lowercase, numbers, underscore, dash is accepted", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Valid username with allowed characters
       fill_basic_settings(view, "Valid Name", "valid_user-123")
@@ -219,10 +180,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       # New user tries to use same username
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Try to use taken username
       fill_basic_settings(view, "New User", "takenusername")
 
@@ -240,8 +197,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "a username taken after it was checked explains why on continue", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view |> element("button[phx-click='next_step']") |> render_click()
 
       fill_basic_settings(view, "New User", "racehandle")
       refute render(view) =~ "already taken"
@@ -265,8 +220,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       fill_basic_settings(view, "New User", "legacyhandle")
 
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -279,8 +232,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "a reserved username explains why on continue", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-
-      view |> element("button[phx-click='next_step']") |> render_click()
 
       fill_basic_settings(view, "New User", "admin")
 
@@ -298,8 +249,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       demo_username = ReservingDemoProvider.reserved_username()
       {:ok, view, _html, user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       fill_basic_settings(view, "New User", demo_username)
 
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -311,10 +260,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "available username proceeds successfully", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Use available username
       fill_basic_settings(view, "New User", "availableuser456")
@@ -339,11 +284,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       conn = log_in_user(conn, user)
 
-      {:ok, view, _html} = live(conn, ~p"/onboarding")
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      {:ok, view, _html} = live(conn, ~p"/onboarding/profile")
 
       # Don't change username, just continue
       view
@@ -355,128 +296,9 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     end
   end
 
-  # Timezone selection tests removed - these test UI implementation details
-  # The timezone functionality is tested in edge_cases_test.exs through the
-  # timezone detection and persistence tests
-
-  # Scheduling preferences UI interaction tests removed - these test implementation details
-  # The UI uses buttons instead of select elements, making these tests incorrect
-  # The actual scheduling preferences functionality is tested through the complete
-  # onboarding flow and data persistence tests
-
-  describe "scheduling preferences validation" do
-    test "scheduling preferences are saved correctly", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-
-      navigate_to_scheduling_steps(view)
-
-      # Navigate through all three scheduling steps to ready
-      # buffer_time → booking_window → minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify the schedule defaults were used
-      # Schedule defaults: buffers 15/15, advance_booking_days: 90, min_advance_hours: 3
-      schedule = default_schedule(user)
-      assert schedule.buffer_before_minutes == 15
-      assert schedule.buffer_after_minutes == 15
-      assert schedule.advance_booking_days == 90
-      assert schedule.min_advance_hours == 3
-    end
-
-    test "buffer_before_minutes with valid boundary values (0 and 120) are accepted", %{
-      conn: conn
-    } do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_steps(view)
-
-      # Test minimum value (0) — already on buffer_time step
-      view
-      |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='0']"
-      )
-      |> render_click()
-
-      # buffer_time → booking_window → minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify value was saved
-      schedule = default_schedule(user)
-      assert schedule.buffer_before_minutes == 0
-    end
-
-    test "advance_booking_days with valid minimum boundary (1) is accepted", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_steps(view)
-
-      # Navigate to booking_window step
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Set minimum valid custom value (1 day)
-      view
-      |> element(
-        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
-      )
-      |> render_click()
-
-      view
-      |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"advance_booking_days" => "1"})
-
-      # Custom input should still be visible (1 is not in presets)
-      html = render(view)
-      assert html =~ ~s(name="advance_booking_days")
-
-      # booking_window → minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify minimum boundary value was saved
-      schedule = default_schedule(user)
-      assert schedule.advance_booking_days == 1
-    end
-
-    test "min_advance_hours with valid boundary value (168) is accepted", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_steps(view)
-
-      # Navigate to minimum_notice step (buffer_time → booking_window → minimum_notice)
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Set max valid custom value (168 hours = 1 week)
-      view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='min_advance_hours']")
-      |> render_click()
-
-      view
-      |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"min_advance_hours" => "168"})
-
-      # The custom input stays open: typing into it carries no `_preset` marker,
-      # so custom mode is left alone even when the value typed is also a preset.
-      html = render(view)
-      assert html =~ ~s(name="min_advance_hours")
-
-      # minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify max boundary value was saved
-      schedule = default_schedule(user)
-      assert schedule.min_advance_hours == 168
-    end
-  end
-
   describe "real-time validation" do
     test "form validates on change and shows inline errors", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Type invalid username and trigger validation
       fill_basic_settings(view, "Valid Name", "ab")
@@ -488,10 +310,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "errors clear when input becomes valid", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # First, invalid input
       fill_basic_settings(view, "", "validuser")

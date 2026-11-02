@@ -4,6 +4,9 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
   @moduletag :e2e
   @moduletag :onboarding
 
+  # Walks the old eight-step wizard, including the calendar skip that no
+  # longer exists. Skipped until it is rewritten for the five-step flow.
+  @tag skip: "pending its rewrite for the five-step onboarding flow"
   feature "new user completes onboarding wizard", %{session: session} do
     # Create a verified user who hasn't completed onboarding (the factory
     # default is verified)

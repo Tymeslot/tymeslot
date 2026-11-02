@@ -8,11 +8,6 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.Availability.AvailabilityScheduleSchema
-  alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Profiles.ProfileSchema
-  alias Tymeslot.Repo
-
   @endpoint TymeslotWeb.Endpoint
 
   @doc """
@@ -87,8 +82,8 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   end
 
   @doc """
-  Like `setup_onboarding/1` but with an active calendar integration already
-  connected, so the conditional `choose_theme` step is part of the flow.
+  Like `setup_onboarding/1` but with an active, bookable calendar integration
+  already connected, so the host can go past the calendar step.
 
   Returns `{:ok, view, html, user}`.
   """
@@ -102,136 +97,49 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   end
 
   @doc """
-  Navigates from the welcome step to the `choose_theme` step.
-
-  Requires a connected calendar (use `setup_onboarding_with_calendar/1`); fills
-  the profile with a unique username so the profile step persists and advances.
-  """
-  @spec goto_choose_theme(any()) :: any()
-  def goto_choose_theme(view) do
-    # welcome -> profile
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    # fill + advance profile with a unique, available username
-    fill_profile(view, "Ada Lovelace", "ada#{System.unique_integer([:positive])}")
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    # connect_calendar -> choose_theme (calendar already connected)
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    view
-  end
-
-  @doc """
-  Navigates from the welcome step to the first scheduling preference step (buffer time).
-  Fills the profile form and clicks through connect_calendar.
-  """
-  @spec navigate_to_scheduling_steps(any()) :: any()
-  def navigate_to_scheduling_steps(view) do
-    # From welcome to profile
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
-    # Fill profile form with unique username
-    view
-    |> form("form#profile-form", %{
-      "full_name" => "Test User",
-      "username" => "testuser#{System.unique_integer([:positive])}"
-    })
-    |> render_change()
-
-    # Profile to connect_calendar
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
-    # connect_calendar is a forced choice — select "skip" before Continue,
-    # otherwise next_step is a no-op on this step.
-    view
-    |> element(~s{button[phx-value-option="skip"]})
-    |> render_click()
-
-    # Continue without a calendar opens a nudge modal — confirm it to advance.
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
-    render_click(view, "confirm_skip_calendar")
-
-    view
-  end
-
-  @doc """
-  Alias for navigate_to_scheduling_steps/1 — kept for backward compatibility.
-  """
-  @spec navigate_to_preferences(any()) :: any()
-  def navigate_to_preferences(view), do: navigate_to_scheduling_steps(view)
-
-  @doc """
-  Alias for navigate_to_scheduling_steps/1 — kept for backward compatibility.
-  """
-  @spec navigate_to_scheduling_preferences(any()) :: any()
-  def navigate_to_scheduling_preferences(view), do: navigate_to_scheduling_steps(view)
-
-  @doc """
-  Navigates from the welcome step to the booking window step (advance_booking_days).
-  """
-  @spec navigate_to_booking_window_step(any()) :: any()
-  def navigate_to_booking_window_step(view) do
-    navigate_to_scheduling_steps(view)
-
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
-    view
-  end
-
-  @doc """
-  Navigates from the welcome step to the minimum notice step (min_advance_hours).
-  """
-  @spec navigate_to_minimum_notice_step(any()) :: any()
-  def navigate_to_minimum_notice_step(view) do
-    navigate_to_booking_window_step(view)
-
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
-    view
-  end
-
-  @doc """
-  Navigates from the welcome step to the `connect_calendar` step.
+  Advances from the profile step to the `connect_calendar` step, saving the
+  profile with a unique, available username.
   """
   @spec navigate_to_calendar_step(any()) :: any()
   def navigate_to_calendar_step(view) do
-    # Welcome → profile
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    # Fill profile
-    view
-    |> form("form#profile-form", %{
-      "full_name" => "Test User",
-      "username" => "testuser#{System.unique_integer([:positive])}"
-    })
-    |> render_change()
-
-    # Profile → connect_calendar
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    view
+    fill_profile(view, "Test User", "testuser#{System.unique_integer([:positive])}")
+    click_continue(view)
   end
 
   @doc """
-  Loads the default availability schedule of the user's profile, where the
-  preference steps persist buffer, booking window and minimum notice.
+  Advances from the profile step to the `meeting` step. Requires a connected
+  calendar (use `setup_onboarding_with_calendar/1`).
   """
-  @spec default_schedule(map()) :: AvailabilityScheduleSchema.t() | nil
-  def default_schedule(user) do
-    profile = Repo.get_by!(ProfileSchema, user_id: user.id)
-    Schedules.get_default(profile.id)
+  @spec navigate_to_meeting_step(any()) :: any()
+  def navigate_to_meeting_step(view) do
+    view |> navigate_to_calendar_step() |> click_continue()
+  end
+
+  @doc """
+  Advances from the profile step to the `choose_theme` step. Requires a
+  connected calendar (use `setup_onboarding_with_calendar/1`).
+  """
+  @spec navigate_to_theme_step(any()) :: any()
+  def navigate_to_theme_step(view) do
+    view |> navigate_to_meeting_step() |> click_continue()
+  end
+
+  @doc """
+  Advances from the profile step to the `ready` step. Requires a connected
+  calendar (use `setup_onboarding_with_calendar/1`).
+  """
+  @spec navigate_to_ready_step(any()) :: any()
+  def navigate_to_ready_step(view) do
+    view |> navigate_to_theme_step() |> click_continue()
+  end
+
+  @doc """
+  Presses the layout's Continue button.
+  """
+  @spec click_continue(any()) :: any()
+  def click_continue(view) do
+    view |> element("button[phx-click='next_step']") |> render_click()
+    view
   end
 
   @doc """

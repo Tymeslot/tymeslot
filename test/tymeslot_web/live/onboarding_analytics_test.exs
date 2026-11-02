@@ -9,9 +9,13 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
   use TymeslotWeb.LiveCase, async: false
   @moduletag :onboarding
 
+  import Ecto.Query
   import Mox
   import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
+
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Repo
 
   setup :verify_on_exit!
 
@@ -21,62 +25,44 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
   end
 
   describe "onboarding analytics events" do
-    test "advancing from the welcome step pushes an anonymous step-completed event",
-         %{conn: conn} do
+    test "saving the link pushes an anonymous step-completed event", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
+      navigate_to_calendar_step(view)
 
       assert_push_event view, "ts:analytics", %{
         name: "onboarding_step_completed",
-        props: %{step: "welcome"}
+        props: %{step: "profile"}
       }
     end
 
-    test "skipping the calendar step pushes a skipped step-completed event", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
+    test "each later step pushes its own step-completed event", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
 
-      # welcome -> profile
-      view |> element("button[phx-click='next_step']") |> render_click()
+      navigate_to_ready_step(view)
 
-      # fill the profile form and advance to connect_calendar
-      view
-      |> form("form#profile-form", %{
-        "full_name" => "Test User",
-        "username" => "testuser#{System.unique_integer([:positive])}"
-      })
-      |> render_change()
-
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # skip the calendar step: select "Not right now", Continue, then confirm
-      # the nudge modal — the skipped event fires only once the user confirms.
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
-
-      assert_push_event view, "ts:analytics", %{
-        name: "onboarding_step_completed",
-        props: %{step: "connect_calendar", skipped: true}
-      }
+      for step <- ~w(profile connect_calendar meeting choose_theme) do
+        assert_push_event view, "ts:analytics", %{
+          name: "onboarding_step_completed",
+          props: %{step: ^step}
+        }
+      end
     end
 
     test "step events never carry user-identifying props", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
+      navigate_to_calendar_step(view)
 
       assert_push_event view, "ts:analytics", %{props: props}
-      refute Map.has_key?(props, :user_id)
-      refute Map.has_key?(props, :username)
-      refute Map.has_key?(props, :email)
+      assert props == %{step: "profile"}
     end
   end
 
   describe "share step with a live booking page" do
     setup %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      view |> goto_choose_theme() |> advance_to_share_step()
+      navigate_to_ready_step(view)
       %{view: view}
     end
 
@@ -114,7 +100,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
     test "share links carry the booking URL and open safely", %{view: view} do
       email = view |> element("a#onboarding-share-email") |> render()
       assert email =~ ~s(href="mailto:?subject=Book%20a%20time%20with%20me&amp;body=)
-      assert email =~ "%2Fada"
+      assert email =~ "%2Ftestuser"
 
       whatsapp = view |> element("a#onboarding-share-whatsapp") |> render()
 
@@ -126,15 +112,25 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       linkedin = view |> element("a#onboarding-share-linkedin") |> render()
       assert linkedin =~ "https://www.linkedin.com/sharing/share-offsite/?url=http"
-      assert linkedin =~ "%2Fada"
+      assert linkedin =~ "%2Ftestuser"
       assert linkedin =~ ~s(rel="noopener noreferrer")
     end
   end
 
-  describe "share step without a connected calendar" do
+  # A calendar that stops being bookable during onboarding (removed, or
+  # deactivated elsewhere) leaves the host on a share step whose page refuses
+  # visitors.
+  describe "share step after the calendar stopped being bookable" do
     setup %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view |> navigate_to_scheduling_steps() |> advance_to_share_step()
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      navigate_to_theme_step(view)
+
+      Repo.update_all(
+        from(c in CalendarIntegrationSchema, where: c.user_id == ^user.id),
+        set: [is_active: false]
+      )
+
+      click_continue(view)
       %{view: view}
     end
 
@@ -172,45 +168,15 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
     test "the warning takes the host back to the calendar step", %{view: view} do
       view |> element("#onboarding-return-to-calendar") |> render_click()
 
-      assert has_element?(view, ".onboarding-step-title", "Connect your calendar")
+      assert has_element?(view, ".onboarding-step-title", "Your calendar")
       assert has_element?(view, ".onboarding-provider-cards")
-    end
-
-    test "skipping again from there leads straight back to the share step", %{view: view} do
-      assert_push_event view, "ts:analytics", %{
-        name: "onboarding_step_completed",
-        props: %{step: "connect_calendar"}
-      }
-
-      assert_push_event view, "ts:analytics", %{
-        name: "share_step_viewed",
-        props: %{returned: false}
-      }
-
-      view |> element("#onboarding-return-to-calendar") |> render_click()
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
-
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
-      assert has_element?(view, "#onboarding-page-offline-warning")
-
-      assert_push_event view, "ts:analytics", %{
-        name: "share_step_viewed",
-        props: %{page_live: false, returned: true}
-      }
-
-      # The host already completed the calendar step once.
-      refute_push_event view, "ts:analytics", %{
-        name: "onboarding_step_completed",
-        props: %{step: "connect_calendar"}
-      }
     end
   end
 
   describe "share step opened directly by URL" do
     setup %{conn: conn} do
       {conn, user} = onboarding_conn(conn)
+      insert(:profile, user: user, username: "ada#{System.unique_integer([:positive])}")
       insert(:calendar_integration, user: user)
       %{conn: conn}
     end
@@ -237,7 +203,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
+      assert has_element?(view, ".onboarding-step-title", "You're live")
       assert has_element?(view, "a#onboarding-share-email")
 
       assert_push_event view, "ts:analytics", %{
@@ -248,22 +214,15 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       refute_push_event view, "ts:analytics", %{name: "onboarding_step_completed"}
     end
 
-    # A host who skipped the calendar never saw the theme step, which only a
-    # host with a calendar is shown.
-    test "connecting from the share step, having skipped the calendar, shows the theme step first",
-         %{conn: conn} do
+    # Before the calendar became required, a host who had skipped it was sent
+    # back with `return=theme`. Such a host has seen neither the meeting nor
+    # the theme step, so the flow simply continues.
+    test "a return path from the old flow continues to the meeting step", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/onboarding/connect_calendar?return=theme")
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-      assert has_element?(view, ".onboarding-step-title", "Choose your theme")
+      click_continue(view)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
-
-      assert_push_event view, "ts:analytics", %{
-        name: "share_step_viewed",
-        props: %{returned: true}
-      }
+      assert has_element?(view, ".onboarding-step-title", "Your meeting")
     end
 
     test "connecting without coming from the share step continues as usual",
@@ -272,7 +231,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      refute has_element?(view, ".onboarding-step-title", "Share your booking page")
+      assert has_element?(view, ".onboarding-step-title", "Your meeting")
 
       assert_push_event view, "ts:analytics", %{
         name: "onboarding_step_completed",
@@ -285,22 +244,6 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       assert has_element?(view, "a#onboarding-share-email")
       refute_push_event view, "ts:analytics", %{name: "share_step_viewed"}
-    end
-  end
-
-  # Clicks Continue until the share step, so each describe can reach it from
-  # wherever its own setup leaves the wizard.
-  defp advance_to_share_step(view, attempts_left \\ 6) do
-    cond do
-      has_element?(view, ".onboarding-step-title", "Share your booking page") ->
-        view
-
-      attempts_left == 0 ->
-        flunk("never reached the share step")
-
-      true ->
-        view |> element("button[phx-click='next_step']") |> render_click()
-        advance_to_share_step(view, attempts_left - 1)
     end
   end
 end

@@ -2,28 +2,24 @@ defmodule TymeslotWeb.OnboardingLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.ChooseThemeStep
   alias TymeslotWeb.OnboardingLive.ConnectCalendarStep
+  alias TymeslotWeb.OnboardingLive.DebugFixtures
   alias TymeslotWeb.OnboardingLive.Initializer
   alias TymeslotWeb.OnboardingLive.LivePreview
+  alias TymeslotWeb.OnboardingLive.MeetingStep
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.OnboardingLayout
-  alias TymeslotWeb.OnboardingLive.PreferencesStep
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
   alias TymeslotWeb.OnboardingLive.ProfileStep
   alias TymeslotWeb.OnboardingLive.ReadyStep
-  alias TymeslotWeb.OnboardingLive.SchedulingHandlers
-  alias TymeslotWeb.OnboardingLive.SkipCalendarModal
-  alias TymeslotWeb.OnboardingLive.SkipConfirmationModal
   alias TymeslotWeb.OnboardingLive.StepConfig
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.OnboardingLive.ThemePreviewModal
   alias TymeslotWeb.OnboardingLive.TimezoneHandlers
-  alias TymeslotWeb.OnboardingLive.WelcomeStep
   alias TymeslotWeb.Themes.Core.Registry
 
   @impl Phoenix.LiveView
@@ -31,9 +27,8 @@ defmodule TymeslotWeb.OnboardingLive do
           {:ok, Phoenix.LiveView.Socket.t()} | {:ok, Phoenix.LiveView.Socket.t(), keyword()}
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
-    is_debug = socket.assigns.live_action in [:debug_welcome, :debug_step]
 
-    if user.onboarding_completed_at && !is_debug do
+    if user.onboarding_completed_at && !debug?(socket) do
       {:ok,
        socket
        |> put_flash(
@@ -46,50 +41,36 @@ defmodule TymeslotWeb.OnboardingLive do
     end
   end
 
+  # Where a host may be is derived from their account (`StepConfig.resume_step/1`):
+  # `/onboarding` lands on that step, and a step out of reach from it
+  # (`StepConfig.reachable?/2`) patches back to it, so no step can be reached
+  # before what it depends on is done. The static render has no profile yet,
+  # so the check waits for the connected one.
   @impl Phoenix.LiveView
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_params(%{"step" => step} = params, _uri, socket) do
-    if StepConfig.valid_step?(step) do
-      step_atom = String.to_existing_atom(step)
-      # Set by the OAuth return path of a host sent back from the share step;
-      # `theme` when that host has not seen the theme step yet.
-      socket =
-        assign(socket,
-          returning_to_share: params["return"] in ["share", "theme"],
-          theme_unseen: params["return"] == "theme"
-        )
+  def handle_params(params, uri, socket) do
+    socket =
+      socket
+      |> assign(
+        base_path: NavigationHandlers.base_path(uri),
+        # Set by the OAuth return path of a host sent back from the share step.
+        returning_to_share: params["return"] == "share"
+      )
+      |> maybe_apply_fixture(params["fixture"])
 
-      # During the disconnected (static) render the calendar list has not been
-      # loaded yet, so `socket.assigns.steps` is always the no-calendar sequence
-      # and conditional steps like `:choose_theme` are absent. Redirecting here
-      # would wrongly bounce a calendar-connected user who deep-links or refreshes
-      # `/onboarding/choose_theme` before the socket connects. Defer the
-      # membership check until the connected render, where `mount/3` has run
-      # with the real calendar list and `steps` reflects it.
-      cond do
-        not connected?(socket) ->
-          {:noreply, assign(socket, :current_step, step_atom)}
+    requested = requested_step(params["step"])
 
-        step_atom == :ready ->
-          {:noreply,
-           socket
-           |> assign(:current_step, :ready)
-           |> NavigationHandlers.assign_booking_page_live()}
+    cond do
+      not connected?(socket) ->
+        {:noreply, assign(socket, :current_step, requested || :profile)}
 
-        step_atom in socket.assigns.steps ->
-          {:noreply, assign(socket, :current_step, step_atom)}
+      is_nil(requested) or not StepConfig.reachable?(requested, resume_step(socket)) ->
+        {:noreply, push_patch(socket, to: step_path(socket, resume_step(socket), uri))}
 
-        true ->
-          {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
-      end
-    else
-      {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
+      true ->
+        {:noreply, assign(socket, :current_step, requested)}
     end
-  end
-
-  def handle_params(_params, _uri, socket) do
-    {:noreply, assign(socket, :current_step, :welcome)}
   end
 
   @impl Phoenix.LiveView
@@ -98,12 +79,9 @@ defmodule TymeslotWeb.OnboardingLive do
     ~H"""
     <OnboardingLayout.onboarding_layout
       current_step={@current_step}
-      steps={@steps}
-      show_skip_modal={@show_skip_modal}
       booking_page_live={@booking_page_live}
       next_disabled={
-        @current_step == :connect_calendar and is_nil(@calendar_choice) and
-          @connected_calendars == []
+        @current_step == :connect_calendar and is_nil(@calendar_choice) and !@booking_page_live
       }
     >
       <:preview>
@@ -120,18 +98,12 @@ defmodule TymeslotWeb.OnboardingLive do
           username={Map.get(@form_data, "username", "")}
           avatar_url={Profiles.avatar_url(@profile, :thumb)}
           theme_customization={@theme_customization}
-          buffer_before_minutes={policy_value(@availability_schedule, :buffer_before_minutes)}
-          buffer_after_minutes={policy_value(@availability_schedule, :buffer_after_minutes)}
-          advance_booking_days={policy_value(@availability_schedule, :advance_booking_days)}
-          min_advance_hours={policy_value(@availability_schedule, :min_advance_hours)}
-          calendar_connected={@connected_calendars != [] or @calendar_choice not in [nil, "skip"]}
+          calendar_connected={@connected_calendars != [] or @calendar_choice != nil}
           booking_host={booking_host()}
           booking_page_live={@booking_page_live}
         />
       </:preview>
       <%= case @current_step do %>
-        <% :welcome -> %>
-          <WelcomeStep.welcome_step />
         <% :profile -> %>
           <ProfileStep.profile_step
             profile={@profile}
@@ -161,37 +133,12 @@ defmodule TymeslotWeb.OnboardingLive do
             caldav_form_errors={@caldav_form_errors}
             caldav_discovering={@caldav_discovering}
           />
-        <% :buffer_time -> %>
-          <PreferencesStep.buffer_time_step
-            buffer_before_minutes={policy_value(@availability_schedule, :buffer_before_minutes)}
-            buffer_after_minutes={policy_value(@availability_schedule, :buffer_after_minutes)}
-            time_format={@time_format}
-            form_errors={@form_errors}
-            rejected_inputs={@rejected_inputs}
-            custom_input_mode={@custom_input_mode}
-          />
-        <% :booking_window -> %>
-          <PreferencesStep.booking_window_step
-            advance_booking_days={policy_value(@availability_schedule, :advance_booking_days)}
-            form_errors={@form_errors}
-            custom_input_mode={@custom_input_mode}
-          />
-        <% :minimum_notice -> %>
-          <PreferencesStep.minimum_notice_step
-            min_advance_hours={policy_value(@availability_schedule, :min_advance_hours)}
-            form_errors={@form_errors}
-            custom_input_mode={@custom_input_mode}
-          />
+        <% :meeting -> %>
+          <MeetingStep.meeting_step />
         <% :ready -> %>
           <ReadyStep.ready_step booking_url={@booking_url} page_live={@booking_page_live} />
       <% end %>
     </OnboardingLayout.onboarding_layout>
-
-    <%!-- Skip confirmation modal --%>
-    <SkipConfirmationModal.skip_confirmation_modal show={@show_skip_modal} />
-
-    <%!-- Nudge before continuing without a connected calendar --%>
-    <SkipCalendarModal.skip_calendar_modal show={@show_skip_calendar_modal} />
 
     <%!-- Real booking-page preview --%>
     <ThemePreviewModal.theme_preview_modal
@@ -220,26 +167,6 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("previous_step", _params, socket) do
     NavigationHandlers.handle_previous_step(socket)
-  end
-
-  def handle_event("show_skip_modal", _params, socket) do
-    NavigationHandlers.handle_show_skip_modal(socket)
-  end
-
-  def handle_event("hide_skip_modal", _params, socket) do
-    NavigationHandlers.handle_hide_skip_modal(socket)
-  end
-
-  def handle_event("skip_onboarding", _params, socket) do
-    NavigationHandlers.handle_skip_onboarding(socket)
-  end
-
-  def handle_event("confirm_skip_calendar", _params, socket) do
-    NavigationHandlers.handle_confirm_skip_calendar(socket)
-  end
-
-  def handle_event("hide_skip_calendar_modal", _params, socket) do
-    NavigationHandlers.handle_hide_skip_calendar_modal(socket)
   end
 
   # ------------------------------------------------------------------
@@ -307,22 +234,6 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   # ------------------------------------------------------------------
-  # Event handlers — Scheduling preferences
-  # ------------------------------------------------------------------
-
-  def handle_event("validate_scheduling_preferences", params, socket) do
-    SchedulingHandlers.handle_validate_scheduling_preferences(params, socket)
-  end
-
-  def handle_event("update_scheduling_preferences", params, socket) do
-    SchedulingHandlers.handle_update_with_custom_modes(params, socket)
-  end
-
-  def handle_event("focus_custom_input", %{"setting" => setting}, socket) do
-    SchedulingHandlers.handle_focus_custom_input(setting, socket)
-  end
-
-  # ------------------------------------------------------------------
   # Event handlers — Timezone
   # ------------------------------------------------------------------
 
@@ -368,21 +279,39 @@ defmodule TymeslotWeb.OnboardingLive do
   # Private helpers
   # ------------------------------------------------------------------
 
-  defp onboarding_fallback_path(socket) do
-    if socket.assigns.live_action in [:debug_welcome, :debug_step] do
-      ~p"/debug/onboarding"
-    else
-      ~p"/onboarding"
+  defp debug?(socket), do: socket.assigns.live_action in [:debug_welcome, :debug_step]
+
+  # A fixture only ever applies on the debug routes; elsewhere the parameter
+  # is ignored.
+  defp maybe_apply_fixture(socket, name) do
+    if debug?(socket), do: DebugFixtures.apply(socket, name), else: socket
+  end
+
+  # An unknown or retired step name (`welcome`, the old preference steps)
+  # counts as no step at all, and so resumes like `/onboarding` does.
+  defp requested_step(step) do
+    if StepConfig.valid_step?(step), do: String.to_existing_atom(step)
+  end
+
+  defp resume_step(socket) do
+    StepConfig.resume_step(%{
+      username: socket.assigns.profile && socket.assigns.profile.username,
+      bookable_calendar?: socket.assigns.booking_page_live == true
+    })
+  end
+
+  # The query string travels with the patch, so a debug fixture or an OAuth
+  # return flag survives the move to the resume step.
+  defp step_path(socket, step, uri) do
+    path = socket.assigns.base_path <> "/" <> Atom.to_string(step)
+
+    case URI.parse(uri).query do
+      nil -> path
+      query -> path <> "?" <> query
     end
   end
 
   defp booking_host do
     String.replace(UrlBuilder.base_url(), ~r{^https?://}, "")
   end
-
-  # The booking policy lives on the profile's default availability schedule,
-  # which is absent during the disconnected render. `Schedules.policy/2` answers
-  # a nil schedule with the same defaults a freshly created one is given, so the
-  # steps and the summary always show a real number rather than a blank.
-  defp policy_value(schedule, field), do: Schedules.policy(schedule, field)
 end

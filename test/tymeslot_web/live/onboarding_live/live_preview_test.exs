@@ -11,7 +11,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreviewTest do
 
   defp render_preview(settings) do
     render_component(&LivePreview.live_preview/1,
-      current_step: :welcome,
+      current_step: :profile,
       booking_theme: "1",
       theme_customization: %ThemeCustomizationSchema{theme_id: "1", settings: settings},
       booking_host: "tymeslot.test"
