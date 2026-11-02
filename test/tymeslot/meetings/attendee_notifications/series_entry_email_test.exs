@@ -23,9 +23,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
   import Tymeslot.Test.AttendeeEmailDelivery
 
   alias Ecto.Changeset
+  alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntrySchema
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.RepeatSeriesFixtures
 
@@ -236,6 +238,169 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
     end
   end
 
+  # A write to every occurrence drops the series' cached rows, and the sync
+  # brings them back blank (`Tymeslot.CalendarGrid.SeriesEdit`); what each
+  # guest was sent is read from the record the emails left instead.
+  describe "a series after an edit of every occurrence" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, provider: "google")
+      cache_rule(integration, "master-g", nil)
+      %{integration: integration}
+    end
+
+    test "the edit moves an occurrence emailed on its own, and cancelling every " <>
+           "occurrence then cancels that entry under the UID the guest holds",
+         %{user: user, integration: integration} do
+      third = ~U[2026-11-17 09:30:00.000000Z]
+      fifth = ~U[2026-12-01 09:30:00.000000Z]
+
+      # The third occurrence moved two hours on its own, and its guest told.
+      integration
+      |> google_occurrence(third, last_notified_state: baseline(third))
+      |> retimed(DateTime.add(third, 2, :hour))
+      |> run_update_to_delivery()
+
+      clear_jobs()
+
+      # Every occurrence from the fifth moved an hour later.
+      original = google_occurrence(integration, fifth)
+      later = DateTime.add(fifth, 1, :hour)
+      updated = %{original | start_at: later, end_at: DateTime.add(later, 1, :hour)}
+      resync_series(integration)
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
+
+      [email] = deliver_all("send_event_update_notification")
+
+      assert entry_uids(email) == [
+               "series-g_20261201T093000Z",
+               "series-g",
+               "series-g_20261117T093000Z"
+             ]
+
+      assert calendar_attachment(email).data =~ "DTSTART:20261117T123000Z"
+      assert {"series-g_20261117T093000Z", 2} in entry_sequences(email)
+      clear_jobs()
+
+      # Synced back, each occurrence is filed under its new original start.
+      event = google_occurrence(integration, later)
+
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+      [email] = deliver_all("send_calendar_invitation")
+
+      ics = calendar_attachment(email).data
+      sequences = entry_sequences(email)
+
+      assert {"series-g_20261117T093000Z", 3} in sequences
+      assert {"series-g_20261201T093000Z", 2} in sequences
+      assert ics =~ "DTSTART:20261117T123000Z"
+    end
+
+    test "an occurrence emailed after the edit goes out above the revision the edit sent", %{
+      user: user,
+      integration: integration
+    } do
+      original = google_occurrence(integration, @second)
+      updated = %{original | summary: "Weekly sync (moved room)"}
+      resync_series(integration)
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
+
+      clear_jobs()
+
+      # Synced back at revision 0, then retitled on its own.
+      synced =
+        google_occurrence(integration, @second,
+          summary: "Weekly sync (moved room)",
+          last_notified_state: baseline(@second)
+        )
+
+      email = run_update_to_delivery(moved(synced))
+
+      assert entry_sequences(email) == [{"series-g_20261110T093000Z", 2}]
+    end
+  end
+
+  test "cancelling every occurrence after the edit sends the occurrence's own entry " <>
+         "above the revision the edit sent",
+       %{user: user} do
+    integration = insert(:calendar_integration, user: user, provider: "google")
+    cache_rule(integration, "master-g", nil)
+    original = google_occurrence(integration, @second)
+    updated = %{original | summary: "Weekly sync (moved room)"}
+    resync_series(integration)
+
+    assert {:ok, :sent} =
+             AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
+
+    clear_jobs()
+
+    # Synced back at revision 0.
+    synced = google_occurrence(integration, @second, summary: "Weekly sync (moved room)")
+
+    assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(synced, user.id, :series)
+    [email] = deliver_all("send_calendar_invitation")
+
+    assert [{"series-g_20261110T093000Z", 2} | _invitation] = entry_sequences(email)
+  end
+
+  describe "the record of a series' entries" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, provider: "google")
+      cache_rule(integration, "master-g", nil)
+      %{integration: integration}
+    end
+
+    test "cancelling one occurrence forgets its entry, so cancelling every one " <>
+           "later does not cancel it again",
+         %{user: user, integration: integration} do
+      third = ~U[2026-11-17 09:30:00.000000Z]
+
+      emailed =
+        google_occurrence(integration, third, last_notified_state: baseline(third))
+
+      run_update_to_delivery(moved(emailed))
+      clear_jobs()
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.event_deleted_confirm(
+                 Repo.reload!(emailed),
+                 user.id,
+                 :occurrence
+               )
+
+      Repo.delete!(emailed)
+      clear_jobs()
+
+      event = google_occurrence(integration, @second)
+
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+      [email] = deliver_all("send_calendar_invitation")
+
+      assert entry_uids(email) == ["series-g_20261110T093000Z", "series-g"]
+    end
+
+    test "cancelling every occurrence forgets every entry of the series", %{
+      user: user,
+      integration: integration
+    } do
+      emailed = google_occurrence(integration, @second, last_notified_state: baseline(@second))
+      run_update_to_delivery(moved(emailed))
+      assert Repo.aggregate(SeriesEntrySchema, :count) == 1
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.event_deleted_confirm(
+                 google_occurrence(integration, @first),
+                 user.id,
+                 :series
+               )
+
+      assert Repo.aggregate(SeriesEntrySchema, :count) == 0
+    end
+  end
+
   describe "an Outlook series" do
     setup %{user: user} do
       integration = insert(:calendar_integration, user: user, provider: "outlook")
@@ -295,6 +460,21 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
       )
 
     assert entry_uids(run_update_to_delivery(moved(event))) == ["one-off"]
+  end
+
+  # What a write to every occurrence does to the cache: the series' rows go,
+  # and the sync that brings them back reads the series' rule again.
+  defp resync_series(integration) do
+    :ok = EventDeletion.delete_series_rows(integration.id, {:master, "master-g"})
+    cache_rule(integration, "master-g", nil)
+  end
+
+  defp clear_jobs, do: Repo.delete_all(Oban.Job)
+
+  defp retimed(event, start) do
+    event
+    |> Changeset.change(start_at: start, end_at: DateTime.add(start, 1, :hour))
+    |> Repo.update!()
   end
 
   defp cache_rule(integration, master_id, ical_uid) do
