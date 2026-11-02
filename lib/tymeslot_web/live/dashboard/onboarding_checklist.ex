@@ -247,6 +247,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       icon="hero-clipboard"
       class={cta_class()}
       phx-hook="CopyOnClick"
+      phx-click="booking_link_copied"
+      phx-value-channel="checklist"
       data-copy-text={@item.copy_url}
       data-copy-feedback={dgettext("onboarding_wizard", "Booking link copied to clipboard!")}
     >

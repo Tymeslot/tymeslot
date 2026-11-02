@@ -76,6 +76,8 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                     variant={:secondary}
                     id={"copy-booking-link-#{@editing_type.id}"}
                     phx-hook="CopyOnClick"
+                    phx-click="booking_link_copied"
+                    phx-target={@myself}
                     data-copy-text={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
                     data-copy-feedback={dgettext("dashboard_integrations", "Booking link copied!")}
                   >

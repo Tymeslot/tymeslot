@@ -140,6 +140,23 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Atomically stamps `booking_link_first_shared_at` for a profile, but only when
+  it is currently `nil`.
+
+  Returns the number of rows actually updated (`1` on the first share, `0` if it
+  was already set), so concurrent callers stamp it exactly once.
+  """
+  @spec mark_booking_link_shared(integer(), DateTime.t()) :: non_neg_integer()
+  def mark_booking_link_shared(profile_id, shared_at) do
+    {count, _result} =
+      ProfileSchema
+      |> where([p], p.id == ^profile_id and is_nil(p.booking_link_first_shared_at))
+      |> Repo.update_all(set: [booking_link_first_shared_at: shared_at])
+
+    count
+  end
+
+  @doc """
   Gets a profile with preloaded user.
 
   Keyed by *profile* id. `get_by_user_id/1` is the user-keyed lookup, and

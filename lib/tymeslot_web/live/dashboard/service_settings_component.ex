@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.BookingLinkShare
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
@@ -126,6 +127,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("booking_link_copied", _params, socket),
+    do: {:noreply, BookingLinkShare.record(socket, socket.assigns.profile, "settings")}
+
   def handle_event("toggle_add_form", _params, socket) do
     show_add_form = !socket.assigns.show_add_form
 

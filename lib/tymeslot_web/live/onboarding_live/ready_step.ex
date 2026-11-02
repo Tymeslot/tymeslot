@@ -21,9 +21,10 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   use TymeslotWeb.Components.CoreComponents,
     only: [action_button: 1, action_link: 1, icon: 1, info_box: 1]
 
-  @share_channels ~w(copy email whatsapp linkedin)
+  # `checklist`, `settings` and `embed` are the dashboard's own copy buttons.
+  @share_channels ~w(copy email whatsapp linkedin checklist settings embed)
 
-  @doc "The channels a `share_booking_link` event may report."
+  @doc "The channels a `booking_link_shared` event may report."
   @spec share_channels() :: [String.t()]
   def share_channels, do: @share_channels
 

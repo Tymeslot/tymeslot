@@ -167,6 +167,24 @@ defmodule Tymeslot.Profiles do
     end
   end
 
+  @doc """
+  Remembers when a host first copied or shared their booking link.
+
+  The stamp is a lower bound (copying is a client-side action the server only
+  hears about when the page is connected), so it must never gate behaviour.
+  Returns `{:ok, :shared}` only on the first share and `{:ok, :noop}` after.
+  """
+  @spec mark_booking_link_shared(profile()) :: {:ok, :shared | :noop}
+  def mark_booking_link_shared(%ProfileSchema{booking_link_first_shared_at: %DateTime{}}),
+    do: {:ok, :noop}
+
+  def mark_booking_link_shared(%ProfileSchema{id: profile_id}) do
+    case ProfileQueries.mark_booking_link_shared(profile_id, DateTime.utc_now(:second)) do
+      1 -> {:ok, :shared}
+      0 -> {:ok, :noop}
+    end
+  end
+
   # --- Profile Updates ---
 
   @doc """

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Components.CoreComponents.Navigation
+  alias TymeslotWeb.Dashboard.BookingLinkShare
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview
@@ -194,7 +195,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   def handle_event("copy_code", %{"type" => type}, socket) when type in @valid_embed_types do
     code = Helpers.embed_code(type, Helpers.snippet_options(socket.assigns))
 
-    socket = push_event(socket, "copy-to-clipboard", %{text: code})
+    socket =
+      socket
+      |> push_event("copy-to-clipboard", %{text: code})
+      |> then(&BookingLinkShare.record(&1, &1.assigns.profile, "embed"))
+
     Flash.info(dgettext("dashboard_embed", "Code copied to clipboard!"))
 
     {:noreply, socket}
