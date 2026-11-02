@@ -103,4 +103,39 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
       props: %{channel: "embed"}
     }
   end
+
+  test "the sidebar's copy button stamps the profile", %{conn: conn, profile: profile} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+    assert is_nil(shared_at(profile))
+
+    view |> element("#copy-scheduling-link") |> render_click()
+
+    assert %DateTime{} = shared_at(profile)
+
+    assert_push_event view, "ts:analytics", %{
+      name: "booking_link_shared",
+      props: %{channel: "sidebar"}
+    }
+  end
+
+  test "the sidebar's copy button also works on the analytics page", %{
+    conn: conn,
+    profile: profile
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+    view |> element("#copy-scheduling-link") |> render_click()
+
+    assert %DateTime{} = shared_at(profile)
+  end
+
+  test "a channel the buttons do not use is ignored", %{conn: conn, profile: profile} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+
+    render_click(view, "booking_link_copied", %{"channel" => "user@example.com"})
+    render_click(view, "booking_link_copied", %{})
+
+    assert is_nil(shared_at(profile))
+    refute_push_event view, "ts:analytics", %{name: "booking_link_shared"}
+  end
 end

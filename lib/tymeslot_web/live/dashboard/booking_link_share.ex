@@ -25,4 +25,19 @@ defmodule TymeslotWeb.Dashboard.BookingLinkShare do
   end
 
   def record(socket, nil, _channel), do: socket
+
+  @event_channels ~w(checklist sidebar)
+
+  @doc """
+  The `booking_link_copied` event for LiveViews that render the dashboard layout.
+
+  The channel comes from the client, so anything outside the channels those
+  buttons use is ignored rather than reported.
+  """
+  @spec handle_copied(Phoenix.LiveView.Socket.t(), term()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_copied(socket, channel) when channel in @event_channels,
+    do: {:noreply, record(socket, socket.assigns[:profile], channel)}
+
+  def handle_copied(socket, _channel), do: {:noreply, socket}
 end

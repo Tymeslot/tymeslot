@@ -536,8 +536,8 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  def handle_event("booking_link_copied", _params, socket),
-    do: {:noreply, BookingLinkShare.record(socket, socket.assigns[:profile], "checklist")}
+  def handle_event("booking_link_copied", params, socket),
+    do: BookingLinkShare.handle_copied(socket, params["channel"])
 
   def handle_event("onboarding:dismiss", _params, socket) do
     case Onboarding.dismiss_dashboard_setup(socket.assigns.current_user) do
