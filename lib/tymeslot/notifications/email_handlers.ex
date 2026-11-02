@@ -15,9 +15,9 @@ defmodule Tymeslot.Notifications.EmailHandlers do
   alias Tymeslot.Notifications.Email.GuestEmails
   alias Tymeslot.Notifications.Email.IntegrationEmails
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.Email.OnboardingEmails
   alias Tymeslot.Notifications.Email.PlannedSessionEmails
   alias Tymeslot.Notifications.Email.PollEmails
-  alias Tymeslot.Notifications.Email.OnboardingEmails
   alias Tymeslot.Notifications.Email.RescheduleEmails
   alias Tymeslot.Notifications.Email.RescheduleRequestEmails
   alias Tymeslot.Notifications.Email.SeatJobs
