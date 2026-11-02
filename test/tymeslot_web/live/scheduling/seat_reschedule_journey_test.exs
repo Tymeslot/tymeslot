@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
   alias Tymeslot.RescheduleTestSetup
   alias Tymeslot.Security.Token
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -79,7 +80,7 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
 
   defp submit_booking(view, name, email) do
     view
-    |> form("form[phx-submit='submit']", %{
+    |> form("form[data-fact='attendee']", %{
       "booking" => %{"name" => name, "email" => email, "message" => ""}
     })
     |> render_submit()
@@ -250,12 +251,10 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
 
       {:ok, view, _html} = live(conn, to)
 
-      view
-      |> element("[data-testid='duration-option'][phx-value-duration='group-session']")
-      |> render_click()
+      BookingDriver.choose_meeting_type(view, "group-session")
 
       # The normal flow, with its way back to the meeting types.
-      assert has_element?(view, "[data-testid='back-step']")
+      assert has_element?(view, "[data-intent='back']")
       refute has_element?(view, "[data-testid='seat-move-notice']")
     end
 
@@ -293,29 +292,20 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
           "/#{profile.username}/group-session?timezone=UTC&reschedule_seat_token=#{seat.management_token}"
         )
 
-      date = DateTime.to_date(old_meeting.start_time)
-      day = "button.calendar-day[phx-value-date='#{date}']"
-
-      unless has_element?(view, "#{day}:not(.calendar-day--other-month)"),
-        do: show_month(view, date)
-
-      wait_until(fn -> has_element?(view, "#{day}:not([disabled])") end)
-      view |> element(day) |> render_click()
-      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+      date = old_meeting.start_time |> DateTime.to_date() |> Date.to_iso8601()
+      BookingDriver.pick_date(view, date)
+      wait_until(fn -> has_element?(view, "[data-fact='time']") end)
 
       own_time =
         view
         |> render()
         |> Floki.parse_document!()
-        |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
+        |> Floki.attribute("[data-fact='time']", "data-value")
         |> Enum.find(&(&1 =~ ~r/^(14:00|0?2:00 PM)/)) ||
           flunk("expected the spot's own time to be offered")
 
-      view
-      |> element("button[data-testid='time-slot'][phx-value-time='#{own_time}']")
-      |> render_click()
-
-      view |> element("[data-testid='next-step']") |> render_click()
+      BookingDriver.pick_time(view, own_time)
+      BookingDriver.continue(view)
 
       submit_booking(view, "Moving Participant", "mover@example.com")
 
@@ -421,9 +411,9 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
         view
         |> render()
         |> Floki.parse_document!()
-        |> Floki.find("[data-testid='duration-option']")
+        |> Floki.find("[data-fact='meeting_type']")
 
-      assert Floki.attribute(cards, "phx-value-duration") == ["group-session"]
+      assert Floki.attribute(cards, "data-value") == ["group-session"]
     end
   end
 

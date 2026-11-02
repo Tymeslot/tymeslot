@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Live.Themes.IgnoredStepEventTest do
 
       # The meeting types' own component receives the event, as a template's
       # phx-click with phx-target={@myself} would send it.
-      step = "[data-phx-component]:has([data-testid='duration-option'])"
+      step = "[data-phx-component]:has([data-fact='meeting_type'])"
 
       for _twice <- 1..2 do
         view

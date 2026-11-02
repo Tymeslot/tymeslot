@@ -357,7 +357,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
         view
         |> render()
         |> Floki.parse_document!()
-        |> Floki.find("[data-testid='duration-option']")
+        |> Floki.find("[data-fact='meeting_type']")
 
       assert length(cards) == 2,
              "the flow has restarted, so the organiser's full catalogue is the choice again"

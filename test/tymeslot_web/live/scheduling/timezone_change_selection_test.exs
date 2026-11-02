@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -105,7 +106,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
         change_timezone(view, ctx.to)
 
         assert_selected(view, today(ctx.to), "the page's pick after moving to #{ctx.to}")
-        assert has_element?(view, "button[data-testid='time-slot']")
+        assert has_element?(view, "[data-fact='time']")
       end
 
       test "has no slots fetched for it once the timezone has changed",
@@ -139,16 +140,10 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
           # Coming back, the schedule step reopens on the day as a held one, no
           # longer the page's: only the new zone's booking window can drop it.
-          [time | _other_times] =
-            view
-            |> render()
-            |> Floki.parse_document!()
-            |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
-
-          send(view.pid, {:step_event, :schedule, :select_time, time})
-          send(view.pid, {:step_event, :schedule, :next_step, nil})
+          {_date, _time} = BookingDriver.pick_first_slot(view, on: Date.to_iso8601(picked))
+          BookingDriver.continue(view)
           wait_until(fn -> live_assigns(view).current_state == :booking end)
-          send(view.pid, {:step_event, :booking, :back_step, nil})
+          BookingDriver.back(view)
           wait_until(fn -> settled?(view) end)
           assert_selected(view, picked, "the held day back on the schedule step")
 
@@ -214,7 +209,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
         assert_received {:trace, _pid, :receive,
                          {:fetch_available_slots, ^chosen_string, _duration, ^to}}
 
-        assert has_element?(view, "button[data-testid='time-slot']")
+        assert has_element?(view, "[data-fact='time']")
       end
 
       test "is dropped once it has passed in the new timezone",
@@ -292,7 +287,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
       |> live("#{path}#{separator}timezone=#{timezone}")
 
     if entry == :from_overview do
-      view |> element("button[data-testid='duration-option']") |> render_click()
+      BookingDriver.choose_meeting_type(view, "30-minutes")
     end
 
     wait_until(fn -> settled?(view) end)
@@ -358,12 +353,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
     view
     |> render()
     |> Floki.parse_document!()
-    |> Floki.find("button[phx-click*='select_date'][phx-value-date]")
-    |> Enum.filter(fn button ->
-      classes = button |> Floki.attribute("class") |> List.first("") |> String.split()
-      "selected" in classes or "calendar-day--selected" in classes
-    end)
-    |> Floki.attribute("phx-value-date")
+    |> Floki.attribute("button[phx-click*='select_date'][aria-pressed='true']", "phx-value-date")
     |> Enum.uniq()
   end
 

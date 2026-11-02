@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
   # The timezone selector lives on the schedule step, one duration choice in.
   defp advance_to_schedule_step(view) do
     view
-    |> element("button[data-testid='duration-option'][data-duration='quick-chat']")
+    |> element("[data-fact='meeting_type'][data-value='quick-chat']")
     |> render_click()
 
     view

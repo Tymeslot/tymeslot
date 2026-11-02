@@ -380,7 +380,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
 
         assert has_element?(view, "[data-testid='awaiting-payment']")
         refute has_element?(view, "button[phx-click='next_month']")
-        refute has_element?(view, "button[data-testid='duration-option']")
+        refute has_element?(view, "[data-fact='meeting_type']")
       end
 
       meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id

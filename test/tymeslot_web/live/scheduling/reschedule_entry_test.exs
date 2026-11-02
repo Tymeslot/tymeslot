@@ -62,9 +62,9 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
           "/#{profile.username}?timezone=#{profile.timezone}&reschedule_meeting_uid=#{meeting.uid}"
         )
 
-      view |> element("button[data-testid='duration-option']") |> render_click()
+      view |> element("[data-fact='meeting_type']") |> render_click()
 
-      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+      wait_until(fn -> has_element?(view, "[data-fact='time']") end)
 
       state = :sys.get_state(view.pid).socket.assigns
 
@@ -75,10 +75,10 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
 
       document = view |> render() |> Floki.parse_document!()
 
-      assert Floki.find(document, "button.calendar-day--selected") != [],
+      assert Floki.find(document, "[data-fact='date'][aria-pressed='true']") != [],
              "expected the reschedule to open on a day painted as selected"
 
-      assert Floki.attribute(document, "button[data-testid='time-slot']", "phx-value-time") != [],
+      assert Floki.attribute(document, "[data-fact='time']", "data-value") != [],
              "expected that day's times to be listed"
 
       # The hour stays the rescheduler's decision, exactly as for a new booking.
@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       # meeting's own type and nothing else.
       refute has_element?(
                view,
-               "button[data-testid='duration-option'][phx-value-duration='quick-chat']"
+               "[data-fact='meeting_type'][data-value='quick-chat']"
              )
 
       # The card is gone, but the event behind it is still the client's to
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       # clicked with another type's slug overriding its value — the closest a
       # test gets to a crafted client without bypassing the component.
       view
-      |> element("button[data-testid='duration-option']")
+      |> element("[data-fact='meeting_type']")
       |> render_click(%{"duration" => "quick-chat"})
 
       render(view)
@@ -256,17 +256,17 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
           view
           |> render()
           |> Floki.parse_document!()
-          |> Floki.find("[data-testid='duration-option']")
+          |> Floki.find("[data-fact='meeting_type']")
 
         assert length(cards) == 1
-        assert Floki.attribute(cards, "phx-value-duration") == ["quick-chat"]
+        assert Floki.attribute(cards, "data-value") == ["quick-chat"]
 
         # Already chosen, and choosing it is the way on: the overview offers
         # no Next of its own to hold the booker back.
         assert has_element?(view, unquote(theme.selected_duration_selector))
         offer = moment_for(view, :meeting_type)
-        assert has_element?(view, "##{offer}-step [data-testid='duration-option']")
-        refute has_element?(view, "##{offer}-step [data-testid='next-step']")
+        assert has_element?(view, "##{offer}-step [data-fact='meeting_type']")
+        refute has_element?(view, "##{offer}-step [data-intent='continue']")
       end
 
       @tag :capture_log
@@ -287,7 +287,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
         # on a page that never pinned anything, where the click chooses a card.
         assert has_element?(view, unquote(theme.selected_duration_selector))
 
-        view |> element("[data-testid='duration-option']") |> render_click()
+        view |> element("[data-fact='meeting_type']") |> render_click()
 
         # Paged, the overview leaves the page; on a continuous page it stays
         # above the calendar, done.

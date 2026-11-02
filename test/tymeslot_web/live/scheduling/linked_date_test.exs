@@ -175,10 +175,7 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
     end
   end
 
-  defp selected_day?(button) do
-    classes = button |> Floki.attribute("class") |> List.first("") |> String.split()
-    "selected" in classes or "calendar-day--selected" in classes
-  end
+  defp selected_day?(button), do: Floki.attribute(button, "aria-pressed") == ["true"]
 
   defp today, do: @zone |> DateTime.now!() |> DateTime.to_date()
 

@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Live.Scheduling.PaidTypeUnsellablePageTest do
   end
 
   defp duration_option(slug),
-    do: "[data-testid='duration-option'][phx-value-duration='#{slug}']"
+    do: "[data-fact='meeting_type'][data-value='#{slug}']"
 
   defp connect_stripe(user, charges_enabled) do
     insert(:connect_account,

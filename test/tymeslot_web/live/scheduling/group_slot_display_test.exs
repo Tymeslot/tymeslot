@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
       timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(1) |> Date.to_string()
 
     BookingDriver.pick_date(view, date_str)
-    wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
+    wait_until(fn -> has_element?(view, ~s([data-fact="time"])) end)
     {view, date_str}
   end
 
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
         first
         |> render()
         |> Floki.parse_document!()
-        |> Floki.attribute(~s([data-testid="time-slot"]), "phx-value-time")
+        |> Floki.attribute(~s([data-fact="time"]), "data-value")
         |> List.first()
 
       BookingDriver.pick_time(first, taken_time)
@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       refute has_element?(
                second,
-               ~s([data-testid="time-slot"][phx-value-time="#{taken_time}"])
+               ~s([data-fact="time"][data-value="#{taken_time}"])
              )
     end
   end
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
         view = group_schedule(user, @theme, show_seat_availability: false)
 
         refute has_element?(view, ~s([data-testid="seat-badge"]))
-        refute has_element?(view, ~s([data-testid="time-slot"].slot-list__slot--seats))
+        refute has_element?(view, ~s([data-fact="time"].slot-list__slot--seats))
         assert has_element?(view, ~s([data-testid="group-session-hint"]), "up to 10 people")
       end
 

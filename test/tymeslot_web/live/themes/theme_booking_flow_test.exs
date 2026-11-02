@@ -363,7 +363,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
           ~p"/#{profile.username}/30-minutes?date=#{dst_date_str}&timezone=#{timezone}"
         )
 
-      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+      wait_until(fn -> has_element?(view, "[data-fact='time']") end)
 
       slots_html = render(view)
 
@@ -552,8 +552,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
         rendered_slugs =
           html
           |> Floki.parse_document!()
-          |> Floki.find("button[data-testid='duration-option']")
-          |> Enum.map(&Floki.attribute(&1, "data-duration"))
+          |> Floki.find("[data-fact='meeting_type']")
+          |> Enum.map(&Floki.attribute(&1, "data-value"))
           |> List.flatten()
 
         assert rendered_slugs == ["zebra-session", "alpha-session", "middle-session"]
