@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Live.Scheduling.SlotTimeLocaleTest do
   @moduledoc """
   The booking summary and the confirmation show the chosen time on the
-  visitor's clock, in both themes.
+  visitor's clock, in Quill and Rhythm.
 
   The chosen slot travels as its internal key ("5:30 PM"), which is also its
   identity: the URL `time` param, slot matching and the booking submission all

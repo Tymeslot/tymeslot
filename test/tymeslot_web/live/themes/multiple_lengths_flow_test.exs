@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
   @moduledoc """
   A meeting type can offer several lengths. The booker then picks one in a
-  step of its own, between the meeting type and the calendar, in both themes;
-  a type with one length never shows that step.
+  step of its own, between the meeting type and the calendar, in Quill and
+  Rhythm; a type with one length never shows that step.
   """
 
   use TymeslotWeb.LiveCase, async: false

@@ -2,10 +2,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabels do
   @moduledoc """
   Labels shared by every theme's booking form.
 
-  Both themes ask the same two questions of the same data (what does the submit
-  button say, and what do we call the organiser), and answered them with
-  byte-identical private copies that differed only in the label used when the
-  meeting type is ungated. Approval added a third and fourth branch to that
+  Every theme asks the same two questions of the same data (what does the
+  submit button say, and what do we call the organiser). Quill and Rhythm once
+  answered them with byte-identical private copies that differed only in the
+  label used when the meeting type is ungated. Approval added a third and fourth branch to that
   `cond`, which is exactly the point at which two copies start to drift: a
   wording fix applied to one theme silently leaves the other behind.
   """

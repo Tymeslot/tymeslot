@@ -351,8 +351,9 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
              "found #{inspect(drawn_selected(view))}"
   end
 
-  # The days drawn selected, across both themes' day buttons (Quill's month
-  # grid and narrow-screen week row, Rhythm's week strip).
+  # The days drawn selected, across every calendar theme's day buttons (Quill's
+  # month grid and narrow-screen week row, Rhythm's week strip, Paper's and
+  # Folio's month grids).
   defp drawn_selected(view) do
     view
     |> render()

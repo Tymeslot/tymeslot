@@ -93,7 +93,7 @@
 :where(:root) {
   --theme-font-heading: var(--theme-font-family);
 
-  /* Defaults (kind 5 above), each the value both shipped themes had. */
+  /* Defaults (kind 5 above), each the value Quill and Rhythm both had. */
   --border-width-thin: 1px;
   --border-width-medium: 2px;
   --border-width-thick: 3px;

@@ -43,7 +43,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       viewport with its actions row pinned on-screen (Quill's app shell).
     * `:schedule_view` - what the schedule step picks a time with:
       `:calendar` (a month or week calendar of days, then the chosen day's
-      times, as Quill and Rhythm) or `:week_grid` (the shared `WeekGrid`, a
+      times, as every shipped theme) or `:week_grid` (the shared `WeekGrid`, a
       week of times with one click per time). `TymeslotWeb.BookingDriver`
       picks a time from either through the markup contract; the tests of the
       calendar's own day buttons run for `:calendar` themes only.

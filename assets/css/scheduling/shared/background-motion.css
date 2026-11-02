@@ -38,8 +38,8 @@
 
 .background-motion-toggle:hover {
   background: var(--chrome-surface-hover);
-  /* Colours come from the theme's --chrome-* tokens (shared/tokens.css), which
-     both themes set to the same values. */
+  /* Colours come from the --chrome-* tokens (shared/tokens.css), whose
+     defaults no theme overrides. */
   border-color: var(--chrome-line-hover);
 }
 

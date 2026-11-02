@@ -37,8 +37,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarDaysTest do
       assert Enum.at(days, 3).available == true
     end
 
-    # Both themes call this from inside the schedule template, so the seven-day
-    # business-hours fallback must not cost a query per day.
+    # Quill and Rhythm call this from inside the schedule template, so the
+    # seven-day business-hours fallback must not cost a query per day.
     test "reads the weekly schedule and overrides once for the whole week" do
       profile = insert(:profile, timezone: "Etc/UTC")
       schedule = insert(:availability_schedule, profile: profile, is_default: true)
@@ -221,7 +221,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarDaysTest do
   # Rhythm's week view and Quill's narrow-screen weekly row both render from
   # `get_week_days/5` and both disable the day button on `available: false`,
   # so the distinction between "the calendar says no" and "nobody asked the
-  # calendar" is made once, here, for both themes.
+  # calendar" is made once, here, for both.
   describe "get_week_days/5 with a week the availability map does not cover" do
     test "the fetched block covers the week of a month's last day on either week start" do
       # August 2026 is the shape that once escaped: a 31-day month whose 1st

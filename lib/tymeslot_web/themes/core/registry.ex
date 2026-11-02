@@ -64,7 +64,9 @@ defmodule TymeslotWeb.Themes.Core.Registry do
       iex> Registry.all_themes()
       %{
         quill: %{id: "1", name: "Quill", ...},
-        rhythm: %{id: "2", name: "Rhythm", ...}
+        rhythm: %{id: "2", name: "Rhythm", ...},
+        paper: %{id: "3", name: "Paper", ...},
+        folio: %{id: "4", name: "Folio", ...}
       }
   """
   @spec all_themes() :: %{theme_key() => theme_definition()}

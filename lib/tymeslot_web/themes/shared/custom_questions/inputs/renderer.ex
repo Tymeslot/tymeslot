@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer do
   @moduledoc """
-  Single entry point used by both Quill and Rhythm to render the input
+  Single entry point used by every theme to render the input
   control for a custom question (the one on show, or each of them on a
   screen that shows them all, which passes `autofocus={false}`).
   Pattern-matches on `definition["type"]` and dispatches to the

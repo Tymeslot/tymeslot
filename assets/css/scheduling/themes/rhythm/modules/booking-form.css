@@ -320,7 +320,7 @@
    ADD GUESTS FIELD
    Collapsible chip/token field; a sibling of the booking form, matched to its
    width and styled with Rhythm's surfaces, radii and cyan accent. The
-   structure both themes share is in shared/components/booking-fields.css.
+   structure every theme shares is in shared/components/booking-fields.css.
    ============================================================================ */
 
 .rhythm-theme-wrapper .guest-field,

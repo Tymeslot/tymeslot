@@ -454,7 +454,7 @@ assets/css/scheduling/
         └── theme.css
 ```
 
-The two themes deliberately split their modules at **different granularities** —
+Quill and Rhythm deliberately split their modules at **different granularities**:
 there is no fixed module list. Quill breaks UI controls into many small files;
 Rhythm consolidates them into `components.css`. Match whichever style suits your
 theme; only `variables.css`, `base.css`, and `iframe.css` are universally expected.
