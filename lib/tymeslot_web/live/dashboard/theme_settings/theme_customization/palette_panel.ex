@@ -237,8 +237,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
   defp primary_swatches(%{colors: colors}),
     do: [colors.primary, colors.secondary, colors.accent]
 
-  # The presets' names (Quill and Rhythm's through Paper's palettes, which
-  # share them) and a seed's "Custom" all have `dashboard_appearance` entries.
+  # The presets' names (every theme's, Paper's palettes sharing Quill and
+  # Rhythm's) and a seed's "Custom" all have `dashboard_appearance` entries.
   defp scheme_name(%{name: name}),
     do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_appearance", name)
 end

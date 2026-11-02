@@ -72,6 +72,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           <h2 id="folio-details-heading" class="folio-eyebrow">
             {dgettext("booking", "Meeting Details")}
           </h2>
+          <p :if={@meeting_type} class="folio-details__subject" data-testid="chosen-meeting-type">
+            {@meeting_type.name}
+          </p>
           <dl class="folio-details__list">
             <div class="folio-details__row">
               <dt>{dgettext("booking", "Date")}</dt>

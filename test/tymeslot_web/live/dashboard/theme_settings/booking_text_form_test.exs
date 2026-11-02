@@ -46,11 +46,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       assert html =~ "disabled"
     end
 
-    test "names both themes' defaults, not only the current theme's", %{conn: conn} do
+    test "names the other themes' defaults, not only the current theme's", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
 
       # A single heading displaces a different sentence in each theme, so the
-      # organiser has to be shown both.
+      # organiser has to be shown every one.
       assert html =~ "Arrange a meeting"
       assert html =~ "Schedule with Sarah"
       assert html =~ "your current theme"
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
 
       saved = Repo.reload!(profile)
       assert saved.booking_text_enabled
-      # The current theme's default heading, not the other theme's.
+      # The current theme's default heading, not another theme's.
       assert saved.booking_heading == "Arrange a meeting"
       assert saved.booking_greeting == "Hi! I'm Sarah."
       assert saved.booking_instruction == "Pick an option to get started."

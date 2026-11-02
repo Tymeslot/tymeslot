@@ -96,11 +96,11 @@ defmodule TymeslotWeb.Live.Scheduling.StepIndicatorNavigationTest do
           BookingDriver.continue(view)
 
           assert renders_indicator?(view)
-          refute has_element?(view, "[data-testid='duration-option']")
+          refute has_element?(view, "[data-fact='meeting_type']")
 
           view |> element(offered(1)) |> render_click()
 
-          assert has_element?(view, "[data-testid='duration-option']")
+          assert has_element?(view, "[data-fact='meeting_type']")
         end
       end
     end

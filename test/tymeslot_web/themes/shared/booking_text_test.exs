@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
   alias TymeslotWeb.Themes.Shared.BookingText
 
   describe "custom wording" do
-    test "reaches both themes from the one profile field" do
+    test "reaches Quill and Rhythm from the one profile field" do
       profile = customized(booking_heading: "Let's build something")
 
       assert BookingText.heading(profile, :quill, "Sam") == "Let's build something"

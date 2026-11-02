@@ -111,7 +111,11 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OfferMoment do
 
   # Spans, not a list: a button holds phrasing content only.
   defp entry(assigns) do
-    assigns = assign(assigns, :locations, MeetingTypes.location_options(assigns.meeting_type))
+    assigns =
+      assign(assigns,
+        locations: MeetingTypes.location_options(assigns.meeting_type),
+        description: BookingText.description(assigns.meeting_type)
+      )
 
     ~H"""
     <span class="folio-meeting__name">
@@ -133,8 +137,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OfferMoment do
       <span :if={@price} class="folio-meeting__price">{@price}</span>
     </span>
     <GroupSession.hint meeting_type={@meeting_type} class="folio-meeting__group" />
-    <span :if={present?(Map.get(@meeting_type, :description))} class="folio-meeting__description">
-      {@meeting_type.description}
+    <span :if={@description} class="folio-meeting__description">
+      {@description}
     </span>
     """
   end
@@ -147,6 +151,4 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OfferMoment do
   end
 
   defp locked?(_assigns), do: false
-
-  defp present?(text), do: is_binary(text) and String.trim(text) != ""
 end

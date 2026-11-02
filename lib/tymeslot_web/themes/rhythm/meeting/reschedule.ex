@@ -68,6 +68,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                     organizer_profile={@organizer_profile}
                     locale={@locale}
                     organizer_name={@meeting.organizer_name}
+                    meeting_type={@meeting.meeting_type}
                     class="ticket-body"
                   />
 

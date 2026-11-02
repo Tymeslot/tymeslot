@@ -347,7 +347,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     assigns =
       assign(assigns,
         locations: MeetingTypes.location_options(assigns.meeting_type),
-        description: description(assigns.meeting_type)
+        description: BookingText.description(assigns.meeting_type)
       )
 
     ~H"""
@@ -501,10 +501,4 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     day[:current_month] == true and day[:available] == true and day[:past] != true and
       Map.get(day, :loading, false) != true
   end
-
-  defp description(%{description: text}) when is_binary(text) do
-    if String.trim(text) == "", do: nil, else: text
-  end
-
-  defp description(_meeting_type), do: nil
 end

@@ -43,7 +43,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       viewport with its actions row pinned on-screen (Quill's app shell).
     * `:schedule_view` - what the schedule step picks a time with:
       `:calendar` (a month or week calendar of days, then the chosen day's
-      times, as Quill and Rhythm) or `:week_grid` (the shared `WeekGrid`, a
+      times, as every shipped theme) or `:week_grid` (the shared `WeekGrid`, a
       week of times with one click per time). `TymeslotWeb.BookingDriver`
       picks a time from either through the markup contract; the tests of the
       calendar's own day buttons run for `:calendar` themes only.
@@ -224,6 +224,20 @@ defmodule TymeslotWeb.ThemeTestMatrix do
   @doc "Every shipped theme id, in numeric order."
   @spec ids() :: [String.t()]
   def ids, do: Enum.map(all(), & &1.id)
+
+  @doc """
+  The shipped themes' entries that pass `fun`, in numeric id order: for a
+  suite that needs a capability (`schedule_view: :calendar`) rather than a
+  theme. Raises when no shipped theme passes, so a suite whose capability
+  every theme has dropped fails at compile time instead of running nothing.
+  """
+  @spec all_where((entry() -> boolean())) :: [entry()]
+  def all_where(fun) when is_function(fun, 1) do
+    case Enum.filter(all(), fun) do
+      [] -> raise ArgumentError, "no shipped theme in ThemeTestMatrix passes the filter"
+      themes -> themes
+    end
+  end
 
   @doc """
   The shipped theme ids whose customisation spec passes `fun`, in numeric

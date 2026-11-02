@@ -454,7 +454,7 @@ assets/css/scheduling/
         └── theme.css
 ```
 
-The two themes deliberately split their modules at **different granularities** —
+Quill and Rhythm deliberately split their modules at **different granularities**:
 there is no fixed module list. Quill breaks UI controls into many small files;
 Rhythm consolidates them into `components.css`. Match whichever style suits your
 theme; only `variables.css`, `base.css`, and `iframe.css` are universally expected.
@@ -1290,7 +1290,7 @@ A theme whose `schedule_view` is `:calendar` (days, then the chosen day's times)
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
-| `[data-testid="calendar-day"]` | a `<button>` per day with `data-date` (ISO date), `phx-click="select_date"`, `phx-value-date`, `phx-target`; `disabled` while the day has no times, is outside the month on show, or availability is loading; `aria-current="date"` on today in the visitor's timezone; the chosen day carries the class `selected` or `calendar-day--selected`; the days of the period on show also carry `data-fact="date"` and `data-value`, one copy per day (§"The markup contract") | theme | `linked_date_test.exs`, `timezone_change_selection_test.exs`, e2e, visual harness, and `AutoScrollToSlots` (moves focus on from a button matching `[data-testid="calendar-day"]` or `.week-day-cell`); `BookingDriver` reads its `data-fact="date"`; `visitor_today_test.exs` does not read the testid but the button itself (`button[phx-click='select_date'][aria-current='date']`) |
+| `[data-testid="calendar-day"]` | a `<button>` per day with `data-date` (ISO date), `phx-click="select_date"`, `phx-value-date`, `phx-target`; `disabled` while the day has no times, is outside the month on show, or availability is loading; `aria-current="date"` on today in the visitor's timezone; `aria-pressed` on every day, `"true"` on the chosen one, which is what the suites read (the class `selected` or `calendar-day--selected` is the theme's styling); the days of the period on show also carry `data-fact="date"` and `data-value`, one copy per day (§"The markup contract") | theme | `linked_date_test.exs`, `timezone_change_selection_test.exs`, e2e, visual harness, and `AutoScrollToSlots` (moves focus on from a button matching `[data-testid="calendar-day"]` or `.week-day-cell`); `BookingDriver` reads its `data-fact="date"`; `visitor_today_test.exs` does not read the testid but the button itself (`button[phx-click='select_date'][aria-current='date']`) |
 | `.calendar-day--loading` (or `.loading` on a `.week-day-cell`) | a day button while its availability is loading | theme | visual harness waits for it to clear |
 | `.calendar-day--other-month` | a padded day of the neighbouring month, if the grid pads | theme (optional) | visual harness (`SEL.day` ignores it) |
 | `button.calendar-nav-button` | each calendar navigation button, with `phx-click` `prev_month`, `next_month`, `prev_week` or `next_week`, `disabled` at the edge of the booking window | theme | `BookingTestHelpers.show_month/3` (`button[phx-click="next_month"]`, `prev_month`), visual harness (`[phx-click^="next"]`); `BookingDriver` reads the marked arrows' `data-intent="earlier"` and `"later"` |

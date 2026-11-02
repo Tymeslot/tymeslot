@@ -66,6 +66,26 @@
   color: var(--theme-text-secondary);
 }
 
+/* The chosen meeting type, named before its length: a booker who opened one
+   of several types of the same length must still see which one this is. */
+.meeting-type-name {
+  color: var(--theme-text);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.meeting-type-name + .meeting-type-length::before {
+  content: " · ";
+}
+
+/* The type's description spans the header under the organiser row. A width,
+   not a flex-basis: the header is a column on most cards, where a 100% basis
+   would be a height and wrap the description into a second column. */
+.schedule-header__description {
+  width: 100%;
+  color: var(--theme-text-secondary);
+}
+
 /* ============================================================================
    TIMEZONE SELECTOR
    The picker's shared structure and --dropdown-surface are in

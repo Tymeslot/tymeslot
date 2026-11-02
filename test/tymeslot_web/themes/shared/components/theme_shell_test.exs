@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
   element marked as the booker root, the organiser's colours, the
   owner-preview disclosure, the language switcher and the configured theme
   extensions. Where the chrome and the extensions sit is the theme's choice;
-  the page below lays them out as Quill and Rhythm do, in a grid of its own.
+  the page below lays them out as the shipped themes do, in a grid of its own.
   """
   # Mutates the node-wide :theme_extensions setting.
   use ExUnit.Case, async: false

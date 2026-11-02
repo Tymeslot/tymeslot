@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Components.MeetingTypeDescription
   alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
@@ -59,6 +60,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       disabled={!@available || !@current_month || @loading}
       aria-label={LocalizationHelpers.format_full_date_label(@day[:date] || @day["date"])}
       aria-current={@day.is_today && "date"}
+      aria-pressed={to_string(@selected)}
       {@rest}
     >
       <span class="calendar-day__number" aria-hidden="true">{@day.day}</span>
@@ -129,11 +131,22 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         </p>
                       <% end %>
 
-                      <p class="schedule-duration-label text-glass-primary">
-                        {dgettext("booking", "Duration: %{duration}",
-                          duration: BookingText.duration_label(assigns)
-                        )}
+                      <p
+                        class="schedule-meeting-summary text-glass-primary"
+                        data-testid="chosen-meeting-type"
+                      >
+                        <span :if={@meeting_type} class="schedule-meeting-name">
+                          {@meeting_type.name}
+                        </span>
+                        <span class="schedule-meeting-duration">
+                          {BookingText.duration_label(assigns)}
+                        </span>
                       </p>
+                      <MeetingTypeDescription.description
+                        id="schedule-meeting-description"
+                        meeting_type={@meeting_type}
+                        class="schedule-meeting-description text-glass-primary"
+                      />
 
                       <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
                       <MeetingPrice.hint
@@ -231,6 +244,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                 disabled={not day.available || day.loading}
                                 aria-label={LocalizationHelpers.format_full_date_label(day.date)}
                                 aria-current={day.today && "date"}
+                                aria-pressed={to_string(@selected_date == day.date)}
                               >
                                 <span class="week-day-name" aria-hidden="true">{day.day_name}</span>
                                 <span class="week-day-number" aria-hidden="true">{day.day_number}</span>

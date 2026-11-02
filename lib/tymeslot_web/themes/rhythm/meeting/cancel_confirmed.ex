@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
   attr :theme_tokens, :any, required: true
+  attr :meeting, :map, default: nil, doc: "the cancelled meeting"
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
   attr :legal_links, :map, required: true
@@ -43,6 +44,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                   <h1 class="confirmation-headline">
                     {dgettext("booking_manage", "Meeting Cancelled")}
                   </h1>
+                  <p
+                    :if={assigns[:meeting] && @meeting.meeting_type not in [nil, ""]}
+                    class="confirmation-subject"
+                    data-testid="chosen-meeting-type"
+                  >
+                    {@meeting.meeting_type}
+                  </p>
 
                   <p class="confirmation-message">
                     {dgettext("booking_manage", "Your meeting has been successfully cancelled.")}

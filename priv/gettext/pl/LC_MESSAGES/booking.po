@@ -102,11 +102,6 @@ msgstr "Nowa karta się nie otworzyła?"
 msgid "Duration"
 msgstr "Czas trwania"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
-#, elixir-autogen, elixir-format
-msgid "Duration: %{duration}"
-msgstr "Czas trwania: %{duration}"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address"
@@ -1010,16 +1005,6 @@ msgstr "Opłacono"
 msgid "Price:"
 msgstr "Cena:"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration}"
-msgstr "Rezerwujesz spotkanie na %{duration}"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration} with %{name}"
-msgstr "Rezerwujesz spotkanie na %{duration}, organizator: %{name}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Paid %{amount}"
@@ -1068,3 +1053,23 @@ msgstr "%{organizer} wykorzysta te dane, aby umówić z tobą spotkanie."
 #, elixir-autogen, elixir-format
 msgid "The organiser uses these details to arrange your meeting."
 msgstr "Organizator wykorzysta te dane, aby umówić z tobą spotkanie."
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show less"
+msgstr "Pokaż mniej"
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show more"
+msgstr "Pokaż więcej"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration})"
+msgstr "Rezerwujesz spotkanie %{meeting} (%{duration})"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration}) with %{name}"
+msgstr "Rezerwujesz spotkanie %{meeting} (%{duration}), organizator: %{name}"

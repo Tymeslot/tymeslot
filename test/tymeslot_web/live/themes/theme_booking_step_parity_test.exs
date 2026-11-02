@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
     :ok
   end
 
-  @duration_option "button[data-testid='duration-option']"
+  @duration_option "[data-fact='meeting_type']"
 
   for theme <- ThemeTestMatrix.all() do
     @tag :capture_log

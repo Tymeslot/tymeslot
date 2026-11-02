@@ -4,9 +4,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   instruction.
 
   The wording is stored on the profile and applies to every theme, so this form
-  spells out what a single heading replaces in each of them: the two themes open
-  differently by default, and an organiser editing one field needs to see both
-  sentences it displaces.
+  spells out what a single heading replaces in each of them: the themes open
+  differently by default, and an organiser editing one field needs to see every
+  sentence it displaces.
 
   ## Saving
 

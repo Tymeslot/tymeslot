@@ -9,6 +9,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
   alias Tymeslot.ThemeCustomizations.RhythmSpec
   alias Tymeslot.ThemeCustomizations.Specs
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
+  alias TymeslotWeb.ThemeTestMatrix
 
   describe "theme customizations" do
     setup do
@@ -94,11 +95,18 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       refute ThemeCustomizations.supports_background?("9", :video)
     end
 
-    test "every shipped theme offers image and video backgrounds" do
-      for theme_id <- ["1", "2"] do
-        assert ThemeCustomizations.supports_background?(theme_id, :image), theme_id
-        assert ThemeCustomizations.supports_background?(theme_id, :video), theme_id
-      end
+    test "every shipped theme offers the backgrounds the matrix says it renders" do
+      # The matrix's `video_background` is what the background tests expect on
+      # the page (the motion toggle); a theme offering video also offers
+      # images. A theme that offers neither (Paper, Folio) is held to that.
+      mismatched =
+        Enum.reject(ThemeTestMatrix.all(), fn theme ->
+          ThemeCustomizations.supports_background?(theme.id, :video) == theme.video_background and
+            ThemeCustomizations.supports_background?(theme.id, :image) == theme.video_background
+        end)
+
+      assert mismatched == [],
+             "backgrounds disagree with the matrix: #{inspect(Enum.map(mismatched, & &1.name))}"
     end
 
     test "get_defaults/1 returns theme-specific defaults" do

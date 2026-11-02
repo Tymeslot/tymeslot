@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   The failure this guards against is the one the whole feature exists to fix:
   a visitor who picks a time, sees "You're All Set!", and only learns from an
   email that nobody has agreed to it. Every stage of the flow is checked in
-  both themes, and the confirmation screen is checked hardest, because that is
+  every theme, and the confirmation screen is checked hardest, because that is
   the screen that used to lie.
   """
 
