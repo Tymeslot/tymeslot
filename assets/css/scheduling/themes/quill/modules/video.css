@@ -5,22 +5,38 @@
   background: transparent;
 }
 
-/* Darkening veil over any image background. The glass content is tuned for the
-   dark default gradient, so a bright photo leaves card text, the step heading,
-   and the floating chrome under-contrasted. `isolation` turns the background
-   layer into a stacking context, so the z-index:-1 veil sits above the image but
-   below every piece of content — no per-element z-index needed. */
-.main-gradient[style*="background-image"] {
+/* Darkening veil over any image or solid colour background. The glass
+   content is white ink on translucent dark glass, tuned for the dark default
+   gradient, so a bright photo or a light colour (white, yellow) turns the glass
+   mid-grey and leaves card text, the step band, and the floating chrome
+   under-contrasted. Veiling the page rather than flooring each surface keeps
+   the glass translucent and covers everything that sits straight on the page
+   (the step band, the heading, the chrome) in one rule. `isolation` turns the
+   background layer into a stacking context, so the z-index:-1 veil sits above
+   the background but below every piece of content, with no per-element
+   z-index needed. A gradient preset is drawn with `background:` and is
+   neither matched nor veiled. */
+.main-gradient:is([style*="background-image"], [style*="background-color"]) {
   isolation: isolate;
 }
 
-.main-gradient[style*="background-image"]::after {
+.main-gradient:is([style*="background-image"], [style*="background-color"])::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
   background: var(--background-media-scrim);
+}
+
+/* A solid colour is known, so its veil can follow its lightness: none on a
+   dark colour, which already reads like the default gradient, up to the
+   strongest on white or yellow (--background-colour-scrim). Browsers without
+   relative colours keep the fixed media veil above. */
+@supports (color: oklch(from red l c h)) {
+  .main-gradient[style*="background-color"]::after {
+    background: var(--background-colour-scrim);
+  }
 }
 
 /* Video Background */

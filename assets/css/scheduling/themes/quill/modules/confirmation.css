@@ -10,6 +10,7 @@
 
 .confirmation-badge-dot {
   background: var(--theme-success);
+  color: var(--theme-on-success);
   box-shadow: var(--shadow-success-md);
 }
 

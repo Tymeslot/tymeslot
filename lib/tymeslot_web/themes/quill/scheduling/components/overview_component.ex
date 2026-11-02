@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       <%!-- The gap keeps the duration badge clear of the icon, which a range
             such as "15–120 min" would otherwise run into. --%>
       <div class="flex items-center justify-between gap-4">
-        <div class="text-left flex-1">
+        <div class="text-left flex-1 min-w-0">
           <div class="flex items-start justify-between gap-2 mb-1">
             <h3 class="duration-card-title font-bold flex-1">
               {@title}
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
         </div>
         <%= if @icon != "none" do %>
           <%= if String.starts_with?(@icon, "hero-") do %>
-            <.icon name={sanitize_css_class(@icon)} class="duration-card-icon text-white" />
+            <.icon name={sanitize_css_class(@icon)} class="duration-card-icon" />
           <% else %>
             <div class="duration-card-emoji">{@icon}</div>
           <% end %>

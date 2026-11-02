@@ -136,32 +136,48 @@
   border-color: var(--border-strong);
 }
 
-.duration-card--selected .duration-card-description {
-  color: var(--text-opacity-medium-high);
-}
-
 .duration-card-badge {
   background: var(--surface-intense);
   color: var(--text-opacity-high);
   backdrop-filter: blur(10px);
 }
 
-/* duration-card-title: replaces text-base sm:text-lg md:text-xl */
+/* duration-card-title: replaces text-base sm:text-lg md:text-xl.
+   A long name (a German compound, a URL) breaks inside the word rather than
+   widening the card past the screen; the min-width lets its flex column
+   shrink below that word's width. */
 .duration-card-title {
   font-size: var(--theme-font-size-base);
   color: var(--text-opacity-high);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* duration-card-description: replaces text-xs sm:text-sm md:text-base */
 .duration-card-description {
   font-size: var(--theme-font-size-xs);
   color: var(--text-opacity-medium-low);
+  overflow-wrap: anywhere;
 }
 
 /* duration-card-icon: replaces w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 */
 .duration-card-icon {
   width: 1.5rem;
   height: 1.5rem;
+  flex-shrink: 0;
+  color: var(--text-opacity-high);
+}
+
+/* On the selected card everything sits on the primary fill, so it all takes
+   the fill's on-primary ink: white is 2.43:1 on the default turquoise. */
+.duration-card--selected :is(.duration-card-title, .duration-card-description, .duration-card-icon, .duration-card-emoji) {
+  color: var(--theme-on-primary);
+}
+
+.duration-card--selected :is(.duration-card-badge, .approval-pill) {
+  border-color: var(--theme-on-primary);
+  background: var(--duration-badge-selected-surface);
+  color: var(--theme-on-primary);
 }
 
 /* duration-card-emoji: replaces text-xl sm:text-2xl md:text-3xl */

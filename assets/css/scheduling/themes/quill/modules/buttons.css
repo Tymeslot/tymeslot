@@ -40,9 +40,11 @@
   border-color: var(--theme-primary);
 }
 
+/* From the darker red down, not from --theme-danger: white is only 3.76:1
+   on that one. */
 .action-button--danger {
-  background: linear-gradient(135deg, var(--theme-danger) 0%, var(--theme-danger-dark) 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--theme-danger-dark) 0%, var(--theme-danger-deep) 100%);
+  color: var(--text-opacity-full);
 }
 
 .action-button--danger:hover {

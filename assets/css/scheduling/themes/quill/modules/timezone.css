@@ -29,6 +29,16 @@
   height: 1rem;
 }
 
+/* --- Picker width ---
+   As wide as the zone's name needs, up to the room the header gives it, so
+   "London, United Kingdom" is cut short only where it truly does not fit
+   (the shared fixed 14rem cut it on a wide desktop card). */
+
+.tz-picker {
+  width: max-content;
+  max-width: 100%;
+}
+
 /* --- Trigger button --- */
 
 .tz-picker__trigger {
@@ -67,7 +77,7 @@
 .timezone-name {
   font-size: var(--theme-font-size-xs);
   font-weight: var(--font-weight-medium);
-  color: white;
+  color: var(--text-opacity-full);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -182,7 +192,7 @@
   }
 
   .tz-picker {
-    width: 18rem;
+    min-width: 18rem;
   }
 
   .tz-picker__panel {

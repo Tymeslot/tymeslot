@@ -64,6 +64,12 @@
   --theme-info: #6366f1;
   --theme-danger: #ef4444;
   --theme-danger-dark: #dc2626;
+  /* The danger button's lower stop: white keeps 4.5:1 across the whole
+     gradient from --theme-danger-dark (4.83:1) down to here. */
+  --theme-danger-deep: #b91c1c;
+  /* Ink on a success fill (the confirmation badge's dot): white is 2.54:1 on
+     the success green, this slate 7:1. */
+  --theme-on-success: #0f172a;
   --theme-error-bg: rgba(254, 226, 226, 0.08);
   --theme-error-border: rgba(239, 68, 68, 0.6);
   --theme-error-border-focus: rgba(239, 68, 68, 0.8);
@@ -100,7 +106,6 @@
   /* Dark Surface Overlays (for backgrounds) */
   --surface-dark-medium: rgba(0, 0, 0, 0.4);
   --surface-dark-strong: rgba(0, 0, 0, 0.5);
-  --surface-dark-very-intense: rgba(0, 0, 0, 0.9);
 
   /* Border Opacity Levels */
   --border-subtle: rgba(255, 255, 255, 0.1);
@@ -197,6 +202,9 @@
      so a custom palette's contrast pair carries over to the badge. */
   --seat-selected: var(--theme-on-primary);
   --seat-selected-bg: color-mix(in srgb, var(--theme-on-primary) 14%, transparent);
+  /* The duration badge on a selected meeting-type card: the same faint wash
+     of the on-primary ink over the primary fill. */
+  --duration-badge-selected-surface: color-mix(in srgb, var(--theme-on-primary) 14%, transparent);
 
   /* Component-Specific Tokens - Container Widths */
   --container-xs: 280px;
@@ -249,6 +257,11 @@
      dark gradient. Without it a bright photo or video leaves card text, the step
      heading, and the floating chrome under-contrasted. */
   --background-media-scrim: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55));
+  /* The veil over a solid colour background (video.css), black at an alpha
+     that grows with the colour's OKLCH lightness: nothing up to 0.3 (the
+     default gradient's stops sit below it), 0.7 from about 0.88 (white,
+     yellow). --theme-background holds the organiser's colour then. */
+  --background-colour-scrim: oklch(from var(--theme-background) 0 0 0 / clamp(0, (l - 0.3) * 1.2, 0.7));
 
   /* Glassmorphism Effects */
   --glass-blur: 20px;
@@ -261,21 +274,9 @@
   /* Card Border Radius (legacy - use radius tokens) */
   --card-border-radius: 1.5rem;
 
-  /* Input Glassmorphism Colors (component-specific) */
-  --input-border-glass: rgba(255, 255, 255, 0.3);
-  --input-border-glass-disabled: rgba(255, 255, 255, 0.2);
-  --input-bg-glass: rgba(0, 0, 0, 0.5);
-  --input-bg-glass-focus: rgba(0, 0, 0, 0.6);
-  --input-bg-glass-disabled: rgba(0, 0, 0, 0.2);
-  --input-placeholder-glass: rgba(255, 255, 255, 0.5);
-  --input-error-border: var(--theme-error-border);
-  --input-error-border-focus: var(--theme-error-border-focus);
-  --input-error-bg: var(--theme-error-bg);
+  /* Form field focus (the fields themselves are the light ones below) */
   --input-error-focus-ring: var(--theme-primary-focus);
-  --input-shadow-base: rgba(0, 0, 0, 0.15);
   --input-shadow-focus: rgba(0, 0, 0, 0.2);
-  --input-inset-highlight: rgba(255, 255, 255, 0.1);
-  --input-inset-highlight-focus: rgba(255, 255, 255, 0.15);
 
   /* Option / Yes-No Tile Glassmorphism (custom-questions step) — the selectable
      glass tiles share one surface system; tokenised here so both the yes/no
@@ -373,17 +374,26 @@
   --dropdown-surface: linear-gradient(135deg, rgba(20, 15, 45, 0.98) 0%, rgba(30, 20, 60, 0.97) 100%);
 
   /* Text shadows */
-  --text-shadow-input: 0 1px 2px rgba(0, 0, 0, 0.5);
   --text-shadow-strong: 0 2px 4px rgba(0, 0, 0, 0.3);
   --text-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.2);
   --text-shadow-faint: 0 1px 2px rgba(0, 0, 0, 0.2);
 
-  /* Light form fields (booking form, phone location) */
+  /* Light form fields (booking form, questions, phone location). The field
+     is near white whatever the background, so every colour here is judged
+     against white: the placeholder clears 4.5:1 (WCAG 1.4.3), the edge and
+     the error edge clear 3:1 against both the field and the dark card
+     (1.4.11). An invalid or disabled field stays light, so its typed text
+     keeps the field's dark ink. */
   --input-light-surface: rgba(255, 255, 255, 0.92);
-  --input-light-line: rgba(255, 255, 255, 0.28);
-  --input-light-line-hover: rgba(255, 255, 255, 0.45);
+  --input-light-line: #64748b;
+  --input-light-line-hover: #475569;
   --input-light-ink: rgb(15, 23, 42);
-  --input-light-placeholder: rgba(15, 23, 42, 0.45);
+  --input-light-placeholder: #475569;
+  --input-light-error-surface: #fef2f2;
+  --input-light-error-line: #dc2626;
+  --input-light-surface-disabled: #cbd5e1;
+  --input-light-line-disabled: #94a3b8;
+  --input-light-ink-disabled: #334155;
   /* The custom-question dropdown's chevron sits on that light field
      (shared/components/custom-questions.css). */
   --select-chevron-ink: var(--input-light-ink);

@@ -63,12 +63,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon
                             :if={!ApprovalDisplay.awaiting_approval?(assigns)}
                             name="hero-check"
-                            class="confirmation-badge-icon text-white stroke-3"
+                            class="confirmation-badge-icon stroke-3"
                           />
                           <.icon
                             :if={ApprovalDisplay.awaiting_approval?(assigns)}
                             name="hero-clock"
-                            class="confirmation-badge-icon text-white stroke-3"
+                            class="confirmation-badge-icon stroke-3"
                           />
                         </div>
                         <div class={[
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           ApprovalDisplay.awaiting_approval?(assigns) &&
                             "confirmation-badge-dot--pending"
                         ]}>
-                          <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon text-white" />
+                          <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon" />
                         </div>
                       </div>
                     </div>

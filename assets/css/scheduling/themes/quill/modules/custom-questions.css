@@ -1,37 +1,8 @@
-/* Custom Questions Step. Quill's own part of the step: its text inputs and
-   radio lists, and the glass treatment of the shared answer controls in
+/* Custom Questions Step. Quill's own part of the step: its radio lists, and
+   the glass treatment of the shared answer controls in
    `shared/components/custom-questions.css`. */
 
-/* ===== Inputs ===== */
-
 .custom-questions-progress { letter-spacing: var(--letter-spacing-wide); }
-
-.custom-question-input {
-  width: 100%;
-  padding: var(--input-padding);
-  border-radius: var(--input-border-radius);
-  border: var(--border-width-thin) solid var(--input-border-glass);
-  background: var(--input-bg-glass);
-  backdrop-filter: blur(var(--glass-blur-md));
-  -webkit-backdrop-filter: blur(var(--glass-blur-md));
-  color: white;
-  font-size: var(--theme-font-size-base);
-  transition: var(--transition-normal);
-  box-shadow: 0 2px 8px var(--input-shadow-base), inset 0 1px 0 var(--input-inset-highlight);
-}
-
-.custom-question-input:focus {
-  outline: none;
-  border-color: var(--theme-primary);
-  background: var(--input-bg-glass-focus);
-  box-shadow: 0 0 0 3px var(--theme-primary-focus), 0 4px 12px var(--input-shadow-focus), inset 0 1px 0 var(--input-inset-highlight-focus);
-}
-
-@supports not (backdrop-filter: blur(var(--glass-blur-md))) {
-  .custom-question-input {
-    background: var(--surface-dark-very-intense);
-  }
-}
 
 .custom-question-radios,
 .custom-question-checkboxes { display: flex; flex-direction: column; gap: var(--space-xs); }

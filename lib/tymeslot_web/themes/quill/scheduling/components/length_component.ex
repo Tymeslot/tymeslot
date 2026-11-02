@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                       <h3 class="duration-card-title font-bold text-left">
                         {LocalizationHelpers.format_duration(minutes)}
                       </h3>
-                      <.icon name="hero-clock" class="duration-card-icon text-white" />
+                      <.icon name="hero-clock" class="duration-card-icon" />
                     </div>
                   </button>
                 </div>
