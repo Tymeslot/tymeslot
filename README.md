@@ -42,7 +42,7 @@
 <p align="center">
   <img src="./priv/static/icons/providers/calendar/medium/google.webp" alt="Google Calendar" title="Google Calendar" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/calendar/outlook.svg" alt="Outlook" title="Outlook" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/calendar/apple.svg" alt="Apple iCloud" title="Apple iCloud" height="32" />&nbsp;
+  <picture><source media="(prefers-color-scheme: dark)" srcset="./priv/static/images/readme/apple-dark.svg" /><img src="./priv/static/icons/providers/calendar/apple.svg" alt="Apple iCloud" title="Apple iCloud" height="32" /></picture>&nbsp;
   <img src="./priv/static/icons/providers/calendar/medium/nextcloud.webp" alt="Nextcloud" title="Nextcloud" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/calendar/caldav.svg" alt="CalDAV" title="CalDAV" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/calendar/radicale.svg" alt="Radicale" title="Radicale" height="32" />&nbsp;
