@@ -177,3 +177,13 @@ msgstr "Votaciones que invitan, confirman y te mantienen al tanto"
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
 msgstr "Una votación puede ser abierta (cualquiera que tenga el enlace pide por correo su enlace para votar) o solo por invitación. Puedes recibir un correo a medida que llegan los votos. Después de enviarla, puedes cambiar el plazo, agregar horarios, reenviar una invitación y quitar personas; los recordatorios llegan a las personas invitadas que todavía no votaron. La reunión que confirma una votación es tuya: todas las personas que participan son invitados, y solo tú puedes moverla o cancelarla."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot now speaks Spanish"
+msgstr "Tymeslot ya habla español"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Your dashboard, booking pages and every email are now available in Spanish. Tymeslot follows your browser's language, or you can choose one yourself in Account Settings. People who book you see booking pages and confirmations in their own language too."
+msgstr "Tu panel, tus páginas de reservas y todos los correos ya están disponibles en español. Tymeslot sigue el idioma de tu navegador, o puedes elegir uno en Configuración de la cuenta. Las personas que reservan contigo también ven las páginas de reservas y las confirmaciones en su propio idioma."

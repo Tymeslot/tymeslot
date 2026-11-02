@@ -35,17 +35,39 @@ defmodule Tymeslot.Announcements.Catalog do
   @meeting_polls_published_at ~U[2026-10-23 00:00:00Z]
   @meeting_polls_expires_at ~U[2026-11-22 00:00:00Z]
 
+  @spanish_published_at ~U[2026-11-02 00:00:00Z]
+  @spanish_expires_at ~U[2026-12-02 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
     # entry's translatable copy readable in isolation.
     [
+      spanish(),
       meeting_polls(),
       group_bookings(),
       meeting_locations(),
       video_providers(),
       time_off()
     ]
+  end
+
+  defp spanish do
+    %Announcement{
+      key: "spanish_language",
+      title: dgettext("onboarding", "Tymeslot now speaks Spanish"),
+      body:
+        dgettext(
+          "onboarding",
+          "Your dashboard, booking pages and every email are now available in Spanish. " <>
+            "Tymeslot follows your browser's language, or you can choose one yourself in " <>
+            "Account Settings. People who book you see booking pages and confirmations in " <>
+            "their own language too."
+        ),
+      image_path: "/images/announcements/spanish.svg",
+      published_at: @spanish_published_at,
+      expires_at: @spanish_expires_at
+    }
   end
 
   defp meeting_polls do
