@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
@@ -130,13 +131,19 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                   </div>
 
                   <div>
-                    <h1 class="section-header overview-title">
+                    <JourneyComponents.moment_heading
+                      tag="h1"
+                      moment={assigns[:moment]}
+                      moment_state={assigns[:moment_state]}
+                      focus={assigns[:journey_focus]}
+                      class="section-header overview-title"
+                    >
                       {BookingText.heading(
                         @organizer_profile,
                         :quill,
                         Profiles.display_name(@organizer_profile)
                       )}
-                    </h1>
+                    </JourneyComponents.moment_heading>
                     <%!-- Greeting and instruction are separate settings, often
                          separate thoughts; each starts on its own line, as the
                          Rhythm theme shows them. --%>

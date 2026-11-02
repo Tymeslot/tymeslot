@@ -224,6 +224,18 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
                Runtime.handle_step_event(back, :schedule, :back_step, nil)
     end
 
+    test "a move to another moment sends the focus there; a refused one leaves it" do
+      refused = socket(%{current_state: :overview, meeting_types: [@intro]})
+      back = socket(%{current_state: :schedule, entered_via_overview: true})
+
+      assert {:noreply, refused} = Runtime.handle_step_event(refused, :overview, :next_step, nil)
+      assert refused.assigns.current_state == :overview
+      refute Map.has_key?(refused.assigns, :journey_focus)
+
+      assert {:noreply, back} = Runtime.handle_step_event(back, :schedule, :back_step, nil)
+      assert %{current_state: :overview, journey_focus: :overview} = back.assigns
+    end
+
     test "next from a moment no longer on screen is not handled" do
       socket = socket(%{current_state: :schedule})
 
@@ -376,7 +388,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
       socket = socket(%{current_state: :schedule, meeting_type: nil, entered_via_overview: true})
 
       assert {:noreply, socket} = Runtime.navigate_to_step(socket, %{"step" => "1"})
-      assert socket.assigns.current_state == :overview
+      assert %{current_state: :overview, journey_focus: :overview} = socket.assigns
+    end
+
+    test "leaves the focus where it is when the step moves nothing" do
+      socket = socket(%{current_state: :schedule, meeting_type: nil})
+
+      assert {:noreply, socket} = Runtime.navigate_to_step(socket, %{"step" => "3"})
+      assert socket.assigns.current_state == :schedule
+      refute Map.has_key?(socket.assigns, :journey_focus)
     end
 
     test "ignores a step that is not a string" do

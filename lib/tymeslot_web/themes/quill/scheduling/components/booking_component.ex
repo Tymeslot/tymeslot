@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -61,9 +62,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
             <div class="w-full">
               <.glass_morphism_card class="booker-card booking-form-card" data-testid="booker-card">
                 <div class="booking-card-body">
-                  <h1 class="section-header booking-heading booking-heading-wrapper">
+                  <JourneyComponents.moment_heading
+                    tag="h1"
+                    moment={assigns[:moment]}
+                    moment_state={assigns[:moment_state]}
+                    focus={assigns[:journey_focus]}
+                    class="section-header booking-heading booking-heading-wrapper"
+                  >
                     {dgettext("booking", "Enter Your Details")}
-                  </h1>
+                  </JourneyComponents.moment_heading>
 
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>

@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.LengthComponent do
 
   alias Tymeslot.MeetingTypes.Lengths
   alias TymeslotWeb.Themes.Paper.Components
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -68,7 +69,15 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.LengthComponent do
 
       <div class="paper-overview">
         <header class="paper-intro">
-          <h1 class="paper-title">{@meeting_type && @meeting_type.name}</h1>
+          <JourneyComponents.moment_heading
+            tag="h1"
+            moment={assigns[:moment]}
+            moment_state={assigns[:moment_state]}
+            focus={assigns[:journey_focus]}
+            class="paper-title"
+          >
+            {@meeting_type && @meeting_type.name}
+          </JourneyComponents.moment_heading>
           <p class="paper-intro__instruction">
             {dgettext("booking", "How long should the meeting be?")}
           </p>

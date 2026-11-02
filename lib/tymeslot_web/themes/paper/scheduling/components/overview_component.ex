@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -73,7 +74,15 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
       <div class="paper-overview">
         <header class="paper-intro">
           <Components.avatar :if={is_nil(@logo)} profile={@organizer_profile} size={:lg} />
-          <h1 class="paper-title">{@heading}</h1>
+          <JourneyComponents.moment_heading
+            tag="h1"
+            moment={assigns[:moment]}
+            moment_state={assigns[:moment_state]}
+            focus={assigns[:journey_focus]}
+            class="paper-title"
+          >
+            {@heading}
+          </JourneyComponents.moment_heading>
           <p :if={@greeting} class="paper-intro__greeting">{@greeting}</p>
           <p :if={@instruction} class="paper-intro__instruction">{@instruction}</p>
         </header>

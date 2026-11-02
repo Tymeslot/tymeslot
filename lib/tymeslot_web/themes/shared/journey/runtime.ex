@@ -35,7 +35,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   (`settle/1`). The navigators and `BookingFlow` move through it. A fact's
   or an ambient event settles too, and when that moves `:current_state` on to
   a moment after the one the event came from, the new current moment
-  becomes `:journey_focus`. `clear/2` forgets facts and
+  becomes `:journey_focus`. Next, Back and the step indicator do the same
+  for every navigator, in either direction: a move that makes another
+  moment current makes it `:journey_focus`. Nothing sets it on page load
+  or on a reconnect, which mounts afresh. `clear/2` forgets facts and
   those depending on them. `navigate_to_step/2` is the step indicator's
   click, handed to the navigator's `go_to/3`.
 
@@ -70,7 +73,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     reply =
       cond do
         navigation?(journey, socket.assigns, moment_key, event) ->
-          navigate(journey, socket, event)
+          focus_on_move(navigate(journey, socket, event), socket)
 
         restart?(socket.assigns, moment_key, event) ->
           {:noreply, restart(socket)}
@@ -295,7 +298,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   @spec navigate_to_step(Socket.t(), map()) :: reply()
   def navigate_to_step(%Socket{assigns: %{journey: journey}} = socket, %{"step" => step})
       when is_binary(step),
-      do: journey.navigator.go_to(journey, socket, step)
+      do: focus_on_move(journey.navigator.go_to(journey, socket, step), socket)
 
   def navigate_to_step(socket, _params), do: {:noreply, socket}
 
@@ -335,6 +338,19 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   defp navigate(journey, socket, :next_step), do: journey.navigator.continue(journey, socket)
   defp navigate(journey, socket, :back_step), do: journey.navigator.back(journey, socket)
+
+  # Next, Back and the step indicator are the visitor's own moves: whatever
+  # the navigator, one that makes another moment current sends the focus to
+  # it (its `Journey.Components.moment_heading/1`), forward or back. A move
+  # refused, or one that stays inside the moment (the questions wizard's
+  # next question), leaves the focus on the control just pressed.
+  defp focus_on_move({:noreply, socket}, before) do
+    now = socket.assigns[:current_state]
+
+    if now == before.assigns[:current_state],
+      do: {:noreply, socket},
+      else: {:noreply, assign(socket, :journey_focus, now)}
+  end
 
   # The route whose entry the booking starts again on: the overview, or the
   # meeting type's own link (`/:username/:slug`, live action `:schedule`),

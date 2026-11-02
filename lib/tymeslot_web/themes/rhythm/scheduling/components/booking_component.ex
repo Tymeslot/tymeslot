@@ -54,6 +54,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 host_currency={@host_currency}
                 show_price={!@is_rescheduling}
                 locale={@locale}
+                moment={assigns[:moment]}
+                moment_state={assigns[:moment_state]}
+                focus={assigns[:journey_focus]}
               />
             </div>
 

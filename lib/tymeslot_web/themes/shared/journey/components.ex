@@ -1,18 +1,19 @@
 defmodule TymeslotWeb.Themes.Shared.Journey.Components do
   @moduledoc """
-  Markup the navigators showing several moments need around and inside them.
+  Markup the navigators need around and inside the moments.
 
     * `frame/1`: `SchedulingPage` renders the visible moments inside it. A
       navigator with `frame/0` names the element (`Navigators.Continuous` a
       `div`, `Navigators.Transcript` an ordered list that is a polite live
       region); for one without (`Navigators.Paged`) the moment is rendered
       bare, so a paged theme's DOM is what it was.
-    * `moment_heading/1`: the heading a moment opens with. It can take the
-      keyboard focus (`tabindex="-1"`), and takes it when its moment has
-      just become current through the visitor's own action (the runtime's
-      `:journey_focus`); never on page load. Its id carries the moment's
-      state, so a moment that becomes current again mounts a new heading and
-      takes the focus again. The focus alone scrolls only until the heading
+    * `moment_heading/1`: the heading a moment opens with, on every
+      navigator (on a paged theme, the heading of the moment's screen). It
+      can take the keyboard focus (`tabindex="-1"`), and takes it when its
+      moment has just become current through the visitor's own action (the
+      runtime's `:journey_focus`); never on page load. Its id carries the
+      moment's state, so a moment that becomes current again mounts a new
+      heading and takes the focus again. The focus alone scrolls only until the heading
       is in sight (in Chrome, to the middle of the view, smoothly), so the
       heading then asks to be brought to the top (`reveal_into_view.js`,
       below a sticky bar through its `scroll-margin-top`), unless it is

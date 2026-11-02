@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
 
   alias Tymeslot.MeetingTypes.Lengths
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -43,9 +44,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.LengthComponent do
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
-            <h1 class="slide-title">
+            <JourneyComponents.moment_heading
+              tag="h1"
+              moment={assigns[:moment]}
+              moment_state={assigns[:moment_state]}
+              focus={assigns[:journey_focus]}
+              class="slide-title"
+            >
               {@meeting_type && @meeting_type.name}
-            </h1>
+            </JourneyComponents.moment_heading>
             <p class="organizer-instruction">
               {dgettext("booking", "How long should the meeting be?")}
             </p>

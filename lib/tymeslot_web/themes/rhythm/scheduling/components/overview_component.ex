@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -48,13 +49,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
-            <h1 class="slide-title">
+            <JourneyComponents.moment_heading
+              tag="h1"
+              moment={assigns[:moment]}
+              moment_state={assigns[:moment_state]}
+              focus={assigns[:journey_focus]}
+              class="slide-title"
+            >
               {BookingText.heading(
                 @organizer_profile,
                 :rhythm,
                 Profiles.display_name(@organizer_profile)
               )}
-            </h1>
+            </JourneyComponents.moment_heading>
 
             <div class="organizer-profile">
               <div class="organizer-avatar">

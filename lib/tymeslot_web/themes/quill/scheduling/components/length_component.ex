@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
 
   alias Tymeslot.MeetingTypes.Lengths
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
@@ -52,9 +53,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
           <div class="w-full">
             <.glass_morphism_card class="booker-card">
               <div class="overview-card-body">
-                <h1 class="section-header overview-title">
+                <JourneyComponents.moment_heading
+                  tag="h1"
+                  moment={assigns[:moment]}
+                  moment_state={assigns[:moment_state]}
+                  focus={assigns[:journey_focus]}
+                  class="section-header overview-title"
+                >
                   {@meeting_type && @meeting_type.name}
-                </h1>
+                </JourneyComponents.moment_heading>
                 <p class="overview-description text-glass-primary">
                   {dgettext("booking", "How long should the meeting be?")}
                 </p>

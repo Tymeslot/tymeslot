@@ -74,6 +74,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.Components.WeekGrid
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -167,6 +168,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           meeting_type={@meeting_type}
           duration_text={@duration_text}
           price={@price}
+          moment={@moment}
+          moment_state={@moment_state}
+          focus={assigns[:journey_focus]}
         />
 
         <div :if={@view == "week"} class="paper-week" data-testid="paper-week">
@@ -333,7 +337,12 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   attr :meeting_type, :map, default: nil
   attr :duration_text, :string, required: true
   attr :price, :string, default: nil
+  attr :moment, :atom, required: true
+  attr :moment_state, :atom, required: true
+  attr :focus, :atom, default: nil
 
+  # The meeting type's name is the screen's heading: it takes the focus when
+  # the visitor moves on to the screen (`Journey.Components.moment_heading/1`).
   defp details(assigns) do
     assigns =
       assign(assigns,
@@ -345,7 +354,16 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     <aside class="paper-details">
       <Components.avatar profile={@organizer_profile} size={:sm} />
       <p class="paper-details__organiser">{Profiles.display_name(@organizer_profile)}</p>
-      <h1 :if={@meeting_type} class="paper-details__title">{@meeting_type.name}</h1>
+      <JourneyComponents.moment_heading
+        :if={@meeting_type}
+        tag="h1"
+        moment={@moment}
+        moment_state={@moment_state}
+        focus={@focus}
+        class="paper-details__title"
+      >
+        {@meeting_type.name}
+      </JourneyComponents.moment_heading>
       <ul class="paper-facts" role="list">
         <Components.fact icon="hero-clock">{@duration_text}</Components.fact>
         <Components.fact :for={location <- @locations} icon={LocationIcons.icon(location.kind)}>
