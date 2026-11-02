@@ -28,6 +28,7 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   require Logger
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingPages.Access
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Media.ImageMetadata
   alias Tymeslot.ThemeCustomizations
@@ -51,10 +52,12 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   """
   @spec attach_asset(ThemeCustomizations.scope(), String.t(), atom(), upload()) :: result()
   def attach_asset(scope, theme_id, field, upload) do
-    with {:ok, spec} <- Catalog.customization_spec(theme_id),
+    with :ok <- ThemeCustomizations.check_write(scope),
+         {:ok, spec} <- Catalog.customization_spec(theme_id),
          {:ok, group, kind} <- Specs.upload_group(spec, field) do
       attach(kind, scope, theme_id, {group, field}, upload)
     else
+      {:error, :upgrade_required} -> {:error, Access.locked_message()}
       _unavailable -> {:error, option_unavailable()}
     end
   end

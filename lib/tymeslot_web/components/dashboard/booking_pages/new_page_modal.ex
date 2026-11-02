@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
   def new_page_modal(assigns) do
     ~H"""
     <Modal.modal id="new-booking-page-modal" show={@show} on_cancel={@on_cancel}>
-      <:header>{dgettext("dashboard_appearance", "New booking page")}</:header>
+      <:header>{dgettext("dashboard_booking_pages", "New booking page")}</:header>
 
       <.form
         for={@form}
@@ -45,13 +45,13 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
       >
         <.input
           field={@form[:name]}
-          label={dgettext("dashboard_appearance", "Page name")}
+          label={dgettext("dashboard_booking_pages", "Page name")}
           maxlength={BookingPageSchema.name_max_length()}
         />
-        <.input field={@form[:slug]} label={dgettext("dashboard_appearance", "Address")} />
+        <.input field={@form[:slug]} label={dgettext("dashboard_booking_pages", "Address")} />
         <p class="text-token-sm text-tymeslot-500">
           {dgettext(
-            "dashboard_appearance",
+            "dashboard_booking_pages",
             "The page starts with your main page's theme and colours, its own texts switched off, and no meeting types."
           )}
         </p>
@@ -62,10 +62,10 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
             phx-click="hide_new_page"
             phx-target={@target}
           >
-            {dgettext("dashboard_appearance", "Cancel")}
+            {dgettext("dashboard_booking_pages", "Cancel")}
           </.action_button>
           <.action_button type="submit">
-            {dgettext("dashboard_appearance", "Create page")}
+            {dgettext("dashboard_booking_pages", "Create page")}
           </.action_button>
         </div>
       </.form>

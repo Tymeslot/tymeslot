@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.PageVisibility do
   @moduledoc """
   Where a meeting type is listed, shaped for the meeting type editor's
-  Visibility switches and the meeting type cards.
+  Visibility switches and the meeting type cards' "Unlisted" badge.
 
   The profile's own page at `/<username>` is the type's `is_private` flag;
   each booking page is a listing (`Tymeslot.BookingPages.memberships/1`). A type
@@ -36,18 +36,4 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.PageVisibility do
   @spec unlisted?(map(), map()) :: boolean()
   def unlisted?(memberships, type),
     do: type.is_private and not Map.has_key?(memberships, type.id)
-
-  @doc """
-  The addresses a type is listed on, for its card. Empty while the profile has
-  no booking pages, where the "Unlisted" badge says it all.
-  """
-  @spec addresses(String.t() | nil, [map()], map(), map()) :: [String.t()]
-  def addresses(_username, [], _memberships, _type), do: []
-
-  def addresses(username, pages, memberships, type) do
-    username
-    |> rows(pages, memberships, type)
-    |> Enum.filter(& &1.checked)
-    |> Enum.map(& &1.address)
-  end
 end

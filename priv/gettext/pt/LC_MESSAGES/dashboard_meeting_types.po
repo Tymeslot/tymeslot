@@ -429,3 +429,8 @@ msgstr[1] "As %{count} pessoas inscritas serão avisadas por e-mail."
 #, elixir-autogen, elixir-format
 msgid "On no booking page; reachable only by its direct link"
 msgstr "Em nenhuma página de agendamento; acessível só pelo link direto"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link"
+msgstr "Link de reserva"

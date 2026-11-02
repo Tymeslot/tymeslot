@@ -76,8 +76,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       # says so plainly rather than silently booking for real.
       |> assign_new(:preview_token, fn -> PreviewToken.sign(assigns.current_user.id) end)
       |> assign(:pages, BookingPages.list(profile.id))
-      |> assign_new(:selected_page_id, fn -> nil end)
-      |> assign_page_target()
+      |> select_page(assigns[:params]["page"])
 
     {:ok, socket}
   end
@@ -313,18 +312,30 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     )
   end
 
+  # The choice goes into the URL (`?page=<id>`), so a reload keeps it; the
+  # patch comes back through `update/2`.
   def handle_event("select_page", %{"page" => "profile"}, socket),
-    do: {:noreply, socket |> assign(:selected_page_id, nil) |> assign_page_target()}
+    do: {:noreply, push_patch(socket, to: ~p"/dashboard/embed")}
 
   def handle_event("select_page", %{"page" => id}, socket) when is_binary(id) do
     case Enum.find_value(socket.assigns.pages, &(to_string(&1.id) == id && &1.id)) do
       nil -> reject_invalid_event("select_page", socket)
-      page_id -> {:noreply, socket |> assign(:selected_page_id, page_id) |> assign_page_target()}
+      page_id -> {:noreply, push_patch(socket, to: ~p"/dashboard/embed?#{[page: page_id]}")}
     end
   end
 
   def handle_event("select_page", _params, socket),
     do: reject_invalid_event("select_page", socket)
+
+  # A `page` the profile does not have (deleted since the link was copied)
+  # shows the main page.
+  defp select_page(socket, page_param) do
+    page_id = Enum.find_value(socket.assigns.pages, &(to_string(&1.id) == page_param && &1.id))
+
+    socket
+    |> assign(:selected_page_id, page_id)
+    |> assign_page_target()
+  end
 
   # The snippet, link and preview follow the chosen page: its address in place
   # of the username, and its theme. Allowed embed domains stay the profile's.

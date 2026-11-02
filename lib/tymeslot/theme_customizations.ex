@@ -9,6 +9,7 @@ defmodule Tymeslot.ThemeCustomizations do
   require Logger
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingPages.Access
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
@@ -45,7 +46,8 @@ defmodule Tymeslot.ThemeCustomizations do
   @type customization_input :: ThemeCustomizationSchema.t() | map() | nil
   @type upload_attrs :: %{path: String.t(), filename: String.t()}
   @type persistence_result ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, Changeset.t() | :not_found}
+          {:ok, ThemeCustomizationSchema.t()}
+          | {:error, Changeset.t() | :not_found | :upgrade_required}
 
   @doc """
   Gets a theme customization by scope (see `t:scope/0`) and theme ID.
@@ -168,6 +170,15 @@ defmodule Tymeslot.ThemeCustomizations do
   end
 
   @doc """
+  `:ok` when the customisations of `scope` may be changed: always for the
+  profile's own page, and for one of its booking pages only while the owner
+  may change booking pages (`Tymeslot.BookingPages.Access`).
+  """
+  @spec check_write(scope()) :: :ok | {:error, :upgrade_required}
+  def check_write({profile_id, _page_id}), do: Access.check_profile(profile_id)
+  def check_write(_profile_id), do: :ok
+
+  @doc """
   Creates or updates a theme customization for a profile and theme. A new
   row starts from the theme's defaults (the schema changeset reads an empty
   row through `Specs.settings/2`), so `attrs` need only hold what changes.
@@ -203,6 +214,9 @@ defmodule Tymeslot.ThemeCustomizations do
   is stored, called on the locked row. `then_fun` returns `{:ok, result}`,
   or `{:error, reason}` to roll the save back.
 
+  A booking page's colours are refused as `{:error, :upgrade_required}` while
+  its owner lacks the feature (`check_write/1`).
+
   A refused save returns its changeset, and `{:error, :not_found}` means the
   row was deleted while the save waited for it (its profile was deleted).
   Anything raised inside the transaction, which is then rolled back, comes
@@ -218,6 +232,12 @@ defmodule Tymeslot.ThemeCustomizations do
         ) :: {:ok, result} | {:error, reason | Changeset.t()}
         when result: term(), reason: term()
   def save_customization(scope, theme_id, attrs, then_fun) do
+    with :ok <- check_write(scope) do
+      do_save_customization(scope, theme_id, attrs, then_fun)
+    end
+  end
+
+  defp do_save_customization(scope, theme_id, attrs, then_fun) do
     transaction =
       run_transaction(fn ->
         with {:ok, previous, saved} <- lock_and_write(scope, theme_id, attrs),
@@ -584,6 +604,9 @@ defmodule Tymeslot.ThemeCustomizations do
   @spec format_persistence_error({:ok, ThemeCustomizationSchema.t()} | {:error, term()}) ::
           {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
   defp format_persistence_error({:ok, _result} = ok), do: ok
+
+  defp format_persistence_error({:error, :upgrade_required}),
+    do: {:error, Access.locked_message()}
 
   defp format_persistence_error({:error, _reason}),
     do:

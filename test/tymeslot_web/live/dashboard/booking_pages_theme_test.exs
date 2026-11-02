@@ -62,14 +62,15 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
     assert Repo.reload!(ctx.profile).booking_heading == nil
   end
 
-  test "a page's texts saved after it was deleted in another tab say so", ctx do
+  # The dashboard hears of the delete at once (`BookingPages.subscribe/1`),
+  # so the open tab leaves the page before its texts can be saved anywhere.
+  test "a page deleted in another tab is left at once, with a notice", ctx do
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
 
     {:ok, _deleted} = BookingPages.delete(ctx.page)
-    view |> element("#booking-text-form-#{ctx.page.id}-enabled") |> render_click()
 
-    assert has_element?(view, "#app-flash-group-error", "This booking page no longer exists.")
     assert_patch(view, ~p"/dashboard/theme")
+    assert has_element?(view, "#app-flash-group-error", "This booking page no longer exists.")
     refute has_element?(view, "#booking-text-form-#{ctx.page.id}")
     refute Repo.reload!(ctx.profile).booking_text_enabled
   end

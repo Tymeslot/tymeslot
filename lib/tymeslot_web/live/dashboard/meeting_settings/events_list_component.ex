@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Dashboard.MeetingSettings.Card
+  alias TymeslotWeb.Endpoint
 
   @type row :: %{
           type: map(),
@@ -86,6 +87,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
 
   attr :events, :list, required: true, doc: "`rows/1`"
   attr :booking_base_url, :string, default: nil
+
+  attr :link_paths, :map,
+    default: %{},
+    doc: "each event type's one booking address by id (`BookingPages.meeting_type_paths/4`)"
+
   attr :timezone, :string, required: true
   attr :time_format, :string, required: true
   attr :venues, :list, default: [], doc: "the host's saved venues, to name an event's location"
@@ -164,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
               label={dgettext("dashboard_meeting_types", "Copy link")}
               tooltip={dgettext("dashboard_meeting_types", "Copy link")}
               phx-hook="CopyOnClick"
-              data-copy-text={"#{@booking_base_url}/#{MeetingTypes.effective_slug(event.type)}"}
+              data-copy-text={copy_url(@booking_base_url, @link_paths, event.type)}
               data-copy-feedback={dgettext("dashboard_meeting_types", "Booking link copied!")}
             />
             <Buttons.icon_button
@@ -202,6 +208,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
   # or the events section's own when it has none.
   defp event_icon(%{icon: icon}) when is_binary(icon) and icon != "none", do: icon
   defp event_icon(_type), do: "hero-ticket"
+
+  # The type's one address when known, else its direct link under the
+  # username.
+  defp copy_url(base_url, link_paths, type) do
+    case Map.fetch(link_paths, type.id) do
+      {:ok, path} -> Endpoint.url() <> path
+      :error -> "#{base_url}/#{MeetingTypes.effective_slug(type)}"
+    end
+  end
 
   defp tone(:open), do: :success
   defp tone(:closed), do: :warning

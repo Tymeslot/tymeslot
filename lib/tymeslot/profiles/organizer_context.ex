@@ -59,9 +59,16 @@ defmodule Tymeslot.Profiles.OrganizerContext do
       profile: profile,
       user_id: profile.user_id,
       meeting_types: meeting_types,
-      page_title: dgettext("booking", "Schedule with %{name}", name: display_name)
+      page_title: page_title(profile, display_name)
     }
   end
+
+  # A booking page is named for what it offers, and the host stays the person.
+  defp page_title(%{booking_page: %BookingPageSchema{name: page_name}}, display_name),
+    do: dgettext("booking", "%{page} with %{name}", page: page_name, name: display_name)
+
+  defp page_title(_profile, display_name),
+    do: dgettext("booking", "Schedule with %{name}", name: display_name)
 
   defp get_user_name_from_profile(%{user: %{name: name}}), do: name
   defp get_user_name_from_profile(_arg), do: nil

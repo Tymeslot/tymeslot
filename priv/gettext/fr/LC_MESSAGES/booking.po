@@ -1048,3 +1048,9 @@ msgstr "Vous réservez : %{meeting} (%{duration})"
 #, elixir-autogen, elixir-format
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Vous réservez : %{meeting} (%{duration}) avec %{name}"
+
+#: lib/tymeslot/profiles/organizer_context.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{page} with %{name}"
+msgstr "%{page} avec %{name}"

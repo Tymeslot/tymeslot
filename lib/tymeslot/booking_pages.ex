@@ -14,13 +14,21 @@ defmodule Tymeslot.BookingPages do
   A page is a draft until it lists a meeting type it can offer
   (`published?/1`): its addresses answer as unknown, except to its owner's
   preview.
+
+  Creating and changing pages may be a paid feature (`Access`): without it a
+  host's pages stay published and may be deleted, but every other write is
+  `{:error, :upgrade_required}`. Each write that changes what the dashboard
+  shows of a profile's pages is broadcast to its owner's dashboards
+  (`subscribe/1`).
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingPages.Access
   alias Tymeslot.BookingPages.BookingPageQueries
   alias Tymeslot.BookingPages.BookingPageRedirectQueries
   alias Tymeslot.BookingPages.BookingPageSchema
+  alias Tymeslot.BookingPages.SlugSuggestion
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.PublicListing
   alias Tymeslot.Profiles.ProfileQueries
@@ -45,6 +53,53 @@ defmodule Tymeslot.BookingPages do
   @doc "The most extra pages one profile may hold."
   @spec max_pages() :: pos_integer()
   def max_pages, do: @max_pages
+
+  @doc """
+  Whether `user_id` may create pages and change them (`Access`). Deleting a
+  page needs no permission.
+  """
+  @spec editable?(integer()) :: boolean()
+  def editable?(user_id), do: Access.allowed?(user_id)
+
+  @doc "What a write refused for want of the feature tells the host (`Access`)."
+  @spec locked_message() :: String.t()
+  defdelegate locked_message, to: Access
+
+  @doc "The address the new-page dialog suggests for `name` (`SlugSuggestion`)."
+  @spec suggest_slug(String.t() | nil) :: String.t()
+  def suggest_slug(name), do: SlugSuggestion.from_name(name)
+
+  @doc """
+  Subscribes the caller to the profile's page changes: a page created,
+  renamed, moved, deleted or given other meeting types arrives as
+  `{:booking_pages_changed, profile_id}`, so an open dashboard notices a
+  change made in another tab.
+  """
+  @spec subscribe(integer()) :: :ok | {:error, term()}
+  def subscribe(profile_id) when is_integer(profile_id),
+    do: Phoenix.PubSub.subscribe(Tymeslot.PubSub, topic(profile_id))
+
+  # Best effort: a lost notice leaves another tab stale until its next edit,
+  # which reports a page gone, so it never fails the write.
+  defp broadcast(profile_id) do
+    _sent =
+      Phoenix.PubSub.broadcast(
+        Tymeslot.PubSub,
+        topic(profile_id),
+        {:booking_pages_changed, profile_id}
+      )
+
+    :ok
+  end
+
+  defp broadcast_ok({:ok, %BookingPageSchema{profile_id: profile_id}} = result) do
+    broadcast(profile_id)
+    result
+  end
+
+  defp broadcast_ok(result), do: result
+
+  defp topic(profile_id), do: "booking_pages:#{profile_id}"
 
   @doc """
   `profile` as `page` presents it: the page's theme and booking texts in place
@@ -148,14 +203,36 @@ defmodule Tymeslot.BookingPages do
   as its direct link. `profile` is the owner's, through a page or not.
   """
   @spec meeting_type_path(map(), map()) :: String.t()
-  def meeting_type_path(%{username: username}, meeting_type) do
-    slug = MeetingTypes.effective_slug(meeting_type)
+  def meeting_type_path(%{username: username}, meeting_type),
+    do: path_under(username, home_page(meeting_type), meeting_type)
 
-    case home_page(meeting_type) do
-      nil -> "/#{username}/#{slug}"
-      %BookingPageSchema{slug: page_slug} -> "/#{username}/#{page_slug}/#{slug}"
-    end
+  @doc """
+  `meeting_type_path/2` for each of `meeting_types`, by id, from one look at
+  the profile's pages rather than one per type. For a list of types.
+  """
+  @spec meeting_type_paths(map(), [map()]) :: %{optional(integer()) => String.t()}
+  def meeting_type_paths(%{id: profile_id} = profile, meeting_types),
+    do: meeting_type_paths(profile, meeting_types, list(profile_id), memberships(profile_id))
+
+  @doc """
+  `meeting_type_paths/2` from the profile's pages, oldest first as `list/1`
+  returns them, and their `memberships/1`, for a caller already holding both.
+  """
+  @spec meeting_type_paths(map(), [map()], [page()], map()) ::
+          %{optional(integer()) => String.t()}
+  def meeting_type_paths(%{username: username}, meeting_types, pages, memberships) do
+    Map.new(meeting_types, fn type ->
+      listed_on = Map.get(memberships, type.id, MapSet.new())
+      home = if type.is_private, do: Enum.find(pages, &MapSet.member?(listed_on, &1.id))
+      {type.id, path_under(username, home, type)}
+    end)
   end
+
+  defp path_under(username, nil, type),
+    do: "/#{username}/#{MeetingTypes.effective_slug(type)}"
+
+  defp path_under(username, %BookingPageSchema{slug: page_slug}, type),
+    do: "/#{username}/#{page_slug}/#{MeetingTypes.effective_slug(type)}"
 
   @doc """
   The page `meeting_type` belongs to: the oldest page listing it, when it is
@@ -229,11 +306,24 @@ defmodule Tymeslot.BookingPages do
   address's redirect.
   """
   @spec create(ProfileSchema.t(), map()) ::
-          {:ok, page()} | {:error, :limit_reached} | {:error, Changeset.t()}
+          {:ok, page()}
+          | {:error, :limit_reached | :upgrade_required}
+          | {:error, Changeset.t()}
   def create(%ProfileSchema{} = profile, attrs) do
-    if BookingPageQueries.count_for_profile(profile.id) >= @max_pages do
-      {:error, :limit_reached}
-    else
+    cond do
+      Access.check(profile.user_id) != :ok ->
+        {:error, :upgrade_required}
+
+      BookingPageQueries.count_for_profile(profile.id) >= @max_pages ->
+        {:error, :limit_reached}
+
+      true ->
+        do_create(profile, attrs)
+    end
+  end
+
+  defp do_create(profile, attrs) do
+    broadcast_ok(
       Repo.transaction(fn ->
         :ok = BookingPageQueries.lock_addresses(profile.id)
 
@@ -249,7 +339,7 @@ defmodule Tymeslot.BookingPages do
           {:error, error} -> Repo.rollback(error)
         end
       end)
-    end
+    )
   end
 
   @doc "The details form's changeset, the slug checked as `change_new/2` checks it."
@@ -272,8 +362,14 @@ defmodule Tymeslot.BookingPages do
   as `fetch/2` would report it.
   """
   @spec update_details(page(), map()) ::
-          {:ok, page()} | {:error, :not_found} | {:error, Changeset.t()}
+          {:ok, page()} | {:error, :not_found | :upgrade_required} | {:error, Changeset.t()}
   def update_details(%BookingPageSchema{} = page, attrs) do
+    with :ok <- Access.check_profile(page.profile_id) do
+      page |> do_update_details(attrs) |> broadcast_ok()
+    end
+  end
+
+  defp do_update_details(page, attrs) do
     result =
       Repo.transaction(fn ->
         :ok = BookingPageQueries.lock_addresses(page.profile_id)
@@ -312,11 +408,14 @@ defmodule Tymeslot.BookingPages do
   defp not_found_when_gone(result), do: result
 
   @doc "Switches a page to another theme."
-  @spec update_theme(page(), String.t()) :: {:ok, page()} | {:error, Changeset.t()}
+  @spec update_theme(page(), String.t()) ::
+          {:ok, page()} | {:error, :upgrade_required} | {:error, Changeset.t()}
   def update_theme(%BookingPageSchema{} = page, theme_id) do
-    page
-    |> BookingPageSchema.theme_changeset(theme_id)
-    |> BookingPageQueries.update()
+    with :ok <- Access.check_profile(page.profile_id) do
+      page
+      |> BookingPageSchema.theme_changeset(theme_id)
+      |> BookingPageQueries.update()
+    end
   end
 
   @doc """
@@ -325,19 +424,22 @@ defmodule Tymeslot.BookingPages do
   found, as in `update_details/2`.
   """
   @spec update_booking_text(page(), map()) ::
-          {:ok, page()} | {:error, :not_found} | {:error, Changeset.t()}
+          {:ok, page()} | {:error, :not_found | :upgrade_required} | {:error, Changeset.t()}
   def update_booking_text(%BookingPageSchema{} = page, attrs) do
-    page
-    |> ProfileSchema.booking_text_changeset(attrs)
-    |> BookingPageQueries.update()
-    |> not_found_when_gone()
+    with :ok <- Access.check_profile(page.profile_id) do
+      page
+      |> ProfileSchema.booking_text_changeset(attrs)
+      |> BookingPageQueries.update()
+      |> not_found_when_gone()
+    end
   end
 
   @doc """
   Deletes a page, its colours and their uploaded background files. Its meeting
   type listings go with the page, and its bookings keep everything but the
   page id. Its address, and every former one, then lead to the profile's own
-  page. A page already gone counts as deleted.
+  page. A page already gone counts as deleted. Allowed with or without the
+  feature (`Access`), so a host who lost it can still tidy up.
 
   The page is locked first, so a colour saved in another tab either lands
   before the delete (and goes with it) or fails on the missing page, never
@@ -363,6 +465,7 @@ defmodule Tymeslot.BookingPages do
 
     with {:ok, {deleted, customizations}} <- result do
       ThemeCustomizations.cleanup_page_files(customizations)
+      broadcast(page.profile_id)
       {:ok, deleted}
     end
   end
@@ -370,14 +473,38 @@ defmodule Tymeslot.BookingPages do
   @doc """
   Lists `meeting_type_id` on `page` or takes it off. Listing checks in the
   query that the type is the page owner's: another account's type, a missing
-  one, or a page deleted meanwhile is `{:error, :not_found}`.
+  one, or a page deleted meanwhile is `{:error, :not_found}`, and an account
+  without the feature (`Access`) `{:error, :upgrade_required}`.
   """
   @spec set_meeting_type(page(), integer(), boolean()) :: :ok | {:error, term()}
-  def set_meeting_type(%BookingPageSchema{id: page_id}, meeting_type_id, true),
+  def set_meeting_type(%BookingPageSchema{} = page, meeting_type_id, listed?) do
+    with :ok <- Access.check_profile(page.profile_id),
+         :ok <- write_listing(page.id, meeting_type_id, listed?) do
+      broadcast(page.profile_id)
+    end
+  end
+
+  defp write_listing(page_id, meeting_type_id, true),
     do: BookingPageQueries.add_meeting_type(page_id, meeting_type_id)
 
-  def set_meeting_type(%BookingPageSchema{id: page_id}, meeting_type_id, false),
+  defp write_listing(page_id, meeting_type_id, false),
     do: BookingPageQueries.remove_meeting_type(page_id, meeting_type_id)
+
+  @doc """
+  The meeting types `page` alone lists: hidden from the profile's own page
+  and on no other page, so deleting `page` leaves them unlisted everywhere,
+  bookable only by their direct links. In the profile's order.
+  """
+  @spec only_listed_on(page()) :: [Tymeslot.MeetingTypes.MeetingTypeSchema.t()]
+  def only_listed_on(%BookingPageSchema{id: page_id} = page) do
+    memberships = memberships(page.profile_id)
+    sole = MapSet.new([page_id])
+
+    page.profile_id
+    |> ProfileQueries.user_id_for_profile()
+    |> MeetingTypes.get_all_meeting_types()
+    |> Enum.filter(&(&1.is_private and Map.get(memberships, &1.id) == sole))
+  end
 
   @doc """
   The meeting types `page` offers on its start page: listed on it and active,

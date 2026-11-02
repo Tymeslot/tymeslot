@@ -429,3 +429,8 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "On no booking page; reachable only by its direct link"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link"
+msgstr ""

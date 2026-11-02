@@ -434,3 +434,8 @@ msgstr[2] "%{count} přihlášených osob se to dozví e-mailem."
 #, elixir-autogen, elixir-format
 msgid "On no booking page; reachable only by its direct link"
 msgstr "Na žádné rezervační stránce; přístup jen přes přímý odkaz"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link"
+msgstr "Rezervační odkaz"

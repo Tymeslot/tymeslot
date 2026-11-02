@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias TymeslotWeb.Dashboard.MeetingSettings.Card
   alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
 
@@ -26,6 +27,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
 
   @spec meeting_types_section(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_types_section(assigns) do
+    assigns = assign(assigns, :link_paths, link_paths(assigns))
+
     ~H"""
     <div>
       <%= if @meeting_types == [] && !@show_add_form do %>
@@ -63,9 +66,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
                 time_format={@time_format}
                 payments_accepted={@payments_accepted}
                 unlisted={PageVisibility.unlisted?(@page_memberships, type)}
-                page_addresses={
-                  PageVisibility.addresses(@username, @booking_pages, @page_memberships, type)
-                }
+                link_path={@link_paths[type.id]}
                 myself={@parent_myself}
               />
             </div>
@@ -77,6 +78,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
   end
 
   attr :parent_myself, :any, required: true
+
+  # Each type's one address, which can lie under a page, shown once the
+  # profile has pages; without them every type is at `/<username>/<slug>`
+  # and the "Unlisted" badge says the rest.
+  defp link_paths(%{booking_pages: []}), do: %{}
+
+  defp link_paths(assigns) do
+    BookingPages.meeting_type_paths(
+      %{username: assigns.username},
+      assigns.meeting_types,
+      assigns.booking_pages,
+      assigns.page_memberships
+    )
+  end
 
   @doc """
   The button that opens the add form. The page header carries it once there

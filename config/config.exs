@@ -228,6 +228,7 @@ config :tymeslot, :feature_assigns,
   custom_questions_allowed: true,
   group_bookings_allowed: true,
   analytics_allowed: true,
+  booking_pages_allowed: true,
   meeting_payments: false
 
 # Dashboard Feature Gates - Maps live_action atoms to feature flag assign keys.

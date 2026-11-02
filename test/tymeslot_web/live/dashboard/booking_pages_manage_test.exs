@@ -129,12 +129,13 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     page = insert(:booking_page, profile: profile, slug: "einfachiso", name: "Einfach ISO")
     {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
-    assert has_element?(view, "#booking-page-tabs-tab-profile", "/joern")
-
+    assert has_element?(view, "#booking-page-tabs-tab-profile", "Main page")
+    assert has_element?(view, "#booking-page-tabs-tab-#{page.id}", "Einfach ISO")
+    # The select a phone shows in place of the tabs carries the addresses.
     assert has_element?(
              view,
-             "#booking-page-tabs-tab-#{page.id}",
-             "Einfach ISO · /joern/einfachiso"
+             "#booking-page-select option[value='profile']",
+             "Main page · /joern"
            )
 
     view |> element("#booking-page-tabs-tab-#{page.id}") |> render_click()
@@ -285,7 +286,8 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     |> render_submit()
 
     assert %{name: "einfachISO", slug: "iso"} = Repo.reload!(page)
-    assert has_element?(view, "#booking-page-tabs-tab-#{page.id}", "einfachISO · /joern/iso")
+    assert has_element?(view, "#booking-page-tabs-tab-#{page.id}", "einfachISO")
+    assert has_element?(view, "#booking-page-select option", "einfachISO · /joern/iso")
     assert {:moved, "iso"} = BookingPages.locate(profile, "einfachiso")
     assert has_element?(view, "#page-settings-#{page.id}-details input[value='einfachISO']")
   end
@@ -307,7 +309,9 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso", name: "Old")
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
 
-    {:ok, _deleted} = BookingPages.delete(page)
+    # Gone without the notice that would move the tab off it at once, as when
+    # the save races the delete.
+    Repo.delete!(page)
 
     view
     |> form("#page-settings-#{page.id}-details", page: %{name: "New", slug: "einfachiso"})

@@ -37,10 +37,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingPageVisibilityTest do
       assert PageVisibility.unlisted?(%{}, %{id: 1, is_private: true})
       refute PageVisibility.unlisted?(%{}, %{id: 1, is_private: false})
     end
-
-    test "addresses stay empty until there are booking pages" do
-      assert PageVisibility.addresses("joern", [], %{}, %{id: 1, is_private: false}) == []
-    end
   end
 
   test "the editor lists a type on a page and the card names it", ctx do
@@ -58,9 +54,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingPageVisibilityTest do
     refute has_element?(view, "[data-testid='unlisted-note']")
 
     view |> element("button", "Done") |> render_click()
-    html = render(view)
-    assert html =~ "/joern/einfachiso"
-    refute html =~ "Unlisted"
+    # The card's badge is the type's one address, under the page listing it.
+    assert has_element?(view, "[data-testid='meeting-type-link']", "/joern/einfachiso/iso-audit")
+    refute render(view) =~ "Unlisted"
+  end
+
+  test "the editor's link to a type only a page lists is under that page", ctx do
+    type = insert(:meeting_type, user: ctx.user, name: "ISO audit", is_private: true)
+    :ok = BookingPages.set_meeting_type(ctx.page, type.id, true)
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meeting-settings")
+
+    view |> element("[phx-click='edit_type'][phx-value-id='#{type.id}']") |> render_click()
+
+    assert has_element?(
+             view,
+             "#copy-booking-link-#{type.id}[data-copy-text$='/joern/einfachiso/iso-audit']"
+           )
   end
 
   test "a page deleted in another tab fails with a flash, not a crash", ctx do

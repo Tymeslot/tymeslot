@@ -84,6 +84,28 @@ defmodule TymeslotWeb.BookingPagePublicTest do
     refute html =~ "Automation call"
   end
 
+  test "a page's browser title names the page and its host", %{conn: conn, profile: profile} do
+    profile |> Changeset.change(full_name: "Jörn Weber") |> Repo.update!()
+
+    {:ok, view, _html} = live(conn, ~p"/joern/einfachiso?timezone=#{@timezone}")
+    assert page_title(view) =~ "einfachISO with Jörn Weber"
+
+    {:ok, own, _html} = live(conn, ~p"/joern?timezone=#{@timezone}")
+    assert page_title(own) =~ "Schedule with Jörn Weber"
+  end
+
+  # Rhythm names the host in its default heading; through a page it names the
+  # page with them, and its small header labels the host with the page.
+  test "a naming theme's heading names the page", %{conn: conn, profile: profile, page: page} do
+    profile |> Changeset.change(full_name: "Jörn Weber") |> Repo.update!()
+    page |> Changeset.change(booking_theme: "2", booking_text_enabled: false) |> Repo.update!()
+
+    {:ok, _view, html} = live(conn, ~p"/joern/einfachiso?timezone=#{@timezone}")
+
+    assert html =~ "einfachISO with Jörn Weber"
+    refute html =~ "Schedule with Jörn Weber"
+  end
+
   test "the username's page is as it was", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/joern?timezone=#{@timezone}")
 

@@ -434,3 +434,8 @@ msgstr[2] "%{count} зареєстрованих осіб отримають с�
 #, elixir-autogen, elixir-format
 msgid "On no booking page; reachable only by its direct link"
 msgstr "На жодній сторінці бронювання; доступно лише за прямим посиланням"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link"
+msgstr "Посилання для бронювання"
