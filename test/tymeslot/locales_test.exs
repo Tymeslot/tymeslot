@@ -202,7 +202,7 @@ defmodule Tymeslot.LocalesTest do
     end
 
     test "supported_codes/0 lists the configured codes, in configured order" do
-      assert Locales.supported_codes() == ["en", "de", "fr", "it", "uk", "cs", "pl", "pt"]
+      assert Locales.supported_codes() == ["en", "de", "fr", "it", "uk", "cs", "pl", "pt", "es"]
     end
   end
 
@@ -265,7 +265,7 @@ defmodule Tymeslot.LocalesTest do
     end
 
     test "skips absent and unsupported candidates instead of stopping at them" do
-      assert Locales.resolve([nil, "es", "", "it"], "en") == "it"
+      assert Locales.resolve([nil, "ja", "", "it"], "en") == "it"
     end
 
     test "returns the fallback when nothing is acceptable" do

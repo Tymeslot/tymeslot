@@ -28,10 +28,10 @@ defmodule TymeslotWeb.Hooks.LocaleHookTest do
 
   describe "per-source validation (matching LocalePlug)" do
     test "an unsupported URL parameter falls through to the dead render's resolved locale" do
-      # An unsupported "es" param must not be coerced to the default; the valid
+      # An unsupported "ja" param must not be coerced to the default; the valid
       # "de" session locale (what LocalePlug resolved on the dead render) wins.
       {:cont, socket} =
-        LocaleHook.on_mount(:default, %{"locale" => "es"}, %{"resolved_locale" => "de"}, socket())
+        LocaleHook.on_mount(:default, %{"locale" => "ja"}, %{"resolved_locale" => "de"}, socket())
 
       assert socket.assigns.locale == "de"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"

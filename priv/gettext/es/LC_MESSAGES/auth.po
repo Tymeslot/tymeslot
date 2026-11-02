@@ -1,0 +1,969 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication is not available"
+msgstr "La autenticación con %{provider} no está disponible"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication succeeded but session creation failed."
+msgstr "La autenticación con %{provider} funcionó, pero no se pudo crear la sesión."
+
+#: lib/tymeslot/auth/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Account created successfully. Please check your email for verification instructions."
+msgstr "Se creó la cuenta. Revisa tu correo para ver cómo verificarla."
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#, elixir-autogen, elixir-format
+msgid "Almost There!"
+msgstr "Ya casi está"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "Already have an account?"
+msgstr "¿Ya tienes una cuenta?"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "An error occurred during %{provider} authentication."
+msgstr "Hubo un error durante la autenticación con %{provider}."
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Back to Login"
+msgstr "Volver al inicio de sesión"
+
+#: lib/tymeslot_web/components/auth/shared/auth_layout_components.ex
+#, elixir-autogen, elixir-format
+msgid "Back to Website"
+msgstr "Volver al sitio web"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Check Your Email"
+msgstr "Revisa tu correo"
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "Complete Registration"
+msgstr "Completar el registro"
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "Complete Your Registration"
+msgstr "Completa tu registro"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm New Password"
+msgstr "Confirma la nueva contraseña"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new password"
+msgstr "Confirma tu nueva contraseña"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create a password"
+msgstr "Crea una contraseña"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create a strong password for your account"
+msgstr "Crea una contraseña segura para tu cuenta"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Didn't receive the email?"
+msgstr "¿No te llegó el correo?"
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "Display Name"
+msgstr "Nombre visible"
+
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Don't have an account?"
+msgstr "¿Todavía no tienes cuenta?"
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Email Address"
+msgstr "Correo electrónico"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your email and we'll send you instructions to reset your password"
+msgstr "Escribe tu correo y te enviaremos las instrucciones para restablecer la contraseña"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your new password"
+msgstr "Escribe tu nueva contraseña"
+
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your password"
+msgstr "Escribe tu contraseña"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to authenticate with %{provider}."
+msgstr "No se pudo autenticar con %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create session. Please try again."
+msgstr "No se pudo crear la sesión. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Forgot password?"
+msgstr "¿Olvidaste tu contraseña?"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid Link"
+msgstr "Enlace no válido"
+
+#: lib/tymeslot_web/live/auth_live/password_reset_events.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid reset token"
+msgstr "Token de restablecimiento no válido"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "Join Tymeslot"
+msgstr "Únete a Tymeslot"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Link Expired or Invalid"
+msgstr "Enlace vencido o no válido"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Log In"
+msgstr "Iniciar sesión"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Log in"
+msgstr "Iniciar sesión"
+
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Log in to Tymeslot"
+msgstr "Inicia sesión en Tymeslot"
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Logged out successfully."
+msgstr "Sesión cerrada."
+
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Logging in..."
+msgstr "Iniciando sesión…"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Missing OAuth provider information. Please try again."
+msgstr "Faltan datos del proveedor de OAuth. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "New Password"
+msgstr "Nueva contraseña"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "OAuth authentication failed - missing provider."
+msgstr "Falló la autenticación OAuth: falta el proveedor."
+
+#: lib/tymeslot_web/components/auth/shared/auth_layout_components.ex
+#, elixir-autogen, elixir-format
+msgid "Or continue with"
+msgstr "O continúa con"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Contraseña"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Password Reset Successfully"
+msgstr "Contraseña restablecida"
+
+#: lib/tymeslot/auth/validation.ex
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password is required"
+msgstr "La contraseña es obligatoria"
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your email and password."
+msgstr "Escribe tu correo electrónico y tu contraseña."
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "Privacy Policy"
+msgstr "Política de privacidad"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Remember your password?"
+msgstr "¿Recuerdas tu contraseña?"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Request New Link"
+msgstr "Pedir un enlace nuevo"
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#, elixir-autogen, elixir-format
+msgid "Resend Verification Email"
+msgstr "Reenviar el correo de verificación"
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#, elixir-autogen, elixir-format
+msgid "Resend available in %{count}s"
+msgid_plural "Resend available in %{count}s"
+msgstr[0] "Podrás reenviarlo en %{count} s"
+msgstr[1] "Podrás reenviarlo en %{count} s"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Reset Password"
+msgstr "Restablecer la contraseña"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reset Your Password"
+msgstr "Restablecer tu contraseña"
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "Return to login"
+msgstr "Volver al inicio de sesión"
+
+#: lib/tymeslot_web/live/auth_live/security_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Security validation failed. Please refresh the page."
+msgstr "Falló la validación de seguridad. Vuelve a cargar la página."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Security validation failed. Please try again."
+msgstr "Falló la validación de seguridad. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Send Reset Instructions"
+msgstr "Enviar las instrucciones"
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Sending..."
+msgstr "Enviando…"
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#, elixir-autogen, elixir-format
+msgid "Sent to"
+msgstr "Enviado a"
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Set New Password"
+msgstr "Definir la nueva contraseña"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Sign up"
+msgstr "Registrarse"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "Signing up..."
+msgstr "Registrando…"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "Start scheduling your meetings with ease. Zero friction, total control."
+msgstr "Organiza tus reuniones y mantén el control de tu agenda."
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Success!"
+msgstr "Todo listo"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Successfully signed in with %{provider}."
+msgstr "Sesión iniciada con %{provider}."
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "Terms of Service"
+msgstr "Términos del servicio"
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "Thank you for signing up! Let's finish setting up your account."
+msgstr "Gracias por registrarte. Vamos a terminar de configurar tu cuenta."
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "The security link you followed is no longer valid. Please request a new one to continue."
+msgstr "El enlace de seguridad que abriste ya no es válido. Pide uno nuevo para continuar."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This verification link has expired. Please request a new verification email to continue."
+msgstr "Este enlace de verificación venció. Pide un correo de verificación nuevo para continuar."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This verification link is no longer valid. If you've requested a newer verification email, please open the link in the most recent one."
+msgstr "Este enlace de verificación ya no es válido. Si pediste un correo de verificación más reciente, abre el enlace del correo más reciente."
+
+#: lib/tymeslot_web/components/auth/shared/password_toggle_button_component.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle password visibility"
+msgstr "Mostrar u ocultar la contraseña"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many OAuth attempts. Please try again later."
+msgstr "Demasiados intentos de OAuth. Inténtalo más tarde."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many authentication attempts. Please try again later."
+msgstr "Demasiados intentos de autenticación. Inténtalo más tarde."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many registration attempts. Please try again later."
+msgstr "Demasiados intentos de registro. Inténtalo más tarde."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many verification attempts. Please try again later."
+msgstr "Demasiados intentos de verificación. Inténtalo más tarde."
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Try again"
+msgstr "Inténtalo de nuevo"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Unsupported OAuth provider."
+msgstr "Proveedor de OAuth no admitido."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Unsupported OAuth provider: %{provider}"
+msgstr "Proveedor de OAuth no admitido: %{provider}"
+
+#: lib/tymeslot_web/live/auth_live/verification_events.ex
+#, elixir-autogen, elixir-format
+msgid "Verification email sent! Please check your inbox."
+msgstr "Se envió el correo de verificación. Revisa tu bandeja de entrada."
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#, elixir-autogen, elixir-format
+msgid "Verify Your Email"
+msgstr "Verifica tu correo"
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "Want to start over?"
+msgstr "¿Quieres empezar de nuevo?"
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#, elixir-autogen, elixir-format
+msgid "We've just sent you a verification email! Please click the link in the email to confirm your address and finish setting up your account."
+msgstr "Te acabamos de enviar un correo de verificación. Abre el enlace que contiene para confirmar tu dirección y terminar de configurar tu cuenta."
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "We've sent password reset instructions to your email address. Please check your inbox and follow the link to reset your password."
+msgstr "Te enviamos a tu correo las instrucciones para restablecer la contraseña. Revisa tu bandeja de entrada y abre el enlace."
+
+#: lib/tymeslot_web/components/auth/session/login_component.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome Back!"
+msgstr "Te damos de nuevo la bienvenida"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome! You've successfully signed up with %{provider}."
+msgstr "Te registraste con %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your email has been successfully verified! Please log in to continue."
+msgstr "Tu correo quedó verificado. Inicia sesión para continuar."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your email has been successfully verified! You're now logged in."
+msgstr "Tu correo quedó verificado y ya tienes la sesión iniciada."
+
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your password has been reset. You can now log in with your new credentials."
+msgstr "Se restableció tu contraseña. Ya puedes iniciar sesión con los datos nuevos."
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "e.g. John Doe"
+msgstr "p. ej. Juan Pérez"
+
+#: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
+#, elixir-autogen, elixir-format
+msgid "or"
+msgstr "o"
+
+#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "privacy policy"
+msgstr "política de privacidad"
+
+#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "terms"
+msgstr "términos"
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication failed. Please try again."
+msgstr "Falló la autenticación. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a New Password"
+msgstr "Elige una contraseña nueva"
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a strong new password for your Tymeslot account."
+msgstr "Elige una contraseña nueva y segura para tu cuenta de Tymeslot."
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Create a Tymeslot account and start sharing your availability in minutes. No credit card required."
+msgstr "Crea una cuenta de Tymeslot y comparte tu disponibilidad en unos minutos. Sin tarjeta de crédito."
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Create an Account"
+msgstr "Crear una cuenta"
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Email address is required to complete registration."
+msgstr "Hace falta un correo electrónico para completar el registro."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Email address is required to complete registration. Please provide your email address."
+msgstr "Hace falta un correo electrónico para completar el registro. Indica el tuyo."
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your email to receive a password reset link for your Tymeslot account."
+msgstr "Escribe tu correo y te enviaremos un enlace para restablecer la contraseña de tu cuenta de Tymeslot."
+
+#: lib/tymeslot/auth/registration.ex
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create user account. Please try again."
+msgstr "No se pudo crear la cuenta. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid OAuth data received. Please try again."
+msgstr "Se recibieron datos de OAuth no válidos. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/auth_live/state_helper.ex
+#, elixir-autogen, elixir-format
+msgid "No pending registration found. Please sign in again."
+msgstr "No hay ningún registro pendiente. Vuelve a iniciar sesión."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Please provide a valid email address."
+msgstr "Indica un correo electrónico válido."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Registration failed due to validation errors. Please check your information and try again."
+msgstr "No se pudo completar el registro porque algunos datos no son válidos. Revisa tus datos e inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
+msgstr "Inicia sesión en tu cuenta de Tymeslot para gestionar tus enlaces de reservas, tu disponibilidad y tus reservas."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please try again later."
+msgstr "Demasiados intentos. Inténtalo más tarde."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You must accept the terms to continue."
+msgstr "Tienes que aceptar los términos para continuar."
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
+#, elixir-autogen, elixir-format
+msgid "your.email@example.com"
+msgstr "tu.correo@example.com"
+
+#: lib/tymeslot_web/hooks/auth_live_session_hook.ex
+#: lib/tymeslot_web/plugs/redirect_if_authenticated.ex
+#, elixir-autogen, elixir-format
+msgid "You are already logged in."
+msgstr "Ya tienes la sesión iniciada."
+
+#: lib/tymeslot_web/hooks/auth_live_session_hook.ex
+#: lib/tymeslot_web/plugs/require_auth.ex
+#, elixir-autogen, elixir-format
+msgid "You must be logged in to access this page."
+msgstr "Tienes que iniciar sesión para abrir esta página."
+
+#: lib/tymeslot_web/hooks/auth_live_session_hook.ex
+#, elixir-autogen, elixir-format
+msgid "Your session has expired. Please log in again."
+msgstr "Tu sesión venció. Vuelve a iniciar sesión."
+
+#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "I accept the %{terms} and %{privacy_policy}"
+msgstr "Acepto los %{terms} y la %{privacy_policy}"
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex
+#, elixir-autogen, elixir-format
+msgid "This site is protected by reCAPTCHA and the Google %{privacy_policy} and %{terms} apply."
+msgstr "Este sitio está protegido por reCAPTCHA. Se aplican la %{privacy_policy} y los %{terms} de Google."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "An account with that email address already exists. Please log in instead."
+msgstr "Ya existe una cuenta con ese correo electrónico. Inicia sesión."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "The email address from your login provider is not valid. Please try a different account."
+msgstr "El correo electrónico de tu proveedor de acceso no es válido. Prueba con otra cuenta."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "A server error occurred. Please try again"
+msgstr "Hubo un error del servidor. Inténtalo de nuevo"
+
+#: lib/tymeslot/auth/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Account created but profile creation failed: %{reason}"
+msgstr "Se creó la cuenta, pero no se pudo crear el perfil: %{reason}"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid or expired token"
+msgstr "Token no válido o vencido"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid password"
+msgstr "Contraseña incorrecta"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Password authentication is currently disabled."
+msgstr "El acceso con contraseña está desactivado por ahora."
+
+#: lib/tymeslot/auth/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Please correct the following errors: %{errors}"
+msgstr "Corrige los errores siguientes: %{errors}"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Registration is currently disabled."
+msgstr "El registro está desactivado por ahora."
+
+#: lib/tymeslot/auth/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Terms of service must be accepted"
+msgstr "Se deben aceptar los términos del servicio"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This link has expired. Please request a new one"
+msgstr "Este enlace venció. Pide uno nuevo"
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Your password has been reset successfully. Please log in with your new password."
+msgstr "Se restableció tu contraseña. Inicia sesión con la nueva."
+
+#: lib/tymeslot/auth/authentication.ex
+#, elixir-autogen, elixir-format
+msgid "Login successful."
+msgstr "Sesión iniciada."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "%{operation} failed: %{reason}"
+msgstr "Error de %{operation}: %{reason}"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "An error occurred. Please try again."
+msgstr "Hubo un error. Inténtalo de nuevo."
+
+#: lib/tymeslot/auth/validation.ex
+#, elixir-autogen, elixir-format
+msgid "Current password is incorrect"
+msgstr "La contraseña actual es incorrecta"
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Email changed successfully. Please sign in with your new email."
+msgstr "Se cambió el correo. Inicia sesión con el nuevo."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid or expired password reset token."
+msgstr "El token para restablecer la contraseña no es válido o venció."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid or expired verification link"
+msgstr "Enlace de verificación no válido o vencido"
+
+#: lib/tymeslot/auth/password_update.ex
+#, elixir-autogen, elixir-format
+msgid "New password must be different from current password"
+msgstr "La nueva contraseña debe ser distinta de la actual"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Registration"
+msgstr "Registro"
+
+#: lib/tymeslot/auth/signup_security.ex
+#, elixir-autogen, elixir-format
+msgid "Security verification failed. Please try again."
+msgstr "Falló la verificación de seguridad. Inténtalo de nuevo."
+
+#: lib/tymeslot/auth/signup_security.ex
+#, elixir-autogen, elixir-format
+msgid "Security verification unavailable. Please enable JavaScript and refresh the page, or contact support if the problem persists."
+msgstr "La verificación de seguridad no está disponible. Activa JavaScript y vuelve a cargar la página, o escribe al soporte si el problema continúa."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be updated. Please try again with a different password."
+msgstr "No se pudo actualizar la contraseña. Inténtalo con otra."
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "This email is already registered. Please use a different email address."
+msgstr "Este correo ya está registrado. Usa otro."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This email is associated with a social login. Please use your original sign-in method."
+msgstr "Este correo está vinculado a un acceso con una red social. Usa el método con el que te registraste."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This information is already in use. Please try with different details."
+msgstr "Estos datos ya están en uso. Prueba con otros."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many %{operation} attempts. Please try again later."
+msgstr "Demasiados intentos de %{operation}. Inténtalo más tarde."
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "Too many failed attempts. Please wait before trying again"
+msgstr "Demasiados intentos fallidos. Espera antes de volver a intentarlo"
+
+#: lib/tymeslot/auth/signup_security.ex
+#, elixir-autogen, elixir-format
+msgid "Too many signup attempts. Please try again later."
+msgstr "Demasiados intentos de registro. Inténtalo más tarde."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Unable to send password reset email. Please try again later."
+msgstr "No se pudo enviar el correo para restablecer la contraseña. Inténtalo más tarde."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Verification link has expired"
+msgstr "El enlace de verificación venció"
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Your reset token has expired. Please request a new password reset."
+msgstr "El token para restablecer la contraseña venció. Vuelve a pedir el restablecimiento de la contraseña."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "authentication"
+msgstr "autenticación"
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Email change request cancelled"
+msgstr "Se canceló la solicitud de cambio de correo"
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Password reset instructions have been sent to your email."
+msgstr "Se enviaron a tu correo las instrucciones para restablecer la contraseña."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Token verified successfully."
+msgstr "Token verificado."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Verification email sent to %{email}"
+msgstr "Correo de verificación enviado a %{email}"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password confirmation does not match"
+msgstr "Las contraseñas no coinciden"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password confirmation is required"
+msgstr "Hay que confirmar la contraseña"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be a text value"
+msgstr "La contraseña debe ser un texto"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at least %{count} character long"
+msgid_plural "Password must be at least %{count} characters long"
+msgstr[0] "La contraseña debe tener al menos %{count} carácter"
+msgstr[1] "La contraseña debe tener al menos %{count} caracteres"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one lowercase letter"
+msgstr "La contraseña debe contener al menos una letra minúscula"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one number"
+msgstr "La contraseña debe contener al menos un número"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one special character"
+msgstr "La contraseña debe contener al menos un carácter especial"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one uppercase letter"
+msgstr "La contraseña debe contener al menos una letra mayúscula"
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If an account exists with this email address, password reset instructions have been sent."
+msgstr "Si existe una cuenta con este correo electrónico, se enviaron las instrucciones para restablecer la contraseña."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email address"
+msgstr "Confirma tu correo electrónico"
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to finish verifying your email address."
+msgstr "Pulsa el botón de abajo para terminar de verificar tu correo electrónico."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Verify email address"
+msgstr "Verificar el correo electrónico"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new email address"
+msgstr "Confirma tu nuevo correo electrónico"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to switch your account to this email address."
+msgstr "Pulsa el botón de abajo para que tu cuenta use este correo electrónico."
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm email change"
+msgstr "Confirmar el cambio de correo"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
+msgstr "La contraseña debe tener como máximo %{count} bytes. Las letras acentuadas y los emojis cuentan como más de un byte."
+
+#: lib/tymeslot_web/live/auth_live/verification_events.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to receive a new verification link."
+msgstr "Inicia sesión para recibir un enlace de verificación nuevo."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Verifica tu correo electrónico antes de iniciar sesión. No pudimos enviarte un enlace nuevo; inténtalo más tarde."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Verifica tu correo electrónico antes de iniciar sesión. Te enviamos un enlace de verificación nuevo."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "Tu sesión de registro venció. Vuelve a iniciar sesión."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+msgstr "Correo o contraseña incorrectos. Si te registraste hace poco, busca el enlace de verificación en tu bandeja de entrada."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Check your email: we've sent a link to finish signing up with %{provider}."
+msgstr "Revisa tu correo: te enviamos un enlace para terminar el registro con %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Create my account"
+msgstr "Crear mi cuenta"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Finish signing up"
+msgstr "Terminar el registro"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to confirm your email address and create your account."
+msgstr "Pulsa el botón de abajo para confirmar tu correo electrónico y crear tu cuenta."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This link is no longer valid. Please sign in to continue."
+msgstr "Este enlace ya no es válido. Inicia sesión para continuar."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't send the link to finish signing up just now. Please try again later."
+msgstr "Ahora mismo no pudimos enviar el enlace para terminar el registro. Inténtalo más tarde."
+
+#: lib/tymeslot/auth/validation.ex
+#, elixir-autogen, elixir-format
+msgid "Password is too long"
+msgstr "La contraseña es demasiado larga"
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
+msgstr "Ya existe una cuenta con este correo electrónico. Inicia sesión con tu contraseña o con el servicio que usaste al registrarte. Si olvidaste la contraseña, puedes restablecerla desde la página de inicio de sesión."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Restore my account"
+msgstr "Restaurar mi cuenta"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Sign out"
+msgstr "Cerrar sesión"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back. Your account has been restored and will not be deleted."
+msgstr "Te damos de nuevo la bienvenida. Tu cuenta se restauró y no se eliminará."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your account could not be restored. Please try again."
+msgstr "No se pudo restaurar tu cuenta. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is being deleted"
+msgstr "Tu cuenta se está eliminando"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is being deleted and can no longer be restored."
+msgstr "Tu cuenta se está eliminando y ya no se puede restaurar."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
+msgstr "Tu cuenta está en proceso de eliminación (programada para el %{date}). Si quieres conservarla, restáurala aquí."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "The verification email could not be sent. Please try again."
+msgstr "No se pudo enviar el correo de verificación. Inténtalo de nuevo."
+
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Email address"
+msgstr "Dirección de correo electrónico"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication failed - missing authorisation code or security token."
+msgstr "Falló la autenticación con %{provider}: falta el código de autorización o el token de seguridad."

@@ -72,14 +72,14 @@ defmodule TymeslotWeb.Hooks.AppLocaleHookTest do
 
   describe "per-source validation (matching LocalePlug)" do
     test "an unsupported user locale falls through to the valid ambient locale" do
-      # A stale "es" preference must not be coerced to the default; the valid
+      # A stale "ja" preference must not be coerced to the default; the valid
       # "de" ambient locale (what LocalePlug detected on the dead render) wins.
       {:cont, socket} =
         AppLocaleHook.on_mount(
           :default,
           %{},
           %{"ambient_locale" => "de"},
-          socket(%{current_user: %{locale: "es"}})
+          socket(%{current_user: %{locale: "ja"}})
         )
 
       assert socket.assigns.locale == "de"
