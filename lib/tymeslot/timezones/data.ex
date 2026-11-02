@@ -115,6 +115,7 @@ defmodule Tymeslot.Timezones.Data do
 
                           Map.merge(entry, %{
                             label: "#{city}, #{country}",
+                            local_city: city,
                             local_country: country,
                             english_label: entry.label
                           })
@@ -171,6 +172,10 @@ defmodule Tymeslot.Timezones.Data do
 
   @labels_by_locale Map.new(@entries_by_locale, fn {locale, entries} ->
                       {locale, Map.new(entries, fn e -> {e.timezone_id, e.label} end)}
+                    end)
+
+  @cities_by_locale Map.new(@entries_by_locale, fn {locale, entries} ->
+                      {locale, Map.new(entries, fn e -> {e.timezone_id, e.local_city} end)}
                     end)
 
   # Search index per locale: folded key → entry. Each entry answers to its
@@ -312,6 +317,27 @@ defmodule Tymeslot.Timezones.Data do
   end
 
   def display_name(_other), do: "Unknown timezone"
+
+  @doc """
+  The zone's city in the current Gettext locale; a valid zone with no entry
+  falls back to its city segment. Nil for a zone named after no place
+  (`Etc/UTC`, `Etc/GMT+5`, `UTC`).
+  """
+  @spec city(String.t()) :: String.t() | nil
+  def city(timezone_id) when is_binary(timezone_id) do
+    @cities_by_locale
+    |> Map.fetch!(locale())
+    |> Map.get_lazy(timezone_id, fn -> fallback_city(timezone_id) end)
+  end
+
+  defp fallback_city("Etc/" <> _offset_zone), do: nil
+
+  defp fallback_city(timezone_id) do
+    case String.split(timezone_id, "/") do
+      [_no_region] -> nil
+      segments -> segments |> List.last() |> String.replace("_", " ")
+    end
+  end
 
   @spec normalize(term()) :: term()
   def normalize(timezone_id) when is_binary(timezone_id) do

@@ -57,7 +57,10 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end)
   end
 
-  feature "overview + schedule fit without horizontal overflow in both themes",
+  # Twenty walks (every shipped theme at every width), each waiting for the
+  # schedule's day, time or slot to show: past ExUnit's default minute.
+  @tag timeout: 180_000
+  feature "overview + schedule fit without horizontal overflow in every theme",
           %{session: session} do
     {profile, _slug} = create_user_with_meeting_type()
 
@@ -73,7 +76,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "length step fits without horizontal overflow in both themes",
+  feature "length step fits without horizontal overflow in every theme",
           %{session: session} do
     # A type offering several lengths asks for one between the overview and
     # the schedule, a step with a layout of its own.
@@ -96,7 +99,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "length step keeps its actions reachable on wide-short viewports (both themes)",
+  feature "length step keeps its actions reachable on wide-short viewports (every theme)",
           %{session: session} do
     {profile, slug} = create_user_with_several_lengths()
 
@@ -114,7 +117,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "overview stays operable with introductory text at its length caps (both themes)",
+  feature "overview stays operable with introductory text at its length caps (every theme)",
           %{session: session} do
     # An organiser may fill the heading and both welcome lines to the character
     # limit the changeset allows. The caps were chosen so that the tallest legal
@@ -135,11 +138,17 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "schedule actions never overlap the calendar on wide-short viewports (both themes)",
+  feature "schedule actions never overlap the calendar on wide-short viewports (classic journeys)",
           %{session: session} do
     {profile, slug} = create_user_with_meeting_type()
 
-    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
+    # The schedule step with its own actions row and Next is the classic
+    # journey's shape; a theme with a journey of its own (Paper's second
+    # screen opens the details below the picker) has neither.
+    themes = Enum.filter(ThemeTestMatrix.all(), &(&1.journey == :classic))
+    assert themes != []
+
+    for theme <- themes, {width, height} <- @short_sizes, reduce: session do
       acc ->
         context = "#{theme.name} schedule #{width}x#{height}"
 
@@ -151,6 +160,39 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> assert_no_horizontal_overflow(context)
         |> assert_no_actions_calendar_overlap(context)
         |> assert_cta_reachable(context)
+    end
+  end
+
+  # A walk per theme with a journey of its own (Paper, Folio) at every short
+  # size, each to the details: past ExUnit's default minute.
+  @tag timeout: 180_000
+  feature "a theme with a journey of its own keeps its slot and submit reachable on short viewports",
+          %{session: session} do
+    # Paper opens the details below the picker, and Folio below the calendar
+    # on its continuous page, so there is no schedule actions row or Next to
+    # measure: the first time on offer, and after picking it the details'
+    # submit, must instead sit inside the scrollable page.
+    {profile, slug} = create_user_with_meeting_type()
+    themes = Enum.reject(ThemeTestMatrix.all(), &(&1.journey == :classic))
+    assert themes != []
+
+    for theme <- themes, {width, height} <- @short_sizes, reduce: session do
+      acc ->
+        context = "#{theme.name} journey #{width}x#{height}"
+
+        acc
+        |> resize_window(width, height)
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> assert_has(css("[data-fact='slot'], [data-fact='date']", minimum: 1))
+        |> assert_no_horizontal_overflow(context)
+        |> click_first_free_date()
+        |> assert_has(css("[data-fact='slot'], [data-fact='time']", minimum: 1))
+        |> assert_reachable("[data-fact='slot'], [data-fact='time']", "first time at #{context}")
+        |> pick_first_free_slot()
+        |> assert_has(css("[data-testid='submit-booking']"))
+        |> assert_reachable("[data-testid='submit-booking']", "submit at #{context}")
+        |> assert_no_horizontal_overflow("details at #{context}")
     end
   end
 
@@ -178,7 +220,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "embedded schedule flows to its natural height instead of the viewport's (both themes)",
+  feature "embedded schedule flows to its natural height instead of the viewport's (every theme)",
           %{session: session} do
     # In an embed the viewport is the iframe, which iframe_embed.js sizes from
     # the content. A schedule step locked to the viewport would measure the
@@ -204,7 +246,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "a fixed-date type's dates scroll with the calendar at short heights (both themes)",
+  feature "a fixed-date type's dates scroll with the calendar at short heights (every theme)",
           %{session: session} do
     # The list of dates sits above the calendar. Were the calendar the only
     # scroll region, a long list would keep its height and squeeze the

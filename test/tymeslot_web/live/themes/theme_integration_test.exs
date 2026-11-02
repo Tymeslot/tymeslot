@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
         assert html =~ profile.username
 
         # No bookable duration may be offered: the host has none.
-        refute has_element?(view, "[data-testid='duration-option']")
+        refute has_element?(view, "[data-fact='meeting_type']")
         refute html =~ "15-minutes"
         refute html =~ "30-minutes"
         assert html =~ "No meeting types available"

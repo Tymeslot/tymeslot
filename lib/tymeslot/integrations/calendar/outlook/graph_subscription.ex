@@ -60,12 +60,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
       read_at = DateTime.utc_now(:microsecond)
 
       with {:ok, {events, delta_link}} <- fetch_initial_delta(token),
-           {:ok, calendar_events} <- normalise_delta_events(events, integration, read_at),
+           {:ok, calendar_events, master_reads} <-
+             normalise_delta_events(events, integration, read_at),
            :ok <-
              SeriesRules.refresh(
                integration.id,
                calendar_events,
-               SeriesMaster.reader(integration)
+               SeriesMaster.reader(integration),
+               already_read: master_reads
              ),
            # Through `Sync.upsert_cache/2` for the ownership flagging it adds;
            # see the note in `DeltaSync.apply_delta/3`.
@@ -284,9 +286,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
       synced_at: read_at
     }
 
-    events
-    |> OccurrenceStubs.complete(integration)
-    |> OutlookProvider.normalise_events(context)
+    {completed, master_reads} = OccurrenceStubs.complete(events, integration)
+
+    with {:ok, calendar_events} <- OutlookProvider.normalise_events(completed, context) do
+      {:ok, calendar_events, master_reads}
+    end
   end
 
   defp create_subscription(token, client_state, expiration, webhook_base_url) do

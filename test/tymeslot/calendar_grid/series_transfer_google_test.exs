@@ -336,7 +336,11 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
       assert [
                %{method: :get, url: @master_url, token: ["source-token"]},
                %{method: :post, url: post_url, body: body, token: ["destination-token"]},
-               %{method: :delete, url: @master_url, token: ["source-token"]}
+               %{
+                 method: :delete,
+                 url: @master_url <> "?sendUpdates=none",
+                 token: ["source-token"]
+               }
              ] = requests()
 
       assert split_url(post_url) ==
@@ -422,7 +426,11 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
              }
 
       # The copy is never deleted again.
-      assert [%{method: :get}, %{method: :post}, %{method: :delete, url: @master_url}] =
+      assert [
+               %{method: :get},
+               %{method: :post},
+               %{method: :delete, url: @master_url <> "?sendUpdates=none"}
+             ] =
                requests()
 
       assert_enqueued(sync_job(source))

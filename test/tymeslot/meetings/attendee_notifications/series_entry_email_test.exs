@@ -26,6 +26,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
+  alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.RepeatSeriesFixtures
 
   @first ~U[2026-11-03 09:30:00.000000Z]
@@ -145,6 +146,93 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
       assert entry_uids(email) == ["series-g_20261110T093000Z", "series-g"]
       assert ics =~ "DTSTART:20261103T103000Z"
       assert ics =~ "DTEND:20261103T113000Z"
+    end
+  end
+
+  # A client ignores a VEVENT whose SEQUENCE is below the one it holds for
+  # that UID, so each entry goes out above the revision its guest was sent.
+  describe "the SEQUENCE of each entry" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, provider: "google")
+      cache_rule(integration, "master-g", nil)
+      %{integration: integration}
+    end
+
+    test "cancelling every occurrence from the first sends an occurrence emailed twice above it",
+         %{user: user, integration: integration} do
+      first = google_occurrence(integration, @first)
+
+      _emailed_twice =
+        google_occurrence(integration, @second,
+          last_notified_state: baseline(@second),
+          ical_sequence: 2
+        )
+
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(first, user.id, :series)
+      [email] = deliver_all("send_calendar_invitation")
+
+      assert entry_sequences(email) == [{"series-g", 1}, {"series-g_20261110T093000Z", 3}]
+    end
+
+    test "cancelling every occurrence from a later one sends the invitation's entry above " <>
+           "the revision its first occurrence was sent at",
+         %{user: user, integration: integration} do
+      _first =
+        google_occurrence(integration, @first,
+          last_notified_state: baseline(@first),
+          ical_sequence: 4
+        )
+
+      event = google_occurrence(integration, @second)
+
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+      [email] = deliver_all("send_calendar_invitation")
+
+      assert entry_sequences(email) == [{"series-g_20261110T093000Z", 1}, {"series-g", 5}]
+    end
+
+    test "an edit of all occurrences from a later one sends the invitation's entry above " <>
+           "the revision its first occurrence was sent at",
+         %{user: user, integration: integration} do
+      _first =
+        google_occurrence(integration, @first,
+          last_notified_state: baseline(@first),
+          ical_sequence: 3
+        )
+
+      original = google_occurrence(integration, @second)
+      updated = %{original | summary: "Weekly sync (moved room)"}
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
+
+      [email] = deliver_all("send_event_update_notification")
+
+      assert entry_sequences(email) == [{"series-g_20261110T093000Z", 1}, {"series-g", 4}]
+    end
+
+    test "an entry of a job queued before entries carried their own is sent at the email's",
+         %{user: user, integration: integration} do
+      first = google_occurrence(integration, @first)
+
+      _emailed_twice =
+        google_occurrence(integration, @second,
+          last_notified_state: baseline(@second),
+          ical_sequence: 2
+        )
+
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(first, user.id, :series)
+      assert [job] = enqueued_jobs("send_calendar_invitation")
+
+      legacy_args =
+        Map.update!(job.args, "other_entries", fn entries ->
+          Enum.map(entries, &Map.delete(&1, "sequence"))
+        end)
+
+      assert :ok = perform_job(EmailWorker, legacy_args)
+      assert_received {:email, email}
+
+      assert entry_sequences(email) == [{"series-g", 1}, {"series-g_20261110T093000Z", 1}]
     end
   end
 
@@ -275,6 +363,21 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
     event
     |> Changeset.change(summary: "Weekly sync (moved room)")
     |> Repo.update!()
+  end
+
+  # The UID and SEQUENCE of every VEVENT in the email's attachment, the UID
+  # without the domain every Tymeslot UID ends in.
+  defp entry_sequences(email) do
+    email
+    |> calendar_attachment()
+    |> Map.fetch!(:data)
+    |> String.split("BEGIN:VEVENT")
+    |> tl()
+    |> Enum.map(fn vevent ->
+      [_all, uid] = Regex.run(~r/\r\nUID:([^@\r]+)@/, vevent)
+      [_all, sequence] = Regex.run(~r/\r\nSEQUENCE:(\d+)\r\n/, vevent)
+      {uid, String.to_integer(sequence)}
+    end)
   end
 
   # The UID of every VEVENT in the email's attachment, without the domain

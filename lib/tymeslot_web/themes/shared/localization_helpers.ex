@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   alias Calendar
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.MeetingTypes.Lengths
+  alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.ChosenLength
@@ -61,7 +62,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
          {:ok, time_obj} <- DateTimeUtils.parse_time_string(time),
          {:ok, naive_dt} <- NaiveDateTime.new(date_struct, time_obj),
          {:ok, dt} <- DateTime.from_naive(naive_dt, timezone) do
-      weekday = get_weekday_name(Date.day_of_week(DateTime.to_date(dt)))
+      weekday = weekday_name(Date.day_of_week(DateTime.to_date(dt)))
       month = month_in_date(dt.month)
       time_str = format_time_by_locale(dt)
 
@@ -81,6 +82,33 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   def format_booking_datetime(_date, _time, _timezone),
     do: dgettext("datetime", "Invalid date/time")
+
+  @doc """
+  The visitor's zone named as a time, "Berlin time (UTC+1)", with the offset in
+  force at the slot starting at `time` on `date`; the offset now when no single
+  slot is chosen.
+  """
+  @spec format_zone_label(Date.t() | String.t() | nil, String.t() | nil, String.t()) ::
+          String.t()
+  def format_zone_label(date, time, timezone) when is_binary(timezone) do
+    case slot_instant(date, time, timezone) do
+      {:ok, at} -> Timezones.time_label(timezone, at)
+      _no_single_slot -> Timezones.time_label(timezone)
+    end
+  end
+
+  defp slot_instant(date, time, timezone) when is_binary(time) do
+    with {:ok, day} <- to_date(date),
+         {:ok, clock} <- DateTimeUtils.parse_time_string(time) do
+      DateTimeUtils.resolve_local(day, clock, timezone)
+    end
+  end
+
+  defp slot_instant(_date, _time, _timezone), do: :error
+
+  defp to_date(%Date{} = date), do: {:ok, date}
+  defp to_date(date) when is_binary(date), do: parse_date(date)
+  defp to_date(_other), do: :error
 
   @doc """
   When a meeting starting at `time` on `date` (the booker's clock) ends on a
@@ -178,7 +206,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     case to_attendee_datetime(start_time, timezone) do
       {:ok, dt} ->
         dgettext("datetime", "%{weekday} %{day} %{month}, %{time}",
-          weekday: get_weekday_name(Date.day_of_week(DateTime.to_date(dt))),
+          weekday: weekday_name(Date.day_of_week(DateTime.to_date(dt))),
           day: dt.day,
           month: month_in_date(dt.month),
           time: format_time_by_locale(dt)
@@ -253,7 +281,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   def format_full_date_label(%Date{} = date) do
     dgettext("datetime", "%{weekday}, %{date}",
-      weekday: get_weekday_name(Date.day_of_week(date)),
+      weekday: weekday_name(Date.day_of_week(date)),
       date: format_date(date)
     )
   end
@@ -304,6 +332,35 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     end
   end
 
+  @doc """
+  The full name of ISO weekday `day` (1 is Monday) in the booking language,
+  as the long date labels write it: "Thursday", "Donnerstag".
+  """
+  @spec weekday_name(1..7) :: String.t()
+  def weekday_name(day) do
+    case day do
+      1 -> dgettext("datetime", "Monday")
+      2 -> dgettext("datetime", "Tuesday")
+      3 -> dgettext("datetime", "Wednesday")
+      4 -> dgettext("datetime", "Thursday")
+      5 -> dgettext("datetime", "Friday")
+      6 -> dgettext("datetime", "Saturday")
+      7 -> dgettext("datetime", "Sunday")
+    end
+  end
+
+  @doc """
+  `weekday_name/1` as it reads inside a sentence: German nouns and English
+  weekdays keep their capital; in the other catalogues (French, Italian,
+  Czech, Ukrainian, Polish, Portuguese) a weekday is capitalised only as a
+  heading, so here it is lower-cased ("jeudi", "giovedì").
+  """
+  @spec mid_sentence_weekday(1..7) :: String.t()
+  def mid_sentence_weekday(day) do
+    name = weekday_name(day)
+    if current_locale() in ["en", "de"], do: name, else: String.downcase(name)
+  end
+
   # A month named inside a date takes a different form from a standalone one in
   # several locales: Ukrainian and Czech use the genitive ("15 червня 2026"),
   # French and Italian lowercase it. The headings below use the standalone form
@@ -319,26 +376,6 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   defp current_locale, do: Gettext.get_locale(TymeslotWeb.Gettext)
-
-  # German nouns and English weekdays keep their capital inside a sentence; the
-  # other catalogues capitalise them only for use as a heading.
-  defp mid_sentence_weekday(day) do
-    name = get_weekday_name(day)
-    if current_locale() in ["en", "de"], do: name, else: String.downcase(name)
-  end
-
-  @spec get_weekday_name(integer()) :: String.t()
-  defp get_weekday_name(day) do
-    case day do
-      1 -> dgettext("datetime", "Monday")
-      2 -> dgettext("datetime", "Tuesday")
-      3 -> dgettext("datetime", "Wednesday")
-      4 -> dgettext("datetime", "Thursday")
-      5 -> dgettext("datetime", "Friday")
-      6 -> dgettext("datetime", "Saturday")
-      7 -> dgettext("datetime", "Sunday")
-    end
-  end
 
   @doc """
   The month grid's column headings, abbreviated and translated, starting on

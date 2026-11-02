@@ -46,8 +46,9 @@ defmodule TymeslotWeb.SavedLocationsJourneyTest do
   alias Tymeslot.TestMocks
   alias Tymeslot.Venues
   alias Tymeslot.Workers.VideoRoomWorker
+  alias TymeslotWeb.ThemeTestMatrix
 
-  @themes [{"Quill", "1"}, {"Rhythm", "2"}]
+  @themes Enum.map(ThemeTestMatrix.all(), &{&1.name, &1.id})
   @note "The address will be arranged with you after booking."
   @host_note "The address is to be arranged with the booker."
 

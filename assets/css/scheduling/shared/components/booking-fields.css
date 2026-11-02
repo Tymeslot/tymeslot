@@ -13,6 +13,10 @@
    Tokens: --guest-remove-ink-hover, the glyph of the guest chip's remove
    button and the guest field's close button on hover, drawn on
    --theme-danger: an ink that reads on the danger colour.
+   --recaptcha-notice-ink and --recaptcha-notice-link-ink, the reCAPTCHA
+   notice under the form and its two links (defaults in shared/tokens.css:
+   the theme's --ink-2 and --ink-1; the links are underlined, so they need
+   no hue of their own to stand apart).
    ========================================================================== */
 
 /* ===== Add Guests field ===== */
@@ -277,4 +281,14 @@
   margin-top: var(--space-3xs);
   font-size: var(--theme-font-size-sm);
   color: var(--theme-error-light);
+}
+
+/* ===== reCAPTCHA notice (Shared.SecurityFields) ===== */
+
+.scheduling-app .recaptcha-notice {
+  color: var(--recaptcha-notice-ink);
+}
+
+.scheduling-app .recaptcha-notice a {
+  color: var(--recaptcha-notice-link-ink);
 }

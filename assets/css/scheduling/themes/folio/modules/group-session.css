@@ -1,0 +1,50 @@
+/* Folio's group-session marks (after the shared group-session.css), set
+   like print rather than as chips: the hint is a small-capitals line in the
+   eyebrow's style, and the confirmation line and the seat-move notice sit
+   between two rules like a standfirst, with no fill and no corners.
+
+     .group-session-hint  - a meeting card and the schedule's header
+     .group-session-line  - the confirmation, above the meeting's details
+     .group-session-move  - the schedule step of a seat move */
+
+.folio-theme-wrapper .group-session-hint {
+  align-self: flex-start;
+  justify-self: start;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-2xs);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+/* In a meeting card the hint runs under the description, across the card. */
+.folio-meeting .folio-meeting__group {
+  grid-column: 1 / -1;
+}
+
+.folio-meeting[aria-current="true"] .group-session-hint {
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .group-session-line,
+.folio-theme-wrapper .group-session-move {
+  margin: 0;
+  padding: var(--space-xs) 0;
+  border: 0;
+  border-block: var(--border-width-thin) solid var(--folio-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-base);
+  font-style: italic;
+  line-height: var(--folio-line-height-body);
+}
+
+.folio-theme-wrapper .group-session-line-icon {
+  color: var(--theme-text-secondary);
+}

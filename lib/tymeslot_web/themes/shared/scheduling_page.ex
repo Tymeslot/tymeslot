@@ -20,13 +20,18 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
   `moment_state`, `:current`, `:done` or `:open`; an outcome's gets neither.
   The assigns a component may rely on are the table in
   `docs/THEME_DEVELOPMENT_GUIDE.md` §"Step Components".
+
+  On a demo page the shared theme switcher (`Components.DemoThemeSwitcher`)
+  leads the content, above the moments, so every theme carries it without a
+  wrapper of its own changing.
   """
 
   use Phoenix.Component
 
-  alias TymeslotWeb.Themes.Shared.Components.{AwaitingPayment, ErrorComponent}
+  alias TymeslotWeb.Themes.Shared.Components.{AwaitingPayment, DemoThemeSwitcher, ErrorComponent}
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   @page_keys [:page_wrapper, :page_parts, :page_navigator]
 
@@ -55,6 +60,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       should_show_branding={assigns[:should_show_branding]}
       {Map.take(assigns, [:demo_mode])}
     >
+      <DemoThemeSwitcher.switcher
+        :if={assigns[:demo_theme_switcher]}
+        theme_id={assigns[:theme_id]}
+        base_path={PathHandlers.current_base_path(assigns)}
+      />
       <%= cond do %>
         <% assigns[:scheduling_error_message] -> %>
           <.live_component

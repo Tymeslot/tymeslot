@@ -10,6 +10,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   import ExUnit.Assertions
   import Phoenix.LiveViewTest, only: [render_component: 2]
 
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
@@ -129,9 +130,10 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
         start_time: ~U[2026-02-20 10:00:00Z],
         duration: 30,
         organizer_name: "Test User",
+        meeting_type: "Strategy session",
         attendee_timezone: "UTC"
       },
-      organizer_profile: %{username: "testuser"},
+      organizer_profile: %ProfileSchema{username: "testuser", full_name: "Test User"},
       theme_tokens:
         ThemeCustomizations.tokens(theme_id, %ThemeCustomizationSchema{
           theme_id: theme_id,

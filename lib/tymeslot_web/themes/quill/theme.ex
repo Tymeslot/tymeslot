@@ -24,7 +24,8 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
       conversion: :atmosphere,
       voice: :polished,
       surface: :glass
-    ]
+    ],
+    voice: TymeslotWeb.Themes.Quill.Voice
 
   @impl TymeslotWeb.Themes.Core.Behaviour
   defdelegate onboarding_preview(assigns),

@@ -13,9 +13,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Components.MeetingTypeDescription
   alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -58,6 +60,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       disabled={!@available || !@current_month || @loading}
       aria-label={LocalizationHelpers.format_full_date_label(@day[:date] || @day["date"])}
       aria-current={@day.is_today && "date"}
+      aria-pressed={to_string(@selected)}
       {@rest}
     >
       <span class="calendar-day__number" aria-hidden="true">{@day.day}</span>
@@ -86,7 +89,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       )
 
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale}>
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
@@ -103,9 +112,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
                     <div class="schedule-title-area">
-                      <h1 class="section-header schedule-title">
+                      <JourneyComponents.moment_heading
+                        tag="h1"
+                        moment={assigns[:moment]}
+                        moment_state={assigns[:moment_state]}
+                        focus={assigns[:journey_focus]}
+                        class="section-header schedule-title"
+                      >
                         {dgettext("booking", "Select a Date & Time")}
-                      </h1>
+                      </JourneyComponents.moment_heading>
 
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">
@@ -116,11 +131,22 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         </p>
                       <% end %>
 
-                      <p class="schedule-duration-label text-glass-primary">
-                        {dgettext("booking", "Duration: %{duration}",
-                          duration: BookingText.duration_label(assigns)
-                        )}
+                      <p
+                        class="schedule-meeting-summary text-glass-primary"
+                        data-testid="chosen-meeting-type"
+                      >
+                        <span :if={@meeting_type} class="schedule-meeting-name">
+                          {@meeting_type.name}
+                        </span>
+                        <span class="schedule-meeting-duration">
+                          {BookingText.duration_label(assigns)}
+                        </span>
                       </p>
+                      <MeetingTypeDescription.description
+                        id="schedule-meeting-description"
+                        meeting_type={@meeting_type}
+                        class="schedule-meeting-description text-glass-primary"
+                      />
 
                       <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
                       <MeetingPrice.hint
@@ -218,6 +244,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                 disabled={not day.available || day.loading}
                                 aria-label={LocalizationHelpers.format_full_date_label(day.date)}
                                 aria-current={day.today && "date"}
+                                aria-pressed={to_string(@selected_date == day.date)}
                               >
                                 <span class="week-day-name" aria-hidden="true">{day.day_name}</span>
                                 <span class="week-day-number" aria-hidden="true">{day.day_number}</span>
@@ -426,7 +453,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
               />
               <div class="timezone-trigger-text">
                 <div class="timezone-name">
-                  {Timezones.format(@user_timezone)}
+                  {Timezones.time_label(@user_timezone)}
                 </div>
                 <div class="timezone-time-display timezone-time-inline">
                   {dgettext("booking", "%{time} local time",

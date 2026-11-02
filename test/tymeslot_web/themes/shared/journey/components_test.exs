@@ -63,7 +63,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.ComponentsTest do
       doc = heading(moment: :when, moment_state: :current, focus: :when)
 
       assert [mounted] = Floki.attribute(doc, "#when-heading-current", "phx-mounted")
-      assert mounted =~ "focus"
+
+      # The focus first, then the request to bring the heading to the top:
+      # the focus alone scrolls it only into sight (the middle of the view).
+      assert [["focus", %{}], ["dispatch", %{"event" => "tymeslot:reveal"} = reveal]] =
+               Jason.decode!(mounted)
+
+      refute Map.has_key?(reveal, "to")
       assert Floki.attribute(doc, "#when-heading-current", "tabindex") == ["-1"]
     end
 

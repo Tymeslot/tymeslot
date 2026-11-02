@@ -5,7 +5,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EventsTest do
   @moduletag :themes
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.CustomFields
   alias Tymeslot.Test.LogCapture
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
 
   defp socket, do: %Socket{assigns: %{__changed__: %{}}}
@@ -54,5 +56,119 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EventsTest do
 
     assert meta.theme_id == "2"
     assert meta.step == :questions
+  end
+
+  defp definitions do
+    [
+      %{"id" => "a", "type" => "short_text", "label" => "A", "required" => true, "position" => 0},
+      %{
+        "id" => "b",
+        "type" => "short_text",
+        "label" => "B",
+        "required" => false,
+        "position" => 1
+      },
+      %{
+        "id" => "m",
+        "type" => "multi_select",
+        "label" => "M",
+        "required" => false,
+        "position" => 2,
+        "options" => [%{"key" => "x", "label" => "X"}, %{"key" => "y", "label" => "Y"}]
+      }
+    ]
+  end
+
+  defp asking,
+    do: %Socket{assigns: %{__changed__: %{}, moment: :pick, engine: Engine.init(definitions())}}
+
+  describe "the question an answer is for" do
+    test "is the one the event names, on a screen that shows them all" do
+      assert {:noreply, _socket} =
+               Events.handle_event("answer", %{"question" => "b", "value" => "Acme"}, asking())
+
+      assert_received {:step_event, :pick, :answer, {"b", "Acme"}}
+    end
+
+    test "is the one on show when the event names none" do
+      Events.handle_event("answer", %{"value" => "Acme"}, asking())
+      assert_received {:step_event, :pick, :answer, {"a", "Acme"}}
+    end
+
+    test "is none when the event names a question the engine does not have" do
+      assert {:noreply, _socket} =
+               Events.handle_event("answer", %{"question" => "zz", "value" => "Acme"}, asking())
+
+      assert {:noreply, _socket} =
+               Events.handle_event(
+                 "multi_toggle",
+                 %{"question" => "zz", "value" => "y"},
+                 asking()
+               )
+
+      refute_received {:step_event, _moment, :answer, _data}
+    end
+
+    test "is the one a choice toggled names" do
+      Events.handle_event("multi_toggle", %{"question" => "m", "value" => "y"}, asking())
+      assert_received {:step_event, :pick, :answer, {"m", ["y"]}}
+    end
+  end
+
+  describe "all_questions/1" do
+    test "gives every question with its answer, and no error before the booker has seen one" do
+      engine = Engine.answer(Engine.init(definitions()), "b", "Design")
+
+      assert [
+               %{definition: %{"id" => "a"}, value: nil, error: nil},
+               %{definition: %{"id" => "b"}, value: "Design", error: nil},
+               %{definition: %{"id" => "m"}, value: nil, error: nil}
+             ] = Events.all_questions(%{engine: engine})
+    end
+
+    test "names a question the submit refused while its answer still fails" do
+      refused = %{refused_questions: MapSet.new(["a"])}
+
+      assert [%{error: error} | _rest] =
+               Events.all_questions(Map.put(refused, :engine, Engine.init(definitions())))
+
+      assert byte_size(error) > 0
+
+      answered = Engine.answer(Engine.init(definitions()), "a", "Acme")
+      assert [%{error: nil} | _rest] = Events.all_questions(Map.put(refused, :engine, answered))
+    end
+
+    test "names a touched answer that fails" do
+      engine = Engine.answer(Engine.init(definitions()), "a", "")
+
+      assert [%{error: error} | _rest] = Events.all_questions(%{engine: engine})
+      assert byte_size(error) > 0
+    end
+
+    # The submission refuses a raw answer over 5,000 bytes before its type's
+    # own check (`CustomFields.validate_answers/2`); the screen names it too.
+    test "names a touched answer the submission would refuse for its length" do
+      long = String.duplicate("𝄞", 1300)
+
+      choice = %{
+        "id" => "c",
+        "type" => "single_select",
+        "label" => "C",
+        "required" => false,
+        "options" => [%{"key" => long, "label" => "Long"}]
+      }
+
+      engine = Engine.answer(Engine.init([choice]), "c", long)
+
+      assert {:error, %{"c" => message}} =
+               CustomFields.validate_answers([choice], %{"c" => long})
+
+      assert [%{error: ^message}] = Events.all_questions(%{engine: engine})
+    end
+
+    test "is empty without questions" do
+      assert Events.all_questions(%{engine: Engine.init([])}) == []
+      assert Events.all_questions(%{}) == []
+    end
   end
 end

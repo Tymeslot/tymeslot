@@ -31,6 +31,16 @@
     margin-top: auto;
     margin-bottom: auto;
   }
+
+  /* On a demo page the theme switcher goes with the box, centred below
+     the language switcher's row rather than left under it. */
+  .language-switcher-container.visible ~ .demo-theme-switcher {
+    margin-top: auto;
+  }
+
+  .language-switcher-container.visible ~ .demo-theme-switcher ~ .scheduling-box {
+    margin-top: 0;
+  }
 }
 
 /* Language switcher visibility (only on slide 1) */

@@ -1,0 +1,276 @@
+/* The schedule screen's booking form: the shared booking form,
+   the reCAPTCHA notice, and the colours of the shared guest and location
+   fields (their structure is shared/components/booking-fields.css,
+   imported just before this file, at the same specificity, so these rules
+   win the ties). */
+
+/* --- The form: one column, name and email side by side once there is room --- */
+
+.paper-booking-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+}
+
+.paper-booking-form__contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+}
+
+@container scheduling (min-width: 30rem) {
+  .paper-booking-form__contact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Its inks are the --recaptcha-notice-* tokens (variables.css). */
+.paper-theme-wrapper .recaptcha-notice {
+  margin-top: var(--space-sm);
+  font-size: var(--theme-font-size-2xs);
+}
+
+/* The approval notice under the form keeps the form's block spacing from
+   the last field (the shared notice only spaces itself below). */
+.paper-theme-wrapper .approval-notice-before {
+  margin-top: var(--space-lg);
+}
+
+/* --- Guests --- */
+
+.paper-theme-wrapper .guest-field__toggle {
+  color: var(--theme-primary);
+}
+
+.paper-theme-wrapper .guest-field__toggle:hover {
+  text-decoration: underline;
+}
+
+.paper-theme-wrapper .guest-field__label {
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .guest-field__count,
+.paper-theme-wrapper .guest-field__close {
+  color: var(--ink-2);
+}
+
+.paper-theme-wrapper .guest-chip {
+  border: var(--border-width-thin) solid var(--line-2);
+  background: var(--surface-subtle);
+}
+
+.paper-theme-wrapper .guest-chip__email {
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .guest-chip__remove {
+  color: var(--ink-2);
+}
+
+.paper-theme-wrapper .guest-add__input {
+  box-sizing: border-box;
+  min-height: var(--paper-control-height);
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  font: inherit;
+}
+
+.paper-theme-wrapper .guest-add__input::placeholder,
+.paper-theme-wrapper .location-phone__input::placeholder {
+  color: var(--ink-2);
+  opacity: 1;
+}
+
+.paper-theme-wrapper .guest-add__input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.paper-theme-wrapper .guest-add__button {
+  min-height: var(--paper-control-height);
+  padding: 0 var(--space-md);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.paper-theme-wrapper .guest-add__button:hover {
+  background: var(--surface-light);
+}
+
+.paper-theme-wrapper .guest-field__error {
+  color: var(--theme-danger);
+}
+
+/* --- Location --- */
+
+.paper-theme-wrapper .location-field {
+  margin-bottom: var(--space-lg);
+}
+
+.paper-theme-wrapper .location-field__label {
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-theme-wrapper .location-options {
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
+  background: var(--theme-surface);
+}
+
+.paper-theme-wrapper .location-option {
+  /* Inside the group's box, inset by its padding, so the corners stay
+     concentric under every radius option (square under sharp). */
+  border-radius: max(0rem, calc(min(var(--radius-control), var(--paper-radius-box)) - var(--space-3xs)));
+  color: var(--ink-2);
+  /* Sentence case, as the rest of Paper's voice, not the shared capitals. */
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.paper-theme-wrapper .location-option:hover {
+  background: var(--surface-subtle);
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--border-width-medium);
+}
+
+.paper-theme-wrapper .location-option--selected,
+.paper-theme-wrapper .location-option--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.paper-theme-wrapper .location-field__detail {
+  color: var(--ink-2);
+}
+
+/* The venues an in-person option offers: one row each in the same flat box
+   as the options, so a venue's address sits under its name. The radio
+   inside reuses `.location-option__radio`. An address may run over several
+   lines, which `pre-line` keeps. */
+.paper-theme-wrapper .location-venues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
+  background: var(--theme-surface);
+}
+
+.paper-theme-wrapper .location-venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: max(0rem, calc(min(var(--radius-control), var(--paper-radius-box)) - var(--space-3xs)));
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.paper-theme-wrapper .location-venue:hover {
+  background: var(--surface-subtle);
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .location-venue:has(.location-option__radio:focus-visible) {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--border-width-medium);
+}
+
+.paper-theme-wrapper .location-venue--selected,
+.paper-theme-wrapper .location-venue--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.paper-theme-wrapper .location-venue__name,
+.paper-theme-wrapper .location-field__venue-name {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-theme-wrapper .location-field__venue-name {
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .location-venue__description,
+.paper-theme-wrapper .location-field__venue-description {
+  font-size: var(--theme-font-size-xs);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.paper-theme-wrapper .location-field__venue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.paper-theme-wrapper .location-field__note {
+  margin: var(--space-2xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+/* The one place a type with nothing to choose is held at: its icon and
+   name as a fact line, then its venue or the arranged-later note. */
+.paper-theme-wrapper .location-stated__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-theme-wrapper .location-phone__label {
+  color: var(--ink-1);
+}
+
+.paper-theme-wrapper .location-phone__input {
+  box-sizing: border-box;
+  min-height: var(--paper-control-height);
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  font: inherit;
+}
+
+.paper-theme-wrapper .location-phone__input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.paper-theme-wrapper .location-field__error {
+  color: var(--theme-danger);
+}
+
+.paper-book__price {
+  margin: 0;
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

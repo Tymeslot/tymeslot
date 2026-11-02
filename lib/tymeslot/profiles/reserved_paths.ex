@@ -10,9 +10,10 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   @doc """
   Whether `username` is reserved, so no organiser may choose it.
 
-  A username is reserved when it is on `list/0`, or when it lies in the
-  namespace the configured demo provider reserves for its demo pages
-  (`Tymeslot.Demo.demo_username?/1`).
+  A username is reserved when it is on `list/0`, when it has the shape of a
+  regional or script locale tag (`pt-pt`, `es-419`, `zh-hans`), or when it
+  lies in the namespace the configured demo provider reserves for its demo
+  pages (`Tymeslot.Demo.demo_username?/1`).
 
   Only new choices are refused: a profile's current username is never
   re-checked (`Tymeslot.Profiles.username_status/2`), so a handle chosen
@@ -20,7 +21,7 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   """
   @spec reserved?(String.t()) :: boolean()
   def reserved?(username) when is_binary(username),
-    do: username in list() or Demo.demo_username?(username)
+    do: username in list() or locale_tag?(username) or Demo.demo_username?(username)
 
   @doc """
   Returns a list of top-level paths and usernames that are reserved for system use.
@@ -42,6 +43,17 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   # pages (/de, /fr, ...), so a username must never be able to shadow one —
   # or be shadowed by one — should a longer locale code ever launch.
   defp locale_paths, do: Locales.supported_codes()
+
+  # A locale launched later could take a regional or script variant as its
+  # URL prefix (European Portuguese as `pt-pt`, beside `pt` for Brazil), and
+  # reserving it only then would be too late: a profile's current username
+  # is never re-checked. So the whole BCP 47 shape is reserved up front: a
+  # two-letter language, then a region (two letters, or three digits as in
+  # `es-419`) or a script (four letters). Bare two-letter codes need no rule,
+  # being shorter than any username may be.
+  @locale_tag ~r/^[a-z]{2}-(?:[a-z]{2}|[0-9]{3}|[a-z]{4})$/
+
+  defp locale_tag?(username), do: username =~ @locale_tag
 
   defp system_paths do
     ~w(

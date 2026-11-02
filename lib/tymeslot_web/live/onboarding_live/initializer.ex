@@ -49,9 +49,10 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     connected_calendars =
       if connected?(socket), do: Calendar.list_integrations(user.id), else: []
 
-    # Seed both themes with a random video background the moment a calendar is
-    # connected (the point the theme step unlocks), before reading the
-    # customization below so the assigned state reflects it.
+    # Seed every theme that offers video backgrounds (Quill and Rhythm) with a
+    # random one the moment a calendar is connected (the point the theme step
+    # unlocks), before reading the customization below so the assigned state
+    # reflects it.
     ThemeHandlers.seed_video_backgrounds(profile, connected_calendars)
 
     {customization, onboarding_choices} = ThemeHandlers.initial_theme_state(profile)

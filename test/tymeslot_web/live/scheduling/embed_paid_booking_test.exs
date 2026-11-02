@@ -27,18 +27,25 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
   @moduletag :payments
   @moduletag :live
 
+  import Ecto.Query, only: [where: 2]
   import Mox
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.JourneyFixtureHelpers, only: [seed_organiser: 3]
 
   alias Phoenix.LiveViewTest
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -373,7 +380,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
 
         assert has_element?(view, "[data-testid='awaiting-payment']")
         refute has_element?(view, "button[phx-click='next_month']")
-        refute has_element?(view, "button[data-testid='duration-option']")
+        refute has_element?(view, "[data-fact='meeting_type']")
       end
 
       meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
@@ -381,6 +388,75 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
       _drain = :sys.get_state(view.pid)
 
       assert has_element?(view, "[data-testid='confirmation-heading']")
+    end
+  end
+
+  describe "the organiser above the wait" do
+    @tag :capture_log
+    test "Folio draws its slim masthead with the organiser above the shared wait", %{conn: conn} do
+      profile = seed_embed_organiser(:folio, "paidfolio")
+      view = book_embedded(conn, profile, "cs_folio_wait")
+      avatar = Profiles.avatar_url(profile, :original)
+
+      [wait] =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find("[data-testid='folio-payment-wait']")
+
+      assert [masthead, awaiting] = Floki.children(wait)
+      assert Floki.attribute(masthead, "class") == ["folio-masthead folio-masthead--slim"]
+      assert Floki.attribute(awaiting, "data-testid") == ["awaiting-payment"]
+
+      assert [_portrait] = Floki.find(masthead, "img.folio-portrait[src='#{avatar}']")
+      assert masthead |> Floki.find(".folio-identity__name") |> Floki.text() == "Mia Laurent"
+    end
+
+    for key <- [:quill, :paper] do
+      @tag :capture_log
+      test "#{key}'s wait stays without the organiser's portrait or name", %{conn: conn} do
+        key = unquote(key)
+        profile = seed_embed_organiser(key, "paid#{key}")
+        view = book_embedded(conn, profile, "cs_#{key}_wait")
+
+        assert has_element?(view, "[data-testid='awaiting-payment']")
+        refute has_element?(view, "img[src='#{Profiles.avatar_url(profile, :original)}']")
+        refute render(view) =~ "Mia Laurent"
+      end
+    end
+  end
+
+  # The suites above book Quill; each shipped theme draws its own journey and
+  # its own wait and confirmation, so each completes an embedded booking.
+  describe "an embedded booking on each theme" do
+    for theme <- ThemeTestMatrix.all() do
+      @tag :capture_log
+      test "#{theme.name}: a free booking confirms inside the iframe", %{conn: conn} do
+        %{user: user, profile: profile} =
+          seed_organiser(unquote(theme.id), "embedfree#{unquote(theme.slug)}",
+            profile: [allowed_embed_domains: ["embedder.test"]]
+          )
+
+        view = open_embedded(conn, profile)
+        html = BookingDriver.book(view, meeting_type: "quick-chat")
+
+        assert html =~ ~s(data-intent="restart")
+        assert [%{status: :confirmed}] = meetings_for(user)
+      end
+
+      @tag :capture_log
+      test "#{theme.name}: a paid booking waits in the iframe, then confirms once paid",
+           %{conn: conn} do
+        profile = seed_embed_organiser(unquote(theme.key), "embedpaid#{unquote(theme.slug)}")
+        view = book_embedded(conn, profile, "cs_#{unquote(theme.slug)}_flip")
+
+        meeting_id = :sys.get_state(view.pid).socket.assigns[:awaiting_payment_meeting].id
+        Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)
+        _drain = :sys.get_state(view.pid)
+
+        refute has_element?(view, "[data-testid='awaiting-payment']")
+        assert has_element?(view, "[data-testid='confirmation-heading']")
+      end
     end
   end
 
@@ -419,49 +495,76 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     end
   end
 
-  defp navigate_to_booking_form_embedded(conn, profile, meeting_type) do
-    timezone = profile.timezone
-    # Referer header drives the EmbedTokenPlug's parent_origin signing,
-    # which the EmbedAuthHook then verifies against the profile's
-    # `allowed_embed_domains` (set to "embedder.test" in the setup).
-    conn = put_req_header(conn, "referer", "https://embedder.test/page")
-    {:ok, view, _html} = live(conn, "/#{profile.username}?embed=1&timezone=#{timezone}")
+  # An organiser named "Mia Laurent" on the theme `key`, embeddable on
+  # embedder.test, with one paid meeting type and a Stripe account that
+  # takes charges.
+  defp seed_embed_organiser(key, username) do
+    {:ok, theme_id} = Catalog.key_to_id(key)
 
-    # Sanity check: the embed token wired the LV into embedded mode.
-    assert :sys.get_state(view.pid).socket.assigns[:embedded] == true,
-           "expected embedded LV after ?embed=1 — check EmbedTokenPlug + EmbedAuthHook"
+    %{user: user, profile: profile} =
+      seed_organiser(theme_id, username,
+        profile: [full_name: "Mia Laurent", allowed_embed_domains: ["embedder.test"]],
+        types: [
+          [name: "Paid Consult", duration_minutes: 30, payment_required: true, price_cents: 5000]
+        ]
+      )
 
-    _meeting_type = meeting_type
+    insert(:connect_account,
+      user: user,
+      stripe_account_id: "acct_#{username}",
+      default_currency: "usd",
+      charges_enabled: true
+    )
 
-    view |> element("button[data-testid='duration-option']") |> render_click()
-    view |> element("button[data-testid='next-step']") |> render_click()
+    profile
+  end
 
-    today = timezone |> DateTime.now!() |> DateTime.to_date()
-    target_date = Date.add(today, 1)
-    date_str = Date.to_string(target_date)
-
-    show_month(view, target_date)
-
-    wait_until(fn ->
-      has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")
+  # Books the paid meeting type in the embedded booker through the markup
+  # contract and returns the view once it shows the payment wait.
+  defp book_embedded(conn, profile, session_id) do
+    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+      {:ok, %{id: session_id, url: "https://checkout.stripe.com/#{session_id}"}}
     end)
 
-    view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
-    wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+    view = open_embedded(conn, profile)
+    BookingDriver.book(view, meeting_type: "paid-consult", until: :attendee)
 
-    slot =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
-      |> List.first() ||
-        flunk("expected a time slot after selecting a date")
+    view
+    |> form("form[data-fact='attendee']", %{
+      "booking" => %{"name" => "Pay Pat", "email" => "pat@example.com", "message" => ""}
+    })
+    |> render_submit()
 
-    view |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']") |> render_click()
-    view |> element("button[phx-click='next_step']") |> render_click()
+    _drain = :sys.get_state(view.pid)
+    assert has_element?(view, "[data-testid='awaiting-payment']")
+    view
+  end
+
+  # Opens the booker as the embed snippet does: the Referer drives
+  # EmbedTokenPlug's parent_origin signing, which EmbedAuthHook verifies
+  # against the profile's `allowed_embed_domains`.
+  defp open_embedded(conn, profile) do
+    conn = put_req_header(conn, "referer", "https://embedder.test/page")
+    {:ok, view, _html} = live(conn, "/#{profile.username}?embed=1&timezone=#{profile.timezone}")
+
+    assert :sys.get_state(view.pid).socket.assigns[:embedded] == true,
+           "expected embedded LV after ?embed=1; check EmbedTokenPlug + EmbedAuthHook"
 
     view
   end
+
+  defp navigate_to_booking_form_embedded(conn, profile, meeting_type) do
+    view = open_embedded(conn, profile)
+
+    BookingDriver.book(view,
+      meeting_type: MeetingTypes.effective_slug(meeting_type),
+      until: :attendee
+    )
+
+    view
+  end
+
+  defp meetings_for(user), do: Repo.all(where(MeetingSchema, organizer_user_id: ^user.id))
 
   # `assert_redirect/3` raises with `ExUnit.AssertionError` on timeout and
   # `ArgumentError` when the LiveView never redirected at all — both mean

@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   require Logger
 
@@ -94,6 +95,19 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         log_create_meeting_room_error(reason)
         error
     end
+  end
+
+  @doc """
+  The fields that make a new Outlook event of the integration's Microsoft
+  account carry its Teams meeting, for an event created with the meeting on
+  it rather than given one afterwards
+  (`Tymeslot.Integrations.MeetingProvisioning.booking_online_meeting/1`).
+  """
+  @spec online_meeting_fields(VideoIntegrationSchema.t()) :: map()
+  def online_meeting_fields(%VideoIntegrationSchema{} = integration) do
+    Payload.online_meeting(%{
+      tenant_id: VideoIntegrationSchema.decrypt_credentials(integration).tenant_id
+    })
   end
 
   # `:calendar_event_id` names the booking's own Outlook event when the Teams
@@ -332,12 +346,44 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   # The booking's own calendar event, made into the Teams meeting, so the
-  # organiser's calendar holds one entry for the booking rather than two.
+  # organiser's calendar holds one entry for the booking rather than two. A
+  # booking's event may have been created with the meeting already on it
+  # (`MeetingProvisioning.booking_online_meeting/1`, signalled by
+  # `:adopt_calendar_meeting`), and is then only read: Graph mails the
+  # event's attendees on every write to it, so switching on a meeting it
+  # already has would send the guest an update for nothing.
   defp attach_to_calendar_event(token, event_id, config) do
-    :patch
-    |> graph_request(token, event_path(event_id), Payload.online_meeting(config))
-    |> handle_room_event(token, config, :calendar_event)
+    case existing_online_meeting(token, event_id, config) do
+      {:ok, event} ->
+        extract_join_info(token, event, :calendar_event)
+
+      :none ->
+        :patch
+        |> graph_request(token, event_path(event_id), Payload.online_meeting(config))
+        |> handle_room_event(token, config, :calendar_event)
+    end
   end
+
+  defp existing_online_meeting(token, event_id, %{adopt_calendar_meeting: true}),
+    do: read_online_meeting(token, event_id)
+
+  defp existing_online_meeting(_token, _event_id, _config), do: :none
+
+  # Any failure to read is left to the write, which reports it properly.
+  defp read_online_meeting(token, event_id) do
+    with {:ok, %{status: 200, body: body}} <-
+           graph_request(:get, token, event_path(event_id), nil),
+         {:ok, event} <- decode_event(body),
+         join_url when is_binary(join_url) <- Payload.join_url(event) do
+      {:ok, event}
+    else
+      _no_meeting -> :none
+    end
+  end
+
+  defp decode_event(body) when is_map(body), do: {:ok, body}
+  defp decode_event(body) when is_binary(body), do: Jason.decode(body)
+  defp decode_event(_body), do: :error
 
   defp handle_room_event(response, token, config, owner) do
     with {:ok, event} <- write_result(response, config, success: [200, 201]) do

@@ -1,0 +1,117 @@
+/* Folio: the page, which spans the window, and the card the meeting, poll and
+   payment pages draw. The page scrolls; nothing is locked to the viewport. */
+
+html.folio-theme {
+  background: var(--theme-canvas);
+  color-scheme: light;
+}
+
+/* A dark scheme (the wrapper's mode, Wrapper.mode/1) darkens the browser's
+   own controls and scrollbars, on the root where a browser supports :has()
+   and on the wrapper everywhere. */
+html.folio-theme:has(.folio-theme-wrapper--dark) {
+  color-scheme: dark;
+}
+
+body.folio-theme {
+  margin: 0;
+  background: var(--theme-canvas);
+  color: var(--theme-text);
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-base);
+  line-height: var(--folio-line-height-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.folio-theme-wrapper--light {
+  color-scheme: light;
+}
+
+.folio-theme-wrapper--dark {
+  color-scheme: dark;
+}
+
+.folio-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: var(--theme-canvas);
+  box-sizing: border-box;
+}
+
+.folio-page > .content-area {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 var(--space-2xl);
+}
+
+/* The language switcher (overview only) has a row of its own above the
+   page, in the column. ThemeShell hides it with Tailwind's `hidden`, which
+   this unlayered rule would override, so the hidden state is restated. */
+.folio-language {
+  display: flex;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--folio-column) + 2 * var(--folio-gutter));
+  margin-inline: auto;
+  padding: var(--space-sm) var(--folio-gutter);
+}
+
+.folio-language.theme-shell__language--hidden {
+  display: none;
+}
+
+/* The card: the container the page's layout queries. It never clips its
+   content (the timezone panel drops out of it); the cover band rounds its
+   own top corners. Only the meeting, poll and payment pages draw it
+   (`Pages.page_shell/1`); the booking page is a card-less page (`page.css`). */
+.folio-card {
+  container-type: inline-size;
+  container-name: scheduling;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  border: var(--border-width-thin) solid var(--folio-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--folio-card-shadow);
+}
+
+.folio-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg) var(--folio-gutter) var(--space-xl);
+}
+
+/* A default page's card keeps the column it had. */
+.folio-page > .content-area > .folio-card {
+  width: min(100% - 2 * var(--space-md), var(--folio-column));
+  max-width: var(--folio-column);
+  margin: var(--space-xl) auto 0;
+}
+
+/* Folio's focus ring: inside a card (the meeting, poll and payment pages),
+   and on the booking page and its confirmation, which have none. */
+.folio-card :focus-visible,
+.journey--continuous :focus-visible,
+.folio-outcome-page :focus-visible,
+.folio-plain-page :focus-visible {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: var(--border-width-medium);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folio-theme-wrapper *,
+  .folio-theme-wrapper *::before,
+  .folio-theme-wrapper *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

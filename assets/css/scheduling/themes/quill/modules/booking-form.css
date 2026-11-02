@@ -4,67 +4,18 @@
 
 /* ===== Form Fields ===== */
 
-/* Form field styling for glassmorphism theme - Override global styles */
-.form-field__label {
-  display: block;
-  margin-bottom: var(--space-xs);
-  font-size: var(--theme-font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-opacity-medium-high);
-}
-
-.form-field__input,
-.form-field textarea {
-  width: 100%;
-  padding: var(--input-padding);
-  border: var(--border-width-thin) solid var(--input-border-glass);
-  border-radius: var(--input-border-radius);
-  background: var(--input-bg-glass);
-  backdrop-filter: blur(var(--glass-blur-md));
-  -webkit-backdrop-filter: blur(var(--glass-blur-md));
-  color: white;
-  text-shadow: var(--text-shadow-input);
-  font-size: var(--theme-font-size-sm);
-  transition: var(--transition-normal);
-  box-shadow: 0 2px 8px var(--input-shadow-base), inset 0 1px 0 var(--input-inset-highlight);
-}
-
-/* Fallback for browsers without backdrop-filter support */
-@supports not (backdrop-filter: blur(var(--glass-blur-md))) {
-  .form-field__input,
-  .form-field textarea {
-    background: var(--surface-dark-very-intense);
-  }
-}
-
-.form-field__input:focus,
-.form-field textarea:focus {
-  outline: none;
-  border-color: var(--theme-primary);
-  background: var(--input-bg-glass-focus);
-  box-shadow: 0 0 0 3px var(--theme-primary-focus), 0 4px 12px var(--input-shadow-focus), inset 0 1px 0 var(--input-inset-highlight-focus);
-}
-
-.form-field__input::placeholder,
-.form-field textarea::placeholder {
-  color: var(--input-placeholder-glass);
-}
-
-.form-field__input--error {
-  border-color: var(--input-error-border);
-  background: var(--input-error-bg);
-}
-
-.form-field__input--error:focus {
-  border-color: var(--input-error-border-focus);
-  box-shadow: 0 0 0 3px var(--input-error-focus-ring), 0 4px 12px var(--input-shadow-focus);
+/* Error lines: a custom question's (custom_questions_component.ex) and the
+   core field error under each input. The light red keeps 4.5:1 on the dark
+   glass card, where the status red (and the core's red-600) does not. */
+.quill-theme-wrapper .form-field-error {
+  color: var(--theme-error-light);
 }
 
 .form-field__error {
   display: block;
   margin-top: var(--space-3xs);
   font-size: var(--theme-font-size-sm);
-  color: var(--theme-danger);
+  color: var(--theme-error-light);
   font-weight: var(--font-weight-medium);
 }
 
@@ -122,34 +73,27 @@
   outline-offset: var(--space-3xs);
 }
 
-.quill-theme-wrapper .input::placeholder,
-.quill-theme-wrapper input.input::placeholder,
-.quill-theme-wrapper textarea.input::placeholder,
-.quill-theme-wrapper .guest-add__input::placeholder {
-  color: var(--input-placeholder-glass);
-}
-
 .quill-theme-wrapper .input:disabled,
 .quill-theme-wrapper input.input:disabled,
 .quill-theme-wrapper textarea.input:disabled,
 .quill-theme-wrapper select.input:disabled {
-  opacity: 0.6;
   cursor: not-allowed;
-  background: var(--input-bg-glass-disabled);
-  border-color: var(--input-border-glass-disabled);
+  background: var(--input-light-surface-disabled);
+  border-color: var(--input-light-line-disabled);
+  color: var(--input-light-ink-disabled);
 }
 
 .quill-theme-wrapper .input-error,
 .quill-theme-wrapper input.input-error,
 .quill-theme-wrapper textarea.input-error {
-  border-color: var(--input-error-border);
-  background: var(--input-error-bg);
+  border-color: var(--input-light-error-line);
+  background: var(--input-light-error-surface);
 }
 
 .quill-theme-wrapper .input-error:focus,
 .quill-theme-wrapper input.input-error:focus,
 .quill-theme-wrapper textarea.input-error:focus {
-  border-color: var(--input-error-border-focus);
+  border-color: var(--input-light-error-line);
   box-shadow: 0 0 0 3px var(--input-error-focus-ring), 0 4px 12px var(--input-shadow-focus);
 }
 
@@ -176,12 +120,6 @@
   resize: vertical;
   min-height: var(--textarea-min-height);
   max-height: var(--textarea-max-height);
-}
-
-/* Textarea specific */
-.form-field textarea {
-  resize: vertical;
-  min-height: 4rem;
 }
 
 /* Booking container */
@@ -255,6 +193,15 @@
   margin-bottom: var(--space-xs);
 }
 
+/* A paid type's price, right above the submit it will be charged after. */
+.booking-submit-price {
+  margin: 0;
+  color: var(--theme-text);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* booking-actions: replaces cluster cluster-xs mt-3 */
 .booking-actions {
   display: flex;
@@ -266,9 +213,19 @@
 
 /* A button label never breaks ("Book" above "Meeting"). When the two
    buttons no longer fit side by side, the row wraps and the second takes a
-   line of its own. */
+   line of its own. The min-width keeps a button from shrinking below its
+   label (a flex-1 basis of 0 let "Zurück" overflow its button at 320px). */
 .booking-actions .action-button {
   white-space: nowrap;
+  min-width: max-content;
+}
+
+/* On a narrow card the inline padding gives way first, so two short labels
+   still share the row. */
+@container scheduling (max-width: 399px) {
+  .booking-actions .action-button {
+    padding-inline: var(--space-md);
+  }
 }
 
 /* Booking card typography & spacing scale with the card's own width,
@@ -369,7 +326,7 @@
 
 .quill-theme-wrapper .guest-field__error {
   display: block;
-  color: var(--theme-danger);
+  color: var(--theme-error-light);
   font-weight: var(--font-weight-medium);
 }
 
@@ -384,7 +341,6 @@
 
 /* Medium containers: comfortable textarea */
 @container scheduling (min-width: 768px) {
-  .form-field textarea[name="booking[message]"],
   textarea[phx-value-field="message"] {
     min-height: 8rem;
     resize: vertical;
@@ -397,7 +353,6 @@
     min-height: var(--card-height-sm);
   }
 
-  .form-field textarea[name="booking[message]"],
   textarea[phx-value-field="message"] {
     min-height: 10rem;
   }

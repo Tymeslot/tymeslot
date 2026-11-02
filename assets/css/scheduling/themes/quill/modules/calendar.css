@@ -81,13 +81,14 @@
   background: var(--surface-light);
   border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-md);
-  color: white;
+  color: var(--text-opacity-full);
   cursor: pointer;
   transition: var(--transition-smooth);
   position: relative;
 }
 
-.calendar-day:hover:not(:disabled) {
+/* Never on the selected day, whose filled ground carries on-primary ink. */
+.calendar-day:hover:not(:disabled, .calendar-day--selected) {
   background: var(--surface-medium);
   border-color: var(--theme-primary);
   transform: translateY(-1px);
@@ -107,7 +108,6 @@
 }
 
 .calendar-day--unavailable {
-  color: var(--border-intense);
   cursor: not-allowed;
   background: var(--surface-transparent);
   opacity: 0.5;
@@ -142,21 +142,10 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* Calendar day color overrides — white text for glassmorphism */
-.calendar-day--available:not(:disabled):not(.calendar-day--selected) {
-  color: white;
-}
-
-.calendar-day--other-month.calendar-day--available {
+/* The base rule's white is the glass ink; a padded day of the next month
+   is dimmed, and the selected day keeps its on-primary ink. */
+.calendar-day--other-month.calendar-day--available:not(.calendar-day--selected) {
   color: var(--text-opacity-medium-low);
-}
-
-.calendar-day {
-  color: white;
-}
-
-.calendar-day--today:not(.calendar-day--selected) {
-  color: white;
 }
 
 /* Calendar Weekday Headers */
@@ -205,7 +194,7 @@
   outline-offset: var(--space-3xs);
 }
 
-.week-day-cell:hover:not(:disabled) {
+.week-day-cell:hover:not(:disabled, .selected) {
   background: var(--surface-medium);
   border-color: var(--theme-primary);
   transform: translateY(-1px);
@@ -239,7 +228,7 @@
 }
 
 .week-day-cell.selected .week-day-name {
-  color: var(--text-opacity-medium-low);
+  color: var(--theme-on-primary);
 }
 
 .week-day-number {
@@ -304,10 +293,27 @@
   margin-bottom: var(--space-xs);
 }
 
-.schedule-duration-label {
-  display: none;
-  font-size: var(--theme-font-size-base);
+/* The chosen meeting type, named on every width and height: a booker who
+   opened one of several types of the same length must still see which one
+   this calendar books. */
+.schedule-meeting-summary {
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
   font-weight: var(--font-weight-medium);
+}
+
+.schedule-meeting-name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.schedule-meeting-name + .schedule-meeting-duration::before {
+  content: " · ";
+}
+
+.schedule-meeting-description {
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-xs);
+  opacity: 0.85;
 }
 
 .calendar-month-header {
@@ -441,9 +447,13 @@
     font-size: var(--theme-font-size-base);
   }
 
-  .schedule-duration-label {
-    display: block;
+  .schedule-meeting-summary {
     font-size: var(--theme-font-size-lg);
+  }
+
+  .schedule-meeting-description {
+    max-width: 65ch;
+    font-size: var(--theme-font-size-sm);
   }
 
   .calendar-month-header {
@@ -648,15 +658,20 @@
   }
 }
 
-/* Very short viewports: the header's secondary lines (advance-notice + duration)
-   are decorative. Drop them so the pinned header stays compact and the calendar
-   keeps a usable scroll region instead of being squeezed toward zero. The
-   essential title and timezone selector remain. */
+/* Very short viewports: the header's secondary lines (advance notice and the
+   type's description) are dropped so the pinned header stays compact and the
+   calendar keeps a usable scroll region instead of being squeezed toward zero.
+   The title, the chosen type's name and length, and the timezone selector
+   remain. */
 @media (max-height: 640px) {
   :where(html:not([data-embedded])) {
     .schedule-advance-notice,
-    .schedule-duration-label {
+    .schedule-meeting-description {
       display: none;
+    }
+
+    .schedule-meeting-summary {
+      font-size: var(--theme-font-size-sm);
     }
 
     .schedule-card-header {

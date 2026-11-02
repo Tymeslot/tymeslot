@@ -26,13 +26,15 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.BookingDriver.Page
+  alias TymeslotWeb.ThemeTestMatrix
 
   @host_zone "Europe/London"
   @booker_zone "Europe/Kyiv"
 
-  @calendar_day "button[data-testid='calendar-day']"
-  @time_slot "button[data-testid='time-slot']"
+  @date "[data-fact='date']"
+  @time "[data-fact='time']"
 
   setup :verify_on_exit!
 
@@ -48,15 +50,15 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
     :ok
   end
 
-  for {theme_id, theme_name} <- [{"1", "Quill"}, {"2", "Rhythm"}] do
+  # Greyed-out days are a calendar of days; a week of times has no day to grey.
+  for theme <- ThemeTestMatrix.all_where(&(&1.schedule_view == :calendar)) do
     @tag :capture_log
-    test "#{theme_name}: the bookable days follow the new timezone", %{conn: conn} do
-      profile = overnight_monday_host(unquote(theme_id))
+    test "#{theme.name}: the bookable days follow the new timezone", %{conn: conn} do
+      profile = overnight_monday_host(unquote(theme.id))
 
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@booker_zone}")
 
-      view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
+      BookingDriver.choose_meeting_type(view, "night-chat")
 
       monday = next_monday()
       tuesday = Date.add(monday, 1)
@@ -121,7 +123,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
     )
 
     insert(:calendar_integration, user: user, is_active: true)
-    insert(:meeting_type, user: user, duration_minutes: 60, is_active: true)
+    insert(:meeting_type, user: user, slug: "night-chat", duration_minutes: 60, is_active: true)
     profile
   end
 
@@ -135,7 +137,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
     Date.add(from, rem(8 - Date.day_of_week(from), 7))
   end
 
-  defp day(date), do: "#{@calendar_day}[phx-value-date='#{Date.to_string(date)}']"
+  defp day(date), do: "#{@date}[data-value='#{Date.to_string(date)}']"
 
   defp bookable?(view, date), do: has_element?(view, "#{day(date)}:not([disabled])")
 
@@ -156,6 +158,6 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
     view
     |> render()
     |> Floki.parse_document!()
-    |> Floki.attribute(@time_slot, "phx-value-time")
+    |> Floki.attribute(@time, "data-value")
   end
 end

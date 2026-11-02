@@ -33,6 +33,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.Management, as: CalendarManagement
+  alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventCache
   alias Tymeslot.Meetings.CalendarEventMapping
@@ -466,9 +467,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     Logger.info("Creating calendar event", meeting_id: meeting_id)
 
     event_data =
-      CalendarEventBuilder.build_event_data(meeting,
+      meeting
+      |> CalendarEventBuilder.build_event_data(
         attendees: Meetings.attendees_for_calendar(meeting)
       )
+      |> with_online_meeting(MeetingProvisioning.booking_online_meeting(meeting))
 
     # Use the meeting context to create in the correct calendar
     case CalendarEvents.create_event(event_data, meeting) do
@@ -494,6 +497,12 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         handle_create_event_error(error_type, meeting, meeting_id, attempt)
     end
   end
+
+  # A booking whose Teams meeting goes on this event is created with it, so the
+  # invitation Outlook mails the guest carries it and no second write follows
+  # to add it (`MeetingProvisioning.booking_online_meeting/1`).
+  defp with_online_meeting(event_data, nil), do: event_data
+  defp with_online_meeting(event_data, fields), do: Map.put(event_data, :online_meeting, fields)
 
   # No calendar to write to is not a sync failure: the owner is never emailed
   # about it, and the worker ends the job without retrying.

@@ -44,7 +44,7 @@ defmodule Mix.Tasks.Tymeslot.SyncTlds do
   @shortdoc "Regenerate the delegated TLD list in priv/tlds.json from IANA"
 
   @source_url "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
-  @tlds_path Path.expand("../../../priv/tlds.json", __DIR__)
+  @tlds_path Path.expand("../../../../priv/tlds.json", __DIR__)
 
   @impl Mix.Task
   def run(args) do

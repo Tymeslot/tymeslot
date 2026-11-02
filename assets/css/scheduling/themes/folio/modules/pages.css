@@ -1,0 +1,40 @@
+/* The page shell's card (Pages.page_shell/1): the default meeting, poll and
+   payment page bodies below a slim cover band. Their structure is shared
+   (manage-pages.css, polls.css, payment-pages.css) and their colours are
+   Folio's tokens; the card body already has the padding the poll page
+   would add. */
+
+.folio-card--page {
+  --poll-voting-padding: 0;
+}
+
+:is(.folio-card--page, .folio-plain-page) .manage-page__button,
+:is(.folio-card--page, .folio-plain-page) .payment-page-link {
+  min-height: var(--folio-control-height);
+  font-family: var(--theme-font-family);
+}
+
+/* A notice runs to several lines: the panel radius, not the pill a "round"
+   control radius would make of it. */
+:is(.folio-card--page, .folio-plain-page) .manage-page__notice {
+  border-radius: var(--folio-radius-panel);
+}
+
+/* The payment return pages: centred, as the meeting pages' headers are,
+   their heading at the cancel and reschedule titles' size, and the way
+   back a compact button in the middle rather than a full-width bar. */
+:is(.folio-card--page, .folio-plain-page) .manage-page--payment-processing,
+:is(.folio-card--page, .folio-plain-page) .manage-page--payment-cancelled {
+  text-align: center;
+}
+
+:is(.folio-card--page, .folio-plain-page) .payment-page-heading {
+  font-size: var(--theme-font-size-2xl);
+}
+
+:is(.folio-card--page, .folio-plain-page) .payment-page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}

@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.BookingText
@@ -63,12 +62,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon
                             :if={!ApprovalDisplay.awaiting_approval?(assigns)}
                             name="hero-check"
-                            class="confirmation-badge-icon text-white stroke-3"
+                            class="confirmation-badge-icon stroke-3"
                           />
                           <.icon
                             :if={ApprovalDisplay.awaiting_approval?(assigns)}
                             name="hero-clock"
-                            class="confirmation-badge-icon text-white stroke-3"
+                            class="confirmation-badge-icon stroke-3"
                           />
                         </div>
                         <div class={[
@@ -76,7 +75,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           ApprovalDisplay.awaiting_approval?(assigns) &&
                             "confirmation-badge-dot--pending"
                         ]}>
-                          <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon text-white" />
+                          <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon" />
                         </div>
                       </div>
                     </div>
@@ -99,7 +98,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <GroupSession.confirmation_line meeting_type={@meeting_type} class="mt-4" />
 
-                  <.meeting_details_card title="">
+                  <.meeting_details_card title={@meeting_type && @meeting_type.name}>
                     <.booking_details
                       date={@selected_date}
                       time={@selected_time}
@@ -185,7 +184,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       :if={PathHandlers.calendar_ics_path(assigns)}
                       href={PathHandlers.calendar_ics_path(assigns)}
                       download
-                      class="action-button action-button--secondary calendar-download-button"
+                      class="action-button action-button--primary calendar-download-button"
                       data-testid="add-to-calendar"
                     >
                       <.icon name="hero-calendar-days" class="calendar-download-icon" />
@@ -193,15 +192,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         do: dgettext("booking", "Add tentative hold to calendar"),
                         else: dgettext("booking", "Add to calendar")}
                     </a>
-                    <.action_button
+                    <button
+                      type="button"
                       phx-click="schedule_another"
                       phx-target={@myself}
                       data-testid="schedule-another"
                       data-intent="restart"
-                      class="inline-block"
+                      class="confirmation-restart-link"
                     >
                       {dgettext("booking", "Schedule Another Meeting")}
-                    </.action_button>
+                    </button>
                   </div>
 
                   <p class="confirmation-help-text mt-3 text-xs">
@@ -225,15 +225,19 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   # ========== MEETING DISPLAY COMPONENTS ==========
 
-  attr :title, :string, default: ""
+  attr :title, :string, default: nil, doc: "the meeting type's name"
   slot :inner_block, required: true
 
   defp meeting_details_card(assigns) do
     ~H"""
     <div class="meeting-details-card">
-      <%= if @title && @title != "" do %>
-        <h3 class="text-lg font-semibold mb-4 text-purple-900">{@title}</h3>
-      <% end %>
+      <h2
+        :if={@title not in [nil, ""]}
+        class="meeting-details-title"
+        data-testid="chosen-meeting-type"
+      >
+        {@title}
+      </h2>
       {render_slot(@inner_block)}
     </div>
     """
@@ -262,7 +266,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       |> assign_new(:timezone_label, fn -> dgettext("booking", "Timezone") end)
       |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
       |> assign_new(:formatted_time, fn -> LocalizationHelpers.format_slot_label(assigns.time) end)
-      |> assign_new(:formatted_timezone, fn -> Timezones.format(assigns.timezone) end)
+      |> assign_new(:formatted_timezone, fn ->
+        LocalizationHelpers.format_zone_label(assigns.date, assigns.time, assigns.timezone)
+      end)
 
     ~H"""
     <div class={@grid_class}>

@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLiveTest do
   end
 
   # The classic journey written out, as a theme with its own journey writes
-  # one.
+  # one, keeping the route it arrived on as the classic expansion does.
   defmodule JourneyLive do
     @moduledoc false
 
@@ -65,7 +65,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLiveTest do
           {:questions, collects: [:answers], component: CustomQuestionsComponent},
           {:booking, collects: [:attendee], component: BookingComponent}
         ],
-        outcomes: %{confirmation: ConfirmationComponent, awaiting_payment: :shared}
+        outcomes: %{confirmation: ConfirmationComponent, awaiting_payment: :shared},
+        url: :route
       ]
   end
 

@@ -109,6 +109,15 @@
   margin: 0;
 }
 
+/* The cancelled meeting's type, named under the headline. */
+.confirmation-subject {
+  margin: 0;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
 .confirmation-message {
   color: var(--theme-text-secondary);
   margin: 0;
@@ -129,6 +138,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
   background: var(--surface-subtle);
   border-bottom: var(--border-width-thin) solid var(--border-subtle);
@@ -137,6 +147,21 @@
 
 .ticket-label {
   color: var(--theme-text);
+}
+
+/* The booked meeting type's name, in the ticket's header beside its length. */
+.ticket-title {
+  min-width: 0;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  overflow-wrap: anywhere;
+}
+
+.ticket-header .ticket-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ticket-badge {
@@ -657,4 +682,17 @@ html.rhythm-theme[data-embedded] .custom-answers__row {
 .success-badge-inner.success-badge-inner--pending {
   background: var(--theme-warning);
   box-shadow: var(--shadow-warning-lg);
+}
+
+/* "Schedule another": a quiet link under the calendar action, which leads. */
+.confirmation-restart-link {
+  align-self: center;
+  padding: var(--space-2xs) var(--space-xs);
+  border: 0;
+  background: none;
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-sm);
+  text-decoration: underline;
+  text-underline-offset: var(--space-3xs);
+  cursor: pointer;
 }

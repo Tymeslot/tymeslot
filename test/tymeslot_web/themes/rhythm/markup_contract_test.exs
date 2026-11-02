@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Themes.Rhythm.MarkupContractTest do
     :ok
   end
 
-  test "the overview marks each meeting type and the way on", %{conn: conn} do
+  test "the overview marks each meeting type, which is the way on", %{conn: conn} do
     %{profile: profile} = seed_booking_account(@theme_id, "rhythm-mc-overview", @timezone)
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
     doc = document(view)
@@ -51,8 +51,27 @@ defmodule TymeslotWeb.Themes.Rhythm.MarkupContractTest do
                "button[data-testid='duration-option'][data-fact='meeting_type'][data-value='quick-chat']"
              )
 
-    assert [_next] = Floki.find(doc, "[data-testid='next-step'][data-intent='continue']")
+    assert [_overview] = Floki.find(doc, "#overview-step[data-moment-state='current']")
+    assert Floki.find(doc, "#overview-step [data-intent='continue']") == []
     assert Floki.find(doc, "[data-intent='back']") == []
+  end
+
+  test "choosing a meeting type moves on, and back on the overview it shows chosen",
+       %{conn: conn} do
+    %{profile: profile} = seed_booking_account(@theme_id, "rhythm-mc-back", @timezone)
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
+    button = "button[data-testid='duration-option'][data-value='quick-chat']"
+    chosen = ".duration-card.selected #{button}"
+
+    assert has_element?(view, button)
+    refute has_element?(view, chosen)
+
+    view |> element(button) |> render_click()
+    assert has_element?(view, "#schedule-step[data-moment-state='current']")
+
+    view |> element("[data-intent='back']") |> render_click()
+    assert has_element?(view, "#overview-step[data-moment-state='current']")
+    assert has_element?(view, chosen)
   end
 
   test "the schedule marks every day of the week and the week arrows", %{conn: conn} do
@@ -110,7 +129,6 @@ defmodule TymeslotWeb.Themes.Rhythm.MarkupContractTest do
   defp open_schedule(conn, profile) do
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
     view |> element("[data-testid='duration-option']") |> render_click()
-    view |> element("[data-testid='next-step']") |> render_click()
     wait_until(fn -> has_element?(view, "[data-testid='calendar-day']:not([disabled])") end)
     view
   end

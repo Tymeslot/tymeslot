@@ -377,3 +377,8 @@ msgstr[2] "Інтеграції %{names} потрібно перепідключ
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Перепідключіть %{names}: доти ваша сторінка бронювання може не приймати бронювань"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Зберегти зміни"

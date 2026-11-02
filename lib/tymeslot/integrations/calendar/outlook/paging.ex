@@ -133,8 +133,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Paging do
        when code in ["syncStateNotFound", "syncStateInvalid"],
        do: true
 
-  defp unusable_link?(%{"error" => %{"message" => message}}) when is_binary(message),
-    do: message =~ ~r/token/i
+  # Matched on the whole answer Graph gave: a 400 whose message merely
+  # mentions a token (an `$skiptoken` it rejects, say) is a different fault,
+  # and clearing the link for it would re-bootstrap for nothing.
+  defp unusable_link?(%{"error" => %{"code" => "BadRequest", "message" => message}})
+       when is_binary(message),
+       do: message =~ ~r/badly formed token/i
 
   defp unusable_link?(body) when is_binary(body) do
     case Jason.decode(body) do

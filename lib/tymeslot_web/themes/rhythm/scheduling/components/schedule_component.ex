@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.MeetingTypeDescription
   alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
@@ -32,9 +33,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
+    <div
+      class="scheduling-box booker-card"
+      data-locale={@locale}
+      data-testid="booker-card"
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content schedule-slide">
             <GroupSession.seat_move_notice
               from={assigns[:reschedule_seat_from]}
@@ -49,6 +57,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 host_currency={@host_currency}
                 show_price={!@is_rescheduling}
                 locale={@locale}
+                moment={assigns[:moment]}
+                moment_state={assigns[:moment_state]}
+                focus={assigns[:journey_focus]}
+              />
+              <MeetingTypeDescription.description
+                id="schedule-meeting-description"
+                meeting_type={@meeting_type}
+                class="schedule-header__description"
               />
               <div class="timezone-selector-container">
                 <%!-- Visual label only: it names no control (the trigger below carries
@@ -66,7 +82,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         class="timezone-flag"
                         fallback_icon="hero-globe-alt"
                       />
-                      <span class="timezone-text">{Timezones.format(@user_timezone)}</span>
+                      <span class="timezone-text">{Timezones.time_label(@user_timezone)}</span>
                     </div>
                     <.icon name="hero-chevron-down" class="timezone-arrow" />
                   </:trigger>
@@ -143,6 +159,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       disabled={not day.available || day.loading}
                       aria-label={LocalizationHelpers.format_full_date_label(day.date)}
                       aria-current={day.today && "date"}
+                      aria-pressed={to_string(@selected_date == day.date)}
                     >
                       <div class="day-name" aria-hidden="true">{day.day_name}</div>
                       <div class="day-number" aria-hidden="true">{day.day_number}</div>

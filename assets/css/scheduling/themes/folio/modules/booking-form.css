@@ -1,0 +1,307 @@
+/* The booking step, and the one input style every Folio field uses: the
+   shared booking form (CoreComponents' .input, .label, .form-field-wrapper,
+   .form-field-error), the question inputs, and the guest and phone inputs.
+   The guest and location fields' structure is
+   shared/components/booking-fields.css, imported just before this file;
+   their colours are here. Unlayered rules, so they replace the Tailwind
+   utilities on the same elements. */
+
+/* --- Fields --- */
+
+.folio-theme-wrapper .form-field-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.folio-theme-wrapper .label {
+  margin: 0;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--theme-text);
+}
+
+/* The required marker. */
+.folio-theme-wrapper .label span {
+  color: var(--theme-danger);
+}
+
+.folio-theme-wrapper .input,
+.folio-theme-wrapper .guest-add__input,
+.folio-theme-wrapper .location-phone__input {
+  width: 100%;
+  min-height: var(--folio-control-height);
+  padding: var(--space-xs) var(--space-sm);
+  box-sizing: border-box;
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-control);
+  background-color: var(--theme-surface);
+  color: var(--theme-text);
+  font: inherit;
+  font-size: var(--theme-font-size-base);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* A select's chevron. The core select carries appearance-none, and the
+   booking page loads no dashboard stylesheet to draw one, so Folio draws
+   it: two small triangles in the secondary ink, on the end side with room
+   kept for them. */
+.folio-theme-wrapper select.input {
+  padding-inline-end: calc(var(--space-sm) + var(--space-md) + 2 * var(--folio-chevron-size));
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--theme-text-secondary) 50%),
+    linear-gradient(135deg, var(--theme-text-secondary) 50%, transparent 50%);
+  background-position:
+    right calc(var(--space-md) + var(--folio-chevron-size)) center,
+    right var(--space-md) center;
+  background-size: var(--folio-chevron-size) var(--folio-chevron-size);
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.folio-theme-wrapper textarea.input {
+  min-height: calc(var(--folio-control-height) * 2.5);
+  border-radius: var(--folio-radius-panel);
+  line-height: var(--folio-line-height-body);
+  resize: vertical;
+}
+
+.folio-theme-wrapper .input::placeholder,
+.folio-theme-wrapper .guest-add__input::placeholder,
+.folio-theme-wrapper .location-phone__input::placeholder {
+  color: color-mix(in srgb, var(--theme-text-secondary) 80%, var(--theme-surface));
+}
+
+.folio-theme-wrapper .input:hover,
+.folio-theme-wrapper .guest-add__input:hover,
+.folio-theme-wrapper .location-phone__input:hover {
+  border-color: var(--folio-border-strong);
+}
+
+.folio-theme-wrapper .input:focus,
+.folio-theme-wrapper .guest-add__input:focus,
+.folio-theme-wrapper .location-phone__input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.folio-theme-wrapper .input-error {
+  border-color: var(--theme-danger);
+  background-color: color-mix(in srgb, var(--theme-danger) 6%, var(--theme-surface));
+}
+
+.folio-theme-wrapper .form-field-error {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-danger);
+}
+
+/* --- The booking step --- */
+
+.folio-booking,
+.folio-booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Name and email: stacked, side by side from 34rem. */
+.folio-contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+}
+
+@container scheduling (width >= 34rem) {
+  .folio-contact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* The notice takes the shared inks: --ink-2, and --ink-1 for its
+   underlined links. A light seed's primary, contrast-checked against the
+   card, falls short on the form's tinted ground. */
+.folio-theme-wrapper .recaptcha-notice {
+  font-size: var(--theme-font-size-2xs);
+}
+
+/* --- Guests --- */
+
+.folio-theme-wrapper .guest-field__toggle {
+  color: var(--theme-primary);
+}
+
+.folio-theme-wrapper .guest-field__toggle:hover {
+  color: var(--theme-primary-hover);
+  text-decoration: underline;
+}
+
+.folio-theme-wrapper .guest-chip__email {
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .guest-field__count,
+.folio-theme-wrapper .guest-field__close {
+  color: var(--theme-text-secondary);
+}
+
+.folio-theme-wrapper .guest-chip {
+  border: var(--border-width-thin) solid var(--border-light);
+}
+
+.folio-theme-wrapper .guest-chip__remove {
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-md);
+}
+
+.folio-theme-wrapper .guest-add__button {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-control);
+  color: var(--theme-text);
+  font: inherit;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.folio-theme-wrapper .guest-field__error {
+  color: var(--theme-danger);
+}
+
+/* --- Location --- */
+
+/* The location and guest fields' labels read as the form's own (.label
+   above): the same size, weight and ink. */
+.folio-theme-wrapper .location-field__label,
+.folio-theme-wrapper .location-phone__label,
+.folio-theme-wrapper .guest-field__label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .location-options {
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--folio-radius-panel);
+  background: var(--surface-subtle);
+}
+
+.folio-theme-wrapper .location-option {
+  border-radius: var(--radius-control);
+  color: var(--theme-text-secondary);
+}
+
+.folio-theme-wrapper .location-option:hover {
+  background: var(--surface-light);
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: var(--space-hairline);
+}
+
+.folio-theme-wrapper .location-option--selected,
+.folio-theme-wrapper .location-option--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.folio-theme-wrapper .location-field__detail {
+  color: var(--theme-text-secondary);
+}
+
+/* The venues an in-person option offers, set like a printed list of
+   addresses: the name in the heading face, the address beneath it, one
+   entry per row in the options' panel. The radio inside reuses
+   `.location-option__radio`; `pre-line` keeps an address's lines. */
+.folio-theme-wrapper .location-venues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--folio-radius-panel);
+  background: var(--surface-subtle);
+}
+
+.folio-theme-wrapper .location-venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-control);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+
+.folio-theme-wrapper .location-venue:hover {
+  background: var(--surface-light);
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .location-venue:has(.location-option__radio:focus-visible) {
+  outline: var(--border-width-medium) solid var(--theme-primary);
+  outline-offset: var(--space-hairline);
+}
+
+.folio-theme-wrapper .location-venue--selected,
+.folio-theme-wrapper .location-venue--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.folio-theme-wrapper .location-venue__name,
+.folio-theme-wrapper .location-field__venue-name {
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+}
+
+.folio-theme-wrapper .location-field__venue-name {
+  color: var(--theme-text);
+}
+
+.folio-theme-wrapper .location-venue__description,
+.folio-theme-wrapper .location-field__venue-description {
+  font-size: var(--theme-font-size-sm);
+  line-height: var(--folio-line-height-body);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.folio-theme-wrapper .location-field__venue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.folio-theme-wrapper .location-field__note {
+  margin: var(--space-2xs) 0 0;
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-sm);
+  font-style: italic;
+}
+
+/* The one place a type with nothing to choose is held at, labelled like
+   the form's own fields, then its venue or the arranged-later note. */
+.folio-theme-wrapper .location-stated__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.folio-booking__price {
+  margin: 0;
+  color: var(--theme-text);
+  font-variant-numeric: tabular-nums;
+}

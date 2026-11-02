@@ -70,6 +70,11 @@
   --theme-text: #e2e8f0;
   --theme-text-secondary: #94a3b8;
   --theme-text-muted: #64748b;
+  /* Secondary text that sits on the box over a moving video, where the
+     frame can darken the glass's backdrop only so far: the secondary ink
+     pulled a quarter towards the text, which keeps 4.5:1 on the lightest
+     frames of the shipped videos (#94a3b8 alone dips to about 4.4:1). */
+  --rhythm-ink-quiet: color-mix(in srgb, var(--theme-text-secondary) 75%, var(--theme-text));
   /* The palette's page colour. The server overrides it per organiser; it is
      what shows behind an image or video background (--theme-background falls
      back to it). */
@@ -122,7 +127,20 @@
   --box-blur: 36px;
   --box-opacity: 0.55;
   --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 var(--border-subtle);
+  /* The box's backdrop floor (base.css). Over the theme's own video it is a
+     no-op, so the video's colour still glows through the glass. Over a
+     colour, image or gradient the organiser chose, whose brightness the
+     stylesheet cannot know, the backdrop is dimmed to a fifth before the
+     glass tints it: a white page then shows through the box as about
+     rgb(29 29 37), dark enough for the slate secondary ink on the box's
+     lighter tiles to clear 4.5:1. The dimming is multiplicative, so the
+     background's hue still tints the glass. */
+  --box-backdrop-floor: brightness(1);
+  --box-backdrop-floor-static: brightness(0.2);
   --slide-transition: opacity var(--transition-slow), transform var(--transition-slow);
+
+  /* How far a step's slide travels as it enters (base.css, rhythm-slide-in). */
+  --slide-enter-offset: 2rem;
 
   /* Component-specific sizing (fluid, scales with container) */
   --avatar-size-sm: clamp(32px, 4cqi, 36px);

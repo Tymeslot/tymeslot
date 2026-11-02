@@ -19,7 +19,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubsSyncTest do
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.RateLimiter
 
   # The breaker is a GenServer, so stubs must be visible from its process.
   setup :set_mox_global
@@ -81,8 +83,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubsSyncTest do
       assert %{all_day: true, start_date: ~D[2026-11-09], summary: "Holiday"} =
                cached(integration, "occ-1")
 
-      # One read completes the stub, one reads the series' rule.
-      assert master_reads() == ["master-1", "master-1"]
+      # The one read completes the stub and gives the series its rule.
+      assert master_reads() == ["master-1"]
+      assert %{rule: "FREQ=DAILY;COUNT=3"} = stored_rule(integration, "master-1")
     end
 
     test "keeps an occurrence Graph lists in full as it is", %{integration: integration} do
@@ -112,6 +115,72 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubsSyncTest do
 
       assert %{summary: nil, all_day: false} = cached(integration, "occ-1")
       assert log =~ "Could not read an Outlook series master"
+    end
+
+    test "completes a stub a throttled master read left as it came on the next sweep",
+         %{integration: integration} do
+      serve(delta: [stub("occ-1", "2026-11-09")], masters: %{"master-1" => throttled()})
+      capture_log(fn -> assert :ok = DeltaSync.fetch_and_apply(integration) end)
+
+      assert %{summary: nil, all_day: false} = cached(integration, "occ-1")
+      assert master_reads() == ["master-1"]
+
+      # The next delta has nothing new to say about the occurrence.
+      serve(delta: [], masters: %{"master-1" => all_day_master()})
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+
+      assert %{all_day: true, start_date: ~D[2026-11-09], summary: "Holiday"} =
+               cached(integration, "occ-1")
+
+      assert master_reads() == ["master-1"]
+
+      # Completed, the stub is not read for again.
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+      assert master_reads() == []
+    end
+
+    test "does not bring back a stub left as it came that the next delta removes",
+         %{integration: integration} do
+      serve(delta: [stub("occ-1", "2026-11-09")], masters: %{"master-1" => throttled()})
+      capture_log(fn -> assert :ok = DeltaSync.fetch_and_apply(integration) end)
+      assert %{summary: nil} = cached(integration, "occ-1")
+
+      serve(
+        delta: [%{"id" => "occ-1", "@removed" => %{"reason" => "deleted"}}],
+        masters: %{"master-1" => all_day_master()}
+      )
+
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+
+      # Retried, the master being readable now, it would be cached again.
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "occ-1")
+    end
+
+    test "stops reading masters at the first read that fails", %{integration: integration} do
+      serve(
+        delta: [
+          stub("occ-1", "2026-11-09"),
+          Map.put(stub("occ-2", "2026-11-09"), "seriesMasterId", "master-2")
+        ],
+        masters: %{"master-1" => throttled(), "master-2" => all_day_master("master-2")}
+      )
+
+      capture_log(fn -> assert :ok = DeltaSync.fetch_and_apply(integration) end)
+
+      assert master_reads() == ["master-1"]
+      assert %{summary: nil} = cached(integration, "occ-2")
+    end
+
+    test "reads no master once the integration's master read budget is spent",
+         %{integration: integration} do
+      for _n <- 1..50, do: :ok = RateLimiter.check(:series_rule_read, integration.id)
+
+      serve(delta: [stub("occ-1", "2026-11-09")], masters: %{"master-1" => all_day_master()})
+      capture_log(fn -> assert :ok = DeltaSync.fetch_and_apply(integration) end)
+
+      assert master_reads() == []
+      assert %{summary: nil, all_day: false} = cached(integration, "occ-1")
     end
   end
 
@@ -145,10 +214,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubsSyncTest do
     }
   end
 
-  defp all_day_master do
+  defp throttled, do: {429, %{"error" => %{"code" => "TooManyRequests"}}}
+
+  defp all_day_master(id \\ "master-1") do
     %{
-      "id" => "master-1",
-      "iCalUId" => "ical-master-1",
+      "id" => id,
+      "iCalUId" => "ical-#{id}",
       "type" => "seriesMaster",
       "subject" => "Holiday",
       "isAllDay" => true,
@@ -201,6 +272,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubsSyncTest do
     after
       0 -> []
     end
+  end
+
+  defp stored_rule(integration, master_id) do
+    Map.get(SeriesRuleQueries.list_by_master(integration.id, [master_id]), master_id)
   end
 
   # A stub has no `iCalUId`, so it is cached under its Graph id.

@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Live.Scheduling.SlotTimeLocaleTest do
   @moduledoc """
   The booking summary and the confirmation show the chosen time on the
-  visitor's clock, in both themes.
+  visitor's clock, in every shipped theme.
 
   The chosen slot travels as its internal key ("5:30 PM"), which is also its
   identity: the URL `time` param, slot matching and the booking submission all
@@ -22,6 +22,8 @@ defmodule TymeslotWeb.Live.Scheduling.SlotTimeLocaleTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -33,7 +35,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotTimeLocaleTest do
     :ok
   end
 
-  for {theme_id, theme_name} <- [{"1", "Quill"}, {"2", "Rhythm"}] do
+  for %{id: theme_id, name: theme_name} <- ThemeTestMatrix.all() do
     describe "#{theme_name}, visitor reading German" do
       setup do
         setup_host(unquote(theme_id))
@@ -55,10 +57,9 @@ defmodule TymeslotWeb.Live.Scheduling.SlotTimeLocaleTest do
       @tag :capture_log
       test "the confirmation shows the booked time on a 24-hour clock",
            %{conn: conn, profile: profile, date: date} do
-        {:ok, _view, html} =
-          live(conn, "/#{profile.username}/thank-you?#{query(date, "5:30 PM")}")
+        html = book_at_half_past_five(conn, profile, date, "de")
 
-        assert html =~ "17:30"
+        assert outcome_text(html) =~ "17:30"
         refute html =~ "5:30 PM"
       end
     end
@@ -71,13 +72,29 @@ defmodule TymeslotWeb.Live.Scheduling.SlotTimeLocaleTest do
       @tag :capture_log
       test "the confirmation keeps the 12-hour clock",
            %{conn: conn, profile: profile, date: date} do
-        {:ok, _view, html} =
-          live(conn, "/#{profile.username}/thank-you?#{query(date, "5:30 PM", "en")}")
+        html = book_at_half_past_five(conn, profile, date, "en")
 
-        assert html =~ "05:30 PM"
+        assert outcome_text(html) =~ "05:30 PM"
         refute html =~ "17:30"
       end
     end
+  end
+
+  # The confirmation is reached by booking, as the visitor reaches it: a theme
+  # that keeps its outcome on the booking page has no confirmation URL.
+  defp book_at_half_past_five(conn, profile, date, locale) do
+    query = URI.encode_query(%{"timezone" => "Etc/UTC", "locale" => locale}, :rfc3986)
+    {:ok, view, _html} = live(conn, "/#{profile.username}?#{query}")
+    BookingDriver.book(view, meeting_type: "chat", date: date, time: "5:30 PM")
+  end
+
+  # The outcome only: no time picker left on the page whose times could stand
+  # in for the confirmation's own.
+  defp outcome_text(html) do
+    doc = Floki.parse_document!(html)
+    assert Floki.find(doc, "[data-intent='restart']") != []
+    assert Floki.find(doc, "[data-fact='time'], [data-fact='slot']") == []
+    Floki.text(doc)
   end
 
   defp query(date, time, locale \\ "de") do
@@ -122,6 +139,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotTimeLocaleTest do
       user: user,
       duration_minutes: 30,
       name: "Chat",
+      slug: "chat",
       is_active: true
     )
 

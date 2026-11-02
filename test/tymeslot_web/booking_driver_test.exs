@@ -181,7 +181,9 @@ defmodule TymeslotWeb.BookingDriverTest do
             {day, "10:00 AM"}
           end
 
-        BookingDriver.continue(view)
+        # A screen that asks for the details beside the picker (Fixture
+        # Two) shows the form as soon as the time is picked.
+        unless has_element?(view, "form[data-fact='attendee']"), do: BookingDriver.continue(view)
         BookingDriver.submit(view, %{name: "Ada Lovelace", email: "slot-#{slug}@example.com"})
 
         wait_until(fn -> Repo.get_by(MeetingSchema, organizer_user_id: user.id) end)
@@ -323,6 +325,12 @@ defmodule TymeslotWeb.BookingDriverTest do
       assert BookingDriver.continue_move(page(offer: "done", ask: "current"), "offer") == :opened
     end
 
+    test "accepts a paged page that replaced the moment of the last action" do
+      # A paged journey shows one moment at a time: the overview is gone, not
+      # marked done, once the choice moved the page on.
+      assert BookingDriver.continue_move(page(schedule: "current"), "overview") == :opened
+    end
+
     test "takes no way on of a moment that opened by itself after the last action" do
       html =
         page(
@@ -363,6 +371,20 @@ defmodule TymeslotWeb.BookingDriverTest do
       assert BookingDriver.choice_move(html, nil, "quick-chat") == :click
     end
 
+    test "does nothing when the type is already chosen in a moment the page has moved past" do
+      choice =
+        ~s(<button data-fact="meeting_type" data-value="quick-chat">Quick Chat</button>)
+
+      html =
+        "<main>" <>
+          ~s(<section data-moment="offer" data-moment-state="done">#{choice}</section>) <>
+          ~s(<section data-moment="when" data-moment-state="current"></section></main>)
+
+      assert BookingDriver.choice_move(html, "quick-chat", "quick-chat") == :chosen
+      assert BookingDriver.choice_move(html, "long-talk", "quick-chat") == :click
+      assert BookingDriver.choice_move(html, nil, "quick-chat") == :click
+    end
+
     test "does nothing when no choice is rendered and the type is already chosen" do
       html = page(offer: "done", ask: "current")
 
@@ -398,13 +420,20 @@ defmodule TymeslotWeb.BookingDriverTest do
   # The slot picker. The classic journey shows it one way on past the meeting
   # types; a custom journey shows it on the page once the type is chosen
   # (Fixture Scroll) or defaulted (Fixture Talk, Fixture Express), so no
-  # step-level move is taken there.
+  # step-level move is taken there. Fixture Two shows it one way on past its
+  # meeting types, as the classic journey does.
   defp to_picker(view, :classic) do
     BookingDriver.choose_meeting_type(view, "quick-chat")
     BookingDriver.continue(view)
   end
 
-  defp to_picker(view, :custom), do: BookingDriver.choose_meeting_type(view, "quick-chat")
+  defp to_picker(view, :custom) do
+    BookingDriver.choose_meeting_type(view, "quick-chat")
+
+    # A paged journey of its own (Fixture Two) shows the picker one way on.
+    unless has_element?(view, "[data-fact='date'], [data-fact='slot'], [data-fact='time']"),
+      do: BookingDriver.continue(view)
+  end
 
   # The last day a bounded picker shows, as a day button or a slot button.
   defp last_day_on_show(view), do: view |> days_on_show() |> Enum.max()

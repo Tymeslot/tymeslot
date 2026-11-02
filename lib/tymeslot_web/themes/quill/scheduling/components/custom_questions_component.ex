@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -34,7 +35,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
     assigns = Events.assign_render_state(assigns)
 
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale}>
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
@@ -57,9 +64,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                     </p>
                   <% end %>
 
-                  <h1 class="section-header booking-heading booking-heading-wrapper">
+                  <JourneyComponents.moment_heading
+                    tag="h1"
+                    moment={assigns[:moment]}
+                    moment_state={assigns[:moment_state]}
+                    focus={assigns[:journey_focus]}
+                    class="section-header booking-heading booking-heading-wrapper"
+                  >
                     {@definition["label"]}
-                  </h1>
+                  </JourneyComponents.moment_heading>
 
                   <%= if @definition["help_text"] do %>
                     <p class="text-quill-secondary mb-2">{@definition["help_text"]}</p>

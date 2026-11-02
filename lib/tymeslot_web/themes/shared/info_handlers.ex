@@ -342,7 +342,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
       true ->
         socket =
           socket
-          |> put_flash(:error, BookingErrorMessage.message(:slot_taken))
+          |> put_flash(
+            :error,
+            BookingErrorMessage.voiced(:slot_taken, socket.assigns[:theme_id])
+          )
           |> BookingFlow.return_to_schedule_for_new_slot(&Runtime.transition_to/3)
 
         {:noreply, socket}

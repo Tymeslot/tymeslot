@@ -202,9 +202,11 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
   The three strings are kept whether or not they are in use, so switching the
   customisation off and back on restores the organiser's wording instead of
-  losing it. That is why `validate_required/2` applies only while
-  `booking_text_enabled` is true: a blank field is an error when the text is
-  live and unremarkable when it is not.
+  losing it. That is why the heading is required only while
+  `booking_text_enabled` is true: a blank heading is an error when the text is
+  live and unremarkable when it is not. The greeting and the instruction are
+  never required; with the customisation on, a blank one is stored as `nil`
+  and the page shows nothing for it.
 
   Casts with `empty_values: []` deliberately. Ecto's default treats `""` as
   absent, which would silently drop the change when an organiser clears a field,
@@ -245,9 +247,12 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
 
+  # Only the heading is required: a theme's voice may leave the greeting or the
+  # instruction unsaid (Paper greets nobody, Folio gives no instruction), so an
+  # organiser may too, and a blank line is dropped from the page.
   defp validate_booking_text_present(changeset) do
     if fetch_field!(changeset, :booking_text_enabled) do
-      validate_required(changeset, @booking_text_fields)
+      validate_required(changeset, [:booking_heading])
     else
       changeset
     end

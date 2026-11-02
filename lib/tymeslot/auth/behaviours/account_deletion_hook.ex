@@ -16,6 +16,11 @@ defmodule Tymeslot.Auth.Behaviours.AccountDeletionHook do
       and all their data intact; the deletion job retries later. We never
       destroy a user while external state that keeps costing them money could
       not be cancelled.
+    * `purge_protected_user_ids/0` (optional) names the accounts the purge of
+      abandoned, unverified sign-ups must never delete, whatever their age:
+      a paying subscriber, say. Returning `{:error, reason}`, raising or
+      exiting makes that run of the purge delete nothing. A hook that does
+      not implement it protects nobody beyond what Core already spares.
 
   Every callback may run more than once for the same user (jobs retry), so
   each must be idempotent and must return `:ok` for a user with nothing to do.
@@ -27,4 +32,7 @@ defmodule Tymeslot.Auth.Behaviours.AccountDeletionHook do
   @callback on_deletion_requested(user_id :: pos_integer(), feedback()) :: :ok | {:error, term()}
   @callback on_deletion_restored(user_id :: pos_integer()) :: :ok | {:error, term()}
   @callback on_account_deletion(user_id :: integer()) :: :ok | {:error, term()}
+  @callback purge_protected_user_ids() :: {:ok, [integer()]} | {:error, term()}
+
+  @optional_callbacks purge_protected_user_ids: 0
 end

@@ -194,7 +194,7 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
 
   describe "locale fallback behavior" do
     test "falls back to English for unsupported locale", %{conn: conn, username: username} do
-      view = start_view(conn, username, "es")
+      view = start_view(conn, username, "ja")
 
       # Should fall back to English
       assert render(view) =~ "data-locale=\"en\""

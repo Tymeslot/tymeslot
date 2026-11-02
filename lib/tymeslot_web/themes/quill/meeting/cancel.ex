@@ -66,6 +66,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                       organizer_profile={@organizer_profile}
                       locale={@locale}
                       organizer_name={@meeting.organizer_name}
+                      meeting_type={@meeting.meeting_type}
                     />
                   </div>
                 </div>
@@ -113,6 +114,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                       organizer_profile={@organizer_profile}
                       locale={@locale}
                       organizer_name={@meeting.organizer_name}
+                      meeting_type={@meeting.meeting_type}
                     />
                   </div>
                 </div>

@@ -14,6 +14,15 @@
 }
 
 .meeting-page-lead { color: var(--text-opacity-medium-high); }
+
+/* The cancelled meeting's type, named under the page's title. */
+.meeting-page-subject {
+  margin-bottom: var(--space-2xs);
+  color: var(--text-opacity-high);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
 .meeting-page-muted { color: var(--text-opacity-medium); }
 .meeting-page-panel-title { color: var(--text-opacity-high); }
 

@@ -140,6 +140,16 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotListTest do
       assert Floki.attribute(doc, ".slot-list__slot--selected", "data-time") == ["9:30 AM"]
     end
 
+    test "announces the chosen time as pressed and the others as not", %{doc: doc} do
+      pressed = fn time ->
+        Floki.attribute(doc, "[data-testid=time-slot][data-time='#{time}']", "aria-pressed")
+      end
+
+      assert pressed.("9:30 AM") == ["true"]
+      assert pressed.("9:00 AM") == ["false"]
+      assert pressed.("2:00 PM") == ["false"]
+    end
+
     test "offers no hour toggles", %{doc: doc} do
       assert Floki.find(doc, "[data-testid=slot-hour]") == []
     end
@@ -196,6 +206,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotListTest do
       doc = hours(selected_time: "10:00 AM")
 
       assert Floki.attribute(doc, ".slot-list__slot--selected", "phx-value-hour") == ["10"]
+
+      # The hour button discloses its minutes; it is not a choice, so it
+      # carries aria-expanded and never aria-pressed.
+      assert hour_attr(doc, 10, "aria-pressed") == []
+      assert hour_attr(doc, 10, "aria-expanded") == ["false"]
       assert Floki.attribute(doc, ".slot-list__slot--expanded", "phx-value-hour") == ["9"]
     end
   end
@@ -247,6 +262,22 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotListTest do
                "Calendar unavailable"
 
       assert Floki.find(render.(%{loading: false, error: nil}), "#own-empty") != []
+    end
+  end
+
+  describe "auto-scroll" do
+    test "a list scrolls itself into view by default" do
+      doc = render_list(available_slots: ["9:00 AM"])
+
+      assert Floki.attribute(doc, "#slots-container", "phx-hook") == ["AutoScrollToSlots"]
+      assert Floki.attribute(doc, "#slots-container", "data-auto-scroll") == []
+    end
+
+    test "a list that opts out keeps the hook, for its focus move, and turns the scroll off" do
+      doc = render_list(available_slots: ["9:00 AM"], auto_scroll: false)
+
+      assert Floki.attribute(doc, "#slots-container", "phx-hook") == ["AutoScrollToSlots"]
+      assert Floki.attribute(doc, "#slots-container", "data-auto-scroll") == ["off"]
     end
   end
 end

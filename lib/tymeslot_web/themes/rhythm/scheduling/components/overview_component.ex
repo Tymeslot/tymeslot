@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -27,18 +28,40 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    profile = assigns.organizer_profile
+
+    # Either line may be unsaid (`nil`), and then is not rendered at all.
+    assigns =
+      assign(assigns,
+        greeting: BookingText.greeting(profile, Profiles.display_name(profile), :rhythm),
+        instruction: BookingText.instruction(profile, :rhythm)
+      )
+
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
+    <div
+      class="scheduling-box booker-card"
+      data-locale={@locale}
+      data-testid="booker-card"
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content">
-            <h1 class="slide-title">
+            <JourneyComponents.moment_heading
+              tag="h1"
+              moment={assigns[:moment]}
+              moment_state={assigns[:moment_state]}
+              focus={assigns[:journey_focus]}
+              class="slide-title"
+            >
               {BookingText.heading(
                 @organizer_profile,
                 :rhythm,
                 Profiles.display_name(@organizer_profile)
               )}
-            </h1>
+            </JourneyComponents.moment_heading>
 
             <div class="organizer-profile">
               <div class="organizer-avatar">
@@ -51,17 +74,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   <.icon name="hero-check-mini" class="avatar-checkmark__icon" />
                 </div>
               </div>
-              <div class="organizer-info">
-                <p class="organizer-greeting">
-                  {BookingText.greeting(
-                    @organizer_profile,
-                    Profiles.display_name(@organizer_profile),
-                    :rhythm
-                  )}
-                </p>
-                <p class="organizer-instruction">
-                  {BookingText.instruction(@organizer_profile, :rhythm)}
-                </p>
+              <div :if={@greeting || @instruction} class="organizer-info">
+                <p :if={@greeting} class="organizer-greeting">{@greeting}</p>
+                <p :if={@instruction} class="organizer-instruction">{@instruction}</p>
               </div>
             </div>
 
@@ -80,7 +95,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   <% slug = MeetingTypes.effective_slug(meeting_type) %>
                   <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
                     <button
-                      phx-click="select_duration"
+                      phx-click="choose_duration"
                       phx-value-duration={slug}
                       phx-target={@myself}
                       class="duration-button"
@@ -116,20 +131,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 <% end %>
               </div>
             <% end %>
-
-            <div class="slide-actions">
-              <button
-                class={if is_nil(@selected_duration), do: "next-button disabled", else: "next-button"}
-                phx-click="next_step"
-                phx-target={@myself}
-                data-testid="next-step"
-                data-intent="continue"
-                disabled={is_nil(@selected_duration)}
-              >
-                {dgettext("booking", "Next")}
-                <.icon name="hero-arrow-right" class="inline-icon" />
-              </button>
-            </div>
           </div>
         </div>
       </div>

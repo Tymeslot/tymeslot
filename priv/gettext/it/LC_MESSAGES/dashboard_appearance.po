@@ -160,11 +160,6 @@ msgstr "Video"
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
 msgstr "Design glass morphism con eleganti effetti di trasparenza e un flusso di prenotazione in 4 passaggi."
 
-#: lib/tymeslot_web/themes/rhythm/theme.ex
-#, elixir-autogen, elixir-format
-msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Design moderno a scorrimento con sfondo video e un flusso di prenotazione in 4 slide."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
@@ -583,7 +578,6 @@ msgstr "Tavolozza dei colori"
 msgid "Could not save your theme customisation. Please try again."
 msgstr "Impossibile salvare la personalizzazione del tema. Riprova."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Customise Style"
@@ -605,6 +599,31 @@ msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenota
 msgid "Solid Colour"
 msgstr "Tinta unita"
 
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Una pagina in stile editoriale che ti presenta, con immagine di copertina, il tuo ritratto, titolo, biografia e titoli con grazie."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar View"
+msgstr "Vista del calendario"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Month"
+msgstr "Mese"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a day from a month, or see a whole week of free times at once."
+msgstr "Scegli un giorno da un mese, oppure vedi in una volta sola tutti gli orari liberi di una settimana."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Week"
+msgstr "Settimana"
+
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
 msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
@@ -620,10 +639,80 @@ msgstr "Quando qualcuno prenota con me, voglio che senta prima l'atmosfera: movi
 msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
 msgstr "File di sottotitoli non valido. Carica un file WebVTT (.vtt)."
 
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "I don't want my booking page to have a personality. I want it clear, fast and in my colour, so people book and get on with their day."
+msgstr "Non voglio che la mia pagina di prenotazione abbia una personalità. La voglio chiara, veloce e del mio colore, così le persone prenotano e tornano alla loro giornata."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+msgstr "Le persone prenotano me, non un orario. Prima di scegliere una data, devono sapere chi sono, cosa faccio e se siamo fatti per lavorare insieme."
+
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 o WebM. Massimo %{size} MB."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design: each step slides in on a glass card over a video background."
+msgstr "Design moderno a scorrimento: ogni passaggio scorre su una scheda in vetro sopra uno sfondo video."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Customise %{theme_name}"
+msgstr "Personalizza %{theme_name}"
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, flat booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes in the colour palette you choose."
+msgstr "Una pagina di prenotazione sobria, dal design piatto: prima il tipo di incontro, poi orario e prenotazione in un'unica schermata. Modalità chiara e scura nella tavolozza di colori che preferisci."
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Arctic Blue"
+msgstr "Blu artico"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Default Turquoise"
+msgstr "Turchese predefinito"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Forest Green"
+msgstr "Verde bosco"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Monochrome"
+msgstr "Monocromatico"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ocean Breeze"
+msgstr "Brezza marina"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Purple Dream"
+msgstr "Sogno viola"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Rose Gold"
+msgstr "Oro rosa"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Sunset Glow"
+msgstr "Tramonto"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The colours of your booking page, shown here light and dark. Colour Mode decides which one visitors see."
+msgstr "I colori della tua pagina di prenotazione, mostrati qui in chiaro e in scuro. La modalità colore decide quale versione vedono i visitatori."
 
 #: lib/tymeslot/theme_customizations/assets.ex
 #, elixir-autogen, elixir-format

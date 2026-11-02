@@ -9,11 +9,18 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   (`--loading` while a fetch is on its way), `__nav`, `__nav-button`
   (`--prev`, `--next`), `__nav-icon`, `__range`, `__days`, `__day`
   (`--today`), `__day-heading`, `__day-name`, `__day-date`, `__slots`,
-  `__slot` (`--selected`), `__empty`, `__loading`, `__error` and `__jump`. The shared
+  `__slot` (`--selected`, `--seats`), `__empty`, `__loading`, `__error` and `__jump`. The shared
   structure is `scheduling/shared/components/week-grid.css`; a theme styles
   the classes through tokens and never restructures the DOM. `heading_tag` is
   an attribute because it is document semantics: the level of each day's
   heading in the page outline.
+
+  Where a narrow grid scrolls sideways, the `WeekGridScroll` hook
+  (`assets/js/hooks/week_grid_scroll.js`) on `__days` keeps one day in view:
+  the day named in its `data-reveal-date`, which is the chosen day when it
+  falls in the week shown, else today, else the first day with times. The
+  hook moves the row only when that day changes, so a booker browsing the row
+  is not pulled back. The row's `id` is fixed, so a page renders one grid.
 
   A theme that needs markup of its own between the week navigation and the
   days (a day picker for a narrow screen, a notice about the week) passes it
@@ -21,6 +28,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   to the same `@container week-grid` queries as the days, in every state:
   while the week loads, after a failed fetch, and once it is loaded. A caller
   that passes none renders nothing there.
+
+  On a group meeting type (`meeting_type`) a time also shows its spots, as
+  `SlotList` does (`SeatBadge`, under the organiser's display settings): the
+  button gains `week-grid__slot--seats`, which stacks the time above the
+  badge. A solo time, and every time when the caller passes no `meeting_type`,
+  keeps its single line.
 
   Everything the grid shows comes from the flow's assigns
   (`TymeslotWeb.Live.Scheduling.WeekSlots`): `week_slots` is nil until the
@@ -49,7 +62,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation, WeekSlots}
+  alias TymeslotWeb.Components.MeetingUtils
+  alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation}
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
+  alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :week_start, Date, required: true, doc: "the Monday of the week shown"
@@ -66,11 +82,20 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   attr :user_timezone, :string, required: true
   attr :booking_window_days, :integer, default: nil
 
+  attr :meeting_type, :any,
+    default: nil,
+    doc: "the meeting type, whose spots a group time shows (as `SlotList`'s)"
+
   attr :landing_week, Date,
     default: nil,
     doc: "the week the page landed the booker on (`CalendarHelpers.landing_week/1`)"
 
   attr :target, :any, required: true
+
+  attr :theme_key, :atom,
+    default: nil,
+    doc: "the rendering theme's catalogue key, whose voice words the loaded week's status"
+
   attr :heading_tag, :string, default: "h3", values: ~w(h2 h3 h4)
 
   slot :before_days,
@@ -78,10 +103,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
 
   @spec week_grid(map()) :: Phoenix.LiveView.Rendered.t()
   def week_grid(assigns) do
+    days = days(assigns.week_start, assigns.week_slots, assigns.today)
+
     assigns =
       assign(assigns,
-        days: days(assigns.week_start, assigns.week_slots, assigns.today),
+        days: days,
         state: state(assigns),
+        reveal_date: reveal_date(days, assigns.selected_date),
         ask: is_nil(assigns.week_slots) && JS.push("load_week", target: assigns.target)
       )
 
@@ -132,7 +160,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
       </div>
       {render_slot(@before_days)}
       <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {status_text(@state, @error)}
+        {status_text(@state, @error, @theme_key)}
       </div>
       <%= case @state do %>
         <% :error -> %>
@@ -142,7 +170,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
             <span>{dgettext("booking", "Loading available times...")}</span>
           </div>
         <% :loaded -> %>
-          <div class="week-grid__days booker-scroll">
+          <div
+            id="week-grid-days"
+            class="week-grid__days booker-scroll"
+            phx-hook="WeekGridScroll"
+            data-reveal-date={@reveal_date}
+          >
             <section
               :for={day <- @days}
               class={["week-grid__day", day.today && "week-grid__day--today"]}
@@ -157,26 +190,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
               </.dynamic_tag>
               <ul :if={day.slots != []} class="week-grid__slots">
                 <li :for={slot <- day.slots}>
-                  <button
-                    type="button"
-                    class={[
-                      "week-grid__slot",
-                      selected?(@selected_date, @selected_time, day.iso, slot) &&
-                        "week-grid__slot--selected"
-                    ]}
-                    data-testid="week-slot"
-                    data-fact="slot"
-                    data-date={day.iso}
-                    data-time={slot}
-                    phx-click="select_slot"
-                    phx-value-date={day.iso}
-                    phx-value-time={slot}
-                    phx-target={@target}
-                    disabled={@loading}
-                    aria-pressed={to_string(selected?(@selected_date, @selected_time, day.iso, slot))}
-                  >
-                    {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot))}
-                  </button>
+                  <.slot_button
+                    slot={slot}
+                    iso={day.iso}
+                    selected={selected?(@selected_date, @selected_time, day.iso, slot.time)}
+                    loading={@loading}
+                    meeting_type={@meeting_type}
+                    target={@target}
+                  />
                 </li>
               </ul>
               <p :if={day.slots == []} class="week-grid__empty">
@@ -189,6 +210,50 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
     """
   end
 
+  # One time of a day. On a group meeting type it stacks the time above its
+  # spots (`SeatBadge`, as the organiser chose to show them), as the slot
+  # list's button does; a solo time keeps its single line.
+  attr :slot, :map, required: true
+  attr :iso, :string, required: true
+  attr :selected, :boolean, default: false
+  attr :loading, :boolean, default: false
+  attr :meeting_type, :any, default: nil
+  attr :target, :any, required: true
+
+  defp slot_button(assigns) do
+    # Only for the meeting type passed: `SeatBadge.display/2` with no type
+    # falls back to the default display settings and would show a badge, so
+    # a caller passing none would see its markup change.
+    seat_display =
+      assigns.meeting_type && SeatBadge.display(assigns.slot, assigns.meeting_type)
+
+    assigns = assign(assigns, :seat_display, seat_display)
+
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "week-grid__slot",
+        @seat_display && "week-grid__slot--seats",
+        @selected && "week-grid__slot--selected"
+      ]}
+      data-testid="week-slot"
+      data-fact="slot"
+      data-date={@iso}
+      data-time={@slot.time}
+      phx-click="select_slot"
+      phx-value-date={@iso}
+      phx-value-time={@slot.time}
+      phx-target={@target}
+      disabled={@loading}
+      aria-pressed={to_string(@selected)}
+    >
+      {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot.time))}
+      <SeatBadge.seat_badge display={@seat_display} />
+    </button>
+    """
+  end
+
   defp days(week_start, week_slots, today) do
     for offset <- 0..6 do
       date = Date.add(week_start, offset)
@@ -198,7 +263,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
         date: date,
         iso: iso,
         today: date == today,
-        slots: WeekSlots.times(Map.get(week_slots || %{}, iso, []))
+        slots: MeetingUtils.normalize_slot_list(Map.get(week_slots || %{}, iso, []))
       }
     end
   end
@@ -210,9 +275,22 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   defp state(%{loading: true, week_slots: slots}) when map_size(slots) == 0, do: :loading
   defp state(_assigns), do: :loaded
 
-  defp status_text(:error, error), do: error
-  defp status_text(:loading, _error), do: dgettext("booking", "Loading available times...")
-  defp status_text(:loaded, _error), do: dgettext("booking", "Available Times")
+  # The day a narrow grid scrolls into view (`data-reveal-date`, read by the
+  # `WeekGridScroll` hook): the chosen day when it is in this week, else
+  # today, else the first day with times, else none.
+  defp reveal_date(days, selected_date) do
+    Enum.find_value(days, &(&1.iso == selected_date && &1.iso)) ||
+      Enum.find_value(days, &(&1.today && &1.iso)) ||
+      Enum.find_value(days, &(&1.slots != [] && &1.iso))
+  end
+
+  # The loaded week says what `SlotList`'s heading says, in the same voice.
+  defp status_text(:error, error, _theme_key), do: error
+
+  defp status_text(:loading, _error, _theme_key),
+    do: dgettext("booking", "Loading available times...")
+
+  defp status_text(:loaded, _error, theme_key), do: SlotList.heading(theme_key)
 
   defp selected?(selected_date, selected_time, date, slot),
     do: selected_date == date and selected_time == slot

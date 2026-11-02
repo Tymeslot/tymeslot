@@ -331,7 +331,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   defp room_placement(meeting) do
     case MeetingProvisioning.teams_room_placement(meeting) do
       {:calendar_event, event_id} ->
-        {:ok, [calendar_event_id: event_id]}
+        {:ok, [calendar_event_id: event_id, adopt_calendar_meeting: true]}
 
       :awaiting_calendar_event ->
         Logger.info("Teams meeting waits for the booking's calendar event",

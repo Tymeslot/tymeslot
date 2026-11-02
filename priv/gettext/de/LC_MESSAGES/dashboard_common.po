@@ -376,3 +376,8 @@ msgstr[1] "Die Integrationen %{names} müssen erneut verbunden werden. Solange S
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Verbinden Sie %{names} erneut: Bis dahin nimmt Ihre Buchungsseite möglicherweise keine Buchungen an"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Änderungen speichern"

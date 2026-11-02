@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
       `theme_id`, `organizer_user_id`, `should_show_branding`, and
       `demo_mode` when the page assigned one.
 
-  Everything between them is the theme's: Quill and Rhythm lay their pages
+  Everything between them is the theme's: the shipped themes lay their pages
   out as a grid (`.booker-page`) holding a content area and the extensions
   as its footer row; the fixture theme puts all three straight inside the
   root. `booker_hook_classes_test.exs` holds every registered theme's booking

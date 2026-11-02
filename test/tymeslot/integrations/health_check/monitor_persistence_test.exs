@@ -9,10 +9,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
-  import ExUnit.CaptureLog
-
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.HealthCheck.Monitor
 
   describe "get_state/3 and put_state/3" do

@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.Approval
-  alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.BookingLabels
@@ -18,6 +17,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -33,9 +33,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
+    <div
+      class="scheduling-box booker-card"
+      data-locale={@locale}
+      data-testid="booker-card"
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content booking-slide">
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
@@ -46,6 +53,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 host_currency={@host_currency}
                 show_price={!@is_rescheduling}
                 locale={@locale}
+                moment={assigns[:moment]}
+                moment_state={assigns[:moment_state]}
+                focus={assigns[:journey_focus]}
               />
             </div>
 
@@ -62,24 +72,26 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     <div :if={@next_day_end} class="summary-label" data-testid="booking-next-day-end">
                       {@next_day_end}
                     </div>
+                    <div class="summary-label" data-testid="booking-timezone">
+                      {LocalizationHelpers.format_zone_label(
+                        @selected_date,
+                        @selected_time,
+                        @user_timezone
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div class="summary-item">
-                  <.icon name="hero-globe-alt" class="summary-icon hero-icon hero-icon--md" />
+                  <.icon name="hero-clock" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">
-                      {Timezones.format(@user_timezone)}
-                    </div>
-                    <div class="summary-label">
                       {BookingText.duration_label(%{
                         meeting_type: @meeting_type,
                         duration: @selected_duration,
                         chosen_length_minutes: ChosenLength.minutes(assigns)
-                      })} {dgettext(
-                        "booking",
-                        "meeting"
-                      )}
+                      })}
                     </div>
+                    <div class="summary-label">{dgettext("booking", "meeting")}</div>
                   </div>
                 </div>
               </div>
@@ -112,7 +124,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               target={@myself}
               class="booking-form"
               message_rows={4}
-              labels={form_labels()}
+              labels={BookingForm.short_labels()}
             >
               <GuestField.guest_field
                 :if={guests_allowed?(assigns)}
@@ -133,6 +145,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               stage={:before}
             />
 
+            <SubmitPrice.price
+              meeting_type={@meeting_type}
+              currency={@host_currency}
+              locale={@locale}
+              rescheduling={@is_rescheduling}
+              class="booking-submit-price"
+            />
+
             <div class="slide-actions horizontal">
               <button
                 type="button"
@@ -151,6 +171,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 form="booking-form"
                 class="submit-button"
                 data-testid="submit-booking"
+                aria-describedby={
+                  SubmitPrice.describedby(@meeting_type, @host_currency, @locale, @is_rescheduling)
+                }
                 data-intent="submit"
                 disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
               >
@@ -186,17 +209,5 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   defp organizer_display_name(organizer_profile, username_context) do
     BookingLabels.organizer_display_name(organizer_profile, username_context)
-  end
-
-  # Rhythm's shorter field labels.
-  defp form_labels do
-    %{
-      name: dgettext("booking", "Name"),
-      name_placeholder: dgettext("booking", "Enter your full name"),
-      email: dgettext("booking", "Email"),
-      email_placeholder: dgettext("booking", "your.email@example.com"),
-      message: dgettext("booking", "Message (optional)"),
-      message_placeholder: dgettext("booking", "Add any details...")
-    }
   end
 end

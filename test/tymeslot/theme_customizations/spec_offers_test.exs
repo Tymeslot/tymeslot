@@ -10,7 +10,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecOffersTest do
 
   describe "spec_offers?/2" do
     test "is true for each option group the spec declares" do
-      for option <- [:palette, :colour_mode, :cover] do
+      for option <- [:palette, :colour_mode, :cover, :calendar_view] do
         assert ThemeCustomizations.spec_offers?(ShowcaseThemeSpec, option), inspect(option)
       end
     end
@@ -19,6 +19,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecOffersTest do
       assert ThemeCustomizations.spec_offers?(QuillSpec, :palette)
       refute ThemeCustomizations.spec_offers?(QuillSpec, :colour_mode)
       refute ThemeCustomizations.spec_offers?(QuillSpec, :cover)
+      refute ThemeCustomizations.spec_offers?(QuillSpec, :calendar_view)
     end
 
     test "answers a background kind by the kinds the spec's background group lists" do

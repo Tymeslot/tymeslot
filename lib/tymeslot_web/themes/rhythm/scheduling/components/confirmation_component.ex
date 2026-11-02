@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles
-  alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.ChosenLength
@@ -35,7 +34,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
     ~H"""
     <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content confirmation-slide">
             <div class="confirmation-container">
               <div class="confirmation-header-section">
@@ -81,7 +80,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="meeting-ticket">
                 <div class="ticket-header">
-                  <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
+                  <span :if={@meeting_type} class="ticket-title" data-testid="chosen-meeting-type">
+                    {@meeting_type.name}
+                  </span>
+                  <span :if={!@meeting_type} class="ticket-label">
+                    {dgettext("booking", "Meeting Details")}
+                  </span>
                   <span class="ticket-badge">
                     {dgettext("booking", "%{minutes} min",
                       minutes:
@@ -113,7 +117,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       <span class="ticket-value">
                         {LocalizationHelpers.format_slot_label(@selected_time)}
                       </span>
-                      <span class="ticket-sublabel">{Timezones.format(@user_timezone)}</span>
+                      <span class="ticket-sublabel">
+                        {LocalizationHelpers.format_zone_label(
+                          @selected_date,
+                          @selected_time,
+                          @user_timezone
+                        )}
+                      </span>
                       <span
                         :if={@next_day_end}
                         class="ticket-sublabel"
@@ -198,7 +208,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   :if={PathHandlers.calendar_ics_path(assigns)}
                   href={PathHandlers.calendar_ics_path(assigns)}
                   download
-                  class="action-button-primary action-button-secondary calendar-download-button"
+                  class="action-button-primary calendar-download-button"
                   data-testid="add-to-calendar"
                 >
                   <.icon name="hero-calendar-days" class="calendar-download-icon" />
@@ -207,11 +217,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     else: dgettext("booking", "Add to calendar")}
                 </a>
                 <button
+                  type="button"
                   phx-click="schedule_another"
                   phx-target={@myself}
                   data-testid="schedule-another"
                   data-intent="restart"
-                  class="action-button-primary"
+                  class="confirmation-restart-link"
                 >
                   {dgettext("booking", "Schedule Another Meeting")}
                 </button>

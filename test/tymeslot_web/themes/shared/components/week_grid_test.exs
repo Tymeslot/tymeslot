@@ -143,6 +143,54 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGridTest do
       assert attr(Floki.find(doc, "[data-testid=week-grid-prev]"), "aria-label") ==
                "Vorherige Woche"
     end
+
+    test "shows a group time's spots under the time, as the slot list does" do
+      group = %{show_seat_availability: true, last_spots_threshold: 3}
+
+      doc =
+        render_grid(
+          meeting_type: group,
+          week_slots: %{
+            "2027-03-08" => [
+              %{time: "9:00 AM", seats_left: 2, capacity: 10},
+              %{time: "10:00 AM", seats_left: 8, capacity: 10}
+            ]
+          }
+        )
+
+      assert slots(doc) == [{"2027-03-08", "9:00 AM"}, {"2027-03-08", "10:00 AM"}]
+      assert [_one, _two] = Floki.find(doc, ".week-grid__slot.week-grid__slot--seats")
+
+      assert [_badge] =
+               Floki.find(doc, "[data-time='9:00 AM'] [data-testid='seat-badge'].seat-red")
+
+      assert [_badge] =
+               Floki.find(doc, "[data-time='10:00 AM'] [data-testid='seat-badge'].seat-green")
+    end
+
+    test "keeps a solo time's markup, and every time's without a meeting type" do
+      solo = render_grid(week_slots: %{"2027-03-08" => ["9:00 AM"]}, meeting_type: %{})
+
+      without =
+        render_grid(
+          week_slots: %{"2027-03-08" => [%{time: "9:00 AM", seats_left: 2, capacity: 10}]}
+        )
+
+      for doc <- [solo, without] do
+        assert Floki.find(doc, "[data-testid='seat-badge']") == []
+        assert Floki.find(doc, ".week-grid__slot--seats") == []
+      end
+    end
+
+    test "shows no badge when the organiser hides the spots" do
+      doc =
+        render_grid(
+          meeting_type: %{show_seat_availability: false, last_spots_threshold: nil},
+          week_slots: %{"2027-03-08" => [%{time: "9:00 AM", seats_left: 6, capacity: 10}]}
+        )
+
+      assert Floki.find(doc, "[data-testid='seat-badge']") == []
+    end
   end
 
   describe "fetching the week" do
@@ -324,6 +372,50 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGridTest do
 
     test "adds nothing when a theme passes none" do
       assert children(render_grid([])) == ["week-grid__nav", "sr-only", "week-grid__days"]
+    end
+  end
+
+  # The day a narrow grid's `WeekGridScroll` hook scrolls into view.
+  describe "the day kept in view" do
+    @week_with_times %{"2027-03-09" => ["9:00 AM"], "2027-03-12" => ["2:00 PM"]}
+
+    defp reveal_date(overrides) do
+      overrides
+      |> render_grid()
+      |> Floki.find(".week-grid__days")
+      |> attr("data-reveal-date")
+    end
+
+    test "is the chosen time's day, wherever it sits in the week" do
+      assert reveal_date(
+               week_slots: @week_with_times,
+               today: ~D[2027-03-10],
+               selected_date: "2027-03-12",
+               selected_time: "2:00 PM"
+             ) == "2027-03-12"
+    end
+
+    test "is today when nothing in this week is chosen" do
+      assert reveal_date(
+               week_slots: @week_with_times,
+               today: ~D[2027-03-10],
+               selected_date: "2027-03-22"
+             ) == "2027-03-10"
+    end
+
+    test "is the first day with times in a week without today" do
+      assert reveal_date(week_slots: @week_with_times, today: ~D[2027-03-01]) == "2027-03-09"
+    end
+
+    test "is none in a week with no times, no today and nothing chosen" do
+      assert reveal_date(week_slots: %{}, today: ~D[2027-03-01]) == nil
+    end
+
+    test "is read by the hook on the scrolling row" do
+      [days] = Floki.find(render_grid(week_slots: @week_with_times), ".week-grid__days")
+
+      assert attr(days, "phx-hook") == "WeekGridScroll"
+      assert attr(days, "id") == "week-grid-days"
     end
   end
 end

@@ -15,8 +15,8 @@ defmodule TymeslotWeb.ThemeTestMatrix do
   stylesheet of its own. Besides the fixture (`"99"`) and the showcase
   (`"97"`), the test-only themes are the journey fixtures
   (`test/support/journey_fixtures/`: `"96"` Fixture Scroll, `"95"` Fixture
-  Talk and `"94"` Fixture Express), whose journeys are their own
-  (`journey: :custom`).
+  Talk, `"94"` Fixture Express and `"93"` Fixture Two), whose journeys are
+  their own (`journey: :custom`).
 
   `all/0` and `ids/0` are the shipped themes alone, for the suites tied to
   their own design (deep links, sort order, cancel pages, accessibility, the
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       viewport with its actions row pinned on-screen (Quill's app shell).
     * `:schedule_view` - what the schedule step picks a time with:
       `:calendar` (a month or week calendar of days, then the chosen day's
-      times, as Quill and Rhythm) or `:week_grid` (the shared `WeekGrid`, a
+      times, as every shipped theme) or `:week_grid` (the shared `WeekGrid`, a
       week of times with one click per time). `TymeslotWeb.BookingDriver`
       picks a time from either through the markup contract; the tests of the
       calendar's own day buttons run for `:calendar` themes only.
@@ -106,6 +106,32 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       journey: :classic,
       fixture: false
     },
+    "3" => %{
+      id: "3",
+      key: :paper,
+      slug: "paper",
+      name: "Paper",
+      wrapper_class: "paper-theme-wrapper",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :calendar,
+      selected_duration_selector: "[data-testid='duration-option'][aria-current='true']",
+      journey: :custom,
+      fixture: false
+    },
+    "4" => %{
+      id: "4",
+      key: :folio,
+      slug: "folio",
+      name: "Folio",
+      wrapper_class: "folio-theme-wrapper",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :calendar,
+      selected_duration_selector: "[data-testid='duration-option'][aria-current='true']",
+      journey: :custom,
+      fixture: false
+    },
     "96" => %{
       id: "96",
       key: :fixture_scroll,
@@ -128,6 +154,19 @@ defmodule TymeslotWeb.ThemeTestMatrix do
       video_background: false,
       pins_schedule_actions: false,
       schedule_view: :week_grid,
+      selected_duration_selector: "[data-fact='meeting_type'][aria-pressed='true']",
+      journey: :custom,
+      fixture: true
+    },
+    "93" => %{
+      id: "93",
+      key: :fixture_two,
+      slug: "fixture_two",
+      name: "Fixture Two",
+      wrapper_class: "journey-fixture-two",
+      video_background: false,
+      pins_schedule_actions: false,
+      schedule_view: :calendar,
       selected_duration_selector: "[data-fact='meeting_type'][aria-pressed='true']",
       journey: :custom,
       fixture: true
@@ -185,6 +224,20 @@ defmodule TymeslotWeb.ThemeTestMatrix do
   @doc "Every shipped theme id, in numeric order."
   @spec ids() :: [String.t()]
   def ids, do: Enum.map(all(), & &1.id)
+
+  @doc """
+  The shipped themes' entries that pass `fun`, in numeric id order: for a
+  suite that needs a capability (`schedule_view: :calendar`) rather than a
+  theme. Raises when no shipped theme passes, so a suite whose capability
+  every theme has dropped fails at compile time instead of running nothing.
+  """
+  @spec all_where((entry() -> boolean())) :: [entry()]
+  def all_where(fun) when is_function(fun, 1) do
+    case Enum.filter(all(), fun) do
+      [] -> raise ArgumentError, "no shipped theme in ThemeTestMatrix passes the filter"
+      themes -> themes
+    end
+  end
 
   @doc """
   The shipped theme ids whose customisation spec passes `fun`, in numeric

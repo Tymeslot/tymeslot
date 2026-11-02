@@ -2,11 +2,13 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   @moduledoc """
   A theme's own wording of the booking lines every theme shares.
 
-  `BookingText`, `ConfirmationText` and `BookingLabels` decide which line a
-  page shows; a theme's voice only words it. Each of those modules asks the
-  rendering theme's voice first (`line/4`) and keeps the shared wording when
-  the theme has no voice or the voice leaves the line alone. A theme names
-  its voice with `use TymeslotWeb.Themes.Core.Theme, voice: MyTheme.Voice`.
+  `BookingText`, `ConfirmationText`, `BookingLabels` and
+  `BookingErrorMessage` decide which line a page shows, as do the shared
+  `SlotList`, `WeekGrid` and custom-question inputs for their own lines
+  (each takes a `theme_key` attribute); a theme's voice only words it. Each of those modules asks the rendering theme's voice first
+  (`line/4`) and keeps the shared wording when the theme has no voice or the
+  voice leaves the line alone. A theme names its voice with
+  `use TymeslotWeb.Themes.Core.Theme, voice: MyTheme.Voice`.
 
   A voice implements `c:text/2`: given a key and its bindings, the line in
   the theme's words, or `nil` to keep the shared one. Each line is a literal
@@ -30,23 +32,42 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   | `:heading` | none | "Let's Connect!" (a `:generic` heading style, or no name) |
   | `:heading_named` | `name` | "Schedule with %{name}" (a `:named` heading style) |
   | `:greeting` | `name` | "Hi! I'm %{name}." |
-  | `:instruction` | none | "Pick an option below." |
+  | `:instruction` | none | "Pick an option to get started." |
   | `:held_message` | `name` | "%{name}, your request has been sent." |
   | `:held_message_named` | `name`, `organizer_name` | "%{name}, your request to %{organizer_name} has been sent." |
   | `:organizer_fragment` | `name` | "with %{name}" |
   | `:submit` | none | the theme's own label for an ordinary booking |
+  | `:submit_paid` | none | "Continue to payment" (a paid meeting type: the checkout follows the submit) |
   | `:submit_request` | none | "Request meeting" |
   | `:submit_request_reschedule` | none | "Request new time" |
   | `:submit_reschedule` | none | "Reschedule Meeting" |
+  | `:slot_taken` | none | "This time slot is no longer available. Please select a different time." (the notice when the time was booked meanwhile) |
+  | `:slot_heading` | none | "Available Times" (`SlotList`'s heading, and its and `WeekGrid`'s screen-reader status once times are shown) |
+  | `:slot_prompt` | none | "Please select a date to see available times" (`SlotList` before a day is chosen, shown and announced) |
+  | `:select_prompt` | none | "Select…" (a single-select question's empty choice) |
+  | `:answer_yes` | none | "Yes" (a yes/no question) |
+  | `:answer_no` | none | "No" (a yes/no question) |
+  | `:acknowledge` | none | "I acknowledge the above" (a note question's checkbox) |
+
+  So `c:text/2` has three answers: `nil` keeps the shared wording, a string
+  is the theme's wording, and `""` says nothing: the line is dropped where it
+  is optional. Only the `:greeting` and the `:instruction` are optional
+  (`BookingText`); every other line must be said. A `""` must not depend on
+  the bindings, as the dashboard asks a `:greeting` with an empty name to
+  learn whether the theme greets at all (`BookingText.seed_greeting/2`).
 
   The organiser's own wording (`booking_text_enabled`) still wins over any
-  voice, as it wins over the shared wording.
+  voice, as it wins over the shared wording, and seeds from the voice's
+  lines, `""` included.
   """
 
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
-  @doc "The line for `key` in the theme's words, or `nil` to keep the shared wording."
+  @doc """
+  The line for `key` in the theme's words, `nil` to keep the shared wording,
+  or `""` to say nothing for an optional line.
+  """
   @callback text(key :: atom(), bindings :: map()) :: String.t() | nil
 
   @keys %{
@@ -58,9 +79,17 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
     held_message_named: [:name, :organizer_name],
     organizer_fragment: [:name],
     submit: [],
+    submit_paid: [],
     submit_request: [],
     submit_request_reschedule: [],
-    submit_reschedule: []
+    submit_reschedule: [],
+    slot_taken: [],
+    slot_heading: [],
+    slot_prompt: [],
+    select_prompt: [],
+    answer_yes: [],
+    answer_no: [],
+    acknowledge: []
   }
 
   @doc "Every key a voice may word, sorted."

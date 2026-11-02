@@ -43,7 +43,8 @@ defmodule TymeslotWeb.Live.Themes.TimezonePlaceNamesTest do
     BookingDriver.choose_meeting_type(view, "quick-chat")
     BookingDriver.continue(view)
 
-    assert view |> element(".tz-picker__trigger") |> render() =~ "Berlin, Deutschland"
+    # The trigger names the zone as a time; the options below name places.
+    assert view |> element(".tz-picker__trigger") |> render() =~ "Zeit in Berlin"
 
     view |> element(".tz-picker__trigger") |> render_click()
     view |> element(".tz-picker__search") |> render_keyup(%{"value" => "Wien"})

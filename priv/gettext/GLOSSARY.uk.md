@@ -155,7 +155,7 @@ Tymeslot`.
 (`хостинг у ЄС`, `хостингом у ЄС`, `у Німеччині, у ЄС`), `в ЄС` after a vowel (`дані
 зберігаються в ЄС`, `розміщено в ЄС`).
 
-**Profession names mid-sentence.** `profession_in_text` in `priv/professions/uk/*.exs` is the
+**Profession names mid-sentence.** `profession_in_text` in `priv/professions/*/uk.exs` is the
 nominative plural (`психологи`, `інструктори з йоги`, `ІТ-консультанти`). Ukrainian cannot put a
 nominative after `для`, so every msgstr that interpolates it is built so the profession is the
 grammatical subject: `Усе, без чого не обходяться %{profession_in_text}.`, `Стартове
@@ -169,7 +169,7 @@ sample (see §5).
 Every figure on a Ukrainian page is in **гривнях**, written `1 200 грн` (non-breaking or plain
 space as the thousands separator, `грн` postfix, no full stop). Never `£`, `фунтів стерлінгів`,
 or a Ukrainian page quoting a UK price. The `/for` pages' prose figures must agree with that
-page's own calculator defaults (`calculator: %{hourly_rate: …}` in `priv/professions/uk/*.exs`,
+page's own calculator defaults (`calculator: %{hourly_rate: …}` in `priv/professions/*/uk.exs`,
 which is already in hryvnia), and every derived total must be arithmetic the reader could redo.
 Product prices (`29 $`, `9 €`) stay in the currency Tymeslot actually charges.
 

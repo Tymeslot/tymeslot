@@ -131,9 +131,11 @@
 }
 
 /* Completed step label. Keeps (0,4,0) so it still beats the
-   `button:hover .step-label` colour below, as it always has. */
+   `button:hover .step-label` colour below, as it always has. White ink like
+   the rest of the band: the palette's secondary text colour was 3.7:1 on the
+   band over the default gradient. */
 .quill-theme-wrapper .step-item-wrapper .step-label.step-label--completed {
-  color: var(--theme-text-secondary);
+  color: var(--text-opacity-medium-low);
   text-shadow: var(--text-shadow-soft);
 }
 

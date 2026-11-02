@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -40,7 +42,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
     assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
 
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale}>
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
@@ -54,18 +62,26 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
             <div class="w-full">
               <.glass_morphism_card class="booker-card booking-form-card" data-testid="booker-card">
                 <div class="booking-card-body">
-                  <h1 class="section-header booking-heading booking-heading-wrapper">
+                  <JourneyComponents.moment_heading
+                    tag="h1"
+                    moment={assigns[:moment]}
+                    moment_state={assigns[:moment_state]}
+                    focus={assigns[:journey_focus]}
+                    class="section-header booking-heading booking-heading-wrapper"
+                  >
                     {dgettext("booking", "Enter Your Details")}
-                  </h1>
+                  </JourneyComponents.moment_heading>
 
-                  <p class="booking-subtitle text-quill-primary">
+                  <p class="booking-subtitle text-quill-primary" data-testid="chosen-meeting-type">
                     <%= if @organizer_profile do %>
-                      {dgettext("booking", "You're booking %{duration} with %{name}",
+                      {dgettext("booking", "You're booking %{meeting} (%{duration}) with %{name}",
+                        meeting: @meeting_type.name,
                         duration: BookingText.duration_label(assigns),
                         name: get_organizer_name(@organizer_profile, @username_context)
                       )}
                     <% else %>
-                      {dgettext("booking", "You're booking %{duration}",
+                      {dgettext("booking", "You're booking %{meeting} (%{duration})",
+                        meeting: @meeting_type.name,
                         duration: BookingText.duration_label(assigns)
                       )}
                     <% end %>
@@ -140,6 +156,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     stage={:before}
                   />
 
+                  <SubmitPrice.price
+                    meeting_type={@meeting_type}
+                    currency={@host_currency}
+                    locale={@locale}
+                    rescheduling={@is_rescheduling}
+                    class="booking-submit-price"
+                  />
+
                   <div class="booking-actions">
                     <.action_button
                       type="button"
@@ -163,6 +187,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       loading_text={dgettext("booking", "Verifying...")}
                       disabled={!OrganizerHelpers.form_valid?(@form)}
                       data-testid="submit-booking"
+                      aria-describedby={
+                        SubmitPrice.describedby(
+                          @meeting_type,
+                          @host_currency,
+                          @locale,
+                          @is_rescheduling
+                        )
+                      }
                       data-intent="submit"
                       class="flex-1"
                       title={get_submit_title(@submitting, @form)}

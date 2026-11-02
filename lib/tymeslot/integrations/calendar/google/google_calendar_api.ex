@@ -349,7 +349,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
-  Deletes an event from the specified calendar.
+  Deletes an event from the specified calendar. Google's own notifications
+  are suppressed, as on every write here: without `sendUpdates=none` a delete
+  mails each attendee a cancellation beside Tymeslot's own.
   """
   @impl CalendarAPIBehaviour
   @spec delete_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
@@ -358,7 +360,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       google_event_id = EventMapper.uuid_to_google_event_id(event_id)
 
-      case make_request(:delete, event_path(calendar_id, google_event_id), token) do
+      case make_request(:delete, event_path(calendar_id, google_event_id), token, %{
+             "sendUpdates" => "none"
+           }) do
         {:ok, _response} -> :ok
         {:error, :gone, _message} -> :ok
         error -> error
