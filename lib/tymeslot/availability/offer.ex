@@ -30,6 +30,7 @@ defmodule Tymeslot.Availability.Offer do
   alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
@@ -155,6 +156,32 @@ defmodule Tymeslot.Availability.Offer do
   @spec slots_for_range(request(), Date.t(), Date.t(), String.t() | integer() | nil) ::
           {:ok, %{String.t() => [term()]}} | {:error, any()}
   def slots_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
+    with {:ok, %{slots: slots}} <-
+           slots_and_busy_for_range(request, start_date, end_date, duration) do
+      {:ok, slots}
+    end
+  end
+
+  @doc """
+  `slots_for_range/4` together with the busy periods those slots were computed
+  from, for a view that shows both (a week preview).
+
+  The host's calendar is read once for the pair, so the free times and the busy
+  blocks cannot disagree and a caller does not pay two provider round trips.
+  `:busy` is every period that occupies the host's time in the range (blocking
+  calendar events and live bookings) as `{start, end}` datetimes, unmerged,
+  buffers and notice not applied; a demo page has none. Fails exactly as
+  `slots_for_range/4` does.
+  """
+  @spec slots_and_busy_for_range(
+          request(),
+          Date.t(),
+          Date.t(),
+          String.t() | integer() | nil
+        ) ::
+          {:ok, %{slots: %{String.t() => [term()]}, busy: [{DateTime.t(), DateTime.t()}]}}
+          | {:error, any()}
+  def slots_and_busy_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
     cond do
       Date.compare(start_date, end_date) == :gt ->
         {:error, :invalid_range}
@@ -163,9 +190,12 @@ defmodule Tymeslot.Availability.Offer do
         {:error, :range_too_long}
 
       demo?(request) ->
-        collect_days(start_date, end_date, fn date ->
-          slots_for_date(request, Date.to_iso8601(date), duration)
-        end)
+        with {:ok, slots} <-
+               collect_days(start_date, end_date, fn date ->
+                 slots_for_date(request, Date.to_iso8601(date), duration)
+               end) do
+          {:ok, %{slots: slots, busy: []}}
+        end
 
       true ->
         free_slots_in_range(request, start_date, end_date, duration)
@@ -337,20 +367,32 @@ defmodule Tymeslot.Availability.Offer do
         config: config
       }
 
-      collect_days(start_date, end_date, fn date ->
-        with {:ok, starts} <-
-               Calculate.available_starts(
-                 date,
-                 duration_minutes,
-                 request.user_timezone,
-                 owner_timezone(profile),
-                 busy,
-                 config
-               ) do
-          {:ok, offered_slots(starts, meeting_type, date, group_context)}
-        end
-      end)
+      with {:ok, slots} <-
+             collect_days(start_date, end_date, fn date ->
+               with {:ok, starts} <-
+                      Calculate.available_starts(
+                        date,
+                        duration_minutes,
+                        request.user_timezone,
+                        owner_timezone(profile),
+                        busy,
+                        config
+                      ) do
+                 {:ok, offered_slots(starts, meeting_type, date, group_context)}
+               end
+             end) do
+        {:ok, %{slots: slots, busy: busy_intervals(busy)}}
+      end
     end
+  end
+
+  # The blocking periods as datetime pairs, for display. A period without two
+  # datetimes cannot be drawn and is left out; the slot engine has already
+  # judged it either way.
+  defp busy_intervals(busy) do
+    for %{start_time: %DateTime{} = from, end_time: %DateTime{} = to} = period <- busy,
+        CalendarEvent.blocking?(period),
+        do: {from, to}
   end
 
   # `day_slots` for every day of the range, keyed by ISO date; the first day

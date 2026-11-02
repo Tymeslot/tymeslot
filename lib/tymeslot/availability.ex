@@ -16,6 +16,7 @@ defmodule Tymeslot.Availability do
   """
 
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
@@ -39,4 +40,15 @@ defmodule Tymeslot.Availability do
   # schedule that was just deleted still reaches its owner.
   def changed(%AvailabilityScheduleSchema{profile_id: profile_id}),
     do: profile_id |> ProfileQueries.user_id_for_profile() |> changed()
+
+  @doc """
+  The host's next seven days as the booking page offers them, with the
+  calendar's busy blocks; see `Tymeslot.Availability.WeekPreview`.
+
+  Takes `:meeting_type` and `:today`. `{:error, :calendar_unavailable}` when
+  the host's calendar could not be read.
+  """
+  @spec week_preview(ProfileSchema.t(), keyword()) ::
+          {:ok, WeekPreview.t()} | {:error, :calendar_unavailable}
+  defdelegate week_preview(profile, opts \\ []), to: WeekPreview, as: :build
 end
