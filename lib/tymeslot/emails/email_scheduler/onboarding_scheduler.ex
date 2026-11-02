@@ -20,7 +20,7 @@ defmodule Tymeslot.Emails.EmailScheduler.OnboardingScheduler do
         period: @booking_link_window_seconds,
         fields: [:args, :queue],
         keys: [:action, :user_id],
-        states: [:scheduled, :available, :executing, :retryable, :completed]
+        states: :successful
       ]
     )
     |> Helpers.insert(user_id: user_id)

@@ -17,8 +17,9 @@ defmodule Tymeslot.Emails.Templates.BookingLink do
   alias Tymeslot.Utils.UrlBuilder
 
   @intent :confirmed
+  # The cid is the filename: SendGrid derives the content id from the filename
+  # and Mailgun keys inline files by it.
   @qr_filename "booking-link-qr.png"
-  @qr_cid "booking-link-qr"
 
   @doc """
   The email, addressed and rendered in the host's locale. `booking_url` is
@@ -35,7 +36,7 @@ defmodule Tymeslot.Emails.Templates.BookingLink do
       |> Email.attachment(
         Attachment.new({:data, QrCode.png(booking_url)},
           filename: @qr_filename,
-          cid: @qr_cid,
+          cid: @qr_filename,
           content_type: "image/png",
           type: :inline
         )
@@ -64,7 +65,7 @@ defmodule Tymeslot.Emails.Templates.BookingLink do
 
     <mj-section padding="8px 0 4px 0">
       <mj-column>
-        <mj-image src="cid:#{@qr_cid}" alt="#{Sanitise.sanitize_for_email(dgettext("emails_account", "QR code for your booking page"))}" width="160px" padding="0" />
+        <mj-image src="cid:#{@qr_filename}" alt="#{Sanitise.sanitize_for_email(dgettext("emails_account", "QR code for your booking page"))}" width="160px" padding="0" />
       </mj-column>
     </mj-section>
 
@@ -92,7 +93,7 @@ defmodule Tymeslot.Emails.Templates.BookingLink do
     #{dgettext("emails_account", "Add it to your email signature")}
     #{signature_line(booking_url)}
 
-    #{dgettext("emails_account", "Manage your page")}: #{UrlBuilder.build_url("/dashboard")}
+    #{dgettext("emails_account", "Manage your page: %{url}", url: UrlBuilder.build_url("/dashboard"))}
     """
   end
 

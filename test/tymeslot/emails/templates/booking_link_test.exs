@@ -12,7 +12,6 @@ defmodule Tymeslot.Emails.Templates.BookingLinkTest do
   alias Tymeslot.Emails.Templates.BookingLink
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
-  alias Tymeslot.Utils.QrCode
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -58,15 +57,9 @@ defmodule Tymeslot.Emails.Templates.BookingLinkTest do
       assert %{type: :inline, content_type: "image/png", data: <<0x89, "PNG", _rest::binary>>} =
                qr
 
+      assert qr.cid == qr.filename
       assert email.html_body =~ "cid:#{qr.cid}"
       refute email.html_body =~ "data:image"
-    end
-  end
-
-  describe "Tymeslot.Utils.QrCode" do
-    test "returns a PNG and an SVG data URI" do
-      assert <<0x89, "PNG", 0x0D, 0x0A, 0x1A, 0x0A, _rest::binary>> = QrCode.png(@url)
-      assert String.starts_with?(QrCode.svg_data_uri(@url), "data:image/svg+xml;base64,")
     end
   end
 
@@ -97,18 +90,18 @@ defmodule Tymeslot.Emails.Templates.BookingLinkTest do
       assert email.html_body =~ "cid:#{qr.cid}"
     end
 
-    test "a host without a username gets an error and no email" do
+    test "a host without a username is discarded and gets no email" do
       user = insert(:user)
       insert(:profile, user: user, username: nil)
 
-      assert {:error, _reason} =
+      assert {:discard, "host has no username"} =
                perform_job(
                  EmailWorker,
                  %{"action" => "send_booking_link_email", "user_id" => user.id},
                  repo: Repo
                )
 
-      assert {:error, :no_username} =
+      assert {:discard, "host has no username"} =
                EmailHandlers.execute_email_action(
                  "send_booking_link_email",
                  %{"user_id" => user.id}

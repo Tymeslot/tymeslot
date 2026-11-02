@@ -722,6 +722,11 @@ msgstr "Ihre Seite verwalten"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
+msgid "Manage your page: %{url}"
+msgstr "Ihre Seite verwalten: %{url}"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
 msgid "Open your page"
 msgstr "Ihre Seite öffnen"
 
