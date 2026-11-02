@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <GroupSession.confirmation_line meeting_type={@meeting_type} class="mt-4" />
 
-                  <.meeting_details_card title="">
+                  <.meeting_details_card title={@meeting_type && @meeting_type.name}>
                     <.booking_details
                       date={@selected_date}
                       time={@selected_time}
@@ -225,15 +225,19 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   # ========== MEETING DISPLAY COMPONENTS ==========
 
-  attr :title, :string, default: ""
+  attr :title, :string, default: nil, doc: "the meeting type's name"
   slot :inner_block, required: true
 
   defp meeting_details_card(assigns) do
     ~H"""
     <div class="meeting-details-card">
-      <%= if @title && @title != "" do %>
-        <h3 class="text-lg font-semibold mb-4 text-purple-900">{@title}</h3>
-      <% end %>
+      <h2
+        :if={@title not in [nil, ""]}
+        class="meeting-details-title"
+        data-testid="chosen-meeting-type"
+      >
+        {@title}
+      </h2>
       {render_slot(@inner_block)}
     </div>
     """

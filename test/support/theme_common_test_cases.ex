@@ -130,6 +130,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
         start_time: ~U[2026-02-20 10:00:00Z],
         duration: 30,
         organizer_name: "Test User",
+        meeting_type: "Strategy session",
         attendee_timezone: "UTC"
       },
       organizer_profile: %ProfileSchema{username: "testuser", full_name: "Test User"},

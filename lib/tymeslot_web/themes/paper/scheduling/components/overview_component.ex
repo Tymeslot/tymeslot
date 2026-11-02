@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
   defp meeting_type_row(assigns) do
     assigns =
       assign(assigns,
-        description: description(assigns.meeting_type),
+        description: BookingText.description(assigns.meeting_type),
         locations: MeetingTypes.location_options(assigns.meeting_type)
       )
 
@@ -166,14 +166,5 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
       <.icon name="hero-chevron-right-mini" class="paper-type__chevron" />
     </button>
     """
-  end
-
-  # A demo persona's meeting type is a plain map, so the field is read with
-  # Map.get; a blank description is left out rather than drawn empty.
-  defp description(meeting_type) do
-    case Map.get(meeting_type, :description) do
-      text when is_binary(text) -> if String.trim(text) == "", do: nil, else: text
-      _none -> nil
-    end
   end
 end

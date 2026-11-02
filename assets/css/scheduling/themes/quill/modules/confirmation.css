@@ -60,6 +60,16 @@
 }
 
 /* Ensure email addresses are visible with good contrast */
+/* The booked meeting type's name, heading the details card. */
+.meeting-details-title {
+  margin: 0 0 var(--space-sm);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  overflow-wrap: anywhere;
+}
+
 .booking-detail-value a {
   color: var(--theme-primary);
   text-decoration: none;

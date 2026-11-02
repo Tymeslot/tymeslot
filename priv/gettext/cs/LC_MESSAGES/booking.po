@@ -105,11 +105,6 @@ msgstr "Nová karta se neotevřela?"
 msgid "Duration"
 msgstr "Délka"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
-#, elixir-autogen, elixir-format
-msgid "Duration: %{duration}"
-msgstr "Délka: %{duration}"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address"
@@ -1013,16 +1008,6 @@ msgstr "Zaplaceno"
 msgid "Price:"
 msgstr "Cena:"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration}"
-msgstr "Rezervujete si schůzku (%{duration})"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration} with %{name}"
-msgstr "Rezervujete si schůzku (%{duration}) s hostitelem %{name}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Paid %{amount}"
@@ -1050,3 +1035,23 @@ msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors 
 msgstr[0] "Váš kalendář %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
 msgstr[1] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
 msgstr[2] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show less"
+msgstr "Zobrazit méně"
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show more"
+msgstr "Zobrazit více"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration})"
+msgstr "Rezervujete si schůzku %{meeting} (%{duration})"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration}) with %{name}"
+msgstr "Rezervujete si schůzku %{meeting} (%{duration}) s hostitelem %{name}"

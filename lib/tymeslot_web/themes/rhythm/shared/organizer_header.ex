@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
 
   ## Attributes
   - organizer_profile: The organizer profile to display
-  - meeting_type: Optional meeting type (for duration)
+  - meeting_type: Optional meeting type, named beside its duration
   - selected_duration: Optional selected duration (fallback if no meeting_type)
   - length_minutes: The length the booker chose, when the type offers several
   - host_currency: The currency a paid meeting type's price is shown in
@@ -65,12 +65,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
             {Profiles.display_name(@organizer_profile) || ""}
           </span>
         </JourneyComponents.moment_heading>
-        <div class="meeting-duration">
-          {BookingText.duration_label(%{
-            meeting_type: @meeting_type,
-            duration: @selected_duration,
-            chosen_length_minutes: @length_minutes
-          })}
+        <div class="meeting-duration" data-testid="chosen-meeting-type">
+          <span :if={@meeting_type} class="meeting-type-name">{@meeting_type.name}</span>
+          <span class="meeting-type-length">
+            {BookingText.duration_label(%{
+              meeting_type: @meeting_type,
+              duration: @selected_duration,
+              chosen_length_minutes: @length_minutes
+            })}
+          </span>
         </div>
         <GroupSession.hint :if={@meeting_type} meeting_type={@meeting_type} />
         <MeetingPrice.hint

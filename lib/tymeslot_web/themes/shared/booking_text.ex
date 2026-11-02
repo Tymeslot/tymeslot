@@ -213,4 +213,19 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
       do: PaymentHelpers.format_amount(cents, currency, locale)
 
   def price_label(_meeting_type, _currency, _locale), do: nil
+
+  @doc """
+  A meeting type's description as the booker reads it, or `nil` when it has
+  none to show: a blank one is left out rather than drawn empty. A demo
+  persona's meeting type is a plain map, so the field is read with `Map.get/2`.
+  """
+  @spec description(map() | nil) :: String.t() | nil
+  def description(%{} = meeting_type) do
+    case Map.get(meeting_type, :description) do
+      text when is_binary(text) -> if String.trim(text) == "", do: nil, else: text
+      _none -> nil
+    end
+  end
+
+  def description(nil), do: nil
 end

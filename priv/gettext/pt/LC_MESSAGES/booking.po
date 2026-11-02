@@ -105,11 +105,6 @@ msgstr "A nova aba não abriu?"
 msgid "Duration"
 msgstr "Duração"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
-#, elixir-autogen, elixir-format
-msgid "Duration: %{duration}"
-msgstr "Duração: %{duration}"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address"
@@ -1007,16 +1002,6 @@ msgstr "Pago"
 msgid "Price:"
 msgstr "Preço:"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration}"
-msgstr "Você está agendando uma reunião de %{duration}"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration} with %{name}"
-msgstr "Você está agendando uma reunião de %{duration} com %{name}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Paid %{amount}"
@@ -1043,3 +1028,23 @@ msgid "Your calendar %{names} needs reconnecting. Until you do, visitors may see
 msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors may see no times here."
 msgstr[0] "Seu calendário %{names} precisa ser reconectado. Enquanto isso não for feito, os visitantes podem não ver horários aqui."
 msgstr[1] "Seus calendários %{names} precisam ser reconectados. Enquanto isso não for feito, os visitantes podem não ver horários aqui."
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show less"
+msgstr "Mostrar menos"
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show more"
+msgstr "Mostrar mais"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration})"
+msgstr "Você está agendando: %{meeting} (%{duration})"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration}) with %{name}"
+msgstr "Você está agendando: %{meeting} (%{duration}) com %{name}"

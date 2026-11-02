@@ -10,6 +10,7 @@ import { lazyHook } from "../dynamic_hooks"
 import { AutoScrollToSlots } from "../utility_hooks"
 import { PaymentRedirectOpenTab } from "../hooks/payment_redirect_open_tab"
 import { WeekGridScroll } from "../hooks/week_grid_scroll"
+import { ClampedText } from "../hooks/clamped_text"
 import { installRevealIntoView } from "../reveal_into_view"
 
 // `JS.dispatch("tymeslot:reveal", ...)` from a booking page's templates.
@@ -22,6 +23,8 @@ const PublicHooks = {
   PaymentRedirectOpenTab,
   // The shared week grid's sideways scroll, on a narrow booking page.
   WeekGridScroll,
+  // "Show more" on a meeting type's description, only when it is cut.
+  ClampedText,
   // Lazy-load video hooks - only load when video elements are mounted
   RhythmVideo: lazyHook("RhythmVideo", () =>
     import("../video_hooks").then(m => m.RhythmVideo)

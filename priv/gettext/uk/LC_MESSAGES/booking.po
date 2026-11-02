@@ -105,11 +105,6 @@ msgstr "Нова вкладка не відкрилася?"
 msgid "Duration"
 msgstr "Тривалість"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
-#, elixir-autogen, elixir-format
-msgid "Duration: %{duration}"
-msgstr "Тривалість: %{duration}"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address"
@@ -1013,16 +1008,6 @@ msgstr "Оплачено"
 msgid "Price:"
 msgstr "Ціна:"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration}"
-msgstr "Ви бронюєте зустріч на %{duration}"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking %{duration} with %{name}"
-msgstr "Ви бронюєте зустріч на %{duration} з %{name}"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Paid %{amount}"
@@ -1050,3 +1035,23 @@ msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors 
 msgstr[0] "Ваш календар %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."
 msgstr[1] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."
 msgstr[2] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show less"
+msgstr "Показати менше"
+
+#: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
+#, elixir-autogen, elixir-format
+msgid "Show more"
+msgstr "Показати більше"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration})"
+msgstr "Ви бронюєте зустріч %{meeting} (%{duration})"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{meeting} (%{duration}) with %{name}"
+msgstr "Ви бронюєте зустріч %{meeting} (%{duration}) з %{name}"

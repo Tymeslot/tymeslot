@@ -72,14 +72,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     {dgettext("booking", "Enter Your Details")}
                   </JourneyComponents.moment_heading>
 
-                  <p class="booking-subtitle text-quill-primary">
+                  <p class="booking-subtitle text-quill-primary" data-testid="chosen-meeting-type">
                     <%= if @organizer_profile do %>
-                      {dgettext("booking", "You're booking %{duration} with %{name}",
+                      {dgettext("booking", "You're booking %{meeting} (%{duration}) with %{name}",
+                        meeting: @meeting_type.name,
                         duration: BookingText.duration_label(assigns),
                         name: get_organizer_name(@organizer_profile, @username_context)
                       )}
                     <% else %>
-                      {dgettext("booking", "You're booking %{duration}",
+                      {dgettext("booking", "You're booking %{meeting} (%{duration})",
+                        meeting: @meeting_type.name,
                         duration: BookingText.duration_label(assigns)
                       )}
                     <% end %>

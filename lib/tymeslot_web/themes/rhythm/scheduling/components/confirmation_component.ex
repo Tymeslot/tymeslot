@@ -80,7 +80,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="meeting-ticket">
                 <div class="ticket-header">
-                  <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
+                  <span :if={@meeting_type} class="ticket-title" data-testid="chosen-meeting-type">
+                    {@meeting_type.name}
+                  </span>
+                  <span :if={!@meeting_type} class="ticket-label">
+                    {dgettext("booking", "Meeting Details")}
+                  </span>
                   <span class="ticket-badge">
                     {dgettext("booking", "%{minutes} min",
                       minutes:
