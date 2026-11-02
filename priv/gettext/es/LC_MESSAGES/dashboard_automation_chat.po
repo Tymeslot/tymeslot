@@ -528,7 +528,7 @@ msgstr "Integración de Slack reactivada"
 msgid "Slack integration updated"
 msgstr "Integración de Slack actualizada"
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Slack notifications are not enabled on this deployment."
@@ -753,77 +753,77 @@ msgstr "No se pudo completar la conexión con Slack. Inténtalo de nuevo."
 msgid "Too many requests. Please try again later."
 msgstr "Demasiadas solicitudes. Inténtalo más tarde."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Slack credentials are missing. Reconnect to continue."
 msgstr "Faltan los datos de acceso de Slack. Vuelve a conectar para continuar."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL is missing. Add it again to continue."
 msgstr "Falta la URL del webhook. Vuelve a agregarla para continuar."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Your plan does not include Slack notifications. Upgrade to connect Slack."
 msgstr "Tu plan no incluye notificaciones de Slack. Mejora tu plan para conectar Slack."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Could not verify your plan right now. Please try again in a moment."
 msgstr "No se pudo comprobar tu plan en este momento. Inténtalo de nuevo en breve."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Slack app install is not available on this deployment. Use a webhook URL instead."
 msgstr "La instalación de la app de Slack no está disponible en esta instalación. Usa una URL de webhook."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Slack app is not configured as a bot token app. Check your Slack app settings and ensure the OAuth scopes grant a bot token."
 msgstr "La app de Slack no está configurada para usar un token de bot. Revisa la configuración de tu app de Slack y comprueba que los ámbitos de OAuth concedan un token de bot."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Slack integration is misconfigured."
 msgstr "La integración de Slack está mal configurada."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This Slack workspace is already connected. Disconnect the existing integration first."
 msgstr "Este espacio de trabajo de Slack ya está conectado. Desconecta primero la integración existente."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Could not save Slack integration."
 msgstr "No se pudo guardar la integración de Slack."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Channel not accessible. If it's a private channel, invite the Tymeslot bot first."
 msgstr "No se puede acceder al canal. Si es un canal privado, invita primero al bot de Tymeslot."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Slack authorisation was revoked. Reconnect to continue."
 msgstr "Se revocó la autorización de Slack. Vuelve a conectar para continuar."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Bot is not in this channel. Either pick a public channel or invite the bot."
 msgstr "El bot no está en este canal. Elige un canal público o invita al bot."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Slack is rate-limiting. Try again in a minute."
 msgstr "Slack está limitando las solicitudes. Inténtalo de nuevo en un minuto."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL was revoked in Slack. Generate a new one."
 msgstr "La URL del webhook se revocó en Slack. Genera una nueva."
 
-#: lib/tymeslot/slack/slack.ex
+#: lib/tymeslot/slack/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Slack error: %{error}"
 msgstr "Error de Slack: %{error}"

@@ -197,8 +197,7 @@ msgstr "Todavía no hay votaciones"
 msgid "Open"
 msgstr "Abierta"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Los tipos de reunión de pago no se pueden usar en votaciones"
@@ -229,8 +228,7 @@ msgstr "Votaciones"
 msgid "Remove time"
 msgstr "Quitar el horario"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Ese tipo de reunión no está disponible"
@@ -263,8 +261,7 @@ msgstr "Este horario choca con un evento de tu calendario"
 msgid "This time is no longer free"
 msgstr "Este horario ya no está libre"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Los horarios deben estar en el futuro"
@@ -285,8 +282,7 @@ msgstr "Zona horaria"
 msgid "Title"
 msgstr "Título"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Hasta %{max} horarios"
@@ -534,8 +530,7 @@ msgstr "¿Quitar a %{name} y sus respuestas de esta votación? No se le avisará
 msgid "Remove from the poll"
 msgstr "Quitar de la votación"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "El plazo debe estar en el futuro"

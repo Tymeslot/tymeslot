@@ -101,7 +101,7 @@ msgstr "Ocultar"
 msgid "Enter a valid partial refund amount."
 msgstr "Escribe una cantidad válida para el reembolso parcial."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr "No se pudo cancelar la reunión. Inténtalo de nuevo."
@@ -156,7 +156,7 @@ msgstr "Notas de la reunión"
 msgid "Meeting cancelled and refund issued."
 msgstr "Reunión cancelada y reembolso emitido."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Se canceló la reunión, pero no se pudo emitir el reembolso. Emítelo manualmente desde tu panel de Stripe."
