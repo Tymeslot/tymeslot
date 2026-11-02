@@ -699,3 +699,48 @@ msgstr "Ihr Tymeslot-Konto ist zur Löschung vorgemerkt"
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr "⚠️ Anfrage zur E-Mail-Änderung – Sicherheitswarnung"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Add it to your email signature"
+msgstr "Für Ihre E-Mail-Signatur"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Book a time with me: %{url}"
+msgstr "Termin mit mir buchen: %{url}"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Here is your booking page. Send it to anyone who needs a time with you."
+msgstr "Hier ist Ihre Buchungsseite. Schicken Sie sie jedem, der einen Termin mit Ihnen braucht."
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Manage your page"
+msgstr "Ihre Seite verwalten"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Open your page"
+msgstr "Ihre Seite öffnen"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "QR code for your booking page"
+msgstr "QR-Code für Ihre Buchungsseite"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking link"
+msgstr "Ihr Buchungslink"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page, ready to send to anyone."
+msgstr "Ihre Buchungsseite, bereit zum Weiterschicken."
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your page"
+msgstr "Ihre Seite"

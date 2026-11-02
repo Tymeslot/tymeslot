@@ -699,3 +699,48 @@ msgstr "Váš účet Tymeslot je naplánován ke smazání"
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr "⚠️ Žádost o změnu e-mailu – bezpečnostní upozornění"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Add it to your email signature"
+msgstr "Přidejte si ho do e-mailového podpisu"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Book a time with me: %{url}"
+msgstr "Rezervujte si u mě termín: %{url}"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Here is your booking page. Send it to anyone who needs a time with you."
+msgstr "Tady je vaše rezervační stránka. Pošlete ji každému, kdo si s vámi potřebuje domluvit schůzku."
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Manage your page"
+msgstr "Spravovat stránku"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Open your page"
+msgstr "Otevřít stránku"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "QR code for your booking page"
+msgstr "QR kód vaší rezervační stránky"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking link"
+msgstr "Váš rezervační odkaz"
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page, ready to send to anyone."
+msgstr "Vaše rezervační stránka, připravená k odeslání komukoli."
+
+#: lib/tymeslot/emails/templates/booking_link.ex
+#, elixir-autogen, elixir-format
+msgid "Your page"
+msgstr "Vaše stránka"

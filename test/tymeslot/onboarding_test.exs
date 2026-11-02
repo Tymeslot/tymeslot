@@ -1,6 +1,8 @@
 defmodule Tymeslot.OnboardingTest do
   use Tymeslot.DataCase, async: true
 
+  use Oban.Testing, repo: Tymeslot.Repo
+
   @moduletag :utils
   @moduletag :onboarding
 
@@ -8,6 +10,7 @@ defmodule Tymeslot.OnboardingTest do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Onboarding
+  alias Tymeslot.Workers.EmailWorker
 
   describe "get_or_create_profile/1" do
     test "creates a profile when none exists" do
@@ -29,6 +32,18 @@ defmodule Tymeslot.OnboardingTest do
       {:ok, original_profile} = Onboarding.get_or_create_profile(user.id)
       {:ok, same_profile} = Onboarding.get_or_create_profile(user.id)
       assert same_profile.id == original_profile.id
+    end
+  end
+
+  describe "email_booking_link/1" do
+    test "enqueues one job per ten minutes" do
+      user = insert(:user)
+
+      assert :ok = Onboarding.email_booking_link(user)
+      assert :ok = Onboarding.email_booking_link(user)
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args == %{"action" => "send_booking_link_email", "user_id" => user.id}
     end
   end
 

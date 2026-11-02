@@ -3,6 +3,7 @@ defmodule Tymeslot.Onboarding do
   Context module for onboarding business logic.
   """
 
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
@@ -14,6 +15,20 @@ defmodule Tymeslot.Onboarding do
   """
   @spec get_or_create_profile(integer()) :: {:ok, Ecto.Schema.t()} | {:error, any()}
   def get_or_create_profile(user_id), do: Profiles.get_or_create_profile(user_id)
+
+  @doc """
+  Emails the host their own booking link, with a signature line and a QR code.
+
+  Enqueues one job per user per ten minutes; a second call inside the window
+  returns `:ok` without a second email.
+  """
+  @spec email_booking_link(Ecto.Schema.t() | map()) :: :ok | {:error, term()}
+  def email_booking_link(%{id: user_id}) do
+    case EmailScheduler.schedule_booking_link(user_id) do
+      {:ok, _outcome} -> :ok
+      {:error, _reason} = error -> error
+    end
+  end
 
   @doc """
   Completes the onboarding process for a user.
