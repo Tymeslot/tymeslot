@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.EmbedBookingPagesTest do
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Embed.Token
   alias Tymeslot.Repo
+  alias TymeslotWeb.Helpers.PathUtils
   alias TymeslotWeb.Hooks.EmbedAuthHook
 
   setup :setup_dashboard_user_with_theme
@@ -33,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.EmbedBookingPagesTest do
     assert has_element?(
              view,
              "#embed-page-picker option[value='#{page.id}']",
-             "Einfach ISO · /einfachiso"
+             "Einfach ISO · /joern/einfachiso"
            )
   end
 
@@ -48,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.EmbedBookingPagesTest do
       |> form("#embed-page-picker", %{"page" => to_string(page.id)})
       |> render_change()
 
-    assert html =~ ~r/data-username=(&quot;|")einfachiso/
+    assert html =~ ~r/data-username=(&quot;|")joern\/einfachiso/
   end
 
   test "choosing the profile again returns to the username", %{conn: conn, profile: profile} do
@@ -74,6 +75,9 @@ defmodule TymeslotWeb.Dashboard.EmbedBookingPagesTest do
   end
 
   describe "embed auth under a page address" do
+    # The embed token names the first segment of the URL, which under a
+    # page's address (`/joern/einfachiso`) is the owner's username, so the
+    # owner's allowed domains decide.
     test "lets the page address through from an allowed domain", %{profile: profile} do
       profile
       |> Changeset.change(allowed_embed_domains: ["example.com"])
@@ -88,14 +92,16 @@ defmodule TymeslotWeb.Dashboard.EmbedBookingPagesTest do
         private: %{connect_info: %{}}
       }
 
-      token = Token.sign("einfachiso", "https://example.com")
+      username = PathUtils.extract_username_from_path("/joern/einfachiso")
+      assert username == "joern"
+      token = Token.sign(username, "https://example.com")
 
       assert {:cont, updated} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
       assert updated.assigns.embedded == true
 
-      other = Token.sign("einfachiso", "https://evil.com")
+      other = Token.sign(username, "https://evil.com")
 
       assert {:halt, _socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => other}, socket)

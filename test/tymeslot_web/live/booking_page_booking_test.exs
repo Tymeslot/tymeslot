@@ -69,13 +69,33 @@ defmodule TymeslotWeb.BookingPageBookingTest do
     user: user,
     page: page
   } do
-    {:ok, view, _html} = live(conn, ~p"/einfachiso?timezone=#{@timezone}")
+    {:ok, view, _html} = live(conn, ~p"/joern/einfachiso?timezone=#{@timezone}")
     BookingDriver.book(view, attendee: attendee("page-booker@example.com"))
 
     meeting =
       Repo.get_by!(MeetingSchema,
         organizer_user_id: user.id,
         attendee_email: "page-booker@example.com"
+      )
+
+    assert meeting.booking_page_id == page.id
+  end
+
+  # A type's own link under the page (`/<username>/<page>/<type>`) books it
+  # through the page.
+  @tag :capture_log
+  test "a visitor books from a type's link under the page", %{
+    conn: conn,
+    user: user,
+    page: page
+  } do
+    {:ok, view, _html} = live(conn, ~p"/joern/einfachiso/iso-audit?timezone=#{@timezone}")
+    BookingDriver.book(view, attendee: attendee("type-link-booker@example.com"))
+
+    meeting =
+      Repo.get_by!(MeetingSchema,
+        organizer_user_id: user.id,
+        attendee_email: "type-link-booker@example.com"
       )
 
     assert meeting.booking_page_id == page.id
@@ -107,7 +127,7 @@ defmodule TymeslotWeb.BookingPageBookingTest do
       Application.delete_env(:swoosh, :shared_test_process)
     end)
 
-    {:ok, view, _html} = live(conn, ~p"/einfachiso?timezone=#{@timezone}")
+    {:ok, view, _html} = live(conn, ~p"/joern/einfachiso?timezone=#{@timezone}")
     BookingDriver.book(view, attendee: attendee("cancel-booker@example.com"))
 
     meeting =
@@ -131,7 +151,7 @@ defmodule TymeslotWeb.BookingPageBookingTest do
       end)
 
     assert attendee_email, "no cancellation email reached the attendee"
-    assert attendee_email.html_body =~ UrlBuilder.booking_url("einfachiso")
+    assert attendee_email.html_body =~ UrlBuilder.booking_url("joern/einfachiso")
     refute attendee_email.html_body =~ ~s(href="#{UrlBuilder.booking_url("joern")}")
   end
 

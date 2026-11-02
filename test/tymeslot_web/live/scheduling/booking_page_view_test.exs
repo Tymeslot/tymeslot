@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingPageViewTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.BookingPages
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
@@ -26,16 +27,19 @@ defmodule TymeslotWeb.Live.Scheduling.BookingPageViewTest do
     profile =
       insert(:profile, user: user, username: "owner-#{System.unique_integer([:positive])}")
 
-    insert(:booking_page, profile: profile, slug: "einfachiso")
+    page = insert(:booking_page, profile: profile, slug: "einfachiso")
+    listed = insert(:meeting_type, user: user, name: "ISO audit")
+    :ok = BookingPages.set_meeting_type(page, listed.id, true)
 
     {:ok, _view, _html} =
       conn
       |> put_req_header("user-agent", "Mozilla/5.0 (Macintosh) Chrome/126.0.0.0")
-      |> live(~p"/einfachiso")
+      |> live("/#{profile.username}/einfachiso")
 
     assert [event] = Repo.all(EventSchema)
     assert event.event_type == "booking_page_view"
     assert event.user_id == user.id
-    assert event.path == "/einfachiso"
+    assert event.path == "/#{profile.username}/einfachiso"
+    assert event.meeting_type_id == nil
   end
 end

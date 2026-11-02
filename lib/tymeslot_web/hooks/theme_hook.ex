@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Hooks.ThemeHook do
 
   import Phoenix.Component
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.Profiles
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Core.Registry
@@ -20,12 +21,16 @@ defmodule TymeslotWeb.Hooks.ThemeHook do
   # A requested theme wins, then the organiser's, then the default. Anything
   # the registry does not know is skipped, never assigned.
   defp resolve_theme_id(params) do
-    Registry.requested_theme_id(params) || organiser_theme_id(params["username"]) ||
-      Catalog.default_id()
+    Registry.requested_theme_id(params) || organiser_theme_id(params) || Catalog.default_id()
   end
 
-  defp organiser_theme_id(username) when is_binary(username) do
-    case Profiles.get_profile_by_username(username) do
+  # The theme of the start page the URL is under: one of the organiser's
+  # booking pages (`/<username>/<page>`, or `/<username>/<x>` when `x` is a
+  # page's slug), otherwise the organiser's own.
+  defp organiser_theme_id(%{"username" => username} = params) when is_binary(username) do
+    page_slug = params["page"] || params["slug"]
+
+    case username |> Profiles.get_profile_by_username() |> BookingPages.presented_at(page_slug) do
       %{booking_theme: theme_id} when is_binary(theme_id) ->
         if Registry.valid_theme_id?(theme_id), do: theme_id
 

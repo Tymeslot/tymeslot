@@ -28,20 +28,21 @@ defmodule Tymeslot.BookingPages.ResolutionTest do
     %{profile: profile, page: page}
   end
 
-  test "a page address resolves to its owner, wearing the page", %{profile: profile, page: page} do
-    resolved = Profiles.get_profile_by_username("einfachiso")
+  test "a page's address resolves to its owner, wearing the page", %{profile: profile, page: page} do
+    assert {:ok, context} = Profiles.resolve_organizer_context("joern/einfachiso")
+    resolved = context.profile
 
     assert resolved.id == profile.id
     assert resolved.username == "joern"
     assert resolved.booking_theme == "1"
     assert resolved.booking_heading == "ISO consulting"
     assert resolved.booking_page.id == page.id
-    assert BookingPages.public_address(resolved) == "einfachiso"
+    assert BookingPages.public_address(resolved) == "joern/einfachiso"
     assert BookingPages.page_id(resolved) == page.id
   end
 
   test "a username resolves to the profile as it is" do
-    resolved = Profiles.get_profile_by_username("joern")
+    assert {:ok, %{profile: resolved}} = Profiles.resolve_organizer_context("joern")
 
     assert resolved.booking_theme == "2"
     assert resolved.booking_page == nil
@@ -49,34 +50,29 @@ defmodule Tymeslot.BookingPages.ResolutionTest do
     assert BookingPages.page_id(resolved) == nil
   end
 
-  test "a username wins over a page holding the same address" do
-    other = insert(:profile, username: "clash")
-    # Inserted directly, as a race between the two checks would leave it.
-    insert(:booking_page, slug: "clash")
-
-    resolved = Profiles.get_profile_by_username("clash")
-
-    assert resolved.id == other.id
-    assert resolved.booking_page == nil
+  # Pages left the username namespace: a page's slug alone is no address.
+  test "a page's slug on its own is no username", %{page: page} do
+    assert Profiles.get_profile_by_username(page.slug) == nil
+    assert Profiles.resolve_organizer_context(page.slug) == {:error, :profile_not_found}
   end
 
-  # Pages are found whatever the case of the address, usernames only as typed
-  # (`/Clash` never found the username `clash`): an address in other case than
-  # a username must not reach the page either.
-  test "a username wins over a page in any case of the address" do
-    insert(:profile, username: "clash")
-    insert(:booking_page, slug: "clash")
+  test "a page's slug resolves only under its own username", %{page: page} do
+    insert(:profile, username: "someone-else")
 
-    for address <- ["Clash", "CLASH"] do
-      assert Profiles.get_profile_by_username(address) == nil
-      assert Profiles.resolve_organizer_context(address) == {:error, :profile_not_found}
-    end
+    assert Profiles.resolve_organizer_context("someone-else/#{page.slug}") ==
+             {:error, :profile_not_found}
+
+    assert Profiles.resolve_organizer_context("joern/nothing-here") ==
+             {:error, :profile_not_found}
   end
 
-  test "a page address resolves in any case", %{page: page} do
-    assert Profiles.get_profile_by_username("EinfachISO").booking_page.id == page.id
-    assert {:ok, context} = Profiles.resolve_organizer_context("EinfachISO")
-    assert context.profile.booking_page.id == page.id
+  test "presented_at/2 wears the page at a slug, and only a page's", %{
+    profile: profile,
+    page: page
+  } do
+    assert BookingPages.presented_at(profile, "EinfachISO").booking_page.id == page.id
+    assert BookingPages.presented_at(profile, "a-meeting-type").booking_page == nil
+    assert BookingPages.presented_at(profile, nil).booking_page == nil
   end
 
   test "an unknown address resolves to nothing" do
@@ -89,16 +85,16 @@ defmodule Tymeslot.BookingPages.ResolutionTest do
     insert(:meeting_type, user: profile.user, name: "Automation call")
     :ok = BookingPages.set_meeting_type(page, on_page.id, true)
 
-    assert {:ok, context} = Profiles.resolve_organizer_context("einfachiso")
+    assert {:ok, context} = Profiles.resolve_organizer_context("joern/einfachiso")
     assert Enum.map(context.meeting_types, & &1.name) == ["ISO audit"]
-    assert context.username == "einfachiso"
+    assert context.username == "joern/einfachiso"
     assert context.user_id == profile.user_id
   end
 
   test "a page with nothing to list offers nothing, not the profile's types", %{profile: profile} do
     insert(:meeting_type, user: profile.user, name: "Automation call")
 
-    assert {:ok, %{meeting_types: []}} = Profiles.resolve_organizer_context("einfachiso")
+    assert {:ok, %{meeting_types: []}} = Profiles.resolve_organizer_context("joern/einfachiso")
   end
 
   test "the start page wears the page's colours", %{profile: profile, page: page} do
@@ -111,7 +107,7 @@ defmodule Tymeslot.BookingPages.ResolutionTest do
       color_scheme: "rose"
     )
 
-    resolved = Profiles.get_profile_by_username("einfachiso")
+    resolved = BookingPages.presented_at(profile, "einfachiso")
 
     assert primary_colour(resolved) == Presets.get_color_schemes()["rose"].colors.primary
     assert primary_colour(profile) == Presets.get_color_schemes()["ocean"].colors.primary

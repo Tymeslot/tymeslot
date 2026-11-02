@@ -835,3 +835,13 @@ msgstr "annulez les dates prévues avant de désactiver les dates fixes"
 #, elixir-autogen, elixir-format
 msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
 msgstr "Utilisez 3 à 30 lettres minuscules, chiffres, tirets ou tirets bas, en commençant par une lettre ou un chiffre"
+
+#: lib/tymeslot/meeting_types/slugs.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your booking pages"
+msgstr "est déjà l’adresse d’une de vos pages de réservation"
+
+#: lib/tymeslot/booking_pages.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your meeting types"
+msgstr "est déjà l’adresse d’un de vos types de réunion"

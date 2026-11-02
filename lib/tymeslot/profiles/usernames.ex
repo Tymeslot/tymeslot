@@ -123,9 +123,8 @@ defmodule Tymeslot.Profiles.Usernames do
   reserved list, then whether another profile already holds it. `profile` may
   be `nil` when there is no profile yet.
 
-  The write enforces the same rules again, in the profile changeset and,
-  for booking page addresses, under `ProfileQueries.lock_public_address/1`,
-  which is what settles a username taken between this check and the save.
+  The profile changeset enforces the same rules again on write, which is what
+  settles a username taken between this check and the save.
   """
   @spec status(ProfileSchema.t() | map() | nil, term()) ::
           :unchanged | :ok | {:invalid, String.t()} | :reserved | :taken

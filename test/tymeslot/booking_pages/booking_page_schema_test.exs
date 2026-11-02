@@ -32,17 +32,19 @@ defmodule Tymeslot.BookingPages.BookingPageSchemaTest do
     refute page_changeset(%{name: "x", slug: "-leading"}).valid?
   end
 
-  test "refuses a reserved address" do
-    changeset = page_changeset(%{name: "Dash", slug: "dashboard"})
+  test "refuses a path routed under a username, and only those" do
+    for slug <- BookingPageSchema.reserved_slugs() do
+      assert {"is reserved", _opts} = page_changeset(%{name: "x", slug: slug}).errors[:slug]
+    end
 
-    assert {"is reserved", _opts} = changeset.errors[:slug]
+    assert page_changeset(%{name: "Dash", slug: "dashboard"}).valid?
   end
 
   test "refuses an unknown theme" do
     refute page_changeset(%{name: "x", slug: "fine-name", booking_theme: "no-such-theme"}).valid?
   end
 
-  test "the database refuses a second page with the same address in any case" do
+  test "the database refuses a second page of one profile at the same slug in any case" do
     profile = insert(:profile)
     insert(:booking_page, profile: profile, slug: "einfachiso")
 
@@ -57,6 +59,21 @@ defmodule Tymeslot.BookingPages.BookingPageSchemaTest do
       |> Repo.insert()
 
     assert {"has already been taken", _opts} = changeset.errors[:slug]
+  end
+
+  test "the database lets two profiles each have a page at the same slug" do
+    insert(:booking_page, slug: "einfachiso")
+    other = insert(:profile)
+
+    assert {:ok, _page} =
+             %BookingPageSchema{}
+             |> BookingPageSchema.create_changeset(%{
+               profile_id: other.id,
+               booking_theme: "1",
+               name: "Same",
+               slug: "einfachiso"
+             })
+             |> Repo.insert()
   end
 
   test "a profile row and a page row may share a theme" do

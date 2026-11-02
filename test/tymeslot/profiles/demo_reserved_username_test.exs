@@ -12,7 +12,6 @@ defmodule Tymeslot.Profiles.DemoReservedUsernameTest do
 
   import Tymeslot.ConfigTestHelpers
 
-  alias Tymeslot.BookingPages
   alias Tymeslot.Demo.NoOp
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
@@ -70,15 +69,6 @@ defmodule Tymeslot.Profiles.DemoReservedUsernameTest do
 
       assert {:invalid, _message} = Profiles.username_status(profile, capitalised)
       assert Repo.reload!(profile).username == "sarah"
-    end
-
-    test "a booking page cannot take it as its address" do
-      profile = insert(:profile, username: "sarah")
-
-      assert {:error, changeset} =
-               BookingPages.create(profile, %{name: "Demo", slug: @demo_username})
-
-      assert "is reserved" in errors_on(changeset)[:slug]
     end
 
     test "a username it does not reserve stays free" do

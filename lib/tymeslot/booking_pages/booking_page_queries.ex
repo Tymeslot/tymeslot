@@ -47,28 +47,72 @@ defmodule Tymeslot.BookingPages.BookingPageQueries do
   def get(id), do: Repo.get(BookingPageSchema, id)
 
   @doc """
-  The page at `slug`, with `preload` loaded. Compared lowercase so the
-  `lower(slug)` index is used.
+  The profile's page at `slug`, with `preload` loaded. Compared lowercase so
+  the `(profile_id, lower(slug))` index is used.
   """
-  @spec get_by_slug(String.t(), list()) :: BookingPageSchema.t() | nil
-  def get_by_slug(slug, preload \\ []) do
+  @spec get_by_slug(integer(), String.t(), list()) :: BookingPageSchema.t() | nil
+  def get_by_slug(profile_id, slug, preload \\ []) do
     normalised = String.downcase(slug)
 
     query =
       from(p in BookingPageSchema,
-        where: fragment("lower(?)", p.slug) == ^normalised,
+        where: p.profile_id == ^profile_id and fragment("lower(?)", p.slug) == ^normalised,
         preload: ^preload
       )
 
     Repo.one(query)
   end
 
-  @doc "Whether any page holds `slug`, ignoring case, as the unique index does."
-  @spec slug_taken?(String.t()) :: boolean()
-  def slug_taken?(slug) do
+  @doc """
+  Whether another of the profile's pages than `except_id` (nil: any page)
+  holds `slug`, ignoring case, as the unique index does.
+  """
+  @spec slug_taken?(integer(), String.t(), integer() | nil) :: boolean()
+  def slug_taken?(profile_id, slug, except_id \\ nil) do
     normalised = String.downcase(slug)
 
-    Repo.exists?(from(p in BookingPageSchema, where: fragment("lower(?)", p.slug) == ^normalised))
+    query =
+      from(p in BookingPageSchema,
+        where: p.profile_id == ^profile_id and fragment("lower(?)", p.slug) == ^normalised
+      )
+
+    query = if except_id, do: where(query, [p], p.id != ^except_id), else: query
+
+    Repo.exists?(query)
+  end
+
+  # Distinguishes the address lock from any other advisory locks the
+  # application takes. Arbitrary but must stay stable.
+  @address_lock_class 715_003
+
+  @doc """
+  Serialises, within the current transaction, every write that gives one of
+  the profile's pages or meeting types an address (`pg_advisory_xact_lock/2`
+  keyed on the profile). Pages and meeting types share the second segment
+  of `/<username>/<x>` but live in two tables, so no unique index can keep
+  them apart: each write takes this lock first and checks the other table
+  under it. Released on commit or rollback. Must be called inside a
+  transaction.
+  """
+  @spec lock_addresses(integer()) :: :ok
+  def lock_addresses(profile_id) when is_integer(profile_id) do
+    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@address_lock_class, profile_id])
+    :ok
+  end
+
+  @doc "The oldest page `meeting_type_id` is listed on, or nil when it is on none."
+  @spec first_for_meeting_type(integer()) :: BookingPageSchema.t() | nil
+  def first_for_meeting_type(meeting_type_id) do
+    query =
+      from(p in BookingPageSchema,
+        join: l in BookingPageMeetingTypeSchema,
+        on: l.booking_page_id == p.id,
+        where: l.meeting_type_id == ^meeting_type_id,
+        order_by: [asc: p.inserted_at, asc: p.id],
+        limit: 1
+      )
+
+    Repo.one(query)
   end
 
   @doc "Whether a page with `id` exists."

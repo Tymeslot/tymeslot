@@ -134,7 +134,8 @@ defmodule Tymeslot.MeetingTypes do
       Repo.transaction(fn ->
         changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs, opts)
 
-        with {:ok, promotion} <- BookingCalendar.promote(changeset),
+        with {:ok, changeset} <- Slugs.claim_address(changeset),
+             {:ok, promotion} <- BookingCalendar.promote(changeset),
              {:ok, meeting_type} <- MeetingTypeQueries.create_meeting_type(attrs, opts) do
           {meeting_type, promotion}
         else
@@ -175,6 +176,7 @@ defmodule Tymeslot.MeetingTypes do
     changeset = MeetingTypeSchema.changeset(meeting_type, attrs, opts)
 
     with :ok <- FixedDates.check_sessions_kept(meeting_type, changeset),
+         {:ok, changeset} <- Slugs.claim_address(changeset),
          {:ok, _promotion} <- BookingCalendar.promote(changeset),
          {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
       sync_group_capacity(meeting_type, updated)
@@ -341,6 +343,7 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate effective_slug(meeting_type), to: Slugs
   defdelegate generate_random_slug(user_id), to: Slugs
   defdelegate update_slug(meeting_type, slug), to: Slugs
+  defdelegate slug_in_use?(user_id, slug), to: Slugs, as: :in_use?
 
   # Which meeting types offer a saved venue, asked by `Tymeslot.Venues` for
   # the Locations page, and the rewrite that takes a deleted venue off them.

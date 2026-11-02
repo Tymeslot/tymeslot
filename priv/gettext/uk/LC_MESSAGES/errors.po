@@ -853,3 +853,13 @@ msgstr "скасуйте заплановані дати, перш ніж вим
 #, elixir-autogen, elixir-format
 msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
 msgstr "Використовуйте від 3 до 30 малих літер, цифр, дефісів або підкреслень, починаючи з літери чи цифри"
+
+#: lib/tymeslot/meeting_types/slugs.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your booking pages"
+msgstr "вже є адресою однієї з ваших сторінок бронювання"
+
+#: lib/tymeslot/booking_pages.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your meeting types"
+msgstr "вже є адресою одного з ваших типів зустрічей"

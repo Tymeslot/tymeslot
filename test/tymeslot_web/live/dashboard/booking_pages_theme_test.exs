@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   test "the colour editor on a page's tab edits the page's colours", ctx do
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme/customize/1?#{[page: ctx.page.id]}")
 
-    assert render(view) =~ "/einfachiso"
+    assert render(view) =~ "/joern/einfachiso"
 
     view
     |> element(

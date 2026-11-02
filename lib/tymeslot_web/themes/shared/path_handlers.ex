@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
   # The route's own segments, which arrive in `params` beside the query.
-  @path_params ["username", "slug"]
+  @path_params ["username", "page", "slug"]
 
   # What makes a page a reschedule rather than a booking.
   @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
@@ -38,7 +38,10 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   @doc """
   The path of the step the page's route names (`/username`,
-  `/username/slug`, `/username/slug/book`, ...), with no query. The page's
+  `/username/slug`, `/username/slug/book`, ...), with no query. Under a
+  booking page, `username` is the page's address, `<username>/<page>`
+  (`TymeslotWeb.Live.Scheduling.PageAddress`), and every path here follows
+  it. The page's
   links back to itself start from it: the locale switch and the demo's theme
   switcher.
   """
@@ -437,7 +440,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   @doc """
   Returns the organizer's scheduling page path for restarting a booking,
-  e.g. "/username", or the booking page's address for an organiser resolved through one.
+  e.g. "/username", or "/username/page" for an organiser resolved through
+  one of their booking pages.
 
   Invoked from the reschedule flow's "Choose New Time" CTA. When a
   `:meeting_uid` is present in the assigns it is carried forward as the
@@ -480,9 +484,13 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   @spec calendar_ics_path(map()) :: String.t() | nil
   def calendar_ics_path(%{seat_calendar_url: url}) when is_binary(url) and url != "", do: url
 
-  def calendar_ics_path(%{username_context: username, meeting_uid: uid})
-      when is_binary(username) and username != "" and is_binary(uid) and uid != "",
-      do: ~p"/#{username}/meeting/#{uid}/calendar.ics"
+  # The meeting's file is the host's, under the username, whichever of their
+  # pages (`<username>/<page>`) it was booked on.
+  def calendar_ics_path(%{username_context: address, meeting_uid: uid})
+      when is_binary(address) and address != "" and is_binary(uid) and uid != "" do
+    [username | _page] = String.split(address, "/", parts: 2)
+    ~p"/#{username}/meeting/#{uid}/calendar.ics"
+  end
 
   def calendar_ics_path(_assigns), do: nil
 end

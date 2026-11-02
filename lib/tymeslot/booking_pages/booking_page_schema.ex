@@ -1,6 +1,7 @@
 defmodule Tymeslot.BookingPages.BookingPageSchema do
   @moduledoc """
-  An extra public start page of a profile, at its own top-level address.
+  An extra public start page of a profile, at its own address under the
+  profile's username: `/<username>/<slug>`.
 
   The profile's own page at `/<username>` is not a row here: its theme and
   texts stay on the profile. A page carries the same page settings the profile
@@ -8,10 +9,11 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
   `Tymeslot.BookingPages.apply_to_profile/2` can lay a page over its owner's
   profile and everything that renders a start page reads the result unchanged.
 
-  The address is trimmed and stored lowercase, follows the username rules and
-  stays off the reserved list here; that it is free of every username and
-  other page is checked by `Tymeslot.BookingPages`, with the unique index on
-  `lower(slug)` as the backstop between pages.
+  The slug is trimmed and stored lowercase, follows the username rules and
+  is none of the fixed second segments routed under a username
+  (`reserved_slugs/0`); that it is free of the profile's other pages and
+  meeting types is checked by `Tymeslot.BookingPages`, with the unique index
+  on `(profile_id, lower(slug))` as the backstop between pages.
   """
   use Ecto.Schema
   use Gettext, backend: TymeslotWeb.Gettext
@@ -19,7 +21,6 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Profiles.ProfileSchema
-  alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Themes.Catalog
 
@@ -40,6 +41,10 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
 
   @name_max_length 60
 
+  # The literal second segments the router serves under `/:username/`
+  # (`TymeslotWeb.Router`): a page there would never be reached.
+  @reserved_slugs ~w(book meeting poll thank-you)
+
   schema "booking_pages" do
     field(:slug, :string)
     field(:name, :string)
@@ -57,6 +62,10 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
   @doc "The longest a page name may be."
   @spec name_max_length() :: pos_integer()
   def name_max_length, do: @name_max_length
+
+  @doc "The slugs no page may take: the fixed paths routed under a username."
+  @spec reserved_slugs() :: [String.t()]
+  def reserved_slugs, do: @reserved_slugs
 
   @doc """
   A new page: its owner, starting theme, name and address.
@@ -83,7 +92,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
     |> validate_required([:name, :slug])
     |> validate_length(:name, max: @name_max_length)
     |> validate_slug()
-    |> unique_constraint(:slug, name: :booking_pages_slug_index)
+    |> unique_constraint(:slug, name: :booking_pages_profile_id_slug_index)
   end
 
   @doc """
@@ -108,7 +117,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
     validate_change(changeset, :slug, fn :slug, slug ->
       cond do
         UsernameValidator.validate(slug) != :ok -> [slug: address_format_message()]
-        ReservedPaths.reserved?(slug) -> [slug: {"is reserved", validation: :reserved}]
+        slug in @reserved_slugs -> [slug: {"is reserved", validation: :reserved}]
         true -> []
       end
     end)

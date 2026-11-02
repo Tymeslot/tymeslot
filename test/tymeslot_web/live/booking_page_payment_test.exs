@@ -37,6 +37,11 @@ defmodule TymeslotWeb.BookingPagePaymentTest do
         price_cents: 5000
       )
 
+    # Listing a free type keeps the page public (`BookingPages.published?/1`),
+    # whatever the host's payment setup makes of the paid one.
+    free = insert(:meeting_type, user: user, name: "Free intro")
+    :ok = BookingPages.set_meeting_type(page, free.id, true)
+
     %{user: user, page: page, meeting_type: meeting_type}
   end
 
@@ -99,7 +104,7 @@ defmodule TymeslotWeb.BookingPagePaymentTest do
       {:ok, _view, html} =
         live(ctx.conn, ~p"/themes/rhythm/payment-processing/#{meeting.id}?session_id=cs_TEST")
 
-      assert html =~ ~s(href="/einfachiso/paid-consultation")
+      assert html =~ ~s(href="/joern/einfachiso/paid-consultation")
 
       assert {:error, {:redirect, %{to: "/"}}} =
                live(
@@ -113,7 +118,7 @@ defmodule TymeslotWeb.BookingPagePaymentTest do
 
       {:ok, _view, html} = live(ctx.conn, ~p"/themes/rhythm/payment-cancelled/#{meeting.id}")
 
-      assert html =~ ~s(href="/einfachiso/paid-consultation")
+      assert html =~ ~s(href="/joern/einfachiso/paid-consultation")
 
       assert {:error, {:redirect, %{to: "/"}}} =
                live(ctx.conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")

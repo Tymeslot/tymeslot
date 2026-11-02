@@ -27,6 +27,6 @@ defmodule Tymeslot.BookingPages.AttributionTest do
     assert PathHandlers.organizer_scheduling_path(%{
              organizer_profile: BookingPages.apply_to_profile(profile, page),
              meeting_uid: "abc"
-           }) == "/einfachiso?reschedule_meeting_uid=abc"
+           }) == "/joern/einfachiso?reschedule_meeting_uid=abc"
   end
 end

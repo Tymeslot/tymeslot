@@ -1,10 +1,11 @@
 defmodule Tymeslot.Repo.Migrations.CreateBookingPages do
   @moduledoc """
   Booking pages: extra public start pages of a profile, each at its own
-  top-level address with its own theme, texts and meeting types, beside the
-  profile's own page at `/<username>`.
+  address under the username (`/<username>/<page>`) with its own theme, texts
+  and meeting types, beside the profile's own page at `/<username>`.
 
-  Adds `booking_pages` and `booking_page_meeting_types`, and a nullable
+  Adds `booking_pages`, `booking_page_meeting_types` and
+  `booking_page_redirects` (a page's former addresses), and a nullable
   `booking_page_id` on `theme_customizations` (a page's own colours) and on
   `meetings` (the page a booking came through). Existing customisation rows
   keep a NULL page id and stay the profile's, so the unique index on
@@ -43,8 +44,11 @@ defmodule Tymeslot.Repo.Migrations.CreateBookingPages do
       timestamps(type: :utc_datetime)
     end
 
-    create index(:booking_pages, [:profile_id])
-    create unique_index(:booking_pages, ["lower(slug)"], name: :booking_pages_slug_index)
+    # An address is the profile's own: two profiles may each have a page at
+    # the same slug. The index also serves every lookup by profile.
+    create unique_index(:booking_pages, [:profile_id, "lower(slug)"],
+             name: :booking_pages_profile_id_slug_index
+           )
 
     create table(:booking_page_meeting_types) do
       add :booking_page_id, references(:booking_pages, on_delete: :delete_all), null: false
@@ -55,6 +59,20 @@ defmodule Tymeslot.Repo.Migrations.CreateBookingPages do
 
     create unique_index(:booking_page_meeting_types, [:booking_page_id, :meeting_type_id])
     create index(:booking_page_meeting_types, [:meeting_type_id])
+
+    # A former page address of a profile, kept for good so old links keep
+    # working: the page it now leads to, or NULL once that page is deleted,
+    # which sends visitors to the profile's own page.
+    create table(:booking_page_redirects) do
+      add :profile_id, references(:profiles, on_delete: :delete_all), null: false
+      add :slug, :string, null: false
+      add :booking_page_id, references(:booking_pages, on_delete: :nilify_all)
+
+      timestamps(type: :utc_datetime)
+    end
+
+    create unique_index(:booking_page_redirects, [:profile_id, :slug])
+    create index(:booking_page_redirects, [:booking_page_id])
 
     alter table(:theme_customizations) do
       add :booking_page_id, references(:booking_pages, on_delete: :delete_all)
@@ -117,6 +135,7 @@ defmodule Tymeslot.Repo.Migrations.CreateBookingPages do
 
     create unique_index(:theme_customizations, [:profile_id, :theme_id])
 
+    drop table(:booking_page_redirects)
     drop table(:booking_page_meeting_types)
     drop table(:booking_pages)
   end

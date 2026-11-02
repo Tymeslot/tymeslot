@@ -77,22 +77,80 @@ defmodule Tymeslot.BookingPagesTest do
       assert log =~ "theme_id"
     end
 
-    test "refuses an address that is a username", %{profile: profile} do
+    # Addresses are per profile now: a username is no clash at all.
+    test "takes a slug that is someone's username", %{profile: profile} do
       insert(:profile, username: "taken-name")
 
-      assert {:error, changeset} =
+      assert {:ok, %{slug: "taken-name"}} =
                BookingPages.create(profile, %{"name" => "X", "slug" => "Taken-Name"})
-
-      assert {"has already been taken", _opts} = changeset.errors[:slug]
     end
 
-    test "refuses an address another page holds, whatever its case", %{profile: profile} do
+    test "takes a slug another profile's page holds", %{profile: profile} do
       insert(:booking_page, slug: "einfachiso")
+
+      assert {:ok, %{slug: "einfachiso"}} =
+               BookingPages.create(profile, %{"name" => "X", "slug" => "einfachiso"})
+    end
+
+    test "refuses a slug another of the profile's pages holds, whatever its case", %{
+      profile: profile
+    } do
+      insert(:booking_page, profile: profile, slug: "einfachiso")
+
+      assert {"has already been taken", _opts} =
+               BookingPages.change_new(profile, %{"name" => "X", "slug" => "EINFACHISO"}).errors[
+                 :slug
+               ]
 
       assert {:error, changeset} =
                BookingPages.create(profile, %{"name" => "X", "slug" => "EINFACHISO"})
 
       assert {"has already been taken", _opts} = changeset.errors[:slug]
+    end
+
+    # `/<username>/<x>` is a page or a meeting type, never both.
+    test "refuses the effective slug of one of the profile's meeting types", %{
+      user: user,
+      profile: profile
+    } do
+      insert(:meeting_type, user: user, name: "Coaching Call")
+      insert(:meeting_type, user: user, name: "Other", slug: "mentoring", is_active: false)
+
+      for slug <- ["coaching-call", "mentoring"] do
+        assert {:error, changeset} =
+                 BookingPages.create(profile, %{"name" => "X", "slug" => slug})
+
+        assert {"is already the address of one of your meeting types", _opts} =
+                 changeset.errors[:slug]
+      end
+
+      assert BookingPages.list(profile.id) == []
+    end
+
+    test "refuses the paths routed under a username", %{profile: profile} do
+      for slug <- ["book", "meeting", "poll", "thank-you"] do
+        assert {:error, changeset} =
+                 BookingPages.create(profile, %{"name" => "X", "slug" => slug})
+
+        assert {"is reserved", _opts} = changeset.errors[:slug]
+      end
+    end
+
+    # The site-wide reserved paths guard usernames, the first segment only.
+    test "takes a slug reserved as a username", %{profile: profile} do
+      assert {:ok, %{slug: "dashboard"}} =
+               BookingPages.create(profile, %{"name" => "X", "slug" => "dashboard"})
+    end
+
+    test "ends the redirect of a former page address it takes", %{profile: profile} do
+      old = insert(:booking_page, profile: profile, slug: "old-name")
+      {:ok, _moved} = BookingPages.update_details(old, %{"slug" => "new-name"})
+      assert {:moved, "new-name"} = BookingPages.locate(profile, "old-name")
+
+      {:ok, page} = BookingPages.create(profile, %{"name" => "Fresh", "slug" => "old-name"})
+
+      assert {:ok, %{id: id}} = BookingPages.locate(profile, "old-name")
+      assert id == page.id
     end
 
     test "stops at the cap", %{profile: profile} do
@@ -113,13 +171,50 @@ defmodule Tymeslot.BookingPagesTest do
                BookingPages.update_details(page, %{"name" => "New", "slug" => "einfachiso"})
     end
 
-    test "moving to a username's address is refused", %{profile: profile} do
+    test "moving to another of the profile's pages' slugs is refused", %{profile: profile} do
+      insert(:booking_page, profile: profile, slug: "coaching")
       page = insert(:booking_page, profile: profile, slug: "einfachiso")
 
       assert {:error, changeset} =
-               BookingPages.update_details(page, %{"name" => "X", "slug" => "joern"})
+               BookingPages.update_details(page, %{"name" => "X", "slug" => "coaching"})
 
       assert {"has already been taken", _opts} = changeset.errors[:slug]
+    end
+
+    test "moving to a meeting type's slug is refused", %{user: user, profile: profile} do
+      insert(:meeting_type, user: user, name: "Coaching")
+      page = insert(:booking_page, profile: profile, slug: "einfachiso")
+
+      assert {"is already the address of one of your meeting types", _opts} =
+               BookingPages.change_details(page, %{"slug" => "coaching"}).errors[:slug]
+
+      assert {:error, changeset} = BookingPages.update_details(page, %{"slug" => "coaching"})
+
+      assert {"is already the address of one of your meeting types", _opts} =
+               changeset.errors[:slug]
+
+      assert Repo.reload!(page).slug == "einfachiso"
+    end
+
+    test "the slug it leaves leads to it, and so do older ones", %{profile: profile} do
+      page = insert(:booking_page, profile: profile, slug: "first")
+
+      {:ok, page} = BookingPages.update_details(page, %{"slug" => "second"})
+      {:ok, _page} = BookingPages.update_details(page, %{"slug" => "third"})
+
+      assert {:moved, "third"} = BookingPages.locate(profile, "first")
+      assert {:moved, "third"} = BookingPages.locate(profile, "Second")
+      assert {:ok, %{slug: "third"}} = BookingPages.locate(profile, "third")
+    end
+
+    test "moving back to a former slug ends its redirect", %{profile: profile} do
+      page = insert(:booking_page, profile: profile, slug: "first")
+
+      {:ok, page} = BookingPages.update_details(page, %{"slug" => "second"})
+      {:ok, _page} = BookingPages.update_details(page, %{"slug" => "first"})
+
+      assert {:ok, %{slug: "first"}} = BookingPages.locate(profile, "first")
+      assert {:moved, "first"} = BookingPages.locate(profile, "second")
     end
 
     test "a page deleted meanwhile is not found, not a crash", %{profile: profile} do
@@ -183,6 +278,24 @@ defmodule Tymeslot.BookingPagesTest do
     assert {:ok, _deleted} = BookingPages.delete(page)
     assert BookingPages.list(profile.id) == []
     assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+  end
+
+  test "delete/1 sends the page's addresses, old and current, to the username", %{
+    profile: profile
+  } do
+    page = insert(:booking_page, profile: profile, slug: "first")
+    {:ok, page} = BookingPages.update_details(page, %{"slug" => "second"})
+
+    assert {:ok, _deleted} = BookingPages.delete(page)
+
+    assert {:moved, nil} = BookingPages.locate(profile, "first")
+    assert {:moved, nil} = BookingPages.locate(profile, "second")
+  end
+
+  test "locate/2 knows only the profile's own addresses", %{profile: profile} do
+    insert(:booking_page, slug: "theirs")
+
+    assert BookingPages.locate(profile, "theirs") == :error
   end
 
   test "delete/1 of a page already deleted, say in another tab, succeeds", %{profile: profile} do

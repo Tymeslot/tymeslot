@@ -10,7 +10,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.PageVisibility do
 
   @type row :: %{id: String.t(), address: String.t(), checked: boolean()}
 
-  @doc "One row per page, the username's first; none without a type."
+  @doc """
+  One row per page, the username's first; none without a type. A page's
+  address is under the username, `<username>/<slug>`.
+  """
   @spec rows(String.t() | nil, [map()], map(), map() | nil) :: [row()]
   def rows(_username, _pages, _memberships, nil), do: []
 
@@ -22,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.PageVisibility do
       | Enum.map(pages, fn page ->
           %{
             id: to_string(page.id),
-            address: page.slug,
+            address: "#{username}/#{page.slug}",
             checked: MapSet.member?(listed_on, page.id)
           }
         end)

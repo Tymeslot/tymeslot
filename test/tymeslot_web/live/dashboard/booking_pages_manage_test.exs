@@ -33,18 +33,19 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     assert_patch(view, ~p"/dashboard/theme?#{[page: page.id]}")
   end
 
-  test "the dialog refuses an address that is taken", %{conn: conn, profile: profile} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+  test "the dialog refuses a slug that is one of the host's meeting types", ctx do
+    insert(:meeting_type, user: ctx.user, name: "Coaching")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
     html =
       view
-      |> form("#new-booking-page-form", page: %{name: "Me again", slug: "joern"})
+      |> form("#new-booking-page-form", page: %{name: "Coaching", slug: "coaching"})
       |> render_submit()
 
-    assert html =~ "has already been taken"
-    assert BookingPages.list(profile.id) == []
+    assert html =~ "is already the address of one of your meeting types"
+    assert BookingPages.list(ctx.profile.id) == []
   end
 
   # The main page's colours are copied once the page is written. A colour row
@@ -129,7 +130,12 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
     assert has_element?(view, "#booking-page-tabs-tab-profile", "/joern")
-    assert has_element?(view, "#booking-page-tabs-tab-#{page.id}", "Einfach ISO · /einfachiso")
+
+    assert has_element?(
+             view,
+             "#booking-page-tabs-tab-#{page.id}",
+             "Einfach ISO · /joern/einfachiso"
+           )
 
     view |> element("#booking-page-tabs-tab-#{page.id}") |> render_click()
 
@@ -210,13 +216,14 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     |> render_submit()
 
     [page] = BookingPages.list(ctx.profile.id)
-    {:ok, _view, before_html} = live(ctx.conn, ~p"/einfachiso")
-    refute before_html =~ "ISO audit"
+
+    # A draft until it lists a type: its address names nothing yet.
+    assert {:error, {:redirect, %{to: "/joern"}}} = live(ctx.conn, ~p"/joern/einfachiso")
 
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
     view |> element("#page-settings-#{page.id}-type-#{type.id}") |> render_click()
 
-    {:ok, _view, after_html} = live(ctx.conn, ~p"/einfachiso")
+    {:ok, _view, after_html} = live(ctx.conn, ~p"/joern/einfachiso")
     assert after_html =~ "ISO audit"
   end
 
@@ -269,6 +276,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   end
 
   test "renames a page and moves its address", %{conn: conn, profile: profile} do
+    # The slug it leaves keeps leading to it (`BookingPages.locate/2`).
     page = insert(:booking_page, profile: profile, slug: "einfachiso", name: "Old")
     {:ok, view, _html} = live(conn, ~p"/dashboard/theme?#{[page: page.id]}")
 
@@ -277,7 +285,8 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     |> render_submit()
 
     assert %{name: "einfachISO", slug: "iso"} = Repo.reload!(page)
-    assert has_element?(view, "#booking-page-tabs-tab-#{page.id}", "einfachISO · /iso")
+    assert has_element?(view, "#booking-page-tabs-tab-#{page.id}", "einfachISO · /joern/iso")
+    assert {:moved, "iso"} = BookingPages.locate(profile, "einfachiso")
     assert has_element?(view, "#page-settings-#{page.id}-details input[value='einfachISO']")
   end
 

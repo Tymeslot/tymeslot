@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingPageVisibilityTest do
 
       assert PageVisibility.rows("joern", [page], %{1 => MapSet.new([page.id])}, type) == [
                %{id: "profile", address: "joern", checked: false},
-               %{id: to_string(page.id), address: "einfachiso", checked: true}
+               %{id: to_string(page.id), address: "joern/einfachiso", checked: true}
              ]
 
       assert PageVisibility.rows("joern", [page], %{}, nil) == []
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingPageVisibilityTest do
 
     view |> element("button", "Done") |> render_click()
     html = render(view)
-    assert html =~ "/einfachiso"
+    assert html =~ "/joern/einfachiso"
     refute html =~ "Unlisted"
   end
 

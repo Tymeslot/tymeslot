@@ -13,7 +13,9 @@ defmodule Tymeslot.Emails.AppointmentBuilderBookingPageTest do
     user = insert(:user)
     profile = insert(:profile, user: user, username: "joern")
     page = insert(:booking_page, profile: profile, slug: "einfachiso")
-    %{user: user, page: page}
+    listed = insert(:meeting_type, user: user, name: "ISO audit")
+    :ok = BookingPages.set_meeting_type(page, listed.id, true)
+    %{user: user, page: page, listed: listed}
   end
 
   defp meeting(user, attrs) do
@@ -36,7 +38,20 @@ defmodule Tymeslot.Emails.AppointmentBuilderBookingPageTest do
   } do
     result = AppointmentBuilder.from_meeting(meeting(user, booking_page_id: page.id))
 
-    assert URI.parse(result.booking_url).path == "/einfachiso"
+    assert URI.parse(result.booking_url).path == "/joern/einfachiso"
+  end
+
+  # A draft page is not there for the attendee to go back to.
+  test "it leads to the username while the page lists nothing", %{
+    user: user,
+    page: page,
+    listed: listed
+  } do
+    :ok = BookingPages.set_meeting_type(page, listed.id, false)
+
+    result = AppointmentBuilder.from_meeting(meeting(user, booking_page_id: page.id))
+
+    assert URI.parse(result.booking_url).path == "/joern"
   end
 
   test "it leads to the username once the page is gone", %{user: user, page: page} do

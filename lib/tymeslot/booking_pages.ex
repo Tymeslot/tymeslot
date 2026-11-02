@@ -1,17 +1,28 @@
 defmodule Tymeslot.BookingPages do
   @moduledoc """
-  Booking pages: extra public start pages of a profile, each at its own
-  top-level address with its own theme, colours, texts and meeting types.
+  Booking pages: extra public start pages of a profile, each with its own
+  theme, colours, texts and meeting types, at `/<username>/<slug>`.
 
   The profile's own page at `/<username>` is not one of these; it stays on the
-  profile. An address shares one namespace with usernames and reserved paths,
-  so neither can take the other's.
+  profile. `/<username>/<x>` is either one of the profile's pages or one of
+  its meeting types on its own page, so a page's slug and a meeting type's
+  effective slug never meet within one profile (`claim_meeting_type_slug/2`
+  and the page writes check each other under `BookingPageQueries.lock_addresses/1`).
+  Addresses are per profile, so a page's former slugs lead to it for good
+  (`locate/2`).
+
+  A page is a draft until it lists a meeting type it can offer
+  (`published?/1`): its addresses answer as unknown, except to its owner's
+  preview.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Ecto.Changeset
   alias Tymeslot.BookingPages.BookingPageQueries
+  alias Tymeslot.BookingPages.BookingPageRedirectQueries
   alias Tymeslot.BookingPages.BookingPageSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.PublicListing
-  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
@@ -51,53 +62,111 @@ defmodule Tymeslot.BookingPages do
   end
 
   @doc """
-  The owner's profile, as the page at `address` presents it, or nil when no
-  page has that address. Callers try usernames first.
+  `profile` as its page at `slug` presents it, or `profile` unchanged when it
+  has no page there (`slug` nil, a meeting type's slug, or nothing at all).
+  For whatever needs only the look of `/<username>/<slug>`, such as the
+  stylesheet chosen before the page mounts.
   """
-  @spec profile_for_address(String.t()) :: ProfileSchema.t() | nil
-  def profile_for_address(address) when is_binary(address) do
-    case page_at(address, [:profile]) do
-      nil -> nil
-      page -> apply_to_profile(page.profile, page)
+  @spec presented_at(ProfileSchema.t() | nil, String.t() | nil) :: ProfileSchema.t() | nil
+  def presented_at(%ProfileSchema{id: profile_id} = profile, slug) when is_binary(slug) do
+    case BookingPageQueries.get_by_slug(profile_id, slug) do
+      nil -> profile
+      page -> apply_to_profile(profile, page)
+    end
+  end
+
+  def presented_at(profile, _no_slug), do: profile
+
+  @doc """
+  What `/<username>/<slug>` is for `profile`, ignoring case:
+
+    * `{:ok, page}`: one of its pages, draft or not (`published?/1`), with
+      its stored, lowercase slug;
+    * `{:moved, slug}`: a page's former address, which now leads to the
+      page at `slug`, or to the profile's own page (`nil`) once that page
+      was deleted;
+    * `:error`: neither, so a meeting type's slug or nothing.
+  """
+  @spec locate(ProfileSchema.t(), String.t()) ::
+          {:ok, page()} | {:moved, String.t() | nil} | :error
+  def locate(%ProfileSchema{id: profile_id}, slug) when is_binary(slug) do
+    with nil <- BookingPageQueries.get_by_slug(profile_id, slug),
+         nil <- BookingPageRedirectQueries.get(profile_id, String.downcase(slug)) do
+      :error
+    else
+      %BookingPageSchema{} = page -> {:ok, page}
+      %{booking_page: %BookingPageSchema{slug: current}} -> {:moved, current}
+      %{booking_page: nil} -> {:moved, nil}
     end
   end
 
   @doc """
-  `profile_for_address/1` with the owner's user preloaded, as the scheduling
-  flow's organiser context needs it.
+  The profile at `username`, with its user, as its page at `slug` presents
+  it, draft or not. The scheduling flow's organiser context, once the
+  address has been settled (`locate/2`).
   """
-  @spec resolve_with_user(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
-  def resolve_with_user(address) when is_binary(address) do
-    case page_at(address, profile: :user) do
-      nil -> {:error, :not_found}
-      page -> {:ok, apply_to_profile(page.profile, page)}
+  @spec resolve_with_user(String.t(), String.t()) ::
+          {:ok, ProfileSchema.t()} | {:error, :not_found}
+  def resolve_with_user(username, slug) when is_binary(username) and is_binary(slug) do
+    with {:ok, profile} <- ProfileQueries.get_by_username_with_user(username),
+         %BookingPageSchema{} = page <- BookingPageQueries.get_by_slug(profile.id, slug) do
+      {:ok, apply_to_profile(profile, page)}
+    else
+      _no_profile_or_page -> {:error, :not_found}
     end
   end
 
-  # A page is found whatever the case of its address, a username only as
-  # typed (usernames are stored lowercase). So the caller's username lookup
-  # misses `/Clash` for the username `clash`, and the username has to win
-  # here instead, as it does at `/clash`.
-  defp page_at(address, preload) do
-    lowercase = String.downcase(address)
-
-    if address != lowercase and match?({:ok, _profile}, ProfileQueries.get_by_username(lowercase)),
-      do: nil,
-      else: BookingPageQueries.get_by_slug(address, preload)
-  end
+  @doc """
+  Whether `page` is public: it offers at least one meeting type
+  (`list_meeting_types/1`). A page that offers none is a draft, which only
+  its owner sees, through the dashboard's preview.
+  """
+  @spec published?(page()) :: boolean()
+  def published?(%BookingPageSchema{} = page), do: list_meeting_types(page) != []
 
   @doc """
-  The address a profile's start page is at: its page's for a profile resolved
-  through a page, otherwise its username.
+  The address a profile's start page is at, without the leading slash: its
+  username, or `<username>/<slug>` for a profile resolved through a page.
   """
   @spec public_address(map() | nil) :: String.t() | nil
-  def public_address(%{booking_page: %BookingPageSchema{slug: slug}}), do: slug
+  def public_address(%{booking_page: %BookingPageSchema{slug: slug}, username: username})
+      when is_binary(username),
+      do: username <> "/" <> slug
+
   def public_address(%{username: username}), do: username
   def public_address(_no_profile), do: nil
 
-  @doc "A page as the dashboard lists it: its name, then its address."
-  @spec name_and_address(page()) :: String.t()
-  def name_and_address(%BookingPageSchema{name: name, slug: slug}), do: "#{name} · /#{slug}"
+  @doc "A page as the dashboard lists it: its name, then its address under `username`."
+  @spec name_and_address(page(), String.t() | nil) :: String.t()
+  def name_and_address(%BookingPageSchema{name: name, slug: slug}, username),
+    do: "#{name} · /#{username}/#{slug}"
+
+  @doc """
+  The one address `meeting_type` is booked at, as a path: under the oldest
+  page listing it when the profile's own page does not (`home_page/1`),
+  otherwise `/<username>/<slug>`, which also serves a type listed nowhere
+  as its direct link. `profile` is the owner's, through a page or not.
+  """
+  @spec meeting_type_path(map(), map()) :: String.t()
+  def meeting_type_path(%{username: username}, meeting_type) do
+    slug = MeetingTypes.effective_slug(meeting_type)
+
+    case home_page(meeting_type) do
+      nil -> "/#{username}/#{slug}"
+      %BookingPageSchema{slug: page_slug} -> "/#{username}/#{page_slug}/#{slug}"
+    end
+  end
+
+  @doc """
+  The page `meeting_type` belongs to: the oldest page listing it, when it is
+  hidden from the profile's own page (`is_private`). nil for a type the
+  profile's own page lists, or one listed on no page at all.
+  """
+  @spec home_page(map()) :: page() | nil
+  def home_page(%{is_private: true, id: id}) when is_integer(id),
+    do: BookingPageQueries.first_for_meeting_type(id)
+
+  def home_page(_listed_on_own_page), do: nil
 
   @doc "The page a profile was resolved through, by id, or nil."
   @spec page_id(map() | nil) :: integer() | nil
@@ -141,21 +210,23 @@ defmodule Tymeslot.BookingPages do
   end
 
   @doc """
-  The new-page form's changeset, address namespace included, for showing
-  errors while the host types.
+  The new-page form's changeset, the slug checked against the profile's
+  other pages and meeting types, for showing errors while the host types.
   """
   @spec change_new(ProfileSchema.t(), map()) :: Changeset.t()
   def change_new(%ProfileSchema{} = profile, attrs) do
     profile
     |> new_changeset(attrs)
-    |> validate_address_free(nil)
+    |> validate_slug_free(profile.id, profile.user_id, nil)
     |> Map.put(:action, :validate)
   end
 
   @doc """
   Creates a page for `profile` on the profile's current theme, with copies of
   its colours (`ThemeCustomizations.copy_to_page/2`). Texts start switched off
-  and no meeting types are listed.
+  and no meeting types are listed, so it starts as a draft (`published?/1`).
+  Taking a slug the profile once had for another page ends that old
+  address's redirect.
   """
   @spec create(ProfileSchema.t(), map()) ::
           {:ok, page()} | {:error, :limit_reached} | {:error, Changeset.t()}
@@ -164,11 +235,14 @@ defmodule Tymeslot.BookingPages do
       {:error, :limit_reached}
     else
       Repo.transaction(fn ->
+        :ok = BookingPageQueries.lock_addresses(profile.id)
+
         with {:ok, page} <-
                profile
                |> new_changeset(attrs)
-               |> claim_address(nil)
+               |> validate_slug_free(profile.id, profile.user_id, nil)
                |> BookingPageQueries.insert(),
+             :ok <- BookingPageRedirectQueries.delete(profile.id, page.slug),
              :ok <- ThemeCustomizations.copy_to_page(profile.id, page.id) do
           page
         else
@@ -178,32 +252,50 @@ defmodule Tymeslot.BookingPages do
     end
   end
 
-  @doc "The details form's changeset, address namespace included."
+  @doc "The details form's changeset, the slug checked as `change_new/2` checks it."
   @spec change_details(page(), map()) :: Changeset.t()
   def change_details(%BookingPageSchema{} = page, attrs) do
     page
     |> BookingPageSchema.details_changeset(attrs)
-    |> validate_address_free(page.slug)
+    |> validate_slug_free(
+      page.profile_id,
+      ProfileQueries.user_id_for_profile(page.profile_id),
+      page.id
+    )
     |> Map.put(:action, :validate)
   end
 
   @doc """
-  Renames a page or moves it to another address. A page deleted meanwhile, say
-  in another tab, is not found, as `fetch/2` would report it.
+  Renames a page or moves it to another slug. The slug it leaves keeps
+  leading to the page (`locate/2`), and the one it takes stops leading
+  anywhere else. A page deleted meanwhile, say in another tab, is not found,
+  as `fetch/2` would report it.
   """
   @spec update_details(page(), map()) ::
           {:ok, page()} | {:error, :not_found} | {:error, Changeset.t()}
   def update_details(%BookingPageSchema{} = page, attrs) do
     result =
       Repo.transaction(fn ->
+        :ok = BookingPageQueries.lock_addresses(page.profile_id)
+        user_id = ProfileQueries.user_id_for_profile(page.profile_id)
+
         page
         |> BookingPageSchema.details_changeset(attrs)
-        |> claim_address(page.slug)
+        |> validate_slug_free(page.profile_id, user_id, page.id)
         |> BookingPageQueries.update()
         |> ok_or_rollback()
+        |> record_move(page.slug)
       end)
 
     not_found_when_gone(result)
+  end
+
+  defp record_move(%BookingPageSchema{slug: same} = page, same), do: page
+
+  defp record_move(%BookingPageSchema{} = page, old_slug) do
+    :ok = BookingPageRedirectQueries.delete(page.profile_id, page.slug)
+    :ok = BookingPageRedirectQueries.put(page.profile_id, old_slug, page.id)
+    page
   end
 
   defp ok_or_rollback({:ok, value}), do: value
@@ -244,7 +336,8 @@ defmodule Tymeslot.BookingPages do
   @doc """
   Deletes a page, its colours and their uploaded background files. Its meeting
   type listings go with the page, and its bookings keep everything but the
-  page id. A page already gone counts as deleted.
+  page id. Its address, and every former one, then lead to the profile's own
+  page. A page already gone counts as deleted.
 
   The page is locked first, so a colour saved in another tab either lands
   before the delete (and goes with it) or fails on the missing page, never
@@ -259,9 +352,12 @@ defmodule Tymeslot.BookingPages do
           nil ->
             {page, []}
 
-          %BookingPageSchema{} ->
+          %BookingPageSchema{} = current ->
             customizations = ThemeCustomizations.delete_page_customizations(page.id)
-            {page |> BookingPageQueries.delete() |> ok_or_rollback(), customizations}
+            deleted = page |> BookingPageQueries.delete() |> ok_or_rollback()
+            # The former addresses' rows lose the page by the foreign key.
+            :ok = BookingPageRedirectQueries.put(current.profile_id, current.slug, nil)
+            {deleted, customizations}
         end
       end)
 
@@ -296,11 +392,12 @@ defmodule Tymeslot.BookingPages do
   end
 
   @doc """
-  Whether `page` serves `meeting_type` at `/<page>/<slug>`: the type is listed
-  on it, or it is unlisted everywhere (hidden from `/<username>` and on no
-  page), so its direct link is the only way in and any of the host's
-  addresses may carry it. A type listed only on `/<username>` or on another
-  page belongs to that address, and booking it here would record this page
+  Whether `page` serves `meeting_type` at `/<username>/<page>/<slug>`: the
+  type is listed on it, or it is unlisted everywhere (hidden from
+  `/<username>` and on no page), so its direct link is the only way in and
+  any of the host's addresses may carry it. A type listed only on
+  `/<username>` or on other pages belongs to its own address
+  (`meeting_type_path/2`), and booking it here would record this page
   against a type it does not offer.
   """
   @spec serves?(page(), map()) :: boolean()
@@ -357,41 +454,65 @@ defmodule Tymeslot.BookingPages do
   def for_meeting(profile, _meeting), do: profile
 
   @doc """
-  The address to send someone back to for `meeting`: its page's while the
-  page exists, otherwise `fallback` (the host's username).
+  The address, without the leading slash, to send someone back to for
+  `meeting`: `<username>/<page>` while the page it came through exists and
+  is public, otherwise `username` (the host's own page).
   """
   @spec address_for_meeting(map(), String.t() | nil) :: String.t() | nil
-  def address_for_meeting(%{booking_page_id: page_id}, fallback) when is_integer(page_id) do
-    case BookingPageQueries.get(page_id) do
-      %BookingPageSchema{slug: slug} -> slug
-      nil -> fallback
+  def address_for_meeting(%{booking_page_id: page_id}, username)
+      when is_integer(page_id) and is_binary(username) do
+    with %BookingPageSchema{} = page <- BookingPageQueries.get(page_id),
+         true <- published?(page) do
+      username <> "/" <> page.slug
+    else
+      _gone_or_draft -> username
     end
   end
 
-  def address_for_meeting(_meeting, fallback), do: fallback
+  def address_for_meeting(_meeting, username), do: username
 
-  # `validate_address_free/2` under the address lock, inside the write's
-  # transaction, so no username takes the address between the check and the
-  # write (`ProfileQueries.lock_public_address/1`).
-  defp claim_address(changeset, current_slug) do
-    case Changeset.fetch_change(changeset, :slug) do
-      {:ok, slug} when is_binary(slug) -> ProfileQueries.lock_public_address(slug)
-      _unchanged -> :ok
+  @doc """
+  Claims `slug` as a meeting type's address for `user_id`'s profile, inside
+  the caller's transaction: refused when one of the profile's pages holds
+  it, and otherwise ending the redirect a former page address of that slug
+  had. Serialised with the page writes (`BookingPageQueries.lock_addresses/1`).
+  A user without a profile has no pages, so anything is free.
+  """
+  @spec claim_meeting_type_slug(integer(), String.t()) :: :ok | {:error, :taken_by_page}
+  def claim_meeting_type_slug(user_id, slug) when is_integer(user_id) and is_binary(slug) do
+    case ProfileQueries.id_for_user(user_id) do
+      nil ->
+        :ok
+
+      profile_id ->
+        :ok = BookingPageQueries.lock_addresses(profile_id)
+
+        if BookingPageQueries.slug_taken?(profile_id, slug),
+          do: {:error, :taken_by_page},
+          else: BookingPageRedirectQueries.delete(profile_id, String.downcase(slug))
     end
-
-    validate_address_free(changeset, current_slug)
   end
 
-  # The page's own current address is never a clash with itself. Otherwise
-  # `Profiles.username_available?/1` answers for usernames and pages alike,
-  # case-insensitively.
-  defp validate_address_free(changeset, current_slug) do
+  # The slug must be free of the profile's other pages (the unique index is
+  # the backstop) and of its meeting types' effective slugs, which share the
+  # second segment of `/<username>/<x>`. Writes call this under
+  # `BookingPageQueries.lock_addresses/1`.
+  defp validate_slug_free(changeset, profile_id, user_id, page_id) do
     Changeset.validate_change(changeset, :slug, fn :slug, slug ->
       cond do
-        slug == current_slug -> []
-        Profiles.username_available?(slug) -> []
-        true -> [slug: {"has already been taken", validation: :unsafe_unique}]
+        is_integer(profile_id) and BookingPageQueries.slug_taken?(profile_id, slug, page_id) ->
+          [slug: {"has already been taken", validation: :unsafe_unique}]
+
+        is_integer(user_id) and MeetingTypes.slug_in_use?(user_id, slug) ->
+          [slug: {meeting_type_clash_message(), validation: :meeting_type_slug}]
+
+        true ->
+          []
       end
     end)
   end
+
+  # Built at call time so it follows the caller's locale.
+  defp meeting_type_clash_message,
+    do: dgettext("errors", "is already the address of one of your meeting types")
 end

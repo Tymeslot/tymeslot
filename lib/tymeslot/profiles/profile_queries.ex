@@ -4,8 +4,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   """
 
   import Ecto.Query
-  alias Ecto.Changeset
-  alias Tymeslot.BookingPages.BookingPageQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -170,6 +168,15 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     |> Repo.one()
   end
 
+  @doc "The id of a user's profile, or nil when they have none."
+  @spec id_for_user(integer()) :: integer() | nil
+  def id_for_user(user_id) do
+    ProfileSchema
+    |> where([p], p.user_id == ^user_id)
+    |> select([p], p.id)
+    |> Repo.one()
+  end
+
   @doc """
   Gets a profile by username.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.
@@ -197,9 +204,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   the insert to discover, one round trip after the live check could have said
   so. Only rows written outside the changeset can be non-lowercase, which is
   exactly the case the functional index exists to catch.
-
-  Booking page addresses share the namespace (`Tymeslot.BookingPages`), so an
-  address any page holds is not available either.
   """
   @spec username_available?(String.t()) :: boolean()
   def username_available?(username) when is_binary(username) do
@@ -207,69 +211,16 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
     not Repo.exists?(
       from(p in ProfileSchema, where: fragment("lower(?)", p.username) == ^normalised)
-    ) and not BookingPageQueries.slug_taken?(normalised)
-  end
-
-  # Distinguishes the public address lock from any other advisory locks the
-  # application takes. Arbitrary but must stay stable.
-  @public_address_lock_class 715_002
-
-  @doc """
-  Serialises claims on one public address (`/<address>`) within the current
-  transaction via `pg_advisory_xact_lock/2`.
-
-  Usernames and booking page addresses share one namespace but live in two
-  tables, so no unique index can keep them apart. Every write that gives a
-  profile a username or a page an address takes this lock on the address
-  first and checks the other table under it, so neither can take an address
-  the other claimed between the check and the write. Released on commit or
-  rollback. Must be called inside a transaction.
-  """
-  @spec lock_public_address(String.t()) :: :ok
-  def lock_public_address(address) when is_binary(address) do
-    Repo.query!("SELECT pg_advisory_xact_lock($1, hashtext($2))", [
-      @public_address_lock_class,
-      String.downcase(address)
-    ])
-
-    :ok
+    )
   end
 
   @doc """
-  Updates a profile's username. One a booking page holds is refused as taken,
-  as another profile's would be.
+  Updates a profile's username.
   """
   @spec update_username(ProfileSchema.t(), String.t()) ::
           {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_username(%ProfileSchema{} = profile, username) do
-    Repo.transaction(fn ->
-      case write_username(profile, username) do
-        {:ok, updated} -> updated
-        {:error, changeset} -> Repo.rollback(changeset)
-      end
-    end)
-  end
-
-  defp write_username(profile, username) do
-    profile
-    |> ProfileSchema.username_changeset(%{username: username})
-    |> claim_username()
-    |> Repo.update()
-  end
-
-  # Under the address lock, so no booking page takes the username between this
-  # check and the update. Reported as the unique constraint would report
-  # another profile holding it, so `Profiles.username_error/1` calls it taken.
-  defp claim_username(%Changeset{valid?: true, changes: %{username: username}} = changeset) do
-    :ok = lock_public_address(username)
-
-    if BookingPageQueries.slug_taken?(username),
-      do:
-        Changeset.add_error(changeset, :username, "has already been taken", constraint: :unique),
-      else: changeset
-  end
-
-  defp claim_username(changeset), do: changeset
+  def update_username(%ProfileSchema{} = profile, username),
+    do: profile |> ProfileSchema.username_changeset(%{username: username}) |> Repo.update()
 
   @doc """
   Gives a profile `username` only if its stored username is still blank,
@@ -301,7 +252,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
   defp fill_blank_username(%ProfileSchema{username: blank} = stored, username)
        when blank in [nil, ""] do
-    case write_username(stored, username) do
+    case update_username(stored, username) do
       {:ok, updated} -> {:ok, updated}
       {:error, changeset} -> Repo.rollback(changeset)
     end

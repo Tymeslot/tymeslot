@@ -167,7 +167,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
 
   defp tabs(profile, pages) do
     profile_tab = tab("profile", "/" <> (profile.username || ""), nil)
-    [profile_tab | Enum.map(pages, &tab(to_string(&1.id), BookingPages.name_and_address(&1), &1))]
+
+    [
+      profile_tab
+      | Enum.map(
+          pages,
+          &tab(to_string(&1.id), BookingPages.name_and_address(&1, profile.username), &1)
+        )
+    ]
   end
 
   defp tab(id, label, page),
