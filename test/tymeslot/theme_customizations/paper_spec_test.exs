@@ -18,6 +18,7 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
   alias Tymeslot.ThemeCustomizations.Options.Radius
   alias Tymeslot.ThemeCustomizations.PaperSpec
   alias Tymeslot.ThemeCustomizations.Specs
+  alias Tymeslot.Utils.Colour
   alias TymeslotWeb.Themes.Shared.ThemeStyle
 
   defp defaults,
@@ -141,7 +142,16 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
       tokens = tokens(%{}, %{primary_color: "#e11d48"})
 
       assert tokens.vars["--theme-primary"] == "#e11d48"
-      assert tokens.dark_vars["--theme-primary"] == "#e11d48"
+      # Too dark to read on the dark card, so lightened in the same hue.
+      assert tokens.dark_vars["--theme-primary"] == "#eb6582"
+    end
+
+    test "an embed's pale primary colour is fitted to read as text on the card, in both sets" do
+      tokens = tokens(%{}, %{primary_color: "#ffff00"})
+
+      for vars <- [tokens.vars, tokens.dark_vars] do
+        assert Colour.contrast_ratio(vars["--theme-primary"], vars["--theme-surface"]) >= 4.5
+      end
     end
 
     test "the font and the corners are the chosen ones" do
