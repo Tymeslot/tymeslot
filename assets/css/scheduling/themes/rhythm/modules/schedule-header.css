@@ -43,6 +43,17 @@
   gap: var(--space-3xs);
 }
 
+/* The step's heading ("Schedule with" and the name), which takes the focus
+   when the visitor moves on to the step: laid out as the two lines were
+   before a heading held them, without the heading's own wrapping. */
+.organizer-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  text-wrap: inherit;
+  overflow-wrap: inherit;
+}
+
 .organizer-name {
   color: var(--theme-text-secondary);
 }

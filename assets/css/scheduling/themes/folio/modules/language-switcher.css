@@ -1,0 +1,20 @@
+/* Folio's language switcher: a quiet chip in the card's colours in its own
+   row above the card (base.css), legible on every scheme. The shared
+   structure and the --lang-switcher-* colours are in
+   shared/components/language-switcher.css. The component's trigger carries
+   `text-white`; this unlayered rule replaces that ink. */
+
+.lang-switcher__button {
+  border: var(--border-width-thin) solid var(--border-medium);
+  color: var(--theme-text);
+  font-family: var(--theme-font-family);
+}
+
+.lang-switcher__button:hover {
+  border-color: var(--theme-primary);
+}
+
+.lang-switcher__panel {
+  color: var(--theme-text);
+  box-shadow: var(--shadow-md);
+}

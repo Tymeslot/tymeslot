@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
   # Each pair is 24 hours apart, and neither zone observes summer time.
@@ -128,30 +129,33 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
                         "slots were fetched for #{old_day}, a day dropped by the change"
       end
 
-      test "is picked again after a visit to the booking step and back",
-           %{conn: conn, profile: profile} = ctx do
-        view = open_schedule(conn, "/#{profile.username}/30-minutes", ctx.from)
-        picked = today(ctx.from)
-        assert_selected(view, picked, "the page's own pick")
+      # One page per step: the classic journey's shape (Quill, Rhythm).
+      if theme.journey == :classic do
+        test "is picked again after a visit to the booking step and back",
+             %{conn: conn, profile: profile} = ctx do
+          view = open_schedule(conn, "/#{profile.username}/30-minutes", ctx.from)
+          picked = today(ctx.from)
+          assert_selected(view, picked, "the page's own pick")
 
-        # Coming back, the schedule step reopens on the day as a held one, no
-        # longer the page's: only the new zone's booking window can drop it.
-        [time | _other_times] =
-          view
-          |> render()
-          |> Floki.parse_document!()
-          |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
+          # Coming back, the schedule step reopens on the day as a held one, no
+          # longer the page's: only the new zone's booking window can drop it.
+          [time | _other_times] =
+            view
+            |> render()
+            |> Floki.parse_document!()
+            |> Floki.attribute("button[data-testid='time-slot']", "phx-value-time")
 
-        send(view.pid, {:step_event, :schedule, :select_time, time})
-        send(view.pid, {:step_event, :schedule, :next_step, nil})
-        wait_until(fn -> live_assigns(view).current_state == :booking end)
-        send(view.pid, {:step_event, :booking, :back_step, nil})
-        wait_until(fn -> settled?(view) end)
-        assert_selected(view, picked, "the held day back on the schedule step")
+          send(view.pid, {:step_event, :schedule, :select_time, time})
+          send(view.pid, {:step_event, :schedule, :next_step, nil})
+          wait_until(fn -> live_assigns(view).current_state == :booking end)
+          send(view.pid, {:step_event, :booking, :back_step, nil})
+          wait_until(fn -> settled?(view) end)
+          assert_selected(view, picked, "the held day back on the schedule step")
 
-        change_timezone(view, ctx.to)
+          change_timezone(view, ctx.to)
 
-        assert_selected(view, today(ctx.to), "the pick after #{picked} passed in #{ctx.to}")
+          assert_selected(view, today(ctx.to), "the pick after #{picked} passed in #{ctx.to}")
+        end
       end
 
       test "is picked again on every later change of timezone",
@@ -289,7 +293,6 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
     if entry == :from_overview do
       view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
     end
 
     wait_until(fn -> settled?(view) end)
@@ -298,7 +301,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
   defp change_timezone(view, timezone) do
     # The message the schedule step's timezone picker relays for a pick.
-    send(view.pid, {:step_event, :schedule, :change_timezone, timezone})
+    send(view.pid, {:step_event, slot_moment(view), :change_timezone, timezone})
     wait_until(fn -> live_assigns(view).user_timezone == timezone and settled?(view) end)
   end
 
@@ -307,7 +310,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   defp settled?(view) do
     assigns = live_assigns(view)
 
-    assigns.current_state == :schedule and assigns.availability_task_ref == nil and
+    Progress.collecting_now?(assigns, :slot) and assigns.availability_task_ref == nil and
       assigns.availability_status == :loaded and assigns.auto_select_settled == true and
       assigns.loading_slots != true
   end
@@ -327,11 +330,11 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
 
     if shown != wanted do
       arrow = if Date.compare(wanted, shown) == :gt, do: :next_week, else: :prev_week
-      send(view.pid, {:step_event, :schedule, arrow, nil})
+      send(view.pid, {:step_event, slot_moment(view), arrow, nil})
       wait_until(fn -> settled?(view) end)
     end
 
-    send(view.pid, {:step_event, :schedule, :select_date, Date.to_iso8601(date)})
+    send(view.pid, {:step_event, slot_moment(view), :select_date, Date.to_iso8601(date)})
   end
 
   defp assert_selected(view, %Date{} = expected, what) do
@@ -354,7 +357,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
     view
     |> render()
     |> Floki.parse_document!()
-    |> Floki.find("button[phx-click='select_date'][phx-value-date]")
+    |> Floki.find("button[phx-click*='select_date'][phx-value-date]")
     |> Enum.filter(fn button ->
       classes = button |> Floki.attribute("class") |> List.first("") |> String.split()
       "selected" in classes or "calendar-day--selected" in classes
@@ -383,4 +386,8 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   defp today(zone), do: zone |> DateTime.now!() |> DateTime.to_date()
 
   defp live_assigns(view), do: :sys.get_state(view.pid).socket.assigns
+
+  # The moment that picks the day, whatever the journey calls it (the classic
+  # journey's `:schedule`, Folio's `:when`), which the relayed step events name.
+  defp slot_moment(view), do: Progress.moment_for(live_assigns(view).journey, :slot)
 end

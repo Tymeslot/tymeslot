@@ -26,7 +26,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabels do
   request instead. `ungated_label` is the theme's own wording for the ordinary
   case ("Book meeting", "Submit"), passed in already translated so each theme
   keeps its own literal at its own call site for extraction; a voice wording
-  `:submit` replaces it.
+  `:submit` replaces it. A paid meeting type names the payment that follows
+  (`:submit_paid`, "Continue to payment"), unless it is a request or a
+  reschedule.
   """
   @spec submit_label(boolean(), term(), String.t(), Catalog.theme_key() | nil) :: String.t()
   def submit_label(is_rescheduling, meeting_type, ungated_label, theme_key \\ nil) do
@@ -46,6 +48,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabels do
           dgettext("booking", "Reschedule Meeting")
         end)
 
+      paid?(meeting_type) ->
+        Voice.line(voice, :submit_paid, %{}, fn -> dgettext("booking", "Continue to payment") end)
+
       true ->
         Voice.line(voice, :submit, %{}, fn -> ungated_label end)
     end
@@ -59,4 +64,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabels do
   def organizer_display_name(organizer_profile, username_context) do
     Profiles.display_name(organizer_profile) || username_context
   end
+
+  # The visitor goes on to a checkout after this submit. A request to an
+  # organiser who approves each booking says it is a request first, and a
+  # move of a booked meeting charges nothing again.
+  defp paid?(%{payment_required: true}), do: true
+  defp paid?(_meeting_type), do: false
 end

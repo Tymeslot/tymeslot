@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Themes.Shared.VoiceTest do
     end
 
     test "is nil for a theme with no voice, an unknown key and no key" do
-      assert Voice.of(:quill) == nil
+      assert Voice.of(:rhythm) == nil
       assert Voice.of(:showcase) == nil
       assert Voice.of(:some_future_theme) == nil
       assert Voice.of(nil) == nil

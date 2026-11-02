@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Time do
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
+  attr :autofocus, :boolean, default: true
 
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Time do
       definition={@definition}
       value={@value}
       myself={@myself}
+      autofocus={@autofocus}
     />
     """
   end

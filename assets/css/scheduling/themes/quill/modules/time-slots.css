@@ -63,8 +63,14 @@
   min-height: var(--time-slot-min-height);
 }
 
-.slot-list__slot:hover {
+/* Not on the selected slot: this rule would outrank --selected (a class and
+   a pseudo-class against a class), and a hovered or just-tapped selected slot
+   lost its filled ground under its on-primary text. */
+.slot-list__slot:hover:not(.slot-list__slot--selected) {
   background: var(--surface-medium-light);
+  /* Full white on the lighter hover glass, where the palette's text colour
+     dipped just under 4.5:1. */
+  color: var(--text-opacity-full);
   border-color: var(--border-strong);
   box-shadow:
     var(--shadow-md),
@@ -194,9 +200,11 @@
 .slot-list__slot--expanded {
   background: var(--surface-medium-light);
   border-color: var(--theme-primary);
-  color: var(--theme-primary);
+  /* The page's text colour, not the primary: a palette's primary need not
+     read as text on the card. The primary edge and ring carry the state. */
+  color: var(--theme-text);
   font-weight: var(--font-weight-semibold);
-  box-shadow: var(--shadow-primary-sm);
+  box-shadow: var(--shadow-primary-sm), inset 0 0 0 var(--border-width-thin) var(--theme-primary);
 }
 
 /* A contained drawer rather than a left rule. The rule sat at the row's left

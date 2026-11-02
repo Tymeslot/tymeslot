@@ -156,11 +156,6 @@ msgstr "Wideo"
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
 msgstr "Projekt w stylu glass morphism z eleganckimi efektami przezroczystości i rezerwacją w 4 krokach."
 
-#: lib/tymeslot_web/themes/rhythm/theme.ex
-#, elixir-autogen, elixir-format
-msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Nowoczesny przesuwany układ z tłem wideo i rezerwacją na 4 slajdach."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
@@ -579,7 +574,6 @@ msgstr "Paleta kolorów"
 msgid "Could not save your theme customisation. Please try again."
 msgstr "Nie udało się zapisać dostosowania motywu. Spróbuj ponownie."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Customise Style"
@@ -601,6 +595,31 @@ msgstr "Wybierz główne kolory interfejsu swojej strony rezerwacji."
 msgid "Solid Colour"
 msgstr "Kolor jednolity"
 
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Strona w stylu magazynu, która cię przedstawia: zdjęcie tytułowe, twój portret, nagłówek i biogram oraz tytuły krojem szeryfowym."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar View"
+msgstr "Widok kalendarza"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Month"
+msgstr "Miesiąc"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a day from a month, or see a whole week of free times at once."
+msgstr "Wybierz dzień z miesiąca albo zobacz od razu wszystkie wolne terminy całego tygodnia."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Week"
+msgstr "Tydzień"
+
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
 msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
@@ -616,10 +635,80 @@ msgstr "Kiedy ktoś się u mnie umawia, chcę, żeby najpierw poczuł atmosferę
 msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
 msgstr "Nieprawidłowy plik napisów. Prześlij plik WebVTT (.vtt)."
 
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "I don't want my booking page to have a personality. I want it clear, fast and in my colour, so people book and get on with their day."
+msgstr "Nie chcę, żeby moja strona rezerwacji miała osobowość. Ma być przejrzysta, szybka i w moim kolorze, żeby ludzie rezerwowali termin i wracali do swoich spraw."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+msgstr "Ludzie rezerwują mnie, a nie termin. Zanim wybiorą datę, powinni wiedzieć, kim jestem, czym się zajmuję i czy do siebie pasujemy."
+
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 lub WebM. Maks. %{size} MB."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design: each step slides in on a glass card over a video background."
+msgstr "Nowoczesny przesuwany układ: każdy krok wsuwa się na szklanej karcie na tle wideo."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Customise %{theme_name}"
+msgstr "Dostosuj %{theme_name}"
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, flat booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes in the colour palette you choose."
+msgstr "Spokojna strona rezerwacji w płaskim stylu: najpierw rodzaj spotkania, potem godzina i rezerwacja na jednym ekranie. Tryb jasny i ciemny w wybranej przez Ciebie palecie kolorów."
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Arctic Blue"
+msgstr "Arktyczny błękit"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Default Turquoise"
+msgstr "Domyślny turkus"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Forest Green"
+msgstr "Leśna zieleń"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Monochrome"
+msgstr "Monochromatyczna"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ocean Breeze"
+msgstr "Morska bryza"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Purple Dream"
+msgstr "Fioletowy sen"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Rose Gold"
+msgstr "Różowe złoto"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Sunset Glow"
+msgstr "Zachód słońca"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The colours of your booking page, shown here light and dark. Colour Mode decides which one visitors see."
+msgstr "Kolory Twojej strony rezerwacji, pokazane tu w jasnej i ciemnej wersji. Tryb kolorów decyduje, którą zobaczą odwiedzający."
 
 #: lib/tymeslot/theme_customizations/assets.ex
 #, elixir-autogen, elixir-format

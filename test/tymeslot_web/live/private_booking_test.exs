@@ -126,10 +126,6 @@ defmodule TymeslotWeb.PrivateBookingTest do
     |> element("button[phx-value-duration='open-chat']")
     |> render_click()
 
-    overview
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
     assert has_element?(overview, "[data-testid='back-step']")
   end
 

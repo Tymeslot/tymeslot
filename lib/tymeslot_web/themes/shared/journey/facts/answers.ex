@@ -7,15 +7,16 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Answers do
   meeting type, so a journey may ask the questions before the calendar. Known
   once the booker has confirmed answers that validate (Continue past the last
   question), or when the meeting type has no questions; on a moment that
-  also collects the attendee, once they validate (the submit confirms them).
-  The wizard moves within the fact: `continue/1` stays on the questions until
-  the last one validates, and `back/1` steps back until the first question,
-  then leaves.
+  also collects the attendee, once they validate (the submit confirms them,
+  and the submission validates them: `beside_attendee?/1`). The wizard
+  moves within the fact: `continue/1` stays on the questions until the last
+  one validates, and `back/1` steps back until the first question, then
+  leaves.
   """
 
   use TymeslotWeb.Themes.Shared.Journey.Fact
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.Journey.Fact
@@ -56,14 +57,21 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Answers do
     end
   end
 
-  defp beside_attendee?(%{journey: %{moments: _moments} = journey}) do
+  @doc """
+  Whether this journey asks the questions in the attendee's own moment, so
+  the details form's submit sends the answers too. Such answers are known
+  once they validate (`known?/1`), and they are no prerequisite of the
+  attendee (`Facts.Attendee.requires/1`): the submission validates them.
+  """
+  @spec beside_attendee?(map()) :: boolean()
+  def beside_attendee?(%{journey: %{moments: _moments} = journey}) do
     case Progress.moment_for(journey, :answers) do
       nil -> false
       moment -> moment == Progress.moment_for(journey, :attendee)
     end
   end
 
-  defp beside_attendee?(_assigns), do: false
+  def beside_attendee?(_assigns), do: false
 
   @impl Fact
   def events, do: [:answer]
@@ -128,7 +136,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Answers do
 
   @impl Fact
   def clear(%{assigns: %{engine: %QEngine{definitions: definitions}}} = socket),
-    do: assign(socket, :engine, QEngine.init(definitions))
+    do: assign(socket, engine: QEngine.init(definitions), refused_questions: MapSet.new())
 
   def clear(socket), do: socket
 

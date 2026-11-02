@@ -376,3 +376,8 @@ msgstr[2] "Integrace %{names} je potřeba připojit znovu. Dokud je znovu nepři
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Připojte znovu %{names}: do té doby vaše rezervační stránka nemusí přijímat rezervace"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Uložit změny"

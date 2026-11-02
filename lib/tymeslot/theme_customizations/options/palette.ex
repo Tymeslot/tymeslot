@@ -142,7 +142,9 @@ defmodule Tymeslot.ThemeCustomizations.Options.Palette do
 
   A `:primary_color` override replaces the primary (and its hover shade)
   before the contrast pairs are derived, so filled controls stay legible on
-  the override. Derived from the seed when one is stored, with or without a
+  the override. On a light-seeded group (`seed_mode: :light`), whose pages
+  set the primary as text on the card, the override is first fitted to read
+  there (`ContrastTokens.fit_text/3`), as a stored seed already is. Derived from the seed when one is stored, with or without a
   scheme name beside it (`resolve/2`); both empty when neither a seed nor a
   scheme resolves.
   """
@@ -181,19 +183,22 @@ defmodule Tymeslot.ThemeCustomizations.Options.Palette do
   """
   @spec scheme_tokens(Presets.color_scheme_preset(), overrides(), group()) :: tokens()
   def scheme_tokens(%{colors: colors} = scheme, overrides, group) do
-    %{vars: colours_to_vars(colors, overrides), dark_vars: dark_vars(scheme, overrides, group)}
+    %{
+      vars: colours_to_vars(colors, overrides, group),
+      dark_vars: dark_vars(scheme, overrides, group)
+    }
   end
 
-  defp dark_vars(%{dark_colors: dark_colors}, overrides, %{follow_os: true})
+  defp dark_vars(%{dark_colors: dark_colors}, overrides, %{follow_os: true} = group)
        when is_map(dark_colors),
-       do: colours_to_vars(dark_colors, overrides)
+       do: colours_to_vars(dark_colors, overrides, group)
 
   defp dark_vars(_scheme, _overrides, _group), do: %{}
 
   # A palette's colours as `--theme-*` variables plus its contrast tokens; the
   # palette's `background` becomes `--theme-canvas`.
-  defp colours_to_vars(colors, overrides) do
-    colors = override_primary(colors, overrides)
+  defp colours_to_vars(colors, overrides, group) do
+    colors = override_primary(colors, overrides, group)
 
     colors
     |> Map.merge(ContrastTokens.derive(colors) || %{})
@@ -206,10 +211,23 @@ defmodule Tymeslot.ThemeCustomizations.Options.Palette do
     |> Map.new()
   end
 
-  defp override_primary(colors, %{primary_color: hex}) when is_binary(hex),
-    do: %{colors | primary: hex, primary_hover: PaletteDerivation.hover_for(hex) || hex}
+  defp override_primary(colors, %{primary_color: hex}, group) when is_binary(hex) do
+    primary = fit_override(hex, colors, group)
+    %{colors | primary: primary, primary_hover: PaletteDerivation.hover_for(primary) || primary}
+  end
 
-  defp override_primary(colors, _overrides), do: colors
+  defp override_primary(colors, _overrides, _group), do: colors
+
+  # The card is the set's surface, or its canvas where the surface is not an
+  # opaque colour; with neither, the override stands as given.
+  defp fit_override(hex, colors, %{seed_mode: :light}) do
+    case Enum.find([colors[:surface], colors[:background]], &Colour.parse_hex/1) do
+      nil -> hex
+      card -> ContrastTokens.fit_text(hex, card)
+    end
+  end
+
+  defp fit_override(hex, _colors, _group), do: hex
 
   defp cast_seed(changeset) do
     case get_change(changeset, :custom_palette_seed) do

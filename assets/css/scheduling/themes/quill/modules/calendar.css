@@ -81,13 +81,14 @@
   background: var(--surface-light);
   border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-md);
-  color: white;
+  color: var(--text-opacity-full);
   cursor: pointer;
   transition: var(--transition-smooth);
   position: relative;
 }
 
-.calendar-day:hover:not(:disabled) {
+/* Never on the selected day, whose filled ground carries on-primary ink. */
+.calendar-day:hover:not(:disabled, .calendar-day--selected) {
   background: var(--surface-medium);
   border-color: var(--theme-primary);
   transform: translateY(-1px);
@@ -107,7 +108,6 @@
 }
 
 .calendar-day--unavailable {
-  color: var(--border-intense);
   cursor: not-allowed;
   background: var(--surface-transparent);
   opacity: 0.5;
@@ -142,21 +142,10 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* Calendar day color overrides — white text for glassmorphism */
-.calendar-day--available:not(:disabled):not(.calendar-day--selected) {
-  color: white;
-}
-
-.calendar-day--other-month.calendar-day--available {
+/* The base rule's white is the glass ink; a padded day of the next month
+   is dimmed, and the selected day keeps its on-primary ink. */
+.calendar-day--other-month.calendar-day--available:not(.calendar-day--selected) {
   color: var(--text-opacity-medium-low);
-}
-
-.calendar-day {
-  color: white;
-}
-
-.calendar-day--today:not(.calendar-day--selected) {
-  color: white;
 }
 
 /* Calendar Weekday Headers */
@@ -205,7 +194,7 @@
   outline-offset: var(--space-3xs);
 }
 
-.week-day-cell:hover:not(:disabled) {
+.week-day-cell:hover:not(:disabled, .selected) {
   background: var(--surface-medium);
   border-color: var(--theme-primary);
   transform: translateY(-1px);
@@ -239,7 +228,7 @@
 }
 
 .week-day-cell.selected .week-day-name {
-  color: var(--text-opacity-medium-low);
+  color: var(--theme-on-primary);
 }
 
 .week-day-number {

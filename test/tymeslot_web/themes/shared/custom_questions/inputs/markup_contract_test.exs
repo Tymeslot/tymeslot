@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.MarkupContractTest do
       assert [form] = Floki.find(doc, "form[data-fact='answer']")
       assert Floki.attribute(form, "data-question") == [id]
       assert [_input] = Floki.find(form, "input[name='value']")
+      assert Floki.attribute(form, "input[type='hidden'][name='question']", "value") == [id]
     end
   end
 
@@ -45,6 +46,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.MarkupContractTest do
 
     assert [form] = Floki.find(doc, "form[data-fact='answer'][data-question='q-long']")
     assert [_select] = Floki.find(form, "select[name='value']")
+    assert Floki.attribute(form, "input[type='hidden'][name='question']", "value") == ["q-long"]
   end
 
   test "a short single select marks each choice with the key it sends" do
@@ -60,6 +62,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.MarkupContractTest do
 
     assert Floki.attribute(doc, choices, "data-value") == ["opt1", "opt2", "opt3"]
     assert Floki.attribute(doc, choices, "phx-value-value") == ["opt1", "opt2", "opt3"]
+
+    assert Floki.attribute(doc, choices, "phx-value-question") == [
+             "q-short",
+             "q-short",
+             "q-short"
+           ]
+
+    assert Floki.attribute(doc, choices, "name") == ["cq-q-short", "cq-q-short", "cq-q-short"]
   end
 
   test "a multi select marks each choice with the key it sends" do
@@ -73,6 +83,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.MarkupContractTest do
 
     assert Floki.attribute(doc, "input[data-fact='answer'][data-question='q-many']", "data-value") ==
              ["opt1", "opt2", "opt3"]
+
+    assert Floki.attribute(doc, "input[data-question='q-many']", "phx-value-question") ==
+             ["q-many", "q-many", "q-many"]
   end
 
   test "a yes/no question marks both answers" do
@@ -82,6 +95,29 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.MarkupContractTest do
 
     assert Floki.attribute(doc, choices, "data-value") == ["true", "false"]
     assert Floki.attribute(doc, choices, "phx-value-value") == ["true", "false"]
+
+    assert Floki.attribute(doc, "input[data-question='q-yes']", "phx-value-question") == [
+             "q-yes",
+             "q-yes"
+           ]
+
+    assert Floki.attribute(doc, "input[data-question='q-yes']", "name") == [
+             "cq-q-yes",
+             "cq-q-yes"
+           ]
+  end
+
+  test "a text question takes the focus unless the screen turns it off" do
+    definition = %{"id" => "q-focus", "type" => "short_text", "label" => "Question"}
+
+    assert [_focused] = Floki.find(render_question(definition), "input[autofocus]")
+
+    doc =
+      (&Renderer.render/1)
+      |> render_component(%{definition: definition, value: nil, myself: nil, autofocus: false})
+      |> Floki.parse_fragment!()
+
+    assert Floki.find(doc, "input[autofocus]") == []
   end
 
   test "a note marks its acknowledgement" do

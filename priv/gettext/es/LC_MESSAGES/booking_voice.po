@@ -10,3 +10,261 @@ msgid ""
 msgstr ""
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book a meeting"
+msgstr "Reservar una reunión"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book a meeting with %{name}"
+msgstr "Reservar una reunión con %{name}"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Confirm booking"
+msgstr "Confirmar la reserva"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a meeting type"
+msgstr "Selecciona un tipo de reunión"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "That time was just booked. Choose another."
+msgstr "Ese horario se acaba de reservar. Elige otro."
+
+#: lib/tymeslot_web/themes/quill/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "quill"
+msgid "Arrange a meeting"
+msgstr "Concertar una reunión"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Change time"
+msgstr "Cambiar el horario"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Book another meeting"
+msgstr "Reservar otra reunión"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Enter your details"
+msgstr "Completa tus datos"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Meeting rescheduled"
+msgstr "Reunión reprogramada"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this month"
+msgstr "No hay horarios disponibles este mes"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "No times available this week"
+msgstr "No hay horarios disponibles esta semana"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Request sent"
+msgstr "Solicitud enviada"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date and time"
+msgstr "Selecciona fecha y hora"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a time"
+msgstr "Selecciona un horario"
+
+#: lib/tymeslot_web/themes/paper/scheduling/details.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Sending…"
+msgstr "Enviando…"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Book our session"
+msgstr "Reservar nuestra sesión"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Request this time"
+msgstr "Solicitar este horario"
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Someone took that time a moment ago. Here are the nearest ones."
+msgstr "Alguien acaba de reservar ese horario. Estos son los más cercanos."
+
+#: lib/tymeslot_web/themes/folio/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Ways to work with me"
+msgstr "Formas de trabajar conmigo"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "A little about you"
+msgstr "Un poco sobre ti"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Book another session"
+msgstr "Reservar otra sesión"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "I have no free times at the moment."
+msgstr "Ahora mismo no tengo horarios libres."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "I'm fully booked this month."
+msgstr "Este mes tengo la agenda completa."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/offer_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "I'm not taking new bookings at the moment."
+msgstr "Por ahora no acepto nuevas reservas."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date}"
+msgstr "Nos vemos el %{weekday} %{date}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date} instead"
+msgstr "Nos vemos ahora el %{weekday} %{date}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date} instead, %{name}"
+msgstr "Nos vemos ahora el %{weekday} %{date}, %{name}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "See you on %{weekday} %{date}, %{name}"
+msgstr "Nos vemos el %{weekday} %{date}, %{name}"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Show my next free day"
+msgstr "Ver mi próximo día disponible"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "Thank you. I'll reply to your request soon."
+msgstr "Gracias. Responderé pronto a tu solicitud."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/when_moment.ex
+#, elixir-autogen, elixir-format
+msgctxt "folio"
+msgid "When suits you?"
+msgstr "¿Cuándo te viene bien?"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Available times"
+msgstr "Horarios disponibles"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "I have read this"
+msgstr "He leído esto"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Reschedule meeting"
+msgstr "Reprogramar la reunión"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date"
+msgstr "Selecciona una fecha"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select an option"
+msgstr "Selecciona una opción"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting has been rescheduled."
+msgstr "Tu reunión se reprogramó."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting is confirmed."
+msgstr "Tu reunión está confirmada."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} has been rescheduled."
+msgstr "Tu reunión con %{organizer} se reprogramó."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} is confirmed."
+msgstr "Tu reunión con %{organizer} está confirmada."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request has been sent."
+msgstr "Tu solicitud se envió."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request to %{organizer} has been sent."
+msgstr "Tu solicitud a %{organizer} se envió."

@@ -137,6 +137,33 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
   end
 
+  describe "weekday_name/1" do
+    test "names the ISO weekday in the booking language" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      assert LocalizationHelpers.weekday_name(4) == "Thursday"
+      assert LocalizationHelpers.weekday_name(7) == "Sunday"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.weekday_name(4) == "Donnerstag"
+    after
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+    end
+  end
+
+  describe "mid_sentence_weekday/1" do
+    test "keeps the capital where the language does, and lower-cases it elsewhere" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.mid_sentence_weekday(4) == "Donnerstag"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "fr")
+
+      assert LocalizationHelpers.mid_sentence_weekday(4) ==
+               String.downcase(LocalizationHelpers.weekday_name(4))
+    after
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+    end
+  end
+
   describe "format_full_date_label/1" do
     test "builds a weekday + date label from an ISO date string" do
       # 2026-06-15 is a Monday.

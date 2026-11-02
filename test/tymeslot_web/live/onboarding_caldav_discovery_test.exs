@@ -103,8 +103,10 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       assert html =~ "Discovering"
       assert html =~ "disabled"
 
-      # Let the async task settle so it doesn't leak into later assertions.
-      render_async(view)
+      # Let the async task settle so it does not leak into later assertions.
+      # Every wait in this file allows 2000ms: even a failing discovery runs
+      # through the cache and circuit breaker, and 100ms is too tight under load.
+      render_async(view, 2000)
     end
 
     test "surfaces a discovery error and re-enables the form once it fails", %{conn: conn} do
@@ -125,7 +127,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       })
       |> render_submit()
 
-      render_async(view)
+      render_async(view, 2000)
       html = render(view)
 
       # The exact wording comes from DisplayHelpers.normalize_discovery_error/1.
@@ -203,7 +205,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       })
       |> render_submit()
 
-      render_async(view)
+      render_async(view, 2000)
       html = render(view)
 
       assert html =~ "An unexpected error occurred with CalDAV server"
@@ -235,7 +237,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       })
       |> render_submit()
 
-      render_async(view)
+      render_async(view, 2000)
       html = render(view)
 
       refute html =~ "Something went wrong while contacting the calendar server"

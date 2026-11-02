@@ -171,8 +171,8 @@ defmodule TymeslotWeb.ReadOnlyCalDAVCalendarJourneyTest do
     end)
 
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=Etc/UTC")
+    # Choosing the meeting type moves on to the calendar.
     view |> element("button[data-testid='duration-option']") |> render_click()
-    view |> element("button[data-testid='next-step']") |> render_click()
 
     eventually(fn -> :sys.get_state(view.pid).socket.assigns[:availability_status] == :error end)
 
@@ -195,8 +195,8 @@ defmodule TymeslotWeb.ReadOnlyCalDAVCalendarJourneyTest do
   defp offered_slots(conn, profile, date) do
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=Etc/UTC")
 
+    # Choosing the meeting type moves on to the calendar.
     view |> element("button[data-testid='duration-option']") |> render_click()
-    view |> element("button[data-testid='next-step']") |> render_click()
 
     day = "button[data-testid='calendar-day'][phx-value-date='#{date}']"
     eventually(fn -> has_element?(view, "button[data-testid='calendar-day']") end)

@@ -1,0 +1,211 @@
+/* Paper's page: the tone's canvas, one centred card, nothing behind it.
+   The page scrolls; nothing is locked to the viewport, so Paper has no
+   height queries, and an embed needs only the shared shell rules
+   (shared/embed.css) and iframe.css. */
+
+:root {
+  color-scheme: var(--theme-color-scheme);
+}
+
+html.paper-theme {
+  background: var(--theme-canvas);
+}
+
+body.paper-theme {
+  margin: 0;
+  background: var(--theme-canvas);
+  color: var(--ink-1);
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-base);
+  line-height: var(--paper-line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.paper-theme-wrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--theme-canvas);
+  color: var(--ink-1);
+}
+
+/* The theme grid: the content row, then the footer row the theme
+   extensions (the branding banner) render in. */
+.paper-page {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.paper-page .content-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  padding: var(--space-2xl) var(--space-md);
+}
+
+/* The card: Paper's one surface, and the container every step's layout
+   queries. */
+.paper-card {
+  container-type: inline-size;
+  container-name: scheduling;
+  box-sizing: border-box;
+  width: min(100%, var(--paper-card-width));
+  padding: var(--space-xl);
+  background: var(--surface-card);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-card);
+  box-shadow: var(--paper-card-shadow);
+  color: var(--ink-1);
+}
+
+.paper-card--wide {
+  width: min(100%, var(--paper-card-width-wide));
+}
+
+/* Phones: the page and the card give up their breathing room before the
+   content does. A card cannot query its own width, so this is a viewport
+   rule. */
+@media (max-width: 30rem) {
+  .paper-page .content-area {
+    padding: var(--space-sm) var(--space-xs);
+  }
+
+  .paper-card {
+    padding: var(--space-md);
+  }
+}
+
+/* --- Type --- */
+
+.paper-title {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+  /* An organiser's heading may be one long word; it wraps rather than
+     pushing the card wider than the page. */
+  overflow-wrap: anywhere;
+}
+
+.paper-heading {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  color: var(--ink-1);
+}
+
+/* --- Brand row and avatar --- */
+
+.paper-brand {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.paper-logo {
+  display: block;
+  width: auto;
+  height: var(--paper-logo-height);
+  max-width: var(--paper-logo-max-width);
+  object-fit: contain;
+}
+
+.paper-avatar {
+  display: block;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background: var(--surface-light);
+}
+
+.paper-avatar--lg {
+  width: var(--paper-avatar-lg);
+  height: var(--paper-avatar-lg);
+}
+
+.paper-avatar--sm {
+  width: var(--paper-avatar-sm);
+  height: var(--paper-avatar-sm);
+}
+
+/* --- The two-pane frame: the overview and the schedule step ---
+
+   A column on the left (the overview's introduction, .paper-intro; the
+   schedule step's meeting details, .paper-details) and the step's own
+   pane on the right (.paper-choices, .paper-picker), laid out by the
+   card's width. Both steps change shape at the same width and the left
+   column is as wide on each, so the rule between the panes stays put from
+   one step to the next.
+     below 40rem  one column: the left column above, a rule under it
+     from 40rem   the left column beside the pane, the rule between them */
+
+.paper-overview,
+.paper-schedule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-lg);
+}
+
+.paper-intro,
+.paper-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding-bottom: var(--space-lg);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-choices,
+.paper-picker {
+  min-width: 0;
+}
+
+@container scheduling (min-width: 40rem) {
+  .paper-overview,
+  .paper-schedule {
+    grid-template-columns: var(--paper-details-width) minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .paper-intro,
+  .paper-details {
+    padding: 0 var(--space-lg) 0 0;
+    border-bottom: 0;
+    border-right: var(--border-width-thin) solid var(--line-1);
+  }
+
+  .paper-choices,
+  .paper-picker {
+    padding-left: var(--space-lg);
+  }
+}
+
+/* --- Scroll regions: the timezone list (.scroll-y) and a capped slot list --- */
+
+.scroll-y {
+  overflow-y: auto;
+}
+
+.scroll-y,
+.slot-list__body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-scrollbar-thumb) transparent;
+}
+
+/* --- Focus: one visible ring on every control, for keyboard use --- */
+
+.paper-theme-wrapper :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--border-width-medium);
+}

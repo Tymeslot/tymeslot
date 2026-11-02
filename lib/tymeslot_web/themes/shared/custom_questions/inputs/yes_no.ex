@@ -6,16 +6,21 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
   glyph that highlights when selected. The native radio inputs are
   hidden visually but remain keyboard- and screen-reader-accessible.
 
-  Themes style `.custom-question-yes-no*` to match their look.
+  Themes style `.custom-question-yes-no*` to match their look. The two
+  answers are the `:answer_yes` and `:answer_no` voice lines, worded by the
+  theme `theme_key` names.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
+  alias TymeslotWeb.Themes.Shared.Voice
+
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
+  attr :theme_key, :atom, default: nil, doc: "the rendering theme's catalogue key"
 
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
@@ -30,12 +35,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
       ]}>
         <input
           type="radio"
-          name="value"
+          name={"cq-#{@definition["id"]}"}
           value="true"
           checked={@value == true}
           class="sr-only"
           phx-click="answer"
           phx-value-value="true"
+          phx-value-question={@definition["id"]}
           phx-target={@myself}
           data-fact="answer"
           data-question={@definition["id"]}
@@ -44,7 +50,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
         <span class="custom-question-yes-no-icon" aria-hidden="true">
           <.icon name="hero-check" class="stroke-[2.5]" />
         </span>
-        <span class="custom-question-yes-no-label">{dgettext("booking", "Yes")}</span>
+        <span class="custom-question-yes-no-label">{yes(@theme_key)}</span>
       </label>
 
       <label class={[
@@ -54,12 +60,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
       ]}>
         <input
           type="radio"
-          name="value"
+          name={"cq-#{@definition["id"]}"}
           value="false"
           checked={@value == false}
           class="sr-only"
           phx-click="answer"
           phx-value-value="false"
+          phx-value-question={@definition["id"]}
           phx-target={@myself}
           data-fact="answer"
           data-question={@definition["id"]}
@@ -68,9 +75,15 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
         <span class="custom-question-yes-no-icon" aria-hidden="true">
           <.icon name="hero-x-mark" class="stroke-[2.5]" />
         </span>
-        <span class="custom-question-yes-no-label">{dgettext("booking", "No")}</span>
+        <span class="custom-question-yes-no-label">{no(@theme_key)}</span>
       </label>
     </fieldset>
     """
   end
+
+  defp yes(theme_key),
+    do: Voice.line(Voice.of(theme_key), :answer_yes, %{}, fn -> dgettext("booking", "Yes") end)
+
+  defp no(theme_key),
+    do: Voice.line(Voice.of(theme_key), :answer_no, %{}, fn -> dgettext("booking", "No") end)
 end

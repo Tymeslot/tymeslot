@@ -1,7 +1,8 @@
-defmodule TymeslotWeb.Themes.Quill.NextDayEndTest do
+defmodule TymeslotWeb.Themes.NextDayEndTest do
   @moduledoc """
   The booking step names the end of a meeting that runs past midnight, and says
-  nothing for one that ends the day it starts.
+  nothing for one that ends the day it starts, on every shipped theme
+  (`ThemeTestMatrix.all/0`).
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -17,6 +18,7 @@ defmodule TymeslotWeb.Themes.Quill.NextDayEndTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.ThemeTestMatrix
 
   @note "[data-testid='booking-next-day-end']"
 
@@ -30,16 +32,17 @@ defmodule TymeslotWeb.Themes.Quill.NextDayEndTest do
     :ok
   end
 
-  # One organiser whose only offer is the given hours and a meeting of
-  # `duration` minutes, so the first slot of any day is the one the test books.
-  defp host(hours, duration) do
+  # One organiser on `theme` whose only offer is the given hours and a meeting
+  # of `duration` minutes, so the first slot of any day is the one the test
+  # books.
+  defp host(theme, hours, duration) do
     user = insert(:user)
 
     profile =
       insert(:profile,
         user: user,
-        username: "quill-night",
-        booking_theme: "1",
+        username: "#{theme.slug}-night",
+        booking_theme: theme.id,
         timezone: "America/New_York"
       )
 
@@ -65,22 +68,33 @@ defmodule TymeslotWeb.Themes.Quill.NextDayEndTest do
     profile
   end
 
-  @tag :capture_log
-  test "names the end of a meeting that runs past midnight", %{conn: conn} do
-    profile = host([start_time: ~T[23:00:00], end_time: ~T[01:00:00], ends_next_day: true], 120)
+  for theme <- ThemeTestMatrix.all() do
+    describe theme.name do
+      @theme theme
 
-    view = BookingTestHelpers.navigate_to_booking_form(conn, profile, nil)
+      @tag :capture_log
+      test "names the end of a meeting that runs past midnight", %{conn: conn} do
+        profile =
+          host(
+            @theme,
+            [start_time: ~T[23:00:00], end_time: ~T[01:00:00], ends_next_day: true],
+            120
+          )
 
-    assert has_element?(view, @note)
-  end
+        view = BookingTestHelpers.navigate_to_booking_form(conn, profile, nil)
 
-  @tag :capture_log
-  test "says nothing for a meeting that ends the day it starts", %{conn: conn} do
-    profile = host([start_time: ~T[22:00:00], end_time: ~T[23:00:00]], 60)
+        assert has_element?(view, @note)
+      end
 
-    view = BookingTestHelpers.navigate_to_booking_form(conn, profile, nil)
+      @tag :capture_log
+      test "says nothing for a meeting that ends the day it starts", %{conn: conn} do
+        profile = host(@theme, [start_time: ~T[22:00:00], end_time: ~T[23:00:00]], 60)
 
-    assert has_element?(view, "form[data-testid='booking-form']")
-    refute has_element?(view, @note)
+        view = BookingTestHelpers.navigate_to_booking_form(conn, profile, nil)
+
+        assert has_element?(view, "form[data-testid='booking-form']")
+        refute has_element?(view, @note)
+      end
+    end
   end
 end

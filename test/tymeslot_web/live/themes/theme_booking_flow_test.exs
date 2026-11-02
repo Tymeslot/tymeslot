@@ -435,62 +435,63 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
         BookingDriver.pick_first_slot(view)
 
-        wait_until(fn -> not has_element?(view, "button[data-testid='next-step'][disabled]") end)
+        wait_until(fn ->
+          has_element?(view, "[data-testid=next-step]:not([disabled]), form[data-fact=attendee]")
+        end)
       end
 
-      @tag :capture_log
-      test "visitor can open booking route directly with #{theme.slug} theme", %{conn: conn} do
-        timezone = "America/New_York"
-        user = insert(:user)
+      # Paper picks the time on its schedule screen, so /book opens there (paper_theme_test.exs).
+      if theme.key != :paper do
+        @tag :capture_log
+        test "visitor can open booking route directly with #{theme.slug} theme", %{conn: conn} do
+          timezone = "America/New_York"
+          user = insert(:user)
 
-        profile =
-          insert(:profile,
-            user: user,
-            username: "deeplink-book-#{unquote(theme.slug)}",
-            booking_theme: unquote(theme.id),
-            timezone: timezone
-          )
+          profile =
+            insert(:profile,
+              user: user,
+              username: "deeplink-book-#{unquote(theme.slug)}",
+              booking_theme: unquote(theme.id),
+              timezone: timezone
+            )
 
-        schedule =
-          insert(:availability_schedule,
-            profile: profile,
-            is_default: true,
-            advance_booking_days: 30,
-            min_advance_hours: 0,
-            buffer_before_minutes: 0,
-            buffer_after_minutes: 0
-          )
+          schedule =
+            insert(:availability_schedule,
+              profile: profile,
+              is_default: true,
+              advance_booking_days: 30,
+              min_advance_hours: 0,
+              buffer_before_minutes: 0,
+              buffer_after_minutes: 0
+            )
 
-        _meeting_type =
-          insert(:meeting_type,
-            user: user,
-            duration_minutes: 30,
-            name: "Quick Chat",
-            is_active: true
-          )
+          _meeting_type =
+            insert(:meeting_type,
+              user: user,
+              duration_minutes: 30,
+              name: "Quick Chat",
+              is_active: true
+            )
 
-        Enum.each(1..7, fn day_of_week ->
-          insert(:weekly_availability,
-            schedule: schedule,
-            day_of_week: day_of_week,
-            is_available: true,
-            start_time: ~T[09:00:00],
-            end_time: ~T[17:00:00]
-          )
-        end)
+          Enum.each(1..7, fn day_of_week ->
+            insert(:weekly_availability,
+              schedule: schedule,
+              day_of_week: day_of_week,
+              is_available: true,
+              start_time: ~T[09:00:00],
+              end_time: ~T[17:00:00]
+            )
+          end)
 
-        _integration =
-          insert(:calendar_integration,
-            user: user,
-            is_active: true
-          )
+          insert(:calendar_integration, user: user, is_active: true)
 
-        # Direct link to booking page without a prior date/time selection must
-        # redirect to the schedule step rather than showing an unusable booking form.
-        assert {:error, {:redirect, %{to: to}}} =
-                 live(conn, ~p"/#{profile.username}/quick-chat/book?timezone=#{timezone}")
+          # Direct link to booking page without a prior date/time selection must
+          # redirect to the schedule step rather than showing an unusable booking form.
+          assert {:error, {:redirect, %{to: to}}} =
+                   live(conn, ~p"/#{profile.username}/quick-chat/book?timezone=#{timezone}")
 
-        assert to == ~p"/#{profile.username}/quick-chat"
+          assert to == ~p"/#{profile.username}/quick-chat"
+        end
       end
     end
   end

@@ -375,3 +375,8 @@ msgstr[1] "Hay que volver a conectar %{names}. Hasta que lo hagas, puede que tu 
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Vuelve a conectar %{names}: hasta que lo hagas, puede que tu página de reservas no acepte reservas"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Guardar los cambios"

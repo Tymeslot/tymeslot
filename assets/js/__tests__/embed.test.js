@@ -148,6 +148,13 @@ describe('modal sizing', () => {
     expect(container.style.maxHeight).toContain('calc(100vh - 100px)')
   })
 
+  test('the iframe is a block, so the clipping frame has no line-box gap to scroll', () => {
+    window.TymeslotBooking.open('alice')
+
+    const iframe = document.querySelector('#tymeslot-modal [data-tymeslot-frame] iframe')
+    expect(iframe.style.display).toBe('block')
+  })
+
   test('mobile full-screen stylesheet is injected once', () => {
     window.TymeslotBooking.open('alice')
     const first = document.getElementById('tymeslot-modal-styles')

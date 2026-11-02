@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -92,8 +93,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
 
         # The last thing read before committing must not promise a booking.
         submit = view |> element("[data-testid='submit-booking']") |> render()
-        assert submit =~ "Request meeting"
-        refute submit =~ "Book Meeting"
+        assert submit =~ request_label(unquote(theme.key))
+
+        refute submit =~
+                 BookingLabels.submit_label(false, %{}, "Book Meeting", unquote(theme.key))
       end
 
       @tag :capture_log
@@ -116,7 +119,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
             attendee: %{name: "Test Attendee", email: email, message: "Hello!"}
           )
 
-        assert html =~ "Request sent!"
+        assert confirmation_heading(html) == held_headline(unquote(theme.key))
         assert html =~ "Not confirmed yet"
         assert html =~ "still has to accept this time"
 
@@ -203,11 +206,32 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
           )
 
         refute html =~ "data-testid=\"approval-notice\""
-        refute html =~ "Request sent!"
+        refute confirmation_heading(html) == held_headline(unquote(theme.key))
 
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
         assert meeting.status == :confirmed
       end
     end
+  end
+
+  # The submit of a gated type: Folio words its own, the rest share one.
+  defp request_label(:folio), do: "Request this time"
+  defp request_label(_shared), do: "Request meeting"
+
+  # Each theme's own headline for a held request, as the heading reads (Floki
+  # decodes the entity in Folio's apostrophe); the shared one where a theme keeps it.
+  defp held_headline(:folio), do: "Thank you. I'll reply to your request soon."
+  defp held_headline(:paper), do: "Request sent"
+  defp held_headline(_shared), do: "Request sent!"
+
+  # The text of the confirmation heading every theme renders.
+  defp confirmation_heading(html) do
+    heading = html |> Floki.parse_fragment!() |> Floki.find("[data-testid=confirmation-heading]")
+
+    assert [_one] = heading
+    # Quill marks a wrapper around its h1 and subtitle; the rest mark the h1.
+    h1 = Floki.find(heading, "h1")
+    node = if h1 == [], do: heading, else: h1
+    node |> Floki.text() |> String.trim()
   end
 end

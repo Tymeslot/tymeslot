@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
 
   # Everything the test-only themes add that a shared module could name,
   # their ids among them as quoted literals.
-  @fixture_names ~r/FixtureTheme|fixture_emblem|EmblemPanel|ClipsPanel|fixture_intro_clip|fixture_outro_clip|fixture_intro_captions|:fixture\b|ShowcaseTheme|:showcase\b|JourneyFixture|:fixture_(scroll|talk|express)\b|#{Regex.escape(~s("99"))}|#{Regex.escape(~s("97"))}|#{Regex.escape(~s("96"))}|#{Regex.escape(~s("95"))}|#{Regex.escape(~s("94"))}/
+  @fixture_names ~r/FixtureTheme|fixture_emblem|EmblemPanel|ClipsPanel|fixture_intro_clip|fixture_outro_clip|fixture_intro_captions|:fixture\b|ShowcaseTheme|:showcase\b|JourneyFixture|:fixture_(scroll|talk|express|two)\b|#{Regex.escape(~s("99"))}|#{Regex.escape(~s("97"))}|#{Regex.escape(~s("96"))}|#{Regex.escape(~s("95"))}|#{Regex.escape(~s("94"))}|#{Regex.escape(~s("93"))}/
 
   setup :verify_on_exit!
 

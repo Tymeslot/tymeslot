@@ -101,6 +101,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     if Honeypot.tripped?(booking_params) do
       {:honeypot, BookingGuards.handle_honeypot(socket, booking_params)}
     else
+      socket = assign(socket, :refused_questions, refused_questions(socket))
+
       case InputProcessor.validate_form(booking_params, BookingConfig.booking_field_spec()) do
         {:ok, sanitized_params} ->
           Logger.info("Form validation passed, proceeding to booking")
@@ -218,6 +220,24 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   # Private functions
 
+  # The questions this submit refuses, by id. Kept apart from
+  # `:validation_errors`, which the form's own validation replaces on every
+  # change, so a screen that shows the questions beside the form names each
+  # one until its answer is put right (`CustomQuestions.Events.all_questions/1`),
+  # whether or not the form's own fields failed too.
+  defp refused_questions(socket) do
+    case socket.assigns[:engine] do
+      %{definitions: definitions, answers: answers} ->
+        case CustomFields.validate_answers(definitions, answers) do
+          {:ok, _answers} -> MapSet.new()
+          {:error, errors} -> errors |> Map.keys() |> MapSet.new()
+        end
+
+      _no_engine ->
+        MapSet.new()
+    end
+  end
+
   defp validate_and_submit(socket, sanitized_params, booking_params) do
     engine = socket.assigns[:engine]
     snapshot = if engine, do: engine.definitions, else: []
@@ -334,7 +354,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     socket =
       socket
       |> BookingGuards.release_submission()
-      |> Flash.put_flash(:error, BookingErrorMessage.message(:slot_taken))
+      |> Flash.put_flash(
+        :error,
+        BookingErrorMessage.voiced(:slot_taken, socket.assigns[:theme_id])
+      )
 
     {:slot_taken, socket}
   end

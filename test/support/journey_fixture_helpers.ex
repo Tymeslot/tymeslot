@@ -20,7 +20,8 @@ defmodule Tymeslot.JourneyFixtureHelpers do
   @doc """
   A booking-ready organiser on `theme_id`: a profile in UTC, availability
   every day (or the ISO weekdays in `opts[:days]`) from 09:00 to 17:00 up to
-  30 days ahead, an active calendar integration, and the meeting types in
+  `opts[:advance_booking_days]` (default 30) days ahead, an active calendar
+  integration, and the meeting types in
   `opts[:types]` (keyword lists for the factory, plus `:custom_fields`, a
   list of question definitions), by default one 30-minute "Quick Chat". `opts[:profile]` adds fields to the profile.
   Returns `%{user:, profile:, meeting_types:}`, the types in order.
@@ -40,7 +41,7 @@ defmodule Tymeslot.JourneyFixtureHelpers do
       insert(:availability_schedule,
         profile: profile,
         is_default: true,
-        advance_booking_days: 30,
+        advance_booking_days: Keyword.get(opts, :advance_booking_days, 30),
         min_advance_hours: 0,
         buffer_before_minutes: 0,
         buffer_after_minutes: 0

@@ -11,6 +11,7 @@ defmodule Tymeslot.ThemeCustomizations do
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations.OptionGroup
   alias Tymeslot.ThemeCustomizations.Options.Background
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Cover
   alias Tymeslot.ThemeCustomizations.Options.Palette
@@ -101,16 +102,25 @@ defmodule Tymeslot.ThemeCustomizations do
 
   # What a customisation spec offers, asked of the spec itself rather than a
   # theme id, so a caller holding a catalogue entry's spec can describe it.
-  @option_modules %{palette: Palette, colour_mode: ColourMode, cover: Cover}
+  @option_modules %{
+    palette: Palette,
+    colour_mode: ColourMode,
+    cover: Cover,
+    calendar_view: CalendarView
+  }
 
   @typedoc "An option a spec may offer: an option group, or one kind of background."
   @type offered_option ::
-          :palette | :colour_mode | :cover | {:background, Spec.background_kind()}
+          :palette
+          | :colour_mode
+          | :cover
+          | :calendar_view
+          | {:background, Spec.background_kind()}
 
   @doc """
   Whether the customisation `spec` (a theme's `customization_spec`) offers
-  `option`: a palette, a colour mode, a cover, or `{:background, kind}` for
-  one kind of background.
+  `option`: a palette, a colour mode, a cover, a calendar view, or
+  `{:background, kind}` for one kind of background.
   """
   @spec spec_offers?(module(), offered_option()) :: boolean()
   def spec_offers?(spec, {:background, kind}), do: Specs.supports_background?(spec, kind)

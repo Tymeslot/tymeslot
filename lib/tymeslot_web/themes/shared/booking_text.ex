@@ -22,6 +22,11 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   given the theme's catalogue key; without a key, or for a line the voice
   leaves alone, it is the shared wording below.
 
+  The heading is always said. The greeting and the instruction are optional:
+  a voice may leave either unsaid (`""`), and so may the organiser, whose
+  blank line is not replaced by a default. `greeting/3` and `instruction/2`
+  return `nil` for an unsaid line, and every theme renders nothing for it.
+
   The stored wording is a single string, not a per-locale map, matching the
   meeting type names and descriptions rendered directly beneath it on the same
   screen. Turning the customisation on therefore opts these three strings out of
@@ -55,21 +60,28 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   @doc """
   The greeting line, in the voice of the theme with key `theme_key` where it
-  has one. `nil` when there is no name to introduce and no custom wording,
-  which drops the line rather than rendering half a sentence.
+  has one, or `nil` for no greeting, which the theme renders as nothing at all.
+
+  It is `nil` when there is no name to introduce (rather than half a
+  sentence), when the theme's voice leaves the greeting unsaid (`""`), and
+  when the organiser's own wording leaves it blank: with the customisation on,
+  the organiser's line is the greeting, blank included, and no default stands
+  in for it.
   """
   @spec greeting(ProfileSchema.t() | nil, String.t() | nil, theme_key() | nil) ::
           String.t() | nil
   def greeting(profile, name, theme_key \\ nil),
-    do: custom(profile, :booking_greeting) || default_greeting(name, theme_key)
+    do: optional(profile, :booking_greeting, fn -> default_greeting(name, theme_key) end)
 
   @doc """
   The line telling the visitor what to do next, in the voice of the theme
-  with key `theme_key` where it has one.
+  with key `theme_key` where it has one, or `nil` for none: the voice leaves
+  it unsaid (`""`), or the organiser's own wording leaves it blank. As with
+  `greeting/3`, the theme renders nothing for `nil`.
   """
-  @spec instruction(ProfileSchema.t() | nil, theme_key() | nil) :: String.t()
+  @spec instruction(ProfileSchema.t() | nil, theme_key() | nil) :: String.t() | nil
   def instruction(profile, theme_key \\ nil),
-    do: custom(profile, :booking_instruction) || default_instruction(theme_key)
+    do: optional(profile, :booking_instruction, fn -> default_instruction(theme_key) end)
 
   @doc """
   The heading a theme shows when the organiser has not supplied one: its
@@ -103,7 +115,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   @doc """
   The greeting shown when the organiser has not supplied one, or `nil` when
-  there is no name to introduce.
+  there is no name to introduce. `""` when the theme's voice says nothing
+  for the greeting; `greeting/3` turns that into `nil`, the dashboard seeds
+  its field with it.
   """
   @spec default_greeting(String.t() | nil, theme_key() | nil) :: String.t() | nil
   def default_greeting(name, theme_key \\ nil)
@@ -112,16 +126,26 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   @doc """
   A greeting to start the organiser off with when they switch the customisation
-  on, which unlike `default_greeting/2` is never `nil`.
+  on, which unlike `default_greeting/2` is never `nil`: the theme's own line,
+  `""` included for a voice that greets nobody, so switching the customisation
+  on changes nothing on the page until the organiser edits a line.
 
-  Turning the customisation on requires all three lines to be filled, so a
-  profile with no name still needs something to seed the field with. The public
-  page keeps dropping the line in that case; this is only ever a starting point
-  in the dashboard.
+  A profile with no name gets a friendly line without one, which the
+  organiser keeps, edits or clears; the public page's default drops the
+  greeting in that case. A voice that leaves the greeting unsaid seeds `""`
+  there too: its `""` does not depend on the name (`Voice`), so asking it
+  with an empty one tells whether it greets at all.
   """
   @spec seed_greeting(String.t() | nil, theme_key() | nil) :: String.t()
   def seed_greeting(name, theme_key \\ nil)
-  def seed_greeting(nil, _theme_key), do: dgettext("booking", "Hi there!")
+
+  def seed_greeting(nil, theme_key) do
+    case voiced_greeting("", theme_key) do
+      "" -> ""
+      _greets -> dgettext("booking", "Hi there!")
+    end
+  end
+
   def seed_greeting(name, theme_key), do: voiced_greeting(name, theme_key)
 
   defp voiced_greeting(name, theme_key) do
@@ -131,17 +155,29 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   end
 
   @doc """
-  The instruction shown when the organiser has not supplied one.
+  The instruction shown when the organiser has not supplied one, or `""`
+  when the theme's voice says nothing for it.
   """
   @spec default_instruction(theme_key() | nil) :: String.t()
   def default_instruction(theme_key \\ nil) do
     Voice.line(Voice.of(theme_key), :instruction, %{}, fn ->
-      dgettext("booking", "Pick an option below.")
+      dgettext("booking", "Pick an option to get started.")
     end)
   end
 
   defp custom(%{booking_text_enabled: true} = profile, field), do: Map.get(profile, field)
   defp custom(_profile, _field), do: nil
+
+  # A line the page may leave out: with the customisation on, the organiser's
+  # wording is the line even when blank; otherwise the theme's default. Blank
+  # comes back as `nil`, so a theme tests one value before rendering.
+  defp optional(%{booking_text_enabled: true} = profile, field, _default),
+    do: present(Map.get(profile, field))
+
+  defp optional(_profile, _field, default), do: present(default.())
+
+  defp present(nil), do: nil
+  defp present(text), do: if(String.trim(text) == "", do: nil, else: text)
 
   @doc """
   The meeting's length as a step shows it: the meeting type's own duration

@@ -123,8 +123,8 @@ defmodule TymeslotWeb.Live.Scheduling.WeekSlots do
   @doc """
   A day's offered times as the labels `select_time` and `select_slot` send:
   a group type's slots arrive as seat-carrying maps
-  (`MeetingUtils.normalize_slot_list/1`), whose seats the week views do not
-  show.
+  (`MeetingUtils.normalize_slot_list/1`), whose seats this drops (`WeekGrid`
+  reads the seats itself, through `MeetingUtils.normalize_slot_list/1`).
   """
   @spec times(term()) :: [String.t()]
   def times(slots), do: slots |> MeetingUtils.normalize_slot_list() |> Enum.map(& &1.time)

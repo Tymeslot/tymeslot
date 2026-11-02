@@ -1,0 +1,42 @@
+/* The schedule screen's questions, all on show above the form: each one's
+   help line, input and error. The answer controls, yes/no tiles and option
+   cards, are shared (shared/components/custom-questions.css) and drawn with
+   Paper's --option-* tokens. */
+
+.paper-question__help {
+  margin: 0 0 var(--space-md);
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.paper-question__input {
+  margin-top: var(--space-xs);
+}
+
+/* While the question shows its error, its field takes the danger edge the
+   booking form's fields take (controls.css, .input.input-error), and so
+   do the yes/no tiles' and option cards' edges and their idle markers. */
+.paper-question__input--invalid {
+  --option-tile-border: var(--theme-danger);
+  --option-indicator-idle: var(--theme-danger);
+}
+
+.paper-theme-wrapper .paper-question__input--invalid .input {
+  border-color: var(--theme-danger);
+}
+
+.paper-question__error {
+  margin: var(--space-sm) 0 0;
+  color: var(--theme-danger);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-theme-wrapper .custom-question-note-body {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.paper-theme-wrapper .custom-question-cta-nowrap {
+  white-space: nowrap;
+}

@@ -175,6 +175,16 @@ msgstr "Machen Sie aus jedem Termintyp eine Gruppensitzung. Legen Sie fest, wie 
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Two new booking page themes: Folio and Paper"
+msgstr "Zwei neue Designs für die Buchungsseite: Folio und Paper"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Folio introduces you before anyone picks a time: a cover image, your portrait, headline and bio, in serif type on one continuous page. Paper does the opposite: one calm card in the colour palette you choose, light or dark, and the time and details on a single screen. Open the Theme page to preview either on your own booking page before you switch."
+msgstr "Folio stellt Sie vor, bevor jemand eine Uhrzeit wählt: mit Titelbild, Ihrem Porträt, Überschrift und Kurzbiografie, in Serifenschrift auf einer durchgehenden Seite. Paper geht den umgekehrten Weg: eine ruhige Karte in der Farbpalette Ihrer Wahl, hell oder dunkel, mit Uhrzeit und Details auf einem einzigen Bildschirm. Öffnen Sie die Seite Design, um sich beide auf Ihrer eigenen Buchungsseite anzusehen, bevor Sie wechseln."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "Polls that invite, confirm and keep you posted"
 msgstr "Umfragen, die einladen, bestätigen und Sie auf dem Laufenden halten"
 

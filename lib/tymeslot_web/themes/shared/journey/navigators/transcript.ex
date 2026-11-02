@@ -27,8 +27,6 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Transcript do
 
   @behaviour TymeslotWeb.Themes.Shared.Journey.Navigator
 
-  import Phoenix.Component, only: [assign: 3]
-
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigator
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
@@ -81,7 +79,6 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Transcript do
     socket
     |> Runtime.clear(Progress.required(moment, socket.assigns))
     |> then(&Reveal.settle(journey, &1))
-    |> assign(:journey_focus, moment.key)
   end
 
   # The moments that may be edited: answered (`:done`) and each of whose

@@ -178,7 +178,9 @@ defmodule Tymeslot.BookingTestHelpers do
   tomorrow's first offered time and moves on to the booking form.
 
   Public for a page that opens on the schedule step, as `/:username/:slug`
-  does, where there is no overview card to pick.
+  does, where there is no overview card to pick. On a screen that also asks
+  for the details (Fixture Two) the form and the questions are already
+  there, and nothing more is clicked.
   """
   @spec walk_from_schedule_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t()) ::
           Phoenix.LiveViewTest.View.t()
@@ -187,7 +189,12 @@ defmodule Tymeslot.BookingTestHelpers do
       timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(1) |> Date.to_iso8601()
 
     _picked = BookingDriver.pick_first_slot(view, on: tomorrow)
-    BookingDriver.continue(view)
+
+    # A screen that picks the time and asks for the details shows the form,
+    # with the questions above it, as soon as the time is picked: there is
+    # no way on to take.
+    unless has_element?(view, "form[data-fact='attendee'], [data-fact='answer']"),
+      do: BookingDriver.continue(view)
 
     view
   end

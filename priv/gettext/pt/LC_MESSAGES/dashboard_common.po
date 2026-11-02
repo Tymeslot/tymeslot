@@ -375,3 +375,8 @@ msgstr[1] "As integrações %{names} precisam ser reconectadas. Enquanto você n
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Reconecte %{names}: até lá, sua página de agendamento pode não receber agendamentos"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Salvar alterações"

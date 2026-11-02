@@ -241,7 +241,6 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{timezone}")
 
     view |> element("button[data-testid='duration-option']") |> render_click()
-    view |> element("button[data-testid='next-step']") |> render_click()
 
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target = Date.add(today, 1)

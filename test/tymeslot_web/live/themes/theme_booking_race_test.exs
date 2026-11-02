@@ -12,8 +12,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingRaceTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Phoenix.HTML
   alias Tymeslot.TestMocks
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
+  alias TymeslotWeb.Themes.Shared.Voice
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -85,12 +89,27 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingRaceTest do
         # synchronous `:sys.get_state/1` before asserting on the render.
         _drain = :sys.get_state(view2.pid)
 
-        # Second one should fail because the slot is now taken
-        assert render(view2) =~ "This time slot is no longer available"
+        # Second one should fail because the slot is now taken, said in the
+        # theme's own words where its voice has them.
+        assert render(view2) =~ escaped(expected_slot_taken(unquote(theme.id)))
+
         refute has_element?(view2, "[data-testid='confirmation-heading']")
       end
     end
   end
+
+  # A theme without a voice keeps the shared wording, pinned here as a literal
+  # so a change to it is noticed; a theme with a voice says it its own way.
+  defp expected_slot_taken(theme_id) do
+    {:ok, key} = Catalog.id_to_key(theme_id)
+
+    case Voice.of(key) do
+      nil -> "This time slot is no longer available"
+      _voice -> BookingErrorMessage.voiced(:slot_taken, theme_id)
+    end
+  end
+
+  defp escaped(text), do: text |> HTML.html_escape() |> HTML.safe_to_string()
 
   # The next weekday strictly after `start_date`.
   defp next_business_day(%Date{} = start_date) do

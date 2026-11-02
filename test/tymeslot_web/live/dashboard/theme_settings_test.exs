@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button[phx-value-theme='1']", "Customise Style")
       |> render_click()
 
-      assert render(view) =~ "Customise Style"
+      assert render(view) =~ "Customise Quill"
       assert render(view) =~ "Colour Palette"
       assert render(view) =~ "Background Design"
 

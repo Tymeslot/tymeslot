@@ -107,6 +107,16 @@ body.quill-theme {
   margin-bottom: auto;
 }
 
+/* A demo page's theme switcher (shared/components/preview-notice.css)
+   leads the column, centred, with the gap above it the language switcher's
+   row has at 640px and below; the card's auto margins centre it in the
+   space below. Where the language switcher floats in the corner,
+   language-switcher.css moves it down clear of it. */
+.main-gradient.theme-grid .content-area > .demo-theme-switcher {
+  flex-shrink: 0;
+  margin-top: var(--space-lg);
+}
+
 /* ===== Schedule Step — Viewport-Locked App Shell =====
    Scoped to the schedule step only via `:has(.calendar-card)`; every other step
    and page keeps the natural page-scroll model above.

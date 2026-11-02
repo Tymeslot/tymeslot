@@ -1,0 +1,52 @@
+/* Folio's type: serif headings (the font option's heading stack), body text
+   in the body stack, long words broken anywhere so a long name or heading
+   never widens the page. The page is the card (the meeting, poll and payment
+   pages), or the card-less booking page, its confirmation and the payment
+   pages' plain variant. */
+
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) {
+  overflow-wrap: anywhere;
+}
+
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) :is(h1, h2, h3) {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--folio-line-height-heading);
+  letter-spacing: var(--folio-letter-spacing-heading);
+  color: var(--theme-text);
+}
+
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) p {
+  margin: 0;
+}
+
+.folio-title {
+  font-size: var(--theme-font-size-2xl);
+}
+
+.folio-lead {
+  font-size: var(--theme-font-size-md);
+  color: var(--theme-text-secondary);
+}
+
+.folio-muted {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+/* A small uppercase label; also on headings, hence the doubled class. */
+:is(.folio-card, .journey--continuous, .folio-outcome-page, .folio-plain-page) .folio-eyebrow {
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--theme-line-height-snug);
+  text-transform: uppercase;
+  color: var(--theme-text-secondary);
+}
+
+.folio-error {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-danger);
+}

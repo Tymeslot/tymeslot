@@ -62,12 +62,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon
                             :if={!ApprovalDisplay.awaiting_approval?(assigns)}
                             name="hero-check"
-                            class="confirmation-badge-icon text-white stroke-3"
+                            class="confirmation-badge-icon stroke-3"
                           />
                           <.icon
                             :if={ApprovalDisplay.awaiting_approval?(assigns)}
                             name="hero-clock"
-                            class="confirmation-badge-icon text-white stroke-3"
+                            class="confirmation-badge-icon stroke-3"
                           />
                         </div>
                         <div class={[
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           ApprovalDisplay.awaiting_approval?(assigns) &&
                             "confirmation-badge-dot--pending"
                         ]}>
-                          <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon text-white" />
+                          <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon" />
                         </div>
                       </div>
                     </div>
@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       :if={PathHandlers.calendar_ics_path(assigns)}
                       href={PathHandlers.calendar_ics_path(assigns)}
                       download
-                      class="action-button action-button--secondary calendar-download-button"
+                      class="action-button action-button--primary calendar-download-button"
                       data-testid="add-to-calendar"
                     >
                       <.icon name="hero-calendar-days" class="calendar-download-icon" />
@@ -192,15 +192,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         do: dgettext("booking", "Add tentative hold to calendar"),
                         else: dgettext("booking", "Add to calendar")}
                     </a>
-                    <.action_button
+                    <button
+                      type="button"
                       phx-click="schedule_another"
                       phx-target={@myself}
                       data-testid="schedule-another"
                       data-intent="restart"
-                      class="inline-block"
+                      class="confirmation-restart-link"
                     >
                       {dgettext("booking", "Schedule Another Meeting")}
-                    </.action_button>
+                    </button>
                   </div>
 
                   <p class="confirmation-help-text mt-3 text-xs">

@@ -1,0 +1,100 @@
+defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
+  @moduledoc """
+  Folio's wrapper: the shared `ThemeShell` on the scheme's canvas, with no
+  background of its own (the cover belongs to the masthead at the top of the
+  page). Inside it,
+  Folio's page grid (`.booker-page folio-page`, sized to content in an embed
+  by its `iframe.css`) holds the content area, which starts with the shell's
+  chrome, and the theme extensions as its footer row.
+
+  It marks the page `folio-theme-wrapper--light` or `--dark` (`mode/1`), the
+  one thing Folio's CSS cannot derive from the palette's custom properties:
+  the `color-scheme` that form controls and scrollbars follow.
+  """
+  use Phoenix.Component
+
+  alias Tymeslot.ThemeCustomizations.Tokens
+  alias Tymeslot.Themes.Catalog
+  alias Tymeslot.Utils.Colour
+  alias TymeslotWeb.Themes.Shared.Components.ThemeShell
+
+  import TymeslotWeb.Themes.Shared.Customization.Helpers, only: [prepare_wrapper_assigns: 1]
+
+  attr :theme_tokens, :any, default: nil
+  attr :locale, :string, default: nil
+  attr :current_state, :atom, default: nil
+
+  attr :journey, :any,
+    default: nil,
+    doc: "the page's journey: a continuous page shows the switcher throughout"
+
+  attr :language_dropdown_open, :boolean, default: nil
+  attr :organizer_user_id, :integer, default: nil
+  attr :should_show_branding, :boolean, default: false
+  attr :show_language_switcher, :boolean, default: nil
+  attr :owner_preview, :boolean, default: false
+  attr :refused_calendars, :list, default: []
+  attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
+
+  attr :show_extensions, :boolean,
+    default: true,
+    doc: "false on pages that are not booking-page impressions (the payment return pages)"
+
+  slot :inner_block, required: true
+
+  @spec folio_wrapper(map()) :: Phoenix.LiveView.Rendered.t()
+  def folio_wrapper(assigns) do
+    assigns =
+      assigns
+      |> prepare_wrapper_assigns()
+      |> assign(theme_id: theme_id(), mode: mode(assigns.theme_tokens))
+
+    ~H"""
+    <ThemeShell.theme_shell
+      class={["folio-theme-wrapper", "folio-theme-wrapper--#{@mode}"]}
+      locale={@locale}
+      theme_tokens={@theme_tokens}
+    >
+      <div class="booker-page folio-page">
+        <div class="content-area">
+          <ThemeShell.chrome
+            language_class="folio-language"
+            locale={@locale}
+            language_dropdown_open={@language_dropdown_open}
+            show_language_switcher={@show_language_switcher}
+            owner_preview={@owner_preview}
+            refused_calendars={@refused_calendars}
+          />
+          {render_slot(@inner_block)}
+        </div>
+        <ThemeShell.extensions
+          :if={@show_extensions}
+          theme_id={@theme_id}
+          organizer_user_id={@organizer_user_id}
+          should_show_branding={@should_show_branding}
+          {Map.take(assigns, [:demo_mode])}
+        />
+      </div>
+    </ThemeShell.theme_shell>
+    """
+  end
+
+  @doc """
+  Whether the page's palette is dark (its canvas darker than its text) or
+  light; light when there are no tokens to read, as on the payment pages.
+  """
+  @spec mode(Tokens.t() | nil) :: :light | :dark
+  def mode(%Tokens{vars: %{"--theme-canvas" => canvas, "--theme-text" => text}})
+      when is_binary(canvas) and is_binary(text) do
+    if Colour.relative_luminance(canvas) < Colour.relative_luminance(text),
+      do: :dark,
+      else: :light
+  end
+
+  def mode(_tokens), do: :light
+
+  defp theme_id do
+    {:ok, id} = Catalog.key_to_id(:folio)
+    id
+  end
+end

@@ -160,11 +160,6 @@ msgstr "Vídeo"
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
 msgstr "Design em vidro fosco, com efeitos de transparência elegantes e um fluxo de agendamento em 4 passos."
 
-#: lib/tymeslot_web/themes/rhythm/theme.ex
-#, elixir-autogen, elixir-format
-msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Design moderno com slides, fundo em vídeo e um fluxo de agendamento em 4 slides."
-
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
@@ -583,7 +578,6 @@ msgstr "Paleta de cores"
 msgid "Could not save your theme customisation. Please try again."
 msgstr "Não foi possível salvar a personalização do tema. Tente novamente."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Customise Style"
@@ -605,6 +599,31 @@ msgstr "Escolha as cores principais da interface da sua página de agendamento."
 msgid "Solid Colour"
 msgstr "Cor sólida"
 
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "An editorial page that introduces you, with a cover image, your portrait, headline and bio, and serif headings."
+msgstr "Uma página editorial que apresenta você, com imagem de capa, o seu retrato, título e biografia, e cabeçalhos com serifa."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar View"
+msgstr "Visualização do calendário"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Month"
+msgstr "Mês"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a day from a month, or see a whole week of free times at once."
+msgstr "Escolha um dia no mês ou veja de uma vez uma semana inteira de horários livres."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/calendar_view_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Week"
+msgstr "Semana"
+
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
 msgid "My clients should feel they are booking someone established. The page should look as considered as my work."
@@ -620,10 +639,80 @@ msgstr "Quando alguém agenda comigo, quero que sinta primeiro a atmosfera: movi
 msgid "Invalid captions file. Please upload a WebVTT (.vtt) file."
 msgstr "Arquivo de legendas inválido. Envie um arquivo WebVTT (.vtt)."
 
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "I don't want my booking page to have a personality. I want it clear, fast and in my colour, so people book and get on with their day."
+msgstr "Não quero que a minha página de agendamento tenha personalidade. Quero que ela seja clara, rápida e na minha cor, para que as pessoas agendem e sigam com o seu dia."
+
+#: lib/tymeslot_web/themes/folio/theme.ex
+#, elixir-autogen, elixir-format
+msgid "People book me, not a time slot. Before they pick a date, they should know who I am, what I do, and whether we're a fit."
+msgstr "As pessoas agendam comigo, não um horário. Antes de escolherem uma data, devem saber quem eu sou, o que faço e se combinamos."
+
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 ou WebM. Máx. %{size} MB."
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design: each step slides in on a glass card over a video background."
+msgstr "Design moderno com slides: cada etapa desliza num cartão de vidro sobre um fundo em vídeo."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Customise %{theme_name}"
+msgstr "Personalizar %{theme_name}"
+
+#: lib/tymeslot_web/themes/paper/theme.ex
+#, elixir-autogen, elixir-format
+msgid "A calm, flat booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes in the colour palette you choose."
+msgstr "Uma página de agendamento calma e de visual plano: primeiro o tipo de reunião, depois horário e agendamento em uma só tela. Modos claro e escuro na paleta de cores que você escolher."
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Arctic Blue"
+msgstr "Azul ártico"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Default Turquoise"
+msgstr "Turquesa padrão"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Forest Green"
+msgstr "Verde floresta"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Monochrome"
+msgstr "Monocromático"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ocean Breeze"
+msgstr "Brisa do mar"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Purple Dream"
+msgstr "Sonho roxo"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Rose Gold"
+msgstr "Ouro rosé"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Sunset Glow"
+msgstr "Pôr do sol"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The colours of your booking page, shown here light and dark. Colour Mode decides which one visitors see."
+msgstr "As cores da sua página de agendamento, mostradas aqui em claro e escuro. O modo de cor define qual versão os visitantes veem."
 
 #: lib/tymeslot/theme_customizations/assets.ex
 #, elixir-autogen, elixir-format

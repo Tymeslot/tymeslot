@@ -59,6 +59,22 @@ defmodule TymeslotWeb.Themes.Shared.StepEventsTest do
     end
   end
 
+  test "choose_duration chooses the meeting type, then moves on, in that order" do
+    assert {:noreply, _socket} =
+             StepEvents.handle_event(
+               "choose_duration",
+               %{"duration" => "30-minutes"},
+               socket(%{current_state: :overview})
+             )
+
+    # assert_received takes the first matching message, so the two bind in
+    # the order they were sent.
+    assert_received {:step_event, :overview, first, first_data}
+    assert_received {:step_event, :overview, second, second_data}
+    assert {first, first_data} == {:select_duration, "30-minutes"}
+    assert {second, second_data} == {:next_step, nil}
+  end
+
   test "relays under the moment the page gives a component, which may not be the step on screen" do
     socket = socket(%{current_state: :when, moment: :you})
 

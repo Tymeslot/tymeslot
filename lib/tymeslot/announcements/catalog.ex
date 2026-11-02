@@ -32,6 +32,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @group_bookings_published_at ~U[2026-10-07 00:00:00Z]
   @group_bookings_expires_at ~U[2026-11-06 00:00:00Z]
 
+  @new_themes_published_at ~U[2026-10-18 00:00:00Z]
+  @new_themes_expires_at ~U[2026-11-17 00:00:00Z]
+
   @meeting_polls_published_at ~U[2026-10-23 00:00:00Z]
   @meeting_polls_expires_at ~U[2026-11-22 00:00:00Z]
 
@@ -44,6 +47,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # entry's translatable copy readable in isolation.
     [
       spanish(),
+      new_themes(),
       meeting_polls(),
       group_bookings(),
       meeting_locations(),
@@ -67,6 +71,25 @@ defmodule Tymeslot.Announcements.Catalog do
       image_path: "/images/announcements/spanish.svg",
       published_at: @spanish_published_at,
       expires_at: @spanish_expires_at
+    }
+  end
+
+  defp new_themes do
+    %Announcement{
+      key: "new_themes_folio_paper",
+      title: dgettext("onboarding", "Two new booking page themes: Folio and Paper"),
+      body:
+        dgettext(
+          "onboarding",
+          "Folio introduces you before anyone picks a time: a cover image, your portrait, " <>
+            "headline and bio, in serif type on one continuous page. Paper does the opposite: " <>
+            "one calm card in the colour palette you choose, light or dark, and the time " <>
+            "and details on a single screen. Open the Theme page to preview either on your own " <>
+            "booking page before you switch."
+        ),
+      image_path: "/images/announcements/new-themes.svg",
+      published_at: @new_themes_published_at,
+      expires_at: @new_themes_expires_at
     }
   end
 

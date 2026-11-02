@@ -7,6 +7,15 @@
   height: 100%;
 }
 
+/* A paid type's price, right above the submit it will be charged after. */
+.booking-submit-price {
+  margin: 0;
+  color: var(--theme-text);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .slide-actions.horizontal {
   display: flex;
   gap: var(--space-md);
@@ -54,8 +63,11 @@
   color: var(--theme-text);
 }
 
+/* The summary's labels sit on its lighter panel, where the video's brightest
+   frames leave the secondary ink short of 4.5:1; the primary ink keeps them
+   legible, and their size and weight still set them below the values. */
 .summary-label {
-  color: var(--theme-text-secondary);
+  color: var(--theme-text);
   margin-top: var(--space-3xs);
 }
 
@@ -110,7 +122,7 @@
 .rhythm-theme-wrapper .booking-form input.input::placeholder,
 .rhythm-theme-wrapper .booking-form textarea.input::placeholder,
 .rhythm-theme-wrapper .guest-add__input::placeholder {
-  color: var(--theme-text-secondary);
+  color: var(--rhythm-ink-quiet);
 }
 
 .rhythm-theme-wrapper .booking-form .input:hover,

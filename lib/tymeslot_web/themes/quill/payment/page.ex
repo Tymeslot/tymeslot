@@ -64,12 +64,12 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Page do
       <.icon
         :if={@status == :confirmed}
         name="hero-check"
-        class="confirmation-badge-icon text-white stroke-3"
+        class="confirmation-badge-icon stroke-3"
       />
       <.icon
         :if={@status == :waiting}
         name="hero-clock"
-        class="confirmation-badge-icon text-white stroke-3"
+        class="confirmation-badge-icon stroke-3"
       />
     </div>
     """

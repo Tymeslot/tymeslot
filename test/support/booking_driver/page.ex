@@ -8,6 +8,7 @@ defmodule TymeslotWeb.BookingDriver.Page do
   and the mounted pushes already sent.
   """
 
+  import ExUnit.Assertions, only: [flunk: 1]
   import Phoenix.LiveViewTest
 
   alias Phoenix.LiveViewTest.View
@@ -24,6 +25,22 @@ defmodule TymeslotWeb.BookingDriver.Page do
   @spec first_node(View.t(), String.t()) :: Floki.html_node() | nil
   def first_node(view, selector),
     do: view |> render() |> Floki.parse_document!() |> Floki.find(selector) |> List.first()
+
+  @doc """
+  The selector the `JS.focus` command on a control's `phx-click` aims at, so
+  a test can check the control takes the focus somewhere that exists. Nil
+  when the control has no click command, or none that focuses.
+  """
+  @spec focus_target(View.t(), String.t()) :: String.t() | nil
+  def focus_target(view, selector) do
+    with [json | _others] <- attribute(view, selector, "phx-click"),
+         {:ok, commands} when is_list(commands) <- Jason.decode(json),
+         ["focus", %{"to" => to}] <- Enum.find(commands, &match?(["focus", _args], &1)) do
+      to
+    else
+      _other -> nil
+    end
+  end
 
   @doc "The LiveView's assigns."
   @spec assigns(View.t()) :: map()
@@ -122,8 +139,8 @@ defmodule TymeslotWeb.BookingDriver.Page do
 
   @doc """
   The journey moments the page marks (`data-moment`, `data-moment-state`),
-  as `{moment, state}` in document order, which is journey order. A page of
-  the classic journey marks none.
+  as `{moment, state}` in document order, which is journey order. A paged
+  page marks the one moment it shows.
   """
   @spec moments(Floki.html_tree()) :: [{String.t(), String.t()}]
   def moments(doc) do
@@ -135,9 +152,10 @@ defmodule TymeslotWeb.BookingDriver.Page do
   end
 
   @doc """
-  Whether the page has moved on: with `last`, the moment `last` is done and
-  another is current; with no `last`, a done moment comes before a current
-  one.
+  Whether the page has moved on: with `last`, the moment `last` was left
+  (marked done, or no longer on the page: a paged journey shows one moment
+  at a time) and another is current; with no `last`, a done moment comes
+  before a current one.
   """
   @spec moved_on?([{String.t(), String.t()}], String.t() | nil) :: boolean()
   def moved_on?(moments, nil) do
@@ -147,8 +165,10 @@ defmodule TymeslotWeb.BookingDriver.Page do
     |> Enum.member?("current")
   end
 
-  def moved_on?(moments, last),
-    do: {last, "done"} in moments and Enum.any?(moments, &match?({_moment, "current"}, &1))
+  def moved_on?(moments, last) do
+    left? = {last, "done"} in moments or not List.keymember?(moments, last, 0)
+    left? and Enum.any?(moments, &match?({_moment, "current"}, &1))
+  end
 
   @doc """
   Remembers the moment current now, so that `BookingDriver.continue/1` can
@@ -170,4 +190,26 @@ defmodule TymeslotWeb.BookingDriver.Page do
   @doc "The moment `remember/1` last kept for `view`, or nil."
   @spec last_moment(View.t()) :: String.t() | nil
   def last_moment(view), do: Process.get({__MODULE__, :last_moment, view.pid})
+
+  @doc """
+  The day and time a `data-fact="slot"` button books, failing on a button
+  that lacks either.
+  """
+  @spec slot_of(Floki.html_node()) :: {String.t(), String.t()}
+  def slot_of(node) do
+    case {Floki.attribute(node, "data-date"), Floki.attribute(node, "data-time")} do
+      {[iso], [time]} ->
+        {iso, time}
+
+      _missing ->
+        flunk(
+          "a data-fact=\"slot\" button lacks its data-date or data-time: " <>
+            Floki.raw_html(node)
+        )
+    end
+  end
+
+  @doc "`attrs` as the string-keyed params a form submits."
+  @spec form_params(map() | keyword()) :: map()
+  def form_params(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 end

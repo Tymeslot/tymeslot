@@ -83,7 +83,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
             <div class="video-background-container"></div>
         <% end %>
       </:background>
-      <div class="booker-page video-background-theme theme-grid">
+      <div
+        class="booker-page video-background-theme theme-grid"
+        data-background={background_kind(@background)}
+      >
         <div class="content-area">
           <ThemeShell.chrome
             language_class="language-switcher-container"
@@ -106,6 +109,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
     </ThemeShell.theme_shell>
     """
   end
+
+  # Names the background kind for the stylesheet, which puts a dark floor
+  # under the box on a background it cannot vouch for (base.css).
+  defp background_kind(%{kind: kind}), do: kind
+  defp background_kind(_theme_default), do: nil
 
   defp theme_id do
     {:ok, id} = Catalog.key_to_id(:rhythm)

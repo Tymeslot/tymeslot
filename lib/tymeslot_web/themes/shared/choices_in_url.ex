@@ -17,10 +17,16 @@ defmodule TymeslotWeb.Themes.Shared.ChoicesInUrl do
   submission token, the calendar refetched). The page's own patch carries
   nothing the socket does not already hold, so `own_patch?/2` recognises it
   and the page applies none of it.
+
+  On a journey whose address follows its facts (`url: :facts`) the path
+  moves with them too (`PathHandlers.facts_address/1`), the choices the path
+  cannot say riding in the query, and the patch's `handle_params` knows the
+  page's own address by `:journey_url`. This module is the only writer of a
+  booking page's address, so the two never patch past each other.
   """
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
+  import Phoenix.LiveView, only: [connected?: 1, push_patch: 2, put_flash: 3]
 
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -40,10 +46,10 @@ defmodule TymeslotWeb.Themes.Shared.ChoicesInUrl do
   def sync({:noreply, socket}), do: {:noreply, sync(socket)}
 
   def sync(%Socket{} = socket) do
-    if syncable?(socket) do
-      patch_if_changed(socket, PathHandlers.choices_query(socket))
-    else
-      socket
+    cond do
+      not syncable?(socket) -> socket
+      follows_facts?(socket) -> follow_facts(socket)
+      true -> patch_if_changed(socket, PathHandlers.choices_query(socket))
     end
   end
 
@@ -63,18 +69,37 @@ defmodule TymeslotWeb.Themes.Shared.ChoicesInUrl do
   @spec forget(Socket.t()) :: Socket.t()
   def forget(socket), do: assign(socket, :own_patch_query, nil)
 
+  # A journey whose address follows its facts is synced on every route,
+  # the confirmation's too: its path is one of the facts.
   defp syncable?(socket) do
     assigns = socket.assigns
 
     is_nil(socket.redirected) and is_map(assigns[:journey]) and
-      assigns[:live_action] in @booking_routes and is_binary(assigns[:username_context])
+      is_binary(assigns[:username_context]) and
+      (follows_facts?(socket) or assigns[:live_action] in @booking_routes)
+  end
+
+  defp follows_facts?(socket), do: match?(%{url: :facts}, socket.assigns[:journey])
+
+  # A page not yet connected keeps its address: the connected mount syncs it.
+  defp follow_facts(socket) do
+    address = PathHandlers.facts_address(socket.assigns)
+
+    if connected?(socket) and is_binary(address) and address != socket.assigns[:journey_url] do
+      socket
+      |> assign(:journey_url, address)
+      |> keep_flash()
+      |> push_patch(to: address, replace: true)
+    else
+      socket
+    end
   end
 
   defp patch_if_changed(socket, query) do
     if query == (socket.assigns[:page_query_params] || %{}) do
       socket
     else
-      path = PathHandlers.page_path(socket)
+      path = PathHandlers.current_base_path(socket.assigns)
       to = if query == %{}, do: path, else: "#{path}?#{URI.encode_query(query)}"
 
       socket

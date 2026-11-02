@@ -73,6 +73,9 @@ defmodule Tymeslot.Availability.SlotGridPropertyTest do
             %{is_available: true} = day <- [day_on(days, owner_date)],
             start = local(owner_date, day.start_time, tz),
             DateTime.to_date(start) == date,
+            # A window wholly inside a spring-forward gap resolves to no
+            # length, so it has no start of its own to list.
+            DateTime.compare(start, local(end_date(day, owner_date), day.end_time, tz)) == :lt,
             Enum.all?(
               minutes(start, DateTime.add(start, duration, :minute)),
               &MapSet.member?(open, &1)

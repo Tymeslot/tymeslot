@@ -200,9 +200,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   @doc """
   Mounts the payment-processing page. Authorises the meeting,
   subscribes to the payment topic, then reads meeting/payment state and
-  assigns `:meeting`, `:payment`, `:rebook_path` (where a failed checkout
-  can start again) and the organiser's customisation (`assign_customization/2`)
-  on success. On failure the socket is
+  assigns `:meeting`, `:payment`, `:organizer_profile` (which a theme's page
+  shell may draw), `:rebook_path` (where a failed checkout can start again)
+  and the organiser's customisation (`assign_customization/2`) on success. On failure the socket is
   redirected to `/` with a generic flash so we never leak the failure mode
   to the attendee.
 
@@ -236,6 +236,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
               loading: false,
               meeting: meeting,
               payment: payment,
+              organizer_profile: profile,
               rebook_path: rebook_path(profile, meeting)
             )
 
@@ -248,7 +249,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       socket =
         socket
         |> no_customization()
-        |> Component.assign(loading: true, meeting: nil, payment: nil, rebook_path: nil)
+        |> Component.assign(
+          loading: true,
+          meeting: nil,
+          payment: nil,
+          organizer_profile: nil,
+          rebook_path: nil
+        )
 
       {:ok, socket}
     end

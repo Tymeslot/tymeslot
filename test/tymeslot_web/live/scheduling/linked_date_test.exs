@@ -97,7 +97,8 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
 
         # Every day button in both themes: Quill's month grid and narrow-screen
         # week row, Rhythm's week strip.
-        days = Floki.find(document, "button[phx-click='select_date'][phx-value-date]")
+        # A day's click may be a JS command (Folio's) that pushes select_date.
+        days = Floki.find(document, "button[phx-click*='select_date'][phx-value-date]")
 
         selected =
           days

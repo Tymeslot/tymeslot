@@ -53,9 +53,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
     test "shows the theme's own wording when the organiser has not customised it" do
       html = render_overview(organizer_profile: build(:profile, full_name: "Sarah Rodriguez"))
 
-      assert html =~ "Let&#39;s Connect!"
+      assert html =~ "Arrange a meeting"
       assert html =~ "Hi! I&#39;m Sarah Rodriguez."
-      assert html =~ "Pick an option below."
+      assert html =~ "Pick an option to get started."
     end
 
     test "shows the organiser's wording in place of all three lines" do
@@ -73,8 +73,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       assert html =~ "Ready to grow your business?"
       assert html =~ "I am Sarah, and I help teams ship."
       assert html =~ "Choose whichever session suits you."
-      refute html =~ "Let&#39;s Connect!"
-      refute html =~ "Pick an option below."
+      refute html =~ "Arrange a meeting"
+      refute html =~ "Pick an option to get started."
     end
 
     test "starts the instruction on its own line below the greeting" do
@@ -101,6 +101,27 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       refute html =~ ~r/overview-description[^>]*>\s*<br/
     end
 
+    test "leaves out a greeting the organiser left blank, with no line break before the instruction" do
+      html = render_overview(organizer_profile: customised(nil, "Please select a meeting type."))
+
+      assert html =~ ~r/overview-description[^>]*>\s*Please select a meeting type\.\s*<\/p>/
+      refute html =~ "Hi! I&#39;m"
+    end
+
+    test "leaves out an instruction the organiser left blank, with no line break after the greeting" do
+      html = render_overview(organizer_profile: customised("Feel free to book.", nil))
+
+      assert html =~ ~r/overview-description[^>]*>\s*Feel free to book\.\s*<\/p>/
+      refute html =~ "Pick an option to get started."
+    end
+
+    test "renders no description at all when the organiser left both lines blank" do
+      html = render_overview(organizer_profile: customised(nil, nil))
+
+      assert html =~ "Book a call"
+      refute html =~ "overview-description"
+    end
+
     test "keeps the theme's wording when the organiser has switched the customisation off" do
       profile =
         build(:profile,
@@ -111,7 +132,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
 
       html = render_overview(organizer_profile: profile)
 
-      assert html =~ "Let&#39;s Connect!"
+      assert html =~ "Arrange a meeting"
       refute html =~ "Ready to grow your business?"
     end
 
@@ -120,7 +141,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
 
       html = render_overview(organizer_profile: profile)
 
-      assert html =~ "Pick an option below."
+      assert html =~ "Pick an option to get started."
       refute html =~ "Hi! I&#39;m"
     end
 
@@ -156,22 +177,21 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
     end
   end
 
-  describe "avatar badge" do
-    # An emoji needs a colour-emoji font the booker's device may lack, which
-    # draws an empty box; the badge draws its check as an inline icon instead.
-    test "draws its check as an icon, not as a text glyph" do
-      badge =
-        render_overview([])
-        |> Floki.parse_document!()
-        |> Floki.find(".overview-success-badge")
+  describe "the organiser's avatar and the heading" do
+    test "draws no verification tick, and a calm heading" do
+      html = render_overview([])
+      doc = Floki.parse_document!(html)
 
-      assert Floki.find(badge, "svg.overview-success-badge-icon") != []
-      assert String.trim(Floki.text(badge)) == ""
+      assert Floki.find(doc, ".overview-success-badge") == []
+      assert Floki.find(doc, ".overview-avatar") != []
+      assert html =~ "Arrange a meeting"
+      refute html =~ "Let&#39;s Connect!"
     end
   end
 
   defp render_overview(overrides) do
     base = %{
+      host_currency: nil,
       id: "overview-step",
       locale: "en",
       host_currency: nil,
@@ -182,6 +202,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
     }
 
     render_component(OverviewComponent, Map.merge(base, Map.new(overrides)))
+  end
+
+  defp customised(greeting, instruction) do
+    build(:profile,
+      full_name: "Sarah Rodriguez",
+      booking_text_enabled: true,
+      booking_heading: "Book a call",
+      booking_greeting: greeting,
+      booking_instruction: instruction
+    )
   end
 
   defp duration_option_count(html) do

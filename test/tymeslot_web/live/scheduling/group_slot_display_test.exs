@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
   @moduledoc """
-  The spots display on the public booking schedule step, per theme, under
-  each of the organiser's display settings. Solo meeting types must render
-  exactly as before (no badge markup).
+  The spots display on the public booking schedule step, on every shipped
+  theme (`ThemeTestMatrix.all/0`), under each of the organiser's display
+  settings. Solo meeting types must render exactly as before (no badge
+  markup). The day is picked through the markup contract
+  (`BookingDriver.pick_date/2`), so no theme's own calendar classes are read.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -17,6 +19,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
 
@@ -71,45 +74,29 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
     {profile, meeting_type}
   end
 
-  # Opens /:username/:slug (direct schedule entry) and selects tomorrow.
+  # Opens /:username/:slug (direct schedule entry), picks tomorrow and waits
+  # for its times.
   defp open_schedule_and_pick_tomorrow(profile, slug) do
     timezone = profile.timezone
     {:ok, view, _html} = live(build_conn(), "/#{profile.username}/#{slug}?timezone=#{timezone}")
 
-    today = timezone |> DateTime.now!() |> DateTime.to_date()
-    target_date = Date.add(today, 1)
-    date_str = Date.to_string(target_date)
+    date_str =
+      timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(1) |> Date.to_string()
 
-    # Quill starts on the current month; Rhythm on the current week. Advance
-    # once if tomorrow is not yet selectable in the rendered strip/grid. On the
-    # last day of a month Quill already renders tomorrow, but as a disabled
-    # trailing other-month cell, so presence alone is not enough.
-    unless has_element?(
-             view,
-             "button.calendar-day[phx-value-date='#{date_str}']:not(.calendar-day--other-month)"
-           ) do
-      nav =
-        if has_element?(view, "button[phx-click='next_month']"),
-          do: "button[phx-click='next_month']",
-          else: "button[phx-click='next_week']"
-
-      view |> element(nav) |> render_click()
-    end
-
-    wait_until(fn ->
-      has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")
-    end)
-
-    view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
+    BookingDriver.pick_date(view, date_str)
+    wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
     {view, date_str}
   end
 
   describe "the meeting-type list" do
-    for {theme, name} <- [{"1", "Quill"}, {"2", "Rhythm"}] do
+    for theme <- ThemeTestMatrix.all() do
+      @theme theme
+
       @tag :capture_log
-      test "#{name} marks a group type as a group session, and only that type", %{user: user} do
+      test "#{theme.name} marks a group type as a group session, and only that type",
+           %{user: user} do
         {profile, _group} =
-          setup_booking_page(user, unquote(theme), "Workshop", max_participants: 3)
+          setup_booking_page(user, @theme.id, "Workshop", max_participants: 3)
 
         insert(:meeting_type,
           user: user,
@@ -131,43 +118,45 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
         assert has_element?(
                  view,
-                 "[data-testid='duration-option'][phx-value-duration='workshop'] [data-testid='group-session-hint']"
+                 "[data-fact='meeting_type'][data-value='workshop'] [data-testid='group-session-hint']"
                )
       end
     end
   end
 
-  describe "Quill (theme 1)" do
-    @tag :capture_log
-    test "group slots show a seat badge with the full capacity free", %{user: user} do
-      {profile, _meeting_type} =
-        setup_booking_page(user, "1", "Group Chat", max_participants: 10)
+  describe "the schedule step's slots" do
+    for theme <- ThemeTestMatrix.all() do
+      @theme theme
 
-      {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-chat")
+      @tag :capture_log
+      test "#{theme.name}: group slots show a seat badge with the full capacity free",
+           %{user: user} do
+        {profile, _meeting_type} =
+          setup_booking_page(user, @theme.id, "Group Chat", max_participants: 10)
 
-      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
+        {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-chat")
 
-      html = render(view)
-      assert html =~ ~s(data-testid="seat-badge")
-      assert html =~ "seat-green"
-      assert html =~ "Plenty left"
-      refute html =~ "spots left"
-      assert html =~ "slot-list__slot--seats"
-    end
+        html = render(view)
+        assert html =~ ~s(data-testid="seat-badge")
+        assert html =~ "seat-green"
+        assert html =~ "Plenty left"
+        refute html =~ "spots left"
+        assert html =~ "slot-list__slot--seats"
+      end
 
-    @tag :capture_log
-    test "solo slots render without any badge markup", %{user: user} do
-      {profile, _meeting_type} =
-        setup_booking_page(user, "1", "Solo Chat", max_participants: 1)
+      @tag :capture_log
+      test "#{theme.name}: solo slots render without any badge markup", %{user: user} do
+        {profile, _meeting_type} =
+          setup_booking_page(user, @theme.id, "Solo Chat", max_participants: 1)
 
-      {view, _date} = open_schedule_and_pick_tomorrow(profile, "solo-chat")
+        {view, _date} = open_schedule_and_pick_tomorrow(profile, "solo-chat")
 
-      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
-
-      html = render(view)
-      refute html =~ "seat-badge"
-      refute html =~ "spots left"
-      refute html =~ "slot-list__slot--seats"
+        html = render(view)
+        refute html =~ "seat-badge"
+        refute html =~ "spots left"
+        refute html =~ "slot-list__slot--seats"
+        refute html =~ "group-session-hint"
+      end
     end
 
     @tag :capture_log
@@ -177,7 +166,6 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       # First booker fills the slot: capacity 2 as themselves plus one guest.
       {first, _date} = open_schedule_and_pick_tomorrow(profile, "tiny-group")
-      wait_until(fn -> has_element?(first, ~s([data-testid="time-slot"])) end)
 
       taken_time =
         first
@@ -202,7 +190,6 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
 
       # A fresh visitor no longer sees that slot; the rest of the day remains.
       {second, _date} = open_schedule_and_pick_tomorrow(profile, "tiny-group")
-      wait_until(fn -> has_element?(second, ~s([data-testid="time-slot"])) end)
 
       refute has_element?(
                second,
@@ -211,42 +198,11 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
     end
   end
 
-  describe "Rhythm (theme 2)" do
-    @tag :capture_log
-    test "group slots show a seat badge", %{user: user} do
-      {profile, _meeting_type} =
-        setup_booking_page(user, "2", "Group Beat", max_participants: 10)
-
-      {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-beat")
-
-      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
-
-      html = render(view)
-      assert html =~ ~s(data-testid="seat-badge")
-      assert html =~ "seat-green"
-      assert html =~ "Plenty left"
-    end
-
-    @tag :capture_log
-    test "solo slots render without any badge markup", %{user: user} do
-      {profile, _meeting_type} =
-        setup_booking_page(user, "2", "Solo Beat", max_participants: 1)
-
-      {view, _date} = open_schedule_and_pick_tomorrow(profile, "solo-beat")
-
-      wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
-
-      html = render(view)
-      refute html =~ "seat-badge"
-      refute html =~ "spots left"
-    end
-  end
-
   # Capacity 10 and nobody booked yet: every slot has 10 spots left, so a
   # threshold of 10 shows the count and one of 9 does not.
-  for {theme, theme_name} <- [{"1", "Quill"}, {"2", "Rhythm"}] do
-    describe "#{theme_name} spots display settings" do
-      @theme theme
+  for theme <- ThemeTestMatrix.all() do
+    describe "#{theme.name} spots display settings" do
+      @theme theme.id
 
       @tag :capture_log
       test "with colours off and no count, slots carry no badge but the step still says group session",
@@ -291,7 +247,6 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
       setup_booking_page(user, theme, "Group Display", [max_participants: 10] ++ display_attrs)
 
     {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-display")
-    wait_until(fn -> has_element?(view, ~s([data-testid="time-slot"])) end)
     view
   end
 end

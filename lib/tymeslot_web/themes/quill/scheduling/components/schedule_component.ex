@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -86,7 +87,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       )
 
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale}>
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
@@ -103,9 +110,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
                     <div class="schedule-title-area">
-                      <h1 class="section-header schedule-title">
+                      <JourneyComponents.moment_heading
+                        tag="h1"
+                        moment={assigns[:moment]}
+                        moment_state={assigns[:moment_state]}
+                        focus={assigns[:journey_focus]}
+                        class="section-header schedule-title"
+                      >
                         {dgettext("booking", "Select a Date & Time")}
-                      </h1>
+                      </JourneyComponents.moment_heading>
 
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">

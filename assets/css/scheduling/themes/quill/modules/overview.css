@@ -1,11 +1,5 @@
 /* Overview - Organizer profile, duration cards, and overview layout */
 
-/* Overview Component Styles */
-.overview-success-badge {
-  background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
-  color: var(--theme-on-primary);
-}
-
 /* ===== Base Styles ===== */
 /* Semantic classes that replace the responsive Tailwind prefixes the
    overview_component used to carry; width adaptations are @container queries below. */
@@ -91,20 +85,6 @@
   height: var(--avatar-size-lg);
 }
 
-/* overview-success-badge positioning: compact default */
-.overview-success-badge {
-  bottom: calc(-1 * var(--space-3xs));
-  right: calc(-1 * var(--space-3xs));
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-/* overview-success-badge-icon: the check, drawn in the badge's ink */
-.overview-success-badge-icon {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
-}
-
 /* overview-title: left-aligned at compact size, centered at 768px+ */
 .overview-title {
   font-size: var(--theme-font-size-xl);
@@ -129,11 +109,6 @@
   gap: var(--space-xs);
   align-content: start;
   clear: both;
-}
-
-/* overview-next-action: replaces mt-4 md:mt-8 */
-.overview-next-action {
-  margin-top: var(--space-md);
 }
 
 /* duration-card: replaces p-2.5 sm:p-3 md:p-5 */
@@ -161,32 +136,48 @@
   border-color: var(--border-strong);
 }
 
-.duration-card--selected .duration-card-description {
-  color: var(--text-opacity-medium-high);
-}
-
 .duration-card-badge {
   background: var(--surface-intense);
   color: var(--text-opacity-high);
   backdrop-filter: blur(10px);
 }
 
-/* duration-card-title: replaces text-base sm:text-lg md:text-xl */
+/* duration-card-title: replaces text-base sm:text-lg md:text-xl.
+   A long name (a German compound, a URL) breaks inside the word rather than
+   widening the card past the screen; the min-width lets its flex column
+   shrink below that word's width. */
 .duration-card-title {
   font-size: var(--theme-font-size-base);
   color: var(--text-opacity-high);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* duration-card-description: replaces text-xs sm:text-sm md:text-base */
 .duration-card-description {
   font-size: var(--theme-font-size-xs);
   color: var(--text-opacity-medium-low);
+  overflow-wrap: anywhere;
 }
 
 /* duration-card-icon: replaces w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 */
 .duration-card-icon {
   width: 1.5rem;
   height: 1.5rem;
+  flex-shrink: 0;
+  color: var(--text-opacity-high);
+}
+
+/* On the selected card everything sits on the primary fill, so it all takes
+   the fill's on-primary ink: white is 2.43:1 on the default turquoise. */
+.duration-card--selected :is(.duration-card-title, .duration-card-description, .duration-card-icon, .duration-card-emoji) {
+  color: var(--theme-on-primary);
+}
+
+.duration-card--selected :is(.duration-card-badge, .approval-pill) {
+  border-color: var(--theme-on-primary);
+  background: var(--duration-badge-selected-surface);
+  color: var(--theme-on-primary);
 }
 
 /* duration-card-emoji: replaces text-xl sm:text-2xl md:text-3xl */
@@ -267,10 +258,6 @@
 
   .overview-duration-list {
     gap: var(--space-md);
-  }
-
-  .overview-next-action {
-    margin-top: var(--space-2xl);
   }
 
   .duration-card {
