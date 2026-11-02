@@ -133,6 +133,10 @@
   /* As wide as the card's content, like the details box under it. */
   --approval-notice-max-width: none;
 
+  /* --- reCAPTCHA notice (shared/components/booking-fields.css): its links
+     in the palette's primary, contrast-checked against Paper's surfaces --- */
+  --recaptcha-notice-link-ink: var(--theme-primary);
+
   /* --- Poll voting page (shared/components/polls.css); Paper's card already pads it --- */
   --poll-voting-padding: 0;
   --poll-panel-surface: var(--surface-subtle);

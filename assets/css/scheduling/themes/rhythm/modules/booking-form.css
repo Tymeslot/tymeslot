@@ -63,8 +63,11 @@
   color: var(--theme-text);
 }
 
+/* The summary's labels sit on its lighter panel, where the video's brightest
+   frames leave the secondary ink short of 4.5:1; the primary ink keeps them
+   legible, and their size and weight still set them below the values. */
 .summary-label {
-  color: var(--theme-text-secondary);
+  color: var(--theme-text);
   margin-top: var(--space-3xs);
 }
 
@@ -119,7 +122,7 @@
 .rhythm-theme-wrapper .booking-form input.input::placeholder,
 .rhythm-theme-wrapper .booking-form textarea.input::placeholder,
 .rhythm-theme-wrapper .guest-add__input::placeholder {
-  color: var(--theme-text-secondary);
+  color: var(--rhythm-ink-quiet);
 }
 
 .rhythm-theme-wrapper .booking-form .input:hover,

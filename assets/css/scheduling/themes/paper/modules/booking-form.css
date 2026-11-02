@@ -24,14 +24,10 @@
   }
 }
 
+/* Its inks are the --recaptcha-notice-* tokens (variables.css). */
 .paper-theme-wrapper .recaptcha-notice {
   margin-top: var(--space-sm);
-  color: var(--ink-2);
   font-size: var(--theme-font-size-2xs);
-}
-
-.paper-theme-wrapper .recaptcha-notice a {
-  color: var(--theme-primary);
 }
 
 /* The approval notice under the form keeps the form's block spacing from

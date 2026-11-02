@@ -48,8 +48,9 @@
       dropdown's layer and height, the flag height, the readiness card's
       width), relations between
       tokens (--line-1/2, --surface-1, --notice-warning, the solid pairs,
-      the poll's "yes" ink --poll-yes-ink), the chrome over a background photo or video, and the print rule
-      colour. A theme may set any of them in variables.css; its :root rule
+      the poll's "yes" ink --poll-yes-ink, the reCAPTCHA notice's inks
+      --recaptcha-notice-ink and --recaptcha-notice-link-ink), the chrome
+      over a background photo or video, and the print rule colour. A theme may set any of them in variables.css; its :root rule
       outranks the zero-specificity :where(:root) whatever the order.
 
    Colour literals (rgb, rgba, hsl, hex) belong in variables.css and in this
@@ -126,6 +127,11 @@
   --theme-accent-solid: var(--theme-accent);
 
   --poll-yes-ink: var(--theme-accent);
+
+  /* The reCAPTCHA notice under the booking form
+     (shared/components/booking-fields.css). */
+  --recaptcha-notice-ink: var(--ink-2);
+  --recaptcha-notice-link-ink: var(--ink-1);
 
   --chrome-surface: rgba(0, 0, 0, 0.45);
   --chrome-surface-hover: rgba(0, 0, 0, 0.65);

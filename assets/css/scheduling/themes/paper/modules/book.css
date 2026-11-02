@@ -126,6 +126,13 @@
   overflow-wrap: anywhere;
 }
 
+/* The required marker, in the danger ink Name and Email's markers take
+   (controls.css), contrast-checked against Paper's surfaces. */
+.paper-question__required {
+  margin-inline-start: var(--space-hairline);
+  color: var(--theme-danger);
+}
+
 /* The part starts with its own rule, so its action rows draw none, and it
    is not the bar the week view keeps in sight. */
 .paper-book .paper-actions {

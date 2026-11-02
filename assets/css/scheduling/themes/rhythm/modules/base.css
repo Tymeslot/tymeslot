@@ -86,8 +86,8 @@ body.rhythm-theme {
   container-type: inline-size;
   container-name: scheduling;
   background: var(--box-surface);
-  backdrop-filter: blur(var(--box-blur)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%);
+  backdrop-filter: blur(var(--box-blur)) saturate(150%) var(--box-backdrop-floor);
+  -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%) var(--box-backdrop-floor);
   border-radius: var(--radius-2xl);
   box-shadow: var(--box-shadow);
   width: min(520px, 100%);
@@ -100,6 +100,14 @@ body.rhythm-theme {
   border: var(--border-width-thin) solid var(--border-medium);
   color: var(--theme-text);
   box-sizing: border-box;
+}
+
+/* A background the organiser chose may be light anywhere, so the box's
+   text gets a dark floor under it (variables.css, --box-backdrop-floor).
+   The wrapper names the kind; the theme's video and its own default
+   gradient keep the glass as it is. */
+.video-background-theme:is([data-background="color"], [data-background="image"], [data-background="gradient"]) {
+  --box-backdrop-floor: var(--box-backdrop-floor-static);
 }
 
 /* Slide System */

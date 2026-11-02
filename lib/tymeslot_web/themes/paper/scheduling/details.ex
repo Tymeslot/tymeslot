@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
                (`aria-required`), so the asterisk is decoration. --%>
           <span
             :if={question.definition["required"] == true}
-            class="text-red-500 ml-0.5"
+            class="paper-question__required"
             aria-hidden="true"
             data-testid="paper-question-required"
           >*</span>

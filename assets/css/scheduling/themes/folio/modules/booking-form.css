@@ -120,13 +120,11 @@
   }
 }
 
+/* The notice takes the shared inks: --ink-2, and --ink-1 for its
+   underlined links. A light seed's primary, contrast-checked against the
+   card, falls short on the form's tinted ground. */
 .folio-theme-wrapper .recaptcha-notice {
   font-size: var(--theme-font-size-2xs);
-  color: var(--theme-text-secondary);
-}
-
-.folio-theme-wrapper .recaptcha-notice a {
-  color: var(--theme-primary);
 }
 
 /* --- Guests --- */
