@@ -60,13 +60,15 @@ defmodule Tymeslot.Mailer.Providers do
     * `:transactional` — confirmations, security alerts, receipts. No opens.
     * `:lifecycle` — onboarding and billing nudges: service mail the
       recipient has not consented to have measured. No opens.
-    * `:marketing` — bulk newsletters and announcements, which the caller
-      sends only to recipients who consented to receive them. Opens on.
+    * `:marketing` — bulk newsletters and announcements to recipients who
+      consented to have them measured. Opens on.
+    * `:broadcast` — the same bulk mail to recipients who have not given
+      that consent. Sent as bulk mail, opens off.
 
   No category turns click tracking on: links are never rewritten through a
   provider's redirect domain, whatever the category or provider.
   """
-  @type tracking :: :transactional | :lifecycle | :marketing
+  @type tracking :: :transactional | :lifecycle | :marketing | :broadcast
 
   @typedoc "Transport classification: API-key-based, SMTP, or development-only."
   @type kind :: :api | :smtp | :dev
@@ -332,9 +334,9 @@ defmodule Tymeslot.Mailer.Providers do
   def tracking_options(_adapter, _category), do: []
 
   defp opens?(:marketing), do: true
-  defp opens?(category) when category in [:transactional, :lifecycle], do: false
+  defp opens?(category) when category in [:transactional, :lifecycle, :broadcast], do: false
 
-  defp stream(:marketing), do: "broadcast"
+  defp stream(category) when category in [:marketing, :broadcast], do: "broadcast"
   defp stream(category) when category in [:transactional, :lifecycle], do: "outbound"
 
   defp yes_no(true), do: "yes"

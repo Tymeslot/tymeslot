@@ -391,6 +391,12 @@ defmodule Tymeslot.Mailer.ProvidersTest do
                track_links: "None",
                message_stream: "broadcast"
              ]
+
+      assert Providers.tracking_options(Swoosh.Adapters.Postmark, :broadcast) == [
+               track_opens: false,
+               track_links: "None",
+               message_stream: "broadcast"
+             ]
     end
 
     test "SendGrid receives the category as tracking settings" do
@@ -424,7 +430,7 @@ defmodule Tymeslot.Mailer.ProvidersTest do
               Swoosh.Adapters.Mailgun,
               Swoosh.Adapters.AhaSend
             ],
-            category <- [:transactional, :lifecycle, :marketing],
+            category <- [:transactional, :lifecycle, :marketing, :broadcast],
             into: %{} do
           {{adapter, category}, open_setting(Providers.tracking_options(adapter, category))}
         end
@@ -433,15 +439,19 @@ defmodule Tymeslot.Mailer.ProvidersTest do
                {Swoosh.Adapters.Postmark, :transactional} => :off,
                {Swoosh.Adapters.Postmark, :lifecycle} => :off,
                {Swoosh.Adapters.Postmark, :marketing} => :on,
+               {Swoosh.Adapters.Postmark, :broadcast} => :off,
                {Swoosh.Adapters.Sendgrid, :transactional} => :off,
                {Swoosh.Adapters.Sendgrid, :lifecycle} => :off,
                {Swoosh.Adapters.Sendgrid, :marketing} => :on,
+               {Swoosh.Adapters.Sendgrid, :broadcast} => :off,
                {Swoosh.Adapters.Mailgun, :transactional} => :off,
                {Swoosh.Adapters.Mailgun, :lifecycle} => :off,
                {Swoosh.Adapters.Mailgun, :marketing} => :on,
+               {Swoosh.Adapters.Mailgun, :broadcast} => :off,
                {Swoosh.Adapters.AhaSend, :transactional} => :off,
                {Swoosh.Adapters.AhaSend, :lifecycle} => :off,
-               {Swoosh.Adapters.AhaSend, :marketing} => :on
+               {Swoosh.Adapters.AhaSend, :marketing} => :on,
+               {Swoosh.Adapters.AhaSend, :broadcast} => :off
              }
     end
 
@@ -471,11 +481,11 @@ defmodule Tymeslot.Mailer.ProvidersTest do
               Swoosh.Adapters.Mailgun,
               Swoosh.Adapters.AhaSend
             ],
-            category <- [:transactional, :lifecycle, :marketing] do
+            category <- [:transactional, :lifecycle, :marketing, :broadcast] do
           {adapter, category, click_setting(Providers.tracking_options(adapter, category))}
         end
 
-      assert length(click_tracking) == 12
+      assert length(click_tracking) == 16
 
       assert Enum.reject(click_tracking, fn {_adapter, _category, setting} -> setting == :off end) ==
                []
