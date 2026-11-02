@@ -871,3 +871,23 @@ msgstr "Sposta una data fissa dal suo tipo di riunione."
 #, elixir-autogen, elixir-format
 msgid "The meeting is already at that time."
 msgstr "La riunione è già fissata a quell'orario."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "All pages"
+msgstr "Tutte le pagine"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through"
+msgstr "Prenotato tramite"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Main page"
+msgstr "Pagina principale"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "via %{page}"
+msgstr "tramite %{page}"

@@ -6,9 +6,12 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   making it easy for users to parse in their automation tools (n8n, Zapier, etc.).
   """
 
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Utils.UrlBuilder
 
   @doc """
   Builds a webhook payload for a meeting event.
@@ -71,6 +74,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       attendee: build_attendee_data(meeting),
       guests: build_guests_data(meeting),
       urls: build_urls(meeting),
+      booking_page: build_booking_page_data(meeting),
       video: build_video_data(meeting),
       created_at: format_datetime(meeting.inserted_at),
       updated_at: format_datetime(meeting.updated_at)
@@ -117,6 +121,23 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   end
 
   defp build_guests_data(_meeting), do: []
+
+  # The booking page the booking came through, read from the loaded
+  # association as guests are (`WebhookWorker` loads it with the page's
+  # profile, whose username the page's address sits under). `nil` for the
+  # host's own page, for a page deleted since, and for a meeting arriving
+  # without the association.
+  defp build_booking_page_data(%MeetingSchema{
+         booking_page: %BookingPageSchema{profile: %ProfileSchema{username: username}} = page
+       }) do
+    %{
+      name: page.name,
+      slug: page.slug,
+      url: UrlBuilder.booking_url(username && username <> "/" <> page.slug)
+    }
+  end
+
+  defp build_booking_page_data(_meeting), do: nil
 
   defp build_urls(meeting) do
     links = MeetingLinks.for_meeting(meeting)

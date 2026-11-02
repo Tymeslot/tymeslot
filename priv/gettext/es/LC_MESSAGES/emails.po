@@ -596,3 +596,8 @@ msgstr "Ya no formas parte del evento"
 #, elixir-autogen, elixir-format
 msgid "Video call:"
 msgstr "Videollamada:"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your %{page} page"
+msgstr "Reservado a través de tu página «%{page}»"

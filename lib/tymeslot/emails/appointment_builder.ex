@@ -6,6 +6,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   require Logger
   alias Tymeslot.BookingPages
+  alias Tymeslot.BookingPages.BookedThrough
   alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Emails.HostClock
@@ -198,6 +199,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.put(:organizer_locale, organizer_locale)
       |> Map.put(:organizer_time_format, organizer_time_format(meeting, organizer_locale))
       |> Map.put(:booking_payment, booking_payment_for(meeting))
+      # Only the host's emails name it (`TemplateHelper.organizer_meeting_details/1`):
+      # which of their pages a booking came through is the host's business.
+      |> Map.put(:booking_page_name, BookedThrough.name(meeting))
     end)
   end
 

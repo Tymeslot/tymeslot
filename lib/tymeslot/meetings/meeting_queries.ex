@@ -46,16 +46,17 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Fetches a meeting with its guests loaded.
+  Fetches a meeting as a webhook payload describes it: with its guests, and
+  the booking page it was booked through with that page's profile.
 
   A webhook payload describes the meeting to an external system, and the people
-  invited to it are part of that description, so the delivery path needs them
-  alongside the meeting itself.
+  invited to it and the page it was booked through are part of that
+  description, so the delivery path needs them alongside the meeting itself.
   """
-  @spec get_meeting_with_guests(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
-  def get_meeting_with_guests(id) do
+  @spec get_meeting_for_webhook(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
+  def get_meeting_for_webhook(id) do
     with {:ok, meeting} <- get_meeting(id) do
-      {:ok, Repo.preload(meeting, :guests)}
+      {:ok, Repo.preload(meeting, [:guests, booking_page: :profile])}
     end
   end
 

@@ -19,6 +19,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -158,6 +159,50 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
         assert [%{"email" => "colleague@example.com", "status" => "pending"}] = guests
 
+        {:ok, %{status: 200, body: "ok"}}
+      end)
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "carries the booking page the meeting was booked through" do
+      profile = insert(:profile, username: "joern")
+      page = insert(:booking_page, profile: profile, name: "Einfach ISO", slug: "einfachiso")
+      meeting = insert(:meeting, organizer_user_id: profile.user_id, booking_page_id: page.id)
+      webhook = insert(:webhook)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        booking_page = body |> Jason.decode!() |> get_in(["data", "meeting", "booking_page"])
+
+        assert booking_page == %{
+                 "name" => "Einfach ISO",
+                 "slug" => "einfachiso",
+                 "url" => Endpoint.url() <> "/joern/einfachiso"
+               }
+
+        {:ok, %{status: 200, body: "ok"}}
+      end)
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "sends a null booking page for a booking through the host's own page" do
+      meeting = insert(:meeting)
+      webhook = insert(:webhook)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        meeting_data = body |> Jason.decode!() |> get_in(["data", "meeting"])
+        assert Map.fetch!(meeting_data, "booking_page") == nil
         {:ok, %{status: 200, body: "ok"}}
       end)
 
