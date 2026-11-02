@@ -1054,20 +1054,20 @@ msgstr[2] "Ваші календарі %{names} потрібно підключ�
 #: lib/tymeslot_web/themes/shared/components/legal_links.ex
 #, elixir-autogen, elixir-format
 msgid "Legal notice"
-msgstr ""
+msgstr "Правова інформація"
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #: lib/tymeslot_web/themes/shared/components/legal_links.ex
 #, elixir-autogen, elixir-format
 msgid "Privacy policy"
-msgstr ""
+msgstr "Політика конфіденційності"
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} uses these details to arrange your meeting."
-msgstr ""
+msgstr "%{organizer} використовує ці дані, щоб узгодити з вами зустріч."
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "The organiser uses these details to arrange your meeting."
-msgstr ""
+msgstr "Організатор використовує ці дані, щоб узгодити з вами зустріч."

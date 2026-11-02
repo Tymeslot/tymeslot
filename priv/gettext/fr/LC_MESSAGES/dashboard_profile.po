@@ -317,34 +317,34 @@ msgstr "Nom d’utilisateur"
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save your legal links"
-msgstr ""
+msgstr "Impossible d’enregistrer vos liens juridiques"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Instance default in use: %{url}"
-msgstr ""
+msgstr "Valeur par défaut de l’instance utilisée : %{url}"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Legal links"
-msgstr ""
+msgstr "Liens juridiques"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Legal links saved"
-msgstr ""
+msgstr "Liens juridiques enregistrés"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Legal notice (imprint)"
-msgstr ""
+msgstr "Mentions légales"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Privacy policy"
-msgstr ""
+msgstr "Politique de confidentialité"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Shown in a small footer on your booking pages and on the pages guests open from your emails. Link the pages on your own website."
-msgstr ""
+msgstr "Affichés dans un petit pied de page sur vos pages de réservation et sur les pages que les invités ouvrent depuis vos e-mails. Indiquez les liens vers les pages correspondantes de votre propre site."

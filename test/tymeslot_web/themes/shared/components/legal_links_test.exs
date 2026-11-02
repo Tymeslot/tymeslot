@@ -65,6 +65,15 @@ defmodule TymeslotWeb.Themes.Shared.Components.LegalLinksTest do
              ~s(data-testid="legal-links")
   end
 
+  test "labels the links in German" do
+    # The locale is per process, so this test's alone.
+    Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+    links = anchors(render(%{legal_notice_url: @notice, privacy_policy_url: @privacy}))
+
+    assert Enum.map(links, &(&1 |> Floki.text() |> String.trim())) == ["Impressum", "Datenschutz"]
+  end
+
   test "renders nothing for nil links" do
     refute render(nil) =~ ~s(data-testid="legal-links")
   end

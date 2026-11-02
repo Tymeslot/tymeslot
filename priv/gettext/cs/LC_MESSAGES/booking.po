@@ -1054,20 +1054,20 @@ msgstr[2] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak 
 #: lib/tymeslot_web/themes/shared/components/legal_links.ex
 #, elixir-autogen, elixir-format
 msgid "Legal notice"
-msgstr ""
+msgstr "Právní upozornění"
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #: lib/tymeslot_web/themes/shared/components/legal_links.ex
 #, elixir-autogen, elixir-format
 msgid "Privacy policy"
-msgstr ""
+msgstr "Zásady ochrany osobních údajů"
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} uses these details to arrange your meeting."
-msgstr ""
+msgstr "%{organizer} tyto údaje využije k naplánování vaší schůzky."
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "The organiser uses these details to arrange your meeting."
-msgstr ""
+msgstr "Organizátor tyto údaje využije k naplánování vaší schůzky."
