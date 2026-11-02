@@ -25,8 +25,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
   import Tymeslot.Test.AttendeeEmailDelivery
 
   alias Tymeslot.Meetings.AttendeeNotifications
-  alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
-  alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
