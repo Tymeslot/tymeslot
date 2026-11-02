@@ -19,6 +19,9 @@ defmodule Tymeslot.Profiles.Usernames do
   @type username :: String.t()
   @type user_id :: pos_integer()
 
+  @max_length 30
+  @max_numbered 9
+
   @doc """
   Generates a unique default username for a user.
   """
@@ -31,6 +34,50 @@ defmodule Tymeslot.Profiles.Usernames do
     else
       generate_random_username(base, 3)
     end
+  end
+
+  @doc """
+  Suggests a booking link for a host from their full name, without writing
+  anything.
+
+  The name is folded to lowercase ASCII (accents dropped, any other run of
+  characters becoming `-`). A name that leaves fewer than three characters
+  gives `user-<id>`. The first of the base, then `base-2` to `base-9`, that is
+  valid, not reserved and free is returned; if none is, `<base>-<id>`, then
+  `user-<id>`.
+  """
+  @spec suggest(String.t() | nil, user_id) :: username
+  def suggest(full_name, user_id) do
+    fallback = "user-#{user_id}"
+    base = normalise(full_name)
+    base = if String.length(base) < 3, do: fallback, else: base
+
+    candidates =
+      [base | Enum.map(2..@max_numbered, &with_suffix(base, "-#{&1}"))] ++
+        [with_suffix(base, "-#{user_id}"), fallback]
+
+    Enum.find(candidates, fallback, &suggestable?/1)
+  end
+
+  defp normalise(name) when is_binary(name) do
+    name
+    |> String.normalize(:nfd)
+    |> String.replace(~r/\p{Mn}/u, "")
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]+/, "-")
+    |> String.trim("-")
+    |> cut(@max_length)
+  end
+
+  defp normalise(_name), do: ""
+
+  defp with_suffix(base, suffix), do: cut(base, @max_length - String.length(suffix)) <> suffix
+
+  defp cut(string, length), do: string |> String.slice(0, length) |> String.trim_trailing("-")
+
+  defp suggestable?(candidate) do
+    UsernameValidator.validate(candidate) == :ok and not ReservedPaths.reserved?(candidate) and
+      ProfileQueries.username_available?(candidate)
   end
 
   @doc "See `Tymeslot.Profiles.change_username/2`."
