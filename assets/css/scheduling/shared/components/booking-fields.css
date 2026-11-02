@@ -292,3 +292,28 @@
 .scheduling-app .recaptcha-notice a {
   color: var(--recaptcha-notice-link-ink);
 }
+
+/* ===== Privacy notice (Shared.Components.BookingForm) =====
+   Who receives the guest's details, with a link to the organiser's privacy
+   policy. Small print like the reCAPTCHA notice, so it takes the same inks:
+   --ink-2 for the sentence and --ink-1 for the underlined link. */
+
+.scheduling-app .booking-privacy-notice {
+  margin-top: var(--space-sm);
+  color: var(--recaptcha-notice-ink);
+  font-size: var(--theme-font-size-2xs);
+  line-height: var(--theme-line-height-relaxed);
+  text-align: center;
+}
+
+.scheduling-app .booking-privacy-notice a {
+  color: var(--recaptcha-notice-link-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.scheduling-app .booking-privacy-notice a:focus-visible {
+  outline: var(--border-width-medium) solid var(--recaptcha-notice-link-ink);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}

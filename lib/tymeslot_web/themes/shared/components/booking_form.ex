@@ -10,7 +10,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
       with every public form), first inside the form;
     * the hidden reCAPTCHA token input, last inside the form;
     * after the form, the inner block (a theme renders the guest field
-      there), then the reCAPTCHA privacy notice.
+      there), then the privacy notice, then the reCAPTCHA privacy notice.
+
+  The privacy notice tells the guest who receives their details and links the
+  organiser's privacy policy (`privacy_policy_url`, from
+  `Profiles.public_legal_links/1`). It is plain text with a link, not a
+  consent checkbox: a booking rests on the contract, so the guest is informed
+  rather than asked. It renders only when a policy URL is set, and always
+  outside the `<form>`, so it sits above the theme's action row.
 
   The reCAPTCHA pieces render only while booking reCAPTCHA is active.
 
@@ -54,7 +61,15 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
     default: nil,
     doc: "labels and placeholders, keyed #{inspect(@label_keys)}; `default_labels/0` when nil"
 
-  slot :inner_block, doc: "rendered after the form and before the reCAPTCHA notice"
+  attr :organizer_name, :string,
+    default: nil,
+    doc: "who receives the details; \"The organiser\" when nil"
+
+  attr :privacy_policy_url, :string,
+    default: nil,
+    doc: "the organiser's privacy policy; no privacy notice when nil"
+
+  slot :inner_block, doc: "rendered after the form and before the privacy notice"
 
   @spec booking_form(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_form(assigns) do
@@ -111,9 +126,34 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
 
     {render_slot(@inner_block)}
 
+    <p :if={@privacy_policy_url} class="booking-privacy-notice" data-testid="booking-privacy-notice">
+      {privacy_sentence(@organizer_name)}
+      <a href={@privacy_policy_url} target="_blank" rel="noopener noreferrer">
+        {dgettext("booking", "Privacy policy")}
+      </a>
+    </p>
+
     <SecurityFields.recaptcha_notice_block />
     """
   end
+
+  @doc """
+  The privacy policy URL out of the page's `legal_links` assign, for the
+  `privacy_policy_url` attribute. `nil` where the page holds no links (a
+  preview or a component rendered on its own).
+  """
+  @spec privacy_policy_url(map() | nil) :: String.t() | nil
+  def privacy_policy_url(%{privacy_policy_url: url}), do: url
+  def privacy_policy_url(_legal_links), do: nil
+
+  defp privacy_sentence(nil),
+    do: dgettext("booking", "The organiser uses these details to arrange your meeting.")
+
+  defp privacy_sentence(name),
+    do:
+      dgettext("booking", "%{organizer} uses these details to arrange your meeting.",
+        organizer: name
+      )
 
   @doc "The labels and placeholders a theme that passes none gets."
   @spec default_labels() :: %{atom() => String.t()}

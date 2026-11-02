@@ -1134,6 +1134,7 @@ Choosing a meeting type is the way on; a theme that wants a separate Next sends 
 | `theme_tokens` | every step | mount | the `%Tokens{}` of the organiser's customisation; templates render from its `media` |
 | `organizer_profile` | overview, schedule, booking, confirmation, awaiting payment | mount | the organiser's profile: name, avatar, greeting, `headline`, `bio` |
 | `username_context` | every step | mount | the organiser's username, for paths |
+| `legal_links` | booking | mount | `Profiles.public_legal_links/1`: `%{legal_notice_url:, privacy_policy_url:}`, each a string or `nil`; pass `BookingForm.privacy_policy_url(assigns[:legal_links])` as `privacy_policy_url` to `BookingForm.booking_form/1` for the privacy notice |
 | `meeting_types` | overview | mount | the organiser's active meeting types |
 | `host_currency` | overview, length, schedule, booking | mount | the currency the organiser's paid meeting types are priced in, for `BookingText.price_label/3`; `nil` while none is paid |
 | `selected_duration` | overview, schedule, booking | mount | the chosen meeting type's duration slug; `nil` until one is chosen |

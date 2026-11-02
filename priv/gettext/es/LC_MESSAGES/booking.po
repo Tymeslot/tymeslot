@@ -1049,7 +1049,18 @@ msgstr[1] "Tienes que volver a conectar tus calendarios %{names}. Mientras no lo
 msgid "Legal notice"
 msgstr ""
 
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #: lib/tymeslot_web/themes/shared/components/legal_links.ex
 #, elixir-autogen, elixir-format
 msgid "Privacy policy"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} uses these details to arrange your meeting."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser uses these details to arrange your meeting."
 msgstr ""

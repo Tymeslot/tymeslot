@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
   @notice "https://example.com/imprint"
   @privacy "https://example.com/privacy"
   @footer "footer[data-testid='legal-links']"
+  @privacy_notice "p[data-testid='booking-privacy-notice']"
 
   setup :verify_on_exit!
 
@@ -98,6 +99,24 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
 
         assert has_element?(view, "form[data-fact='attendee']")
         assert_footer(view)
+      end
+
+      @tag :capture_log
+      test "#{theme.slug} booking step shows the privacy notice",
+           %{conn: conn, profile: profile} do
+        {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+        BookingDriver.book(view, until: :attendee)
+
+        assert has_element?(view, "#{@privacy_notice} a[href='#{@privacy}']", "Privacy policy")
+        assert has_element?(view, @privacy_notice, "uses these details to arrange your meeting")
+        refute has_element?(view, "form#booking-form [data-testid='booking-privacy-notice']")
+
+        BookingDriver.submit(view, %{
+          name: "Test Booker",
+          email: "privacy-#{unquote(theme.slug)}@example.com"
+        })
+
+        assert has_element?(view, "[data-testid='confirmation-heading']")
       end
 
       @tag :capture_log
