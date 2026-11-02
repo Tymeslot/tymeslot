@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles
-  alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.ChosenLength
@@ -113,7 +112,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       <span class="ticket-value">
                         {LocalizationHelpers.format_slot_label(@selected_time)}
                       </span>
-                      <span class="ticket-sublabel">{Timezones.format(@user_timezone)}</span>
+                      <span class="ticket-sublabel">
+                        {LocalizationHelpers.format_zone_label(
+                          @selected_date,
+                          @selected_time,
+                          @user_timezone
+                        )}
+                      </span>
                       <span
                         :if={@next_day_end}
                         class="ticket-sublabel"

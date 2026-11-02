@@ -426,7 +426,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
               />
               <div class="timezone-trigger-text">
                 <div class="timezone-name">
-                  {Timezones.format(@user_timezone)}
+                  {Timezones.time_label(@user_timezone)}
                 </div>
                 <div class="timezone-time-display timezone-time-inline">
                   {dgettext("booking", "%{time} local time",

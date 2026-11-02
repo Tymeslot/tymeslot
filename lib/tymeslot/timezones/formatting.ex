@@ -3,6 +3,8 @@ defmodule Tymeslot.Timezones.Formatting do
   Display formatting for timezones and UTC offsets.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Clock
@@ -16,6 +18,29 @@ defmodule Tymeslot.Timezones.Formatting do
   end
 
   def format(_other), do: "Unknown timezone"
+
+  @doc """
+  The zone named as a time rather than a place, for showing beside times:
+  "Berlin time (UTC+1)". A bare "Berlin, Germany" next to a meeting reads as
+  where it happens. The offset is the one in force at `at` (now, by default),
+  so a label for a given day reads it on that day. A zone named after no
+  place is its offset alone.
+  """
+  @spec time_label(String.t(), DateTime.t()) :: String.t()
+  def time_label(timezone_id, at \\ Clock.utc_now()) when is_binary(timezone_id) do
+    normalized = Data.normalize(timezone_id)
+
+    case {Data.city(normalized), utc_offset(normalized, at)} do
+      {nil, "UTC±0"} ->
+        "UTC"
+
+      {nil, offset} ->
+        offset
+
+      {city, offset} ->
+        dgettext("datetime", "%{city} time (%{offset})", city: city, offset: offset)
+    end
+  end
 
   @doc """
   The zone's UTC offset in force at `at` (now, by default), as `"UTC+2"`.

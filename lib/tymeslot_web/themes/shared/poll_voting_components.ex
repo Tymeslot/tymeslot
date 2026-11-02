@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
@@ -57,10 +58,14 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <p
           class="poll-voting-timezone"
           data-testid="poll-timezone"
-          aria-label={dgettext("booking_polls", "Times shown in %{timezone}", timezone: tz(@poll))}
+          aria-label={
+            dgettext("booking_polls", "Times shown in %{timezone}",
+              timezone: Timezones.time_label(tz(@poll))
+            )
+          }
         >
           <.icon name="hero-globe-alt" class="poll-voting-timezone-icon" />
-          <span>{tz(@poll)}</span>
+          <span>{Timezones.time_label(tz(@poll))}</span>
         </p>
       </div>
 

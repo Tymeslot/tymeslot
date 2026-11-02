@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.NextDayEndComponentTes
 
   @moduledoc """
   The booking and confirmation steps name the end of a meeting that runs past
-  midnight, rendered straight from the step's assigns so no schedule is needed.
+  midnight, and the visitor's zone, rendered straight from the step's assigns
+  so no schedule is needed.
   """
   @moduletag :themes
   @moduletag :bookings
@@ -62,6 +63,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.NextDayEndComponentTes
 
         assert [note] = html |> Floki.parse_document!() |> Floki.find(@note)
         assert Floki.text(note) =~ "Ends 01:00 AM on Tuesday 15 June"
+      end
+
+      test "names the visitor's zone as a time on the meeting's day, not as a place" do
+        html = render_component(unquote(component), assigns("10:00 PM", 60))
+
+        # 14 June 2027 is in British Summer Time, whatever today is.
+        assert html =~ "London time (UTC+1)"
+        refute html =~ "London, United Kingdom"
       end
 
       test "says nothing for a meeting ending the day it starts" do

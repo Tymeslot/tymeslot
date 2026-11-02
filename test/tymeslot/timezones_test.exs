@@ -258,6 +258,41 @@ defmodule Tymeslot.TimezonesTest do
     end
   end
 
+  describe "time_label/2" do
+    test "names a city's zone as a time, with the offset in force at the given moment" do
+      assert Timezones.time_label("Europe/Berlin", ~U[2026-01-15 12:00:00Z]) ==
+               "Berlin time (UTC+1)"
+
+      assert Timezones.time_label("Europe/Berlin", ~U[2026-07-15 12:00:00Z]) ==
+               "Berlin time (UTC+2)"
+    end
+
+    test "names a legacy id by its current city" do
+      assert Timezones.time_label("Asia/Calcutta", ~U[2026-01-15 12:00:00Z]) ==
+               "Kolkata time (UTC+5:30)"
+    end
+
+    test "a zone named after no place is its offset alone" do
+      assert Timezones.time_label("Etc/UTC") == "UTC"
+      assert Timezones.time_label("Etc/GMT+5") == "UTC-5"
+    end
+
+    test "a valid zone missing from the city lists falls back to its city segment" do
+      assert Timezones.time_label("America/North_Dakota/New_Salem", ~U[2026-01-15 12:00:00Z]) ==
+               "New Salem time (UTC-6)"
+    end
+
+    test "names the city in the current locale" do
+      label =
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+          Timezones.time_label("Europe/Vienna", ~U[2026-01-15 12:00:00Z])
+        end)
+
+      assert label =~ "Wien"
+      refute label =~ "Vienna"
+    end
+  end
+
   describe "sanitize/1" do
     test "returns nil for nil, non-binary, or blank input" do
       assert Timezones.sanitize(nil) == nil
