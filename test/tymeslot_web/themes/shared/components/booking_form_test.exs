@@ -203,16 +203,32 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingFormTest do
       assert notice(render_form(%{organizer_name: "Ada Host", privacy_policy_url: nil})) == []
     end
 
-    test "sits after the form, outside it, and before the reCAPTCHA notice" do
+    test "sits after the form and its inner block, and before the reCAPTCHA notice" do
       enable_recaptcha()
-      html = render_form(%{organizer_name: "Ada Host", privacy_policy_url: @privacy})
+      assigns = %{form: to_form(%{}, as: :booking), privacy: @privacy}
+
+      html =
+        rendered_to_string(~H"""
+        <BookingForm.booking_form
+          form={@form}
+          validation_errors={%{}}
+          target={nil}
+          organizer_name="Ada Host"
+          privacy_policy_url={@privacy}
+        >
+          <span id="inner-marker">guest field</span>
+        </BookingForm.booking_form>
+        """)
+
       doc = Floki.parse_document!(html)
-
       assert Floki.find(doc, "form#booking-form [data-testid='booking-privacy-notice']") == []
+      assert Floki.find(doc, "form#booking-form #inner-marker") == []
 
-      {privacy_at, _length} = :binary.match(html, "booking-privacy-notice")
-      {recaptcha_at, _length} = :binary.match(html, "recaptcha-notice")
-      assert privacy_at < recaptcha_at
+      at = fn needle -> html |> :binary.match(needle) |> elem(0) end
+
+      assert at.("</form>") < at.("inner-marker")
+      assert at.("inner-marker") < at.("booking-privacy-notice")
+      assert at.("booking-privacy-notice") < at.("recaptcha-notice")
     end
   end
 end

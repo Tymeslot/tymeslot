@@ -111,6 +111,11 @@ defmodule TymeslotWeb.Live.Themes.LegalLinksFooterTest do
         assert has_element?(view, @privacy_notice, "uses these details to arrange your meeting")
         refute has_element?(view, "form#booking-form [data-testid='booking-privacy-notice']")
 
+        # The notice reads before the submit button, which sits outside the form.
+        {:ok, doc} = view |> render() |> Floki.parse_document()
+        order = Floki.find(doc, "#{@privacy_notice}, [data-testid='submit-booking']")
+        assert [{"p", _p_attrs, _p_kids}, {_tag, _b_attrs, _b_kids}] = order
+
         BookingDriver.submit(view, %{
           name: "Test Booker",
           email: "privacy-#{unquote(theme.slug)}@example.com"

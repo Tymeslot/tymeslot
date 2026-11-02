@@ -134,9 +134,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     target={@myself}
                     class="space-y-2"
                     contact_class="booking-inline-fields"
-                    organizer_name={
-                      BookingLabels.organizer_display_name(@organizer_profile, @username_context)
-                    }
+                    organizer_name={get_organizer_name(@organizer_profile, @username_context)}
                     privacy_policy_url={BookingForm.privacy_policy_url(assigns[:legal_links])}
                   >
                     <GuestField.guest_field
