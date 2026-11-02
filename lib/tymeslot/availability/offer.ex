@@ -26,11 +26,20 @@ defmodule Tymeslot.Availability.Offer do
   capture it whole and nothing here depends on the web layer.
   """
 
-  alias Tymeslot.Availability.{Calculate, GroupSlots, Reach, Schedules, SessionSlots, TimeSlots}
+  alias Tymeslot.Availability.{
+    BusinessHours,
+    BusyIntervals,
+    Calculate,
+    GroupSlots,
+    Reach,
+    Schedules,
+    SessionSlots,
+    TimeSlots
+  }
+
   alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
@@ -168,19 +177,20 @@ defmodule Tymeslot.Availability.Offer do
 
   The host's calendar is read once for the pair, so the free times and the busy
   blocks cannot disagree and a caller does not pay two provider round trips.
+  `:starts` holds the same free times as `DateTime`s in the booker's zone.
   `:busy` is every period that occupies the host's time in the range (blocking
-  calendar events and live bookings) as `{start, end}` datetimes, unmerged,
-  buffers and notice not applied; a demo page has none. Fails exactly as
-  `slots_for_range/4` does.
+  calendar events and live bookings) as UTC `{start, end}` instants, unmerged,
+  buffers and notice not applied. `:windows` is the host's open hours on each
+  date of the range as `BusinessHours.owner_windows/4` resolves them (overrides,
+  extra windows and overnight hours included). A demo page has no starts, busy
+  periods or windows. Fails exactly as `slots_for_range/4` does.
   """
   @spec slots_and_busy_for_range(
           request(),
           Date.t(),
           Date.t(),
           String.t() | integer() | nil
-        ) ::
-          {:ok, %{slots: %{String.t() => [term()]}, busy: [{DateTime.t(), DateTime.t()}]}}
-          | {:error, any()}
+        ) :: {:ok, BusyIntervals.range_view()} | {:error, any()}
   def slots_and_busy_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
     cond do
       Date.compare(start_date, end_date) == :gt ->
@@ -194,7 +204,7 @@ defmodule Tymeslot.Availability.Offer do
                collect_days(start_date, end_date, fn date ->
                  slots_for_date(request, Date.to_iso8601(date), duration)
                end) do
-          {:ok, %{slots: slots, busy: []}}
+          {:ok, %{slots: slots, starts: %{}, busy: [], windows: []}}
         end
 
       true ->
@@ -367,32 +377,42 @@ defmodule Tymeslot.Availability.Offer do
         config: config
       }
 
-      with {:ok, slots} <-
+      owner_timezone = owner_timezone(profile)
+
+      with {:ok, days} <-
              collect_days(start_date, end_date, fn date ->
                with {:ok, starts} <-
                       Calculate.available_starts(
                         date,
                         duration_minutes,
                         request.user_timezone,
-                        owner_timezone(profile),
+                        owner_timezone,
                         busy,
                         config
                       ) do
-                 {:ok, offered_slots(starts, meeting_type, date, group_context)}
+                 {:ok, {offered_slots(starts, meeting_type, date, group_context), starts}}
                end
              end) do
-        {:ok, %{slots: slots, busy: busy_intervals(busy)}}
+        {:ok, range_view(days, busy, {start_date, end_date}, owner_timezone, config)}
       end
     end
   end
 
-  # The blocking periods as datetime pairs, for display. A period without two
-  # datetimes cannot be drawn and is left out; the slot engine has already
-  # judged it either way.
-  defp busy_intervals(busy) do
-    for %{start_time: %DateTime{} = from, end_time: %DateTime{} = to} = period <- busy,
-        CalendarEvent.blocking?(period),
-        do: {from, to}
+  # What `slots_and_busy_for_range/4` answers, from the per-day `{offered,
+  # starts}` pairs.
+  defp range_view(days, busy, {start_date, end_date}, owner_timezone, config) do
+    %{
+      slots: Map.new(days, fn {day, {offered, _starts}} -> {day, offered} end),
+      starts: Map.new(days, fn {day, {_offered, starts}} -> {day, starts} end),
+      busy: BusyIntervals.of(busy, owner_timezone),
+      windows:
+        BusinessHours.owner_windows(
+          Date.range(start_date, end_date),
+          config.schedule_id,
+          owner_timezone,
+          config
+        )
+    }
   end
 
   # `day_slots` for every day of the range, keyed by ISO date; the first day
