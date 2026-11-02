@@ -304,7 +304,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   Each is trimmed and stored as `nil` when blank, so clearing a field removes
   the link. Null bytes are stripped, as Postgres rejects them. A link must be
   an http(s) URL of at most the shared URL length; https is required for a
-  public host, while a private or local host may use http.
+  public host, while a private or local host may use http, and so may an
+  intranet name such as `wiki.lan` or `intranet`: the links are never fetched,
+  so the name's shape is all that needs trusting.
 
   Casts with `empty_values: []` for the reason `booking_text_changeset/2`
   gives: a cleared field has to reach `normalize_text/1` to become `nil`.
@@ -316,7 +318,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     Enum.reduce(@legal_link_fields, changeset, fn field, acc ->
       acc
       |> update_change(field, &normalize_text/1)
-      |> URLValidator.validate_url(field, enforce_https_for_public: true)
+      |> URLValidator.validate_url(field,
+        enforce_https_for_public: true,
+        internal_names_local: true
+      )
     end)
   end
 

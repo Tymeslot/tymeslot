@@ -64,6 +64,12 @@ defmodule Tymeslot.Profiles.LegalLinksChangesetTest do
       assert changeset.valid?
     end
 
+    test "allows http for an intranet name" do
+      for url <- ["http://wiki.lan/imprint", "http://intranet/privacy"] do
+        assert change_links(%{"legal_notice_url" => url}).valid?, url
+      end
+    end
+
     test "rejects a URL over 2048 characters" do
       url = "https://example.com/" <> String.duplicate("a", 2048)
       changeset = change_links(%{"legal_notice_url" => url})
