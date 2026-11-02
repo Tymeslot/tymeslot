@@ -1050,3 +1050,13 @@ msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors 
 msgstr[0] "Váš kalendář %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
 msgstr[1] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
 msgstr[2] "Vaše kalendáře %{names} je potřeba připojit znovu. Dokud se tak nestane, návštěvníci tu možná neuvidí žádné termíny."
+
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Legal notice"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Privacy policy"
+msgstr ""

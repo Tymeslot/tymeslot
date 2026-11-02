@@ -97,6 +97,22 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     Component.assign(socket, :theme_tokens, ThemeCustomizations.tokens(theme_id, customization))
   end
 
+  @doc """
+  Assigns the organiser's profile (`:organizer_profile`, which a theme's page
+  shell may draw) and the legal links the page's footer shows
+  (`:legal_links`, `Profiles.public_legal_links/1`). The dead render reads no
+  data, so it passes nil and shows the instance defaults until the
+  connected mount knows the organiser.
+  """
+  @spec assign_organizer(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t() | nil) ::
+          LiveView.Socket.t()
+  def assign_organizer(socket, profile) do
+    Component.assign(socket,
+      organizer_profile: profile,
+      legal_links: Profiles.public_legal_links(profile)
+    )
+  end
+
   @doc "Assigns no customisation: the dead render's, before any data is read."
   @spec no_customization(LiveView.Socket.t()) :: LiveView.Socket.t()
   def no_customization(socket),
@@ -200,8 +216,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   @doc """
   Mounts the payment-processing page. Authorises the meeting,
   subscribes to the payment topic, then reads meeting/payment state and
-  assigns `:meeting`, `:payment`, `:organizer_profile` (which a theme's page
-  shell may draw), `:rebook_path` (where a failed checkout can start again)
+  assigns `:meeting`, `:payment`, `:organizer_profile` and `:legal_links`
+  (`assign_organizer/2`), `:rebook_path` (where a failed checkout can start again)
   and the organiser's customisation (`assign_customization/2`) on success. On failure the socket is
   redirected to `/` with a generic flash so we never leak the failure mode
   to the attendee.
@@ -232,11 +248,11 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           socket =
             socket
             |> assign_customization(profile)
+            |> assign_organizer(profile)
             |> Component.assign(
               loading: false,
               meeting: meeting,
               payment: payment,
-              organizer_profile: profile,
               rebook_path: rebook_path(profile, meeting)
             )
 
@@ -249,13 +265,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       socket =
         socket
         |> no_customization()
-        |> Component.assign(
-          loading: true,
-          meeting: nil,
-          payment: nil,
-          organizer_profile: nil,
-          rebook_path: nil
-        )
+        |> assign_organizer(nil)
+        |> Component.assign(loading: true, meeting: nil, payment: nil, rebook_path: nil)
 
       {:ok, socket}
     end

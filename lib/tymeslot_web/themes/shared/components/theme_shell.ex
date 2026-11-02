@@ -21,7 +21,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
   Everything between them is the theme's: Quill and Rhythm lay their pages
   out as a grid (`.booker-page`) holding a content area and the extensions
   as its footer row; the fixture theme puts all three straight inside the
-  root. `booker_hook_classes_test.exs` holds every registered theme's booking
+  root.
+
+  After the extensions, and outside their `show_extensions` guard, every
+  wrapper renders the organiser's legal links
+  (`Shared.Components.LegalLinks.footer/1`). The wrapper draws it rather
+  than `theme_shell/1`, because the shell's last child is the theme's own
+  page grid, sized to the viewport: a footer after it would fall below the
+  fold and off the grid's background, so it goes in the grid instead. `booker_hook_classes_test.exs` holds every registered theme's booking
   page to the obligations.
   """
 

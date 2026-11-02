@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
   attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :legal_links, :map, required: true
   attr :meeting, :map, required: true
   attr :organizer_profile, :map, default: nil
 
@@ -29,6 +30,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      legal_links={@legal_links}
       show_language_switcher={true}
     >
       <div class="scheduling-box booker-card">

@@ -45,6 +45,7 @@
 @import "../../shared/components/approval-notice.css";
 @import "../../shared/components/group-session.css";
 @import "../../shared/components/preview-notice.css";
+@import "../../shared/components/legal-links.css";
 @import "../../shared/components/flash.css";
 @import "./modules/confirmation.css";
 @import "./modules/meeting-pages.css";

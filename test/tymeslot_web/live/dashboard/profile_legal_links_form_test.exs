@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Dashboard.ProfileLegalLinksFormTest do
   The organiser's legal notice and privacy policy links, from the "Legal
   links" form in Profile Settings: both fields present, saved with the
   button, flagged while typed when invalid, refused when unsafe, showing the
-  instance default while blank, and restored when the page is opened again.
+  instance default while blank, restored when the page is opened again,
+  and shown to guests at the foot of the booking page once saved.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -52,6 +53,18 @@ defmodule TymeslotWeb.Dashboard.ProfileLegalLinksFormTest do
   defp stored(profile) do
     profile = Repo.reload!(profile)
     {profile.legal_notice_url, profile.privacy_policy_url}
+  end
+
+  defp save_links(conn, links) do
+    conn
+    |> open_settings()
+    |> form("#legal-links-form", profile_legal_links: links)
+    |> render_submit()
+  end
+
+  defp public_page(profile) do
+    {:ok, view, _html} = live(build_conn(), ~p"/#{profile.username}")
+    view
   end
 
   describe "the form" do
@@ -172,6 +185,43 @@ defmodule TymeslotWeb.Dashboard.ProfileLegalLinksFormTest do
                view,
                "#legal-links-form input[name='profile_legal_links[privacy_policy_url]'][value='https://example.com/privacy']"
              )
+    end
+  end
+
+  describe "from the form to a public page" do
+    test "saved links show in the booking page footer", %{conn: conn, profile: profile} do
+      save_links(conn, %{
+        legal_notice_url: "https://example.com/imprint",
+        privacy_policy_url: "https://example.com/privacy"
+      })
+
+      view = public_page(profile)
+
+      assert has_element?(
+               view,
+               "footer[data-testid='legal-links'] a[href='https://example.com/imprint']",
+               "Legal notice"
+             )
+
+      assert has_element?(
+               view,
+               "footer[data-testid='legal-links'] a[href='https://example.com/privacy']",
+               "Privacy policy"
+             )
+    end
+
+    test "clearing a link takes it off the page", %{conn: conn, profile: profile} do
+      save_links(conn, %{
+        legal_notice_url: "https://example.com/imprint",
+        privacy_policy_url: "https://example.com/privacy"
+      })
+
+      save_links(conn, %{legal_notice_url: "", privacy_policy_url: "https://example.com/privacy"})
+
+      view = public_page(profile)
+
+      refute has_element?(view, "footer[data-testid='legal-links'] a", "Legal notice")
+      assert has_element?(view, "footer[data-testid='legal-links'] a", "Privacy policy")
     end
   end
 end
