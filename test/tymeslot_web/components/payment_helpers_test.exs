@@ -30,6 +30,11 @@ defmodule TymeslotWeb.Components.PaymentHelpersTest do
                "1" <> @nbsp <> "234,50" <> @nbsp <> "CHF"
     end
 
+    test "puts the symbol after the number and groups with a space in Spanish" do
+      assert PaymentHelpers.format_amount(123_450, "eur", "es") ==
+               "1" <> @nbsp <> "234,50" <> @nbsp <> "€"
+    end
+
     test "writes a zero-decimal currency in whole units" do
       assert PaymentHelpers.format_amount(1000, "jpy", "en") == "¥1,000"
       assert PaymentHelpers.format_amount(1000, "jpy", "de") == "1.000" <> @nbsp <> "¥"

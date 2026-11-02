@@ -181,3 +181,13 @@ msgstr "Ankety, které zvou, potvrzují a drží vás v obraze"
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
 msgstr "Anketa může být otevřená (o hlasovací odkaz si e-mailem řekne každý, kdo má odkaz), nebo jen pro pozvané. E-mailem se můžete nechat upozorňovat na nové hlasy. Po odeslání můžete změnit uzávěrku, přidat termíny, znovu poslat pozvánku a odebrat lidi; připomínky dostávají pozvaní, kteří ještě nehlasovali. Schůzka, kterou anketa potvrdí, je vaše: všichni na ní jsou hosté a jen vy ji můžete přesunout nebo zrušit."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot now speaks Spanish"
+msgstr "Tymeslot teď mluví španělsky"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Your dashboard, booking pages and every email are now available in Spanish. Tymeslot follows your browser's language, or you can choose one yourself in Account Settings. People who book you see booking pages and confirmations in their own language too."
+msgstr "Váš přehled, rezervační stránky i všechny e-maily jsou teď k dispozici ve španělštině. Tymeslot se řídí jazykem vašeho prohlížeče, nebo si jazyk vyberte sami v Nastavení účtu. Lidé, kteří si u vás rezervují, vidí rezervační stránky a potvrzení ve svém jazyce."

@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "delegated_count": 1437,
-    "iana_version": "2026100500",
-    "last_updated": "2026-10-05",
+    "delegated_count": 1436,
+    "iana_version": "2026110100",
+    "last_updated": "2026-11-02",
     "source": "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
   },
   "tlds": {
@@ -603,7 +603,6 @@
       "health",
       "healthcare",
       "help",
-      "helsinki",
       "here",
       "hermes",
       "hiphop",

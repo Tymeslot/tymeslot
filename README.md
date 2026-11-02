@@ -119,7 +119,7 @@ No add-ons and no per-feature upsells: self-hosted gets all of it.
 | **Payments** | Optional paid bookings through Stripe Connect, off by default and fee-free for self-hosters. [Setup →](https://tymeslot.app/docs/stripe-self-hosting?utm_source=github&utm_medium=readme&utm_campaign=core) |
 | **Sign-in & admin** | Email and password, Google, GitHub, generic OAuth/OIDC (Keycloak, Authentik, Okta, Azure AD). Toggle registration and password sign-in from `/admin` without a redeploy. |
 | **Privacy & security** | No third-party trackers or pixels, credentials encrypted at rest, rate-limited public endpoints, CSRF protection and signed tokens. |
-| **Languages** | English, German, French, Italian, Czech, Polish, Ukrainian and Brazilian Portuguese, across the dashboard, booking pages and every email. |
+| **Languages** | English, German, French, Italian, Czech, Polish, Ukrainian, Brazilian Portuguese and Spanish, across the dashboard, booking pages and every email. |
 | **Under the hood** | Elixir/OTP, Phoenix LiveView, PostgreSQL 14+, Oban. Supervised processes restart a failing sync instead of taking your booking page down. |
 
 <a id="self-host"></a>
