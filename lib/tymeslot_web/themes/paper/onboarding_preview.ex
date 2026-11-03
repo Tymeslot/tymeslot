@@ -109,6 +109,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
           limit={5}
           class="flex flex-col gap-1.5"
           highlight={@highlight}
+          meeting_variant={:plain}
         />
         <.book_button
           class="w-full py-2 rounded-token-lg font-semibold text-white text-token-sm"

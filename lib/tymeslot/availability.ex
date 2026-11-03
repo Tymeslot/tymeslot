@@ -17,6 +17,7 @@ defmodule Tymeslot.Availability do
 
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.Availability.WeeklyHours
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles
@@ -53,6 +54,29 @@ defmodule Tymeslot.Availability do
   @spec week_preview(ProfileSchema.t(), keyword()) ::
           {:ok, WeekPreview.t()} | {:error, :calendar_unavailable}
   defdelegate week_preview(profile, opts \\ []), to: WeekPreview, as: :build
+
+  @doc """
+  The host's week as one window over a set of days, read from their default
+  schedule; see `Tymeslot.Availability.WeeklyHours`. `nil` without one.
+  """
+  @spec weekly_hours(integer()) :: WeeklyHours.t() | nil
+  defdelegate weekly_hours(profile_id), to: WeeklyHours, as: :get
+
+  @doc """
+  Checks a week before it is written: at least one day, and an end after the
+  start.
+  """
+  @spec validate_weekly_hours(map()) ::
+          :ok | {:error, :no_days | :end_before_start | :invalid_time}
+  defdelegate validate_weekly_hours(hours), to: WeeklyHours, as: :validate
+
+  @doc """
+  Writes the host's week to their default schedule, all of it or none: the
+  chosen days (ISO weekdays) get the one window, every other day is turned
+  off. Clears the cached availability once it commits.
+  """
+  @spec set_weekly_hours(integer(), map()) :: :ok | {:error, WeeklyHours.error()}
+  defdelegate set_weekly_hours(profile_id, hours), to: WeeklyHours, as: :set
 
   @doc """
   Today's date where the host is: in the profile's timezone, or the host

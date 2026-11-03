@@ -10,6 +10,9 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   this module owns, so the picker feels like a real choice rather than a
   label swap.
 
+  Above the times it names the meeting the page offers, its length and
+  where it is held, from the meeting step's form as the host edits it.
+
   The card shows the host's real coming week (`PreviewWeek`): their dates
   before a calendar is connected, then their free times and busy blocks
   once the stage's week is ready, revealed once per new week.
@@ -65,6 +68,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     default: 0,
     doc: "bumped when a new week arrives, which reveals its times once"
 
+  attr :meeting, :map,
+    default: nil,
+    doc:
+      "the meeting the page offers, `%{name, duration_minutes, location}`, drawn above the times; `nil` for none"
+
   attr :today, Date,
     required: true,
     doc: "the host's date (`Tymeslot.Availability.today/1`), which dates the coming week"
@@ -96,6 +104,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
         id={@id}
         reveal_key={@reveal_key}
         highlight={highlight(@current_step)}
+        meeting={@meeting}
       >
         <:header>
           <%!-- Avatar + identity --%>

@@ -437,6 +437,23 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
+  Updates only the given attributes of a meeting type, with the same
+  preconditions a form save checks (`FormValidation`: the video
+  integrations and venues a location names must be the host's own and
+  active). For a caller that edits a few fields rather than the whole form,
+  such as the onboarding wizard's meeting step.
+  """
+  @spec update_meeting_type_checked(Ecto.Schema.t(), map()) ::
+          {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
+  def update_meeting_type_checked(meeting_type, attrs) do
+    user_id = meeting_type.user_id
+
+    with :ok <- FormValidation.check(user_id, attrs, meeting_type.max_participants || 1) do
+      update_meeting_type(meeting_type, attrs, FormMapper.payment_opts(user_id))
+    end
+  end
+
+  @doc """
   Seeds the default meeting type for a new user, once, as the profile is
   created (`Tymeslot.Profiles.create_profile/1` and the OAuth sign-up, which
   passes its transaction's `repo`). A host who later deletes it keeps none:

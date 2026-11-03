@@ -734,6 +734,7 @@ msgid "Location"
 msgstr "Sede"
 
 #: lib/tymeslot/meeting_types/location_selection.ex
+#: lib/tymeslot/onboarding/meeting_setup.ex
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Videochiamata"

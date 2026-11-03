@@ -38,9 +38,12 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   alias Tymeslot.Availability.WeekPreview
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.OnboardingLive.PreviewParts
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @days 7
 
@@ -69,8 +72,15 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
           day_note: String.t() | nil,
           times_id: String.t(),
           agenda: [entry()],
-          month: map()
+          month: map(),
+          meeting: meeting() | nil
         }
+
+  @typedoc """
+  The meeting the page offers, as the stage draws it above the times: its
+  name, its length worded in the locale, and an icon for where it is held.
+  """
+  @type meeting :: %{name: String.t(), duration: String.t() | nil, icon: String.t()}
 
   @doc "The week the stage starts with: no calendar yet."
   @spec placeholder() :: week()
@@ -82,7 +92,10 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
 
   Options: `:id`, what the stage copy is called (the stage and its expanded
   copy each pass their own, so their ids never clash), and `:reveal_key`,
-  the stage's count of weeks shown; together they make `times_id`.
+  the stage's count of weeks shown; together they make `times_id`. And
+  `:meeting`, the meeting the page offers (`%{name, duration_minutes,
+  location}`, from the wizard's form as the host edits it), which `times/1`
+  draws above the times; without it there is no meeting line.
   """
   @spec view(week() | nil, Date.t(), String.t(), keyword()) :: t()
   def view(week, %Date{} = today, locale, opts \\ []) do
@@ -102,7 +115,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
       day_note: day_note(ready?, selected),
       times_id: "#{Keyword.get(opts, :id, "preview")}-times-#{Keyword.get(opts, :reveal_key, 0)}",
       agenda: agenda(selected, locale),
-      month: month(days, selected, shown, ready?, locale)
+      month: month(days, selected, shown, ready?, locale),
+      meeting: meeting(Keyword.get(opts, :meeting))
     }
   end
 
@@ -173,6 +187,29 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
 
     Enum.sort_by(slots ++ busy, & &1.at, Time)
   end
+
+  # Where the meeting is held, as an icon; an unknown or unset place shows
+  # the generic one.
+  @location_icons %{
+    video: "hero-video-camera",
+    phone: "hero-phone",
+    in_person: "hero-map-pin"
+  }
+
+  defp meeting(%{name: name} = meeting) when is_binary(name) and name != "" do
+    %{
+      name: name,
+      duration: duration(meeting[:duration_minutes]),
+      icon: Map.get(@location_icons, meeting[:location], "hero-calendar")
+    }
+  end
+
+  defp meeting(_meeting), do: nil
+
+  defp duration(minutes) when is_integer(minutes) and minutes > 0,
+    do: LocalizationHelpers.format_duration(minutes)
+
+  defp duration(_minutes), do: nil
 
   # The two weeks around the seven days shown, Monday first, as a month
   # calendar shows them, titled with the month of the day it opens on.
@@ -329,8 +366,16 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   attr :item_class, :string, default: "rounded-token-md"
   attr :highlight, :list, default: [], doc: "the regions ringed for the step"
 
+  attr :meeting_variant, :atom,
+    default: :bar,
+    values: [:bar, :pill, :rule, :plain],
+    doc: "how the meeting line above the times is drawn, in the theme's idiom (`meeting_line/1`)"
+
   @doc """
-  The chosen day's times, or the week's line where there are none to show.
+  The chosen day's times, or the week's line where there are none to show,
+  under the meeting they are times for (`meeting_line/1`), when the view
+  has one. The two are one region, ringed together on the step that
+  highlights the times, since the meeting's length shapes them.
 
   `:chips` lists the free times alone, as a month-grid theme shows them
   under its calendar; `:rows` lists the day in time order with its busy
@@ -353,7 +398,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     ~H"""
     <div
       id={@view.times_id}
-      class="relative w-full rounded-token-lg"
+      class="w-full rounded-token-lg flex flex-col gap-2"
       style={PreviewParts.ring(@highlighted, @colors)}
       data-preview-part="times"
       data-preview-region="slots"
@@ -361,34 +406,159 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
       data-week-state={@view.state}
       data-reveal
     >
-      <div class={["w-full", @class]}>
-        <span
-          :for={{cell, index} <- Enum.with_index(@cells)}
-          class={[
-            "text-token-xs font-medium inline-flex items-center",
-            @layout == :chips && "justify-center px-2 py-1.5",
-            @layout == :rows && "w-full gap-1.5 px-3 py-2",
-            cell.kind == :busy && "onboarding-preview-busy",
-            cell.kind == :loading && "onboarding-preview-shimmer",
-            cell.kind == :filler && "invisible",
-            @item_class
-          ]}
-          style={cell_style(@colors, cell.kind, index)}
-          data-reveal-item={cell.kind == :slot}
-          data-entry={cell.kind in [:slot, :busy] && cell.kind}
+      <.meeting_line
+        :if={@view.meeting}
+        meeting={@view.meeting}
+        colors={@colors}
+        variant={@meeting_variant}
+      />
+      <div class="relative w-full">
+        <div class={["w-full", @class]} data-role="times-list">
+          <span
+            :for={{cell, index} <- Enum.with_index(@cells)}
+            class={[
+              "text-token-xs font-medium inline-flex items-center",
+              @layout == :chips && "justify-center px-2 py-1.5",
+              @layout == :rows && "w-full gap-1.5 px-3 py-2",
+              cell.kind == :busy && "onboarding-preview-busy",
+              cell.kind == :loading && "onboarding-preview-shimmer",
+              cell.kind == :filler && "invisible",
+              @item_class
+            ]}
+            style={cell_style(@colors, cell.kind, index)}
+            data-reveal-item={cell.kind == :slot}
+            data-entry={cell.kind in [:slot, :busy] && cell.kind}
+          >
+            {cell.label}
+          </span>
+        </div>
+        <p
+          :if={@view.message}
+          class="absolute inset-0 flex items-center justify-center px-3 text-token-xs text-center leading-snug"
+          style={"color: #{muted(@colors)};"}
+          data-role="week-message"
         >
-          {cell.label}
-        </span>
+          {@view.message}
+        </p>
       </div>
+    </div>
+    """
+  end
+
+  attr :meeting, :map, required: true, doc: "the view's `meeting`"
+  attr :colors, :map, required: true
+  attr :variant, :atom, required: true
+
+  @doc """
+  The meeting the page offers, in one line: its name, its length and an
+  icon for where it is held. Each theme draws it in its own idiom:
+
+    * `:bar` - left-aligned behind a short bar in the primary colour
+    * `:pill` - centred in a pill tinted with the primary colour
+    * `:rule` - centred between two thin rules, as a section title
+    * `:plain` - left-aligned, the name above its length and place in the
+      muted colour, for a narrow column
+  """
+  @spec meeting_line(map()) :: Phoenix.LiveView.Rendered.t()
+  def meeting_line(%{variant: :pill} = assigns) do
+    ~H"""
+    <p
+      class="self-center max-w-full min-w-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-token-full text-token-xs font-semibold"
+      style={"background: #{primary(@colors)}1f;color: #{ink(@colors)};"}
+      data-role="preview-meeting"
+      data-variant="pill"
+    >
+      <.meeting_icon name={@meeting.icon} colors={@colors} />
+      <span class="truncate" data-role="preview-meeting-name">{@meeting.name}</span>
+      <.meeting_duration meeting={@meeting} colors={@colors} />
+    </p>
+    """
+  end
+
+  def meeting_line(%{variant: :rule} = assigns) do
+    ~H"""
+    <p
+      class="w-full min-w-0 flex items-center gap-2 text-token-xs font-semibold"
+      style={"color: #{ink(@colors)};"}
+      data-role="preview-meeting"
+      data-variant="rule"
+    >
+      <span class="flex-1 h-px" style={"background: #{muted(@colors)}40;"} />
+      <.meeting_icon name={@meeting.icon} colors={@colors} />
+      <span class="truncate" data-role="preview-meeting-name">{@meeting.name}</span>
+      <.meeting_duration meeting={@meeting} colors={@colors} />
+      <span class="flex-1 h-px" style={"background: #{muted(@colors)}40;"} />
+    </p>
+    """
+  end
+
+  def meeting_line(%{variant: :plain} = assigns) do
+    ~H"""
+    <div
+      class="w-full min-w-0 flex flex-col gap-0.5 text-left"
+      data-role="preview-meeting"
+      data-variant="plain"
+    >
       <p
-        :if={@view.message}
-        class="absolute inset-0 flex items-center justify-center px-3 text-token-xs text-center leading-snug"
-        style={"color: #{muted(@colors)};"}
-        data-role="week-message"
+        class="text-token-xs font-semibold leading-snug line-clamp-2 break-words"
+        style={"color: #{ink(@colors)};"}
+        data-role="preview-meeting-name"
       >
-        {@view.message}
+        {@meeting.name}
+      </p>
+      <p class="flex items-center gap-1 text-token-2xs">
+        <.meeting_icon name={@meeting.icon} colors={@colors} />
+        <.meeting_duration meeting={@meeting} colors={@colors} />
       </p>
     </div>
+    """
+  end
+
+  def meeting_line(assigns) do
+    ~H"""
+    <p
+      class="w-full min-w-0 flex items-center gap-2 text-token-xs font-semibold text-left"
+      style={"color: #{ink(@colors)};"}
+      data-role="preview-meeting"
+      data-variant="bar"
+    >
+      <span class="w-1 h-4 shrink-0 rounded-token-full" style={"background: #{primary(@colors)};"} />
+      <span class="truncate" data-role="preview-meeting-name">{@meeting.name}</span>
+      <.meeting_duration meeting={@meeting} colors={@colors} />
+      <.meeting_icon name={@meeting.icon} colors={@colors} class="ml-auto" />
+    </p>
+    """
+  end
+
+  attr :meeting, :map, required: true
+  attr :colors, :map, required: true
+
+  defp meeting_duration(assigns) do
+    ~H"""
+    <span
+      :if={@meeting.duration}
+      class="shrink-0 font-medium whitespace-nowrap"
+      style={"color: #{muted(@colors)};"}
+      data-role="preview-meeting-duration"
+    >
+      {@meeting.duration}
+    </span>
+    """
+  end
+
+  attr :name, :string, required: true
+  attr :colors, :map, required: true
+  attr :class, :string, default: nil
+
+  defp meeting_icon(assigns) do
+    ~H"""
+    <.icon
+      name={@name}
+      class={["w-3.5 h-3.5 shrink-0", @class]}
+      style={"color: #{muted(@colors)};"}
+      data-role="preview-meeting-icon"
+      data-icon={@name}
+    />
     """
   end
 

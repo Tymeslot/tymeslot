@@ -611,6 +611,28 @@
   }
 }
 
+/* Below lg, the meeting step keeps a short card of the page pinned above
+   its controls: the host edits the meeting and the hours further down the
+   page and still sees the times reshape after each save. A field the
+   browser scrolls into view on focus clears the pinned card. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-step="meeting"] {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-bottom: var(--spacing-2);
+    background-color: var(--color-bg-primary);
+  }
+
+  .onboarding-stage[data-step="meeting"] .stage-frame {
+    height: 24svh;
+  }
+
+  html:has(.onboarding-stage[data-step="meeting"]) {
+    scroll-padding-top: calc(24svh + var(--spacing-32));
+  }
+}
+
 /* Ready step: URL display */
 .onboarding-url-display {
   display: flex;

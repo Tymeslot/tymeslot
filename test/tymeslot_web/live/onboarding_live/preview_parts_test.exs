@@ -46,8 +46,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
     }
   end
 
-  defp card(module, week, highlight \\ []) do
-    assigns = %{module: module, week: week, today: @today, highlight: highlight}
+  defp card(module, week, highlight \\ [], meeting \\ nil) do
+    assigns = %{module: module, week: week, today: @today, highlight: highlight, meeting: meeting}
 
     rendered_to_string(~H"""
     <PreviewParts.theme_preview
@@ -57,6 +57,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
       week={@week}
       today={@today}
       highlight={@highlight}
+      meeting={@meeting}
     >
       <:header>
         <p id="shared-header">Ada Lovelace</p>
@@ -148,13 +149,35 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
             @module
             |> card(week)
             |> doc()
-            |> Floki.find("[data-preview-part='times'] > div > span")
+            |> Floki.find("[data-preview-part='times'] [data-role='times-list'] > span")
             |> length()
           end
 
         assert [count | _rest] = counts
         assert count > 0
         assert Enum.uniq(counts) == [count]
+      end
+
+      test "#{name} names the meeting above the times, inside their ringed region" do
+        meeting = %{name: "Coffee chat", duration_minutes: 45, location: :phone}
+        html = card(@module, ready_week(), [:slots], meeting)
+
+        assert [region] = html |> doc() |> Floki.find("[data-stage-focus]")
+        assert Floki.attribute(region, "data-preview-region") == ["slots"]
+        assert [line] = Floki.find(region, "[data-role='preview-meeting']")
+
+        assert line |> Floki.find("[data-role='preview-meeting-name']") |> Floki.text() =~
+                 "Coffee chat"
+
+        assert line |> Floki.find("[data-role='preview-meeting-duration']") |> Floki.text() =~
+                 "45"
+
+        assert Floki.attribute(line, "[data-role='preview-meeting-icon']", "data-icon") == [
+                 "hero-phone"
+               ]
+
+        assert card(@module, ready_week()) |> doc() |> Floki.find("[data-role='preview-meeting']") ==
+                 []
       end
 
       test "#{name} rings and focuses the region its step highlights" do

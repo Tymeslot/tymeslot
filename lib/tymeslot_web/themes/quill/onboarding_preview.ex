@@ -87,6 +87,7 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
             class="grid grid-cols-3 gap-1.5"
             item_class="rounded-token-lg"
             highlight={@highlight}
+            meeting_variant={:pill}
           />
         </PreviewWeek.calendar_area>
       </div>

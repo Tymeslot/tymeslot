@@ -43,6 +43,11 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     default: [],
     doc: "`:card`: the regions ringed for the current step: `:calendar`, `:slots`"
 
+  attr :meeting, :map,
+    default: nil,
+    doc:
+      "`:card`: the meeting the page offers, `%{name, duration_minutes, location}`; `PreviewWeek.view/4`'s `:meeting`"
+
   slot :header, doc: "`:card`: the shared identity header the theme draws its card around"
 
   @doc """
@@ -68,7 +73,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     view =
       PreviewWeek.view(assigns.week, today, assigns.locale,
         id: assigns.id,
-        reveal_key: assigns.reveal_key
+        reveal_key: assigns.reveal_key,
+        meeting: assigns.meeting
       )
 
     assign(assigns, :view, view)

@@ -33,6 +33,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.AvatarHandlers
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
+  alias TymeslotWeb.OnboardingLive.MeetingHandlers
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.OnboardingLive.WeekReveal
@@ -73,6 +74,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       theme_customization: customization,
       onboarding_choices: onboarding_choices
     )
+    |> MeetingHandlers.assign_initial(user, profile, connected?(socket))
     |> assign_booking_page_live(profile)
     |> assign_initial_week()
     |> allow_avatar_upload()
@@ -107,6 +109,9 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # Bumped whenever a new week arrives, so the stage reveals its times
       # once on that render and never again on a later one.
       reveal_key: 0,
+      # The key of a re-read of the week in flight (`WeekReveal.refresh/1`),
+      # which becomes `reveal_key` when it answers.
+      pending_reveal_key: nil,
       # Set by the LiveView after the host's first action (see
       # `OnboardingLayout`), so the page load never moves the focus.
       focus_heading: false,

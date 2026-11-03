@@ -78,6 +78,7 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
             layout={:chips}
             class="grid grid-cols-3 gap-1.5"
             highlight={@highlight}
+            meeting_variant={:rule}
           />
         </PreviewWeek.calendar_area>
         <.book_button

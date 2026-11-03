@@ -18,6 +18,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
+  alias TymeslotWeb.OnboardingLive.MeetingHandlers
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
   alias TymeslotWeb.OnboardingLive.ReadyStep
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -53,6 +54,9 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       :connect_calendar ->
         handle_calendar_continue(socket)
 
+      :meeting ->
+        handle_meeting_continue(socket)
+
       :ready ->
         {:noreply, complete_onboarding(socket, ~p"/dashboard")}
 
@@ -68,6 +72,15 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     do: {:noreply, advance_step(socket, :connect_calendar)}
 
   defp handle_calendar_continue(socket), do: {:noreply, socket}
+
+  # The meeting step saves what is still pending (a name typed and never
+  # left) and moves on only with every field valid.
+  defp handle_meeting_continue(socket) do
+    case MeetingHandlers.continue(socket) do
+      {:ok, socket} -> {:noreply, advance_step(socket, :meeting)}
+      {:error, socket} -> {:noreply, socket}
+    end
+  end
 
   # A host sent back from the share step to connect a calendar has already
   # answered every step after it, so the calendar step leads straight back to

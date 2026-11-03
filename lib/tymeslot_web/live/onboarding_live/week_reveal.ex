@@ -14,6 +14,13 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   once per mount: on the connected mount of any step when a bookable
   calendar is already there (a reload, a resume, an OAuth return), and again
   when the host connects one on the calendar step.
+
+  `refresh/1` reads it again after the host changed what the week offers
+  (their hours, or the meeting's length or place, on the meeting step). A
+  week already shown stays in place while the new one is read, so the
+  times never blink back to loading; the new week replaces it and reveals
+  as any new week does. The read in flight carries its key in
+  `pending_reveal_key` until it answers.
   """
 
   require Logger
@@ -49,6 +56,35 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
 
   def maybe_start(socket), do: socket
 
+  @doc """
+  Reads the week again after the host changed what it offers. A ready week
+  stays on the stage until the new one arrives; any other state starts
+  over as `maybe_start/1` does. A read already in flight is cancelled, so
+  the latest change always wins.
+  """
+  @spec refresh(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def refresh(
+        %{assigns: %{booking_page_live: true, profile: %{}, stage_week: %{state: :ready}}} =
+          socket
+      ) do
+    if LiveView.connected?(socket), do: start_refresh(socket), else: socket
+  end
+
+  def refresh(socket), do: maybe_start(socket)
+
+  defp start_refresh(socket) do
+    profile = socket.assigns.profile
+    key = max(socket.assigns.reveal_key, socket.assigns[:pending_reveal_key] || 0) + 1
+
+    socket
+    |> LiveView.cancel_async(:week_preview)
+    |> Component.assign(:pending_reveal_key, key)
+    |> LiveView.start_async(
+      :week_preview,
+      Tasks.with_context(fn -> {key, Availability.week_preview(profile)} end)
+    )
+  end
+
   defp start(socket) do
     profile = socket.assigns.profile
     key = socket.assigns.reveal_key + 1
@@ -56,7 +92,11 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
 
     socket
     |> LiveView.cancel_async(:week_preview)
-    |> Component.assign(stage_week: %{state: :loading, preview: nil}, reveal_key: key)
+    |> Component.assign(
+      stage_week: %{state: :loading, preview: nil},
+      reveal_key: key,
+      pending_reveal_key: nil
+    )
     |> LiveView.start_async(
       :week_preview,
       Tasks.with_context(fn -> {key, Availability.week_preview(profile)} end)
@@ -74,6 +114,14 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   """
   @spec handle_result({:ok, term()} | {:exit, term()}, Phoenix.LiveView.Socket.t()) ::
           Phoenix.LiveView.Socket.t()
+  # A refresh's answer takes the key it was read under, so its times are a
+  # new list that reveals.
+  def handle_result({:ok, {key, result}}, %{assigns: %{pending_reveal_key: key}} = socket) do
+    socket
+    |> Component.assign(reveal_key: key, pending_reveal_key: nil)
+    |> then(&handle_result({:ok, {key, result}}, &1))
+  end
+
   def handle_result({:ok, {key, {:ok, preview}}}, %{assigns: %{reveal_key: key}} = socket),
     do: put_week(socket, :ready, preview)
 

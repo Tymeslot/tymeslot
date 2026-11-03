@@ -351,7 +351,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   attr :target, :any, default: nil
   attr :aria_label, :string, required: true, doc: "what the options choose"
-  attr :size, :atom, default: :md, values: [:sm, :md]
+
+  attr :size, :atom,
+    default: :md,
+    values: [:sm, :md, :lg],
+    doc: "`:lg` gives each option a 44px touch target"
+
   attr :disabled, :boolean, default: false
   attr :class, :any, default: nil, doc: "layout classes for the group"
 
@@ -424,6 +429,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   defp segment_size_class(:sm), do: "px-2.5 py-1 text-token-xs"
   defp segment_size_class(:md), do: "px-3 py-1.5 text-token-sm"
+  defp segment_size_class(:lg), do: "min-h-11 px-4 py-2 text-token-sm"
 
   attr :count, :integer, required: true
   attr :active, :boolean, required: true

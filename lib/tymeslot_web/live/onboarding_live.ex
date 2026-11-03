@@ -12,6 +12,7 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.DebugFixtures
   alias TymeslotWeb.OnboardingLive.Initializer
   alias TymeslotWeb.OnboardingLive.LivePreview
+  alias TymeslotWeb.OnboardingLive.MeetingHandlers
   alias TymeslotWeb.OnboardingLive.MeetingStep
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.OnboardingLayout
@@ -92,7 +93,7 @@ defmodule TymeslotWeb.OnboardingLive do
     <OnboardingLayout.onboarding_layout
       current_step={@current_step}
       booking_page_live={@booking_page_live}
-      next_disabled={@current_step == :connect_calendar and @booking_page_live != true}
+      next_disabled={next_disabled?(assigns)}
       focus_heading={@focus_heading}
       stage_announcement={@stage_caption || ""}
       stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
@@ -109,6 +110,7 @@ defmodule TymeslotWeb.OnboardingLive do
           theme_customization={@theme_customization}
           week={@stage_week}
           reveal_key={@reveal_key}
+          meeting={MeetingHandlers.meeting_preview(assigns)}
         />
       </:stage>
       <%= case @current_step do %>
@@ -146,7 +148,12 @@ defmodule TymeslotWeb.OnboardingLive do
             caldav_discovering={@caldav_discovering}
           />
         <% :meeting -> %>
-          <MeetingStep.meeting_step />
+          <MeetingStep.meeting_step
+            meeting_form={@meeting_form}
+            meeting_errors={@meeting_errors}
+            hours_form={@hours_form}
+            video_integration={@video_integration}
+          />
         <% :ready -> %>
           <ReadyStep.ready_step booking_url={@booking_url} page_live={@booking_page_live} />
       <% end %>
@@ -163,6 +170,7 @@ defmodule TymeslotWeb.OnboardingLive do
         theme_customization={@theme_customization}
         week={@stage_week}
         reveal_key={@reveal_key}
+        meeting={MeetingHandlers.meeting_preview(assigns)}
         id="stage-expanded"
       />
     </StagePreviewModal.stage_preview_modal>
@@ -184,6 +192,11 @@ defmodule TymeslotWeb.OnboardingLive do
   attr :theme_customization, :any, required: true
   attr :week, :map, required: true
   attr :reveal_key, :integer, required: true
+
+  attr :meeting, :map,
+    default: nil,
+    doc: "the meeting the page offers (`MeetingHandlers.meeting_preview/1`)"
+
   attr :id, :string, default: "stage", doc: "names this copy of the page"
 
   defp stage_preview(assigns) do
@@ -199,6 +212,7 @@ defmodule TymeslotWeb.OnboardingLive do
       theme_customization={@theme_customization}
       week={@week}
       reveal_key={@reveal_key}
+      meeting={@meeting}
       today={Availability.today(@profile)}
       id={@id}
       booking_host={booking_host()}
@@ -225,6 +239,42 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("previous_step", _params, socket) do
     NavigationHandlers.handle_previous_step(socket)
+  end
+
+  # ------------------------------------------------------------------
+  # Event handlers — Meeting and weekly hours
+  # ------------------------------------------------------------------
+
+  def handle_event("meeting_change", params, socket) do
+    MeetingHandlers.handle_change(params, socket)
+  end
+
+  def handle_event("meeting_save", _params, socket) do
+    MeetingHandlers.handle_save(socket)
+  end
+
+  def handle_event("meeting_suggestion", %{"index" => index}, socket) do
+    MeetingHandlers.handle_suggestion(index, socket)
+  end
+
+  def handle_event("meeting_duration", %{"duration" => value}, socket) do
+    MeetingHandlers.handle_duration(value, socket)
+  end
+
+  def handle_event("meeting_location", %{"location" => value}, socket) do
+    MeetingHandlers.handle_location(value, socket)
+  end
+
+  def handle_event("hours_preset", %{"preset" => value}, socket) do
+    MeetingHandlers.handle_hours_preset(value, socket)
+  end
+
+  def handle_event("hours_toggle_day", %{"day" => day}, socket) do
+    MeetingHandlers.handle_toggle_day(day, socket)
+  end
+
+  def handle_event("hours_change", params, socket) do
+    MeetingHandlers.handle_hours_change(params, socket)
   end
 
   # ------------------------------------------------------------------
@@ -364,6 +414,14 @@ defmodule TymeslotWeb.OnboardingLive do
   # ------------------------------------------------------------------
   # Private helpers
   # ------------------------------------------------------------------
+
+  # The calendar step waits for a bookable calendar; the meeting step for
+  # every field to be valid.
+  defp next_disabled?(%{current_step: :connect_calendar} = assigns),
+    do: assigns.booking_page_live != true
+
+  defp next_disabled?(%{current_step: :meeting} = assigns), do: MeetingHandlers.invalid?(assigns)
+  defp next_disabled?(_assigns), do: false
 
   defp debug?(socket), do: socket.assigns.live_action in [:debug_welcome, :debug_step]
 
