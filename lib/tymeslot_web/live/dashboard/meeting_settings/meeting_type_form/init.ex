@@ -41,11 +41,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:selected_target_calendar_id, get_target_calendar_id(type))
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
-    |> Component.assign(:allow_guests, get_allow_guests(type))
-    |> Component.assign(:guest_limit, Map.get(type || %{}, :max_guests_per_booking))
-    |> Component.assign(:requires_approval, get_requires_approval(type))
-    |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
-    |> Component.assign(:show_as_free, get_show_as_free(type))
+    |> assign_booking_policy(type)
     |> assign_group_bookings_state(type)
     |> Component.assign(
       booking_limits: get_booking_limits(type),
@@ -67,6 +63,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
     |> Component.assign(:__initialized__, true)
+  end
+
+  # Who may join a booking, whether the host must approve it, and how it shows
+  # in the host's calendar.
+  defp assign_booking_policy(socket, type) do
+    Component.assign(socket,
+      allow_guests: get_allow_guests(type),
+      guest_limit: Map.get(type || %{}, :max_guests_per_booking),
+      requires_approval: get_requires_approval(type),
+      approval_window_hours: get_approval_window_hours(type),
+      show_as_free: get_show_as_free(type)
+    )
   end
 
   # Everything the booking-destination picker needs about the integration the
