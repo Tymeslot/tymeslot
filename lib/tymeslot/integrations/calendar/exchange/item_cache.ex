@@ -20,6 +20,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   cached row for an item no longer in the window is a row the grid would show
   in the wrong place.
 
+  ## A recurring series needs the windowed read
+
+  The feed reports a series as its `RecurringMaster`, never as occurrences,
+  and a master's dates describe only the first of them. A windowed read
+  answers the occurrences themselves, each cached under its own item id (see
+  `Exchange.EventNormaliser`), so the feed cannot say which cached rows a
+  series change touches. Editing one occurrence, or the whole series, reports
+  the master; deleting the series reports the master's id, which no cached
+  row carries.
+
+  Either is answered by asking the worker for a full read, the way a refused
+  token is (below), but with the folders' new tokens stored first. A master
+  among the changed items sends the folder there before anything is written;
+  a deletion that matched no cached row does too, after the rest of the
+  folder's changes are applied, since it may have been a master. An item
+  deleted while outside the window costs the same full read, which is the
+  price of not knowing which deletion was which.
+
   ## Tokens are per folder, and stored together
 
   `SyncFolderItems` is folder-scoped, so each selected folder keeps its own
@@ -134,6 +152,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   that token already gone: the caller's full read then re-bootstraps it, where
   reporting the refusal would have every later cycle replay the same spent
   token.
+
+  A feed reporting a change it cannot apply asks for the same full read, with
+  every folder's new token stored first (see "A recurring series needs the
+  windowed read" in the moduledoc). The full read covers the changes those
+  tokens acknowledge, and a token left behind would replay the same change,
+  and the same full read, every cycle.
   """
   @spec incremental_refresh(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
           {:ok, [String.t()]}
@@ -142,13 +166,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   def incremental_refresh(integration, from, to) do
     integration
     |> item_clients()
-    |> Enum.reduce_while({:ok, [], %{}}, fn client, {:ok, uids, states} ->
+    |> Enum.reduce_while({:ok, [], %{}, false}, fn client, {:ok, uids, states, full?} ->
       case sync_one_folder(integration, client, from, to) do
-        {:ok, folder_uids, nil} ->
-          {:cont, {:ok, uids ++ folder_uids, states}}
-
         {:ok, folder_uids, state} ->
-          {:cont, {:ok, uids ++ folder_uids, Map.put(states, folder_key(client), state)}}
+          {:cont, {:ok, uids ++ folder_uids, put_state(states, client, state), full?}}
+
+        {:full_read, state} ->
+          {:cont, {:ok, uids, put_state(states, client, state), true}}
 
         {:error, reason} ->
           {:halt, {:error, reason, folder_key(client)}}
@@ -157,12 +181,27 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
     |> finish_incremental(integration)
   end
 
+  defp put_state(states, _client, nil), do: states
+  defp put_state(states, client, state), do: Map.put(states, folder_key(client), state)
+
   # The token is persisted only once every folder has succeeded. Storing one
   # for a folder that synced while a later folder failed would have the failed
   # run's successes acknowledged and the retry skip them.
-  defp finish_incremental({:ok, uids, states}, integration) do
+  defp finish_incremental({:ok, uids, states, false}, integration) do
     persist_sync_states(states, integration)
     {:ok, uids}
+  end
+
+  # The tokens are stored before the full read is asked for, so that read's
+  # bootstrap leaves them alone and the next cycle goes incremental from past
+  # the change that forced it.
+  defp finish_incremental({:ok, _uids, states, true}, integration) do
+    Logger.info("Exchange change feed reported a series change; forcing a full item read",
+      calendar_integration_id: integration.id
+    )
+
+    {:error, :full_sync_required,
+     states |> merged_states(integration) |> write_sync_states(integration)}
   end
 
   defp finish_incremental({:error, reason, folder_key}, integration) do
@@ -211,18 +250,30 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
     {:ok, [], changes.sync_state}
   end
 
+  # A series master is checked for before anything is written: the folder's
+  # changes are then left to the full read whole, rather than half applied by
+  # this one.
   defp apply_changes(integration, client, changes, from, to) do
     with {:ok, items} <- ItemDiscovery.fetch_items(client, changes.created ++ changes.updated),
          {:ok, events} <- Provider.normalise_events(items, item_context(integration, client)) do
-      {in_window, out_of_window} = Enum.split_with(events, &in_window?(&1, from, to))
+      if Enum.any?(events, &EventNormaliser.series_master?/1) do
+        {:full_read, changes.sync_state}
+      else
+        apply_item_changes(integration, events, changes, from, to)
+      end
+    end
+  end
 
-      # An item the feed reported but the batch could not return is neither
-      # kept nor deleted: `require_readable_batch/1` has already refused a
-      # wholly unreadable batch, and a partly unreadable one logs the codes.
-      # Deleting on a read failure would empty the grid over a transient one.
-      write_incremental(integration, in_window, changes.deleted ++ provider_ids(out_of_window))
+  # An item the feed reported but the batch could not return is neither kept
+  # nor deleted: `require_readable_batch/1` has already refused a wholly
+  # unreadable batch, and a partly unreadable one logs the codes. Deleting on
+  # a read failure would empty the grid over a transient one.
+  defp apply_item_changes(integration, events, changes, from, to) do
+    {in_window, out_of_window} = Enum.split_with(events, &in_window?(&1, from, to))
 
-      {:ok, Enum.map(in_window, & &1.uid), changes.sync_state}
+    case write_incremental(integration, in_window, changes.deleted, provider_ids(out_of_window)) do
+      :ok -> {:ok, Enum.map(in_window, & &1.uid), changes.sync_state}
+      :unmatched_deletion -> {:full_read, changes.sync_state}
     end
   end
 
@@ -231,17 +282,29 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   # fetched, normalised and then classified out — and deleting last is what
   # makes the outcome the same either way.
   #
+  # A deletion the feed reported that matched no cached row may have been a
+  # series master, whose occurrences are cached under their own ids, and is
+  # answered `:unmatched_deletion`. The moved-out ids are not counted: an item
+  # that moved out of the window from outside it has no row either.
+  #
   # Ownership needs no flagging call here: `Sync.upsert_cache/2` does it for
   # every caller. A booking Tymeslot wrote to the mailbox comes back through
   # the feed as an ordinary create, so without that the row would stay unowned
   # until the daily full read happened to rewrite it.
-  defp write_incremental(integration, events, deleted_ids) do
+  defp write_incremental(integration, events, deleted_ids, moved_out_ids) do
     Sync.upsert_cache(integration, events)
+
+    deleted_ids = Enum.uniq(deleted_ids)
+
+    removed =
+      ProviderCalendarEventQueries.delete_by_provider_event_ids(integration.id, deleted_ids)
 
     ProviderCalendarEventQueries.delete_by_provider_event_ids(
       integration.id,
-      Enum.uniq(deleted_ids)
+      Enum.uniq(moved_out_ids) -- deleted_ids
     )
+
+    if removed < length(deleted_ids), do: :unmatched_deletion, else: :ok
   end
 
   defp provider_ids(events), do: Enum.map(events, & &1.provider_event_id)
@@ -304,15 +367,20 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   defp persist_sync_states(states, _integration) when map_size(states) == 0, do: :ok
 
   defp persist_sync_states(states, integration) do
+    states
+    |> merged_states(integration)
+    |> write_sync_states(integration)
+
+    :ok
+  end
+
+  defp merged_states(states, integration) do
     live_keys = integration |> item_clients() |> Enum.map(&folder_key/1) |> MapSet.new()
 
     integration.exchange_sync_states
     |> Kernel.||(%{})
     |> Map.merge(states)
     |> Map.filter(fn {key, _state} -> MapSet.member?(live_keys, key) end)
-    |> write_sync_states(integration)
-
-    :ok
   end
 
   # Answers the integration carrying `states`, written or not. A failed write

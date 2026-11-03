@@ -4,9 +4,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
 
   This is the source of truth for Exchange busy time. The item path
   (`FindItem` over a `CalendarView`, then `GetItem`) cannot see a recurring
-  series' later occurrences on every server: a grommunio mailbox answers one
-  `RecurringMaster` dated to the first occurrence, and nothing at all for a
-  window covering later ones, so an organiser booked every morning reads as
+  series' later occurrences on every server: older grommunio versions answer
+  one `RecurringMaster` dated to the first occurrence, and nothing at all for
+  a window covering later ones, so an organiser booked every morning reads as
   free. `GetUserAvailability` expands the series, so it decides availability
   and the item path feeds the dashboard grid.
 

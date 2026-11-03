@@ -210,11 +210,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SyncCycle do
   # again, so items sliding into the window would never be picked up.
   #
   # `{:error, :full_sync_required, integration}` is the incremental read asking
-  # for the other one rather than failing: the server refused a stored token,
-  # `ItemCache` has already dropped it, and the integration handed back is the
-  # one without it, so the full read's bootstrap re-establishes it. Reporting
-  # the refusal instead would have the folder fail identically every cycle,
-  # forever.
+  # for the other one rather than failing, for one of two reasons. Either the
+  # server refused a stored token, `ItemCache` has already dropped it, and the
+  # integration handed back is the one without it, so the full read's
+  # bootstrap re-establishes it; reporting the refusal instead would have the
+  # folder fail identically every cycle, forever. Or the feed reported a
+  # recurring series change it cannot apply item by item, and the integration
+  # handed back already carries the advanced tokens, which the bootstrap
+  # leaves alone.
   defp refresh_items(integration, from, to) do
     if ItemCache.full_sync_due?(integration) do
       full_refresh_items(integration, from, to)

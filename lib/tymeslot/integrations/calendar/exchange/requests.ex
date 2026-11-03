@@ -23,9 +23,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   ## Busy time comes from a different operation
 
   `FindItem` over a `CalendarView` does not expand a recurring series on every
-  server. A grommunio mailbox answers one `RecurringMaster` dated to the
+  server. Older grommunio versions answer one `RecurringMaster` dated to the
   series' first occurrence, and nothing at all for a window covering later
-  ones, so the item path cannot see the third week of a weekly standup.
+  ones, so there the item path cannot see the third week of a weekly standup.
   `get_user_availability/3` is the operation that does expand it, and
   `Exchange.FreeBusy` reads its answer; the item path feeds the dashboard grid
   rather than availability.

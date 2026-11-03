@@ -38,7 +38,9 @@ defmodule Tymeslot.ExchangeSyncStubs do
   body and forwarding each one to the calling process as `{:ews_request, body}`.
 
   `:intervals`, `:find_item`, `:get_item` and `:sync_folder_items` override
-  what each operation is answered with.
+  what each operation is answered with. `:get_item` may also be a function of
+  the request body, for a run whose `GetItem` requests must be told apart by
+  the ids they name.
   """
   @spec stub_full_sync(keyword()) :: :ok
   def stub_full_sync(opts \\ []) do
@@ -117,6 +119,9 @@ defmodule Tymeslot.ExchangeSyncStubs do
 
       request_body =~ "<m:SyncFolderItems" ->
         responses.sync_folder_items
+
+      request_body =~ "<m:GetItem" and is_function(responses.get_item, 1) ->
+        responses.get_item.(request_body)
 
       request_body =~ "<m:GetItem" ->
         responses.get_item
