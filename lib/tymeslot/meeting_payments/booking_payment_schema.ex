@@ -46,6 +46,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           paid_at: DateTime.t() | nil,
           refunded_amount_cents: integer(),
           last_event_id: String.t() | nil,
+          stripe_dispute_id: String.t() | nil,
+          dispute_closed_at: DateTime.t() | nil,
           host_deleted_at: DateTime.t() | nil,
           meeting_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -75,6 +77,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     field :refunded_amount_cents, :integer, default: 0
 
     field :last_event_id, :string
+
+    # The Stripe dispute this payment last saw, and when it closed. Lets a
+    # `charge.dispute.created` that Stripe delivers after its own
+    # `charge.dispute.closed` be told apart from a new dispute.
+    field :stripe_dispute_id, :string
+    field :dispute_closed_at, :utc_datetime
     field :host_deleted_at, :utc_datetime
 
     belongs_to :meeting, MeetingSchema, type: :binary_id
@@ -93,6 +101,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
                 meeting_id host_name attendee_email attendee_name booking_theme_id
                 stripe_checkout_session_id stripe_payment_intent_id stripe_charge_id
                 status paid_at refunded_amount_cents last_event_id host_deleted_at
+                stripe_dispute_id dispute_closed_at
               )a
 
   @spec create_changeset(map()) :: Ecto.Changeset.t()

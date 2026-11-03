@@ -28,6 +28,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   (`partially_refunded`). The attendee paid for a booking that never
   happened, so nothing of it is the host's to keep.
 
+  A final outcome also records the dispute as closed on the payment
+  (`stripe_dispute_id`, `dispute_closed_at`), whether or not it changes the
+  status, so a `charge.dispute.created` for the same dispute that Stripe
+  delivers late is recognised and ignored (`ChargeDisputeCreated`). A
+  `closed` that arrives before its `created` is applied as usual: the guard
+  keys on the dispute, never on the row being `disputed`.
+
   Idempotent on `last_event_id`.
   """
 
@@ -67,7 +74,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
       payment ->
         outcome = DisputeOutcome.from_status(object["status"])
-        classify(apply_outcome(payment, event_id, outcome, object["amount"] || 0))
+        classify(apply_outcome(payment, event_id, outcome, object))
     end
   end
 
@@ -80,10 +87,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   # Decided from the locked row (`LockedPayment`): a `charge.refunded`
   # committed since the row was resolved must be counted, not written over.
-  defp apply_outcome(payment, event_id, outcome, disputed_amount) do
+  defp apply_outcome(payment, event_id, outcome, object) do
     result =
       LockedPayment.run(payment, event_id, fn locked ->
-        attrs = Map.put(outcome_attrs(locked, outcome, disputed_amount), :last_event_id, event_id)
+        attrs =
+          locked
+          |> outcome_attrs(outcome, object["amount"] || 0)
+          |> Map.merge(%{
+            last_event_id: event_id,
+            stripe_dispute_id: object["id"],
+            dispute_closed_at: DateTime.utc_now(:second)
+          })
 
         with {:ok, updated} <- BookingPaymentQueries.update(locked, attrs),
              {:ok, _job} <- maybe_schedule_refund(updated) do

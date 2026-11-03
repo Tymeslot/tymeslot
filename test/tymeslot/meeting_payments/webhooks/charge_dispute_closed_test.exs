@@ -194,6 +194,69 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
     end
   end
 
+  describe "handle/1 — recording the closed dispute" do
+    test "a final outcome records the dispute as closed" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          stripe_charge_id: "ch_RECORD",
+          stripe_dispute_id: "dp_evt_RECORD"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_RECORD", "ch_RECORD", "won", 5000)
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.stripe_dispute_id == "dp_evt_RECORD"
+      assert %DateTime{} = reloaded.dispute_closed_at
+    end
+
+    # A closed that overtakes its created must still record its outcome:
+    # a lost dispute's refunded amount would otherwise never be written.
+    test "a closed delivered before its created is applied to a paid payment" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :paid,
+          amount_cents: 5000,
+          stripe_charge_id: "ch_EARLY_LOST"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_EARLY_LOST", "ch_EARLY_LOST", "lost", 5000)
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :refunded
+      assert reloaded.refunded_amount_cents == 5000
+      assert reloaded.stripe_dispute_id == "dp_evt_EARLY_LOST"
+      assert %DateTime{} = reloaded.dispute_closed_at
+    end
+
+    test "a live dispute status records nothing" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          stripe_charge_id: "ch_LIVE_REC",
+          stripe_dispute_id: "dp_evt_LIVE_REC"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_LIVE_REC", "ch_LIVE_REC", "needs_response", 5000)
+               )
+
+      assert Repo.reload!(bp).dispute_closed_at == nil
+    end
+  end
+
   describe "handle/1 with an event from another connected account" do
     test "leaves the disputed booking payment untouched" do
       bp =
