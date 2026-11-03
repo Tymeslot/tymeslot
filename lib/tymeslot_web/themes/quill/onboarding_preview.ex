@@ -56,7 +56,6 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
 
   attr :colors, :map, required: true
   attr :view, :map, required: true, doc: "the week, from `PreviewWeek.view/3`"
-  attr :reveal, :boolean, default: false
   attr :highlight, :list, default: []
   slot :header, required: true
 
@@ -87,7 +86,6 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
             layout={:chips}
             class="grid grid-cols-3 gap-1.5"
             item_class="rounded-token-lg"
-            reveal={@reveal}
             highlight={@highlight}
           />
         </PreviewWeek.calendar_area>

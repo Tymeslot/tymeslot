@@ -641,3 +641,8 @@ msgstr[1] "Hai già un impegno %{day} alle %{time}. %{count} orari liberi questa
 #, elixir-autogen, elixir-format
 msgid "Your free times appear here once your calendar is connected."
 msgstr "I tuoi orari liberi compariranno qui dopo aver collegato il calendario."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "No free times in the next seven days."
+msgstr "Nessun orario libero nei prossimi sette giorni."

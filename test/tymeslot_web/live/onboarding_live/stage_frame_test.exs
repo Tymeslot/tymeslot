@@ -198,6 +198,7 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
     # debug fixture is the one way in, and the debug routes are not mounted
     # in tests, so it is applied to the running wizard's socket directly.
     defp put_week_fixture(view, name) do
+      # B5 replaces this with the real async delivery of the week.
       :sys.replace_state(view.pid, fn state ->
         %{state | socket: DebugFixtures.apply(state.socket, name)}
       end)
@@ -221,8 +222,8 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
       assert [caption] = Floki.find(doc, ".onboarding-stage-caption")
       assert String.trim(Floki.text(caption)) == announced
 
-      # The times are on the page, and they reveal on this render.
-      assert Floki.find(doc, ~s([data-preview-part="times"][data-reveal])) != []
+      # The times are on the page, in the new list the bumped key reveals.
+      assert Floki.find(doc, ~s(#stage-times-1 [data-reveal-item])) != []
     end
   end
 end

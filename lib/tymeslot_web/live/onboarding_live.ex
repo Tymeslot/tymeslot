@@ -2,6 +2,7 @@ defmodule TymeslotWeb.OnboardingLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Hooks.ModalHook
@@ -161,6 +162,7 @@ defmodule TymeslotWeb.OnboardingLive do
         theme_customization={@theme_customization}
         week={@stage_week}
         reveal_key={@reveal_key}
+        id="stage-expanded"
       />
     </StagePreviewModal.stage_preview_modal>
 
@@ -182,6 +184,7 @@ defmodule TymeslotWeb.OnboardingLive do
   attr :theme_customization, :any, required: true
   attr :week, :map, required: true
   attr :reveal_key, :integer, required: true
+  attr :id, :string, default: "stage", doc: "names this copy of the page"
 
   defp stage_preview(assigns) do
     ~H"""
@@ -196,7 +199,8 @@ defmodule TymeslotWeb.OnboardingLive do
       theme_customization={@theme_customization}
       week={@week}
       reveal_key={@reveal_key}
-      timezone={Profiles.timezone(@profile)}
+      today={Availability.today(@profile)}
+      id={@id}
       booking_host={booking_host()}
     />
     """

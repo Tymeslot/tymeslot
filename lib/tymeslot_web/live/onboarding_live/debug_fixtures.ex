@@ -29,10 +29,9 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
   import Kernel, except: [apply: 2]
 
   alias Phoenix.Component
+  alias Tymeslot.Availability
   alias Tymeslot.Availability.WeekPreview
-  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Profiles
   alias TymeslotWeb.OnboardingLive.LivePreview
 
   @doc """
@@ -96,7 +95,10 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
   end
 
   defp with_week(socket, state, opts \\ []) do
-    preview = if state == :ready, do: sample_week(today(socket.assigns), opts[:busy])
+    preview =
+      if state == :ready,
+        do: sample_week(Availability.today(socket.assigns[:profile]), opts[:busy])
+
     week = %{state: state, preview: preview}
 
     socket
@@ -106,12 +108,6 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
       stage_announcement: LivePreview.week_caption(week) || "",
       reveal_key: Map.get(socket.assigns, :reveal_key, 0) + 1
     )
-  end
-
-  defp today(assigns) do
-    timezone = Profiles.timezone(assigns[:profile])
-
-    Clock.utc_now() |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
   end
 
   # Never persisted, so it has no id; the calendar step reads only the

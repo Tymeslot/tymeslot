@@ -640,3 +640,8 @@ msgstr[2] "Masz już zajęty termin: %{day}, %{time}. %{count} wolnych terminów
 #, elixir-autogen, elixir-format
 msgid "Your free times appear here once your calendar is connected."
 msgstr "Wolne terminy pojawią się tutaj po podłączeniu kalendarza."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "No free times in the next seven days."
+msgstr "Brak wolnych terminów w ciągu najbliższych siedmiu dni."

@@ -57,7 +57,6 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
 
   attr :colors, :map, required: true
   attr :view, :map, required: true, doc: "the week, from `PreviewWeek.view/3`"
-  attr :reveal, :boolean, default: false
   attr :highlight, :list, default: []
   slot :header, required: true
 
@@ -109,7 +108,6 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
           layout={:rows}
           limit={5}
           class="flex flex-col gap-1.5"
-          reveal={@reveal}
           highlight={@highlight}
         />
         <.book_button

@@ -10,6 +10,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.OnboardingLive.PreviewParts
+  alias TymeslotWeb.OnboardingLive.PreviewWeek
   alias TymeslotWeb.Themes.Core.ThemeInfo
   alias TymeslotWeb.ThemeTestMatrix
 
@@ -65,6 +66,12 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
   end
 
   defp doc(html), do: Floki.parse_fragment!(html)
+
+  # A ready week of seven days with no free time at all.
+  defp empty_week do
+    days = for offset <- 0..6, do: %{date: Date.add(@today, offset), slots: [], busy: []}
+    %{state: :ready, preview: %WeekPreview{days: days, slot_count: 0, first_busy: nil}}
+  end
 
   defp times_text(html),
     do: html |> doc() |> Floki.find("[data-preview-part='times']") |> Floki.text()
@@ -169,6 +176,14 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
         refute html =~ "outline:"
       end
 
+      test "#{name} says so when the week has no free time" do
+        html = card(@module, empty_week())
+
+        assert [message] = html |> doc() |> Floki.find("[data-role='week-message']")
+        assert Floki.text(message) =~ "No free times in the next seven days."
+        assert html |> doc() |> Floki.find("[data-entry]") == []
+      end
+
       test "#{name} sends a slow or failed week to the page" do
         for state <- [:slow, :failed] do
           html = card(@module, %{state: state, preview: nil})
@@ -248,6 +263,41 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
       assert Enum.take(cells, 3) == [{"2", "outside"}, {"3", "idle"}, {"4", "idle"}]
     end
 
+    test "Paper's day note counts no free times in an empty week" do
+      html = card(TymeslotWeb.Themes.Paper.Theme, empty_week())
+
+      assert [day] = html |> doc() |> Floki.find("[data-preview-part='day']")
+      assert Floki.text(day) =~ "0 free times"
+    end
+
+    test "a ready month grid is anchored on the week's own dates, not today" do
+      # A week read on Friday 30 October, still open on Tuesday 3 November.
+      days =
+        for offset <- 0..6 do
+          date = Date.add(~D[2026-10-30], offset)
+          %{date: date, slots: if(offset == 0, do: ["09:00"], else: []), busy: []}
+        end
+
+      week = %{state: :ready, preview: %WeekPreview{days: days, slot_count: 1, first_busy: nil}}
+
+      month =
+        TymeslotWeb.Themes.Quill.Theme
+        |> card(week)
+        |> doc()
+        |> Floki.find("[data-preview-part='month']")
+
+      assert Floki.text(month) =~ "October 2026"
+
+      cells =
+        month
+        |> Floki.find("[data-day-state]")
+        |> Enum.map(&{String.trim(Floki.text(&1)), hd(Floki.attribute(&1, "data-day-state"))})
+
+      # Monday 26 October onwards: the chosen Friday is on the grid.
+      assert Enum.at(cells, 0) == {"26", "outside"}
+      assert Enum.at(cells, 4) == {"30", "selected"}
+    end
+
     test "before a calendar Paper opens on today's real date" do
       html = card(TymeslotWeb.Themes.Paper.Theme, %{state: :placeholder, preview: nil})
 
@@ -263,6 +313,28 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
 
       assert quill =~ ~s(data-preview-part="month")
       refute rhythm =~ ~s(data-preview-part="month")
+    end
+  end
+
+  describe "agenda_window/2" do
+    defp entry(kind, at), do: %{kind: kind, label: at, at: Time.from_iso8601!(at <> ":00")}
+
+    test "shifts the window so a busy block past the limit stays in view" do
+      agenda =
+        Enum.map(~w(09:00 09:30 10:00 10:30 11:00 11:30), &entry(:slot, &1)) ++
+          [entry(:busy, "14:00"), entry(:slot, "15:00")]
+
+      window = PreviewWeek.agenda_window(agenda, 5)
+
+      # The busy block, and the time after it, close the window.
+      assert Enum.map(window, & &1.label) == ~w(10:30 11:00 11:30 14:00 15:00)
+      assert Enum.at(window, 3).kind == :busy
+    end
+
+    test "keeps the first entries when the busy block is already in view" do
+      agenda = [entry(:slot, "09:00"), entry(:busy, "10:00"), entry(:slot, "11:00")]
+
+      assert PreviewWeek.agenda_window(agenda, 2) == Enum.take(agenda, 2)
     end
   end
 

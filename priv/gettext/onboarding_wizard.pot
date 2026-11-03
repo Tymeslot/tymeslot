@@ -641,3 +641,8 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "Your free times appear here once your calendar is connected."
 msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "No free times in the next seven days."
+msgstr ""

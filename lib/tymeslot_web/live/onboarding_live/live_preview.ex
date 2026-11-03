@@ -30,7 +30,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   import TymeslotWeb.OnboardingLive.PreviewParts, only: [color: 3, divider_style: 1, ring: 2]
 
   alias Tymeslot.Availability.WeekPreview
-  alias Tymeslot.Clock
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -64,13 +63,15 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   attr :reveal_key, :integer,
     default: 0,
-    doc: "bumped when a new week arrives; the times reveal on the render where it changed"
+    doc: "bumped when a new week arrives, which reveals its times once"
 
-  attr :timezone, :string,
-    default: "Etc/UTC",
-    doc: "the host's timezone, which decides the dates of the coming week"
+  attr :today, Date,
+    required: true,
+    doc: "the host's date (`Tymeslot.Availability.today/1`), which dates the coming week"
 
-  attr :today, :any, default: nil, doc: "today's date; defaults to today in `timezone`"
+  attr :id, :string,
+    default: "stage",
+    doc: "names this copy of the page, so the stage and its expanded copy never share an id"
 
   @spec live_preview(map()) :: Phoenix.LiveView.Rendered.t()
   def live_preview(assigns) do
@@ -82,8 +83,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       |> assign(:link_host, assigns.booking_host <> "/")
       |> assign(:link_name, link_name(assigns.booking_host, assigns.username))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
-      |> assign(:today, assigns.today || today_in(assigns.timezone))
-      |> assign(:reveal, reveal?(assigns))
 
     ~H"""
     <div class="w-[400px] p-6" style={backdrop_style(@colors)}>
@@ -94,7 +93,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
         week={@week}
         today={@today}
         locale={@locale}
-        reveal={@reveal}
+        id={@id}
+        reveal_key={@reveal_key}
         highlight={highlight(@current_step)}
       >
         <:header>
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
             data-role="preview-address"
           >
             <span class="truncate">{@link_host}</span>
-            <span class="shrink-0">{@link_name}</span>
+            <span class="shrink-0" data-role="preview-address-name">{@link_name}</span>
           </span>
 
           <div class="w-full h-px my-1" style={divider_style(@colors)} />
@@ -158,21 +158,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   defp theme_module(id) do
     ThemeInfo.get_theme_module(id) || ThemeInfo.get_theme_module(Catalog.default_id())
   end
-
-  defp today_in(timezone) do
-    case DateTime.shift_zone(Clock.utc_now(), timezone) do
-      {:ok, now} -> DateTime.to_date(now)
-      {:error, _reason} -> Clock.utc_today()
-    end
-  end
-
-  # The times reveal on the render where `reveal_key` changed (and on the
-  # first, which has no history), never on a later re-render. Outside a
-  # LiveView there is no change tracking, so every render is a first.
-  defp reveal?(%{__changed__: changed}) when is_map(changed),
-    do: Map.has_key?(changed, :reveal_key)
-
-  defp reveal?(_assigns), do: true
 
   # -------------------------------------------------------------------
   # Captions

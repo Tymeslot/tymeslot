@@ -641,3 +641,8 @@ msgstr[1] "Ya tienes un compromiso el %{day} a las %{time}. %{count} huecos libr
 #, elixir-autogen, elixir-format
 msgid "Your free times appear here once your calendar is connected."
 msgstr "Tus huecos libres aparecerán aquí cuando conectes tu calendario."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "No free times in the next seven days."
+msgstr "No hay huecos libres en los próximos siete días."

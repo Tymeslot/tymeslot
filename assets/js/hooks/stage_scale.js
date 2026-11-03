@@ -54,6 +54,14 @@ export function stageScale({ width, wide, availableHeight = Infinity, innerHeigh
  * @param {number} pageHeight the page wrapper's current height
  * @returns {number}
  */
+export function heightForPage(contentHeight, children, pageHeight) {
+  if (children.length === 0) return Infinity
+
+  const top = Math.min(...children.map((box) => box.top))
+  const bottom = Math.max(...children.map((box) => box.bottom))
+  return contentHeight - (bottom - top - pageHeight)
+}
+
 /**
  * How far to shift the page up inside a card `viewport` pixels tall so the
  * focused region (from `top` to `bottom`, in the scaled page) is in view:
@@ -71,14 +79,6 @@ export function focusShift({ viewport, top, bottom, pageHeight, margin = 12 }) {
   return Math.round(Math.min(furthest, Math.max(0, wanted)))
 }
 
-export function heightForPage(contentHeight, children, pageHeight) {
-  if (children.length === 0) return Infinity
-
-  const top = Math.min(...children.map((box) => box.top))
-  const bottom = Math.max(...children.map((box) => box.bottom))
-  return contentHeight - (bottom - top - pageHeight)
-}
-
 export const StageScale = {
   mounted() {
     this.media = window.matchMedia(WIDE_QUERY)
@@ -93,6 +93,9 @@ export const StageScale = {
       this.resizeObserver = new ResizeObserver(() => this.scheduleFit())
       this.resizeObserver.observe(this.el)
       if (this.box) this.resizeObserver.observe(this.box)
+      // The phone card: a change in its height moves what the shift shows.
+      this.card = this.el.closest(".stage-frame-body")
+      if (this.card) this.resizeObserver.observe(this.card)
       this.observeInner()
     }
 
@@ -178,7 +181,7 @@ export const StageScale = {
   // shift that brings the focused region into view, measured on the page
   // as now scaled.
   shift(pageHeight) {
-    const card = this.el.closest(".stage-frame-body")
+    const card = this.card || this.el.closest(".stage-frame-body")
     const focus = this.inner.querySelector("[data-stage-focus]")
     if (this.media.matches || !card || !focus) return 0
 

@@ -31,9 +31,13 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     doc:
       "`:card`: the stage's week, `%{state, preview}` (`PreviewWeek`); `nil` is the placeholder"
 
-  attr :today, :any, default: nil, doc: "`:card`: today in the host's timezone (default: UTC)"
+  attr :today, :any,
+    default: nil,
+    doc: "`:card` (required): the host's date, `Tymeslot.Availability.today/1`"
+
   attr :locale, :string, default: "en"
-  attr :reveal, :boolean, default: false, doc: "`:card`: play the times' reveal on this render"
+  attr :id, :string, default: "preview", doc: "`:card`: names this copy, so ids never clash"
+  attr :reveal_key, :integer, default: 0, doc: "`:card`: bumped for each new week, which reveals"
 
   attr :highlight, :list,
     default: [],
@@ -45,8 +49,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   Renders a theme's onboarding preview through its `onboarding_preview/1`,
   or the generic mock for a module that does not implement it.
 
-  For the `:card` it adds `view`, the week as `PreviewWeek.view/3` resolves
-  it, which is all a theme reads about the week.
+  For the `:card` it adds `view`, the week as `PreviewWeek.view/4` resolves
+  it, which is all a theme reads about the week. A card needs `today`.
   """
   @spec theme_preview(map()) :: Phoenix.LiveView.Rendered.t()
   def theme_preview(assigns) do
@@ -60,14 +64,23 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     end
   end
 
-  defp with_view(%{variant: :card} = assigns) do
-    today = assigns.today || Date.utc_today()
-    assign(assigns, :view, PreviewWeek.view(assigns.week, today, assigns.locale))
+  defp with_view(%{variant: :card, today: %Date{} = today} = assigns) do
+    view =
+      PreviewWeek.view(assigns.week, today, assigns.locale,
+        id: assigns.id,
+        reveal_key: assigns.reveal_key
+      )
+
+    assign(assigns, :view, view)
   end
 
   defp with_view(assigns), do: assigns
 
-  @doc "The generic mock: a plain card with a week strip, the chosen day and a solid Book button."
+  @doc """
+  The generic mock: a plain card with a week strip, the chosen day and a
+  solid Book button. A theme may draw its card with it, setting `radius`
+  (the card's corner class) to its own.
+  """
   @spec generic(map()) :: Phoenix.LiveView.Rendered.t()
   def generic(%{variant: :thumbnail} = assigns) do
     ~H"""
@@ -81,11 +94,10 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   end
 
   def generic(%{variant: :card} = assigns) do
+    assigns = assign_new(assigns, :radius, fn -> "rounded-token-2xl" end)
+
     ~H"""
-    <div
-      class="rounded-token-2xl p-5 flex flex-col items-center gap-3"
-      style={card_style(@colors)}
-    >
+    <div class={[@radius, "p-5 flex flex-col items-center gap-3"]} style={card_style(@colors)}>
       {render_slot(@header)}
       <PreviewWeek.calendar_area colors={@colors} highlight={@highlight} class="flex flex-col gap-2">
         <PreviewWeek.day_strip view={@view} colors={@colors} />
@@ -95,7 +107,6 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
           layout={:rows}
           limit={5}
           class="flex flex-col gap-1.5"
-          reveal={@reveal}
           highlight={@highlight}
         />
       </PreviewWeek.calendar_area>

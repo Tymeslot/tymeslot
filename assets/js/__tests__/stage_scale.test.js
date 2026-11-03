@@ -154,4 +154,22 @@ describe('StageScale hook', () => {
 
     expect(el.style.getPropertyValue('--stage-shift')).toBe('0px');
   });
+
+  test('watches the phone card, so a change in its height refits the shift', () => {
+    const observed = [];
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      observe(target) { observed.push(target); }
+      unobserve() {}
+      disconnect() {}
+    };
+
+    try {
+      const el = buildCard({ focus: true });
+      mount(el, { wide: false });
+      expect(observed).toContain(el.parentElement);
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
+  });
 });

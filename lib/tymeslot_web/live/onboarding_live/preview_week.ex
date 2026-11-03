@@ -20,13 +20,19 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     * `:ready`: the week from the preview: days without times read as
       unavailable, the first day with times is chosen and its times shown,
       and busy blocks are drawn hatched in the muted colour wherever a theme
-      lists a day's times.
+      lists a day's times. A week with no free time at all says so instead.
     * `:slow` and `:failed`: like `:placeholder`, with the line saying the
       free times will appear on the page.
 
-  The times enter with the reveal animation (`onboarding.css`) when
-  `reveal` is set, which the caller does only on the render where the week
-  changed, so a later re-render never replays it.
+  The times enter with the reveal animation (`onboarding.css`) when their
+  list is new in the page. The list's id (`times_id`) carries the stage's
+  `reveal_key`, so a new week (a bumped key) replaces the list and reveals
+  it once, while any other re-render, or a reconnect, patches the same list
+  in place and never replays or cuts it short.
+
+  Every date is the preview's own: before the week is ready, the coming
+  seven days from `today`; once it is, the preview's days, so a page left
+  open past midnight still shows the week it was given.
   """
 
   use Phoenix.Component
@@ -44,7 +50,6 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   @type day :: %{
           date: Date.t(),
           weekday: String.t(),
-          narrow: String.t(),
           number: pos_integer(),
           slots: [String.t()],
           starts: [Time.t()],
@@ -62,6 +67,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
           selected: day() | nil,
           heading: String.t(),
           day_note: String.t() | nil,
+          times_id: String.t(),
           agenda: [entry()],
           month: map()
         }
@@ -71,26 +77,32 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   def placeholder, do: %{state: :placeholder, preview: nil}
 
   @doc """
-  The view every theme lays out, for `week` as of `today` (in the host's
-  timezone), worded in `locale`.
+  The view every theme lays out, for `week` as of `today` (the host's date,
+  `Tymeslot.Availability.today/1`), worded in `locale`.
+
+  Options: `:id`, what the stage copy is called (the stage and its expanded
+  copy each pass their own, so their ids never clash), and `:reveal_key`,
+  the stage's count of weeks shown; together they make `times_id`.
   """
-  @spec view(week() | nil, Date.t(), String.t()) :: t()
-  def view(week, today, locale) do
+  @spec view(week() | nil, Date.t(), String.t(), keyword()) :: t()
+  def view(week, %Date{} = today, locale, opts \\ []) do
     week = week || placeholder()
     ready? = week.state == :ready and match?(%WeekPreview{}, week.preview)
     days = days(week, ready?, today, locale)
     selected = if ready?, do: Enum.find(days, & &1.open?)
+    shown = selected || hd(days)
 
     %{
       state: week.state,
       ready?: ready?,
-      message: message(week.state, ready?),
+      message: message(week.state, ready?, selected),
       days: days,
       selected: selected,
-      heading: LocaleFormat.format_weekday_day_month((selected || hd(days)).date, locale),
-      day_note: day_note(selected),
+      heading: LocaleFormat.format_weekday_day_month(shown.date, locale),
+      day_note: day_note(ready?, selected),
+      times_id: "#{Keyword.get(opts, :id, "preview")}-times-#{Keyword.get(opts, :reveal_key, 0)}",
       agenda: agenda(selected, locale),
-      month: month(days, selected, ready?, today, locale)
+      month: month(days, selected, shown, ready?, locale)
     }
   end
 
@@ -124,7 +136,6 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     %{
       date: date,
       weekday: LocaleFormat.format_weekday_name(weekday, locale, :short),
-      narrow: LocaleFormat.format_weekday_name(weekday, locale, :narrow),
       number: date.day,
       slots: Enum.map(slots, &format_label(&1, locale)),
       starts: Enum.map(slots, &parse_label/1),
@@ -133,10 +144,13 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     }
   end
 
-  defp day_note(nil), do: nil
+  # Before the week is ready there is no count to give; a ready week with
+  # no free day counts none.
+  defp day_note(false, _selected), do: nil
+  defp day_note(true, selected), do: free_times(if(selected, do: length(selected.slots), else: 0))
 
-  defp day_note(%{slots: slots}) do
-    dngettext("onboarding_wizard", "%{count} free time", "%{count} free times", length(slots))
+  defp free_times(count) do
+    dngettext("onboarding_wizard", "%{count} free time", "%{count} free times", count)
   end
 
   defp agenda(nil, _locale), do: []
@@ -160,14 +174,14 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     Enum.sort_by(slots ++ busy, & &1.at, Time)
   end
 
-  # The weeks around the coming seven days, Monday first, as a month
-  # calendar shows them.
-  defp month(days, selected, ready?, today, locale) do
+  # The two weeks around the seven days shown, Monday first, as a month
+  # calendar shows them, titled with the month of the day it opens on.
+  defp month(days, selected, shown, ready?, locale) do
     by_date = Map.new(days, &{&1.date, &1})
-    first = Date.beginning_of_week(today)
+    first = days |> hd() |> Map.fetch!(:date) |> Date.beginning_of_week()
 
     %{
-      title: LocaleFormat.format_month_year(today.month, today.year, locale),
+      title: LocaleFormat.format_month_year(shown.date.month, shown.date.year, locale),
       weekdays: for(n <- 1..7, do: LocaleFormat.format_weekday_name(n, locale, :narrow)),
       cells:
         for offset <- 0..13 do
@@ -183,14 +197,18 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   defp cell_kind(%{open?: true}, _selected, true), do: :open
   defp cell_kind(_day, _selected, true), do: :closed
 
-  defp message(_state, true), do: nil
+  defp message(_state, true, nil),
+    do: dgettext("onboarding_wizard", "No free times in the next seven days.")
 
-  defp message(:loading, _ready?), do: dgettext("onboarding_wizard", "Reading your calendar…")
+  defp message(_state, true, _selected), do: nil
 
-  defp message(state, _ready?) when state in [:slow, :failed],
+  defp message(:loading, _ready?, _selected),
+    do: dgettext("onboarding_wizard", "Reading your calendar…")
+
+  defp message(state, _ready?, _selected) when state in [:slow, :failed],
     do: dgettext("onboarding_wizard", "Connected. Your free times will appear on your page.")
 
-  defp message(_state, _ready?),
+  defp message(_state, _ready?, _selected),
     do:
       dgettext(
         "onboarding_wizard",
@@ -207,7 +225,6 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   attr :view, :map, required: true
   attr :colors, :map, required: true
   attr :cell_class, :string, default: "rounded-token-sm"
-  attr :highlighted, :boolean, default: false
 
   @doc """
   A month calendar of the two weeks around the coming seven days, with real
@@ -220,7 +237,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     <div class="w-full flex flex-col gap-1" data-preview-part="month">
       <p
         class="text-token-xs font-semibold text-left"
-        style={"color: #{PreviewParts.color(@colors, :text, "#0f172a")};"}
+        style={"color: #{ink(@colors)};"}
       >
         {@view.month.title}
       </p>
@@ -228,7 +245,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
         <span
           :for={name <- @view.month.weekdays}
           class="text-token-2xs font-semibold text-center"
-          style={"color: #{PreviewParts.color(@colors, :text_secondary, "#475569")};"}
+          style={"color: #{muted(@colors)};"}
         >
           {name}
         </span>
@@ -309,7 +326,6 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   attr :limit, :integer, default: 6
   attr :class, :string, default: nil, doc: "the list's own layout (columns, gaps)"
   attr :item_class, :string, default: "rounded-token-md"
-  attr :reveal, :boolean, default: false
   attr :highlight, :list, default: [], doc: "the regions ringed for the step"
 
   @doc """
@@ -330,18 +346,18 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     assigns =
       assign(assigns,
         cells: cells(assigns),
-        highlighted: :slots in assigns.highlight,
-        muted: PreviewParts.color(assigns.colors, :text_secondary, "#475569")
+        highlighted: :slots in assigns.highlight
       )
 
     ~H"""
     <div
+      id={@view.times_id}
       class="relative w-full rounded-token-lg"
       style={PreviewParts.ring(@highlighted, @colors)}
       data-preview-part="times"
       data-preview-region="slots"
       data-stage-focus={@highlighted}
-      data-reveal={@reveal and @view.ready?}
+      data-reveal
     >
       <div class={["w-full", @class]}>
         <span
@@ -365,7 +381,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
       <p
         :if={@view.message}
         class="absolute inset-0 flex items-center justify-center px-3 text-token-xs text-center leading-snug"
-        style={"color: #{@muted};"}
+        style={"color: #{muted(@colors)};"}
         data-role="week-message"
       >
         {@view.message}
@@ -374,10 +390,11 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     """
   end
 
-  # Exactly `limit` cells: the entries, then blanks; before the week is
-  # ready, faint cells (shimmering while it loads). A blank keeps a line's
-  # height with a no-break space.
-  defp cells(%{view: %{ready?: true}} = assigns) do
+  # Exactly `limit` cells: the chosen day's entries, then blanks; with no
+  # day to show (before the week is ready, or a week with no free time),
+  # faint cells, shimmering while it loads. A blank keeps a line's height
+  # with a no-break space.
+  defp cells(%{view: %{selected: %{}}} = assigns) do
     entries = entries(assigns)
     entries ++ List.duplicate(%{kind: :filler, label: "\u00a0"}, assigns.limit - length(entries))
   end
@@ -403,47 +420,24 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   # Styles (per-user colours)
   # -------------------------------------------------------------------
 
-  defp cell_style(colors, :selected) do
-    "background: #{PreviewParts.color(colors, :primary, "#14b8a6")};color: #ffffff;"
-  end
+  defp cell_style(colors, :selected), do: "background: #{primary(colors)};color: #ffffff;"
+  defp cell_style(colors, :open), do: "background: #{primary(colors)}26;color: #{ink(colors)};"
+  defp cell_style(colors, :idle), do: "background: #{muted(colors)}14;color: #{muted(colors)};"
+  defp cell_style(colors, :closed), do: "color: #{muted(colors)};opacity: 0.55;"
+  defp cell_style(colors, :outside), do: "color: #{muted(colors)};opacity: 0.3;"
 
-  defp cell_style(colors, :open) do
-    primary = PreviewParts.color(colors, :primary, "#14b8a6")
-    "background: #{primary}26;color: #{PreviewParts.color(colors, :text, "#0f172a")};"
-  end
+  defp cell_style(colors, :slot, index),
+    do: "background: #{primary(colors)}1f;color: #{ink(colors)};--reveal-index: #{index};"
 
-  defp cell_style(colors, :idle) do
-    muted = PreviewParts.color(colors, :text_secondary, "#475569")
-    "background: #{muted}14;color: #{muted};"
-  end
+  defp cell_style(colors, :busy, _index),
+    do: "color: #{muted(colors)};background-color: #{muted(colors)}0f;"
 
-  defp cell_style(colors, :closed) do
-    "color: #{PreviewParts.color(colors, :text_secondary, "#475569")};opacity: 0.55;"
-  end
-
-  defp cell_style(colors, :outside) do
-    "color: #{PreviewParts.color(colors, :text_secondary, "#475569")};opacity: 0.3;"
-  end
-
-  defp cell_style(colors, :slot, index) do
-    primary = PreviewParts.color(colors, :primary, "#14b8a6")
-
-    "background: #{primary}1f;color: #{PreviewParts.color(colors, :text, "#0f172a")};" <>
-      "--reveal-index: #{index};"
-  end
-
-  defp cell_style(colors, :busy, _index) do
-    muted = PreviewParts.color(colors, :text_secondary, "#475569")
-    "color: #{muted};background-color: #{muted}0f;"
-  end
-
-  defp cell_style(colors, :ghost, _index) do
-    "background-color: #{PreviewParts.color(colors, :text_secondary, "#475569")}0a;"
-  end
-
-  defp cell_style(colors, :loading, _index) do
-    "color: #{PreviewParts.color(colors, :text_secondary, "#475569")};"
-  end
-
+  defp cell_style(colors, :ghost, _index), do: "background-color: #{muted(colors)}0a;"
+  defp cell_style(colors, :loading, _index), do: "color: #{muted(colors)};"
   defp cell_style(_colors, :filler, _index), do: nil
+
+  # The theme's colours, or the neutral defaults where it sets none.
+  defp primary(colors), do: PreviewParts.color(colors, :primary, "#14b8a6")
+  defp ink(colors), do: PreviewParts.color(colors, :text, "#0f172a")
+  defp muted(colors), do: PreviewParts.color(colors, :text_secondary, "#475569")
 end

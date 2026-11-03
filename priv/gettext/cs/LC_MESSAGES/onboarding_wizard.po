@@ -644,3 +644,8 @@ msgstr[2] "Už máte obsazeno: %{day}, %{time}. Tento týden %{count} volných t
 #, elixir-autogen, elixir-format
 msgid "Your free times appear here once your calendar is connected."
 msgstr "Vaše volné termíny se tu zobrazí po připojení kalendáře."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "No free times in the next seven days."
+msgstr "V příštích sedmi dnech nejsou žádné volné termíny."

@@ -16,8 +16,10 @@ defmodule Tymeslot.Availability do
   """
 
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
 
@@ -51,4 +53,12 @@ defmodule Tymeslot.Availability do
   @spec week_preview(ProfileSchema.t(), keyword()) ::
           {:ok, WeekPreview.t()} | {:error, :calendar_unavailable}
   defdelegate week_preview(profile, opts \\ []), to: WeekPreview, as: :build
+
+  @doc """
+  Today's date where the host is: in the profile's timezone, or the host
+  default for a profile without one (`Tymeslot.Profiles.timezone/1`), read
+  from `Tymeslot.Clock`.
+  """
+  @spec today(ProfileSchema.t() | map() | nil) :: Date.t()
+  def today(profile), do: profile |> Profiles.timezone() |> TimeOff.today()
 end

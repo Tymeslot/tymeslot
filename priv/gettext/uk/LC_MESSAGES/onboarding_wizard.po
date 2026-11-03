@@ -644,3 +644,8 @@ msgstr[2] "У вас уже зайнято: %{day}, %{time}. Цього тижн
 #, elixir-autogen, elixir-format
 msgid "Your free times appear here once your calendar is connected."
 msgstr "Ваші вільні слоти з’являться тут, щойно ви підключите календар."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "No free times in the next seven days."
+msgstr "Найближчі сім днів вільних слотів немає."

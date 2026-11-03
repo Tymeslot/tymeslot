@@ -1,9 +1,10 @@
 defmodule TymeslotWeb.OnboardingLive.StageRevealTest do
   @moduledoc """
-  The stage's times reveal once per new week: on the render where
-  `reveal_key` changed, and never on a later re-render of the same week.
-  Change tracking only exists inside a LiveView, so the preview is mounted
-  in a small one here.
+  The stage's times reveal once per new week. The list's id carries the
+  stage's `reveal_key`, so a bumped key gives the page a new list, whose
+  times enter with the reveal, while any other re-render patches the same
+  list in place. The preview is mounted in a small LiveView here so the
+  ids can be followed across renders.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -52,23 +53,49 @@ defmodule TymeslotWeb.OnboardingLive.StageRevealTest do
     }
   }
 
-  defp revealing?(view) do
-    view |> render() |> Floki.parse_fragment!() |> Floki.find("[data-reveal]") != []
+  # The id of the revealing times list, which must be the only one.
+  defp times_id(html) do
+    assert [list] = html |> Floki.parse_fragment!() |> Floki.find("[data-reveal]")
+    assert [id] = Floki.attribute(list, "id")
+    assert Floki.find(list, "[data-reveal-item]") != []
+    id
   end
 
-  test "the reveal attribute is only present on the transition render", %{conn: conn} do
+  test "only a new reveal key gives the times a new list to reveal", %{conn: conn} do
     {:ok, view, _html} = live_isolated(conn, StageHost, session: %{"week" => @week})
 
-    assert revealing?(view)
+    assert times_id(render(view)) == "stage-times-1"
 
-    # The same week, re-rendered for another reason: no second reveal.
+    # The same week, re-rendered for another reason: the same list, patched
+    # in place, so its reveal neither replays nor stops short.
     send(view.pid, {:assign, name: "Ada Lovelace"})
-    refute revealing?(view)
-    assert render(view) =~ "Ada Lovelace"
+    html = render(view)
+    assert html =~ "Ada Lovelace"
+    assert times_id(html) == "stage-times-1"
 
-    # A new week arrives: it reveals again.
+    # Two new weeks in a row: a new list each time.
     send(view.pid, {:assign, reveal_key: 2})
-    assert revealing?(view)
+    assert times_id(render(view)) == "stage-times-2"
+    send(view.pid, {:assign, reveal_key: 3})
+    assert times_id(render(view)) == "stage-times-3"
+  end
+
+  test "the stage and its expanded copy never share an id" do
+    ids =
+      for id <- ["stage", "stage-expanded"] do
+        times_id(
+          render_component(&LivePreview.live_preview/1,
+            current_step: :connect_calendar,
+            booking_host: "tymeslot.test",
+            week: @week,
+            reveal_key: 4,
+            today: ~D[2026-11-03],
+            id: id
+          )
+        )
+      end
+
+    assert ids == ["stage-times-4", "stage-expanded-times-4"]
   end
 
   test "the times carry the reveal stagger" do
