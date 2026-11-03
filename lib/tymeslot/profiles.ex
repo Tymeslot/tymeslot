@@ -23,6 +23,7 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Profiles.Usernames
   alias Tymeslot.Repo
   alias Tymeslot.Security.EncryptedString
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Themes.Catalog
 
   @type user_id :: pos_integer()
@@ -323,6 +324,26 @@ defmodule Tymeslot.Profiles do
   @spec username_status(profile() | map() | nil, term()) ::
           :unchanged | :ok | {:invalid, String.t()} | :reserved | :taken
   defdelegate username_status(profile, username), to: Usernames, as: :status
+
+  @doc """
+  Brings typed text towards the accepted username shape (lowercase, spaces
+  to hyphens, disallowed characters dropped); see
+  `Tymeslot.Security.FieldValidators.UsernameValidator.normalise/1`.
+  """
+  @spec normalise_username(String.t()) :: username
+  defdelegate normalise_username(text), to: UsernameValidator, as: :normalise
+
+  @doc """
+  Why a username's shape is refused (`:required`, `{:too_short, min}`,
+  `{:too_long, max}`, `:format`), or `nil`; see
+  `Tymeslot.Security.FieldValidators.UsernameValidator.problem/2`.
+  """
+  @spec username_problem(term()) :: UsernameValidator.problem() | nil
+  defdelegate username_problem(username), to: UsernameValidator, as: :problem
+
+  @doc "The shortest and longest username accepted, as `{min, max}`."
+  @spec username_length_range() :: {pos_integer(), pos_integer()}
+  defdelegate username_length_range(), to: UsernameValidator, as: :length_range
 
   @doc """
   Why a profile changeset refused its username: `:taken` when another profile

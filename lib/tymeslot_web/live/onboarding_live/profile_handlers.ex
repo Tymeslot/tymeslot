@@ -18,12 +18,26 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
 
   Validates user input in real-time and updates form state
   with validation results.
+
+  The link is normalised as it is typed (`Profiles.normalise_username/1`):
+  the form data, and so the preview and what Continue saves, hold the
+  normalised link at once. The field itself keeps what the host typed
+  (`link_input`) while it has focus, so the value never changes under the
+  cursor, and takes the normalised link on blur (`handle_link_blur/1`).
   """
   @spec handle_validate_basic_settings(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_validate_basic_settings(params, socket) do
-    form_params = normalize_basic_settings_params(params)
+    typed_params = normalize_basic_settings_params(params)
+    form_params = normalise_link(typed_params)
     {socket, updated_form_data} = follow_name(socket, build_form_data(form_params, socket))
+
+    socket =
+      Component.assign(
+        socket,
+        :link_input,
+        link_input(typed_params["username"], updated_form_data)
+      )
 
     base_errors =
       case BasicSettingsShared.validate_basic_settings(socket, form_params) do
@@ -50,6 +64,26 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
         params
     end
   end
+
+  @doc """
+  Shows the normalised link in the field once the host leaves it.
+  """
+  @spec handle_link_blur(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_link_blur(socket), do: {:noreply, Component.assign(socket, :link_input, nil)}
+
+  defp normalise_link(%{"username" => link} = form_params) when is_binary(link),
+    do: %{form_params | "username" => Profiles.normalise_username(link)}
+
+  defp normalise_link(form_params), do: form_params
+
+  # What the field shows while it has focus: the typed text, when it is not
+  # already the link the form holds. A suggestion that replaced the link is
+  # shown as it is.
+  defp link_input(typed, %{"username" => link}) when is_binary(typed) do
+    if typed != link and Profiles.normalise_username(typed) == link, do: typed
+  end
+
+  defp link_input(_typed, _form_data), do: nil
 
   defp build_form_data(form_params, socket) do
     %{
@@ -115,24 +149,28 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
     Component.assign(socket, :form_errors, Map.put(errors, :username, username_error(reason)))
   end
 
-  # Username errors fall into two buckets. Format/length problems ("too short",
-  # bad characters) are nags while the user is mid-keystroke, so we suppress
-  # them live and let the changeset surface them on continue. But "reserved"
-  # and "already taken" are decisive — the name can never work — so we show
-  # them immediately, exactly as a collision would feel. The profile's own
-  # current handle is never re-checked.
+  # The link's error is shown as the host types, in the step's words: its
+  # shape (`BasicSettingsShared.link_error/1`), or that it is reserved or
+  # taken. The profile's own current handle is never re-checked.
   defp resolve_username_error(errors, form_data, socket) do
     errors = Map.delete(errors, :username)
+    link = form_data["username"] || ""
 
-    case Profiles.username_status(socket.assigns[:profile], form_data["username"] || "") do
+    case Profiles.username_status(socket.assigns[:profile], link) do
       reason when reason in [:reserved, :taken] ->
         Map.put(errors, :username, username_error(reason))
 
-      _unchanged_ok_or_invalid ->
+      {:invalid, _message} ->
+        Map.put(errors, :username, BasicSettingsShared.link_error(link))
+
+      _unchanged_or_ok ->
         errors
     end
   end
 
-  defp username_error(:reserved), do: dgettext("onboarding_wizard", "This username is reserved")
-  defp username_error(:taken), do: dgettext("onboarding_wizard", "This username is already taken")
+  defp username_error(:reserved),
+    do: dgettext("onboarding_wizard", "This link is reserved. Try another one.")
+
+  defp username_error(:taken),
+    do: dgettext("onboarding_wizard", "Someone already has this link. Try another one.")
 end

@@ -174,9 +174,8 @@ defmodule TymeslotWeb.OnboardingLiveTest do
     end
 
     test "profile step blocks advancing when username is empty", %{conn: conn} do
-      # Front-line defence: NavigationHandlers.handle_username_validation
-      # rejects an empty username at the profile step with "Username is
-      # required", so the user can't reach the calendar step (let alone
+      # Front-line defence: the profile step's validation rejects an empty
+      # link, in the step's own words, so the user can't reach the calendar step (let alone
       # complete onboarding) without choosing a handle. Regression pins
       # the UX gate — the completion-time ensure_username/2 backfill is
       # a secondary safety net, not the primary guard.
@@ -195,7 +194,8 @@ defmodule TymeslotWeb.OnboardingLiveTest do
         |> element("button[phx-click='next_step']")
         |> render_click()
 
-      assert result =~ "Username is required"
+      assert result =~ "Your link needs 3 to 30 characters."
+      refute result =~ "Username is required"
       # The profile form is still visible — the step did not advance.
       assert has_element?(view, "#profile-form")
     end

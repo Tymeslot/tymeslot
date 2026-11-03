@@ -19,6 +19,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Components.TimezoneDropdown
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  alias TymeslotWeb.OnboardingLive.LivePreview
 
   @doc """
   Renders the profile step form.
@@ -36,6 +37,8 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   * `uploads` - The LiveView upload config map (must contain `:avatar`)
   * `avatar_url` - Resolved thumbnail URL for the current avatar
   * `link_suggested` - Whether the link is still a suggestion that follows the name
+  * `link_input` - What the host typed in the link field, while it differs
+    from the normalised link in `form_data` (`nil` otherwise)
   * `timezone_focus_change` - Whether the timezone line's Change button takes
     the focus when it reappears (after the picker closes)
   """
@@ -49,6 +52,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   attr :uploads, :map, required: true
   attr :avatar_url, :string, default: nil
   attr :link_suggested, :boolean, default: false
+  attr :link_input, :string, default: nil
   attr :timezone_focus_change, :boolean, default: false
 
   @spec profile_step(map()) :: Phoenix.LiveView.Rendered.t()
@@ -102,10 +106,14 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
                prefix sits against the typed text whatever its length. While the
                link is a suggestion it follows the name even when the field has
                focus (`phx-patch-focused`): a host who tabs in straight after
-               typing their name sees the link Continue will save. --%>
+               typing their name sees the link Continue will save. What the
+               host types is normalised in the preview at once and in the
+               field when they leave it, never under the cursor. The field
+               draws the focus, so the input inside takes no ring of its own
+               (`onboarding.css`), which would cover the prefix. --%>
           <div
             class={[
-              "input flex items-center min-h-11 cursor-text",
+              "onboarding-link-field input flex items-center min-h-11 cursor-text",
               "focus-within:border-turquoise-400 focus-within:bg-white focus-within:shadow-xl focus-within:shadow-turquoise-500/10",
               if(FormValidationHelpers.field_errors(@form_errors, :username) != [],
                 do: "input-error"
@@ -123,8 +131,9 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
               type="text"
               id="username"
               name="username"
-              value={Map.get(@form_data, "username", "")}
+              value={@link_input || Map.get(@form_data, "username", "")}
               phx-patch-focused={@link_suggested}
+              phx-blur="link_blur"
               class="flex-1 min-w-0 p-0 bg-transparent border-0 text-tymeslot-900 placeholder:text-tymeslot-400 focus:outline-hidden"
               placeholder={dgettext("onboarding_wizard", "yourname")}
               autocomplete="username"
@@ -134,7 +143,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
             />
           </div>
           <%= for message <- FormValidationHelpers.field_errors(@form_errors, :username) do %>
-            <p class="mt-2 text-token-sm text-red-600 font-bold">{message}</p>
+            <p class="mt-2 text-token-sm text-red-600 font-bold" data-role="link-error">{message}</p>
           <% end %>
         </div>
       </.form>
@@ -154,8 +163,24 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
           phx-drop-target={@uploads.avatar.ref}
           class="flex items-center gap-4 mt-1"
         >
-          <div class="w-12 h-12 rounded-token-xl overflow-hidden bg-tymeslot-100 border border-tymeslot-200 shrink-0">
+          <div
+            :if={@profile && @profile.avatar}
+            class="w-12 h-12 rounded-token-xl overflow-hidden bg-tymeslot-100 border border-tymeslot-200 shrink-0"
+          >
             <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
+          </div>
+          <%!-- No photo yet: the initials the page shows instead --%>
+          <div
+            :if={!(@profile && @profile.avatar)}
+            class="w-12 h-12 rounded-token-xl flex items-center justify-center bg-turquoise-100 text-turquoise-800 font-bold shrink-0"
+            data-role="avatar-initials"
+            aria-hidden="true"
+          >
+            <%= if initials = LivePreview.initials(Map.get(@form_data, "full_name")) do %>
+              {initials}
+            <% else %>
+              <.icon name="hero-user" class="w-6 h-6" />
+            <% end %>
           </div>
           <label for={@uploads.avatar.ref} class={button_classes(:secondary, :sm)}>
             <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4 shrink-0" />

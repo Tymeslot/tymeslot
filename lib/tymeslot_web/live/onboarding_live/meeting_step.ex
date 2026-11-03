@@ -5,9 +5,11 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
   week, or days and one window of the host's own).
 
   The step only draws the forms; their state and events are
-  `MeetingHandlers`'. Every chip row is a `segmented_control/1`, which
-  scrolls sideways on a narrow screen rather than wrapping, and every
-  control is at least 44px tall.
+  `MeetingHandlers`'. Every chip row is a `segmented_control/1` that wraps
+  rather than scrolls (`overflow={:wrap}`): each row is a handful of short
+  choices on its own line, so at any width and in any language every chip
+  is whole, where a scrolling row would cut one mid-word. Every control is
+  at least 44px tall.
   """
 
   use Phoenix.Component
@@ -62,6 +64,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             param="index"
             size={:lg}
             aria_label={dgettext("onboarding_wizard", "Suggested names")}
+            overflow={:wrap}
             class="mt-1"
           >
             <:option
@@ -88,6 +91,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             param="duration"
             size={:lg}
             aria_label={dgettext("onboarding_wizard", "Meeting length")}
+            overflow={:wrap}
           >
             <:option
               :for={minutes <- MeetingHandlers.duration_presets()}
@@ -138,6 +142,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             param="location"
             size={:lg}
             aria_label={dgettext("onboarding_wizard", "Where the meeting is held")}
+            overflow={:wrap}
           >
             <:option
               value="video"
@@ -176,6 +181,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           param="preset"
           size={:lg}
           aria_label={dgettext("onboarding_wizard", "Weekly hours")}
+          overflow={:wrap}
         >
           <:option value="weekdays" label={dgettext("onboarding_wizard", "Weekdays 9 to 5")} />
           <:option value="mornings" label={dgettext("onboarding_wizard", "Mornings")} />

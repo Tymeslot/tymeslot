@@ -130,6 +130,67 @@ defmodule TymeslotWeb.OnboardingLive.LivePreviewTest do
     end
   end
 
+  describe "the host's picture on the card" do
+    defp header(theme, attrs) do
+      html =
+        render_component(
+          &LivePreview.live_preview/1,
+          [
+            current_step: :profile,
+            booking_theme: theme,
+            booking_host: "tymeslot.test",
+            today: ~D[2026-11-03]
+          ] ++ attrs
+        )
+
+      Floki.parse_fragment!(html)
+    end
+
+    test "is the host's initials, from the name as typed, while there is no photo" do
+      for theme <- ~w(1 2 3 4) do
+        doc = header(theme, name: "maya okafor")
+
+        assert [initials] = Floki.find(doc, "[data-role='preview-initials']"), "theme #{theme}"
+        assert String.trim(Floki.text(initials)) == "MO"
+      end
+    end
+
+    test "is drawn on the theme's own primary colour" do
+      [initials] = Floki.find(header("1", name: "Ada"), "[data-role='preview-initials']")
+      [quill] = Floki.attribute(initials, "style")
+      [initials] = Floki.find(header("4", name: "Ada"), "[data-role='preview-initials']")
+      [paper] = Floki.attribute(initials, "style")
+
+      assert quill =~ "color: #ffffff"
+      assert quill != paper
+    end
+
+    test "is the photo once there is one" do
+      doc = header("1", name: "Maya Okafor", avatar_url: "/uploads/avatars/maya.webp")
+
+      assert Floki.find(doc, "[data-role='preview-initials']") == []
+      assert Floki.attribute(doc, "img[src='/uploads/avatars/maya.webp']", "src") != []
+    end
+
+    test "is a person outline before a name is typed" do
+      [initials] = Floki.find(header("1", name: "  "), "[data-role='preview-initials']")
+
+      assert String.trim(Floki.text(initials)) == ""
+      assert Floki.find(initials, "svg") != []
+    end
+  end
+
+  describe "initials/1" do
+    test "takes the first and last names' first letters, or the only name's" do
+      assert LivePreview.initials("maya okafor") == "MO"
+      assert LivePreview.initials("Ana María de la Cruz") == "AC"
+      assert LivePreview.initials("Prince") == "P"
+      assert LivePreview.initials("élodie") == "É"
+      assert LivePreview.initials("") == nil
+      assert LivePreview.initials(nil) == nil
+    end
+  end
+
   describe "a 24-hour locale" do
     test "names the busy day in German and keeps the 24-hour clock" do
       caption =

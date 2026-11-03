@@ -69,7 +69,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
 
       html = fill_profile(view, "Ada Lovelace", "takenslot")
 
-      assert html =~ "already taken"
+      assert html =~ "Someone already has this link"
     end
 
     test "accepts an available username with no error", %{conn: conn} do
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       html = fill_profile(view, "Ada Lovelace", "ada-unique-handle")
 
       refute html =~ "reserved"
-      refute html =~ "already taken"
+      refute html =~ "already has this link"
     end
   end
 
@@ -374,5 +374,36 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
       assert profile.avatar not in [nil, ""]
     end
+
+    test "without a photo the page shows the initials of the name being typed, then the photo",
+         %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+
+      fill_profile(view, "Ada Lovelace", "ada")
+      assert initials(view, "#onboarding-stage-scale [data-role='preview-initials']") == "AL"
+      assert initials(view, "[data-role='avatar-initials']") == "AL"
+
+      fill_profile(view, "Grace Hopper", "ada")
+      assert initials(view, "#onboarding-stage-scale [data-role='preview-initials']") == "GH"
+
+      view
+      |> file_input("#onboarding-avatar-form", :avatar, [
+        %{name: "me.png", content: @png, type: "image/png"}
+      ])
+      |> render_upload("me.png")
+
+      refute has_element?(view, "[data-role='preview-initials']")
+      refute has_element?(view, "[data-role='avatar-initials']")
+      assert render(view) =~ "Change photo"
+    end
+  end
+
+  defp initials(view, selector) do
+    view
+    |> element(selector)
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.text()
+    |> String.trim()
   end
 end

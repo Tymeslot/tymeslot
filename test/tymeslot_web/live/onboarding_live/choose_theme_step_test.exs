@@ -126,7 +126,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       stories = render_step(nil)
 
       assert stories =~ ~s(phx-click="show_all_themes")
-      assert stories =~ "Show all themes"
+      assert stories =~ "Compare the looks side by side"
       refute stories =~ "Choose by description instead"
 
       all = render_step(nil, %{}, :all)
