@@ -43,11 +43,23 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITransactionIdTest do
                transaction_id(integration, keyed_event("meeting-1:AAMk-deleted"))
     end
 
-    test "differs once the event's content changed", %{integration: integration} do
+    test "differs once the event moved", %{integration: integration} do
       data = keyed_event("meeting-1:uid-1")
       moved = %{data | start_time: ~U[2026-03-02 11:00:00Z], end_time: ~U[2026-03-02 12:00:00Z]}
 
       refute transaction_id(integration, data) == transaction_id(integration, moved)
+    end
+
+    test "is the same when only the event's content changed", %{integration: integration} do
+      data = keyed_event("meeting-1:uid-1")
+
+      with_room =
+        Map.merge(data, %{
+          location: "https://meet.example.com/room",
+          description: "Join at https://meet.example.com/room"
+        })
+
+      assert transaction_id(integration, data) == transaction_id(integration, with_room)
     end
 
     test "differs for another calendar", %{integration: integration} do

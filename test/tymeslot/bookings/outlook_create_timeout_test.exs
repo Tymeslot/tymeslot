@@ -123,6 +123,29 @@ defmodule Tymeslot.Bookings.OutlookCreateTimeoutTest do
     assert String.starts_with?(start, Calendar.strftime(moved_start, "%Y-%m-%dT%H:%M"))
   end
 
+  test "a video link attached while the answer was lost lands on the one event", %{
+    meeting: meeting,
+    graph: graph
+  } do
+    lose_next_create_answer(graph)
+    refute run_create(meeting, 1) == :ok
+
+    # The room's own update runs before the create's retry: it finds no
+    # recorded event and recovers by creating one, with the link in its body,
+    # which Graph must answer with the event the lost create wrote.
+    room_url = "https://meet.example.com/room-1"
+    meeting |> Changeset.change(meeting_url: room_url) |> Repo.update!()
+
+    assert :ok =
+             perform_job(CalendarEventWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+
+    assert :ok = run_create(meeting, 2)
+
+    assert [event] = live_events(graph)
+    assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == event["id"]
+    assert %{"location" => %{"displayName" => ^room_url}} = event
+  end
+
   defp book(user, meeting_type) do
     params = %{
       form_data: %{"name" => "Ada Attendee", "email" => "ada@example.com", "message" => ""},
