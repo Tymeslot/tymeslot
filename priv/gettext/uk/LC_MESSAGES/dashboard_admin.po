@@ -868,3 +868,8 @@ msgstr "Tymeslot можна безкоштовно розгорнути на в�
 #, elixir-autogen, elixir-format
 msgid "When an admin alert arrives, share it as a GitHub issue (redacting anything sensitive), so it gets fixed for everyone."
 msgstr "Коли надійде адміністративне сповіщення, поділіться ним як issue на GitHub (прибравши все конфіденційне), щоб це виправили для всіх."
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{version}"
+msgstr "Версія %{version}"

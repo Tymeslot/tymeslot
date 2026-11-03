@@ -868,3 +868,8 @@ msgstr "Tymeslot lässt sich kostenlos selbst hosten. Wenn es Ihnen nützt, gibt
 #, elixir-autogen, elixir-format
 msgid "When an admin alert arrives, share it as a GitHub issue (redacting anything sensitive), so it gets fixed for everyone."
 msgstr "Wenn eine Admin-Benachrichtigung eintrifft, teilen Sie sie als GitHub-Issue (sensible Angaben vorher entfernen), damit es für alle behoben wird."
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{version}"
+msgstr "Version %{version}"
