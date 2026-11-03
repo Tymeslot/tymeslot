@@ -292,6 +292,32 @@
   }
 }
 
+/* On the look step a phone keeps the page in view while the host picks:
+   the stage sticks to the top and the stories and colours scroll up under
+   it, so each choice is seen as it lands. Only on a screen tall enough to
+   leave room for the choices below it. */
+@media (max-width: 1023.98px) and (min-height: 600px) {
+  /* What the pinned stage covers: the card plus its padding and the
+     address strip under it, with a little room to spare. Keyboard focus
+     scrolls clear of it, so a story card, "Show all themes" or the heading
+     reached with Shift+Tab never lands behind the stage. */
+  html:has(.onboarding-stage[data-step="choose_theme"]) {
+    scroll-padding-top: calc(36svh + var(--spacing-24));
+  }
+
+  .onboarding-stage[data-step="choose_theme"] {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding-bottom: var(--spacing-3);
+    background-color: var(--color-bg-primary);
+  }
+
+  .onboarding-stage[data-step="choose_theme"] .stage-frame {
+    height: 36svh;
+  }
+}
+
 .stage-frame-bar {
   display: none;
 }
@@ -645,4 +671,54 @@
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-primary-700);
+}
+
+/* The look step's stories: a column from lg; below it a row of cards the
+   host swipes through, each about 80% of the screen wide so the next one
+   peeks in at the edge. The row bleeds through the column's side padding,
+   so on a phone (below 640px) it runs to the screen's edges. A pointer
+   that cannot swipe gets a thin scrollbar under the row as well; on a
+   touch screen the peeking card is the cue, and the bar stays hidden. */
+.onboarding-theme-stories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+@media (max-width: 1023.98px) {
+  .onboarding-theme-stories {
+    flex-direction: row;
+    align-items: stretch;
+    margin-inline: calc(-1 * var(--spacing-4));
+    padding: var(--spacing-1) var(--spacing-4) var(--spacing-2);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--spacing-4);
+    scrollbar-width: thin;
+  }
+
+  .onboarding-theme-story {
+    flex: 0 0 min(80vw, 85%);
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 1023.98px) and (pointer: coarse) {
+  .onboarding-theme-stories {
+    padding-bottom: var(--spacing-1);
+    scrollbar-width: none;
+  }
+
+  .onboarding-theme-stories::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .onboarding-theme-stories {
+    margin-inline: calc(-1 * var(--spacing-6));
+    padding-inline: var(--spacing-6);
+    scroll-padding-inline: var(--spacing-6);
+  }
 }

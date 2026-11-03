@@ -84,13 +84,13 @@ defmodule CredoChecks.UseModalHookTest do
       """
       defmodule TymeslotWeb.OnboardingLive.Initializer do
         defp initial_ui_state do
-          [current_step: :profile, show_theme_preview_modal: false]
+          [current_step: :profile, show_stage_preview_modal: false]
         end
       end
       """
       |> to_source_file("lib/tymeslot_web/live/onboarding_live/initializer.ex")
       |> run_check(UseModalHook)
-      |> assert_issue(fn issue -> assert issue.trigger == "show_theme_preview_modal" end)
+      |> assert_issue(fn issue -> assert issue.trigger == "show_stage_preview_modal" end)
     end
   end
 

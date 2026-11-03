@@ -26,6 +26,11 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   attr :primary, :string, default: nil, doc: "`:thumbnail`: the theme's primary colour"
   attr :colors, :map, default: %{}, doc: "`:card`: the colour map from `colors/1`"
 
+  attr :background, :map,
+    default: nil,
+    doc:
+      "`:card`: the page background the customisation resolves (`Tokens.media.background`), for a theme that draws it"
+
   attr :week, :map,
     default: nil,
     doc:

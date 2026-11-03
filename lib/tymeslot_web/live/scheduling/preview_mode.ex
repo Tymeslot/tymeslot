@@ -62,7 +62,9 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   end
 
   @doc """
-  Absolute-URL form of `owner_path/3`, for the onboarding preview iframe.
+  Absolute-URL form of `owner_path/3`, for an iframe of the owner's real
+  booking page, such as the onboarding stage showing the live page on the
+  last step.
   """
   @spec owner_url(String.t(), integer(), keyword()) :: String.t()
   def owner_url(username, user_id, opts \\ []) do

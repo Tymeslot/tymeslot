@@ -151,7 +151,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     do:
       dgettext(
         "onboarding_wizard",
-        "Pick the look and feel of your booking page - then preview the real thing."
+        "Pick a look and watch your page change."
       )
 
   def step_description(:meeting),

@@ -51,11 +51,6 @@ msgstr "Buchungslink in die Zwischenablage kopiert!"
 msgid "Booking link copied!"
 msgstr "Buchungslink kopiert!"
 
-#: lib/tymeslot_web/live/onboarding_live/theme_preview_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Booking page preview"
-msgstr "Vorschau der Buchungsseite"
-
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV Calendar"
@@ -116,11 +111,6 @@ msgstr "Link kopieren"
 #, elixir-autogen, elixir-format
 msgid "Could not create calendar integration. Please try again."
 msgstr "Kalenderintegration konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot_web/live/onboarding_live/theme_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Could not open the preview. Please try again."
-msgstr "Die Vorschau konnte nicht geöffnet werden. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
@@ -212,11 +202,6 @@ msgstr "%{title} als nicht erledigt markieren"
 msgid "Nextcloud, Radicale, or any CalDAV server"
 msgstr "Nextcloud, Radicale oder ein beliebiger CalDAV-Server"
 
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Opens your real booking page exactly as invitees will see it."
-msgstr "Öffnet Ihre echte Buchungsseite genau so, wie Gäste sie sehen werden."
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "Outlook Calendar"
@@ -246,11 +231,6 @@ msgstr "Bitte überprüfen Sie Ihre Eingabe und versuchen Sie es erneut."
 #, elixir-autogen, elixir-format
 msgid "Please check your timezone selection and try again."
 msgstr "Bitte überprüfen Sie Ihre Zeitzonenauswahl und versuchen Sie es erneut."
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Preview booking page"
-msgstr "Buchungsseite in der Vorschau ansehen"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -389,7 +369,6 @@ msgid "Your booking link"
 msgstr "Ihr Buchungslink"
 
 #: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
-#: lib/tymeslot_web/live/onboarding_live/theme_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page"
 msgstr "Ihre Buchungsseite"
@@ -434,11 +413,6 @@ msgstr "Ein paar empfohlene Schritte - haken Sie ab, was Sie nicht benötigen."
 #, elixir-autogen, elixir-format
 msgid "One click - connect %{email}"
 msgstr "Ein Klick - %{email} verbinden"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Pick the look and feel of your booking page - then preview the real thing."
-msgstr "Wählen Sie das Erscheinungsbild Ihrer Buchungsseite - und sehen Sie sich dann das Original in der Vorschau an."
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
@@ -887,3 +861,8 @@ msgstr "Ihr Termin konnte nicht gespeichert werden. Bitte versuchen Sie es erneu
 #, elixir-autogen, elixir-format
 msgid "Your video connection isn't available any more. Choose another place, or reconnect it in Settings later."
 msgstr "Ihre Videoverbindung ist nicht mehr verfügbar. Wählen Sie einen anderen Ort oder verbinden Sie sie später in den Einstellungen neu."
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a look and watch your page change."
+msgstr "Wählen Sie ein Design und sehen Sie zu, wie sich Ihre Seite verändert."

@@ -64,6 +64,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :stage_url, :string, required: true, doc: "the address the stage frame shows"
   attr :stage_live, :boolean, default: false, doc: "shows the Live badge on the stage"
   attr :stage_canvas, :string, required: true, doc: "the theme's canvas colour"
+  attr :stage_theme, :string, default: nil, doc: "the id of the theme the stage draws"
   attr :stage_caption, :string, default: nil, doc: "a line under the stage frame"
 
   attr :stage_compact, :boolean,
@@ -162,6 +163,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         data-role="onboarding-stage"
         data-step={@current_step}
         data-compact={@stage_compact}
+        data-theme={@stage_theme}
         data-stage-fit
         style={"--stage-canvas: #{@stage_canvas};"}
       >

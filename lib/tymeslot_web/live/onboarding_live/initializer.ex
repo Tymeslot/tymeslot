@@ -66,7 +66,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     |> Component.assign(:profile, profile)
     |> BasicSettingsShared.assign_form_data()
     |> Component.assign(initial_ui_state())
-    |> ModalHook.mount_modal(theme_preview: false, stage_preview: false)
+    |> ModalHook.mount_modal(stage_preview: false)
     |> Component.assign(
       connected_calendars: connected_calendars,
       google_signup_email: Auth.google_signup_login_hint(user),

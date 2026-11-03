@@ -23,7 +23,6 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.StagePreviewModal
   alias TymeslotWeb.OnboardingLive.StepConfig
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
-  alias TymeslotWeb.OnboardingLive.ThemePreviewModal
   alias TymeslotWeb.OnboardingLive.TimezoneHandlers
   alias TymeslotWeb.OnboardingLive.WeekReveal
   alias TymeslotWeb.Themes.Core.Registry
@@ -99,6 +98,7 @@ defmodule TymeslotWeb.OnboardingLive do
       stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
       stage_live={@current_step == :ready and @booking_page_live == true}
       stage_canvas={LivePreview.canvas(stage_theme(@profile), @theme_customization)}
+      stage_theme={stage_theme(@profile)}
       stage_caption={@stage_caption}
       stage_compact={@current_step == :connect_calendar and @booking_page_live != true}
     >
@@ -174,12 +174,6 @@ defmodule TymeslotWeb.OnboardingLive do
         id="stage-expanded"
       />
     </StagePreviewModal.stage_preview_modal>
-
-    <%!-- Real booking-page preview --%>
-    <ThemePreviewModal.theme_preview_modal
-      show={@show_theme_preview_modal}
-      url={@theme_preview_modal_data}
-    />
     """
   end
 
@@ -306,7 +300,7 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   # ------------------------------------------------------------------
-  # Event handlers — Theme & preview
+  # Event handlers — Theme
   # ------------------------------------------------------------------
 
   def handle_event("select_theme", %{"theme" => theme_id}, socket) do
@@ -323,14 +317,6 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("show_theme_stories", _params, socket) do
     ThemeHandlers.handle_theme_picker(:stories, socket)
-  end
-
-  def handle_event("preview_booking_page", _params, socket) do
-    ThemeHandlers.handle_preview_booking_page(socket)
-  end
-
-  def handle_event("close_theme_preview", _params, socket) do
-    ThemeHandlers.handle_close_theme_preview(socket)
   end
 
   # ------------------------------------------------------------------

@@ -2,12 +2,11 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   @moduledoc """
   Covers the onboarding live-preview panel and the personalisation controls:
   the profile step (avatar, name, booking link) and the `choose_theme` step
-  (booking theme, colour scheme, real-page preview).
+  (booking theme, colour scheme).
 
   These assert the user-visible journey: the right-hand mock reflects the
   organiser's in-progress data, the theme step cannot be reached without a
-  calendar, and theme/colour selections persist and drive a real full-page
-  preview of the booking page.
+  calendar, and theme/colour selections persist and redraw the stage.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -94,7 +93,6 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       html = view |> navigate_to_theme_step() |> render()
 
       assert html =~ "Your booking theme"
-      assert html =~ "Preview booking page"
     end
   end
 
@@ -116,39 +114,34 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
     end
   end
 
-  describe "real booking-page preview" do
-    test "opens a full-page standalone preview of the user's own page", %{conn: conn} do
+  describe "the look step and the stage" do
+    test "selecting a story updates the theme and the stage", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
       view = navigate_to_theme_step(view)
 
-      html =
-        view
-        |> element("button[phx-click='preview_booking_page']")
-        |> render_click()
+      assert has_element?(view, "#onboarding-stage[data-theme='1']")
+
+      view
+      |> element("[data-testid='theme-story'][phx-value-theme='2']")
+      |> render_click()
 
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
-
-      # The modal loads the real page standalone (no embed=1) so the video
-      # background renders and the page fills the frame — preview=true alone
-      # pins CSP frame-ancestors 'self' for same-origin framing.
-      assert html =~ "/#{profile.username}?preview=true"
-      refute html =~ "embed=1"
-      assert html =~ ~s(title="Booking page preview")
+      assert profile.booking_theme == "2"
+      assert has_element?(view, "#onboarding-stage[data-theme='2']")
+      refute has_element?(view, "#onboarding-stage[data-theme='1']")
+      # The stage draws Rhythm: its backdrop behind the glass card, no month grid.
+      assert has_element?(view, "#onboarding-stage [data-preview-part='backdrop']")
+      refute has_element?(view, "#onboarding-stage [data-preview-part='month']")
     end
 
-    test "tears the iframe down on close so a reopen reflects the latest theme", %{conn: conn} do
+    test "the preview button is gone", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      view = navigate_to_theme_step(view)
+      html = view |> navigate_to_theme_step() |> render()
 
-      view |> element("button[phx-click='preview_booking_page']") |> render_click()
-
-      closed =
-        view
-        |> element("#onboarding-theme-preview button[aria-label='Close modal']")
-        |> render_click()
-
-      # No iframe remains, so the next open loads a fresh frame (current theme).
-      refute closed =~ ~s(title="Booking page preview")
+      assert html =~ "Your booking theme"
+      refute has_element?(view, "[phx-click='preview_booking_page']")
+      refute html =~ "Preview booking page"
+      refute has_element?(view, "#onboarding-theme-preview")
     end
   end
 
