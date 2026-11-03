@@ -284,8 +284,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   defp send_membership([], _event, _owner_user_id, _change), do: {:ok, :noop}
 
+  # Sent above the revision the guests already on the entry hold, which a
+  # write to the whole series leaves above the event's own.
   defp send_membership(recipients, event, owner_user_id, change) do
-    {method, sequence} = IcalMethod.for(change, current_sequence: current_sequence(event))
+    {method, sequence} =
+      IcalMethod.for(change,
+        current_sequence: sent_sequence(event, SeriesIdentity.entry_uid(event))
+      )
+
     extra = %{user_id: owner_user_id, removed: change == :attendees_removed}
 
     case send_immediate(event, recipients, method, sequence, extra) do

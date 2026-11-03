@@ -20,6 +20,12 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
      user has deactivated. These events are invisible in the UI and would only
      be cleaned up when the integration is fully deleted (via cascade), so
      pruning them proactively keeps the table lean.
+
+  After both, the rules and the attendee series entries
+  (`Tymeslot.Meetings.AttendeeNotifications.SeriesEntries`) of the series
+  the cache no longer holds are forgotten. A series' entries go only once
+  every one of them has also ended before the cutoff, since a write to a
+  whole series empties its cache until the next sync.
   """
 
   use Oban.Worker,
@@ -32,6 +38,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
 
   @grace_days 30
 
@@ -43,10 +50,12 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
     old_count = IntegrationCacheQueries.prune_ended_before(cutoff)
     inactive_count = IntegrationCacheQueries.prune_inactive_integrations()
     SeriesRules.forget_all_orphans()
+    series_entries_count = SeriesEntries.forget_stale(cutoff)
 
     Logger.info("Calendar cache prune completed",
       old_events_pruned: old_count,
       inactive_events_pruned: inactive_count,
+      series_entries_pruned: series_entries_count,
       retention_days: retention_days
     )
 

@@ -321,6 +321,59 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
 
       assert entry_sequences(email) == [{"series-g_20261110T093000Z", 2}]
     end
+
+    test "a guest added after the edit is invited at the revision the guests hold, " <>
+           "and the next update goes out above that",
+         %{user: user, integration: integration} do
+      # The occurrence was emailed about on its own twice.
+      emailed = google_occurrence(integration, @second, last_notified_state: baseline(@second))
+      run_update_to_delivery(moved(emailed))
+      clear_jobs()
+
+      emailed
+      |> Repo.reload!()
+      |> Changeset.change(summary: "Weekly sync (room 4)")
+      |> Repo.update!()
+      |> run_update_to_delivery()
+
+      clear_jobs()
+
+      original = Repo.reload!(emailed)
+      updated = %{original | description: "Agenda attached"}
+      resync_series(integration)
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
+
+      [edit_email] = deliver_all("send_event_update_notification")
+      assert [{"series-g_20261110T093000Z", held} | _invitation] = entry_sequences(edit_email)
+      clear_jobs()
+
+      # Synced back at revision 0, then a guest added to it.
+      synced =
+        google_occurrence(integration, @second,
+          summary: "Weekly sync (room 4)",
+          description: "Agenda attached",
+          last_notified_state: baseline(@second)
+        )
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.attendees_added(
+                 synced,
+                 [%{email: "newcomer@example.com"}],
+                 user.id
+               )
+
+      [invitation] = deliver_all("send_calendar_invitation")
+      assert [{"series-g_20261110T093000Z", invited}] = entry_sequences(invitation)
+      assert invited == held
+      clear_jobs()
+
+      email = run_update_to_delivery(moved(Repo.reload!(synced)))
+
+      assert [{"series-g_20261110T093000Z", sequence}] = entry_sequences(email)
+      assert sequence > held
+    end
   end
 
   test "cancelling every occurrence after the edit sends the occurrence's own entry " <>

@@ -5,6 +5,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryQueries do
   """
   import Ecto.Query
 
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntrySchema
   alias Tymeslot.Repo
 
@@ -19,7 +20,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryQueries do
 
   @doc """
   Records the entries in `attrs` for the series `address` of the
-  integration, each replacing what was recorded for its UID.
+  integration, each replacing the timing recorded for its UID. The SEQUENCE
+  recorded only ever rises: the guests who already hold the entry keep the
+  highest revision they were sent, whatever a later email to a newcomer
+  went out at.
   """
   @spec put_all(integer(), String.t(), [map()]) :: :ok
   def put_all(_integration_id, _address, []), do: :ok
@@ -32,7 +36,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryQueries do
           Map.merge(entry, %{calendar_integration_id: integration_id, series_address: address})
         )
         |> Repo.insert!(
-          on_conflict: {:replace, [:updated_at | SeriesEntrySchema.replaced_fields()]},
+          on_conflict: keep_highest_sequence(),
           conflict_target: [:calendar_integration_id, :series_address, :entry_uid]
         )
       end)
@@ -65,6 +69,75 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryQueries do
   defp series(integration_id, address) do
     from(e in SeriesEntrySchema,
       where: e.calendar_integration_id == ^integration_id and e.series_address == ^address
+    )
+  end
+
+  @doc """
+  Forgets every series whose cache holds no occurrence any more and none of
+  whose recorded entries ends on or after `cutoff`: one deleted at its
+  provider, or ended, long enough ago that no sync reaches it. Answers how
+  many entries went.
+
+  Neither condition alone will do. A write to a whole series drops its
+  cached rows until the next sync, and a live series' invitation entry
+  carries its first occurrence's timing, however long ago that was.
+  """
+  @spec delete_stale(DateTime.t()) :: non_neg_integer()
+  def delete_stale(%DateTime{} = cutoff) do
+    cutoff_date = DateTime.to_date(cutoff)
+
+    query =
+      from(e in SeriesEntrySchema,
+        as: :entry,
+        where: not exists(cached_occurrences()) and not exists(live_entries(cutoff, cutoff_date))
+      )
+
+    {count, _rows} = Repo.delete_all(query)
+
+    count
+  end
+
+  # A cached row of the series the `:entry` row belongs to, as
+  # `Tymeslot.CalendarGrid.Occurrence.series_address/1` addresses it: by its
+  # master, which a master's own row carries as its provider id, or by its
+  # CalDAV resource. Matching an unrelated row only keeps a record longer.
+  defp cached_occurrences do
+    from(c in ProviderCalendarEventSchema,
+      where:
+        c.calendar_integration_id == parent_as(:entry).calendar_integration_id and
+          (fragment("'master:' || ?", c.recurring_event_id) == parent_as(:entry).series_address or
+             fragment("'master:' || ?", c.provider_event_id) == parent_as(:entry).series_address or
+             fragment("'resource:' || ?", c.provider_event_id) ==
+               parent_as(:entry).series_address),
+      select: 1
+    )
+  end
+
+  defp live_entries(cutoff, cutoff_date) do
+    from(o in SeriesEntrySchema,
+      where:
+        o.calendar_integration_id == parent_as(:entry).calendar_integration_id and
+          o.series_address == parent_as(:entry).series_address and
+          (o.end_at >= ^cutoff or o.end_date >= ^cutoff_date),
+      select: 1
+    )
+  end
+
+  # Each later email replaces an entry's timing; its SEQUENCE only rises.
+  # A function rather than a module attribute, which would make this
+  # module a compile-time dependent of the schema.
+  defp keep_highest_sequence do
+    from(e in SeriesEntrySchema,
+      update: [
+        set: [
+          start_at: fragment("EXCLUDED.start_at"),
+          end_at: fragment("EXCLUDED.end_at"),
+          start_date: fragment("EXCLUDED.start_date"),
+          end_date: fragment("EXCLUDED.end_date"),
+          sent_sequence: fragment("GREATEST(?, EXCLUDED.sent_sequence)", e.sent_sequence),
+          updated_at: fragment("EXCLUDED.updated_at")
+        ]
+      ]
     )
   end
 end

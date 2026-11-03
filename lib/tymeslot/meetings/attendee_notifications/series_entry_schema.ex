@@ -53,10 +53,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntrySchema do
     :sent_sequence
   ]
 
-  @doc "The columns a later email about the same entry replaces."
-  @spec replaced_fields() :: [atom()]
-  def replaced_fields, do: [:start_at, :end_at, :start_date, :end_date, :sent_sequence]
-
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(entry, attrs) do
     entry

@@ -80,6 +80,15 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntries do
     :ok
   end
 
+  @doc """
+  Forgets the series whose cache holds no occurrence any more and whose
+  entries all ended before `cutoff`, the oldest date any sync still reaches
+  (`Tymeslot.Workers.CalendarCachePruneWorker`). Nothing moves or cancels
+  their entries again. Answers how many entries went.
+  """
+  @spec forget_stale(DateTime.t()) :: non_neg_integer()
+  def forget_stale(cutoff), do: SeriesEntryQueries.delete_stale(cutoff)
+
   @doc "Forgets every entry of the series `event` belongs to, once it is cancelled."
   @spec forget_series(map()) :: :ok
   def forget_series(event) do
