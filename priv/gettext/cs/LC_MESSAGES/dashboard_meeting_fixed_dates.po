@@ -219,3 +219,13 @@ msgstr "registrace uzavřena"
 #, elixir-autogen, elixir-format
 msgid "registration until %{datetime}"
 msgstr "registrace do %{datetime}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "beyond the booking window"
+msgstr "mimo období pro rezervace"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "inside the minimum notice"
+msgstr "kratší než minimální předstih"

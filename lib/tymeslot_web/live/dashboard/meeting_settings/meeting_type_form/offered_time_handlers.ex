@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandl
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.Component
-  alias Tymeslot.Clock
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.OfferedTimes
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
@@ -46,18 +45,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandl
   def handle_event("remove_offered_time", %{"id" => id}, socket), do: remove(id, socket)
   def handle_event(_event, _params, socket), do: socket
 
-  @doc "The rows the section lists for `type`: every stored time, past ones included."
+  @doc """
+  The rows the section lists for `type`: every stored time, past ones
+  included, each with its `t:Tymeslot.MeetingTypes.OfferedTimes.status/0`.
+  """
   @spec rows(map() | nil) :: [map()]
   def rows(%{id: id} = type) when is_integer(id) do
-    now = Clock.utc_now()
-
     type
-    |> OfferedTimes.list()
-    |> Enum.map(fn offered_time ->
+    |> OfferedTimes.list_with_status()
+    |> Enum.map(fn {offered_time, status} ->
       %{
         id: offered_time.id,
         starts_at: offered_time.starts_at,
-        past?: DateTime.compare(offered_time.starts_at, now) != :gt
+        status: status,
+        past?: status == :past
       }
     end)
   end
@@ -65,13 +66,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandl
   def rows(_type), do: []
 
   @doc """
-  Whether the form's type offers upcoming times while it is a one-to-one
-  type with fixed dates: group bookings cannot be turned on until they are
+  Whether the form's one-to-one type holds upcoming offered times, with
+  fixed dates on or off: group bookings cannot be turned on until they are
   removed (`Tymeslot.MeetingTypes.FixedDates.check_offered_times_kept/2`).
   """
   @spec times_offered?(map()) :: boolean()
   def times_offered?(assigns) do
-    Map.get(assigns, :fixed_dates) == true and Map.get(assigns, :group_bookings_enabled) != true and
+    Map.get(assigns, :group_bookings_enabled) != true and
       Enum.any?(Map.get(assigns, :offered_time_rows) || [], &(not &1.past?))
   end
 

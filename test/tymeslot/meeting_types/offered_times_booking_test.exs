@@ -20,6 +20,7 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesBookingTest do
 
   alias Tymeslot.Availability.{Offer, TimeSlots}
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.Cancellation
   alias Tymeslot.Meetings.MeetingSchema
@@ -84,6 +85,14 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesBookingTest do
     )
   end
 
+  defp reschedule(ctx, meeting, time) do
+    Reschedule.execute(
+      meeting.uid,
+      %{date: Date.to_iso8601(ctx.day), time: time, duration: "30min", user_timezone: "Etc/UTC"},
+      ctx.user.id
+    )
+  end
+
   test "offers exactly the listed times, on no weekly hours at all", ctx do
     assert offered(ctx) == ["9:00 AM", "2:00 PM", "8:30 PM"]
     assert offered(ctx, Date.add(ctx.day, 1)) == []
@@ -107,6 +116,19 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesBookingTest do
   test "a time that is not offered is refused, though it would fit the day", ctx do
     assert {:error, _not_offered} = book(ctx, "10:00")
     assert Repo.aggregate(MeetingSchema, :count) == 0
+  end
+
+  test "a booking moves onto another offered time, and onto no other", ctx do
+    {:ok, meeting} = book(ctx, "09:00")
+
+    assert {:error, _not_offered} = reschedule(ctx, meeting, "10:00")
+    assert Repo.get!(MeetingSchema, meeting.id).start_time == meeting.start_time
+
+    assert {:ok, moved} = reschedule(ctx, meeting, "14:00")
+    assert moved.start_time == DateTime.new!(ctx.day, ~T[14:00:00])
+
+    # The move frees the time it left and takes the one it went to.
+    assert offered(ctx) == ["9:00 AM", "8:30 PM"]
   end
 
   test "a calendar event hides the time it overlaps", ctx do

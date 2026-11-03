@@ -17,7 +17,7 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesTest do
 
   setup do
     user = insert(:user)
-    insert(:profile, user: user)
+    profile = insert(:profile, user: user)
 
     # A single venue, so the type may also become a group type.
     venue = insert(:venue, user: user)
@@ -31,7 +31,7 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesTest do
         locations: [in_person_location([venue])]
       )
 
-    %{user: user, meeting_type: meeting_type}
+    %{user: user, profile: profile, meeting_type: meeting_type}
   end
 
   defp in_days(days), do: DateTime.add(DateTime.utc_now(:second), days, :day)
@@ -135,6 +135,19 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesTest do
       assert FixedDates.sessions?(updated)
     end
 
+    test "refuses a group type with fixed dates off too, so times cannot be buried", ctx do
+      {:ok, _offered} = OfferedTimes.add(ctx.meeting_type, ctx.user.id, in_days(3))
+      {:ok, dormant} = MeetingTypes.update_meeting_type(ctx.meeting_type, %{fixed_dates: false})
+
+      assert {:error, changeset} =
+               MeetingTypes.update_meeting_type(dormant, %{max_participants: 5})
+
+      assert {"remove the offered times before turning group bookings on", _opts} =
+               changeset.errors[:max_participants]
+
+      assert Repo.reload!(ctx.meeting_type).max_participants == 1
+    end
+
     test "turning fixed dates off keeps the times, unused", ctx do
       {:ok, _offered} = OfferedTimes.add(ctx.meeting_type, ctx.user.id, in_days(3))
 
@@ -158,6 +171,60 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesTest do
       {:ok, _offered} = OfferedTimes.add(ctx.meeting_type, ctx.user.id, in_days(3))
 
       assert Enum.sort(ids.()) == Enum.sort([plain.id, ctx.meeting_type.id])
+    end
+  end
+
+  describe "the booking rules' reach" do
+    # Six hours' notice and a seven-day window, on the type's own schedule.
+    setup ctx do
+      schedule =
+        insert(:availability_schedule,
+          profile: ctx.profile,
+          min_advance_hours: 6,
+          advance_booking_days: 7
+        )
+
+      type =
+        insert(:meeting_type,
+          user: ctx.user,
+          max_participants: 1,
+          fixed_dates: true,
+          is_active: true,
+          availability_schedule_id: schedule.id
+        )
+
+      %{type: type}
+    end
+
+    test "names each time's status, and counts only a bookable one as next",
+         %{type: type} = ctx do
+      now = DateTime.utc_now(:second)
+      {:ok, too_soon} = OfferedTimes.add(type, ctx.user.id, DateTime.add(now, 2, :hour))
+      {:ok, too_far} = OfferedTimes.add(type, ctx.user.id, DateTime.add(now, 12, :day))
+
+      assert OfferedTimes.list_with_status(type, now) == [
+               {too_soon, :too_soon},
+               {too_far, :too_far}
+             ]
+
+      assert OfferedTimes.next_by_type([type], now) == %{type.id => nil}
+
+      {:ok, open} = OfferedTimes.add(type, ctx.user.id, DateTime.add(now, 3, :day))
+
+      assert {^open, :bookable} = Enum.at(OfferedTimes.list_with_status(type, now), 1)
+      assert OfferedTimes.next_by_type([type], now) == %{type.id => open.starts_at}
+    end
+
+    test "leaves a type whose times are all out of reach off the public listing",
+         %{type: type} = ctx do
+      ids = fn -> ctx.user.id |> MeetingTypes.get_public_meeting_types() |> Enum.map(& &1.id) end
+      {:ok, _too_far} = OfferedTimes.add(type, ctx.user.id, in_days(12))
+
+      refute type.id in ids.()
+
+      {:ok, _open} = OfferedTimes.add(type, ctx.user.id, in_days(3))
+
+      assert type.id in ids.()
     end
   end
 

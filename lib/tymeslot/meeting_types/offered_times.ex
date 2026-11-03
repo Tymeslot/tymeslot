@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
 
   alias Ecto.Changeset
   alias Tymeslot.Availability
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Clock
   alias Tymeslot.MeetingTypes.{FixedDates, OfferedTimeQueries, OfferedTimeSchema}
 
@@ -29,7 +30,20 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
   # `Tymeslot.Availability.ExtraAvailability` bounds extra times.
   @max_per_type 100
 
+  # The booking window counts whole days from the booker's own today, which
+  # runs up to fourteen hours ahead of UTC, and its last day lasts a further
+  # day. `reach/2` allows for both, so it never counts out a time that a
+  # booker somewhere could still pick.
+  @window_slack_hours 14 + 24
+
   @type add_error :: :not_found | :not_fixed_dates | :start_in_past | :duplicate | :too_many
+
+  @typedoc """
+  Where an offered time stands against its type's booking rules: started
+  already, inside the minimum notice, beyond the booking window, or open
+  to a booker now.
+  """
+  @type status :: :past | :too_soon | :too_far | :bookable
 
   @spec max_per_type() :: pos_integer()
   def max_per_type, do: @max_per_type
@@ -63,20 +77,36 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
   end
 
   @doc """
-  For each of `meeting_types`, its next offered time, or nil, keyed by type
-  id, in one query.
+  The type's offered times, as `list/1` gives them, each with its
+  `t:status/0` at `now`.
+  """
+  @spec list_with_status(map(), DateTime.t()) :: [{OfferedTimeSchema.t(), status()}]
+  def list_with_status(meeting_type, now \\ Clock.utc_now()) do
+    reach = reach(meeting_type, now)
+    meeting_type |> list() |> Enum.map(&{&1, status(&1.starts_at, reach)})
+  end
+
+  @doc """
+  For each of `meeting_types`, its next offered time a booker can pick now
+  (`:bookable`, `t:status/0`), or nil, keyed by type id. A type whose only
+  upcoming times lie inside the minimum notice or beyond the booking window
+  has nothing to book, so it gets nil, as one with no time at all does.
   """
   @spec next_by_type([map()], DateTime.t()) :: %{integer() => DateTime.t() | nil}
   def next_by_type(meeting_types, now \\ Clock.utc_now()) do
-    ids = Enum.map(meeting_types, & &1.id)
+    reaches = Map.new(meeting_types, &{&1.id, reach(&1, now)})
 
     next =
-      ids
+      reaches
+      |> Map.keys()
       |> OfferedTimeQueries.list_for_types(now)
+      |> Enum.filter(
+        &(status(&1.starts_at, Map.fetch!(reaches, &1.meeting_type_id)) == :bookable)
+      )
       |> Enum.group_by(& &1.meeting_type_id)
       |> Map.new(fn {id, [first | _later]} -> {id, first.starts_at} end)
 
-    Map.new(ids, &{&1, Map.get(next, &1)})
+    Map.new(reaches, fn {id, _reach} -> {id, Map.get(next, id)} end)
   end
 
   @doc """
@@ -134,6 +164,28 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
   """
   @spec prune_past(DateTime.t()) :: {non_neg_integer(), nil}
   def prune_past(%DateTime{} = cutoff), do: OfferedTimeQueries.delete_before(cutoff)
+
+  # The span of starts the type's schedule lets a booker pick at `now`: past
+  # the minimum notice, and within the booking window (`@window_slack_hours`).
+  defp reach(meeting_type, now) do
+    schedule = Schedules.resolve_for_meeting_type(meeting_type)
+    window_hours = Schedules.policy(schedule, :advance_booking_days) * 24 + @window_slack_hours
+
+    %{
+      now: now,
+      earliest: DateTime.add(now, Schedules.policy(schedule, :min_advance_hours), :hour),
+      latest: DateTime.add(now, window_hours, :hour)
+    }
+  end
+
+  defp status(starts_at, %{now: now, earliest: earliest, latest: latest}) do
+    cond do
+      DateTime.compare(starts_at, now) != :gt -> :past
+      DateTime.compare(starts_at, earliest) == :lt -> :too_soon
+      DateTime.compare(starts_at, latest) == :gt -> :too_far
+      true -> :bookable
+    end
+  end
 
   defp check_offered_times(meeting_type) do
     if FixedDates.offered_times?(meeting_type), do: :ok, else: {:error, :not_fixed_dates}

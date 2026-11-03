@@ -836,5 +836,10 @@ msgstr "Cancela las fechas planificadas para desactivar las reservas de grupo."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
-msgid "Remove the offered times, or turn off fixed dates, to enable group bookings."
-msgstr "Quita los horarios ofrecidos o desactiva las fechas fijas para activar las reservas de grupo."
+msgid "Remove the offered times to enable group bookings."
+msgstr "Quita los horarios ofrecidos para activar las reservas de grupo."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "This type still has offered times. Turn on fixed dates and remove them to enable group bookings."
+msgstr "Este tipo de reunión aún tiene horarios ofrecidos. Activa las fechas fijas y quítalos para activar las reservas de grupo."

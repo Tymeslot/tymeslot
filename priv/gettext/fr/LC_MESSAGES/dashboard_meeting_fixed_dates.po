@@ -216,3 +216,13 @@ msgstr "inscriptions closes"
 #, elixir-autogen, elixir-format
 msgid "registration until %{datetime}"
 msgstr "inscriptions jusqu’au %{datetime}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "beyond the booking window"
+msgstr "au-delà de la fenêtre de réservation"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "inside the minimum notice"
+msgstr "en deçà du préavis minimum"

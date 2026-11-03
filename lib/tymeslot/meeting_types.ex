@@ -96,7 +96,7 @@ defmodule Tymeslot.MeetingTypes do
   A paused group type (`Tymeslot.MeetingTypes.GroupAccess`) is left out, as an
   inactive one is: it takes no new bookings, so the page must not offer it. So
   is a fixed-date type with nothing left to book: no session open for
-  sign-up, or no upcoming offered time
+  sign-up, or no offered time a booker can pick now
   (`Tymeslot.MeetingTypes.FixedDates.reject_unbookable/1`), and so is a paid
   type while its host is not accepting payments
   (`Tymeslot.MeetingTypes.PaymentAccess`), since its booking could never be

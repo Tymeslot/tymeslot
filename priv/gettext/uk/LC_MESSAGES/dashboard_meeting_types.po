@@ -437,5 +437,5 @@ msgstr[2] "%{count} зареєстрованих осіб отримають с�
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
-msgid "Not on your booking page until it offers an upcoming time. Add a time to offer."
-msgstr "Не з’явиться на сторінці бронювання, поки не запропонує майбутній слот. Додайте слот, який хочете запропонувати."
+msgid "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
+msgstr "Не з’явиться на сторінці бронювання, доки в ньому не з’явиться слот, який можна обрати: пізніший за мінімальний час до бронювання й у межах вікна завчасного бронювання. Додайте слот для пропозиції."

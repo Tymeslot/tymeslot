@@ -45,7 +45,8 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
   @doc """
   `meeting_types` without the fixed-date ones nobody can book any more: a
   group type whose sessions have all passed, closed registration or filled
-  up, and a one-to-one type with no upcoming offered time. Such a type is
+  up, and a one-to-one type with no offered time a booker can pick now
+  (`Tymeslot.MeetingTypes.OfferedTimes.next_by_type/2`). Such a type is
   left off the public booking page, as an inactive one is; its direct link
   still says why it cannot be booked.
   """
@@ -91,18 +92,20 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
   end
 
   @doc """
-  Refuses an update that would make a one-to-one type offering upcoming
+  Refuses an update that would make a one-to-one type with upcoming offered
   times a group type: its times would silently turn into nothing, since a
   group type with fixed dates offers sessions instead. The host removes the
-  times first. Turning fixed dates off is allowed: the times are simply
-  unused until it is turned on again.
+  times first. That holds with fixed dates off too, or turning them off,
+  then group bookings on, then fixed dates on again would bury the times
+  under sessions. Turning fixed dates off on its own is allowed: the times
+  are simply unused until it is turned on again.
   """
   @spec check_offered_times_kept(map(), Ecto.Changeset.t()) ::
           :ok | {:error, Ecto.Changeset.t()}
   def check_offered_times_kept(meeting_type, changeset) do
     updated = apply_changes(changeset)
 
-    if offered_times?(meeting_type) and group?(updated) and
+    if not group?(meeting_type) and group?(updated) and
          OfferedTimes.upcoming(meeting_type) != [] do
       {:error,
        add_error(

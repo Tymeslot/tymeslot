@@ -296,6 +296,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
           <span class="font-semibold text-tymeslot-800">
             {LocalizationHelpers.format_meeting_datetime(offered_time.starts_at, @timezone)}
           </span>
+          <span
+            :if={offered_time.status in [:too_soon, :too_far]}
+            class="font-medium text-amber-700"
+            data-testid="offered-time-out-of-reach"
+          >
+            {out_of_reach_label(offered_time.status)}
+          </span>
           <Buttons.icon_button
             :if={not offered_time.past?}
             icon="hero-x-mark"
@@ -343,6 +350,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
     </div>
     """
   end
+
+  # Why an upcoming offered time cannot be booked yet, or any longer.
+  defp out_of_reach_label(:too_soon),
+    do: dgettext("dashboard_meeting_fixed_dates", "inside the minimum notice")
+
+  defp out_of_reach_label(:too_far),
+    do: dgettext("dashboard_meeting_fixed_dates", "beyond the booking window")
 
   attr :session, :map, required: true
   attr :editing, :map, required: true

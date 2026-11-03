@@ -253,7 +253,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
     do:
       dgettext(
         "dashboard_meeting_form",
-        "Remove the offered times, or turn off fixed dates, to enable group bookings."
+        "Remove the offered times to enable group bookings."
+      )
+
+  defp blocker_message(:hidden_offered_times),
+    do:
+      dgettext(
+        "dashboard_meeting_form",
+        "This type still has offered times. Turn on fixed dates and remove them to enable group bookings."
       )
 
   defp blocker_message({:location, reason}), do: GroupRules.location_message(reason)

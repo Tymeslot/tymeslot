@@ -289,7 +289,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   end
 
   # A group type waits for a session open for registration; a one-to-one
-  # type for an upcoming offered time.
+  # type for an offered time a booker can pick now.
   defp no_open_dates_reason(%{max_participants: max}) when is_integer(max) and max > 1 do
     dgettext(
       "dashboard_meeting_types",
@@ -300,7 +300,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   defp no_open_dates_reason(_type) do
     dgettext(
       "dashboard_meeting_types",
-      "Not on your booking page until it offers an upcoming time. Add a time to offer."
+      "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
     )
   end
 

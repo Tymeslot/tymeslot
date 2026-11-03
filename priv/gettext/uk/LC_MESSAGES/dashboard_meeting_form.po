@@ -841,5 +841,10 @@ msgstr "Скасуйте заплановані дати, щоб вимкнут�
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
-msgid "Remove the offered times, or turn off fixed dates, to enable group bookings."
-msgstr "Видаліть запропоновані слоти або вимкніть фіксовані дати, щоб увімкнути групові бронювання."
+msgid "Remove the offered times to enable group bookings."
+msgstr "Видаліть запропоновані слоти, щоб увімкнути групові бронювання."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "This type still has offered times. Turn on fixed dates and remove them to enable group bookings."
+msgstr "Цей тип зустрічі досі має запропоновані слоти. Увімкніть фіксовані дати й видаліть їх, щоб увімкнути групові бронювання."

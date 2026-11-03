@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
           | :approval
           | :lengths
           | :offered_times
+          | :hidden_offered_times
           | {:location, GroupLocationRule.reason()}
 
   @doc """
@@ -48,8 +49,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
       # A group type with fixed dates offers planned sessions, so a
       # one-to-one type's upcoming offered times would silently stop being
       # offered (`Tymeslot.MeetingTypes.FixedDates.check_offered_times_kept/2`).
+      # With fixed dates off they are kept but not listed, so the host is
+      # told where to find them.
       OfferedTimeHandlers.times_offered?(assigns) ->
-        :offered_times
+        if assigns[:fixed_dates] == true, do: :offered_times, else: :hidden_offered_times
 
       # Everyone in a group slot shares one meeting, so its length cannot be
       # each booker's choice (`Tymeslot.MeetingTypes.Lengths`).

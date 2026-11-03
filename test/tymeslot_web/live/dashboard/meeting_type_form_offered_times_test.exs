@@ -124,6 +124,25 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormOfferedTimesTest do
     assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).max_participants == 1
   end
 
+  test "marks a time the booking rules put out of reach", %{conn: conn, user: user} do
+    meeting_type = solo_type(user)
+    # The default schedule's 90-day window, and its three hours' notice.
+    now = DateTime.utc_now(:second)
+    {:ok, _too_far} = OfferedTimes.add(meeting_type, user.id, DateTime.add(now, 120, :day))
+    {:ok, _too_soon} = OfferedTimes.add(meeting_type, user.id, DateTime.add(now, 1, :hour))
+    {:ok, _open} = OfferedTimes.add(meeting_type, user.id, DateTime.add(now, 5, :day))
+    view = edit(conn, meeting_type)
+
+    badges =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find("[data-testid='offered-time-out-of-reach']")
+      |> Enum.map(&String.trim(Floki.text(&1)))
+
+    assert badges == ["inside the minimum notice", "beyond the booking window"]
+  end
+
   test "turning fixed dates off keeps the times, and the toggle stays free", %{
     conn: conn,
     user: user
@@ -139,5 +158,10 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormOfferedTimesTest do
     refute MeetingTypes.get_meeting_type(meeting_type.id, user.id).fixed_dates
     refute has_element?(view, "[data-testid='offered-times']")
     assert [_kept] = OfferedTimes.list(meeting_type)
+
+    # The kept times still hold group bookings off, and the host is told
+    # where to find them.
+    assert has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
+    assert render(view) =~ "Turn on fixed dates and remove them"
   end
 end

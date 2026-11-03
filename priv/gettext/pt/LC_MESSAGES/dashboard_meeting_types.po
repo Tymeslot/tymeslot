@@ -432,5 +432,5 @@ msgstr[1] "As %{count} pessoas inscritas serão avisadas por e-mail."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
-msgid "Not on your booking page until it offers an upcoming time. Add a time to offer."
-msgstr "Não aparece na sua página de reservas até oferecer um horário futuro. Adicione um horário para oferecer."
+msgid "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
+msgstr "Não aparece na sua página de reservas até oferecer um horário que quem agenda possa escolher: um posterior à antecedência mínima e dentro do limite de antecedência. Adicione um horário para oferecer."
