@@ -45,9 +45,29 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAsymmetricBuffersTest d
   #
   # Swapping the two offers 12:45 and hides 11:15; applying either value to
   # both sides gets one of them wrong as well.
+  #
+  # An existing booking on the same schedule keeps its own 20 before and 10
+  # after, [11:40, 12:40], so on each side the larger of the two facing
+  # buffers, 20, decides:
+  #
+  #   11:00  ends 11:30, 30 before the booking   offered
+  #   11:15  ends 11:45, inside its before-buffer  hidden
+  #   12:45  starts 15 after it, inside the new meeting's before-buffer  hidden
+  #   13:00  starts 30 after it                  offered
+  #
+  # Padding the existing booking with the wrong side's value offers 11:15.
   describe "the invariant under asymmetric buffers" do
     @asymmetric_expectations [
       {"11:15 AM", true},
+      {"11:30 AM", false},
+      {"12:30 PM", false},
+      {"12:45 PM", false},
+      {"1:00 PM", true}
+    ]
+
+    @booking_expectations [
+      {"11:00 AM", true},
+      {"11:15 AM", false},
       {"11:30 AM", false},
       {"12:30 PM", false},
       {"12:45 PM", false},
@@ -127,15 +147,15 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyAsymmetricBuffersTest d
 
       offered = offered(profile, date, "30min", meeting_type: meeting_type)
 
-      for {time, expected?} <- @asymmetric_expectations do
+      for {time, expected?} <- @booking_expectations do
         assert time in offered == expected?, "display: #{time} offered? expected #{expected?}"
       end
 
       # The calendar holds nothing, so only the meetings table can refuse these.
-      assert {:error, :slot_taken} = book_at(user, meeting_type, date, "11:30 AM")
+      assert {:error, :slot_taken} = book_at(user, meeting_type, date, "11:15 AM")
       assert {:error, :slot_taken} = book_at(user, meeting_type, date, "12:45 PM")
       assert {:ok, %MeetingSchema{}} = book_at(user, meeting_type, date, "1:00 PM")
-      assert {:ok, %MeetingSchema{}} = book_at(user, meeting_type, date, "11:15 AM")
+      assert {:ok, %MeetingSchema{}} = book_at(user, meeting_type, date, "11:00 AM")
     end
 
     defp book_at(user, meeting_type, date, time) do
