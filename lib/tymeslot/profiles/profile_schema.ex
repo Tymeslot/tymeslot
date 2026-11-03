@@ -1,12 +1,16 @@
 defmodule Tymeslot.Profiles.ProfileSchema do
   @moduledoc """
   Schema for user profiles containing calendar and appointment settings.
+
+  Besides `changeset/2`, focused changesets cover single concerns:
+  `booking_text_changeset/2`, `intro_changeset/2` and `legal_links_changeset/2`.
   """
   use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
+  alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
@@ -37,6 +41,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           booking_instruction: String.t() | nil,
           headline: String.t() | nil,
           bio: String.t() | nil,
+          legal_notice_url: String.t() | nil,
+          privacy_policy_url: String.t() | nil,
           freebusy_token: String.t() | nil,
           freebusy_token_hash: String.t() | nil,
           primary_calendar_integration_id: integer() | nil,
@@ -69,6 +75,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:booking_instruction, :string)
     field(:headline, :string)
     field(:bio, :string)
+    field(:legal_notice_url, :string)
+    field(:privacy_policy_url, :string)
 
     # Grants read access to the host's busy times, and the host copies the
     # feed URL from the dashboard again whenever they like, so it is
@@ -286,6 +294,36 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     do: value |> String.replace(~r/\r\n?/, "\n") |> normalize_text()
 
   defp normalize_bio(nil), do: nil
+
+  @legal_link_fields [:legal_notice_url, :privacy_policy_url]
+
+  @doc """
+  Focused changeset for the organiser's own legal links: the `legal_notice_url`
+  (imprint) and the `privacy_policy_url` a booking page may link to.
+
+  Each is trimmed and stored as `nil` when blank, so clearing a field removes
+  the link. Null bytes are stripped, as Postgres rejects them. A link must be
+  an http(s) URL of at most the shared URL length; https is required for a
+  public host, while a private or local host may use http, and so may an
+  intranet name such as `wiki.lan` or `intranet`: the links are never fetched,
+  so the name's shape is all that needs trusting.
+
+  Casts with `empty_values: []` for the reason `booking_text_changeset/2`
+  gives: a cleared field has to reach `normalize_text/1` to become `nil`.
+  """
+  @spec legal_links_changeset(t(), map()) :: Ecto.Changeset.t()
+  def legal_links_changeset(profile, attrs) do
+    changeset = cast(profile, attrs, @legal_link_fields, empty_values: [])
+
+    Enum.reduce(@legal_link_fields, changeset, fn field, acc ->
+      acc
+      |> update_change(field, &normalize_text/1)
+      |> URLValidator.validate_url(field,
+        enforce_https_for_public: true,
+        internal_names_local: true
+      )
+    end)
+  end
 
   defp validate_username(changeset) do
     changeset

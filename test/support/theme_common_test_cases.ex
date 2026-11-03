@@ -145,6 +145,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
         }),
       locale: "en",
       language_dropdown_open: false,
+      legal_links: nil,
       loading: false,
       meeting_kept: false
     }

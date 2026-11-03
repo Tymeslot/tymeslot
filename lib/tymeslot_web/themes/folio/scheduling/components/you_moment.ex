@@ -210,6 +210,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
           contact_class="folio-contact"
           message_rows={4}
           labels={BookingForm.short_labels()}
+          organizer_name={BookingLabels.organizer_display_name(@organizer_profile, @username_context)}
+          privacy_policy_url={BookingForm.privacy_policy_url(assigns[:legal_links])}
         >
           <GuestField.guest_field
             :if={GuestBooking.guests_allowed?(assigns)}

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.GuestRsvpController do
   use TymeslotWeb, :controller
 
   alias Tymeslot.Meetings
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.GuestRsvpController do
          :ok <- check_seat(guest, response) do
       conn
       |> put_layout(html: false)
+      |> assign_legal_links(guest.meeting)
       |> render(:confirm,
         meeting: guest.meeting,
         timezone: timezone(guest),
@@ -56,6 +58,7 @@ defmodule TymeslotWeb.GuestRsvpController do
          {:ok, guest} <- Meetings.record_guest_rsvp(token, Map.fetch!(@responses, response)) do
       conn
       |> put_layout(html: false)
+      |> assign_legal_links(guest.meeting)
       |> render(:confirmation,
         meeting: guest.meeting,
         timezone: timezone(guest),
@@ -87,12 +90,24 @@ defmodule TymeslotWeb.GuestRsvpController do
 
   defp check_seat(_guest, _response), do: :ok
 
+  # The organiser's legal links, from the meeting the token resolved to.
+  defp assign_legal_links(conn, %{organizer_user_id: user_id}),
+    do: assign(conn, :legal_links, organiser_legal_links(user_id))
+
+  defp organiser_legal_links(user_id) when is_integer(user_id),
+    do: user_id |> Profiles.get_profile() |> Profiles.public_legal_links()
+
+  defp organiser_legal_links(_no_organiser), do: Profiles.public_legal_links(nil)
+
+  # Error pages (unknown token, closed or full meeting, rate limit) show the
+  # instance defaults: the error carries no meeting to find the organiser by.
   defp render_error(conn, error) do
     {http_status, template} = error_page(error)
 
     conn
     |> put_status(http_status)
     |> put_layout(html: false)
+    |> assign(:legal_links, Profiles.public_legal_links(nil))
     |> render(template)
   end
 

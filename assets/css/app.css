@@ -25,6 +25,7 @@
 @import "./components/forms.css";
 @import "./components/cards.css";
 @import "./components/misc.css";
+@import "./components/token-page.css";
 @import "./components/dashboard.css";
 @import "./components/theme-customization.css";
 @import "./components/embed-cards.css";

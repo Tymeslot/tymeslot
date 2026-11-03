@@ -158,4 +158,77 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingFormTest do
     assert ["jan@example.com"] =
              doc |> Floki.find("[name='booking[email]']") |> Floki.attribute("placeholder")
   end
+
+  describe "privacy notice" do
+    @privacy "https://example.com/privacy"
+
+    defp notice(html),
+      do: html |> Floki.parse_document!() |> Floki.find("p[data-testid='booking-privacy-notice']")
+
+    test "shows the privacy notice with the organiser's name" do
+      html = render_form(%{organizer_name: "Ada Host", privacy_policy_url: @privacy})
+
+      assert [{"p", _attrs, _children} = notice] = notice(html)
+      assert Floki.text(notice) =~ "Ada Host uses these details to arrange your meeting."
+
+      assert [{"a", attrs, _children}] = Floki.find(notice, "a")
+      assert {"href", @privacy} in attrs
+      assert {"target", "_blank"} in attrs
+      assert {"rel", "noopener noreferrer"} in attrs
+      assert Floki.text(Floki.find(notice, "a")) =~ "Privacy policy"
+    end
+
+    test "falls back to 'The organiser' without a name" do
+      html = render_form(%{privacy_policy_url: @privacy})
+
+      assert Floki.text(notice(html)) =~
+               "The organiser uses these details to arrange your meeting."
+    end
+
+    test "reads the URL out of the page's legal links, nil where there are none" do
+      assert BookingForm.privacy_policy_url(%{
+               legal_notice_url: nil,
+               privacy_policy_url: @privacy
+             }) ==
+               @privacy
+
+      assert BookingForm.privacy_policy_url(%{legal_notice_url: nil, privacy_policy_url: nil}) ==
+               nil
+
+      assert BookingForm.privacy_policy_url(nil) == nil
+    end
+
+    test "shows no notice without a privacy URL" do
+      assert notice(render_form(%{organizer_name: "Ada Host"})) == []
+      assert notice(render_form(%{organizer_name: "Ada Host", privacy_policy_url: nil})) == []
+    end
+
+    test "sits after the form and its inner block, and before the reCAPTCHA notice" do
+      enable_recaptcha()
+      assigns = %{form: to_form(%{}, as: :booking), privacy: @privacy}
+
+      html =
+        rendered_to_string(~H"""
+        <BookingForm.booking_form
+          form={@form}
+          validation_errors={%{}}
+          target={nil}
+          organizer_name="Ada Host"
+          privacy_policy_url={@privacy}
+        >
+          <span id="inner-marker">guest field</span>
+        </BookingForm.booking_form>
+        """)
+
+      doc = Floki.parse_document!(html)
+      assert Floki.find(doc, "form#booking-form [data-testid='booking-privacy-notice']") == []
+      assert Floki.find(doc, "form#booking-form #inner-marker") == []
+
+      at = fn needle -> html |> :binary.match(needle) |> elem(0) end
+
+      assert at.("</form>") < at.("inner-marker")
+      assert at.("inner-marker") < at.("booking-privacy-notice")
+      assert at.("booking-privacy-notice") < at.("recaptcha-notice")
+    end
+  end
 end

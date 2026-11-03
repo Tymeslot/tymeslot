@@ -1029,6 +1029,27 @@ msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors 
 msgstr[0] "Seu calendário %{names} precisa ser reconectado. Enquanto isso não for feito, os visitantes podem não ver horários aqui."
 msgstr[1] "Seus calendários %{names} precisam ser reconectados. Enquanto isso não for feito, os visitantes podem não ver horários aqui."
 
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Legal notice"
+msgstr "Aviso legal"
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Privacy policy"
+msgstr "Política de privacidade"
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} uses these details to arrange your meeting."
+msgstr "%{organizer} usa esses dados para organizar sua reunião."
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser uses these details to arrange your meeting."
+msgstr "Quem organiza a reunião usa esses dados para prepará-la."
+
 #: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
 #, elixir-autogen, elixir-format
 msgid "Show less"

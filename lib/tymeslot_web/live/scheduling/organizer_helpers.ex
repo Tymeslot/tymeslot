@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Demo
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
@@ -45,6 +46,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, nil)
         |> assign(:organizer_profile, nil)
+        |> assign(:legal_links, Profiles.public_legal_links(nil))
         |> assign(:booking_window_days, booking_window_days(nil))
         |> assign(:organizer_user_id, nil)
         |> assign(:meeting_types, [])
@@ -55,6 +57,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, context.username)
         |> assign(:organizer_profile, context.profile)
+        |> assign(:legal_links, Profiles.public_legal_links(context.profile))
         |> assign(:booking_window_days, booking_window_days(context.profile))
         |> assign(:organizer_user_id, context.user_id)
         |> assign(:meeting_types, context.meeting_types)

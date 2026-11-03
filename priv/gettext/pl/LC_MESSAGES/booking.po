@@ -1033,6 +1033,27 @@ msgstr[0] "Twój kalendarz %{names} wymaga ponownego połączenia. Dopóki tego 
 msgstr[1] "Twoje kalendarze %{names} wymagają ponownego połączenia. Dopóki tego nie zrobisz, odwiedzający mogą nie widzieć tu żadnych terminów."
 msgstr[2] "Twoje kalendarze %{names} wymagają ponownego połączenia. Dopóki tego nie zrobisz, odwiedzający mogą nie widzieć tu żadnych terminów."
 
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Legal notice"
+msgstr "Nota prawna"
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Privacy policy"
+msgstr "Polityka prywatności"
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} uses these details to arrange your meeting."
+msgstr "%{organizer} wykorzysta te dane, aby umówić z tobą spotkanie."
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser uses these details to arrange your meeting."
+msgstr "Organizator wykorzysta te dane, aby umówić z tobą spotkanie."
+
 #: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
 #, elixir-autogen, elixir-format
 msgid "Show less"

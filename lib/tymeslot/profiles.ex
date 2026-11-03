@@ -32,6 +32,10 @@ defmodule Tymeslot.Profiles do
   @type error_reason :: atom() | String.t() | Ecto.Changeset.t()
   @type result(t) :: {:ok, t} | {:error, error_reason}
   @type uploaded_entry :: map()
+  @type legal_links :: %{
+          legal_notice_url: String.t() | nil,
+          privacy_policy_url: String.t() | nil
+        }
   @type profile_settings :: %{
           timezone: timezone,
           max_bookings_per_day: pos_integer() | nil,
@@ -214,6 +218,33 @@ defmodule Tymeslot.Profiles do
   """
   @spec update_intro(profile, map()) :: result(profile)
   defdelegate update_intro(profile, attrs), to: ProfileQueries
+
+  @doc """
+  Updates the organiser's legal notice and privacy policy links. Callers
+  sanitise the params first
+  (`Tymeslot.Profiles.InputValidation.validate_legal_links/2`); the changeset
+  validates the URLs.
+  """
+  @spec update_legal_links(profile, map()) :: result(profile)
+  defdelegate update_legal_links(profile, attrs), to: ProfileQueries
+
+  @doc """
+  The legal links a booking page shows. Each link is the organiser's own, else
+  the instance default (`:booking_legal_notice_url`, `:booking_privacy_policy_url`),
+  else `nil`. Always returns both keys; a `nil` profile yields the defaults.
+
+  The config is read at call time so runtime configuration takes effect.
+  """
+  @spec public_legal_links(profile | nil) :: legal_links()
+  def public_legal_links(profile) do
+    %{
+      legal_notice_url: legal_link(profile, :legal_notice_url, :booking_legal_notice_url),
+      privacy_policy_url: legal_link(profile, :privacy_policy_url, :booking_privacy_policy_url)
+    }
+  end
+
+  defp legal_link(profile, field, config_key),
+    do: (profile && Map.get(profile, field)) || Application.get_env(:tymeslot, config_key)
 
   @doc """
   Updates the full name for a profile.

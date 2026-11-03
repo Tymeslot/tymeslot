@@ -25,7 +25,7 @@ defmodule TymeslotWeb.SeatHTML do
   @spec cancel_confirm(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_confirm(assigns) do
     ~H"""
-    <TokenPage.shell>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <.status_icon name="hero-x-circle" tone={:warning} />
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.SeatHTML do
   @spec cancelled(map()) :: Phoenix.LiveView.Rendered.t()
   def cancelled(assigns) do
     ~H"""
-    <TokenPage.shell>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <.status_icon name="hero-check-circle" tone={:success} />
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
@@ -101,6 +101,7 @@ defmodule TymeslotWeb.SeatHTML do
   def already_cancelled(assigns) do
     ~H"""
     <.notice
+      legal_links={assigns[:legal_links]}
       booking_path={assigns[:booking_path]}
       icon="hero-check-circle"
       tone={:neutral}
@@ -120,6 +121,7 @@ defmodule TymeslotWeb.SeatHTML do
   def meeting_cancelled(assigns) do
     ~H"""
     <.notice
+      legal_links={assigns[:legal_links]}
       booking_path={assigns[:booking_path]}
       icon="hero-calendar-days"
       tone={:neutral}
@@ -144,6 +146,7 @@ defmodule TymeslotWeb.SeatHTML do
   def not_allowed(%{reason: :meeting_started} = assigns) do
     ~H"""
     <.notice
+      legal_links={assigns[:legal_links]}
       icon="hero-clock"
       tone={:warning}
       title={dgettext("booking_manage", "This meeting has already started")}
@@ -160,6 +163,7 @@ defmodule TymeslotWeb.SeatHTML do
   def not_allowed(%{reason: :meeting_past} = assigns) do
     ~H"""
     <.notice
+      legal_links={assigns[:legal_links]}
       booking_path={assigns[:booking_path]}
       icon="hero-calendar-days"
       tone={:neutral}
@@ -172,6 +176,7 @@ defmodule TymeslotWeb.SeatHTML do
   def not_allowed(assigns) do
     ~H"""
     <.notice
+      legal_links={assigns[:legal_links]}
       icon="hero-clock"
       tone={:warning}
       title={dgettext("booking_manage", "This spot can no longer be cancelled online")}
@@ -190,6 +195,7 @@ defmodule TymeslotWeb.SeatHTML do
   def not_movable(assigns) do
     ~H"""
     <.notice
+      legal_links={assigns[:legal_links]}
       icon="hero-arrows-right-left"
       tone={:warning}
       title={dgettext("booking_manage", "This spot can't be moved")}
@@ -209,12 +215,15 @@ defmodule TymeslotWeb.SeatHTML do
   @spec invalid(map()) :: Phoenix.LiveView.Rendered.t()
   def invalid(assigns) do
     ~H"""
-    <TokenPage.invalid body={
-      dgettext(
-        "booking_manage",
-        "The link may have expired or already been used. Please contact the meeting host."
-      )
-    } />
+    <TokenPage.invalid
+      legal_links={assigns[:legal_links]}
+      body={
+        dgettext(
+          "booking_manage",
+          "The link may have expired or already been used. Please contact the meeting host."
+        )
+      }
+    />
     """
   end
 
@@ -228,11 +237,12 @@ defmodule TymeslotWeb.SeatHTML do
   attr :title, :string, required: true
   attr :body, :string, required: true
   attr :booking_path, :string, default: nil, doc: "the host's booking page, to pick a new time"
+  attr :legal_links, :map, default: nil
   slot :inner_block
 
   defp notice(assigns) do
     ~H"""
-    <TokenPage.shell>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <.status_icon name={@icon} tone={@tone} />
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">{@title}</h1>
       <p class="mt-2 text-token-base text-tymeslot-600">{@body}</p>

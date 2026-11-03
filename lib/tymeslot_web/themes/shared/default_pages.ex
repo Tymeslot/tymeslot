@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   `:cancel`, `:cancel_confirmed`, `:poll`, `:payment_processing`,
   `:payment_cancelled`), the page's `theme_tokens` (`nil` on a payment
   page's dead render, which reads no data), the organiser's
-  `organizer_profile` (`nil` on that dead render too), `locale` and
+  `organizer_profile` (`nil` on that dead render too), the organiser's
+  `legal_links` (which the shell hands to its wrapper), `locale` and
   `language_dropdown_open`, and the body as its inner block; it draws the
   theme's wrapper and card (with the `booker-card` hook class) around it. A
   shell is free to ignore any of them but `page`: only Folio's draws the
@@ -78,6 +79,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       organizer_profile={@organizer_profile}
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
+      legal_links={assigns[:legal_links]}
     >
       <div class={["manage-page", @page_class]} data-testid={@page_testid}>
         {body(assigns)}

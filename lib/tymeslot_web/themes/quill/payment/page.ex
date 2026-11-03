@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Page do
   attr :theme_tokens, :any, default: nil
   attr :locale, :string, default: nil
   attr :language_dropdown_open, :boolean, default: false
+  attr :legal_links, :map, default: nil
   attr :testid, :string, required: true
   attr :status, :atom, default: nil, values: [nil, :waiting, :confirmed, :ended]
   slot :inner_block, required: true
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Page do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      legal_links={@legal_links}
       show_language_switcher={true}
       show_extensions={false}
     >
