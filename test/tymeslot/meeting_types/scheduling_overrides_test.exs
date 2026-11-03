@@ -63,6 +63,24 @@ defmodule Tymeslot.MeetingTypes.SchedulingOverridesTest do
       assert Map.has_key?(errors, :min_advance_hours)
       assert Map.has_key?(errors, :advance_booking_days)
     end
+
+    test "the database refuses a rule out of bounds even past the changeset's validation", %{
+      user: user
+    } do
+      # Forced in after validation, as a write that skips the changeset's
+      # number checks would be; the check constraint is the backstop.
+      for {field, value} <- [
+            buffer_before_minutes: 121,
+            buffer_after_minutes: -1,
+            min_advance_hours: 169,
+            advance_booking_days: 0
+          ] do
+        changeset = user |> changeset(%{}) |> Changeset.force_change(field, value)
+
+        assert {:error, refused} = Repo.insert(changeset)
+        assert Map.has_key?(errors_on(refused), field)
+      end
+    end
   end
 
   describe "max_advance_booking_days_override/1" do

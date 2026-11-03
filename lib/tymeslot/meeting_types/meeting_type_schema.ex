@@ -6,7 +6,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
-  import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 1]
+  import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.MeetingTypes.FixedDates
@@ -235,7 +235,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_length(:description, max: Constraints.description_max_length())
     |> validate_numbers()
     |> validate_booking_limits(:meeting_types)
-    |> validate_scheduling_policy()
+    |> validate_scheduling_policy(:meeting_types)
     |> validate_inclusion(:icon, @valid_icons,
       message: dgettext_noop("errors", "must be one of the available icons")
     )
