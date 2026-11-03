@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   12. Slack OAuth installs never finished by picking a channel, a day after
       they were started, with the workspace bot token they hold
   13. What invitees gave on meetings and polls that ended two years ago,
+      and the invitees of draft polls last saved before then,
       anonymised rather than deleted (see `Tymeslot.InviteeData`)
   14. Requests for a poll voting link never confirmed within the link's
       lifetime (48 hours, not a day count), with the name and email they hold

@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Polls.DeletePollModal do
   @moduledoc """
   Confirmation modal for deleting a poll that is over, confirmed or
-  cancelled, to tidy the list (`Polls.delete_poll/2`).
+  cancelled, to tidy the list, or a draft the host no longer wants
+  (`Polls.delete_poll/2`).
 
   Stateless function component rendered by `PollsComponent`, which owns the
   modal's open/closed state and handles `close_delete_poll_modal` and
@@ -24,14 +25,29 @@ defmodule TymeslotWeb.Dashboard.Polls.DeletePollModal do
       :if={@open && @poll}
       id="delete-poll-modal"
       show
-      title={dgettext("dashboard_polls", "Delete this poll")}
-      confirm_label={dgettext("dashboard_polls", "Delete poll")}
+      title={
+        if @poll.status == :draft,
+          do: dgettext("dashboard_polls", "Delete this draft"),
+          else: dgettext("dashboard_polls", "Delete this poll")
+      }
+      confirm_label={
+        if @poll.status == :draft,
+          do: dgettext("dashboard_polls", "Delete draft"),
+          else: dgettext("dashboard_polls", "Delete poll")
+      }
       cancel_label={dgettext("dashboard_polls", "Keep poll")}
       on_cancel={JS.push("close_delete_poll_modal", target: @myself)}
       on_confirm={JS.push("delete_poll", target: @myself)}
       data-testid="confirm-delete-poll"
     >
-      <p>
+      <p :if={@poll.status == :draft}>
+        {dgettext(
+          "dashboard_polls",
+          "The draft “%{title}” will be removed. Nobody was invited to it, so nobody is told. This cannot be undone.",
+          title: @poll.title
+        )}
+      </p>
+      <p :if={@poll.status != :draft}>
         {dgettext(
           "dashboard_polls",
           "“%{title}” will be removed with its times and everyone's responses. This cannot be undone.",

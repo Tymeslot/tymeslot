@@ -33,6 +33,23 @@ defmodule TymeslotWeb.Dashboard.Polls.PollDuration do
     |> Integer.to_string()
   end
 
+  @doc """
+  The length the host typed, in minutes, or nil when it is not a whole
+  number: the changeset then says what is wrong, where a default would
+  quietly replace it.
+  """
+  @spec parse(String.t() | integer() | nil) :: integer() | nil
+  def parse(value) when is_integer(value), do: value
+
+  def parse(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {int, ""} -> int
+      _other -> nil
+    end
+  end
+
+  def parse(_other), do: nil
+
   attr :meeting_type, :map, default: nil, doc: "the selected meeting type, if any"
   attr :duration, :string, required: true
   attr :errors, :list, default: []
