@@ -137,20 +137,31 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
 
   @doc """
   The host's real booking page in an iframe, switched on once loaded.
+
+  The `StageIframe` hook owns `src` once the frame is in the page: a
+  reconnect renders a freshly signed token, and reloading the page for it
+  would replay the switch-on and lose whatever the host was trying, so the
+  hook loads `data-src` only when `data-page` (the page without its token)
+  changes, as it does after a username change. It also owns `tabindex`,
+  taking the stage card's glimpse out of the tab order below `lg`.
   """
   attr :id, :string, required: true
   attr :src, :string, required: true
 
   @spec page_iframe(map()) :: Phoenix.LiveView.Rendered.t()
   def page_iframe(assigns) do
+    assigns = assign(assigns, :page, assigns.src |> URI.parse() |> Map.get(:path))
+
     ~H"""
     <iframe
       id={@id}
       src={@src}
+      data-src={@src}
+      data-page={@page}
       title={dgettext("onboarding_wizard", "Your booking page")}
       class="stage-iframe"
       phx-hook="StageIframe"
-      phx-mounted={JS.ignore_attributes(["data-loaded"])}
+      phx-mounted={JS.ignore_attributes(["data-loaded", "src", "tabindex"])}
     />
     """
   end

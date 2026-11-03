@@ -203,6 +203,22 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
   end
 
   describe "debug routes" do
+    test "after a keep, finishing on a debug route goes back to where it started" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_step: :ready,
+          kept_method: "copy",
+          live_action: :debug_step,
+          base_path: "/dev/onboarding"
+        }
+      }
+
+      assert {:noreply, %{redirected: {:redirect, %{to: "/dev/onboarding"}}}} =
+               NavigationHandlers.handle_next_step(socket)
+    end
+
     test "debug finish returns to the dev route" do
       assert NavigationHandlers.base_path("http://localhost:4000/dev/onboarding/ready") ==
                "/dev/onboarding"

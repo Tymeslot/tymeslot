@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
+  alias Tymeslot.Utils.QrCode
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.Live.Scheduling.PreviewMode
@@ -25,19 +26,35 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   @doc """
   Records that the host kept their booking link on the last step, by one of
-  `Onboarding.keep_methods/0`: the first keep completes onboarding and stamps
-  the profile's first share (`Onboarding.keep_booking_link/3`), so closing
-  the tab afterwards loses nothing. The method comes from the client, so
-  anything else is ignored. Keeping it again is harmless; the confirmation
-  shows the latest.
+  the methods the step's own buttons send (`Onboarding.keep_methods/0` but
+  `phone`): the first keep completes onboarding and stamps the profile's
+  first share (`Onboarding.keep_booking_link/3`), so closing the tab
+  afterwards loses nothing. The method comes from the client, so anything
+  else is ignored. Keeping it again is harmless; the confirmation shows the
+  latest.
   """
   @spec handle_keep_link(Phoenix.LiveView.Socket.t(), term()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_keep_link(socket, method) do
-    if method in Onboarding.keep_methods() and socket.assigns.current_step == :ready,
-      do: {:noreply, keep_link(socket, method)},
+    # `phone` is the server's to claim: the handoff page opening on another
+    # device says so (`handle_phone_opened/1`), never the client.
+    if method != "phone" and method in Onboarding.keep_methods(),
+      do: {:noreply, keep_on_ready(socket, method)},
       else: {:noreply, socket}
   end
+
+  @doc """
+  The host's booking page was opened from the handoff link (the QR code) on
+  another device, which keeps the link by `phone`.
+  """
+  @spec handle_phone_opened(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_phone_opened(socket), do: {:noreply, keep_on_ready(socket, "phone")}
+
+  defp keep_on_ready(%{assigns: %{current_step: :ready}} = socket, method),
+    do: keep_link(socket, method)
+
+  defp keep_on_ready(socket, _method), do: socket
 
   defp keep_link(socket, method) do
     %{current_user: user, profile: profile} = socket.assigns
@@ -84,32 +101,63 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   def finish_locked?(_assigns), do: false
 
   @doc """
-  The share step's own state: the owner-preview address the stage shows,
-  the handoff address the QR code carries, and the subscription that hears
-  the handoff being opened. Set once per session on the connected render
-  only, so a patch never re-signs the token and reloads the page, and the
-  static render shows the miniature the live page then switches on over.
+  The share step's own state, on the connected render only (the static
+  render shows the miniature the live page then switches on over):
+
+    * the subscription that hears the handoff being opened, made once per
+      LiveView process (`share_subscribed`);
+    * the owner-preview path the stage's iframe shows, built for the
+      profile's username (`share_username`) and rebuilt when it changes, so
+      a patch never re-signs the token and reloads the page, but a new link
+      never shows the old one. The handoff link and its QR code go with it;
+      they are signed only when the QR code is shown
+      (`handle_show_handoff_qr/1`), so its hour starts then.
   """
   @spec assign_share_state(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def assign_share_state(%{assigns: %{owner_preview_url: url}} = socket) when is_binary(url),
-    do: socket
-
   def assign_share_state(%{assigns: %{profile: %{username: username}}} = socket)
       when is_binary(username) do
     if LiveView.connected?(socket) do
-      user_id = socket.assigns.current_user.id
-      :ok = Onboarding.subscribe(user_id)
-
-      Component.assign(socket,
-        owner_preview_url: PreviewMode.owner_url(username, user_id),
-        handoff_url: PreviewMode.owner_url(username, user_id, handoff: true)
-      )
+      socket |> subscribe_once() |> build_preview(username)
     else
       socket
     end
   end
 
   def assign_share_state(socket), do: socket
+
+  defp subscribe_once(%{assigns: %{share_subscribed: true}} = socket), do: socket
+
+  defp subscribe_once(socket) do
+    :ok = Onboarding.subscribe(socket.assigns.current_user.id)
+    Component.assign(socket, :share_subscribed, true)
+  end
+
+  defp build_preview(%{assigns: %{share_username: username}} = socket, username), do: socket
+
+  defp build_preview(socket, username) do
+    Component.assign(socket,
+      share_username: username,
+      # Relative: the stage frames the page from this origin (`frame-src 'self'`).
+      owner_preview_url:
+        PreviewMode.owner_path(username, socket.assigns.current_user.id, stage: true),
+      handoff_url: nil,
+      handoff_qr: nil
+    )
+  end
+
+  @doc """
+  Shows the QR code of the handoff link: the host's page, absolute (a phone
+  opens it), carrying `handoff=1` and a token signed now.
+  """
+  @spec handle_show_handoff_qr(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_show_handoff_qr(%{assigns: %{share_username: username}} = socket)
+      when is_binary(username) do
+    url = PreviewMode.owner_url(username, socket.assigns.current_user.id, handoff: true)
+    {:noreply, Component.assign(socket, handoff_url: url, handoff_qr: QrCode.svg_data_uri(url))}
+  end
+
+  def handle_show_handoff_qr(socket), do: {:noreply, socket}
 
   @doc """
   Handles the next step navigation event.

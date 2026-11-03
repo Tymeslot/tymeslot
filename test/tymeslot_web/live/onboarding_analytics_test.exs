@@ -112,7 +112,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       )
 
       click_continue(view)
-      %{view: view}
+      %{view: view, user: user}
     end
 
     test "records that the host saw the offline variant", %{view: view} do
@@ -142,6 +142,13 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       # Finishing stays possible: the host can connect a calendar later.
       assert has_element?(view, "#onboarding-finish[phx-click='next_step']", "Go to dashboard")
       refute has_element?(view, "#onboarding-finish[aria-disabled]")
+    end
+
+    test "finishing without a keep completes onboarding", %{view: view, user: user} do
+      view |> element("#onboarding-finish") |> render_click()
+
+      assert_redirect(view, "/dashboard")
+      assert %DateTime{} = Repo.reload!(user).onboarding_completed_at
     end
 
     test "the warning takes the host back to the calendar step", %{view: view} do

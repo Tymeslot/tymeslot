@@ -15,10 +15,12 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
   import Tymeslot.AuthTestHelpers
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Utils.QrCode
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Live.Scheduling.PreviewMode
 
@@ -46,13 +48,35 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
         |> Floki.parse_document!()
         |> Floki.attribute("iframe#onboarding-stage-iframe", "src")
 
-      assert src =~ "/#{profile(user).username}?"
+      # Relative, so the frame is same-origin (`frame-src 'self'`), and
+      # marked as the stage's own frame.
+      assert String.starts_with?(src, "/#{profile(user).username}?")
+      assert src =~ "stage=1"
       assert src =~ "preview=true"
       assert src =~ "preview_token="
       # Only the QR link announces an opening; the stage's own page never.
       refute src =~ "handoff"
 
       assert has_element?(view, ~s(iframe#onboarding-stage-iframe[title="Your booking page"]))
+    end
+
+    test "a new username rebuilds the page the stage shows", %{view: view, user: user} do
+      old = profile(user).username
+      new = "renamed#{System.unique_integer([:positive])}"
+
+      render_patch(view, "/onboarding/profile")
+      fill_profile(view, "Test User", new)
+      # link -> calendar -> meeting -> look -> live
+      Enum.each(1..4, fn _step -> click_continue(view) end)
+
+      [src] =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("iframe#onboarding-stage-iframe", "src")
+
+      assert String.starts_with?(src, "/#{new}?")
+      refute src =~ "/#{old}?"
     end
   end
 
@@ -84,7 +108,8 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
   end
 
   describe "keep actions" do
-    for method <- Onboarding.keep_methods() do
+    # `phone` is claimed by the handoff page alone ("the phone handoff" below).
+    for method <- Onboarding.keep_methods() -- ["phone"] do
       test "#{method} completes onboarding and stamps the share", %{view: view, user: user} do
         :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
 
@@ -146,7 +171,9 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
     test "email me that cannot be sent completes nothing", %{view: view, user: user} do
       # Every job insert is refused at the database, as on an outage: the
       # constraint Oban's changeset names turns it into an error, not a
-      # crash. The sandbox rolls the change back after the test.
+      # crash. The sandbox rolls the change back after the test, but until
+      # then the DDL locks `oban_jobs` for every connection, which is why
+      # this module must stay `async: false`.
       Repo.query!("ALTER TABLE oban_jobs DROP CONSTRAINT positive_max_attempts")
 
       Repo.query!(
@@ -159,6 +186,13 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       assert completed_at(user) == nil
       assert first_shared_at(user) == nil
       assert has_element?(view, ~s(#onboarding-finish[aria-disabled="true"]))
+    end
+
+    test "the client cannot claim the phone opening", %{view: view, user: user} do
+      render_hook(view, "keep_link", %{"method" => "phone"})
+
+      assert completed_at(user) == nil
+      refute has_element?(view, "#onboarding-kept")
     end
 
     test "an unknown method is ignored", %{view: view, user: user} do
@@ -194,6 +228,39 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       assert String.starts_with?(text, "You can pick a time with me here: http")
     end
 
+    test "a reconnect after a keep comes back to the kept live step", %{view: view, user: user} do
+      render_hook(view, "keep_link", %{"method" => "first_person"})
+
+      conn =
+        build_conn()
+        |> setup_onboarding_session()
+        |> log_in_user(Repo.get!(UserSchema, user.id))
+
+      assert {:ok, again, _html} = live(conn, "/onboarding/ready")
+      assert has_element?(again, ".onboarding-step-title", "You're live")
+      assert has_element?(again, "#onboarding-kept", "Your link is saved")
+
+      assert has_element?(
+               again,
+               "#onboarding-finish.action-button--primary[phx-click='next_step']"
+             )
+
+      refute has_element?(again, "#onboarding-finish[aria-disabled]")
+    end
+
+    test "an account completed over an hour ago is not sent back into setup", %{user: user} do
+      user =
+        user
+        |> Changeset.change(
+          onboarding_completed_at: DateTime.add(DateTime.utc_now(:second), -7200)
+        )
+        |> Repo.update!()
+
+      conn = build_conn() |> setup_onboarding_session() |> log_in_user(user)
+
+      assert {:error, {:redirect, %{to: "/dashboard"}}} = live(conn, "/onboarding/ready")
+    end
+
     test "closing the tab after a keep does not send the host back", %{view: view, user: user} do
       render_hook(view, "keep_link", %{"method" => "copy"})
 
@@ -207,13 +274,24 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
   end
 
   describe "the phone handoff" do
-    test "the QR code carries the handoff link", %{view: view} do
+    test "the QR code carries the handoff link", %{view: view, user: user} do
       view |> element("#onboarding-keep-phone") |> render_click()
 
-      assert has_element?(
-               view,
-               ~s(#onboarding-handoff-qr img[alt="QR code for your booking page"][src^="data:image/svg+xml;base64,"])
-             )
+      doc = view |> render() |> Floki.parse_document!()
+      [url] = Floki.attribute(doc, "#onboarding-handoff-qr", "data-handoff-url")
+
+      [src] =
+        Floki.attribute(
+          doc,
+          ~s(#onboarding-handoff-qr img[alt="QR code for your booking page"]),
+          "src"
+        )
+
+      # Absolute, for a phone to open, and the one link that announces it.
+      assert String.starts_with?(url, "http")
+      assert url =~ "/#{profile(user).username}?"
+      assert url =~ "handoff=1"
+      assert src == QrCode.svg_data_uri(url)
 
       assert has_element?(view, "#onboarding-handoff-qr", "Scan with your phone camera.")
     end
@@ -226,9 +304,15 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       path = PreviewMode.owner_path(username, user.id, handoff: true)
       assert path =~ "handoff=1"
 
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
       {:ok, _page, _html} = live(build_conn(), path)
 
       assert has_element?(view, "#onboarding-kept", "Opened on your phone")
+      user_id = user.id
+
+      assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{},
+                       %{user_id: ^user_id, method: "phone"}}
+
       assert has_element?(view, ~s([data-role="stage-announcement"]), "Opened on your phone")
       assert %DateTime{} = completed_at(user)
       assert %DateTime{} = first_shared_at(user)

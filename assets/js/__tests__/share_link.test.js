@@ -16,7 +16,7 @@ describe('mailtoHref', () => {
 });
 
 describe('canUseShareSheet', () => {
-  const data = { text: 't', url: 'u' };
+  const data = { text: 't' };
 
   test('is false without navigator.share', () => {
     expect(canUseShareSheet({}, data)).toBe(false);
@@ -44,7 +44,7 @@ describe('ShareLink hook', () => {
     document.body.innerHTML = `
       <div class="onboarding-keep-card">
         <button id="send" data-share-text="Hi Sam, pick a time: https://x.test/sam"
-          data-share-url="https://x.test/sam" data-share-subject="Book a time with me">Send</button>
+          data-share-subject="Book a time with me">Send</button>
       </div>`;
     const el = document.getElementById('send');
     const handlers = {};
@@ -69,10 +69,8 @@ describe('ShareLink hook', () => {
 
     await hook.share();
 
-    expect(navigator.share).toHaveBeenCalledWith({
-      text: 'Hi Sam, pick a time: https://x.test/sam',
-      url: 'https://x.test/sam'
-    });
+    // The text already ends with the link; given a url too, targets paste it twice.
+    expect(navigator.share).toHaveBeenCalledWith({ text: 'Hi Sam, pick a time: https://x.test/sam' });
     expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'share_sheet' });
   });
 
@@ -124,13 +122,52 @@ describe('ShareLink hook', () => {
 });
 
 describe('StageIframe hook', () => {
-  test('marks the frame loaded on load', () => {
-    const el = document.createElement('iframe');
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  function mount({ narrow = false, inStage = true } = {}) {
+    window.matchMedia = vi.fn(() => ({
+      matches: narrow,
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    }));
+    document.body.innerHTML = `<div class="${inStage ? 'onboarding-stage' : 'modal'}">
+      <iframe id="f" src="/anna?t=1" data-src="/anna?t=1" data-page="/anna"></iframe></div>`;
+    const el = document.getElementById('f');
     const hook = Object.assign(Object.create(StageIframe), { el });
     hook.mounted();
+    return { el, hook };
+  }
 
+  test('marks the frame loaded on load', () => {
+    const { el } = mount();
     el.dispatchEvent(new Event('load'));
-
     expect(el.hasAttribute('data-loaded')).toBe(true);
+  });
+
+  test('keeps the loaded page when only the token changes, as on a reconnect', () => {
+    const { el, hook } = mount();
+    el.setAttribute('data-loaded', '');
+    el.dataset.src = '/anna?t=2';
+    hook.updated();
+    expect(el.getAttribute('src')).toBe('/anna?t=1');
+    expect(el.hasAttribute('data-loaded')).toBe(true);
+  });
+
+  test('loads the new page when the page itself changes', () => {
+    const { el, hook } = mount();
+    el.setAttribute('data-loaded', '');
+    el.dataset.src = '/ada?t=3';
+    el.dataset.page = '/ada';
+    hook.updated();
+    expect(el.getAttribute('src')).toBe('/ada?t=3');
+    expect(el.hasAttribute('data-loaded')).toBe(false);
+  });
+
+  test('leaves the tab order below lg on the stage, not in the modal', () => {
+    expect(mount({ narrow: true }).el.getAttribute('tabindex')).toBe('-1');
+    expect(mount({ narrow: true, inStage: false }).el.hasAttribute('tabindex')).toBe(false);
+    expect(mount({ narrow: false }).el.hasAttribute('tabindex')).toBe(false);
   });
 });

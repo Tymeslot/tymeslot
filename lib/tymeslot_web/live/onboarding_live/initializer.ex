@@ -76,6 +76,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     )
     |> MeetingHandlers.assign_blank()
     |> then(&if(connected?(&1), do: MeetingHandlers.load(&1, true), else: &1))
+    |> restore_kept_link(user, profile)
     |> assign_booking_page_live(profile)
     |> assign_initial_week()
     |> allow_avatar_upload()
@@ -110,6 +111,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       kept_method: nil,
       first_person_name: "",
       owner_preview_url: nil,
+      share_username: nil,
+      share_subscribed: false,
       handoff_url: nil,
       handoff_qr: nil,
       # The booking page's coming week, drawn on the stage once a calendar
@@ -146,6 +149,17 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       theme_picker: :stories
     ]
   end
+
+  # A host who kept their link and comes back to the live step (a reconnect
+  # after the mail app took the screen) finds it kept: the confirmation and
+  # an open "Go to dashboard". Which way they kept it is not stored, so the
+  # confirmation says only that it is saved.
+  defp restore_kept_link(socket, %{onboarding_completed_at: %DateTime{}}, %{
+         booking_link_first_shared_at: %DateTime{}
+       }),
+       do: Component.assign(socket, :kept_method, "restored")
+
+  defp restore_kept_link(socket, _user, _profile), do: socket
 
   defp allow_avatar_upload(socket) do
     allow_upload(socket, :avatar,

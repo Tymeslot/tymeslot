@@ -984,3 +984,8 @@ msgstr "Vous pouvez choisir un créneau avec moi ici : %{url}"
 #, elixir-autogen, elixir-format
 msgid "Your page is ready for bookings. Try it yourself, then send it to someone."
 msgstr "Votre page est prête à recevoir des réservations. Essayez-la vous-même, puis envoyez-la à quelqu’un."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Your link is saved"
+msgstr "Votre lien est enregistré"

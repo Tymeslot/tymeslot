@@ -4,7 +4,6 @@ defmodule TymeslotWeb.OnboardingLive do
 
   alias Tymeslot.Availability
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.QrCode
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
@@ -34,7 +33,7 @@ defmodule TymeslotWeb.OnboardingLive do
   def mount(params, _session, socket) do
     user = socket.assigns.current_user
 
-    if user.onboarding_completed_at && !debug?(socket) do
+    if user.onboarding_completed_at && !debug?(socket) && !rejoining_live_step?(user, params) do
       {:ok,
        socket
        |> put_flash(
@@ -50,6 +49,21 @@ defmodule TymeslotWeb.OnboardingLive do
        |> focus_headings_after_first_event()}
     end
   end
+
+  # A host who has just kept their link has finished onboarding, but the
+  # live step may still be on their screen: on a phone the mail fallback
+  # opens Mail, the browser drops the socket, and the LiveView mounts again
+  # when the host comes back. So `/onboarding/ready` stays open for an hour
+  # after completion, the life of the preview token the step shows (a
+  # reconnect comes back within minutes); after that, as for every other
+  # step, a completed account goes to the dashboard and the wizard never
+  # reopens for a settled one.
+  @rejoin_window_seconds 3600
+
+  defp rejoining_live_step?(%{onboarding_completed_at: %DateTime{} = at}, %{"step" => "ready"}),
+    do: DateTime.diff(DateTime.utc_now(), at) <= @rejoin_window_seconds
+
+  defp rejoining_live_step?(_user, _params), do: false
 
   # Where a host may be is derived from their account (`StepConfig.resume_step/1`):
   # `/onboarding` lands on that step, and a step out of reach from it
@@ -175,7 +189,8 @@ defmodule TymeslotWeb.OnboardingLive do
             first_person_name={@first_person_name}
             email={@current_user.email}
             handoff_qr={@handoff_qr}
-            handoff_ready={is_binary(@handoff_url)}
+            handoff_url={@handoff_url}
+            handoff_ready={is_binary(@share_username)}
             finish_locked={NavigationHandlers.finish_locked?(assigns)}
           />
       <% end %>
@@ -275,12 +290,9 @@ defmodule TymeslotWeb.OnboardingLive do
     {:noreply, assign(socket, :first_person_name, name)}
   end
 
-  def handle_event("show_handoff_qr", _params, %{assigns: %{handoff_url: url}} = socket)
-      when is_binary(url) do
-    {:noreply, assign(socket, :handoff_qr, QrCode.svg_data_uri(url))}
+  def handle_event("show_handoff_qr", _params, socket) do
+    NavigationHandlers.handle_show_handoff_qr(socket)
   end
-
-  def handle_event("show_handoff_qr", _params, socket), do: {:noreply, socket}
 
   # ------------------------------------------------------------------
   # Event handlers — Meeting and weekly hours
@@ -450,7 +462,7 @@ defmodule TymeslotWeb.OnboardingLive do
 
   # The host opened the handoff link (the QR code) on another device.
   def handle_info({:onboarding, :preview_opened}, socket) do
-    NavigationHandlers.handle_keep_link(socket, "phone")
+    NavigationHandlers.handle_phone_opened(socket)
   end
 
   # ------------------------------------------------------------------

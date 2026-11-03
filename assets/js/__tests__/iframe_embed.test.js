@@ -168,6 +168,16 @@ describe('embedded context detection', () => {
     expect(window.parent.postMessage).not.toHaveBeenCalled()
   })
 
+  test('marks the onboarding stage\'s own preview (?stage=1), and only it', () => {
+    runScript({ isEmbedded: true, search: '?preview=true&stage=1' })
+    expect(document.documentElement.hasAttribute('data-preview-stage')).toBe(true)
+    expect(document.documentElement.hasAttribute('data-embedded')).toBe(false)
+
+    document.documentElement.removeAttribute('data-preview-stage')
+    runScript({ isEmbedded: true, search: '?preview=true' })
+    expect(document.documentElement.hasAttribute('data-preview-stage')).toBe(false)
+  })
+
   test('still embeds normally for a non-preview iframe', () => {
     runScript({ isEmbedded: true, search: '?embed=1' })
 

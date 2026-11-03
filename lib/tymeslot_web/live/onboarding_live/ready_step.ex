@@ -67,6 +67,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   def kept_label("copy"), do: dgettext("onboarding_wizard", "Copied")
   def kept_label("signature"), do: dgettext("onboarding_wizard", "Signature copied")
   def kept_label("phone"), do: dgettext("onboarding_wizard", "Opened on your phone")
+  def kept_label("restored"), do: dgettext("onboarding_wizard", "Your link is saved")
 
   @doc """
   Renders the share step.
@@ -83,7 +84,8 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   * `first_person_name` - The name typed for the first person
   * `email` - The host's own address, for "Sent to"
   * `handoff_qr` - The QR code's data URI once shown, else `nil`
-  * `handoff_ready` - Whether the handoff link exists yet (connected only)
+  * `handoff_url` - The link the QR code carries, once shown
+  * `handoff_ready` - Whether the QR code can be shown yet (connected only)
   * `finish_locked` - Whether "Go to dashboard" still waits for a keep
   """
   attr :booking_url, :string, required: true
@@ -92,6 +94,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   attr :first_person_name, :string, default: ""
   attr :email, :string, default: nil
   attr :handoff_qr, :string, default: nil
+  attr :handoff_url, :string, default: nil
   attr :handoff_ready, :boolean, default: false
   attr :finish_locked, :boolean, default: true
 
@@ -182,7 +185,6 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
             disabled={@actions_off}
             phx-hook="ShareLink"
             data-share-text={@share_text}
-            data-share-url={@booking_url}
             data-share-subject={dgettext("onboarding_wizard", "Book a time with me")}
           >
             {dgettext("onboarding_wizard", "Send them your link")}
@@ -293,7 +295,12 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           </ul>
         </.info_box>
 
-        <div :if={@handoff_qr} id="onboarding-handoff-qr" class="onboarding-handoff-qr">
+        <div
+          :if={@handoff_qr}
+          id="onboarding-handoff-qr"
+          class="onboarding-handoff-qr"
+          data-handoff-url={@handoff_url}
+        >
           <img
             src={@handoff_qr}
             alt={dgettext("onboarding_wizard", "QR code for your booking page")}

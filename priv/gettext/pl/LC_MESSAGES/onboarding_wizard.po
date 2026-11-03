@@ -983,3 +983,8 @@ msgstr "Tutaj możesz wybrać termin spotkania ze mną: %{url}"
 #, elixir-autogen, elixir-format
 msgid "Your page is ready for bookings. Try it yourself, then send it to someone."
 msgstr "Twoja strona jest gotowa na rezerwacje. Wypróbuj ją, a potem wyślij komuś."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Your link is saved"
+msgstr "Twój link jest zapisany"

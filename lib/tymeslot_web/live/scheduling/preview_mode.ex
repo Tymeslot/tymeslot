@@ -53,7 +53,10 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   a page opened from it tells the host's onboarding session so
   (`Tymeslot.Onboarding.broadcast_preview_opened/1`). The stage's own iframe
   never carries it, or every host would "open it on their phone" the moment
-  the step renders.
+  the step renders. `stage: true` marks the onboarding stage's own frame
+  (`stage=1`), which `iframe_embed.js` turns into `data-preview-stage` on
+  `<html>` so the page can draw its preview chrome compactly in the stage's
+  short phone card. Both are display hints with no authority.
   """
   @spec owner_path(String.t(), integer(), keyword()) :: String.t()
   def owner_path(username, user_id, opts \\ [])
@@ -61,7 +64,8 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
     query =
       %{"preview" => "true", "preview_token" => PreviewToken.sign(user_id)}
       |> put_theme(Keyword.get(opts, :theme))
-      |> put_handoff(Keyword.get(opts, :handoff, false))
+      |> put_flag("handoff", Keyword.get(opts, :handoff, false))
+      |> put_flag("stage", Keyword.get(opts, :stage, false))
       |> URI.encode_query()
 
     "/#{username}?#{query}"
@@ -77,8 +81,8 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
     UrlBuilder.base_url() <> owner_path(username, user_id, opts)
   end
 
-  defp put_handoff(query, true), do: Map.put(query, "handoff", "1")
-  defp put_handoff(query, _handoff), do: query
+  defp put_flag(query, name, true), do: Map.put(query, name, "1")
+  defp put_flag(query, _name, _off), do: query
 
   defp put_theme(query, theme) when theme in [nil, ""], do: query
   defp put_theme(query, theme), do: Map.put(query, "theme", to_string(theme))

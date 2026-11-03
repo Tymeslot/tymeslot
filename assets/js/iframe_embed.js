@@ -47,7 +47,15 @@
   // who may frame the page, so this purely cosmetic bail-out has no security role.
   const isPreview =
     params.get("preview") === "true" || params.get("preview") === "1";
-  if (isPreview) return;
+  if (isPreview) {
+    // The onboarding stage frames its own preview with `stage=1`
+    // (`PreviewMode.owner_path/3`), so the page can draw its preview chrome
+    // compactly in the stage's short phone card. A display hint only.
+    if (params.get("stage") === "1") {
+      document.documentElement.setAttribute("data-preview-stage", "");
+    }
+    return;
+  }
 
   document.documentElement.setAttribute("data-embedded", "");
 

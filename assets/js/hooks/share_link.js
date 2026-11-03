@@ -1,9 +1,10 @@
 /**
  * Share link: the onboarding live step's "Send them your link" button.
  *
- * The message is built on the server and carried in `data-share-text`, with
- * the booking URL in `data-share-url` and a mail subject in
- * `data-share-subject`. On click:
+ * The message is built on the server and carried in `data-share-text`, which
+ * already ends with the booking URL, and a mail subject in
+ * `data-share-subject`. The sheet is given the text alone: given the URL as
+ * well, most targets paste it twice. On click:
  *
  *   - Where the device has a share sheet (`navigator.share`, and
  *     `navigator.canShare` does not refuse the data), it opens it. Settling
@@ -35,7 +36,7 @@ export function mailtoHref(subject, body) {
  * Whether to offer the share sheet for `data`.
  *
  * @param {Navigator} nav
- * @param {{text: string, url: string}} data
+ * @param {{text: string}} data
  * @returns {boolean}
  */
 export function canUseShareSheet(nav, data) {
@@ -64,8 +65,7 @@ export const ShareLink = {
 
   async share() {
     const text = this.el.dataset.shareText || ""
-    const url = this.el.dataset.shareUrl || ""
-    const data = { text, url }
+    const data = { text }
 
     if (canUseShareSheet(navigator, data)) {
       try {
@@ -102,17 +102,52 @@ export const ShareLink = {
 }
 
 /**
- * Stage iframe: marks the host's real page as loaded (`data-loaded`), which
- * is what switches the live stage on. The element is rendered with
- * `JS.ignore_attributes(["data-loaded"])`, so a patch keeps the mark.
+ * Stage iframe: the host's real page on the onboarding stage.
+ *
+ *   - Marks it loaded (`data-loaded`), which is what switches the live stage
+ *     on.
+ *   - Owns `src`: a reconnect renders a freshly signed preview token, and
+ *     reloading the page for it would replay the switch-on and throw away a
+ *     test booking in progress, so it loads `data-src` only when `data-page`
+ *     (the page without its token) changes, as after a username change.
+ *   - Below `lg` the stage card is a glimpse that takes no touch, so the frame
+ *     leaves the tab order there (`tabindex="-1"`); the Expand modal's frame
+ *     stays reachable.
+ *
+ * The element is rendered with `JS.ignore_attributes` for `data-loaded`,
+ * `src` and `tabindex`, so a patch keeps what this sets.
  */
+const NARROW_QUERY = "(max-width: 1023.98px)"
+
 export const StageIframe = {
   mounted() {
+    this.page = this.el.dataset.page
     this.onLoad = () => this.el.setAttribute("data-loaded", "")
     this.el.addEventListener("load", this.onLoad)
+
+    this.media = window.matchMedia(NARROW_QUERY)
+    this.onMedia = () => this.syncTabindex()
+    this.media.addEventListener("change", this.onMedia)
+    this.syncTabindex()
+  },
+
+  updated() {
+    if (this.el.dataset.page !== this.page) {
+      this.page = this.el.dataset.page
+      this.el.removeAttribute("data-loaded")
+      this.el.src = this.el.dataset.src
+    }
+    this.syncTabindex()
   },
 
   destroyed() {
     this.el.removeEventListener("load", this.onLoad)
+    this.media.removeEventListener("change", this.onMedia)
+  },
+
+  syncTabindex() {
+    const glimpse = this.media.matches && this.el.closest(".onboarding-stage") !== null
+    if (glimpse) this.el.setAttribute("tabindex", "-1")
+    else this.el.removeAttribute("tabindex")
   }
 }
