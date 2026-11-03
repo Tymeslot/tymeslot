@@ -15,10 +15,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
       the host's balance for the disputed amount when a dispute is lost,
       so the row should reflect the funds being gone from the host's
       perspective.
-    * other statuses (`warning_closed`, `warning_under_review`, …) are
-      not decisive — leave the booking in `disputed` and ignore.
+    * `warning_closed` (an inquiry that never became a chargeback) and
+      `prevented` (one stopped before it did) are final and withdraw no
+      funds, so they resolve the same way as `won`.
+    * any other status (`warning_under_review`, `needs_response`, …) is a
+      live dispute, which a replayed or mis-routed event must not clear:
+      the booking stays `disputed`.
 
-  Whichever way a decisive dispute goes, a payment whose booking expired is
+  Whichever way a final dispute goes, a payment whose booking expired is
   refunded whatever is left of it with the host: all of it after a won
   dispute, the part a lost one did not take back after a partial loss
   (`partially_refunded`). The attendee paid for a booking that never
@@ -34,6 +38,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Webhooks.DisputeOutcome
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
@@ -61,7 +66,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
         {:ok, :idempotent_replay}
 
       payment ->
-        classify(apply_outcome(payment, event_id, object["status"], object["amount"] || 0))
+        outcome = DisputeOutcome.from_status(object["status"])
+        classify(apply_outcome(payment, event_id, outcome, object["amount"] || 0))
     end
   end
 
@@ -70,13 +76,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, reason}), do: {{:error, :retry_later, reason}, :error}
 
+  defp apply_outcome(_payment, _event_id, nil, _amount), do: :ok
+
   # Decided from the locked row (`LockedPayment`): a `charge.refunded`
   # committed since the row was resolved must be counted, not written over.
-  defp apply_outcome(payment, event_id, status, disputed_amount)
-       when status in ["won", "lost"] do
+  defp apply_outcome(payment, event_id, outcome, disputed_amount) do
     result =
       LockedPayment.run(payment, event_id, fn locked ->
-        attrs = Map.put(outcome_attrs(locked, status, disputed_amount), :last_event_id, event_id)
+        attrs = Map.put(outcome_attrs(locked, outcome, disputed_amount), :last_event_id, event_id)
 
         with {:ok, updated} <- BookingPaymentQueries.update(locked, attrs),
              {:ok, _job} <- maybe_schedule_refund(updated) do
@@ -97,8 +104,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
     end
   end
 
-  defp apply_outcome(_payment, _event_id, _status, _amount), do: :ok
-
   # Money back with the host for a booking that never happened is owed to
   # the attendee, as it was before the dispute opened: after a won dispute,
   # and after a partly lost one, for the part the dispute did not take.
@@ -114,10 +119,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   defp maybe_schedule_refund(_payment), do: {:ok, :none}
 
-  defp outcome_attrs(payment, "won", _disputed_amount),
+  defp outcome_attrs(payment, :won, _disputed_amount),
     do: %{status: derive_status_from_refund(payment, payment.refunded_amount_cents)}
 
-  defp outcome_attrs(payment, "lost", disputed_amount) do
+  defp outcome_attrs(payment, :lost, disputed_amount) do
     new_total = max(payment.refunded_amount_cents, disputed_amount)
     %{status: derive_status_from_refund(payment, new_total), refunded_amount_cents: new_total}
   end

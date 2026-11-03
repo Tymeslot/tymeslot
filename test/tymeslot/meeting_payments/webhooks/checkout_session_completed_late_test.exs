@@ -344,6 +344,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert_remainder_refunded(bp, 3500)
     end
 
+    for status <- ["warning_closed", "prevented"] do
+      test "refunds the payment in full after an inquiry closed as #{status}" do
+        bp = disputed_expired_payment(refunded_amount_cents: 0)
+
+        assert :ok =
+                 ChargeDisputeClosed.handle(
+                   dispute_event("evt_DISPUTE_INQUIRY", "charge.dispute.closed", %{
+                     "status" => unquote(status)
+                   })
+                 )
+
+        assert Repo.reload!(bp).status == :paid
+        assert_remainder_refunded(bp, 5000)
+      end
+    end
+
     test "refunds what is left after a partly lost dispute" do
       bp = disputed_expired_payment(refunded_amount_cents: 0)
 
