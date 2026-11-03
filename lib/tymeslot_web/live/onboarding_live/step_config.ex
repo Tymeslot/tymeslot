@@ -137,7 +137,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     do:
       dgettext(
         "onboarding_wizard",
-        "Add your name, photo, and a short bio so invitees know who they're booking with."
+        "This is the link people will use to book you."
       )
 
   def step_description(:connect_calendar),

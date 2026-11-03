@@ -42,15 +42,21 @@ defmodule Tymeslot.Profiles.Usernames do
 
   The name is folded to lowercase ASCII (accents dropped, any other run of
   characters becoming `-`). A name that leaves fewer than three characters
-  gives `user-<id>`. The first of the base, then `base-2` to `base-9`, that is
-  valid, not reserved and free is returned; if none is, `<base>-<id>`, then
-  `user-<id>`.
+  falls back to the local part of the `:email` option (anything after a `+`
+  dropped), folded the same way, and failing that to `user-<id>`. The first
+  of the base, then `base-2` to `base-9`, that is valid, not reserved and
+  free is returned; if none is, `<base>-<id>`, then `user-<id>`.
   """
-  @spec suggest(String.t() | nil, user_id) :: username
-  def suggest(full_name, user_id) do
+  @spec suggest(String.t() | nil, user_id, keyword()) :: username
+  def suggest(full_name, user_id, opts \\ []) do
     fallback = "user-#{user_id}"
-    base = normalise(full_name)
-    base = if String.length(base) < 3, do: fallback, else: base
+
+    base =
+      Enum.find(
+        [normalise(full_name), normalise(email_name(opts[:email]))],
+        fallback,
+        &(String.length(&1) >= 3)
+      )
 
     candidates =
       [base | Enum.map(2..@max_numbered, &with_suffix(base, "-#{&1}"))] ++
@@ -70,6 +76,28 @@ defmodule Tymeslot.Profiles.Usernames do
   end
 
   defp normalise(_name), do: ""
+
+  defp email_name(email) when is_binary(email),
+    do: email |> String.split("@") |> hd() |> String.split("+") |> hd()
+
+  defp email_name(_email), do: nil
+
+  @doc """
+  Whether `username` is no choice of the host's: blank, or the system
+  default `generate_default_username/1` gives `user_id`.
+  """
+  @spec system_default?(username | nil, user_id) :: boolean()
+  def system_default?(nil, _user_id), do: true
+
+  def system_default?(username, user_id) when is_binary(username) do
+    base = "user_#{user_id}"
+
+    case String.trim(username) do
+      "" -> true
+      ^base -> true
+      other -> Regex.match?(~r/\A#{base}_[0-9a-f]{8}\z/, other)
+    end
+  end
 
   defp with_suffix(base, suffix), do: cut(base, @max_length - String.length(suffix)) <> suffix
 

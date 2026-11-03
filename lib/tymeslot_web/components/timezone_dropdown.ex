@@ -29,6 +29,16 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     default: true,
     doc: "Whether to show the visual label; off where a heading above already names the field"
 
+  attr :show_help, :boolean,
+    default: true,
+    doc: "Whether to show the line under the picker saying what the timezone is used for"
+
+  attr :position, :atom,
+    default: :top_start,
+    values: [:top_start, :bottom_start],
+    doc:
+      "Where the list opens: above the field, or below it where content above must stay visible"
+
   @spec timezone_dropdown(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_dropdown(assigns) do
     ~H"""
@@ -48,7 +58,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         on_toggle="toggle_timezone_dropdown"
         on_close="close_timezone_dropdown"
         target={@target}
-        position={:top_start}
+        position={@position}
         role="dialog"
         panel_label={dgettext("common", "Select timezone")}
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
@@ -142,7 +152,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         </:panel>
       </.dropdown>
 
-      <p class="mt-2 text-sm text-tymeslot-600">
+      <p :if={@show_help} class="mt-2 text-sm text-tymeslot-600">
         {dgettext("common", "This timezone will be used for your availability and scheduling.")}
       </p>
     </div>

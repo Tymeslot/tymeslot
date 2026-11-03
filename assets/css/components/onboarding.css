@@ -283,6 +283,15 @@
   transform: none;
 }
 
+/* On the link step a phone needs the name and link fields above the fold,
+   so the card shows only the page's header and address (the StageScale
+   hook brings that highlighted region into view). */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-step="profile"] .stage-frame {
+    height: 26svh;
+  }
+}
+
 .stage-frame-bar {
   display: none;
 }

@@ -16,25 +16,10 @@ msgstr ""
 msgid "%{provider} · Connected"
 msgstr "%{provider} · připojeno"
 
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "A friendly face helps invitees recognise who they're booking with."
-msgstr "Přátelská tvář pomůže pozvaným poznat, u koho si rezervují čas."
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Add a video provider"
 msgstr "Přidat poskytovatele videohovorů"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Add your name, photo, and a short bio so invitees know who they're booking with."
-msgstr "Přidejte jméno, fotku a krátké představení, aby pozvaní věděli, u koho si rezervují čas."
-
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "All your availability and bookings will be shown in this timezone."
-msgstr "Veškerá vaše dostupnost a rezervace se budou zobrazovat v tomto časovém pásmu."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -317,11 +302,6 @@ msgstr "Nastavte akcentní barvu, která vaši stránku sjednotí."
 msgid "Setup checklist"
 msgstr "Kontrolní seznam nastavení"
 
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "Share this link so people can book time with you. Choose something short and memorable."
-msgstr "Sdílejte tento odkaz, aby si u vás lidé mohli rezervovat čas. Zvolte něco krátkého a zapamatovatelného."
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Share your booking page"
@@ -424,16 +404,6 @@ msgstr "Motiv rezervační stránky"
 #, elixir-autogen, elixir-format
 msgid "Your name"
 msgstr "Vaše jméno"
-
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "Your photo"
-msgstr "Vaše fotka"
-
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "Your timezone"
-msgstr "Vaše časové pásmo"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -649,3 +619,33 @@ msgstr "Vaše volné termíny se tu zobrazí po připojení kalendáře."
 #, elixir-autogen, elixir-format
 msgid "No free times in the next seven days."
 msgstr "V příštích sedmi dnech nejsou žádné volné termíny."
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Change"
+msgstr "Změnit"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Change timezone"
+msgstr "Změnit časové pásmo"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Photo (optional)"
+msgstr "Fotka (nepovinné)"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on your page and in link previews when you share it."
+msgstr "Zobrazí se na vaší stránce a v náhledu odkazu, když ho sdílíte."
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "This is the link people will use to book you."
+msgstr "Přes tento odkaz si u vás lidé budou rezervovat schůzky."
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Times shown in %{zone}"
+msgstr "Časy v pásmu %{zone}"

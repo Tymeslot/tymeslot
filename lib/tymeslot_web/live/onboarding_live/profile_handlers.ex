@@ -23,7 +23,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_validate_basic_settings(params, socket) do
     form_params = normalize_basic_settings_params(params)
-    updated_form_data = build_form_data(form_params, socket)
+    {socket, updated_form_data} = follow_name(socket, build_form_data(form_params, socket))
 
     base_errors =
       case BasicSettingsShared.validate_basic_settings(socket, form_params) do
@@ -56,6 +56,29 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
       "full_name" => Map.get(form_params, "full_name", socket.assigns.form_data["full_name"]),
       "username" => Map.get(form_params, "username", socket.assigns.form_data["username"])
     }
+  end
+
+  # While the link is still a suggestion, a new name suggests a new link. A
+  # change that alters the link itself is the host typing their own, which
+  # is never overwritten from then on. The link field may be focused when a
+  # suggestion arrives, and a browser keeps a focused field's value, so the
+  # next change then carries what the host sees and settles it as theirs.
+  defp follow_name(socket, %{"username" => username} = form_data) do
+    previous = socket.assigns.form_data
+
+    cond do
+      username != previous["username"] ->
+        {Component.assign(socket, :link_suggested, false), form_data}
+
+      socket.assigns.link_suggested and form_data["full_name"] != previous["full_name"] ->
+        link =
+          BasicSettingsShared.suggest_link(socket.assigns.current_user, form_data["full_name"])
+
+        {socket, %{form_data | "username" => link}}
+
+      true ->
+        {socket, form_data}
+    end
   end
 
   defp apply_validation_result(socket, updated_form_data, errors) when errors == %{} do

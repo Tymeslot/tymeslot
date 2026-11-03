@@ -4,6 +4,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   """
 
   alias Phoenix.Component
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Settings
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
@@ -55,18 +56,40 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   end
 
   @doc """
-  Builds the initial form_data map from the current user and profile on the socket.
+  Assigns the profile step's form from the current user and profile on the
+  socket (the profile may still be `nil` on a first visit).
+
+  The name is the account's own, never a placeholder. A host with no link of
+  their own yet (blank, or the generated default) gets one suggested from
+  that name, or failing it their email, and `link_suggested` is set: until
+  they type in the link field, a new name replaces the suggestion. The
+  suggestion is a field value only; nothing is written until Continue.
   """
-  @spec build_form_data(Phoenix.LiveView.Socket.t()) :: map()
-  def build_form_data(socket) do
+  @spec assign_form_data(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_form_data(socket) do
     user = socket.assigns.current_user
     profile = socket.assigns.profile
+    full_name = Enum.find([user.name, profile && profile.full_name], "", &present?/1)
+    username = profile && profile.username
+    suggested? = Profiles.default_username?(username, user.id)
 
-    %{
-      "full_name" => user.name || profile.full_name || "",
-      "username" => profile.username || ""
-    }
+    Component.assign(socket,
+      form_data: %{
+        "full_name" => full_name,
+        "username" => if(suggested?, do: suggest_link(user, full_name), else: username)
+      },
+      link_suggested: suggested?
+    )
   end
+
+  defp present?(name), do: is_binary(name) and String.trim(name) != ""
+
+  @doc """
+  The booking link suggested for `user` under `full_name`.
+  """
+  @spec suggest_link(map(), String.t() | nil) :: String.t()
+  def suggest_link(user, full_name),
+    do: Profiles.suggest_username(full_name, user.id, email: user.email)
 
   @doc """
   Applies validation errors to the socket.

@@ -84,8 +84,17 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
       assert String.ends_with?(text, "#{host()}/anna")
     end
 
-    test "shows a placeholder before there is a username", %{conn: conn} do
+    test "starts on the suggested link", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      text = view |> address() |> Floki.text() |> String.trim()
+
+      assert String.ends_with?(text, "#{host()}/anna-kowalska")
+    end
+
+    test "shows a placeholder while the link is empty", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
+      fill_profile(view, "Anna Example", "")
 
       text = view |> address() |> Floki.text() |> String.trim()
 

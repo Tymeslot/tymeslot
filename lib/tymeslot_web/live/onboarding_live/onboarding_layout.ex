@@ -155,6 +155,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         id="onboarding-stage"
         class="onboarding-stage"
         data-role="onboarding-stage"
+        data-step={@current_step}
         data-stage-fit
         style={"--stage-canvas: #{@stage_canvas};"}
       >

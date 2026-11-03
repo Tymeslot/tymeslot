@@ -296,11 +296,19 @@ defmodule Tymeslot.Profiles do
   defdelegate generate_default_username(user_id), to: Usernames
 
   @doc """
-  Suggests a booking link from a host's full name, without writing anything;
-  see `Tymeslot.Profiles.Usernames.suggest/2`.
+  Suggests a booking link from a host's full name, or failing that their
+  `:email`, without writing anything; see
+  `Tymeslot.Profiles.Usernames.suggest/3`.
   """
-  @spec suggest_username(String.t() | nil, user_id) :: username
-  defdelegate suggest_username(full_name, user_id), to: Usernames, as: :suggest
+  @spec suggest_username(String.t() | nil, user_id, keyword()) :: username
+  defdelegate suggest_username(full_name, user_id, opts \\ []), to: Usernames, as: :suggest
+
+  @doc """
+  Whether a username is no choice of the host's (blank, or the generated
+  default); see `Tymeslot.Profiles.Usernames.system_default?/2`.
+  """
+  @spec default_username?(username | nil, user_id) :: boolean()
+  defdelegate default_username?(username, user_id), to: Usernames, as: :system_default?
 
   @doc """
   Checks if a username is available.

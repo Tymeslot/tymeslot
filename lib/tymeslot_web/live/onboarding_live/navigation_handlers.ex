@@ -174,8 +174,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     end
   end
 
-  defp refresh_form_data(socket, :profile),
-    do: Component.assign(socket, :form_data, BasicSettingsShared.build_form_data(socket))
+  defp refresh_form_data(socket, :profile), do: BasicSettingsShared.assign_form_data(socket)
 
   defp refresh_form_data(socket, _step), do: socket
 

@@ -121,6 +121,7 @@ defmodule TymeslotWeb.OnboardingLive do
             profile={@profile}
             form_data={@form_data}
             timezone_options={@timezone_options}
+            timezone_editing={@timezone_editing}
             timezone_dropdown_open={@timezone_dropdown_open}
             timezone_search={@timezone_search}
             form_errors={@form_errors}
@@ -306,6 +307,10 @@ defmodule TymeslotWeb.OnboardingLive do
   # ------------------------------------------------------------------
   # Event handlers — Timezone
   # ------------------------------------------------------------------
+
+  def handle_event("edit_timezone", _params, socket) do
+    TimezoneHandlers.handle_edit_timezone(socket)
+  end
 
   def handle_event("toggle_timezone_dropdown", _params, socket) do
     TimezoneHandlers.handle_toggle_timezone_dropdown(socket)

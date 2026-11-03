@@ -296,6 +296,117 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     end
   end
 
+  describe "the suggested booking link" do
+    test "the link is suggested from the name", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      assert has_element?(view, ~s{#username[value="anna-kowalska"]})
+    end
+
+    test "with no name the link comes from the email and the name stays empty", %{conn: conn} do
+      {:ok, view, _html, _user} =
+        setup_onboarding(conn, %{name: nil, email: "jan.nowak+tymeslot@example.com"})
+
+      assert has_element?(view, ~s{#username[value="jan-nowak"]})
+      assert has_element?(view, ~s{#full_name[value=""]})
+    end
+
+    test "a blank account name falls back to the name on the profile", %{conn: conn} do
+      user = insert(:user, name: "", onboarding_completed_at: nil)
+      insert(:profile, user: user, full_name: "Anna Kowalska", username: nil)
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/profile")
+
+      assert has_element?(view, ~s{#full_name[value="Anna Kowalska"]})
+      assert has_element?(view, ~s{#username[value="anna-kowalska"]})
+    end
+
+    test "a generated default link is replaced by a suggestion", %{conn: conn} do
+      user = insert(:user, name: "Anna Kowalska", onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "user_#{user.id}")
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/profile")
+
+      assert has_element?(view, ~s{#username[value="anna-kowalska"]})
+    end
+
+    test "a link the host chose is kept", %{conn: conn} do
+      user = insert(:user, name: "Anna Kowalska", onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "annak")
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/profile")
+
+      assert has_element?(view, ~s{#username[value="annak"]})
+
+      rename(view, "Someone Else")
+      assert has_element?(view, ~s{#username[value="annak"]})
+    end
+
+    test "editing the name re-suggests until the link is touched", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      rename(view, "Anna K")
+      assert has_element?(view, ~s{#username[value="anna-k"]})
+
+      fill_basic_settings(view, "Anna K", "my-own-link")
+      rename(view, "Someone Else")
+
+      assert has_element?(view, ~s{#username[value="my-own-link"]})
+    end
+
+    test "nothing is written before Continue", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      rename(view, "Anna K")
+
+      assert Profiles.get_profile(user.id).username == nil
+    end
+
+    test "Continue saves the suggested link", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, ".onboarding-provider-cards")
+      assert Profiles.get_profile(user.id).username == "anna-kowalska"
+    end
+  end
+
+  describe "the timezone line" do
+    test "the timezone line opens the picker", %{conn: conn} do
+      {:ok, view, _html, user} =
+        setup_onboarding(conn, %{}, nil, connect_params: %{"timezone" => "Europe/Berlin"})
+
+      assert has_element?(view, "[data-role='timezone-line']", "Berlin, Germany")
+      refute has_element?(view, "#timezone-dropdown")
+
+      view |> element("button[phx-click='edit_timezone']") |> render_click()
+      assert has_element?(view, "#timezone-dropdown")
+
+      view
+      |> element(~s{[phx-click="change_timezone"][phx-value-timezone="Europe/Paris"]})
+      |> render_click()
+
+      assert Profiles.get_profile(user.id).timezone == "Europe/Paris"
+      assert has_element?(view, "[data-role='timezone-line']", "Paris, France")
+    end
+  end
+
+  # A change to the name field alone, as the browser sends it: the link
+  # field's value travels with it unchanged.
+  defp rename(view, name), do: fill_basic_settings(view, name, current_link(view))
+
+  defp current_link(view) do
+    [value] =
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#username")
+      |> LazyHTML.attribute("value")
+
+    value
+  end
+
   describe "real-time validation" do
     test "form validates on change and shows inline errors", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)

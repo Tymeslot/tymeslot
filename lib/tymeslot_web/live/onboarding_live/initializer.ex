@@ -61,7 +61,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
 
     socket
     |> Component.assign(:profile, profile)
-    |> assign_form_data(profile)
+    |> BasicSettingsShared.assign_form_data()
     |> Component.assign(initial_ui_state())
     |> ModalHook.mount_modal(theme_preview: false, stage_preview: false)
     |> Component.assign(
@@ -104,6 +104,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # `OnboardingLayout`), so the page load never moves the focus.
       focus_heading: false,
       timezone_options: Timezones.all_options(),
+      # The timezone shows as one line until the host asks to change it.
+      timezone_editing: false,
       timezone_dropdown_open: false,
       timezone_search: "",
       page_title: dgettext("onboarding_wizard", "Set up your page"),
@@ -126,12 +128,6 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       auto_upload: true,
       progress: &AvatarHandlers.handle_progress/3
     )
-  end
-
-  defp assign_form_data(socket, nil), do: Component.assign(socket, :form_data, %{})
-
-  defp assign_form_data(socket, _profile) do
-    Component.assign(socket, :form_data, BasicSettingsShared.build_form_data(socket))
   end
 
   # The disconnected render only reads: a host on their first visit has no

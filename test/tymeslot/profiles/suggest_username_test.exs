@@ -87,6 +87,35 @@ defmodule Tymeslot.Profiles.SuggestUsernameTest do
     assert Profiles.suggest_username("Anna Kowalska", @user_id) == "anna-kowalska-#{@user_id}"
   end
 
+  test "a blank name falls back to the email's local part" do
+    assert Profiles.suggest_username(nil, @user_id, email: "anna.k+work@example.com") == "anna-k"
+    assert Profiles.suggest_username("  ", @user_id, email: "anna.k@example.com") == "anna-k"
+  end
+
+  test "a name wins over the email" do
+    assert Profiles.suggest_username("Jan Nowak", @user_id, email: "anna@example.com") ==
+             "jan-nowak"
+  end
+
+  test "a short email local part falls back to the user id" do
+    assert Profiles.suggest_username(nil, @user_id, email: "ab@example.com") == "user-#{@user_id}"
+  end
+
+  describe "default_username?/2" do
+    test "blank and the generated default are no choice of the host's" do
+      assert Profiles.default_username?(nil, @user_id)
+      assert Profiles.default_username?("", @user_id)
+      assert Profiles.default_username?("user_#{@user_id}", @user_id)
+      assert Profiles.default_username?("user_#{@user_id}_0a1b2c3d", @user_id)
+    end
+
+    test "a chosen username, or another user's default, is not" do
+      refute Profiles.default_username?("anna-kowalska", @user_id)
+      refute Profiles.default_username?("user_1", @user_id)
+      refute Profiles.default_username?("user-#{@user_id}", @user_id)
+    end
+  end
+
   test "it writes nothing" do
     before_count = Repo.aggregate(ProfileSchema, :count)
     Profiles.suggest_username("Anna Kowalska", @user_id)

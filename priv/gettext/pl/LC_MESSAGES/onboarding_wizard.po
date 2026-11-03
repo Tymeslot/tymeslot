@@ -12,25 +12,10 @@ msgstr ""
 msgid "%{provider} · Connected"
 msgstr "%{provider} · Podłączono"
 
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "A friendly face helps invitees recognise who they're booking with."
-msgstr "Przyjazna twarz pomaga zaproszonym rozpoznać, z kim się umawiają."
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Add a video provider"
 msgstr "Dodaj dostawcę wideo"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Add your name, photo, and a short bio so invitees know who they're booking with."
-msgstr "Dodaj imię, zdjęcie i krótki opis, żeby zaproszeni wiedzieli, z kim się umawiają."
-
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "All your availability and bookings will be shown in this timezone."
-msgstr "Dostępność i wszystkie rezerwacje będą wyświetlane w tej strefie czasowej."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -313,11 +298,6 @@ msgstr "Ustaw kolor akcentu, który spina całą stronę."
 msgid "Setup checklist"
 msgstr "Lista konfiguracji"
 
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "Share this link so people can book time with you. Choose something short and memorable."
-msgstr "Udostępnij ten link, żeby inni mogli zarezerwować u ciebie termin. Wybierz coś krótkiego i łatwego do zapamiętania."
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Share your booking page"
@@ -420,16 +400,6 @@ msgstr "Motyw strony rezerwacji"
 #, elixir-autogen, elixir-format
 msgid "Your name"
 msgstr "Imię i nazwisko"
-
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "Your photo"
-msgstr "Zdjęcie profilowe"
-
-#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
-#, elixir-autogen, elixir-format
-msgid "Your timezone"
-msgstr "Strefa czasowa"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -645,3 +615,33 @@ msgstr "Wolne terminy pojawią się tutaj po podłączeniu kalendarza."
 #, elixir-autogen, elixir-format
 msgid "No free times in the next seven days."
 msgstr "Brak wolnych terminów w ciągu najbliższych siedmiu dni."
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Change"
+msgstr "Zmień"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Change timezone"
+msgstr "Zmień strefę czasową"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Photo (optional)"
+msgstr "Zdjęcie (opcjonalnie)"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on your page and in link previews when you share it."
+msgstr "Widoczne na Twojej stronie i w podglądzie linku, gdy go udostępniasz."
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "This is the link people will use to book you."
+msgstr "Przez ten link inni będą rezerwować u Ciebie spotkania."
+
+#: lib/tymeslot_web/live/onboarding_live/profile_step.ex
+#, elixir-autogen, elixir-format
+msgid "Times shown in %{zone}"
+msgstr "Godziny według strefy %{zone}"
