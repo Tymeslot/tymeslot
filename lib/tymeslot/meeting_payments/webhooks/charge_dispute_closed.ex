@@ -38,6 +38,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Webhooks.DisputeOutcome
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
@@ -45,14 +46,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @event_type "charge.dispute.closed"
-
-  # Final dispute statuses, by the side they leave the money with.
-  @outcomes %{
-    "won" => :won,
-    "warning_closed" => :won,
-    "prevented" => :won,
-    "lost" => :lost
-  }
 
   @impl WebhookHandler
   @spec handle(map()) :: WebhookHandler.result()
@@ -73,7 +66,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
         {:ok, :idempotent_replay}
 
       payment ->
-        outcome = Map.get(@outcomes, object["status"])
+        outcome = DisputeOutcome.from_status(object["status"])
         classify(apply_outcome(payment, event_id, outcome, object["amount"] || 0))
     end
   end
