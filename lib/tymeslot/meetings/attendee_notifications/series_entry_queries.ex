@@ -73,17 +73,35 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryQueries do
   end
 
   @doc """
-  Forgets every series whose cache holds no occurrence any more and none of
-  whose recorded entries ends on or after `cutoff`: one deleted at its
-  provider, or ended, long enough ago that no sync reaches it. Answers how
-  many entries went.
+  Marks every entry of the series `address` as written now, which keeps
+  the series from `delete_stale/1` for as long as a recent email would.
+  """
+  @spec touch_all(integer(), String.t()) :: :ok
+  def touch_all(integration_id, address) do
+    now = DateTime.utc_now(:second)
 
-  Neither condition alone will do. A write to a whole series drops its
-  cached rows until the next sync, and a live series' invitation entry
-  carries its first occurrence's timing, however long ago that was.
+    integration_id
+    |> series(address)
+    |> Repo.update_all(set: [updated_at: now])
+
+    :ok
+  end
+
+  @doc """
+  Forgets every series whose cache holds no occurrence any more and none of
+  whose recorded entries ends, or was written, on or after `cutoff`: one
+  deleted at its provider, or ended, long enough ago that no sync reaches
+  it. Answers how many entries went.
+
+  No condition alone will do. A write to a whole series drops its cached
+  rows until the next sync, and a live series' invitation entry carries its
+  first occurrence's timing, however long ago that was; that write marks
+  the series' entries (`touch_all/2`) so that the gap cannot cost a long
+  running series what its guests hold.
   """
   @spec delete_stale(DateTime.t()) :: non_neg_integer()
   def delete_stale(%DateTime{} = cutoff) do
+    cutoff = DateTime.truncate(cutoff, :second)
     cutoff_date = DateTime.to_date(cutoff)
 
     query =
@@ -118,7 +136,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryQueries do
       where:
         o.calendar_integration_id == parent_as(:entry).calendar_integration_id and
           o.series_address == parent_as(:entry).series_address and
-          (o.end_at >= ^cutoff or o.end_date >= ^cutoff_date),
+          (o.end_at >= ^cutoff or o.end_date >= ^cutoff_date or o.updated_at >= ^cutoff),
       select: 1
     )
   end
