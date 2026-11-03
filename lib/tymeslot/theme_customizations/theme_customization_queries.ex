@@ -9,22 +9,89 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   @doc """
-  Gets a theme customization by profile ID and theme ID.
+  Gets the profile's own customization for a theme: the one for its page at
+  `/<username>`, never one of its booking pages'.
   """
   @spec get_by_profile_and_theme(integer(), String.t()) :: ThemeCustomizationSchema.t() | nil
   def get_by_profile_and_theme(profile_id, theme_id) do
-    Repo.get_by(ThemeCustomizationSchema, profile_id: profile_id, theme_id: theme_id)
+    query =
+      from(tc in ThemeCustomizationSchema,
+        where: tc.profile_id == ^profile_id and tc.theme_id == ^theme_id,
+        where: is_nil(tc.booking_page_id)
+      )
+
+    Repo.one(query)
   end
 
   @doc """
-  The customisation of `theme_id` for `profile_id`, locked `FOR UPDATE` until
-  the surrounding transaction ends; `nil` when there is none.
+  Gets a booking page's customization for a theme. The profile id must be the
+  one the row belongs to, so another profile's id misses.
+  """
+  @spec get_by_page_and_theme(integer(), integer(), String.t()) ::
+          ThemeCustomizationSchema.t() | nil
+  def get_by_page_and_theme(profile_id, page_id, theme_id) do
+    Repo.get_by(ThemeCustomizationSchema,
+      profile_id: profile_id,
+      booking_page_id: page_id,
+      theme_id: theme_id
+    )
+  end
+
+  @doc """
+  The profile's own customizations, one per theme it has customised.
+  """
+  @spec list_for_profile_page(integer()) :: [ThemeCustomizationSchema.t()]
+  def list_for_profile_page(profile_id) do
+    query =
+      from(tc in ThemeCustomizationSchema,
+        where: tc.profile_id == ^profile_id and is_nil(tc.booking_page_id)
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
+  Deletes a booking page's customizations and returns them as they stood when
+  deleted.
+  """
+  @spec delete_by_page(integer()) :: [ThemeCustomizationSchema.t()]
+  def delete_by_page(page_id) do
+    query =
+      from(tc in ThemeCustomizationSchema, where: tc.booking_page_id == ^page_id, select: tc)
+
+    {_count, deleted} = Repo.delete_all(query)
+    deleted
+  end
+
+  @doc """
+  The profile's own customisation of `theme_id` (never one of its booking
+  pages'), locked `FOR UPDATE` until the surrounding transaction ends; `nil`
+  when there is none.
   """
   @spec lock_by_profile_and_theme(integer(), String.t()) :: ThemeCustomizationSchema.t() | nil
   def lock_by_profile_and_theme(profile_id, theme_id) do
     Repo.one(
       from(c in ThemeCustomizationSchema,
         where: c.profile_id == ^profile_id and c.theme_id == ^theme_id,
+        where: is_nil(c.booking_page_id),
+        lock: "FOR UPDATE"
+      )
+    )
+  end
+
+  @doc """
+  A booking page's customisation of `theme_id`, locked as
+  `lock_by_profile_and_theme/2` locks the profile's. The profile id must be
+  the one the row belongs to, so another profile's id misses.
+  """
+  @spec lock_by_page_and_theme(integer(), integer(), String.t()) ::
+          ThemeCustomizationSchema.t() | nil
+  def lock_by_page_and_theme(profile_id, page_id, theme_id) do
+    Repo.one(
+      from(c in ThemeCustomizationSchema,
+        where:
+          c.profile_id == ^profile_id and c.booking_page_id == ^page_id and
+            c.theme_id == ^theme_id,
         lock: "FOR UPDATE"
       )
     )
@@ -32,8 +99,12 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
 
   @doc """
   Creates a theme customization, or returns `{:ok, :exists}` without writing
-  anything when the profile already has one for the theme (another request
-  created it first).
+  anything when its profile or booking page already has one for the theme
+  (another request created it first).
+
+  No conflict target: the profile's rows and a page's rows each have their own
+  unique index, the profile's partial (`booking_page_id IS NULL`), and a bare
+  `ON CONFLICT DO NOTHING` covers whichever the row falls under.
   """
   @spec create(map()) ::
           {:ok, ThemeCustomizationSchema.t() | :exists} | {:error, Ecto.Changeset.t()}
@@ -41,7 +112,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
     inserted =
       %ThemeCustomizationSchema{}
       |> ThemeCustomizationSchema.changeset(attrs)
-      |> Repo.insert(on_conflict: :nothing, conflict_target: [:profile_id, :theme_id])
+      |> Repo.insert(on_conflict: :nothing)
 
     case inserted do
       {:ok, %ThemeCustomizationSchema{id: nil}} -> {:ok, :exists}

@@ -605,3 +605,8 @@ msgstr "Odebrání z události"
 #, elixir-autogen, elixir-format
 msgid "Video call:"
 msgstr "Videohovor:"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your %{page} page"
+msgstr "Rezervováno přes vaši stránku „%{page}“"

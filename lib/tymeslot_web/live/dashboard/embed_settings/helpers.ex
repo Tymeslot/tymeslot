@@ -247,14 +247,18 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   defp escape(nil), do: ""
   defp escape(val), do: val |> HTML.html_escape() |> HTML.safe_to_string()
 
-  # The username is interpolated into HTML and JavaScript, so only one the
+  # The address (a username, or `<username>/<page>` for a booking page) is
+  # interpolated into HTML and JavaScript, so only one whose every segment the
   # username rules accept is emitted. It is never rewritten: a shortened
   # username can be another organiser's booking page.
-  defp sanitize_username(username) do
-    case InputProcessor.validate_field(username || "", :username) do
-      {:ok, valid} -> valid
-      {:error, _error} -> "invalid-username"
-    end
+  defp sanitize_username(address) do
+    segments = String.split(address || "", "/")
+
+    valid =
+      length(segments) <= 2 and
+        Enum.all?(segments, &match?({:ok, &1}, InputProcessor.validate_field(&1, :username)))
+
+    if valid, do: address, else: "invalid-username"
   end
 
   defp sanitize_theme(nil), do: nil

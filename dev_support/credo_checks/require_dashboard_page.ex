@@ -91,6 +91,7 @@ defmodule CredoChecks.RequireDashboardPage do
     "/shared/",
     "/subscription/",
     "/theme_customization/",
+    "/theme_settings/",
     "calendar_grid_component",
     "calendar_settings_component",
     "dashboard_overview_component",

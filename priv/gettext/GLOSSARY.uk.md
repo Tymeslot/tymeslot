@@ -103,6 +103,17 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | Agenda (calendar view) | **Розклад** |
 | Weekly Schedule (availability) | **Тижневий розклад** |
 
+### Booking pages (a host's extra pages)
+
+A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
+
+| English | uk |
+|---|---|
+| booking page (any public page guests book through, extra or main) | **сторінка бронювання** (plural **сторінки бронювання**) |
+| main page (the host's own page at `/<username>`, as opposed to their extra booking pages) | **головна сторінка** (always with the qualifier; never the bare word for *home page*) |
+| draft (a booking page not public yet because it lists no meeting type) | **чернетка** (same word as the poll draft) |
+| address (the URL path of a page, `/<username>/<page>`) | **адреса** Ніколи `URL` чи `шлях`; адреса електронної пошти й адреса місця проведення є іншими поняттями зі своїм перекладом |
+
 ### Sessions, lessons, no-shows, deposits and other marketing terms
 
 These recur across the `/for` profession pages and the marketing catalogues. They were drifting

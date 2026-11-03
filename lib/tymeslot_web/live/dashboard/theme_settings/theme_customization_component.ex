@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   Assigns contract
   - Required (passed in):
-    - profile: Tymeslot.Profiles.ProfileSchema.t()
+    - profile: Tymeslot.Profiles.ProfileSchema.t() – may be the owner's profile as one of its booking pages presents it; colours are then read and written for that page (ThemeCustomizations.scope_for/1)
     - theme_id: String.t()
   - Provided/managed by this component (do not pass these in):
     - customization: map with current customization state (see customization_t())
@@ -56,7 +56,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     theme_id = assigns[:theme_id] || Catalog.default_id()
 
     %{customization: customization} =
-      ThemeCustomizations.initialize_customization(assigns.profile.id, theme_id)
+      ThemeCustomizations.initialize_customization(
+        ThemeCustomizations.scope_for(assigns.profile),
+        theme_id
+      )
 
     option_groups = ThemeCustomizations.option_groups(theme_id)
     panels = Map.new(option_groups, &{&1.key, Panels.for_group(theme_id, &1)})
@@ -159,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
     with_customization_limit(socket, action, fn ->
       case ThemeCustomizations.apply_option(
-             socket.assigns.profile.id,
+             ThemeCustomizations.scope_for(socket.assigns.profile),
              socket.assigns.theme_id,
              group.key,
              %{"field" => field, "value" => value}

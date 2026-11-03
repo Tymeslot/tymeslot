@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     AvailabilityHelpers,
     CalendarHelpers,
     OrganizerHelpers,
+    PageAddress,
     PreviewToken,
     ThemeUtils
   }
@@ -57,7 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       if socket.assigns[:organizer_profile] do
         socket
       else
-        OrganizerHelpers.handle_username_resolution(socket, params["username"])
+        OrganizerHelpers.handle_username_resolution(socket, PageAddress.address(params))
       end
 
     # The week start falls back to the organiser's own, so it needs them

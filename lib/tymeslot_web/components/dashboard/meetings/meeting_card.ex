@@ -45,7 +45,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         group?: Helpers.group_meeting?(assigns.meeting),
         managed?: HostManaged.managed?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
-        answered_fields: answered_fields(assigns.meeting)
+        answered_fields: answered_fields(assigns.meeting),
+        booking_page: booking_page(assigns.meeting)
       )
 
     ~H"""
@@ -74,6 +75,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.attendee_company}
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
+            <%!-- The booking page it came through; nothing for the host's
+                 own page, or for a page deleted since. --%>
+            <Feedback.pill
+              :if={@booking_page}
+              tone={:neutral}
+              size={:sm}
+              icon="hero-window"
+              data-testid="booking-page-tag"
+            >
+              {dgettext("dashboard_bookings", "via %{page}", page: @booking_page.name)}
+            </Feedback.pill>
             <Feedback.pill
               :if={@managed?}
               tone={:brand}
@@ -425,4 +437,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       total: summary.total
     )
   end
+
+  # Read only when loaded: a meeting refreshed on its own (a dismissed sync
+  # banner) arrives without it, and shows no tag rather than crashing.
+  defp booking_page(%{booking_page: %{name: _name} = page}), do: page
+  defp booking_page(_meeting), do: nil
 end

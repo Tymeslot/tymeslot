@@ -23,6 +23,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(:meeting_type) => String.t() | nil,
           optional(:event_title) => String.t() | nil,
           optional(:time_format) => String.t() | nil,
+          optional(:booking_page_name) => String.t() | nil,
           optional(atom()) => term()
         }
 
@@ -36,6 +37,9 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
   A calendar event, which has a title rather than a meeting type, passes
   `:event_title` instead of `:meeting_type`, and the row is labelled as the
   event.
+
+  A host's copy of a booking made through one of their booking pages
+  (`:booking_page_name`) names the page under the meeting type.
   """
   @spec meeting_details_table(meeting_details(), String.t()) :: String.t()
   def meeting_details_table(details, locale) do
@@ -135,8 +139,12 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
   defp title_row(%{event_title: title}) when is_binary(title) and title != "",
     do: hero_meta_row(dgettext("emails", "Event"), title, border_bottom: true)
 
-  defp title_row(%{meeting_type: type}) when is_binary(type),
-    do: hero_meta_row(dgettext("emails", "Meeting type"), type, border_bottom: true)
+  defp title_row(%{meeting_type: type} = details) when is_binary(type),
+    do:
+      hero_meta_row(dgettext("emails", "Meeting type"), type,
+        border_bottom: true,
+        note: Formatting.booked_through(details)
+      )
 
   defp title_row(_details), do: ""
 
@@ -181,6 +189,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
         <td class="email-hairline-row" style="padding: 0 0 12px 0; #{border}">
           #{hero_meta_label(label)}
           <div class="email-ink" style="font-size: 15px; font-weight: 600; color: #{Styles.ink()}; line-height: 1.4;">#{safe_value}</div>
+          #{hero_meta_note(Keyword.get(opts, :note))}
         </td>
       </tr>
     </mj-table>

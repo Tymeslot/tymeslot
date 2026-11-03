@@ -179,6 +179,15 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     |> Repo.one()
   end
 
+  @doc "The id of a user's profile, or nil when they have none."
+  @spec id_for_user(integer()) :: integer() | nil
+  def id_for_user(user_id) do
+    ProfileSchema
+    |> where([p], p.user_id == ^user_id)
+    |> select([p], p.id)
+    |> Repo.one()
+  end
+
   @doc """
   Gets a profile by username.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.

@@ -10,6 +10,9 @@
  * 1. Inline: <div id="tymeslot-booking" data-username="sarah"></div>
  * 2. Popup: <button onclick="TymeslotBooking.open('sarah')">Book</button>
  * 3. Floating: TymeslotBooking.initFloating('sarah')
+ *
+ * A booking page of an organiser is addressed as `<username>/<page>`, e.g.
+ * data-username="sarah/coaching".
  */
 
 (function() {
@@ -177,7 +180,10 @@
   function createBookingIframe(username, options = {}) {
     const iframe = document.createElement('iframe');
     const base = BASE_URL.replace(/\/$/, '');
-    const url = new URL(`${base}/${encodeURIComponent(username)}`);
+    // A booking page's address is `<username>/<page>`: each segment is
+    // escaped on its own, so the slash between them stays a path separator.
+    const path = String(username).split('/').map(encodeURIComponent).join('/');
+    const url = new URL(`${base}/${path}`);
     
     // Build URL with customization params - STRICT ALLOWLIST
     const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale', 'layout', 'previewToken'];

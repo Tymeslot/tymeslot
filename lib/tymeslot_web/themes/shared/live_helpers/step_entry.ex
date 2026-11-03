@@ -20,11 +20,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
   alias Phoenix.HTML.Form
+  alias Tymeslot.BookingPages
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -123,7 +126,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   """
   @spec handle_schedule_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_schedule_entry(socket, params) do
-    case resolve_entry_meeting_type(socket, params) do
+    case resolve_entry_meeting_type(socket, params, :schedule) do
       {:unresolvable, socket} ->
         socket
 
@@ -166,12 +169,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # link can name a different type outright. Only when the pin comes back empty
   # (not a reschedule, a whole booking whose type has since been deleted, or a
   # seat on another organiser's meeting) does the slug decide, which is what
-  # a fresh booking uses.
-  defp resolve_entry_meeting_type(socket, params) do
+  # a fresh booking uses. `step` is the step being entered, `:schedule` or
+  # `:booking`, which a type found at another address is sent on to there.
+  defp resolve_entry_meeting_type(socket, params, step) do
     if ReschedulePin.pinned?(socket) do
       {:ok, socket}
     else
-      resolve_slug_meeting_type(socket, normalize_duration_param(params))
+      resolve_slug_meeting_type(socket, normalize_duration_param(params), params, step)
     end
   end
 
@@ -182,27 +186,62 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # custom-field snapshot, schedule, buffers and booking limits, and leaving
   # the duration to an unbounded parse of the slug itself.
   #
-  # Returns `{:unresolvable, socket}` — already flashed and redirected — when
-  # the organiser has no type for this slug.
-  defp resolve_slug_meeting_type(socket, slug) do
+  # Returns `{:unresolvable, socket}`, already redirected, when the organiser
+  # has no type for this slug (flashed), or when the type's one address is not
+  # the one in the URL (`at_own_address?/2`): that goes to the same step at
+  # the type's address, so the link still books it, the booking is recorded
+  # against the page that offers it, and each type has one address to share.
+  defp resolve_slug_meeting_type(socket, slug, params, step) do
     if is_binary(socket.assigns[:username_context]) and is_binary(slug) do
       socket.assigns[:organizer_user_id]
       |> ThemeFlow.resolve_meeting_type_for_slug(slug)
-      |> assign_resolved_meeting_type(socket)
+      |> assign_resolved_meeting_type(socket, params, step)
     else
       {:ok, socket}
     end
   end
 
-  defp assign_resolved_meeting_type(nil, socket) do
+  defp assign_resolved_meeting_type(nil, socket, _params, _step) do
     {:unresolvable,
      socket
      |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
      |> redirect(to: invalid_meeting_type_redirect_path(socket))}
   end
 
-  defp assign_resolved_meeting_type(meeting_type, socket) do
-    {:ok, assign_meeting_type(socket, meeting_type)}
+  defp assign_resolved_meeting_type(meeting_type, socket, params, step) do
+    profile = socket.assigns[:organizer_profile]
+
+    if at_own_address?(profile, meeting_type),
+      do: {:ok, assign_meeting_type(socket, meeting_type)},
+      else: {:unresolvable, redirect(socket, to: own_address(socket, meeting_type, params, step))}
+  end
+
+  # A booking page serves the types it lists, and those listed nowhere
+  # (`BookingPages.serves?/2`); the host's own page serves every type but
+  # one hidden from it and listed on a page, whose address is that page's
+  # (`BookingPages.home_page/1`). A demo organiser has no pages.
+  defp at_own_address?(%ProfileSchema{booking_page: %BookingPageSchema{} = page}, meeting_type),
+    do: BookingPages.serves?(page, meeting_type)
+
+  defp at_own_address?(%ProfileSchema{}, meeting_type),
+    do: is_nil(BookingPages.home_page(meeting_type))
+
+  defp at_own_address?(_demo_organiser, _meeting_type), do: true
+
+  # The step at the type's own address, with the page's query (an embed's
+  # parameters, a preview, a timezone): the one `handle_params` applied, or
+  # on a mount that enters before it, the URL's.
+  defp own_address(socket, meeting_type, params, step) do
+    path = BookingPages.meeting_type_path(socket.assigns.organizer_profile, meeting_type)
+    path = if step == :booking, do: path <> "/book", else: path
+
+    query =
+      case socket.assigns[:page_query_params] do
+        query when is_map(query) and map_size(query) > 0 -> query
+        _not_applied -> PathHandlers.query_params(params)
+      end
+
+    PathHandlers.with_query(path, query)
   end
 
   # Carries the reschedule context across the redirect so a bad slug doesn't
@@ -216,7 +255,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
       end
 
     PathHandlers.with_query(
-      ~p"/#{socket.assigns[:username_context]}",
+      "/" <> socket.assigns[:username_context],
       Map.merge(query, PathHandlers.demo_theme_param(socket.assigns))
     )
   end
@@ -317,7 +356,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   @spec handle_booking_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_booking_entry(socket, params) do
     if selection_made?(socket, params) || reschedule?(socket, params) do
-      case resolve_entry_meeting_type(socket, params) do
+      case resolve_entry_meeting_type(socket, params, :booking) do
         {:unresolvable, socket} ->
           socket
 
@@ -358,7 +397,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
       redirect(socket,
         to:
           PathHandlers.with_query(
-            ~p"/#{username}/#{slug}",
+            "/#{username}/#{slug}",
             PathHandlers.demo_theme_param(socket.assigns)
           )
       )

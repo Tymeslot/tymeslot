@@ -112,7 +112,8 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
           optional(:time_format) => String.t() | nil,
           optional(:audience) => :host | :guest,
           optional(:all_day) => boolean(),
-          optional(:last_date) => Date.t() | nil
+          optional(:last_date) => Date.t() | nil,
+          optional(:booking_page_name) => String.t() | nil
         }
 
   @doc """
@@ -146,7 +147,8 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
     |> shared_meeting_details(appointment_details.start_time_owner_tz)
     |> Map.merge(%{
       time_format: Map.get(appointment_details, :organizer_time_format),
-      audience: :host
+      audience: :host,
+      booking_page_name: Map.get(appointment_details, :booking_page_name)
     })
   end
 

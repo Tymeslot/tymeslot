@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -30,6 +31,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      socket
      |> LiveView.stream(:meetings, [])
      |> assign(:filter, "upcoming")
+     |> assign(:booking_pages, [])
+     |> assign(:page_filter, nil)
      |> assign(:focus, nil)
      |> assign(:_last_focus_param, nil)
      |> assign(:loading, true)
@@ -103,6 +106,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       |> assign(:_last_user_id, new_user_id)
       |> assign(:_last_per_page, new_per_page)
 
+    socket = if initialized?, do: socket, else: assign_booking_pages(socket)
     socket = if should_load, do: load_meetings(socket), else: socket
 
     {:ok, socket}
@@ -134,6 +138,23 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           {:noreply, socket}
       end
     end)
+  end
+
+  def handle_event("filter_booking_page", %{"page" => page}, socket) do
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_filter, socket.assigns.current_user.id),
+      socket,
+      fn ->
+        {:noreply,
+         socket
+         |> assign(:page_filter, parse_page_filter(page, socket.assigns.booking_pages))
+         |> assign(:focus, nil)
+         |> assign(:next_cursor, nil)
+         |> assign(:has_more, false)
+         |> assign(:loading, true)
+         |> load_meetings()}
+      end
+    )
   end
 
   def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket),
@@ -208,7 +229,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
     case Meetings.list_user_meetings_by_filter(current_user.id, filter,
            per_page: per_page,
-           after: after_cursor
+           after: after_cursor,
+           booking_page: socket.assigns.page_filter
          ) do
       {:ok, page} ->
         socket =
@@ -341,11 +363,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     ~H"""
     <div id="bookings-management">
       <.dashboard_page icon="hero-clock" title={dgettext("dashboard_common", "Meetings")}>
-        <div class="mb-10">
+        <div class="mb-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <%!-- No tab is current while the list shows one linked booking. --%>
           <MeetingListComponents.filter_tabs
             active={if @focus, do: nil, else: @filter}
             awaiting_approval_count={@awaiting_approval_count}
+            target={@myself}
+          />
+          <MeetingListComponents.page_filter
+            :if={@booking_pages != []}
+            pages={@booking_pages}
+            selected={@page_filter}
             target={@myself}
           />
         </div>
@@ -432,7 +460,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       %{user_id: current_user.id, filter: filter}
     )
 
-    case fetch_page(socket.assigns.focus, current_user.id, filter, per_page) do
+    case fetch_page(socket.assigns.focus, current_user.id, filter,
+           per_page: per_page,
+           booking_page: socket.assigns.page_filter
+         ) do
       {:ok, page} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :load, :stop],
@@ -470,11 +501,27 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   defp focus_param(param) when is_binary(param) and param != "", do: param
   defp focus_param(_none), do: nil
 
-  defp fetch_page(nil, user_id, filter, per_page),
-    do: Meetings.list_user_meetings_by_filter(user_id, filter, per_page: per_page)
+  defp fetch_page(nil, user_id, filter, opts),
+    do: Meetings.list_user_meetings_by_filter(user_id, filter, opts)
 
-  defp fetch_page(focus, user_id, _filter, _per_page),
+  defp fetch_page(focus, user_id, _filter, _opts),
     do: Meetings.list_user_meeting(user_id, focus)
+
+  # The host's booking pages, for the page filter; none without a profile.
+  defp assign_booking_pages(%{assigns: %{profile: %{id: profile_id}}} = socket),
+    do: assign(socket, :booking_pages, BookingPages.list(profile_id))
+
+  defp assign_booking_pages(socket), do: socket
+
+  # "main" is the host's own page; an id must be one of their pages, so a
+  # crafted value narrows to nothing it should not. Anything else is all pages.
+  defp parse_page_filter("main", _pages), do: :main
+
+  defp parse_page_filter(page, pages) when is_binary(page) do
+    Enum.find_value(pages, fn %{id: id} -> if Integer.to_string(id) == page, do: id end)
+  end
+
+  defp parse_page_filter(_page, _pages), do: nil
 
   @valid_filters ["upcoming", "past", "cancelled", "awaiting_approval"]
 

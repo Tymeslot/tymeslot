@@ -154,6 +154,17 @@ Settled while translating; reuse rather than re-coining.
 
 **Weekday abbreviations:** Mo · Di · Mi · Do · Fr · Sa · So
 
+### Booking pages (a host's extra pages)
+
+A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
+
+| English | de |
+|---|---|
+| booking page (any public page guests book through, extra or main) | **Buchungsseite** (plural **Buchungsseiten**) |
+| main page (the host's own page at `/<username>`, as opposed to their extra booking pages) | **Hauptseite** (always with the qualifier; never the bare word for *home page*) |
+| draft (a booking page not public yet because it lists no meeting type) | **Entwurf** (same word as the poll draft) |
+| address (the URL path of a page, `/<username>/<page>`) | **Adresse** Nie *URL* oder *Pfad*; E-Mail-Adresse und die Adresse eines Ortes sind andere Dinge und haben eigene Übersetzungen |
+
 ### Third-party UI labels: never guess
 
 When a setup instruction tells the user to click something in another company's product, the label

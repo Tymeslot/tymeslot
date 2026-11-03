@@ -550,8 +550,18 @@ defmodule TymeslotWeb.Router do
       ] do
       live "/:username", Themes.Core.Dispatcher, :overview
       live "/:username/thank-you", Themes.Core.Dispatcher, :confirmation
+      # A meeting type of the username's page, or the start page of one of its
+      # booking pages: `TymeslotWeb.Live.Scheduling.PageAddress` tells them
+      # apart, since a page's slug and a type's never meet within a profile.
       live "/:username/:slug", Themes.Core.Dispatcher, :schedule
+      # Before `/:username/:page/:slug`, which would otherwise take it as a
+      # page's type slugged "book"; no type may take that slug.
       live "/:username/:slug/book", Themes.Core.Dispatcher, :booking
+      # A booking page's flow, `/:username/:page` being its start page above.
+      # "thank-you" is no type's or page's slug, so its route goes first.
+      live "/:username/:page/thank-you", Themes.Core.Dispatcher, :confirmation
+      live "/:username/:page/:slug", Themes.Core.Dispatcher, :schedule
+      live "/:username/:page/:slug/book", Themes.Core.Dispatcher, :booking
     end
   end
 

@@ -596,3 +596,8 @@ msgstr "Removido do evento"
 #, elixir-autogen, elixir-format
 msgid "Video call:"
 msgstr "Chamada de vídeo:"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your %{page} page"
+msgstr "Agendado pela sua página “%{page}”"

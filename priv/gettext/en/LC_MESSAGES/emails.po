@@ -596,3 +596,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Video call:"
 msgstr ""
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your %{page} page"
+msgstr ""

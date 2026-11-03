@@ -27,11 +27,6 @@ msgstr "Cambiar el enlace de reservas"
 msgid "Changing this link will stop any links you have already shared for this meeting type from working."
 msgstr "Si cambias este enlace, los enlaces que ya compartiste para este tipo de reunión dejarán de funcionar."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Hidden from your public booking page; reachable only by its direct link"
-msgstr "Oculto en tu página pública de reservas; solo se accede con su enlace directo"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Link address"
@@ -454,3 +449,13 @@ msgstr "Duplicar"
 #, elixir-autogen, elixir-format
 msgid "Duplicate %{name}"
 msgstr "Duplicar %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; reachable only by its direct link"
+msgstr "En ninguna página de reservas; solo se accede con su enlace directo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link"
+msgstr "Enlace de reservas"

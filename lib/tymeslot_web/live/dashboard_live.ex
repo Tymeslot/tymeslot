@@ -28,6 +28,7 @@ defmodule TymeslotWeb.DashboardLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Meetings
@@ -57,6 +58,9 @@ defmodule TymeslotWeb.DashboardLive do
   # the now-line, drop entries that have ended, and pick up bookings or
   # calendar events created since the last load.
   @agenda_tick_ms 60_000
+
+  # The sections showing the Theme screen, which follows booking page changes.
+  @booking_page_actions [:theme, :theme_customization]
 
   # The standalone calendar/video/payments pages now live as tabs inside the
   # unified integrations hub. Their routes stay defined (deep links, emails and
@@ -151,6 +155,8 @@ defmodule TymeslotWeb.DashboardLive do
         socket
       end
 
+    socket = subscribe_to_booking_pages(socket, action)
+
     socket =
       socket
       |> assign(:page_title, PageTitles.dashboard_title(action))
@@ -168,6 +174,20 @@ defmodule TymeslotWeb.DashboardLive do
     |> reschedule_agenda_tick(action)
     |> PollEventHandlers.keep_deadline_timer(action)
   end
+
+  # The Theme screen follows the owner's page changes made in other tabs, so
+  # it leaves a page deleted there at once rather than on its next edit.
+  defp subscribe_to_booking_pages(%{assigns: %{profile: %{id: profile_id}}} = socket, action)
+       when action in @booking_page_actions do
+    if connected?(socket) and !socket.assigns[:booking_pages_subscribed] do
+      BookingPages.subscribe(profile_id)
+      assign(socket, :booking_pages_subscribed, true)
+    else
+      socket
+    end
+  end
+
+  defp subscribe_to_booking_pages(socket, _action), do: socket
 
   # Keeps a single agenda-refresh timer alive only while a section that shows
   # the agenda (overview, calendar's Up-next strip) is open. Cancels any prior
@@ -392,6 +412,29 @@ defmodule TymeslotWeb.DashboardLive do
 
         {:noreply, put_flash(socket, :error, dgettext("dashboard_home", "Invalid redirect URL"))}
     end
+  end
+
+  # A component that finds, while updating, that the URL names something gone
+  # (a booking page deleted in another tab) cannot patch from `update/2`, so it
+  # asks here. Only dashboard paths, so a component cannot send the user away.
+  @spec handle_info({:patch, String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:patch, "/dashboard" <> _rest = path}, socket),
+    do: {:noreply, push_patch(socket, to: path)}
+
+  @spec handle_info({:booking_pages_changed, integer()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:booking_pages_changed, _profile_id}, socket) do
+    action = socket.assigns.live_action
+
+    if action in @booking_page_actions do
+      send_update(ComponentDispatch.component_for_action(action, nil),
+        id: ComponentDispatch.component_id(action),
+        booking_pages_changed: true
+      )
+    end
+
+    {:noreply, socket}
   end
 
   @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::

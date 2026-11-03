@@ -264,7 +264,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   # the event fired with. The snapshot is replayed over the seat view, so a
   # seat given up reads as cancelled with the time it was given up.
   defp fetch_meeting(meeting_id, participant_id, snapshot) do
-    with {:ok, meeting} <- MeetingQueries.get_meeting_with_guests(meeting_id),
+    with {:ok, meeting} <- MeetingQueries.get_meeting_for_webhook(meeting_id),
          {:ok, meeting} <- maybe_seat_view(meeting, participant_id, snapshot) do
       {:ok, MeetingSnapshot.replay(meeting, snapshot)}
     end

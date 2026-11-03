@@ -60,7 +60,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
           focus={@focus}
           class="organizer-heading"
         >
-          <span class="organizer-name">{dgettext("booking", "Schedule with")}</span>
+          <%!-- Through a booking page its name labels the host instead. --%>
+          <span class="organizer-name">
+            {BookingText.page_name(@organizer_profile) || dgettext("booking", "Schedule with")}
+          </span>
           <span class="organizer-name-full">
             {Profiles.display_name(@organizer_profile) || ""}
           </span>

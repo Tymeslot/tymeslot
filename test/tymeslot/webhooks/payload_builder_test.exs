@@ -283,6 +283,29 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     end
   end
 
+  describe "build_payload/3 booking_page" do
+    test "names the page a booking came through, with its full address" do
+      profile = build(:profile, username: "joern")
+      page = build(:booking_page, profile: profile, name: "Einfach ISO", slug: "einfachiso")
+      meeting = build(:meeting, booking_page: page)
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert payload.data.meeting.booking_page == %{
+               name: "Einfach ISO",
+               slug: "einfachiso",
+               url: Endpoint.url() <> "/joern/einfachiso"
+             }
+    end
+
+    test "is null for a booking through the host's own page" do
+      meeting = build(:meeting, booking_page: nil)
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert Map.fetch!(payload.data.meeting, :booking_page) == nil
+    end
+  end
+
   describe "build_payload/3 seat" do
     test "describes the seat of a group meeting the event is about" do
       meeting =

@@ -124,6 +124,17 @@ Genitive singular and genitive plural are given wherever a translator will need 
 | managed cloud / self-hosted version | **spravovaný cloud** / **verze pro vlastní server** |
 | `+%{count} more` | **`+%{count} dalších`** in all three plural forms: the elided noun differs per surface (událost f., účastník m., kalendář m.), so no agreeing form is right everywhere; the invariant genitive plural is the convention |
 
+### Booking pages (a host's extra pages)
+
+A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
+
+| English | cs |
+|---|---|
+| booking page (any public page guests book through, extra or main) | **rezervační stránka** (plural **rezervační stránky**) |
+| main page (the host's own page at `/<username>`, as opposed to their extra booking pages) | **Hlavní stránka** (always with the qualifier; never the bare word for *home page*) |
+| draft (a booking page not public yet because it lists no meeting type) | **Koncept** (same word as the poll draft) |
+| address (the URL path of a page, `/<username>/<page>`) | **Adresa** (nikdy `URL` ani `cesta`; e-mailová adresa a adresa místa konání jsou jiné věci a mají vlastní překlad) |
+
 ### Verbs: always give the aspect the string needs
 
 Czech verbs come in perfective/imperfective pairs. **Buttons and completed-action messages take the perfective; ongoing states and in-flight statuses take the imperfective or the verbal noun.** This is where Czech translators drift most.
