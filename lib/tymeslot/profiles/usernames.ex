@@ -62,7 +62,10 @@ defmodule Tymeslot.Profiles.Usernames do
       [base | Enum.map(2..@max_numbered, &with_suffix(base, "-#{&1}"))] ++
         [with_suffix(base, "-#{user_id}"), fallback]
 
-    Enum.find(candidates, fallback, &suggestable?/1)
+    candidates = Enum.filter(candidates, &allowed?/1)
+    taken = ProfileQueries.taken_usernames(candidates)
+
+    Enum.find(candidates, fallback, &(String.downcase(&1) not in taken))
   end
 
   defp normalise(name) when is_binary(name) do
@@ -103,10 +106,8 @@ defmodule Tymeslot.Profiles.Usernames do
 
   defp cut(string, length), do: string |> String.slice(0, length) |> String.trim_trailing("-")
 
-  defp suggestable?(candidate) do
-    UsernameValidator.validate(candidate) == :ok and not ReservedPaths.reserved?(candidate) and
-      ProfileQueries.username_available?(candidate)
-  end
+  defp allowed?(candidate),
+    do: UsernameValidator.validate(candidate) == :ok and not ReservedPaths.reserved?(candidate)
 
   @doc "See `Tymeslot.Profiles.change_username/2`."
   @spec change(ProfileSchema.t(), username) :: {:ok, ProfileSchema.t()} | {:error, term()}

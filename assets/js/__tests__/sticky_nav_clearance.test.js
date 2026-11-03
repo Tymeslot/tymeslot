@@ -65,4 +65,25 @@ describe('StickyNavClearance hook', () => {
     expect(window.scrollBy).toHaveBeenCalledWith({ top: 68, behavior: 'instant' });
     hook.destroyed();
   });
+
+  test('clears the whole marked box around a focused field', () => {
+    const nav = document.createElement('div');
+    nav.style.position = 'sticky';
+    const panel = document.createElement('div');
+    panel.setAttribute('data-nav-clearance-box', '');
+    const input = document.createElement('input');
+    panel.append(input);
+    document.body.append(panel, nav);
+    nav.getBoundingClientRect = () => ({ top: 1000, bottom: 1080 });
+    panel.getBoundingClientRect = () => ({ top: 900, bottom: 1200 });
+    input.getBoundingClientRect = () => ({ top: 910, bottom: 950 });
+    window.scrollBy = vi.fn();
+
+    const hook = Object.assign(Object.create(StickyNavClearance), { el: nav });
+    hook.mounted();
+    input.focus();
+
+    expect(window.scrollBy).toHaveBeenCalledWith({ top: 216, behavior: 'instant' });
+    hook.destroyed();
+  });
 });

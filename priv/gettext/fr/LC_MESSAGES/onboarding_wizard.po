@@ -630,7 +630,7 @@ msgstr "Modifier le fuseau horaire"
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Photo (optional)"
-msgstr "Photo (facultatif)"
+msgstr "Photo (facultative)"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format

@@ -9,6 +9,10 @@
  * scrolls the page by just enough to bring the field above the row. While
  * the row is not stuck (from `lg`), it never overlaps a field and nothing
  * moves.
+ *
+ * A field inside an element marked `data-nav-clearance-box` (a dropdown
+ * panel whose list opens under its search field) clears that whole element
+ * instead, so the list does not stay behind the row either.
  */
 
 const GAP = 16
@@ -41,8 +45,9 @@ export const StickyNavClearance = {
     if (!target.matches("input, select, textarea")) return
     if (getComputedStyle(this.el).position !== "sticky") return
 
+    const box = target.closest("[data-nav-clearance-box]") || target
     const offset = clearanceOffset(
-      target.getBoundingClientRect(),
+      box.getBoundingClientRect(),
       this.el.getBoundingClientRect()
     )
 

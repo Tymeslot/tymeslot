@@ -59,15 +59,18 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
   end
 
   # While the link is still a suggestion, a new name suggests a new link. A
-  # change that alters the link itself is the host typing their own, which
-  # is never overwritten from then on. The link field may be focused when a
-  # suggestion arrives, and a browser keeps a focused field's value, so the
-  # next change then carries what the host sees and settles it as theirs.
+  # change that alters the link to anything but the suggestion for the name
+  # is the host typing their own, which is never overwritten from then on.
+  # A link that is the suggestion is still one: that is what a reconnect's
+  # form recovery sends back after the host had changed the name.
   defp follow_name(socket, %{"username" => username} = form_data) do
     previous = socket.assigns.form_data
 
     cond do
-      username != previous["username"] ->
+      username == previous["username"] and form_data["full_name"] == previous["full_name"] ->
+        {socket, form_data}
+
+      username != previous["username"] and not suggestion?(socket, form_data) ->
         {Component.assign(socket, :link_suggested, false), form_data}
 
       socket.assigns.link_suggested and form_data["full_name"] != previous["full_name"] ->
@@ -80,6 +83,13 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
         {socket, form_data}
     end
   end
+
+  defp suggestion?(%{assigns: %{link_suggested: true}} = socket, form_data),
+    do:
+      form_data["username"] ==
+        BasicSettingsShared.suggest_link(socket.assigns.current_user, form_data["full_name"])
+
+  defp suggestion?(_socket, _form_data), do: false
 
   defp apply_validation_result(socket, updated_form_data, errors) when errors == %{} do
     socket

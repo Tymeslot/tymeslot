@@ -13,6 +13,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
 
   use TymeslotWeb.Components.CoreComponents, only: [button_classes: 2, icon: 1]
 
+  alias Phoenix.LiveView.JS
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.UrlBuilder
@@ -34,6 +35,9 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   * `form_errors` - Map of form validation errors
   * `uploads` - The LiveView upload config map (must contain `:avatar`)
   * `avatar_url` - Resolved thumbnail URL for the current avatar
+  * `link_suggested` - Whether the link is still a suggestion that follows the name
+  * `timezone_focus_change` - Whether the timezone line's Change button takes
+    the focus when it reappears (after the picker closes)
   """
   attr :profile, :map, required: true
   attr :form_data, :map, required: true
@@ -44,6 +48,8 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   attr :form_errors, :map, required: true
   attr :uploads, :map, required: true
   attr :avatar_url, :string, default: nil
+  attr :link_suggested, :boolean, default: false
+  attr :timezone_focus_change, :boolean, default: false
 
   @spec profile_step(map()) :: Phoenix.LiveView.Rendered.t()
   def profile_step(assigns) do
@@ -92,24 +98,34 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
         <%!-- Booking link: the host is a fixed prefix, the username follows --%>
         <div class="onboarding-form-group">
           <label for="username" class="label">{dgettext("onboarding_wizard", "Your booking link")}</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight">
-                {@link_host}/
-              </span>
-            </div>
+          <%!-- One field drawn round the fixed host and the input, so the
+               prefix sits against the typed text whatever its length. While the
+               link is a suggestion it follows the name even when the field has
+               focus (`phx-patch-focused`): a host who tabs in straight after
+               typing their name sees the link Continue will save. --%>
+          <div
+            class={[
+              "input flex items-center min-h-11 cursor-text",
+              "focus-within:border-turquoise-400 focus-within:bg-white focus-within:shadow-xl focus-within:shadow-turquoise-500/10",
+              if(FormValidationHelpers.field_errors(@form_errors, :username) != [],
+                do: "input-error"
+              )
+            ]}
+            phx-click={JS.focus(to: "#username")}
+          >
+            <span
+              class="shrink-0 max-w-[60%] truncate text-tymeslot-400"
+              data-role="link-prefix"
+            >
+              {@link_host}/
+            </span>
             <input
               type="text"
               id="username"
               name="username"
               value={Map.get(@form_data, "username", "")}
-              class={[
-                "input",
-                if(FormValidationHelpers.field_errors(@form_errors, :username) != [],
-                  do: "input-error"
-                )
-              ]}
-              style={"padding-left: #{String.length(@link_host) + 2}ch;"}
+              phx-patch-focused={@link_suggested}
+              class="flex-1 min-w-0 p-0 bg-transparent border-0 text-tymeslot-900 placeholder:text-tymeslot-400 focus:outline-hidden"
               placeholder={dgettext("onboarding_wizard", "yourname")}
               autocomplete="username"
               autocapitalize="none"
@@ -181,7 +197,9 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
           <span aria-hidden="true">·</span>
           <button
             type="button"
+            id="timezone-change"
             phx-click="edit_timezone"
+            phx-mounted={@timezone_focus_change && JS.focus()}
             aria-label={dgettext("onboarding_wizard", "Change timezone")}
             class="font-semibold text-turquoise-700 underline underline-offset-2 hover:text-turquoise-800 rounded-token-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-turquoise-500"
           >
@@ -196,7 +214,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
           timezone_search={@timezone_search}
           safe_flags={true}
           show_help={false}
-          position={:bottom_start}
+          inline={true}
         />
         <%= for message <- FormValidationHelpers.field_errors(@form_errors, :timezone) do %>
           <p class="mt-2 text-token-sm text-red-600 font-bold">{message}</p>

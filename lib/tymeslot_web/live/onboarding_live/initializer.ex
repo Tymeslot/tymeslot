@@ -106,6 +106,9 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       timezone_options: Timezones.all_options(),
       # The timezone shows as one line until the host asks to change it.
       timezone_editing: false,
+      # Set when the picker closes, so the Change button it gave way to takes
+      # the focus back.
+      timezone_focus_change: false,
       timezone_dropdown_open: false,
       timezone_search: "",
       page_title: dgettext("onboarding_wizard", "Set up your page"),

@@ -354,6 +354,37 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       assert has_element?(view, ~s{#username[value="my-own-link"]})
     end
 
+    test "a recovered form after a reconnect keeps the link following the name", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      # Form recovery sends both fields at once: the name the host had typed
+      # and the link that was suggested for it.
+      fill_basic_settings(view, "Anna K", "anna-k")
+      rename(view, "Ola Lis")
+
+      assert has_element?(view, ~s{#username[value="ola-lis"]})
+    end
+
+    test "the link field takes a suggestion even while it has focus", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      assert has_element?(view, "#username[phx-patch-focused]")
+
+      fill_basic_settings(view, "Anna Kowalska", "my-own-link")
+      refute has_element?(view, "#username[phx-patch-focused]")
+    end
+
+    test "Back shows the name saved on this step", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+
+      fill_basic_settings(view, "Saved Name", "saved-name")
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='previous_step']") |> render_click()
+
+      assert has_element?(view, ~s{#full_name[value="Saved Name"]})
+      assert has_element?(view, ~s{#username[value="saved-name"]})
+    end
+
     test "nothing is written before Continue", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
 
@@ -389,6 +420,21 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       assert Profiles.get_profile(user.id).timezone == "Europe/Paris"
       assert has_element?(view, "[data-role='timezone-line']", "Paris, France")
+    end
+
+    test "closing the picker without a choice returns to the line, focusing Change", %{
+      conn: conn
+    } do
+      {:ok, view, _html, user} =
+        setup_onboarding(conn, %{}, nil, connect_params: %{"timezone" => "Europe/Berlin"})
+
+      refute has_element?(view, "#timezone-change[phx-mounted]")
+      view |> element("button[phx-click='edit_timezone']") |> render_click()
+      render_hook(view, "close_timezone_dropdown", %{})
+
+      refute has_element?(view, "#timezone-dropdown")
+      assert has_element?(view, "#timezone-change[phx-mounted]")
+      assert Profiles.get_profile(user.id).timezone == "Europe/Berlin"
     end
   end
 

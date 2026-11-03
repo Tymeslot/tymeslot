@@ -33,11 +33,13 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     default: true,
     doc: "Whether to show the line under the picker saying what the timezone is used for"
 
-  attr :position, :atom,
-    default: :top_start,
-    values: [:top_start, :bottom_start],
-    doc:
-      "Where the list opens: above the field, or below it where content above must stay visible"
+  attr :inline, :boolean,
+    default: false,
+    doc: """
+    Opens the list in the page flow under the field instead of floating over the
+    content above it, so the page grows to hold it (and can scroll it clear of a
+    bar stuck to the bottom of the screen)
+    """
 
   @spec timezone_dropdown(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_dropdown(assigns) do
@@ -58,11 +60,13 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         on_toggle="toggle_timezone_dropdown"
         on_close="close_timezone_dropdown"
         target={@target}
-        position={@position}
+        position={:top_start}
+        unstyled={@inline}
+        panel_attrs={[{"data-nav-clearance-box", true}]}
         role="dialog"
         panel_label={dgettext("common", "Select timezone")}
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
-        class="right-0 max-h-64 brand-card overflow-hidden"
+        class={"max-h-64 brand-card overflow-hidden " <> if(@inline, do: "mt-1", else: "right-0")}
       >
         <:trigger>
           <span class="sr-only">{dgettext("common", "Your Timezone")}:</span>

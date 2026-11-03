@@ -122,6 +122,8 @@ defmodule TymeslotWeb.OnboardingLive do
             form_data={@form_data}
             timezone_options={@timezone_options}
             timezone_editing={@timezone_editing}
+            timezone_focus_change={@timezone_focus_change}
+            link_suggested={@link_suggested}
             timezone_dropdown_open={@timezone_dropdown_open}
             timezone_search={@timezone_search}
             form_errors={@form_errors}

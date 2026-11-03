@@ -59,7 +59,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   Assigns the profile step's form from the current user and profile on the
   socket (the profile may still be `nil` on a first visit).
 
-  The name is the account's own, never a placeholder. A host with no link of
+  The name is the profile's, else the account's, never a placeholder. A host with no link of
   their own yet (blank, or the generated default) gets one suggested from
   that name, or failing it their email, and `link_suggested` is set: until
   they type in the link field, a new name replaces the suggestion. The
@@ -69,7 +69,9 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   def assign_form_data(socket) do
     user = socket.assigns.current_user
     profile = socket.assigns.profile
-    full_name = Enum.find([user.name, profile && profile.full_name], "", &present?/1)
+    # The name on the profile is the one the host last saved here, so Back
+    # shows it; the account's name stands in until there is one.
+    full_name = Enum.find([profile && profile.full_name, user.name], "", &present?/1)
     username = profile && profile.username
     suggested? = Profiles.default_username?(username, user.id)
 

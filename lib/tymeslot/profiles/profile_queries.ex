@@ -204,6 +204,25 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   def get_by_username(username) when is_binary(username), do: find_by_username(username, [])
 
   @doc """
+  Which of `usernames` are taken, in one query, compared the way
+  `username_available?/1` compares them (case-insensitively). Returns the
+  taken ones lowercased.
+  """
+  @spec taken_usernames([String.t()]) :: MapSet.t(String.t())
+  def taken_usernames([]), do: MapSet.new()
+
+  def taken_usernames(usernames) when is_list(usernames) do
+    normalised = Enum.map(usernames, &String.downcase/1)
+
+    from(p in ProfileSchema,
+      where: fragment("lower(?)", p.username) in ^normalised,
+      select: fragment("lower(?)", p.username)
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
   Checks if a username is available.
 
   Asked the way the database answers it: the unique index behind `username`

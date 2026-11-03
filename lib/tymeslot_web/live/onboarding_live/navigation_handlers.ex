@@ -156,7 +156,9 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   Handles the previous step navigation event.
 
   Moves back one step. The profile step is redrawn from the saved profile, so
-  it shows what was stored rather than an edit that was never saved.
+  it shows what was stored rather than an edit that was never saved; a link
+  that is still blank or the generated `user_<id>` default shows a suggestion
+  instead (see `BasicSettingsShared.assign_form_data/1`).
   """
   @spec handle_previous_step(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
