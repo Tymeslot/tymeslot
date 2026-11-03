@@ -79,6 +79,16 @@ defmodule Tymeslot.MeetingTypes do
     do: MeetingTypeQueries.list_active_meeting_types(user_id)
 
   @doc """
+  The longest booking window, in days, any of the user's active meeting types
+  sets for itself, or nil when every one uses its schedule's window. Callers
+  that must cover every bookable date (the calendar prefetch) take the larger
+  of this and the schedules' own windows.
+  """
+  @spec max_advance_booking_days_override(integer()) :: pos_integer() | nil
+  def max_advance_booking_days_override(user_id),
+    do: MeetingTypeQueries.max_advance_booking_days_override(user_id)
+
+  @doc """
   Gets all meeting types for a user (active and inactive). A pure read, like
   `get_active_meeting_types/1`.
   """

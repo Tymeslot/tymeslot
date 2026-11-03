@@ -166,6 +166,14 @@ defmodule Tymeslot.Validation.Constraints do
     do: [:max_bookings_per_day, :max_bookings_per_week, :max_bookings_per_month]
 
   @doc """
+  The scheduling rules an availability schedule sets and a meeting type may
+  override, in the order the editors show them.
+  """
+  @spec scheduling_policy_fields() :: [atom()]
+  def scheduling_policy_fields,
+    do: [:buffer_before_minutes, :buffer_after_minutes, :min_advance_hours, :advance_booking_days]
+
+  @doc """
   The scheduling policy applied when no availability schedule can be resolved.
 
   These are also the column defaults on `availability_schedules`, pinned by

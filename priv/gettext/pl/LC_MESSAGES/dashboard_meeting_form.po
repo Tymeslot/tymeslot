@@ -987,3 +987,43 @@ msgstr[2] "Bez limitu każda rezerwacja może obejmować do %{count} gości."
 #, elixir-autogen, elixir-format
 msgid "Cancel the planned dates to turn group bookings off."
 msgstr "Odwołaj zaplanowane terminy, aby wyłączyć rezerwacje grupowe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Booking window (days)"
+msgstr "Maksymalne wyprzedzenie (dni)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after (minutes)"
+msgstr "Bufor po (minuty)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before (minutes)"
+msgstr "Bufor przed (minuty)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffers and notice come from the schedule above. Enter a value to use a different one for this meeting type, or leave a field empty to keep the schedule's."
+msgstr "Bufory i wyprzedzenie pochodzą z harmonogramu powyżej. Wpisz wartość, aby dla tego typu spotkania użyć innej, albo zostaw pole puste, aby zachować wartość z harmonogramu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum notice (hours)"
+msgstr "Minimalne wyprzedzenie (godziny)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling rules"
+msgstr "Zasady harmonogramu"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Use schedule"
+msgstr "Z harmonogramu"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule: %{value}"
+msgstr "Harmonogram: %{value}"

@@ -14,9 +14,9 @@ defmodule Tymeslot.Availability.AvailabilityScheduleSchema do
   use Ecto.Schema
 
   import Ecto.Changeset
+  import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 2]
 
   alias Tymeslot.Profiles.ProfileSchema
-  alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -66,7 +66,7 @@ defmodule Tymeslot.Availability.AvailabilityScheduleSchema do
     |> update_change(:name, &String.trim/1)
     |> validate_required([:profile_id, :name])
     |> validate_length(:name, min: 1, max: @name_max_length)
-    |> validate_policy()
+    |> validate_scheduling_policy(:availability_schedules)
     |> unique_constraint(:name, name: :availability_schedules_profile_id_name_index)
     |> unique_constraint(:is_default, name: :availability_schedules_one_default_per_profile)
     |> foreign_key_constraint(:profile_id)
@@ -82,21 +82,7 @@ defmodule Tymeslot.Availability.AvailabilityScheduleSchema do
   def policy_changeset(schedule, attrs) do
     schedule
     |> cast(attrs, @policy_fields)
-    |> validate_policy()
-  end
-
-  defp validate_policy(changeset) do
-    changeset
-    |> validate_number(:buffer_before_minutes, Constraints.buffer_before_minutes_opts())
-    |> validate_number(:buffer_after_minutes, Constraints.buffer_after_minutes_opts())
-    |> validate_number(:min_advance_hours, Constraints.min_advance_hours_opts())
-    |> validate_number(:advance_booking_days, Constraints.advance_booking_days_opts())
-    |> check_constraint(:buffer_before_minutes,
-      name: :availability_schedules_buffer_before_minutes_range
-    )
-    |> check_constraint(:buffer_after_minutes,
-      name: :availability_schedules_buffer_after_minutes_range
-    )
+    |> validate_scheduling_policy(:availability_schedules)
   end
 
   @doc """

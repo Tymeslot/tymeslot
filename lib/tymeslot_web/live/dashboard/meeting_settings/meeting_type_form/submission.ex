@@ -63,6 +63,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "reminder_config" => Enum.map(assigns.reminders, &reminder_param/1)
     }
     |> Map.merge(booking_limit_params(assigns))
+    |> Map.merge(Map.get(assigns, :scheduling_rules) || %{})
     |> maybe_put_custom_fields(assigns)
     |> maybe_put_payment(assigns)
     |> maybe_put_max_participants(assigns)

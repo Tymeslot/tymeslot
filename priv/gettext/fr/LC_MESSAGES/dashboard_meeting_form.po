@@ -983,3 +983,43 @@ msgstr[1] "Sans limite, chaque réservation peut amener jusqu’à %{count} invi
 #, elixir-autogen, elixir-format
 msgid "Cancel the planned dates to turn group bookings off."
 msgstr "Annulez les dates prévues pour désactiver les réservations de groupe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Booking window (days)"
+msgstr "Fenêtre de réservation (jours)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after (minutes)"
+msgstr "Marge après (minutes)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before (minutes)"
+msgstr "Marge avant (minutes)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffers and notice come from the schedule above. Enter a value to use a different one for this meeting type, or leave a field empty to keep the schedule's."
+msgstr "Les marges et le préavis proviennent du planning ci-dessus. Saisissez une valeur pour en utiliser une autre pour ce type de réunion, ou laissez le champ vide pour conserver celle du planning."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum notice (hours)"
+msgstr "Préavis minimum (heures)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling rules"
+msgstr "Règles de planification"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Use schedule"
+msgstr "Selon le planning"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule: %{value}"
+msgstr "Planning : %{value}"

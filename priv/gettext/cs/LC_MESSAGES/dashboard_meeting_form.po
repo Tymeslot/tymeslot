@@ -990,3 +990,43 @@ msgstr[2] "Bez omezení může každá rezervace přivést až %{count} hostů."
 #, elixir-autogen, elixir-format
 msgid "Cancel the planned dates to turn group bookings off."
 msgstr "Chcete-li vypnout skupinové rezervace, zrušte naplánované termíny."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Booking window (days)"
+msgstr "Období pro rezervace (ve dnech)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after (minutes)"
+msgstr "Časová rezerva po (v minutách)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before (minutes)"
+msgstr "Časová rezerva před (v minutách)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Buffers and notice come from the schedule above. Enter a value to use a different one for this meeting type, or leave a field empty to keep the schedule's."
+msgstr "Časové rezervy a předstih se přebírají z rozvrhu výše. Zadejte hodnotu, chcete-li pro tento typ schůzky použít jinou, nebo nechte pole prázdné a ponechte hodnotu z rozvrhu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum notice (hours)"
+msgstr "Minimální předstih (v hodinách)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling rules"
+msgstr "Pravidla plánování"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Use schedule"
+msgstr "Podle rozvrhu"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule: %{value}"
+msgstr "Rozvrh: %{value}"

@@ -103,6 +103,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        show_seat_availability: true,
        last_spots_threshold: nil,
        booking_limits: Init.get_booking_limits(nil),
+       scheduling_rules: Init.get_scheduling_rules(nil),
        active_tab: "details",
        __initialized__: false
      )}
@@ -358,6 +359,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply,
      socket
      |> assign(:booking_limits, limits)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_scheduling_rules", params, socket) do
+    # Kept as typed: the mapper parses them, and an out-of-range value stays in
+    # the input next to the changeset's error rather than vanishing.
+    type_params = Map.get(params, "meeting_type", %{})
+
+    rules =
+      Map.new(socket.assigns.scheduling_rules, fn {key, current} ->
+        {key, Map.get(type_params, key, current)}
+      end)
+
+    {:noreply,
+     socket
+     |> assign(:scheduling_rules, rules)
      |> Autosave.maybe_run()}
   end
 
