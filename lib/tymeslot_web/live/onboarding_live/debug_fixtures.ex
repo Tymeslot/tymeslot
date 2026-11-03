@@ -4,13 +4,16 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
 
   A fixture puts the wizard into a state that is slow or awkward to reach by
   hand (a connected calendar, a week preview that failed) so a step can be
-  looked at in that state. It only ever changes assigns, never the database,
-  and the LiveView applies it on the debug actions alone: on the real routes
-  the parameter is ignored.
+  looked at in that state. It never writes to the database, and the
+  LiveView applies it on the debug actions alone: on the real routes the
+  parameter is ignored.
 
   Fixtures:
 
-    * `calendar` - a bookable Google calendar is connected
+    * `calendar` - a bookable Google calendar is connected, and the stage
+      reads the week as it would after a real connect (`WeekReveal`). There
+      is no real calendar to read, so the week that arrives is the
+      account's own hours with nothing busy.
     * `reveal_ready` - `calendar`, and the stage's week is ready: a fixed
       sample week (`sample_week/2`) with busy blocks on Tuesday 14:00-15:00
       and Thursday 10:00-11:30 and 23 open slots
@@ -18,9 +21,10 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
     * `reveal_slow` - `calendar`, and the week is taking too long to read
     * `reveal_failed` - `calendar`, and the week could not be read
 
-  A week fixture also writes what the stage shows into the live region
-  (`stage_announcement`), as a real week arriving does, and bumps
-  `reveal_key`, so the times reveal as they would.
+  A week fixture stands in for the read: it cancels any read in flight, so
+  a real answer never replaces the fixture's week. It also writes what the
+  stage shows into the live region (`stage_announcement`), as a real week
+  arriving does, and bumps `reveal_key`, so the times reveal as they would.
 
   Any other name, including ones reserved for fixtures still to come, leaves
   the socket as it is.
@@ -29,20 +33,22 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
   import Kernel, except: [apply: 2]
 
   alias Phoenix.Component
+  alias Phoenix.LiveView
   alias Tymeslot.Availability
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias TymeslotWeb.OnboardingLive.LivePreview
+  alias TymeslotWeb.OnboardingLive.WeekReveal
 
   @doc """
   Applies the fixture named `name` to the socket.
   """
   @spec apply(Phoenix.LiveView.Socket.t(), String.t() | nil) :: Phoenix.LiveView.Socket.t()
   def apply(socket, "calendar") do
-    Component.assign(socket,
-      connected_calendars: [fake_calendar(socket.assigns)],
-      booking_page_live: true
-    )
+    socket
+    |> connect_fake_calendar()
+    |> Component.assign(:stage_week, WeekReveal.initial_week(true))
+    |> WeekReveal.maybe_start()
   end
 
   def apply(socket, "reveal_ready"), do: with_week(socket, :ready, busy: true)
@@ -102,11 +108,19 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
     week = %{state: state, preview: preview}
 
     socket
-    |> apply("calendar")
+    |> connect_fake_calendar()
+    |> LiveView.cancel_async(:week_preview)
     |> Component.assign(
       stage_week: week,
       stage_announcement: LivePreview.week_caption(week) || "",
       reveal_key: Map.get(socket.assigns, :reveal_key, 0) + 1
+    )
+  end
+
+  defp connect_fake_calendar(socket) do
+    Component.assign(socket,
+      connected_calendars: [fake_calendar(socket.assigns)],
+      booking_page_live: true
     )
   end
 

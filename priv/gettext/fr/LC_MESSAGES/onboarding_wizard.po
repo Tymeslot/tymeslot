@@ -646,3 +646,49 @@ msgstr "C'est le lien que les gens utiliseront pour réserver avec vous."
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{zone}"
 msgstr "Heures affichées pour %{zone}"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "App-specific password"
+msgstr "Mot de passe spécifique à l’application"
+
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple Calendar"
+msgstr "Apple Calendar"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple ID email"
+msgstr "E-mail de l’identifiant Apple"
+
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Apple ID email is required"
+msgstr "L’e-mail de l’identifiant Apple est requis"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Apple Calendar"
+msgstr "Connecter Apple Calendar"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Other calendar (CalDAV)"
+msgstr "Autre calendrier (CalDAV)"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar can't take bookings yet. Choose which calendar to check in Settings, or connect another."
+msgstr "Ce calendrier ne peut pas encore recevoir de réservations. Choisissez dans les paramètres le calendrier à consulter, ou connectez-en un autre."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "We only read when you're busy, never what your events are."
+msgstr "Nous lisons seulement quand vous êtes occupé, jamais le contenu de vos événements."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "iCloud, on your iPhone or Mac"
+msgstr "iCloud, sur votre iPhone ou Mac"

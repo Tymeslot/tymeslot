@@ -646,3 +646,49 @@ msgstr "Questo è il link che le persone useranno per prenotare con te."
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{zone}"
 msgstr "Orari mostrati per %{zone}"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "App-specific password"
+msgstr "Password specifica per app"
+
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple Calendar"
+msgstr "Apple Calendar"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple ID email"
+msgstr "Email dell’ID Apple"
+
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Apple ID email is required"
+msgstr "L’email dell’ID Apple è obbligatoria"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Apple Calendar"
+msgstr "Collega Apple Calendar"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Other calendar (CalDAV)"
+msgstr "Altro calendario (CalDAV)"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar can't take bookings yet. Choose which calendar to check in Settings, or connect another."
+msgstr "Questo calendario non può ancora ricevere prenotazioni. Scegli nelle Impostazioni quale calendario controllare, oppure collegane un altro."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "We only read when you're busy, never what your events are."
+msgstr "Leggiamo solo quando sei impegnato, mai di cosa trattano i tuoi eventi."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "iCloud, on your iPhone or Mac"
+msgstr "iCloud, sul tuo iPhone o Mac"

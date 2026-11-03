@@ -645,3 +645,49 @@ msgstr "Przez ten link inni będą rezerwować u Ciebie spotkania."
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{zone}"
 msgstr "Godziny według strefy %{zone}"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "App-specific password"
+msgstr "Hasło dla aplikacji"
+
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple Calendar"
+msgstr "Apple Calendar"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple ID email"
+msgstr "Adres e-mail Apple ID"
+
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Apple ID email is required"
+msgstr "Adres e-mail Apple ID jest wymagany"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Apple Calendar"
+msgstr "Połącz Apple Calendar"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Other calendar (CalDAV)"
+msgstr "Inny kalendarz (CalDAV)"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar can't take bookings yet. Choose which calendar to check in Settings, or connect another."
+msgstr "Ten kalendarz nie może jeszcze przyjmować rezerwacji. Wybierz w Ustawieniach, który kalendarz sprawdzać, albo połącz inny."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "We only read when you're busy, never what your events are."
+msgstr "Odczytujemy tylko, kiedy jesteś zajęty, nigdy czego dotyczą Twoje wydarzenia."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "iCloud, on your iPhone or Mac"
+msgstr "iCloud, na Twoim iPhonie lub Macu"

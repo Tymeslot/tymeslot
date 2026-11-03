@@ -18,7 +18,6 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.OnboardingLive.DebugFixtures
 
   setup tags do
     {:ok, conn: setup_onboarding_session(tags.conn)}
@@ -28,6 +27,8 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
   # each step with the page as it rendered there.
   defp walk_steps(conn) do
     {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+    # The week the calendar unlocks, read as the wizard mounts.
+    render_async(view)
 
     profile = render(view)
     fill_profile(view, "Anna Example", "anna#{System.unique_integer([:positive])}")
@@ -129,13 +130,14 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
     assert find(html, ".onboarding-stage-caption") == []
   end
 
-  test "the caption shows only once the page is live", %{conn: conn} do
+  test "the caption tells the week on the calendar and meeting steps, and the address on ready",
+       %{conn: conn} do
     captions =
       for {step, html} <- walk_steps(conn),
           find(html, ".onboarding-stage-caption") != [],
           do: step
 
-    assert captions == [:ready]
+    assert captions == [:connect_calendar, :meeting, :ready]
   end
 
   test "the layout has one polite live region and the stage is aria-hidden", %{conn: conn} do
@@ -205,30 +207,19 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
   end
 
   describe "the week on the stage" do
-    # The week arrives on the calendar step (B5 fetches it); until then the
-    # debug fixture is the one way in, and the debug routes are not mounted
-    # in tests, so it is applied to the running wizard's socket directly.
-    defp put_week_fixture(view, name) do
-      # B5 replaces this with the real async delivery of the week.
-      :sys.replace_state(view.pid, fn state ->
-        %{state | socket: DebugFixtures.apply(state.socket, name)}
-      end)
-
-      # Any event re-renders with the new assigns.
-      render_hook(view, "close_stage_preview", %{})
-    end
-
     test "the caption reaches the live region and shows under the stage", %{conn: conn} do
+      # The helper's calendar answers with a free week, so the host's own
+      # hours decide the slots.
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      render_async(view)
       navigate_to_calendar_step(view)
 
-      html = put_week_fixture(view, "reveal_ready")
-      doc = Floki.parse_document!(html)
+      doc = view |> render() |> Floki.parse_document!()
 
       assert [region] = Floki.find(doc, ~s([data-role="stage-announcement"]))
       assert Floki.attribute(region, "aria-live") == ["polite"]
       announced = region |> Floki.text() |> String.trim()
-      assert announced =~ ~r/^Your \w+ .+ is already blocked\. 23 open slots this week\.$/
+      assert announced =~ ~r/^\d+ open slots this week\.$/
 
       assert [caption] = Floki.find(doc, ".onboarding-stage-caption")
       assert String.trim(Floki.text(caption)) == announced

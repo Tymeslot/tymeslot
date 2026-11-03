@@ -524,6 +524,7 @@
 
 .onboarding-provider-card {
   display: flex;
+  min-height: 44px;
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
@@ -541,36 +542,6 @@
   background-color: var(--color-primary-50);
 }
 
-/* Selected option in the forced-choice calendar step */
-.onboarding-choice-card--selected {
-  border-color: var(--color-primary-400);
-  background-color: var(--color-primary-50);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
-}
-
-.onboarding-choice-card--selected:hover {
-  border-color: var(--color-primary-500);
-}
-
-/* Radio indicator on each selectable choice */
-.onboarding-choice-radio {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  margin-left: auto;
-  border: 2px solid var(--color-neutral-200);
-  border-radius: var(--radius-full);
-  transition: all 0.15s ease;
-}
-
-.onboarding-choice-radio--selected {
-  border-color: var(--color-primary-500);
-  background-color: var(--color-primary-500);
-}
-
 .onboarding-provider-badge {
   font-size: var(--font-size-xs);
   font-weight: 700;
@@ -584,6 +555,9 @@
 }
 
 .onboarding-provider-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
   min-width: 36px;
@@ -598,6 +572,19 @@
 .onboarding-provider-label {
   font-size: var(--font-size-sm);
   color: var(--color-neutral-500);
+}
+
+.onboarding-privacy-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+}
+
+.onboarding-privacy-line svg {
+  margin-top: 2px;
 }
 
 .onboarding-connected-calendar {

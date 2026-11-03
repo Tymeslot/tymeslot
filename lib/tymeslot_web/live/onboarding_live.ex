@@ -24,6 +24,7 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.OnboardingLive.ThemePreviewModal
   alias TymeslotWeb.OnboardingLive.TimezoneHandlers
+  alias TymeslotWeb.OnboardingLive.WeekReveal
   alias TymeslotWeb.Themes.Core.Registry
 
   @impl Phoenix.LiveView
@@ -87,9 +88,7 @@ defmodule TymeslotWeb.OnboardingLive do
     <OnboardingLayout.onboarding_layout
       current_step={@current_step}
       booking_page_live={@booking_page_live}
-      next_disabled={
-        @current_step == :connect_calendar and is_nil(@calendar_choice) and !@booking_page_live
-      }
+      next_disabled={@current_step == :connect_calendar and @booking_page_live != true}
       focus_heading={@focus_heading}
       stage_announcement={@stage_announcement}
       stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
@@ -142,7 +141,7 @@ defmodule TymeslotWeb.OnboardingLive do
           <ConnectCalendarStep.connect_calendar_step
             calendar_state={@calendar_state}
             connected_calendars={@connected_calendars}
-            calendar_choice={@calendar_choice}
+            booking_page_live={@booking_page_live}
             google_signup_email={@google_signup_email}
             caldav_form_data={@caldav_form_data}
             caldav_form_errors={@caldav_form_errors}
@@ -291,7 +290,7 @@ defmodule TymeslotWeb.OnboardingLive do
   # ------------------------------------------------------------------
 
   def handle_event("select_calendar_option", %{"option" => option}, socket) do
-    CalendarHandlers.handle_select_option(option, socket)
+    CalendarHandlers.handle_choose_provider(option, socket)
   end
 
   def handle_event("cancel_caldav", _params, socket) do
@@ -343,6 +342,10 @@ defmodule TymeslotWeb.OnboardingLive do
     CalendarHandlers.handle_discover_caldav_result(result, socket)
   end
 
+  def handle_async(:week_preview, result, socket) do
+    {:noreply, WeekReveal.handle_result(result, socket)}
+  end
+
   # ------------------------------------------------------------------
   # handle_info
   # ------------------------------------------------------------------
@@ -350,6 +353,10 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   def handle_info({:flash, {type, message}}, socket) do
     {:noreply, put_flash(socket, type, message)}
+  end
+
+  def handle_info({:week_preview_slow, key}, socket) do
+    {:noreply, WeekReveal.handle_slow(key, socket)}
   end
 
   # ------------------------------------------------------------------

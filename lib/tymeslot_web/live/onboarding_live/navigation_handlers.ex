@@ -18,7 +18,6 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
-  alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
   alias TymeslotWeb.OnboardingLive.ReadyStep
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -62,30 +61,13 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     end
   end
 
-  # Continue on the calendar step is a forced choice: act on the selected
-  # option rather than blindly advancing. OAuth providers redirect out; CalDAV
-  # opens the inline form; with nothing selected it advances only once a
-  # bookable calendar is connected, the same rule that keeps every later step
-  # out of reach without one.
-  defp handle_calendar_continue(socket) do
-    case socket.assigns.calendar_choice do
-      "google" ->
-        CalendarHandlers.handle_connect_google(socket)
+  # A calendar is required: Continue leaves the calendar step only once the
+  # page is bookable, the same rule that keeps every later step out of reach
+  # without one. The tiles connect; Continue only moves on.
+  defp handle_calendar_continue(%{assigns: %{booking_page_live: true}} = socket),
+    do: {:noreply, advance_step(socket, :connect_calendar)}
 
-      "outlook" ->
-        CalendarHandlers.handle_connect_outlook(socket)
-
-      "caldav" ->
-        {:noreply, Component.assign(socket, :calendar_state, :connecting_caldav)}
-
-      _none ->
-        if socket.assigns.booking_page_live do
-          {:noreply, advance_step(socket, :connect_calendar)}
-        else
-          {:noreply, socket}
-        end
-    end
-  end
+  defp handle_calendar_continue(socket), do: {:noreply, socket}
 
   # A host sent back from the share step to connect a calendar has already
   # answered every step after it, so the calendar step leads straight back to
@@ -144,11 +126,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   def handle_return_to_calendar_step(socket) do
     {:noreply,
      socket
-     |> Component.assign(
-       current_step: :connect_calendar,
-       calendar_choice: nil,
-       returning_to_share: true
-     )
+     |> Component.assign(current_step: :connect_calendar, returning_to_share: true)
      |> LiveView.clear_flash()}
   end
 

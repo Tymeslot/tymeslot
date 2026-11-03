@@ -32,6 +32,22 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   end
 
   @doc """
+  Answers every calendar read with a free week. A host with a bookable
+  calendar has their week read in the background as the wizard mounts
+  (`TymeslotWeb.OnboardingLive.WeekReveal`), so a test that connects one
+  needs the calendar boundary to answer. A test may stub it again to answer
+  otherwise.
+  """
+  @spec stub_free_calendar() :: :ok
+  def stub_free_calendar do
+    Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+      {:ok, []}
+    end)
+
+    :ok
+  end
+
+  @doc """
   Sets up the test session with Phoenix.ConnTest.
   """
   @spec setup_onboarding_session(Plug.Conn.t()) :: Plug.Conn.t()
@@ -52,6 +68,7 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   @spec setup_onboarding(Plug.Conn.t(), map(), map() | nil, keyword()) ::
           {:ok, any(), String.t(), any()}
   def setup_onboarding(conn, user_params \\ %{}, profile_params \\ nil, opts \\ []) do
+    stub_free_calendar()
     user = insert(:user, Map.put_new(user_params, :onboarding_completed_at, nil))
 
     if profile_params do
@@ -77,6 +94,7 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   """
   @spec onboarding_conn(Plug.Conn.t()) :: {Plug.Conn.t(), any()}
   def onboarding_conn(conn) do
+    stub_free_calendar()
     user = insert(:user, onboarding_completed_at: nil)
     {log_in_user(conn, user), user}
   end
@@ -89,6 +107,7 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   """
   @spec setup_onboarding_with_calendar(Plug.Conn.t()) :: {:ok, any(), String.t(), any()}
   def setup_onboarding_with_calendar(conn) do
+    stub_free_calendar()
     user = insert(:user, onboarding_completed_at: nil)
     insert(:calendar_integration, user: user)
     conn = log_in_user(conn, user)
@@ -143,13 +162,20 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   end
 
   @doc """
-  Selects the CalDAV option and presses Continue — the only way to reach the
-  inline credential form under the forced-choice model.
+  Chooses the CalDAV tile, which opens the inline credential form.
   """
   @spec open_caldav_form(any()) :: any()
   def open_caldav_form(view) do
     view |> element(~s{button[phx-value-option="caldav"]}) |> render_click()
-    view |> element("button[phx-click='next_step']") |> render_click()
+    view
+  end
+
+  @doc """
+  Chooses the Apple Calendar tile, which opens its inline form.
+  """
+  @spec open_apple_form(any()) :: any()
+  def open_apple_form(view) do
+    view |> element(~s{button[phx-value-option="apple"]}) |> render_click()
     view
   end
 end

@@ -43,6 +43,7 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
 
       # Skip the fixture helper because we need a pre-existing
       # integration — setup_onboarding inserts none by default.
+      stub_free_calendar()
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/onboarding/connect_calendar")
 
@@ -51,10 +52,9 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
       # The connected calendar renders as a read-only row, not a button.
       assert has_element?(view, "div.onboarding-connected-calendar")
       assert html =~ "work@example.com"
-      assert html =~ "Caldav · Connected"
+      assert html =~ "CalDAV · Connected"
 
-      # An existing connection enables Continue (it is not disabled), even
-      # without selecting a provider choice.
+      # An existing bookable connection enables Continue.
       refute has_element?(view, "button[phx-click='next_step'][disabled]")
 
       # The connected calendar still exists in the DB.

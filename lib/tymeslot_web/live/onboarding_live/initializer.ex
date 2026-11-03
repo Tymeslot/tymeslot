@@ -11,7 +11,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   profile if it exists, its form data, theme, connected calendars and
   whether the page is live, so the first paint is the host's own page and
   nothing swaps or jumps when the socket connects. Only the connected mount
-  writes (creating the profile, its timezone, the video backgrounds).
+  writes (creating the profile, its timezone, the video backgrounds), and
+  only the connected mount starts reading the host's week (`WeekReveal`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
+  alias TymeslotWeb.OnboardingLive.WeekReveal
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
@@ -72,6 +74,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       onboarding_choices: onboarding_choices
     )
     |> assign_booking_page_live(profile)
+    |> assign_initial_week()
     |> allow_avatar_upload()
   end
 
@@ -82,6 +85,14 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   defp assign_booking_page_live(socket, _profile),
     do: NavigationHandlers.assign_booking_page_live(socket)
 
+  # A host with a bookable calendar sees their week loading from the first
+  # paint, and the connected mount reads it (`WeekReveal`).
+  defp assign_initial_week(socket) do
+    socket
+    |> Component.assign(:stage_week, WeekReveal.initial_week(socket.assigns.booking_page_live))
+    |> WeekReveal.maybe_start()
+  end
+
   # The wizard's state before the organiser has done anything: the first
   # step, every modal and dropdown closed, and every form empty.
   defp initial_ui_state do
@@ -91,8 +102,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       booking_page_live: nil,
       returning_to_share: false,
       # The booking page's coming week, drawn on the stage once a calendar
-      # is connected.
-      stage_week: %{state: :placeholder, preview: nil},
+      # is connected (`WeekReveal`).
+      stage_week: WeekReveal.initial_week(false),
       # Bumped whenever a new week arrives, so the stage reveals its times
       # once on that render and never again on a later one.
       reveal_key: 0,
@@ -114,7 +125,6 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       page_title: dgettext("onboarding_wizard", "Set up your page"),
       form_errors: %{},
       calendar_state: :selecting,
-      calendar_choice: nil,
       caldav_form_data: %{},
       caldav_form_errors: %{},
       caldav_discovering: false,
