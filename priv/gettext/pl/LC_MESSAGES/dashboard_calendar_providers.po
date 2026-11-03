@@ -644,12 +644,12 @@ msgstr "Zachowaj to hasło tak długo, jak korzystasz z Tymeslot. Unieważnienie
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your Apple ID email and that password below."
-msgstr "Poniżej wpisz adres e-mail Apple ID i to hasło."
+msgstr "Poniżej wpisz adres e-mail Apple ID i utworzone hasło."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Open your Apple Account"
-msgstr "Otwórz swoje konto Apple"
+msgstr "Otwórz Konto Apple"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format

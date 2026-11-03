@@ -231,7 +231,7 @@ msgstr "Налаштування → Безпека"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
-msgstr "Вхід і безпека → Паролі застосунків"
+msgstr "Вхід і безпека → Паролі для програм"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
@@ -281,7 +281,7 @@ msgstr "Ім'я користувача"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
-msgstr "пароль застосунку"
+msgstr "пароль для програми"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
@@ -648,7 +648,7 @@ msgstr "Зберігайте цей пароль, доки користуєте�
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your Apple ID email and that password below."
-msgstr "Нижче введіть електронну пошту Apple ID і цей пароль."
+msgstr "Потім введіть нижче адресу електронної пошти Apple ID і цей пароль."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
@@ -658,9 +658,9 @@ msgstr "Відкрийте свій обліковий запис Apple"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Under Sign-In and Security, choose App-Specific Passwords and create one."
-msgstr "У розділі «Вхід і безпека» виберіть «Паролі застосунків» і створіть новий."
+msgstr "У розділі «Вхід і безпека» виберіть «Паролі для програм» і створіть новий пароль."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud needs an app-specific password, not your Apple ID password."
-msgstr "iCloud потребує пароля застосунку, а не пароля Apple ID."
+msgstr "Для iCloud потрібен пароль для програми, а не пароль Apple ID."

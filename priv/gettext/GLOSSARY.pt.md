@@ -171,6 +171,19 @@ with whatever `%{name}` turns out to be.
 `meeting_form`, which collides with the calendar's **Agenda** view. Leave both as they
 are until the two are decided together.
 
+### Setup wizard (`onboarding_wizard`)
+
+| English | pt-BR | Note |
+|---|---|---|
+| booking link | **link de agendamento** | Never *link de reserva(s)*; *reserva* is not our noun anywhere. |
+| link (the username field, the host's `/<username>`) | **link** | Masculine: *Seu link*, *Este link já está em uso*. |
+| keep (your link: save it somewhere you'll find it) | **guardar** | *Ou guarde para depois*, *Primeiro envie ou guarde seu link*, *Seu link já está guardado*. Not *salvar*, which is the Save button. |
+| Live (step name and badge) · go live · You're live · Almost live | **No ar** · entrar no ar · Você está no ar · Quase no ar | Broadcast idiom, gender-free. |
+| Look (step name) | **Visual** | *Seu visual*, *Comparar os visuais*. |
+| Calendar (step name) | **Calendário** | Same word as everywhere else; never *Agenda* (the calendar's view name). |
+| intro call (the seeded meeting type) | **Conversa inicial** | Matches *discovery call* above. |
+| pick / book a time with me (the host's own casual message) | **marcar um horário comigo** | *Oi, %{name}! Você pode marcar um horário comigo aqui: %{url}*. The signature line keeps *Agende um horário comigo*. |
+
 ### Booking pages (a host's extra pages)
 
 A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.

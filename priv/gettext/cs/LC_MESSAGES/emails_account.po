@@ -703,7 +703,7 @@ msgstr "⚠️ Žádost o změnu e-mailu – bezpečnostní upozornění"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Add it to your email signature"
-msgstr "Přidejte si ho do e-mailového podpisu"
+msgstr "Přidejte si odkaz do e-mailového podpisu"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format

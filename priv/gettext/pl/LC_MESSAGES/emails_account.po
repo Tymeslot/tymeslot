@@ -703,7 +703,7 @@ msgstr "⚠️ Prośba o zmianę adresu e-mail – ostrzeżenie dotyczące bezpi
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Add it to your email signature"
-msgstr "Dodaj go do podpisu w e-mailu"
+msgstr "Dodaj go do podpisu e-mail"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -713,7 +713,7 @@ msgstr "Umów się ze mną na spotkanie: %{url}"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your booking page. Send it to anyone who needs a time with you."
-msgstr "Oto twoja strona rezerwacji. Wyślij ją każdemu, kto chce umówić się z tobą na spotkanie."
+msgstr "Oto twoja strona rezerwacji. Wyślij ją każdemu, kto chce się z tobą umówić."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -733,7 +733,7 @@ msgstr "Otwórz stronę"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "QR code for your booking page"
-msgstr "Kod QR twojej strony rezerwacji"
+msgstr "Kod QR strony rezerwacji"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -743,7 +743,7 @@ msgstr "Twój link do rezerwacji"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page, ready to send to anyone."
-msgstr "Twoja strona rezerwacji, gotowa do wysłania każdemu."
+msgstr "Strona rezerwacji, którą możesz wysłać każdemu."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format

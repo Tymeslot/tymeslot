@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot/meeting_types/defaults.ex
 #, elixir-autogen, elixir-format
 msgid "A short first conversation"
-msgstr "Una breve prima conversazione"
+msgstr "Una breve conversazione iniziale"
 
 #: lib/tymeslot/meeting_types/defaults.ex
 #, elixir-autogen, elixir-format

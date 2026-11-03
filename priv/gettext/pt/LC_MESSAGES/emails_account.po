@@ -703,17 +703,17 @@ msgstr "⚠️ Pedido de troca de e-mail - alerta de segurança"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Add it to your email signature"
-msgstr "Adicione-o à assinatura do seu e-mail"
+msgstr "Adicione à sua assinatura de e-mail"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Book a time with me: %{url}"
-msgstr "Marque um horário comigo: %{url}"
+msgstr "Agende um horário comigo: %{url}"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your booking page. Send it to anyone who needs a time with you."
-msgstr "Aqui está a sua página de reservas. Envie-a a quem precisar de um horário com você."
+msgstr "Aqui está sua página de agendamento. Envie para quem precisar marcar um horário com você."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -733,17 +733,17 @@ msgstr "Abrir sua página"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "QR code for your booking page"
-msgstr "QR code da sua página de reservas"
+msgstr "QR code da sua página de agendamento"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking link"
-msgstr "Seu link de reservas"
+msgstr "Seu link de agendamento"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page, ready to send to anyone."
-msgstr "Sua página de reservas, pronta para enviar a quem quiser."
+msgstr "Sua página de agendamento, pronta para enviar a qualquer pessoa."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format

@@ -703,7 +703,7 @@ msgstr "⚠️ Demande de changement d’e-mail - Alerte de sécurité"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Add it to your email signature"
-msgstr "Ajoutez-le à votre signature d’e-mail"
+msgstr "Ajoutez-le à votre signature e-mail"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -713,7 +713,7 @@ msgstr "Réservez un créneau avec moi : %{url}"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your booking page. Send it to anyone who needs a time with you."
-msgstr "Voici votre page de réservation. Envoyez-la à toute personne qui a besoin d’un créneau avec vous."
+msgstr "Voici votre page de réservation. Envoyez-la à quiconque a besoin d’un créneau avec vous."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -733,7 +733,7 @@ msgstr "Ouvrir votre page"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "QR code for your booking page"
-msgstr "Code QR de votre page de réservation"
+msgstr "QR code de votre page de réservation"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format

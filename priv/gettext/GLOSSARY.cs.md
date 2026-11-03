@@ -135,6 +135,18 @@ A host has one **main page** at `/<username>` and may add extra **booking pages*
 | draft (a booking page not public yet because it lists no meeting type) | **Koncept** (same word as the poll draft) |
 | address (the URL path of a page, `/<username>/<page>`) | **Adresa** (nikdy `URL` ani `cesta`; e-mailová adresa a adresa místa konání jsou jiné věci a mají vlastní překlad) |
 
+### Setup wizard (`onboarding_wizard`)
+
+| English | cs |
+|---|---|
+| booking link | **rezervační odkaz** (the generic entry above); in the wizard, where the context is clear, plain **odkaz** |
+| link (the field that was *username*: the `/<link>` part of the booking page address) | **odkaz**: *Your link* → **Váš odkaz**, *Someone already has this link* → **Tento odkaz už někdo má**; never *uživatelské jméno* in the wizard |
+| keep (your link: save it somewhere you will find it again) | **uložit si**: *Or keep it for later* → **Nebo si ho uložte na později**, *Send or keep your link first* → **Nejdřív odkaz pošlete nebo si ho uložte**; never *ponechat*, which is *keep* as opposed to *remove* |
+| Live (the step name, the badge, and *go live* / *is live*) | **online** **[DECIDED]**: step and badge **Online**, *You're live* → **Jste online**, *Almost live* → **Téměř online**, *isn't live yet* → **zatím není online**, *goes live* → **bude online**. The dashboard's *goes live* for a draft booking page stays **zveřejní se** |
+| free/busy | **volno/obsazeno** (*Free/busy feed* → **Kanál volno/obsazeno**); *when you're busy* → **kdy máte obsazeno** (never *zaneprázdnění*, which forces a gender); *free times* → **volné termíny** |
+| app-specific password (Apple) | **heslo pro konkrétní aplikaci**, Apple's own term; the section is **Hesla pro konkrétní aplikace**. Apple ID / Apple Account → **účet Apple** (*Apple ID email* → **E-mail účtu Apple**, *Apple ID password* → **heslo k účtu Apple**) |
+| text the host sends to someone they know (the share message and its subject) | **tykání**, the one sanctioned exception to §1: *Hi %{name}, you can pick a time with me here: %{url}* → **Ahoj %{name}, tady si u mě můžeš vybrat termín: %{url}**. The e-mail signature line (*Book a time with me: %{url}*) addresses strangers and stays formal: **Rezervujte si u mě termín: %{url}** |
+
 ### Verbs: always give the aspect the string needs
 
 Czech verbs come in perfective/imperfective pairs. **Buttons and completed-action messages take the perfective; ongoing states and in-flight statuses take the imperfective or the verbal noun.** This is where Czech translators drift most.
@@ -255,7 +267,9 @@ Also verbatim, established by the other termbases and applying equally here: Qui
 
 When a setup instruction tells the user to click something inside another company's product, the label must match what that product actually shows in Czech. Invent one and the user hunts for a menu item that does not exist.
 
-> **Open items: verify before shipping.** `dashboard_calendar_providers` references Apple's `Sign-In and Security → App-Specific Passwords` and mailbox.org's `Settings → Security`. The plausible Czech renderings are **`Přihlášení a zabezpečení → Hesla pro aplikace`** and **`Nastavení → Zabezpečení`**, but neither has been checked against the vendor's own Czech surface. Apple's web (`account.apple.com`) and its iOS/macOS Settings wording differ from each other, as the German termbase records. Confirm on Apple's Czech support pages before treating these as settled; mailbox.org has no Czech UI at all, so keep its English label and add a Czech gloss in parentheses.
+> **Apple: verified [DECIDED].** Apple's Czech support page for app-specific passwords (support.apple.com/cs-cz/102654) reads *V části Přihlášení a zabezpečení vyberte Hesla pro konkrétní aplikace* and *Vygenerovat heslo pro konkrétní aplikaci*, and calls the account **účet Apple** (no *Apple ID*). Use exactly **`Přihlášení a zabezpečení → Hesla pro konkrétní aplikace`**, never *Hesla pro aplikace*. Apple's iOS/macOS Settings wording may still differ from the web, as the German termbase records.
+>
+> **Open item: mailbox.org** has no Czech UI at all, so keep its English label (`Settings → Security`) and add a Czech gloss in parentheses.
 
 ---
 

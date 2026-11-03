@@ -703,7 +703,7 @@ msgstr "⚠️ Запит на зміну електронної адреси �
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Add it to your email signature"
-msgstr "Додайте його до підпису в листах"
+msgstr "Додайте посилання до підпису в листах"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -713,7 +713,7 @@ msgstr "Запишіться до мене на зустріч: %{url}"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your booking page. Send it to anyone who needs a time with you."
-msgstr "Ось ваша сторінка бронювання. Надішліть її всім, кому потрібен час для зустрічі з вами."
+msgstr "Ось ваша сторінка бронювання. Надсилайте її всім, хто хоче домовитися з вами про зустріч."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
@@ -743,7 +743,7 @@ msgstr "Ваше посилання для бронювання"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page, ready to send to anyone."
-msgstr "Ваша сторінка бронювання, готова до надсилання будь-кому."
+msgstr "Ваша сторінка бронювання, яку можна надіслати будь-кому."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format

@@ -648,7 +648,7 @@ msgstr "Toto heslo si ponechte po celou dobu, kdy Tymeslot používáte. Jeho zr
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your Apple ID email and that password below."
-msgstr "Níže zadejte e-mail Apple ID a toto heslo."
+msgstr "Níže zadejte e-mail svého účtu Apple a toto heslo."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
@@ -658,9 +658,9 @@ msgstr "Otevřete svůj účet Apple"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Under Sign-In and Security, choose App-Specific Passwords and create one."
-msgstr "V části Přihlášení a zabezpečení zvolte Hesla pro konkrétní aplikace a jedno vytvořte."
+msgstr "V části Přihlášení a zabezpečení vyberte Hesla pro konkrétní aplikace a vygenerujte nové heslo."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud needs an app-specific password, not your Apple ID password."
-msgstr "iCloud vyžaduje heslo pro konkrétní aplikaci, ne heslo k Apple ID."
+msgstr "iCloud vyžaduje heslo pro konkrétní aplikaci, ne heslo k účtu Apple."

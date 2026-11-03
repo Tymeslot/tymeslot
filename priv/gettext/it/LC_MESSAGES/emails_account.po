@@ -703,17 +703,17 @@ msgstr "⚠️ Richiesta di modifica dell'email - avviso di sicurezza"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Add it to your email signature"
-msgstr "Aggiungilo alla firma della tua email"
+msgstr "Aggiungilo alla tua firma email"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Book a time with me: %{url}"
-msgstr "Prenota un appuntamento con me: %{url}"
+msgstr "Fissa un appuntamento con me: %{url}"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your booking page. Send it to anyone who needs a time with you."
-msgstr "Ecco la tua pagina di prenotazione. Inviala a chiunque abbia bisogno di fissare un appuntamento con te."
+msgstr "Ecco la tua pagina di prenotazione. Inviala a chiunque debba fissare un appuntamento con te."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format

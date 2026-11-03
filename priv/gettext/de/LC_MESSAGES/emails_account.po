@@ -708,12 +708,12 @@ msgstr "Für Ihre E-Mail-Signatur"
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Book a time with me: %{url}"
-msgstr "Termin mit mir buchen: %{url}"
+msgstr "Termin mit mir vereinbaren: %{url}"
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your booking page. Send it to anyone who needs a time with you."
-msgstr "Hier ist Ihre Buchungsseite. Schicken Sie sie jedem, der einen Termin mit Ihnen braucht."
+msgstr "hier ist Ihre Buchungsseite. Schicken Sie sie an alle, die einen Termin bei Ihnen brauchen."
 
 #: lib/tymeslot/emails/templates/booking_link.ex
 #, elixir-autogen, elixir-format

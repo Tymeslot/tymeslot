@@ -657,7 +657,7 @@ msgstr "Abra sua Conta Apple"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Under Sign-In and Security, choose App-Specific Passwords and create one."
-msgstr "Em Início de sessão e segurança, escolha Senhas específicas de apps e crie uma."
+msgstr "Na seção Início de sessão e segurança, escolha Senhas específicas de apps e gere uma."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
