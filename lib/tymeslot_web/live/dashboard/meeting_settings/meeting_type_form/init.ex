@@ -41,16 +41,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:selected_target_calendar_id, get_target_calendar_id(type))
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
-    |> Component.assign(:allow_guests, get_allow_guests(type))
-    |> Component.assign(:guest_limit, Map.get(type || %{}, :max_guests_per_booking))
-    |> Component.assign(:requires_approval, get_requires_approval(type))
-    |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
-    |> Component.assign(:show_as_free, get_show_as_free(type))
+    |> assign_booking_rules(type)
     |> assign_group_bookings_state(type)
-    |> Component.assign(
-      booking_limits: get_booking_limits(type),
-      scheduling_rules: get_scheduling_rules(type)
-    )
     |> Component.assign(
       :week_start,
       assigns |> Map.get(:current_user) |> user_id() |> Management.get_week_start()
@@ -67,6 +59,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
     |> Component.assign(:__initialized__, true)
+  end
+
+  # How a booking against this meeting type is admitted: guests, approval,
+  # free/busy visibility, and the limits and rules on when it may be booked.
+  @spec assign_booking_rules(Phoenix.LiveView.Socket.t(), map() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  defp assign_booking_rules(socket, type) do
+    Component.assign(socket,
+      allow_guests: get_allow_guests(type),
+      guest_limit: Map.get(type || %{}, :max_guests_per_booking),
+      requires_approval: get_requires_approval(type),
+      approval_window_hours: get_approval_window_hours(type),
+      show_as_free: get_show_as_free(type),
+      booking_limits: get_booking_limits(type),
+      scheduling_rules: get_scheduling_rules(type)
+    )
   end
 
   # Everything the booking-destination picker needs about the integration the
