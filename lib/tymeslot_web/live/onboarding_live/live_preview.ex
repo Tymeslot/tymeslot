@@ -165,16 +165,19 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   @doc """
   The line the stage shows under the page, or `nil` for none. On the last
-  step a live page gets its address; on the calendar and meeting steps a
+  step a live page with a username gets its address; on the calendar and meeting steps a
   week that is ready gets what it shows (`week_caption/1`). Reads
   `current_step`, `booking_page_live`, `booking_host`, `username` and
   `stage_week`.
   """
   @spec caption(map()) :: String.t() | nil
   def caption(%{current_step: :ready, booking_page_live: true} = assigns) do
-    dgettext("onboarding_wizard", "You're all set - %{link} is live",
-      link: link_text(assigns.booking_host, assigns.username)
-    )
+    # Only a real address is announced as live, never the placeholder name.
+    if String.trim(assigns.username || "") != "" do
+      dgettext("onboarding_wizard", "You're all set - %{link} is live",
+        link: link_text(assigns.booking_host, assigns.username)
+      )
+    end
   end
 
   def caption(%{current_step: step, stage_week: week}) when step in [:connect_calendar, :meeting],

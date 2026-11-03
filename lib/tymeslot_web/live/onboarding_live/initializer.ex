@@ -6,6 +6,12 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   already connected, resolves the initial theme state, and assigns the full
   initial socket state including the avatar upload. Keeps the LiveView's
   `mount/3` a one-liner that delegates here.
+
+  The disconnected (first) render gets the same state from reads alone: the
+  profile if it exists, its form data, theme, connected calendars and
+  whether the page is live, so the first paint is the host's own page and
+  nothing swaps or jumps when the socket connects. Only the connected mount
+  writes (creating the profile, its timezone, the video backgrounds).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -43,14 +49,13 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   end
 
   defp initialize_with_profile(socket, user, profile) do
-    connected_calendars =
-      if connected?(socket), do: Calendar.list_integrations(user.id), else: []
+    connected_calendars = Calendar.list_integrations(user.id)
 
     # Seed every theme that offers video backgrounds (Quill and Rhythm) with a
     # random one the moment a calendar is connected (the point the theme step
     # unlocks), before reading the customization below so the assigned state
-    # reflects it.
-    ThemeHandlers.seed_video_backgrounds(profile, connected_calendars)
+    # reflects it. A write, so the connected mount does it.
+    if connected?(socket), do: ThemeHandlers.seed_video_backgrounds(profile, connected_calendars)
 
     {customization, onboarding_choices} = ThemeHandlers.initial_theme_state(profile)
 
@@ -71,8 +76,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   end
 
   # Whether the page accepts visitors decides where a host resumes, so it is
-  # known from the first connected render. The static render has no profile
-  # and leaves it unknown.
+  # known from the first render. Before a profile exists it stays unknown.
   defp assign_booking_page_live(socket, nil), do: socket
 
   defp assign_booking_page_live(socket, _profile),
@@ -130,6 +134,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     Component.assign(socket, :form_data, BasicSettingsShared.build_form_data(socket))
   end
 
+  # The disconnected render only reads: a host on their first visit has no
+  # profile yet, and the connected mount creates it.
   defp load_profile(socket, user) do
     if connected?(socket) do
       with {:ok, loaded} <- Onboarding.get_or_create_profile(user.id) do
@@ -137,7 +143,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
         profile
       end
     else
-      nil
+      Profiles.get_profile(user.id)
     end
   end
 

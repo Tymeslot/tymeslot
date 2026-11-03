@@ -236,6 +236,23 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
         assert Enum.at(cells, 2) == {"4", "closed"}
         assert Enum.at(cells, 3) == {"5", "open"}
         assert Enum.at(cells, 8) == {"10", "outside"}
+
+        # Only a day of the seven without times reads as unavailable; the
+        # days after the week shown are plain numbers.
+        outside =
+          module
+          |> card(ready_week())
+          |> doc()
+          |> Floki.find("[data-preview-part='month'] [data-day-state='outside']")
+
+        assert outside != []
+
+        for cell <- outside do
+          assert [class] = Floki.attribute(cell, "class")
+          refute class =~ "line-through"
+          assert [style] = Floki.attribute(cell, "style")
+          refute style =~ "opacity"
+        end
       end
     end
 

@@ -88,6 +88,19 @@ defmodule TymeslotWeb.OnboardingLive.LivePreviewTest do
       end
     end
 
+    test "never announces a page without a username as live" do
+      caption =
+        LivePreview.caption(%{
+          current_step: :ready,
+          booking_page_live: true,
+          booking_host: "tymeslot.test",
+          username: "  ",
+          stage_week: @busy_week
+        })
+
+      assert caption == nil
+    end
+
     test "the last step keeps the live page's caption" do
       assert caption(:ready, @busy_week) == "You're all set - tymeslot.test/ada is live"
     end

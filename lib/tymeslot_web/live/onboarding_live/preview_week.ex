@@ -229,7 +229,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   @doc """
   A month calendar of the two weeks around the coming seven days, with real
   day numbers: days with times in the primary's tint, the chosen day solid,
-  days without times struck through, the rest faint.
+  days in the seven without times struck through, and the days around them
+  as plain numbers.
   """
   @spec month_grid(map()) :: Phoenix.LiveView.Rendered.t()
   def month_grid(assigns) do
@@ -424,7 +425,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   defp cell_style(colors, :open), do: "background: #{primary(colors)}26;color: #{ink(colors)};"
   defp cell_style(colors, :idle), do: "background: #{muted(colors)}14;color: #{muted(colors)};"
   defp cell_style(colors, :closed), do: "color: #{muted(colors)};opacity: 0.55;"
-  defp cell_style(colors, :outside), do: "color: #{muted(colors)};opacity: 0.3;"
+  # A day outside the seven shown is neither free nor taken: a plain number.
+  defp cell_style(colors, :outside), do: "color: #{muted(colors)};"
 
   defp cell_style(colors, :slot, index),
     do: "background: #{primary(colors)}1f;color: #{ink(colors)};--reveal-index: #{index};"

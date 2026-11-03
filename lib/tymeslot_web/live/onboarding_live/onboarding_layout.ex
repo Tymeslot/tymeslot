@@ -62,7 +62,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
 
   attr :stage_url, :string, required: true, doc: "the address the stage frame shows"
   attr :stage_live, :boolean, default: false, doc: "shows the Live badge on the stage"
-  attr :stage_canvas, :string, default: nil, doc: "the theme's canvas colour"
+  attr :stage_canvas, :string, required: true, doc: "the theme's canvas colour"
   attr :stage_caption, :string, default: nil, doc: "a line under the stage frame"
 
   slot :inner_block, required: true
@@ -148,17 +148,15 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         </div>
       </section>
 
-      <%!-- The disconnected render has no theme yet, so its stage has no
-           canvas colour. Keying the id on the colour makes the connected
-           render insert a new stage that starts in the theme's colour,
-           rather than fading the old one into it on every load; a theme
-           change later keeps the id and recolours with the transition. --%>
+      <%!-- The canvas colour is known from the first paint, so the stage
+           starts in the theme's colour rather than fading into it on every
+           load; a theme change later recolours with the transition. --%>
       <div
-        id={if @stage_canvas, do: "onboarding-stage", else: "onboarding-stage-pending"}
+        id="onboarding-stage"
         class="onboarding-stage"
         data-role="onboarding-stage"
         data-stage-fit
-        style={@stage_canvas && "--stage-canvas: #{@stage_canvas};"}
+        style={"--stage-canvas: #{@stage_canvas};"}
       >
         <StageFrame.frame url={@stage_url} live={@stage_live}>
           <StageFrame.scaled id="onboarding-stage-scale">

@@ -10,8 +10,10 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
 
   import Ecto.Query, only: [from: 2]
   import Phoenix.LiveViewTest
+  import Tymeslot.Factory, only: [insert: 2]
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
@@ -224,6 +226,48 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
 
       # The times are on the page, in the new list the bumped key reveals.
       assert Floki.find(doc, ~s(#stage-times-1 [data-reveal-item])) != []
+    end
+  end
+
+  describe "the first paint" do
+    # A host with a username, a live page and a chosen theme, seen in the
+    # static render, before the socket connects.
+    defp first_paint(conn, path) do
+      {conn, user} = onboarding_conn(conn)
+      user = Repo.update!(Changeset.change(user, name: "Ada Lovelace"))
+      insert(:calendar_integration, user: user)
+
+      insert(:profile,
+        user: user,
+        username: "ada-paints",
+        full_name: "Ada Lovelace",
+        booking_theme: "3"
+      )
+
+      conn |> get(path) |> html_response(200)
+    end
+
+    test "is the host's own page, not a skeleton", %{conn: conn} do
+      html = first_paint(conn, "/onboarding/connect_calendar")
+
+      assert html =~ "Ada Lovelace"
+      assert Floki.text(find(html, ~s([data-role="preview-address-name"]))) =~ "ada-paints"
+      refute html =~ "your-name"
+
+      # Drawn on the chosen theme's canvas from the start, under the one id
+      # the connected render keeps.
+      canvas = ThemeCustomizations.tokens("3", nil).vars["--theme-canvas"]
+      assert [stage] = find(html, ~s(#onboarding-stage[data-role="onboarding-stage"]))
+      assert [style] = Floki.attribute(stage, "style")
+      assert style =~ "--stage-canvas: #{canvas}"
+    end
+
+    test "names the real address as live on the last step", %{conn: conn} do
+      html = first_paint(conn, "/onboarding/ready")
+
+      assert [caption] = find(html, ".onboarding-stage-caption")
+      assert Floki.text(caption) =~ "/ada-paints is live"
+      refute html =~ "your-name"
     end
   end
 end

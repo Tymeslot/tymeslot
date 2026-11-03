@@ -12,6 +12,9 @@
   display: grid;
   grid-template-areas: "stage" "panel";
   grid-template-columns: minmax(0, 1fr);
+  /* The questions take any height the screen has left over, so the stage
+     card never grows on a step with little to ask. */
+  grid-template-rows: auto 1fr;
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
@@ -22,6 +25,7 @@
   .onboarding-shell {
     grid-template-areas: "panel stage";
     grid-template-columns: 440px minmax(0, 1fr);
+    grid-template-rows: auto;
   }
 }
 
@@ -373,13 +377,19 @@
   transition-property: none;
 }
 
+/* What the stage shows, in words: under the card's address strip on a
+   phone, under the frame from lg. The live region in the question column
+   announces it; this is the visible copy. */
 .onboarding-stage-caption {
-  display: none;
+  margin-top: var(--spacing-2);
+  font-weight: 500;
+  color: var(--color-neutral-700);
 }
 
 @media (min-width: 1024px) {
   .onboarding-stage-caption {
     display: block;
+    margin-top: 0;
     max-width: 100%;
     padding: var(--spacing-2) var(--spacing-4);
     border-radius: var(--radius-full);

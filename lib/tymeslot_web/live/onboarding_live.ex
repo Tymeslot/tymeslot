@@ -48,8 +48,9 @@ defmodule TymeslotWeb.OnboardingLive do
   # Where a host may be is derived from their account (`StepConfig.resume_step/1`):
   # `/onboarding` lands on that step, and a step out of reach from it
   # (`StepConfig.reachable?/2`) patches back to it, so no step can be reached
-  # before what it depends on is done. The static render has no profile yet,
-  # so the check waits for the connected one.
+  # before what it depends on is done. The static render cannot patch, so it
+  # draws the step the connected render will land on, and the patch that
+  # follows changes only the address.
   @impl Phoenix.LiveView
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -69,7 +70,7 @@ defmodule TymeslotWeb.OnboardingLive do
 
     cond do
       not connected?(socket) ->
-        {:noreply, assign(socket, :current_step, requested || :profile)}
+        {:noreply, assign(socket, :current_step, landing_step(socket, requested))}
 
       is_nil(requested) or not StepConfig.reachable?(requested, resume_step(socket)) ->
         {:noreply, push_patch(socket, to: step_path(socket, resume_step(socket), uri))}
@@ -93,7 +94,7 @@ defmodule TymeslotWeb.OnboardingLive do
       stage_announcement={@stage_announcement}
       stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
       stage_live={@current_step == :ready and @booking_page_live == true}
-      stage_canvas={@profile && LivePreview.canvas(stage_theme(@profile), @theme_customization)}
+      stage_canvas={LivePreview.canvas(stage_theme(@profile), @theme_customization)}
       stage_caption={
         LivePreview.caption(%{
           current_step: @current_step,
@@ -153,7 +154,7 @@ defmodule TymeslotWeb.OnboardingLive do
 
     <StagePreviewModal.stage_preview_modal
       show={@show_stage_preview_modal}
-      canvas={@profile && LivePreview.canvas(stage_theme(@profile), @theme_customization)}
+      canvas={LivePreview.canvas(stage_theme(@profile), @theme_customization)}
     >
       <.stage_preview
         profile={@profile}
@@ -174,10 +175,9 @@ defmodule TymeslotWeb.OnboardingLive do
     """
   end
 
-  # The disconnected (dead) render has no profile yet, so it can't know the
-  # user's theme or colours. Rendering the real preview with default colours
-  # there would flash the wrong theme the instant the socket connects, so it
-  # shows a neutral skeleton until then.
+  # Both renders draw the host's own page from their profile. Only a host on
+  # their very first visit, whose profile the connected mount creates, gets
+  # a neutral skeleton in the static render.
   attr :profile, :any, required: true
   attr :current_step, :atom, required: true
   attr :form_data, :map, required: true
@@ -363,6 +363,11 @@ defmodule TymeslotWeb.OnboardingLive do
     if StepConfig.valid_step?(step), do: String.to_existing_atom(step)
   end
 
+  defp landing_step(socket, requested) do
+    resume = resume_step(socket)
+    if requested && StepConfig.reachable?(requested, resume), do: requested, else: resume
+  end
+
   defp resume_step(socket) do
     StepConfig.resume_step(%{
       username: socket.assigns.profile && socket.assigns.profile.username,
@@ -381,7 +386,9 @@ defmodule TymeslotWeb.OnboardingLive do
     end
   end
 
-  defp stage_theme(profile), do: profile.booking_theme || Registry.default_theme_id()
+  # Before the profile exists, the theme it will be created with.
+  defp stage_theme(%{booking_theme: theme}) when is_binary(theme), do: theme
+  defp stage_theme(_profile), do: Registry.default_theme_id()
 
   # A step change after the host's first action moves the focus to the new
   # step's heading; the page load, and the patch that lands a host on the
