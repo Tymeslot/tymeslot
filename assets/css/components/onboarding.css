@@ -1,111 +1,147 @@
 /* ==========================================================================
-   Onboarding — Split-screen layout
+   Onboarding: the question column and the stage
+
+   One markup at every size (question column first, then stage), so reading
+   and tab order never change. Below lg the stage is a card above the column
+   and the page scrolls as one; from lg the column is a 440px panel on the
+   left and the stage fills the rest at full height. Media queries, not
+   container queries, pick the layout; the StageScale hook does the scaling.
    ========================================================================== */
 
-.onboarding-container {
-  display: flex;
+.onboarding-shell {
+  display: grid;
+  grid-template-areas: "stage" "panel";
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
+  background-color: var(--color-bg-primary);
 }
 
-.onboarding-content-panel {
+@media (min-width: 1024px) {
+  .onboarding-shell {
+    grid-template-areas: "panel stage";
+    grid-template-columns: 440px minmax(0, 1fr);
+  }
+}
+
+/* The sticky nav below lg sits over the bottom of the page, so a field the
+   browser scrolls into view on focus has to clear it. */
+@media (max-width: 1023.98px) {
+  html:has(.onboarding-shell) {
+    scroll-padding-bottom: var(--spacing-24);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Question column
+   -------------------------------------------------------------------------- */
+
+.onboarding-panel {
+  grid-area: panel;
   display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--color-bg-primary);
+}
+
+.onboarding-panel-inner {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   width: 100%;
-  padding: var(--spacing-8) var(--spacing-8) var(--spacing-6);
-  background: #ffffff;
-  overflow-y: auto;
-}
-
-@media (min-width: 768px) {
-  .onboarding-content-panel {
-    width: 50%;
-    padding: var(--spacing-12) var(--spacing-16) var(--spacing-8);
-  }
-}
-
-.onboarding-illustration-panel {
-  display: none;
-  width: 50%;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-12);
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-50) 0%,
-    var(--color-cyan-50, #ecfeff) 100%
-  );
-}
-
-@media (min-width: 768px) {
-  .onboarding-illustration-panel {
-    display: flex;
-  }
-}
-
-.onboarding-illustration-panel img {
-  max-width: 100%;
-  max-height: 500px;
-  width: auto;
-  height: auto;
-}
-
-/* Content area — vertically centred with grow spacer */
-.onboarding-content-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   max-width: 480px;
   margin: 0 auto;
-  width: 100%;
+  padding: var(--spacing-6) var(--spacing-4) 0;
 }
 
-/* Progress indicator — horizontal dots */
+@media (min-width: 640px) {
+  .onboarding-panel-inner {
+    padding: var(--spacing-8) var(--spacing-6) 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .onboarding-panel-inner {
+    max-width: none;
+    padding: var(--spacing-12) var(--spacing-10) var(--spacing-8);
+  }
+}
+
+/* Progress: five segments, done and current filled; labels from lg */
 .onboarding-progress {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-8);
-}
-
-.onboarding-progress-dots {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-6);
+  padding: 0;
+  list-style: none;
 }
 
-.onboarding-progress-dot {
-  width: 10px;
-  height: 10px;
+@media (min-width: 1024px) {
+  .onboarding-progress {
+    margin-bottom: var(--spacing-10);
+  }
+}
+
+.onboarding-progress-segment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.onboarding-progress-bar {
+  display: block;
+  height: 4px;
   border-radius: var(--radius-full);
-  transition: all 0.2s ease;
-}
-
-.onboarding-progress-dot--completed {
-  background-color: var(--color-primary-500);
-}
-
-.onboarding-progress-dot--current {
-  background-color: var(--color-primary-500);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
-  transform: scale(1.2);
-}
-
-.onboarding-progress-dot--upcoming {
   background-color: var(--color-neutral-200);
 }
 
-.onboarding-progress-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-neutral-400);
-  font-weight: 500;
+.onboarding-progress-segment[data-state="done"] .onboarding-progress-bar,
+.onboarding-progress-segment[data-state="current"] .onboarding-progress-bar {
+  background-color: var(--color-primary-500);
 }
 
-/* Step content */
+/* Below lg the names are for screen readers only. */
+.onboarding-progress-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .onboarding-progress-name {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: hidden;
+    clip-path: none;
+    text-overflow: ellipsis;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--color-neutral-400);
+  }
+
+  .onboarding-progress-segment[data-state="current"] .onboarding-progress-name {
+    font-weight: 600;
+    color: var(--color-neutral-900);
+  }
+}
+
+/* Step header */
 .onboarding-step-header {
   margin-bottom: var(--spacing-6);
+}
+
+.onboarding-step-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-neutral-500);
+  margin-bottom: var(--spacing-2);
 }
 
 .onboarding-step-title {
@@ -116,68 +152,248 @@
   margin-bottom: var(--spacing-2);
 }
 
+.onboarding-step-title:focus {
+  outline: none;
+}
+
 .onboarding-step-description {
   font-size: var(--font-size-base);
   color: var(--color-neutral-500);
   line-height: 1.6;
 }
 
-/* Navigation buttons */
+/* The question column changes with the step; the stage never slides. */
+.onboarding-slide-in-left {
+  animation: slideInRight 0.25s ease-out;
+}
+
+/* Navigation: in the flow from lg, stuck to the bottom of the screen below */
 .onboarding-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  margin-top: var(--spacing-8);
+  margin: var(--spacing-8) calc(-1 * var(--spacing-4)) 0;
+  padding: var(--spacing-3) var(--spacing-4) max(16px, env(safe-area-inset-bottom));
+  background-color: var(--color-bg-primary);
+  border-top: 1px solid var(--color-neutral-100);
+}
+
+@media (min-width: 640px) {
+  .onboarding-nav {
+    margin-inline: calc(-1 * var(--spacing-6));
+    padding-inline: var(--spacing-6);
+  }
+}
+
+@media (min-width: 1024px) {
+  .onboarding-nav {
+    position: static;
+    margin: var(--spacing-8) 0 0;
+    padding: 0;
+    border-top: 0;
+  }
 }
 
 .onboarding-nav-spacer {
   flex: 1;
 }
 
-/* Welcome step feature list */
-.onboarding-feature-list {
+/* --------------------------------------------------------------------------
+   Stage
+   -------------------------------------------------------------------------- */
+
+.onboarding-stage {
+  grid-area: stage;
+  min-width: 0;
+  padding: var(--spacing-4) var(--spacing-4) 0;
+}
+
+@media (min-width: 640px) {
+  .onboarding-stage {
+    padding: var(--spacing-6) var(--spacing-6) 0;
+  }
+}
+
+/* From lg the theme's canvas colour fills the whole stage, so a theme
+   change recolours half the screen. */
+@media (min-width: 1024px) {
+  .onboarding-stage {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-4);
+    height: 100vh;
+    height: 100dvh;
+    padding: var(--spacing-12);
+    background-color: var(--stage-canvas, var(--color-neutral-100));
+    transition: background-color 400ms ease;
+  }
+}
+
+.stage-frame-wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
-  margin-top: var(--spacing-6);
+  gap: var(--spacing-2);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 0;
 }
 
-.onboarding-feature-item {
+@media (min-width: 1024px) {
+  .stage-frame-wrap {
+    max-width: 760px;
+    flex: 0 1 auto;
+  }
+}
+
+/* Below lg: a card of the page, cut off at 45% of the screen */
+.onboarding-stage .stage-frame {
   display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-4);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-token-xl);
-  transition: background-color 0.15s ease;
+  flex-direction: column;
+  height: 45svh;
+  border-radius: var(--radius-2xl);
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+  transition: background-color 400ms ease;
 }
 
-.onboarding-feature-item:hover {
-  background-color: var(--color-primary-50);
+.onboarding-stage .stage-frame:hover {
+  transform: none;
 }
 
-.onboarding-feature-icon {
+.stage-frame-bar {
+  display: none;
+}
+
+.stage-frame-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+  transition: background-color 400ms ease;
+}
+
+/* From lg: a browser window holding the page */
+@media (min-width: 1024px) {
+  .onboarding-stage .stage-frame {
+    height: auto;
+    max-height: calc(100dvh - 2 * var(--spacing-12) - var(--spacing-12));
+    background: var(--color-glass-bg-card-enhanced);
+  }
+
+  .onboarding-stage .stage-frame:hover {
+    background: var(--color-glass-bg-card-enhanced);
+  }
+
+  .stage-frame-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--color-neutral-100);
+  }
+}
+
+.stage-frame-address {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: var(--radius-token-lg);
-  background-color: var(--color-primary-50);
-  color: var(--color-primary-600);
+  gap: var(--spacing-2);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--spacing-1) var(--spacing-4);
+  border-radius: var(--radius-full);
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-700);
 }
 
-.onboarding-feature-title {
-  font-size: var(--font-size-base);
-  font-weight: 700;
-  color: var(--color-neutral-800);
-}
-
-.onboarding-feature-description {
-  font-size: var(--font-size-sm);
+/* The slim strip under the card below lg: the address and Expand */
+.stage-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
   color: var(--color-neutral-500);
-  margin-top: 2px;
 }
+
+.stage-strip-url {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .stage-strip {
+    display: none;
+  }
+}
+
+/* The page miniature, designed at 400px and scaled by the StageScale hook */
+.stage-scale {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.stage-scale-inner {
+  flex: none;
+  transform: scale(var(--stage-scale, 1));
+  transform-origin: top center;
+}
+
+/* Fitting is a jump, never a motion: no transition, even the near-zero one
+   a global reduced-motion rule gives every property. */
+.stage-scale,
+.stage-scale-inner {
+  transition-property: none;
+}
+
+.onboarding-stage-caption {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .onboarding-stage-caption {
+    display: block;
+    max-width: 100%;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-full);
+    background: var(--color-glass-bg-card-enhanced);
+    box-shadow: var(--shadow-glass-sm);
+    color: var(--color-neutral-700);
+    font-weight: 500;
+    text-align: center;
+  }
+}
+
+/* The expanded preview (StagePreviewModal) */
+.stage-preview-canvas {
+  overflow: hidden;
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-slide-in-left {
+    animation: none;
+  }
+
+  .onboarding-stage,
+  .onboarding-stage .stage-frame,
+  .stage-frame-body {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Step content
+   -------------------------------------------------------------------------- */
 
 /* Form styles */
 .onboarding-form {
@@ -196,20 +412,6 @@
   font-size: var(--font-size-sm);
   color: var(--color-neutral-400);
   margin-top: 2px;
-}
-
-.onboarding-preference-example {
-  font-size: var(--font-size-sm);
-  color: var(--color-neutral-400);
-  font-style: italic;
-  margin-top: var(--spacing-2);
-  margin-bottom: var(--spacing-3);
-}
-
-.onboarding-preference-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
 }
 
 /* Calendar connection */
@@ -303,12 +505,12 @@
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
-  border: 2px solid var(--color-success, #10b981);
+  border: 2px solid var(--color-success);
   border-radius: var(--radius-token-xl);
-  background-color: #f0fdf4;
+  background-color: var(--color-green-50);
 }
 
-/* Ready step — URL display */
+/* Ready step: URL display */
 .onboarding-url-display {
   display: flex;
   align-items: center;
@@ -320,20 +522,4 @@
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-primary-700);
-}
-
-/* Slide animations */
-.onboarding-slide-in-left {
-  animation: onboarding-slide-left 0.25s ease-out;
-}
-
-@keyframes onboarding-slide-left {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }

@@ -10,6 +10,10 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   this module owns, so the picker feels like a real choice rather than a
   label swap.
 
+  The miniature is drawn at 400px wide on the theme's canvas colour, and the
+  onboarding stage scales it to fit (`StageFrame.scaled/1`); the stage takes
+  the same canvas colour (`canvas/2`) around it.
+
   Per-user colours come from the theme's resolved customisation tokens and
   are applied via inline `style`; structural layout is Tailwind utilities.
   The component is pure: its only lookup is that resolution, which reads no
@@ -24,6 +28,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.OnboardingLive.PreviewParts
+  alias TymeslotWeb.OnboardingLive.StageFrame
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @default_theme_id Catalog.default_id()
@@ -45,7 +50,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     doc: "the chosen theme's customisation; `nil` draws the theme's defaults"
 
   attr :calendar_connected, :boolean, default: false
-  attr :booking_page_live, :boolean, default: true
   attr :booking_host, :string, required: true
 
   @spec live_preview(map()) :: Phoenix.LiveView.Rendered.t()
@@ -56,48 +60,41 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       |> assign(:theme_module, theme_module(assigns.booking_theme))
       |> assign(:display_name, display_name(assigns.name))
       |> assign(:link_text, link_text(assigns.booking_host, assigns.username))
-      |> assign(:caption, caption(assigns))
       |> assign(:slots, build_slots(assigns))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
-    <div class="w-full max-w-sm mx-auto">
-      <div class="rounded-token-3xl p-6 shadow-glass-lg" style={backdrop_style(@colors)}>
-        <PreviewParts.theme_preview
-          theme_module={@theme_module}
-          variant={:card}
-          colors={@colors}
-          slots={@slots}
-          locale={@locale}
-          highlight_card={highlight?(@current_step, :card)}
-          highlight_slots={highlight?(@current_step, :slots)}
-        >
-          <:header>
-            <%!-- Avatar + identity --%>
-            <div
-              class="w-16 h-16 rounded-full overflow-hidden bg-white/10"
-              style={avatar_style(@colors, highlight?(@current_step, :avatar))}
-            >
-              <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
-            </div>
-            <p class="font-bold text-token-base text-center" style={text_style(@colors)}>
-              {@display_name}
-            </p>
-            <span
-              class="text-token-xs px-3 py-1 rounded-token-full font-medium"
-              style={link_style(@colors, highlight?(@current_step, :link))}
-            >
-              {@link_text}
-            </span>
+    <div class="w-[400px] p-6" style={backdrop_style(@colors)}>
+      <PreviewParts.theme_preview
+        theme_module={@theme_module}
+        variant={:card}
+        colors={@colors}
+        slots={@slots}
+        locale={@locale}
+        highlight_card={highlight?(@current_step, :card)}
+        highlight_slots={highlight?(@current_step, :slots)}
+      >
+        <:header>
+          <%!-- Avatar + identity --%>
+          <div
+            class="w-16 h-16 rounded-full overflow-hidden bg-white/10"
+            style={avatar_style(@colors, highlight?(@current_step, :avatar))}
+          >
+            <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
+          </div>
+          <p class="font-bold text-token-base text-center" style={text_style(@colors)}>
+            {@display_name}
+          </p>
+          <span
+            class="text-token-xs px-3 py-1 rounded-token-full font-medium"
+            style={link_style(@colors, highlight?(@current_step, :link))}
+          >
+            {@link_text}
+          </span>
 
-            <div class="w-full h-px my-1" style={divider_style(@colors)} />
-          </:header>
-        </PreviewParts.theme_preview>
-
-        <p class="mt-4 text-center text-token-xs font-medium" style={caption_style(@colors)}>
-          {@caption}
-        </p>
-      </div>
+          <div class="w-full h-px my-1" style={divider_style(@colors)} />
+        </:header>
+      </PreviewParts.theme_preview>
     </div>
     """
   end
@@ -113,19 +110,16 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   @spec preview_skeleton(map()) :: Phoenix.LiveView.Rendered.t()
   def preview_skeleton(assigns) do
     ~H"""
-    <div class="w-full max-w-sm mx-auto">
-      <div class="rounded-token-3xl p-6 shadow-glass-lg bg-tymeslot-900/80">
-        <div class="rounded-token-3xl p-5 bg-white/95 flex flex-col items-center gap-3 animate-pulse">
-          <div class="w-16 h-16 rounded-full bg-tymeslot-200" />
-          <div class="h-3 w-1/2 rounded-full bg-tymeslot-200" />
-          <div class="h-2 w-2/3 rounded-full bg-tymeslot-100" />
-          <div class="w-full h-px my-1 bg-tymeslot-100" />
-          <div class="grid grid-cols-2 gap-1.5 w-full">
-            <div :for={_n <- 1..4} class="h-7 rounded-token-md bg-tymeslot-100" />
-          </div>
-          <div class="w-full h-8 rounded-token-xl bg-tymeslot-200 mt-1" />
+    <div class="w-[400px] p-6">
+      <div class="rounded-token-3xl p-5 bg-white/95 flex flex-col items-center gap-3 motion-safe:animate-pulse">
+        <div class="w-16 h-16 rounded-full bg-tymeslot-200" />
+        <div class="h-3 w-1/2 rounded-full bg-tymeslot-200" />
+        <div class="h-2 w-2/3 rounded-full bg-tymeslot-100" />
+        <div class="w-full h-px my-1 bg-tymeslot-100" />
+        <div class="grid grid-cols-2 gap-1.5 w-full">
+          <div :for={_n <- 1..4} class="h-7 rounded-token-md bg-tymeslot-100" />
         </div>
-        <div class="mt-4 h-2 w-1/2 mx-auto rounded-full bg-tymeslot-700/40" />
+        <div class="w-full h-8 rounded-token-xl bg-tymeslot-200 mt-1" />
       </div>
     </div>
     """
@@ -160,25 +154,31 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Captions
   # -------------------------------------------------------------------
 
-  defp caption(%{current_step: :profile}),
+  @doc """
+  The line the stage shows under the page for the current step. Reads
+  `current_step`, `calendar_connected`, `booking_page_live`, `booking_host`
+  and `username`.
+  """
+  @spec caption(map()) :: String.t()
+  def caption(%{current_step: :profile}),
     do: dgettext("onboarding_wizard", "Your page, your brand")
 
-  defp caption(%{current_step: :connect_calendar, calendar_connected: true}),
+  def caption(%{current_step: :connect_calendar, calendar_connected: true}),
     do: dgettext("onboarding_wizard", "Your calendar is synced - these slots are live")
 
-  defp caption(%{current_step: :connect_calendar}),
+  def caption(%{current_step: :connect_calendar}),
     do: dgettext("onboarding_wizard", "Connect your calendar to fill these slots")
 
-  defp caption(%{current_step: :ready, booking_page_live: false}),
+  def caption(%{current_step: :ready, booking_page_live: false}),
     do: dgettext("onboarding_wizard", "Goes live once a calendar is connected")
 
-  defp caption(%{current_step: :ready} = assigns) do
+  def caption(%{current_step: :ready} = assigns) do
     dgettext("onboarding_wizard", "You're all set - %{link} is live",
       link: link_text(assigns.booking_host, assigns.username)
     )
   end
 
-  defp caption(_assigns), do: dgettext("onboarding_wizard", "This is your live booking page")
+  def caption(_assigns), do: dgettext("onboarding_wizard", "This is your live booking page")
 
   # -------------------------------------------------------------------
   # Highlight regions
@@ -200,19 +200,22 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     end
   end
 
-  defp link_text(host, username) do
-    slug =
-      case String.trim(username || "") do
-        "" -> dgettext("onboarding_wizard", "your-link")
-        trimmed -> trimmed
-      end
-
-    "#{host}/#{slug}"
-  end
+  defp link_text(host, username), do: StageFrame.address(host, username)
 
   # -------------------------------------------------------------------
   # Colour resolution
   # -------------------------------------------------------------------
+
+  @doc """
+  The theme's canvas colour: what the page is drawn on, and so what the
+  stage around it takes.
+  """
+  @spec canvas(String.t(), term()) :: String.t()
+  def canvas(theme_id, customization) do
+    theme_id |> preview_colors(customization) |> canvas()
+  end
+
+  defp canvas(colors), do: color(colors, :background, "#0f172a")
 
   defp preview_colors(theme_id, customization) do
     theme_id |> ThemeCustomizations.tokens(customization) |> PreviewParts.colors()
@@ -223,7 +226,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # -------------------------------------------------------------------
 
   defp backdrop_style(colors) do
-    "background: #{color(colors, :background, "#0f172a")};"
+    "background: #{canvas(colors)};"
   end
 
   defp avatar_style(colors, highlighted?) do
@@ -235,9 +238,5 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   defp link_style(colors, highlighted?) do
     "background: #{color(colors, :primary, "#14b8a6")}1a;color: #{color(colors, :text_secondary, "#475569")};" <>
       ring(highlighted?, colors)
-  end
-
-  defp caption_style(colors) do
-    "color: #{color(colors, :text, "#e2e8f0")};"
   end
 end

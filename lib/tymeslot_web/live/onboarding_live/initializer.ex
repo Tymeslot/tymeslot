@@ -58,7 +58,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     |> Component.assign(:profile, profile)
     |> assign_form_data(profile)
     |> Component.assign(initial_ui_state())
-    |> ModalHook.mount_modal(theme_preview: false)
+    |> ModalHook.mount_modal(theme_preview: false, stage_preview: false)
     |> Component.assign(
       connected_calendars: connected_calendars,
       google_signup_email: Auth.google_signup_login_hint(user),
@@ -89,6 +89,13 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # The booking page's coming week, drawn on the stage once a calendar
       # is connected.
       stage_week: %{state: :placeholder, preview: nil},
+      # What the layout's live region announces about the stage (see
+      # `OnboardingLayout`); a step that changes the stage writes a sentence
+      # here.
+      stage_announcement: "",
+      # Set by the LiveView after the host's first action (see
+      # `OnboardingLayout`), so the page load never moves the focus.
+      focus_heading: false,
       timezone_options: Timezones.all_options(),
       timezone_dropdown_open: false,
       timezone_search: "",

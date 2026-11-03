@@ -418,6 +418,7 @@ msgstr "Benvenuto in Tymeslot! Il tuo account è ora configurato."
 msgid "Your booking link"
 msgstr "Il tuo link di prenotazione"
 
+#: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
 #: lib/tymeslot_web/live/onboarding_live/theme_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page"
@@ -453,11 +454,6 @@ msgstr "Il tuo fuso orario"
 #, elixir-autogen, elixir-format
 msgid "e.g. Jane Smith"
 msgstr "es. Mario Rossi"
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "your-link"
-msgstr "il-tuo-link"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -574,6 +570,7 @@ msgstr "Decidi cosa prenotano con te e per quanto tempo."
 msgid "Link"
 msgstr "Link"
 
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Live"
@@ -618,3 +615,18 @@ msgstr "Il tuo incontro"
 #, elixir-autogen, elixir-format
 msgid "Set up your page"
 msgstr "Configura la tua pagina"
+
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
+#, elixir-autogen, elixir-format
+msgid "Expand"
+msgstr "Espandi"
+
+#: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex
+#, elixir-autogen, elixir-format
+msgid "Setup progress"
+msgstr "Avanzamento della configurazione"
+
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
+#, elixir-autogen, elixir-format
+msgid "your-name"
+msgstr "il-tuo-nome"

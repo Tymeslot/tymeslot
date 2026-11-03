@@ -19,6 +19,8 @@ import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { EmailLogoUpload } from "../hooks/email_logo_upload"
 import { AutoUpload } from "../hooks/auto_upload"
 import { ScrollStrip } from "../hooks/scroll_strip"
+import { StageScale } from "../hooks/stage_scale"
+import { StickyNavClearance } from "../hooks/sticky_nav_clearance"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
@@ -85,7 +87,13 @@ const CoreHooks = {
   // Every tab strip and segmented control carries it, and those render on
   // pages without the dashboard bundle (the analytics page), so it
   // is registered for every page. It is a few lines.
-  ScrollStrip
+  ScrollStrip,
+
+  // The onboarding stage's page miniature and its sticky nav row; onboarding
+  // has no route bundle (see AutoUpload above), so they are registered here.
+  // Each is a few lines.
+  StageScale,
+  StickyNavClearance
 }
 
 // /embed-live for framed pages and pages served as an embed (see liveSocketPath)

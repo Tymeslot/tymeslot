@@ -4,6 +4,7 @@ defmodule TymeslotWeb.OnboardingLive do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UrlBuilder
+  alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.ChooseThemeStep
   alias TymeslotWeb.OnboardingLive.ConnectCalendarStep
@@ -16,6 +17,8 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
   alias TymeslotWeb.OnboardingLive.ProfileStep
   alias TymeslotWeb.OnboardingLive.ReadyStep
+  alias TymeslotWeb.OnboardingLive.StageFrame
+  alias TymeslotWeb.OnboardingLive.StagePreviewModal
   alias TymeslotWeb.OnboardingLive.StepConfig
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.OnboardingLive.ThemePreviewModal
@@ -37,7 +40,7 @@ defmodule TymeslotWeb.OnboardingLive do
        )
        |> redirect(to: ~p"/dashboard")}
     else
-      {:ok, Initializer.initialize(socket, user)}
+      {:ok, socket |> Initializer.initialize(user) |> focus_headings_after_first_event()}
     end
   end
 
@@ -85,26 +88,31 @@ defmodule TymeslotWeb.OnboardingLive do
       next_disabled={
         @current_step == :connect_calendar and is_nil(@calendar_choice) and !@booking_page_live
       }
+      focus_heading={@focus_heading}
+      stage_announcement={@stage_announcement}
+      stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
+      stage_live={@current_step == :ready and @booking_page_live == true}
+      stage_canvas={@profile && LivePreview.canvas(stage_theme(@profile), @theme_customization)}
+      stage_caption={
+        @profile &&
+          LivePreview.caption(%{
+            current_step: @current_step,
+            calendar_connected: @connected_calendars != [] or @calendar_choice != nil,
+            booking_page_live: @booking_page_live,
+            booking_host: booking_host(),
+            username: Map.get(@form_data, "username", "")
+          })
+      }
     >
-      <:preview>
-        <%!-- The disconnected (dead) render has no profile yet, so it can't
-             know the user's theme/colours. Rendering the real preview with
-             default colours here would flash the wrong theme the instant the
-             socket connects, so show a neutral skeleton until then. --%>
-        <LivePreview.preview_skeleton :if={is_nil(@profile)} />
-        <LivePreview.live_preview
-          :if={@profile}
+      <:stage>
+        <.stage_preview
+          profile={@profile}
           current_step={@current_step}
-          booking_theme={@profile.booking_theme || Registry.default_theme_id()}
-          name={Map.get(@form_data, "full_name", "")}
-          username={Map.get(@form_data, "username", "")}
-          avatar_url={Profiles.avatar_url(@profile, :thumb)}
+          form_data={@form_data}
           theme_customization={@theme_customization}
           calendar_connected={@connected_calendars != [] or @calendar_choice != nil}
-          booking_host={booking_host()}
-          booking_page_live={@booking_page_live}
         />
-      </:preview>
+      </:stage>
       <%= case @current_step do %>
         <% :profile -> %>
           <ProfileStep.profile_step
@@ -142,10 +150,50 @@ defmodule TymeslotWeb.OnboardingLive do
       <% end %>
     </OnboardingLayout.onboarding_layout>
 
+    <StagePreviewModal.stage_preview_modal
+      show={@show_stage_preview_modal}
+      canvas={@profile && LivePreview.canvas(stage_theme(@profile), @theme_customization)}
+    >
+      <.stage_preview
+        profile={@profile}
+        current_step={@current_step}
+        form_data={@form_data}
+        theme_customization={@theme_customization}
+        calendar_connected={@connected_calendars != [] or @calendar_choice != nil}
+      />
+    </StagePreviewModal.stage_preview_modal>
+
     <%!-- Real booking-page preview --%>
     <ThemePreviewModal.theme_preview_modal
       show={@show_theme_preview_modal}
       url={@theme_preview_modal_data}
+    />
+    """
+  end
+
+  # The disconnected (dead) render has no profile yet, so it can't know the
+  # user's theme or colours. Rendering the real preview with default colours
+  # there would flash the wrong theme the instant the socket connects, so it
+  # shows a neutral skeleton until then.
+  attr :profile, :any, required: true
+  attr :current_step, :atom, required: true
+  attr :form_data, :map, required: true
+  attr :theme_customization, :any, required: true
+  attr :calendar_connected, :boolean, required: true
+
+  defp stage_preview(assigns) do
+    ~H"""
+    <LivePreview.preview_skeleton :if={is_nil(@profile)} />
+    <LivePreview.live_preview
+      :if={@profile}
+      current_step={@current_step}
+      booking_theme={stage_theme(@profile)}
+      name={Map.get(@form_data, "full_name", "")}
+      username={Map.get(@form_data, "username", "")}
+      avatar_url={Profiles.avatar_url(@profile, :thumb)}
+      theme_customization={@theme_customization}
+      calendar_connected={@calendar_connected}
+      booking_host={booking_host()}
     />
     """
   end
@@ -169,6 +217,18 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("previous_step", _params, socket) do
     NavigationHandlers.handle_previous_step(socket)
+  end
+
+  # ------------------------------------------------------------------
+  # Event handlers — Stage
+  # ------------------------------------------------------------------
+
+  def handle_event("expand_stage", _params, socket) do
+    {:noreply, ModalHook.show_modal(socket, :stage_preview)}
+  end
+
+  def handle_event("close_stage_preview", _params, socket) do
+    {:noreply, ModalHook.hide_modal(socket, :stage_preview)}
   end
 
   # ------------------------------------------------------------------
@@ -311,6 +371,17 @@ defmodule TymeslotWeb.OnboardingLive do
       nil -> path
       query -> path <> "?" <> query
     end
+  end
+
+  defp stage_theme(profile), do: profile.booking_theme || Registry.default_theme_id()
+
+  # A step change after the host's first action moves the focus to the new
+  # step's heading; the page load, and the patch that lands a host on the
+  # step they resume at, leave the focus where the browser put it.
+  defp focus_headings_after_first_event(socket) do
+    attach_hook(socket, :focus_heading, :handle_event, fn _event, _params, socket ->
+      {:cont, assign(socket, :focus_heading, true)}
+    end)
   end
 
   defp booking_host do

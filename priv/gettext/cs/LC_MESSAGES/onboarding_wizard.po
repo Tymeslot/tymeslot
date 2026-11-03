@@ -418,6 +418,7 @@ msgstr "Vítejte ve službě Tymeslot! Váš účet je nastavený."
 msgid "Your booking link"
 msgstr "Váš rezervační odkaz"
 
+#: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
 #: lib/tymeslot_web/live/onboarding_live/theme_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page"
@@ -453,11 +454,6 @@ msgstr "Vaše časové pásmo"
 #, elixir-autogen, elixir-format
 msgid "e.g. Jane Smith"
 msgstr "např. Jan Novák"
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "your-link"
-msgstr "vas-odkaz"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -574,6 +570,7 @@ msgstr "Rozhodněte, co si u vás lidé rezervují a na jak dlouho."
 msgid "Link"
 msgstr "Odkaz"
 
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Live"
@@ -618,3 +615,18 @@ msgstr "Vaše schůzka"
 #, elixir-autogen, elixir-format
 msgid "Set up your page"
 msgstr "Nastavte svou stránku"
+
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
+#, elixir-autogen, elixir-format
+msgid "Expand"
+msgstr "Rozbalit"
+
+#: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex
+#, elixir-autogen, elixir-format
+msgid "Setup progress"
+msgstr "Průběh nastavení"
+
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
+#, elixir-autogen, elixir-format
+msgid "your-name"
+msgstr "vase-jmeno"

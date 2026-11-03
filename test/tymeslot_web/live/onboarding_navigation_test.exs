@@ -28,6 +28,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
     |> render()
     |> Floki.parse_fragment!()
     |> Floki.text()
+    |> String.trim()
   end
 
   describe "forward navigation" do
@@ -233,21 +234,23 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
   end
 
   describe "progress indicator" do
-    test "marks the steps before the current one as completed", %{conn: conn} do
+    test "marks the steps before the current one as done", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
 
-      assert has_element?(view, ".onboarding-progress-dot--current")
-      refute has_element?(view, ".onboarding-progress-dot--completed")
+      assert segment_states(view) == ~w(current upcoming upcoming upcoming upcoming)
 
       navigate_to_meeting_step(view)
 
-      assert view
-             |> render()
-             |> Floki.parse_document!()
-             |> Floki.find(".onboarding-progress-dot--completed")
-             |> length() == 2
-
-      assert has_element?(view, ".onboarding-progress-label", "Step 3 of 5")
+      assert segment_states(view) == ~w(done done current upcoming upcoming)
+      assert has_element?(view, ~s([data-role="onboarding-step-label"]), "Step 3 of 5")
     end
+  end
+
+  defp segment_states(view) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find(".onboarding-progress-segment")
+    |> Enum.flat_map(&Floki.attribute(&1, "data-state"))
   end
 end

@@ -418,6 +418,7 @@ msgstr ""
 msgid "Your booking link"
 msgstr ""
 
+#: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
 #: lib/tymeslot_web/live/onboarding_live/theme_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page"
@@ -452,11 +453,6 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "e.g. Jane Smith"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "your-link"
 msgstr ""
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
@@ -574,6 +570,7 @@ msgstr ""
 msgid "Link"
 msgstr ""
 
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Live"
@@ -617,4 +614,19 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/initializer.ex
 #, elixir-autogen, elixir-format
 msgid "Set up your page"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
+#, elixir-autogen, elixir-format
+msgid "Expand"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex
+#, elixir-autogen, elixir-format
+msgid "Setup progress"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
+#, elixir-autogen, elixir-format
+msgid "your-name"
 msgstr ""
