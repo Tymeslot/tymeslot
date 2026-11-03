@@ -24,8 +24,9 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   After both, the rules and the attendee series entries
   (`Tymeslot.Meetings.AttendeeNotifications.SeriesEntries`) of the series
   the cache no longer holds are forgotten. A series' entries go only once
-  every one of them has also ended before the cutoff, since a write to a
-  whole series empties its cache until the next sync.
+  every one of them has also ended, and was last written, before the
+  cutoff, since a write to a whole series empties its cache until the next
+  sync and marks its entries as written.
   """
 
   use Oban.Worker,

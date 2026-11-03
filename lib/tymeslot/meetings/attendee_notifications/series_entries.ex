@@ -82,12 +82,23 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntries do
 
   @doc """
   Forgets the series whose cache holds no occurrence any more and whose
-  entries all ended before `cutoff`, the oldest date any sync still reaches
+  entries all ended, and were last written or held (`hold/2`), before
+  `cutoff`, the oldest date any sync still reaches
   (`Tymeslot.Workers.CalendarCachePruneWorker`). Nothing moves or cancels
   their entries again. Answers how many entries went.
   """
   @spec forget_stale(DateTime.t()) :: non_neg_integer()
   def forget_stale(cutoff), do: SeriesEntryQueries.delete_stale(cutoff)
+
+  @doc """
+  Keeps the entries of the series at `address` in the integration
+  `integration_id` from `forget_stale/1` while a write to the whole series
+  has left its cache empty until the next sync, however long ago they were
+  sent.
+  """
+  @spec hold(pos_integer(), Occurrence.series_address()) :: :ok
+  def hold(integration_id, address),
+    do: SeriesEntryQueries.touch_all(integration_id, address_key(address))
 
   @doc "Forgets every entry of the series `event` belongs to, once it is cancelled."
   @spec forget_series(map()) :: :ok
@@ -101,12 +112,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntries do
   defp address(%{calendar_integration_id: integration_id} = event)
        when is_integer(integration_id) do
     case Occurrence.series_address(event) do
-      {:ok, {kind, id}} -> {:ok, integration_id, "#{kind}:#{id}"}
+      {:ok, address} -> {:ok, integration_id, address_key(address)}
       {:error, _not_a_series} -> :none
     end
   end
 
   defp address(_event), do: :none
+
+  defp address_key({kind, id}), do: "#{kind}:#{id}"
 
   defp attrs(%{uid: uid, start: %Date{} = from, end: %Date{} = to} = entry),
     do: [%{entry_uid: uid, start_date: from, end_date: to, sent_sequence: sequence(entry)}]
