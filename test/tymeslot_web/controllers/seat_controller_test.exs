@@ -13,6 +13,7 @@ defmodule TymeslotWeb.SeatControllerTest do
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes.Slugs
+  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -80,6 +81,64 @@ defmodule TymeslotWeb.SeatControllerTest do
     meeting
     |> Changeset.change(%{start_time: start, end_time: DateTime.add(start, 30, :minute)})
     |> Repo.update!()
+  end
+
+  describe "the organiser's legal links" do
+    @notice "https://organiser.example/impressum"
+    @privacy "https://organiser.example/privacy"
+
+    setup %{meeting: meeting} do
+      {:ok, _profile} =
+        meeting.organizer_user_id
+        |> Profiles.get_profile()
+        |> Profiles.update_legal_links(%{legal_notice_url: @notice, privacy_policy_url: @privacy})
+
+      :ok
+    end
+
+    test "seat cancel page shows the organiser's legal links", %{conn: conn, leaver: leaver} do
+      html = conn |> get(~p"/seat/#{leaver.management_token}/cancel") |> html_response(200)
+
+      assert html =~ ~s(href="#{@notice}")
+      assert html =~ ~s(href="#{@privacy}")
+    end
+
+    test "seat cancel result page keeps the links", %{conn: conn, leaver: leaver} do
+      html = conn |> post(~p"/seat/#{leaver.management_token}/cancel") |> html_response(200)
+
+      assert html =~ ~s(href="#{@notice}")
+      assert html =~ ~s(href="#{@privacy}")
+    end
+
+    test "a spent link still shows the organiser's links", %{conn: conn, leaver: leaver} do
+      {_get, post_conn} = get_and_post(conn, leaver.management_token)
+      assert html_response(post_conn, 200) =~ @notice
+
+      html =
+        conn
+        |> recycle()
+        |> get(~p"/seat/#{leaver.management_token}/cancel")
+        |> html_response(410)
+
+      assert html =~ ~s(href="#{@notice}")
+    end
+
+    test "an unknown token shows the instance defaults only", %{conn: conn} do
+      previous = Application.get_env(:tymeslot, :booking_legal_notice_url)
+      Application.put_env(:tymeslot, :booking_legal_notice_url, "https://instance.example/legal")
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:tymeslot, :booking_legal_notice_url, previous),
+          else: Application.delete_env(:tymeslot, :booking_legal_notice_url)
+      end)
+
+      html = conn |> get(~p"/seat/nope-not-a-token/cancel") |> html_response(404)
+
+      assert html =~ ~s(href="https://instance.example/legal")
+      refute html =~ @notice
+      refute html =~ @privacy
+    end
   end
 
   describe "GET /seat/:token/cancel — confirmation landing page (no mutation)" do

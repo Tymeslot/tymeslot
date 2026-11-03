@@ -25,6 +25,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
@@ -465,7 +466,8 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   end
 
   describe "the meeting type" do
-    test "refuses fixed dates on a type that is not a group type", ctx do
+    test "takes fixed dates on a one-to-one type, which offers times rather than sessions",
+         ctx do
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
           name: "Solo",
@@ -475,8 +477,16 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
           fixed_dates: true
         })
 
-      refute changeset.valid?
-      assert {"fixed dates need group bookings", _opts} = changeset.errors[:fixed_dates]
+      assert changeset.valid?
+
+      solo = Changeset.apply_changes(changeset)
+      refute FixedDates.sessions?(solo)
+      assert FixedDates.offered_times?(solo)
+
+      starts_at = DateTime.add(DateTime.utc_now(), 3, :day)
+
+      assert {:error, :not_fixed_dates} =
+               PlannedSessions.add(%{solo | id: 0}, ctx.user.id, starts_at)
     end
   end
 end

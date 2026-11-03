@@ -41,6 +41,10 @@ config :tymeslot,
   logo_links_to_marketing: false,
   legal_terms_url: nil,
   legal_privacy_url: nil,
+  # Per-instance fallbacks for organisers' booking pages, distinct from the
+  # instance operator's own policy URLs above.
+  booking_legal_notice_url: nil,
+  booking_privacy_policy_url: nil,
 
   # Navigation: Where the logo/home link points to
   site_home_path: "/dashboard",

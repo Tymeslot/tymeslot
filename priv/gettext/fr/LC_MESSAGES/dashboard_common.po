@@ -378,6 +378,7 @@ msgid "Reconnect %{names}: until you do, your booking page may not take bookings
 msgstr "Reconnectez %{names} : d’ici là, votre page de réservation pourrait ne pas recevoir de réservations"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Enregistrer les modifications"

@@ -6,6 +6,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
   `refunded_amount_cents`, and enqueues the host dispute notification
   email so the host can act on the dispute in the Stripe dashboard.
 
+  A dispute that arrives already settled in the host's favour (an inquiry
+  Stripe reports as `prevented`, say; `DisputeOutcome`) is ignored: no
+  `charge.dispute.closed` need follow it, so marking the payment
+  `disputed` would leave it there for good, and the host has nothing to
+  answer.
+
   Idempotent on `last_event_id`.
   """
 
@@ -17,6 +23,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Webhooks.DisputeOutcome
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.Payments.Behaviours.WebhookHandler
@@ -43,7 +50,18 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
         {:ok, :idempotent_replay}
 
       payment ->
-        classify(mark_disputed(payment, event_id, object))
+        case DisputeOutcome.from_status(object["status"]) do
+          :won ->
+            Logger.info("charge.dispute.created: dispute already settled for the host, ignored",
+              booking_payment_id: payment.id,
+              dispute_status: object["status"]
+            )
+
+            {:ok, :ok}
+
+          _open_or_lost ->
+            classify(mark_disputed(payment, event_id, object))
+        end
     end
   end
 

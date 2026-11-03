@@ -154,6 +154,52 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     end
   end
 
+  # A dispute can reach Stripe's created event already over in the host's
+  # favour, and no closed event need follow it.
+  describe "handle/1 with a dispute already settled for the host" do
+    for status <- ["warning_closed", "prevented"] do
+      test "#{status} leaves the payment paid and does not email the host" do
+        bp =
+          insert(:booking_payment,
+            stripe_account_id: @account,
+            status: :paid,
+            amount_cents: 5000,
+            stripe_charge_id: "ch_SETTLED_#{unquote(status)}"
+          )
+
+        event =
+          dispute_event("evt_SETTLED_#{unquote(status)}", "ch_SETTLED_#{unquote(status)}",
+            status: unquote(status)
+          )
+
+        assert :ok = ChargeDisputeCreated.handle(event)
+
+        reloaded = Repo.reload!(bp)
+        assert reloaded.status == :paid
+        assert reloaded.last_event_id == nil
+        refute_enqueued(worker: SendChargeDisputeOpened)
+      end
+    end
+
+    test "an open inquiry is still recorded as disputed" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :paid,
+          amount_cents: 5000,
+          stripe_charge_id: "ch_INQUIRY_OPEN"
+        )
+
+      event =
+        dispute_event("evt_INQUIRY_OPEN", "ch_INQUIRY_OPEN", status: "warning_needs_response")
+
+      assert :ok = ChargeDisputeCreated.handle(event)
+
+      assert Repo.reload!(bp).status == :disputed
+      assert_enqueued(worker: SendChargeDisputeOpened, args: %{booking_payment_id: bp.id})
+    end
+  end
+
   describe "handle/1 with an event from another connected account" do
     test "neither marks the booking disputed nor emails the host" do
       bp =
@@ -178,7 +224,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     end
   end
 
-  defp dispute_event(event_id, charge_id) do
+  defp dispute_event(event_id, charge_id, opts \\ []) do
     %{
       "id" => event_id,
       "account" => @account,
@@ -190,7 +236,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
           "charge" => charge_id,
           "object" => "dispute",
           "amount" => 5000,
-          "reason" => "fraudulent"
+          "reason" => "fraudulent",
+          "status" => Keyword.get(opts, :status, "needs_response")
         }
       }
     }

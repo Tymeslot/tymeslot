@@ -15,7 +15,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandlers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
 
   @doc """
@@ -45,7 +47,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))
     |> assign_group_bookings_state(type)
-    |> Component.assign(:booking_limits, get_booking_limits(type))
+    |> Component.assign(
+      booking_limits: get_booking_limits(type),
+      scheduling_rules: get_scheduling_rules(type)
+    )
     |> Component.assign(
       :week_start,
       assigns |> Map.get(:current_user) |> user_id() |> Management.get_week_start()
@@ -57,6 +62,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> assign_availability_schedules(Map.get(assigns, :current_user))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> SessionHandlers.assign_sessions()
+    |> OfferedTimeHandlers.assign_offered_times()
     |> assign_calendar_state()
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
@@ -197,7 +203,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
     socket
     |> Component.assign(:group_bookings_enabled, limit > 1)
-    |> Component.assign(:fixed_dates, limit > 1 and Map.get(type || %{}, :fixed_dates) == true)
+    |> Component.assign(:fixed_dates, Map.get(type || %{}, :fixed_dates) == true)
     |> Component.assign(
       :max_participants,
       to_string(if limit > 1, do: limit, else: @default_group_limit)
@@ -298,6 +304,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       "max_bookings_per_week" => type.max_bookings_per_week,
       "max_bookings_per_month" => type.max_bookings_per_month
     }
+  end
+
+  @doc """
+  Returns the meeting type's scheduling-rule overrides as form values, keyed by
+  their param names. An empty string is no override: the schedule's rule applies.
+  """
+  @spec get_scheduling_rules(Ecto.Schema.t() | nil) :: %{String.t() => String.t()}
+  def get_scheduling_rules(type) do
+    Map.new(Constraints.scheduling_policy_fields(), fn field ->
+      value = if type, do: Map.get(type, field)
+      {Atom.to_string(field), if(is_nil(value), do: "", else: to_string(value))}
+    end)
   end
 
   @doc "Returns the selected icon for a meeting type, or `\"none\"` when absent."

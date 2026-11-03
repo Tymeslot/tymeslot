@@ -295,13 +295,36 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
     test "sends a complete standard-time rule, since a partial one is answered with nothing" do
       doc = enveloped("alex@example.com")
 
-      assert_time_rule(doc, "StandardTime")
+      assert time_rule(doc, "StandardTime") == %{
+               bias: "0",
+               time: "02:00:00",
+               day_order: "5",
+               month: "10",
+               day_of_week: "Sunday"
+             }
     end
 
     test "sends a complete daylight-time rule, since a partial one is answered with nothing" do
       doc = enveloped("alex@example.com")
 
-      assert_time_rule(doc, "DaylightTime")
+      assert time_rule(doc, "DaylightTime") == %{
+               bias: "0",
+               time: "02:00:00",
+               day_order: "5",
+               month: "3",
+               day_of_week: "Sunday"
+             }
+    end
+
+    test "gives the two rules different transitions, which Exchange requires of a valid zone" do
+      # Identical rules are a daylight period that starts and ends at the
+      # same moment: Exchange 2019 faults "The specified time zone isn't
+      # valid." (GitHub issue #200), while grommunio accepts them.
+      doc = enveloped("alex@example.com")
+
+      transition = &Map.delete(time_rule(doc, &1), :bias)
+
+      assert transition.("StandardTime") != transition.("DaylightTime")
     end
 
     test "biases the time zone to zero so the window and the answer are both UTC" do
@@ -371,17 +394,19 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
     doc
   end
 
-  # Every child is asserted rather than the rule's presence: an incomplete
+  # Every child is read rather than the rule's presence: an incomplete
   # `SerializableTimeZoneTime` is what makes the server answer an empty body
   # with no fault and no response code, which reads as a free calendar.
-  defp assert_time_rule(doc, rule) do
+  defp time_rule(doc, rule) do
     base = "//m:GetUserAvailabilityRequest/t:TimeZone/t:#{rule}"
 
-    assert Soap.xpath(doc, ~x"#{base}/t:Bias/text()"s) == "0"
-    assert Soap.xpath(doc, ~x"#{base}/t:Time/text()"s) == "00:00:00"
-    assert Soap.xpath(doc, ~x"#{base}/t:DayOrder/text()"s) == "1"
-    assert Soap.xpath(doc, ~x"#{base}/t:Month/text()"s) == "1"
-    assert Soap.xpath(doc, ~x"#{base}/t:DayOfWeek/text()"s) == "Sunday"
+    %{
+      bias: Soap.xpath(doc, ~x"#{base}/t:Bias/text()"s),
+      time: Soap.xpath(doc, ~x"#{base}/t:Time/text()"s),
+      day_order: Soap.xpath(doc, ~x"#{base}/t:DayOrder/text()"s),
+      month: Soap.xpath(doc, ~x"#{base}/t:Month/text()"s),
+      day_of_week: Soap.xpath(doc, ~x"#{base}/t:DayOfWeek/text()"s)
+    }
   end
 
   defp normaliser_elements do

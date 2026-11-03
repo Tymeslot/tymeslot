@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
   alias Tymeslot.ThemeCustomizations.Tokens
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Utils.Colour
-  alias TymeslotWeb.Themes.Shared.Components.ThemeShell
+  alias TymeslotWeb.Themes.Shared.Components.{LegalLinks, ThemeShell}
 
   import TymeslotWeb.Themes.Shared.Customization.Helpers, only: [prepare_wrapper_assigns: 1]
 
@@ -35,6 +35,10 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
   attr :owner_preview, :boolean, default: false
   attr :refused_calendars, :list, default: []
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
+
+  attr :legal_links, :map,
+    required: true,
+    doc: "the organiser's legal links (`Profiles.public_legal_links/1`), or nil for none"
 
   attr :show_extensions, :boolean,
     default: true,
@@ -74,6 +78,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
           should_show_branding={@should_show_branding}
           {Map.take(assigns, [:demo_mode])}
         />
+        <LegalLinks.footer links={@legal_links} />
       </div>
     </ThemeShell.theme_shell>
     """

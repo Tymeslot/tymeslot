@@ -1,12 +1,19 @@
 defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   @moduledoc """
-  LiveComponent for creating a poll.
+  LiveComponent for creating a poll, or saving it as a draft and coming back
+  to it.
 
   Owns the interactive create form: the meeting details and the candidate-slot
   builder (each row a `datetime-local` input in the host's timezone). A row
-  whose time falls inside the host's time off carries a warning; it does not
-  stop the poll being created, because confirmation is where time off is
-  enforced.
+  whose time falls inside the host's time off, or clashes with an event in
+  their calendar (`Tymeslot.Polls.SlotHealth`, checked off the LiveView
+  process whenever the times change), carries a warning; neither stops the
+  poll being created, because confirmation is where both are enforced.
+
+  "Save draft" keeps the poll as it stands without publishing it
+  (`Tymeslot.Polls.create_draft/2`). Given a saved `draft`, the form opens
+  filled from it (`DraftFields`), saves over it, and publishes it
+  (`Tymeslot.Polls.publish_draft/3`) with what the form holds.
 
   The host may list people to invite by email (see `PollInvite`); they are
   invited with the poll and emailed once it is saved.
@@ -16,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   (`Tymeslot.Polls.default_invite_only?/1`, the rule `create_poll/2` applies).
 
   On submit it converts the local datetime values to UTC and calls
-  `Tymeslot.Polls.create_poll/2`. Success flashes via the parent LiveView and
+  `Tymeslot.Polls.create_poll/2`, or the draft function the button chose. Success flashes via the parent LiveView and
   asks the parent `PollsComponent` to refresh and close the form; failures map
   to friendly inline errors.
   """
@@ -24,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{Invitations, PollSchema}
   alias Tymeslot.Profiles
@@ -31,13 +39,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   alias TymeslotWeb.Dashboard.Polls.{
     CandidateTimes,
+    DraftFields,
     LocalTime,
     PollAccess,
     PollDuration,
+    PollFormActions,
     PollFormErrors,
     PollInvite,
     PollReminders,
-    PollsComponent
+    PollsComponent,
+    SlotWarnings
   }
 
   alias TymeslotWeb.Live.Shared.Flash
@@ -63,6 +74,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        slots: [],
        slot_counter: 0,
        time_off_keys: MapSet.new(),
+       conflict_keys: MapSet.new(),
+       checked_ranges: [],
+       draft: nil,
+       loaded_draft_id: nil,
        errors: %{}
      )}
   end
@@ -78,16 +93,35 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         assign(socket, :timezone, host_timezone(socket.assigns.profile))
       end
 
-    {:ok, socket}
+    {:ok, load_draft(socket)}
   end
+
+  # Once per draft: the parent passes the same draft on every update, and the
+  # host's edits since must not be written over.
+  defp load_draft(
+         %{assigns: %{draft: %PollSchema{id: id} = draft, loaded_draft_id: loaded}} = socket
+       )
+       when id != loaded do
+    socket
+    |> assign(DraftFields.assigns(draft))
+    |> assign(loaded_draft_id: id, errors: %{})
+    |> assign_time_off_keys()
+    |> check_calendar()
+  end
+
+  defp load_draft(socket), do: socket
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id={"poll-form-#{@id}"}>
       <.card
-        icon="hero-plus-circle"
-        title={dgettext("dashboard_polls", "New poll")}
+        icon={if @draft, do: "hero-pencil-square", else: "hero-plus-circle"}
+        title={
+          if @draft,
+            do: dgettext("dashboard_polls", "Edit draft"),
+            else: dgettext("dashboard_polls", "New poll")
+        }
         class="space-y-6"
       >
         <form
@@ -191,18 +225,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
                   phx-target={@myself}
                 />
               </div>
-              <p
-                :if={MapSet.member?(@time_off_keys, slot.key)}
-                data-testid="poll-slot-time-off-warning"
-                data-slot-key={slot.key}
-                class="flex items-center gap-1 text-token-xs text-amber-700"
-              >
-                <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 shrink-0" />
-                {dgettext(
-                  "dashboard_polls",
-                  "This time falls within your time off, so it can't be confirmed while that stays in place."
-                )}
-              </p>
+              <SlotWarnings.warnings
+                key={slot.key}
+                time_off?={MapSet.member?(@time_off_keys, slot.key)}
+                conflict?={MapSet.member?(@conflict_keys, slot.key)}
+              />
             </div>
 
             <p :for={error <- error_list(@errors, :slots)} class="form-error">{error}</p>
@@ -256,19 +283,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         <p :for={error <- error_list(@errors, :reminder_config)} class="form-error">{error}</p>
 
         <%!-- Outside the form above, so the reminder picker can sit before it;
-              `form` ties the submit button back to the poll. --%>
-        <div class="flex justify-end gap-3 pt-2">
-          <.action_button
-            variant={:secondary}
-            phx-click="cancel_poll_form"
-            phx-target={@parent_myself}
-          >
-            {dgettext("dashboard_polls", "Cancel")}
-          </.action_button>
-          <.action_button type="submit" form={"poll-create-form-#{@id}"}>
-            {dgettext("dashboard_polls", "Create poll")}
-          </.action_button>
-        </div>
+              `form` ties the submit buttons back to the poll. --%>
+        <PollFormActions.actions
+          form={"poll-create-form-#{@id}"}
+          draft?={@draft != nil}
+          parent_myself={@parent_myself}
+        />
       </.card>
     </div>
     """
@@ -295,7 +315,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        timezone: Map.get(params, "timezone", socket.assigns.timezone),
        slots: CandidateTimes.merge(socket.assigns.slots, Map.get(params, "slots", %{}))
      )
-     |> assign_time_off_keys()}
+     |> assign_time_off_keys()
+     |> check_calendar()}
   end
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
@@ -320,11 +341,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     case CandidateTimes.remove(socket.assigns.slots, key) do
       {:ok, slots, key} ->
         {:noreply,
-         assign(socket,
+         socket
+         |> assign(
            slots: slots,
            time_off_keys: MapSet.delete(socket.assigns.time_off_keys, key),
+           conflict_keys: MapSet.delete(socket.assigns.conflict_keys, key),
            errors: Map.delete(socket.assigns.errors, :slots)
-         )}
+         )
+         |> check_calendar()}
 
       :error ->
         {:noreply, socket}
@@ -332,7 +356,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("create_poll", %{"poll" => params}, socket) do
+  def handle_event("create_poll", %{"poll" => poll_params} = event, socket) do
+    # Which submit button was pressed. Enter in a field submits through the
+    # first, Save draft, so nothing goes out by accident.
+    params = Map.put(poll_params, "intent", event["intent"])
+
     # The picker shows only with invitees, so a lead time typed into it
     # before they were cleared is not the host's intent any more, and an
     # invalid one must not stop a save through an error nobody can see.
@@ -346,17 +374,34 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     end
   end
 
+  @impl Phoenix.LiveComponent
+  def handle_async(:calendar_conflicts, {:ok, keys}, socket),
+    do: {:noreply, assign(socket, :conflict_keys, keys)}
+
+  # The check never raises; an exit is the task cut short, and an unchecked
+  # time is shown without a warning, as one whose fetch failed is.
+  def handle_async(:calendar_conflicts, {:exit, _reason}, socket),
+    do: {:noreply, assign(socket, :conflict_keys, MapSet.new())}
+
   defp create(socket, params) do
+    intent = if params["intent"] == "draft", do: :draft, else: :publish
+
     with {:ok, invitees} <- parse_invitees(params),
-         {:ok, poll} <-
-           Polls.create_poll(
-             socket.assigns.current_user.id,
-             Map.put(build_attrs(params, socket), :invitees, invitees)
-           ) do
-      Flash.info(PollInvite.created_message(Invitations.uninvited(poll, invitees)))
+         attrs = Map.put(build_attrs(params, socket), :invitees, invitees),
+         {:ok, poll} <- save(intent, socket.assigns.draft, socket.assigns.current_user.id, attrs) do
+      Flash.info(saved_message(intent, poll, invitees))
       send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
       {:noreply, socket}
     else
+      # Published or deleted from another tab while this one held it open.
+      {:error, reason} when reason in [:not_draft, :not_found] ->
+        Flash.warning(
+          dgettext("dashboard_polls", "This draft has already been published or deleted.")
+        )
+
+        send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
+        {:noreply, socket}
+
       # The calendar went while the form was open: nothing in the form can fix
       # that, so it is said once rather than under a field.
       {:error, :no_calendar} ->
@@ -367,6 +412,21 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         {:noreply, assign(socket, :errors, errors_for(reason))}
     end
   end
+
+  defp save(:draft, nil, user_id, attrs), do: Polls.create_draft(user_id, attrs)
+  defp save(:draft, draft, user_id, attrs), do: Polls.update_draft(draft.id, user_id, attrs)
+  defp save(:publish, nil, user_id, attrs), do: Polls.create_poll(user_id, attrs)
+  defp save(:publish, draft, user_id, attrs), do: Polls.publish_draft(draft.id, user_id, attrs)
+
+  defp saved_message(:draft, _poll, _invitees) do
+    dgettext(
+      "dashboard_polls",
+      "Draft saved. Nobody can see it or has been invited until you publish it."
+    )
+  end
+
+  defp saved_message(:publish, poll, invitees),
+    do: PollInvite.created_message(Invitations.uninvited(poll, invitees))
 
   # --- Slot helpers ---
 
@@ -389,32 +449,39 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     end
   end
 
-  # The rows whose time the host is away for. Recomputed on every change
-  # because the time, the timezone it is read in and the duration all move it.
+  # The rows read as times, for the warnings under them.
+  defp slot_ranges(%{slots: slots, timezone: timezone, duration: duration}),
+    do: SlotWarnings.ranges(slots, timezone, PollDuration.parse(duration))
+
+  # Asks the host's calendar which rows clash with an event, off the LiveView
+  # process, whenever the times the rows name change (their time, timezone or
+  # duration). A newer check replaces one still running.
+  defp check_calendar(socket) do
+    ranges = slot_ranges(socket.assigns)
+
+    cond do
+      ranges == socket.assigns.checked_ranges ->
+        socket
+
+      ranges == [] ->
+        assign(socket, checked_ranges: [], conflict_keys: MapSet.new())
+
+      true ->
+        user_id = socket.assigns.current_user.id
+        draft_id = socket.assigns.draft && socket.assigns.draft.id
+
+        socket
+        |> assign(:checked_ranges, ranges)
+        |> start_async(
+          :calendar_conflicts,
+          Tasks.with_context(fn -> SlotWarnings.conflict_keys(user_id, draft_id, ranges) end)
+        )
+    end
+  end
+
+  # Recomputed on every change, for the same reasons.
   defp assign_time_off_keys(socket) do
-    %{slots: slots, timezone: timezone, duration: duration} = socket.assigns
-
-    starts =
-      for %{key: key, value: value} <- slots,
-          start_time = LocalTime.to_utc(value, timezone),
-          start_time != nil,
-          do: {key, start_time}
-
-    clashing =
-      case parse_duration(duration) do
-        minutes when is_integer(minutes) and minutes > 0 ->
-          Polls.starts_during_time_off(
-            socket.assigns.current_user.id,
-            Enum.map(starts, &elem(&1, 1)),
-            minutes
-          )
-
-        # No usable length yet: the field shows its own error on save.
-        _invalid ->
-          []
-      end
-
-    keys = for {key, start_time} <- starts, start_time in clashing, into: MapSet.new(), do: key
+    keys = SlotWarnings.time_off_keys(socket.assigns.current_user.id, slot_ranges(socket.assigns))
     assign(socket, :time_off_keys, keys)
   end
 
@@ -430,7 +497,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       title: Map.get(params, "title", ""),
       description: blank_to_nil(Map.get(params, "description")),
       timezone: timezone,
-      duration_minutes: parse_duration(Map.get(params, "duration", socket.assigns.duration)),
+      duration_minutes: PollDuration.parse(Map.get(params, "duration", socket.assigns.duration)),
       meeting_type_id: parse_meeting_type_id(Map.get(params, "meeting_type_id")),
       deadline_at: LocalTime.to_utc(Map.get(params, "deadline"), timezone),
       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
@@ -528,19 +595,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp access_hint(_access, _invitees), do: nil
 
   # --- Misc ---
-
-  # What the host typed, or nil when it is not a whole number: the changeset
-  # then says what is wrong, where a default would quietly replace it.
-  defp parse_duration(value) when is_integer(value), do: value
-
-  defp parse_duration(value) when is_binary(value) do
-    case Integer.parse(String.trim(value)) do
-      {int, ""} -> int
-      _other -> nil
-    end
-  end
-
-  defp parse_duration(_other), do: nil
 
   defp checked?(params, key, default) do
     case Map.get(params, key) do

@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
 
   alias Tymeslot.ThemeCustomizations.Tokens
   alias Tymeslot.Themes.Catalog
-  alias TymeslotWeb.Themes.Shared.Components.ThemeShell
+  alias TymeslotWeb.Themes.Shared.Components.{LegalLinks, ThemeShell}
 
   import TymeslotWeb.Themes.Shared.Customization.Helpers, only: [prepare_wrapper_assigns: 1]
 
@@ -25,6 +25,11 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
   attr :owner_preview, :boolean, default: false
   attr :refused_calendars, :list, default: []
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
+
+  attr :legal_links, :map,
+    required: true,
+    doc: "the organiser's legal links (`Profiles.public_legal_links/1`), or nil for none"
+
   slot :inner_block, required: true
 
   @spec fixture_wrapper(map()) :: Phoenix.LiveView.Rendered.t()
@@ -61,6 +66,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
         should_show_branding={@should_show_branding}
         {Map.take(assigns, [:demo_mode])}
       />
+      <LegalLinks.footer links={@legal_links} />
     </ThemeShell.theme_shell>
     """
   end

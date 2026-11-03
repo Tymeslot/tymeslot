@@ -4,12 +4,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   (`Tymeslot.MeetingTypes.FixedDates`), shown under group bookings.
 
   A toggle switches the type from the times its availability schedule
-  offers to the dates its host plans. While upcoming dates are planned it
-  cannot be turned off: they would stay on the calendar and in people's
-  diaries with nothing on the booking page to explain them, so the host
-  cancels them first.
+  offers to dates its host chooses. What those are depends on group
+  bookings:
 
-  Below it the planned dates, each with its seats and when registration
+    * on a one-to-one type, the exact times the host offers
+      (`Tymeslot.MeetingTypes.OfferedTimes`), listed with a row to add one
+      and a button to remove each. They are not meetings, so nothing asks
+      first, and the toggle can be turned off at any time: the times are
+      kept, unused, until it is turned on again. Events go to
+      `OfferedTimeHandlers`.
+    * on a group type, the sessions it plans. While upcoming dates are
+      planned the toggle cannot be turned off: they would stay on the
+      calendar and in people's diaries with nothing on the booking page to
+      explain them, so the host cancels them first.
+
+  For a group type, the planned dates, each with its seats and when registration
   closes, and a row to plan another: a date, a time and an optional close
   of registration, all in the host's own time zone. An upcoming date is
   edited in place: moving it takes everyone booked on it along and tells
@@ -29,7 +38,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :fixed_dates, :boolean, required: true
+  attr :group, :boolean, required: true, doc: "whether group bookings are on"
   attr :is_edit, :boolean, required: true
+  attr :offered_times, :list, default: [], doc: "`OfferedTimeHandlers.rows/1`"
+  attr :new_offered_time, :map, default: %{}
+  attr :offered_time_error, :string, default: nil
   attr :sessions, :list, default: [], doc: "`SessionHandlers.rows/1`"
   attr :timezone, :string, required: true
   attr :new_session, :map, default: %{}
@@ -45,17 +58,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
 
   @spec fixed_dates_section(map()) :: Phoenix.LiveView.Rendered.t()
   def fixed_dates_section(assigns) do
-    assigns = assign(assigns, :upcoming?, Enum.any?(assigns.sessions, &(not &1.past?)))
+    assigns =
+      assign(assigns, :upcoming?, assigns.group and Enum.any?(assigns.sessions, &(not &1.past?)))
 
     ~H"""
     <section class="space-y-4" data-testid="fixed-dates-section">
       <.setting_row
         id={"fixed-dates-toggle-#{@form_id}"}
-        label={dgettext("dashboard_meeting_form", "Offer fixed dates only")}
+        label={dgettext("dashboard_meeting_fixed_dates", "Offer fixed dates only")}
         description={
           dgettext(
-            "dashboard_meeting_form",
-            "Instead of times from the availability schedule, bookers choose from the dates you plan. Each date is on your calendar at once."
+            "dashboard_meeting_fixed_dates",
+            "Instead of times from the availability schedule, bookers choose from dates you set. With group bookings, each date is a session on your calendar at once. Without them, each is a time one person can book, as long as your calendar is free then."
           )
         }
         checked={@fixed_dates}
@@ -64,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
         target={@myself}
       >
         <:disabled_reason>
-          {dgettext("dashboard_meeting_form", "Cancel the planned dates to turn this off.")}
+          {dgettext("dashboard_meeting_fixed_dates", "Cancel the planned dates to turn this off.")}
         </:disabled_reason>
       </.setting_row>
 
@@ -73,12 +87,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
         class="text-token-sm text-tymeslot-600"
         data-testid="fixed-dates-create-first"
       >
-        {dgettext("dashboard_meeting_form", "Create the meeting type to plan its dates.")}
+        {dgettext("dashboard_meeting_fixed_dates", "Create the meeting type to plan its dates.")}
       </p>
 
-      <div :if={@fixed_dates and @is_edit} class="space-y-3">
+      <.offered_times_editor
+        :if={@fixed_dates and @is_edit and not @group}
+        offered_times={@offered_times}
+        timezone={@timezone}
+        new_offered_time={@new_offered_time}
+        error={@offered_time_error}
+        form_id={@form_id}
+        myself={@myself}
+      />
+
+      <div :if={@fixed_dates and @is_edit and @group} class="space-y-3">
         <p class="text-token-sm text-tymeslot-600">
-          {dgettext("dashboard_meeting_form", "Times are in your time zone, %{timezone}.",
+          {dgettext("dashboard_meeting_fixed_dates", "Times are in your time zone, %{timezone}.",
             timezone: @timezone
           )}
         </p>
@@ -88,7 +112,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
           class="text-token-sm text-tymeslot-500 italic"
           data-testid="no-sessions"
         >
-          {dgettext("dashboard_meeting_form", "No dates planned yet.")}
+          {dgettext("dashboard_meeting_fixed_dates", "No dates planned yet.")}
         </p>
 
         <ul :if={@sessions != []} class="space-y-2">
@@ -104,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
               {LocalizationHelpers.format_meeting_datetime(session.start_time, @timezone)}
             </span>
             <span class="text-tymeslot-600">
-              {dgettext("dashboard_meeting_form", "%{taken} of %{capacity} seats taken",
+              {dgettext("dashboard_meeting_fixed_dates", "%{taken} of %{capacity} seats taken",
                 taken: session.seats_taken,
                 capacity: session.capacity
               )}
@@ -113,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
               :if={session.registration_closes_at && session.open?}
               class="text-tymeslot-600"
             >
-              {dgettext("dashboard_meeting_form", "registration until %{datetime}",
+              {dgettext("dashboard_meeting_fixed_dates", "registration until %{datetime}",
                 datetime:
                   LocalizationHelpers.format_meeting_datetime(
                     session.registration_closes_at,
@@ -126,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
               class="font-medium text-amber-700"
               data-testid="session-registration-closed"
             >
-              {dgettext("dashboard_meeting_form", "registration closed")}
+              {dgettext("dashboard_meeting_fixed_dates", "registration closed")}
             </span>
 
             <%= cond do %>
@@ -136,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
               <% @confirming_session_id == session.id -> %>
                 <span class="w-full text-token-sm text-red-700" role="alert">
                   {dngettext(
-                    "dashboard_meeting_form",
+                    "dashboard_meeting_fixed_dates",
                     "Cancel this date? %{count} person is booked and will be told.",
                     "Cancel this date? %{count} people are booked and will be told.",
                     session.participants,
@@ -151,7 +175,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
                   phx-target={@myself}
                   data-testid="confirm-cancel-session"
                 >
-                  {dgettext("dashboard_meeting_form", "Cancel date")}
+                  {dgettext("dashboard_meeting_fixed_dates", "Cancel date")}
                 </.action_button>
                 <.action_button
                   size={:sm}
@@ -159,14 +183,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
                   phx-click="keep_session"
                   phx-target={@myself}
                 >
-                  {dgettext("dashboard_meeting_form", "Keep it")}
+                  {dgettext("dashboard_meeting_fixed_dates", "Keep it")}
                 </.action_button>
               <% true -> %>
                 <Buttons.icon_button
                   icon="hero-pencil-square"
                   size={:sm}
                   class="ml-auto"
-                  label={dgettext("dashboard_meeting_form", "Edit this date")}
+                  label={dgettext("dashboard_meeting_fixed_dates", "Edit this date")}
                   phx-click="edit_session"
                   phx-value-id={session.id}
                   phx-target={@myself}
@@ -176,7 +200,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
                   icon="hero-x-mark"
                   variant={:danger}
                   size={:sm}
-                  label={dgettext("dashboard_meeting_form", "Cancel this date")}
+                  label={dgettext("dashboard_meeting_fixed_dates", "Cancel this date")}
                   phx-click="remove_session"
                   phx-value-id={session.id}
                   phx-target={@myself}
@@ -191,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
             type="date"
             id={"new-session-date-#{@form_id}"}
             name="session[date]"
-            label={dgettext("dashboard_meeting_form", "Date")}
+            label={dgettext("dashboard_meeting_fixed_dates", "Date")}
             value={Map.get(@new_session, "date", "")}
             phx-change="update_session_input"
             phx-target={@myself}
@@ -200,7 +224,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
             type="time"
             id={"new-session-time-#{@form_id}"}
             name="session[time]"
-            label={dgettext("dashboard_meeting_form", "Time")}
+            label={dgettext("dashboard_meeting_fixed_dates", "Time")}
             value={Map.get(@new_session, "time", "")}
             phx-change="update_session_input"
             phx-target={@myself}
@@ -209,7 +233,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
             type="datetime-local"
             id={"new-session-closes-#{@form_id}"}
             name="session[closes_at]"
-            label={dgettext("dashboard_meeting_form", "Registration closes (optional)")}
+            label={dgettext("dashboard_meeting_fixed_dates", "Registration closes (optional)")}
             value={Map.get(@new_session, "closes_at", "")}
             phx-change="update_session_input"
             phx-target={@myself}
@@ -220,7 +244,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
             phx-target={@myself}
             data-testid="add-session"
           >
-            {dgettext("dashboard_meeting_form", "Add date")}
+            {dgettext("dashboard_meeting_fixed_dates", "Add date")}
           </.action_button>
         </div>
         <p :if={@session_error} class="form-error" data-testid="session-error">
@@ -230,6 +254,109 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
     </section>
     """
   end
+
+  attr :offered_times, :list, required: true
+  attr :timezone, :string, required: true
+  attr :new_offered_time, :map, required: true
+  attr :error, :string, default: nil
+  attr :form_id, :string, required: true
+  attr :myself, :any, required: true
+
+  # A one-to-one type's offered times: each start, removable at once (a
+  # booking of one is its own meeting and is not touched), and a row to add
+  # another.
+  defp offered_times_editor(assigns) do
+    ~H"""
+    <div class="space-y-3" data-testid="offered-times">
+      <p class="text-token-sm text-tymeslot-600">
+        {dgettext(
+          "dashboard_meeting_fixed_dates",
+          "Times are in your time zone, %{timezone}. A booked time stops being offered, and is offered again if that booking is cancelled.",
+          timezone: @timezone
+        )}
+      </p>
+
+      <p
+        :if={@offered_times == []}
+        class="text-token-sm text-tymeslot-500 italic"
+        data-testid="no-offered-times"
+      >
+        {dgettext("dashboard_meeting_fixed_dates", "No times offered yet.")}
+      </p>
+
+      <ul :if={@offered_times != []} class="space-y-2">
+        <li
+          :for={offered_time <- @offered_times}
+          class={[
+            "flex items-center gap-3 rounded-token-xl border border-tymeslot-100 bg-white px-3 py-2 text-token-sm",
+            offered_time.past? && "opacity-60"
+          ]}
+          data-testid="offered-time"
+        >
+          <span class="font-semibold text-tymeslot-800">
+            {LocalizationHelpers.format_meeting_datetime(offered_time.starts_at, @timezone)}
+          </span>
+          <span
+            :if={offered_time.status in [:too_soon, :too_far]}
+            class="font-medium text-amber-700"
+            data-testid="offered-time-out-of-reach"
+          >
+            {out_of_reach_label(offered_time.status)}
+          </span>
+          <Buttons.icon_button
+            :if={not offered_time.past?}
+            icon="hero-x-mark"
+            variant={:danger}
+            size={:sm}
+            class="ml-auto"
+            label={dgettext("dashboard_meeting_fixed_dates", "Remove this time")}
+            phx-click="remove_offered_time"
+            phx-value-id={offered_time.id}
+            phx-target={@myself}
+            data-testid="remove-offered-time"
+          />
+        </li>
+      </ul>
+
+      <div class="flex flex-wrap items-end gap-3" data-testid="new-offered-time">
+        <.input
+          type="date"
+          id={"new-offered-time-date-#{@form_id}"}
+          name="offered_time[date]"
+          label={dgettext("dashboard_meeting_fixed_dates", "Date")}
+          value={Map.get(@new_offered_time, "date", "")}
+          phx-change="update_offered_time_input"
+          phx-target={@myself}
+        />
+        <.input
+          type="time"
+          id={"new-offered-time-time-#{@form_id}"}
+          name="offered_time[time]"
+          label={dgettext("dashboard_meeting_fixed_dates", "Time")}
+          value={Map.get(@new_offered_time, "time", "")}
+          phx-change="update_offered_time_input"
+          phx-target={@myself}
+        />
+        <.action_button
+          size={:sm}
+          phx-click="add_offered_time"
+          phx-target={@myself}
+          data-testid="add-offered-time"
+        >
+          {dgettext("dashboard_meeting_fixed_dates", "Add time")}
+        </.action_button>
+      </div>
+      <p :if={@error} class="form-error" data-testid="offered-time-error">{@error}</p>
+    </div>
+    """
+  end
+
+  # Why an upcoming offered time cannot be booked yet, or any longer.
+  defp out_of_reach_label(:too_soon),
+    do: dgettext("dashboard_meeting_fixed_dates", "inside the minimum notice")
+
+  defp out_of_reach_label(:too_far),
+    do: dgettext("dashboard_meeting_fixed_dates", "beyond the booking window")
 
   attr :session, :map, required: true
   attr :editing, :map, required: true
@@ -243,9 +370,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
       <.input
         :for={
           {field, type, label} <- [
-            {"date", "date", dgettext("dashboard_meeting_form", "Date")},
-            {"time", "time", dgettext("dashboard_meeting_form", "Time")},
-            {"closes_at", "datetime-local", dgettext("dashboard_meeting_form", "Registration closes")}
+            {"date", "date", dgettext("dashboard_meeting_fixed_dates", "Date")},
+            {"time", "time", dgettext("dashboard_meeting_fixed_dates", "Time")},
+            {"closes_at", "datetime-local",
+             dgettext("dashboard_meeting_fixed_dates", "Registration closes")}
           ]
         }
         type={type}
@@ -262,7 +390,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
         phx-target={@myself}
         data-testid="save-session-edit"
       >
-        {dgettext("dashboard_meeting_form", "Save")}
+        {dgettext("dashboard_meeting_fixed_dates", "Save")}
       </.action_button>
       <.action_button
         size={:sm}
@@ -270,16 +398,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
         phx-click="discard_session_edit"
         phx-target={@myself}
       >
-        {dgettext("dashboard_meeting_form", "Cancel")}
+        {dgettext("dashboard_meeting_fixed_dates", "Cancel")}
       </.action_button>
       <p class="w-full text-token-xs text-tymeslot-500">
         {dgettext(
-          "dashboard_meeting_form",
+          "dashboard_meeting_fixed_dates",
           "Leave the registration close empty to take sign-ups until the start. A time already past closes registration now."
         )}
         <span :if={@session.participants > 0}>
           {dngettext(
-            "dashboard_meeting_form",
+            "dashboard_meeting_fixed_dates",
             "Moving the date emails the %{count} person booked on it the new time.",
             "Moving the date emails the %{count} people booked on it the new time.",
             @session.participants,

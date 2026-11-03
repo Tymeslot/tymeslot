@@ -59,7 +59,7 @@ msgid "Calendar conflict"
 msgstr "Конфлікт у календарі"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
@@ -126,7 +126,7 @@ msgstr "Не вдалося підтвердити цей час. Спробуй
 msgid "Create a poll to propose a few times and let your guests vote."
 msgstr "Створіть опитування, запропонуйте кілька варіантів часу та дозвольте гостям проголосувати."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Create poll"
 msgstr "Створити опитування"
@@ -380,7 +380,7 @@ msgstr "Опитування оновлено"
 msgid "Save changes"
 msgstr "Зберегти зміни"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/slot_warnings.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
 msgstr "Цей час припадає на вашу відсутність, тому його не можна підтвердити, доки вона діє."
@@ -849,3 +849,68 @@ msgstr "Голосування завершено. Щоб додати варі�
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Тривалість"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} to invite"
+msgid_plural "%{count} to invite"
+msgstr[0] "%{count} особа для запрошення"
+msgstr[1] "%{count} особи для запрошення"
+msgstr[2] "%{count} осіб для запрошення"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Delete draft"
+msgstr "Видалити чернетку"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this draft"
+msgstr "Видалити цю чернетку"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Draft"
+msgstr "Чернетка"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Draft deleted"
+msgstr "Чернетку видалено"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "Draft saved. Nobody can see it or has been invited until you publish it."
+msgstr "Чернетку збережено. Доки ви її не опублікуєте, ніхто її не побачить і нікого не буде запрошено."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Edit draft"
+msgstr "Редагувати чернетку"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Publish poll"
+msgstr "Опублікувати опитування"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Save draft"
+msgstr "Зберегти чернетку"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The draft “%{title}” will be removed. Nobody was invited to it, so nobody is told. This cannot be undone."
+msgstr "Чернетку «%{title}» буде видалено. До неї нікого не запрошували, тож ніхто не отримає сповіщення. Цю дію неможливо скасувати."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "This draft has already been published or deleted."
+msgstr "Цю чернетку вже опубліковано або видалено."
+
+#: lib/tymeslot_web/live/dashboard/polls/slot_warnings.ex
+#, elixir-autogen, elixir-format
+msgid "This time clashes with an event in your calendar."
+msgstr "Цей час перетинається з подією у вашому календарі."

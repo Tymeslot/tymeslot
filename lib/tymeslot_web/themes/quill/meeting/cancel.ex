@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :legal_links, :map, required: true
   attr :meeting, :map, required: true
   attr :organizer_profile, :map, default: nil
   attr :loading, :boolean, required: true
@@ -29,9 +30,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      legal_links={@legal_links}
       show_language_switcher={true}
     >
-      <div class="min-h-screen flex items-center justify-center px-4 py-8">
+      <div class="min-h-screen flex items-center justify-center px-4 py-8" data-testid="quill-cancel">
         <div class="w-full max-w-2xl">
           <.glass_morphism_card class="booker-card">
             <div class="p-8">

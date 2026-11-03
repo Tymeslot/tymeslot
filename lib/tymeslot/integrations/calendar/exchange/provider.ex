@@ -35,11 +35,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
       `display_only` rows. `item_client_configs/1` builds the one client per
       selected folder that read fans out over.
 
-  The split exists because the item path cannot see a recurring series. A
-  server was observed answering a `CalendarView` with a single
-  `RecurringMaster` dated to the first occurrence, and with nothing at all for
-  a window covering later ones, so an organiser booked every morning reads as
-  free from the second day on. `GetUserAvailability` expands the series
+  The split exists because the item path cannot be relied on to see a
+  recurring series. Exchange and current grommunio versions expand it into
+  occurrences, but an older grommunio was observed answering a `CalendarView`
+  with a single `RecurringMaster` dated to the first occurrence, and with
+  nothing at all for a window covering later ones, so an organiser booked
+  every morning reads as free from the second day on. `GetUserAvailability` expands the series
   server-side. It answers no item identity in return — no id, no subject, no
   change key — which is why it cannot simply replace the item path.
 

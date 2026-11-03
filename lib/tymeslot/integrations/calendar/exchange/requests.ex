@@ -23,9 +23,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   ## Busy time comes from a different operation
 
   `FindItem` over a `CalendarView` does not expand a recurring series on every
-  server. A grommunio mailbox answers one `RecurringMaster` dated to the
+  server. Older grommunio versions answer one `RecurringMaster` dated to the
   series' first occurrence, and nothing at all for a window covering later
-  ones, so the item path cannot see the third week of a weekly standup.
+  ones, so there the item path cannot see the third week of a weekly standup.
   `get_user_availability/3` is the operation that does expand it, and
   `Exchange.FreeBusy` reads its answer; the item path feeds the dashboard grid
   rather than availability.
@@ -173,9 +173,18 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   The `t:TimeZone` block is not decoration. Omitting it, or sending a partial
   one, makes the server answer an empty body carrying no fault and no response
   code, which is indistinguishable from a free calendar unless the reader
-  refuses to read it as one. A bias of zero with placeholder standard and
-  daylight rules puts that zone on UTC, which is what the window boundaries
-  below are shifted into and what the answer comes back in.
+  refuses to read it as one. A bias of zero on the zone and on both rules puts
+  it on UTC all year, which is what the window boundaries below are shifted
+  into and what the answer comes back in.
+
+  The two rules must still name different transitions. Exchange 2019 answers
+  identical placeholder rules with the fault "The specified time zone isn't
+  valid.", so the mailbox's busy time cannot be read at all, while this shape
+  answers `NoError`; that fits .NET refusing an adjustment rule whose daylight
+  period starts and ends at the same moment. grommunio accepts either form.
+  The dates themselves carry no meaning, since a zero daylight bias makes
+  every transition a no-op; they follow the UTC example in Microsoft's EWS
+  documentation, which is the shape verified against Exchange 2019.
 
   `FreeBusy` is the view asked for rather than `Detailed`. The two return the
   same intervals with the same busy types, verified against a live server, and
@@ -200,16 +209,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
         <t:Bias>0</t:Bias>
         <t:StandardTime>
           <t:Bias>0</t:Bias>
-          <t:Time>00:00:00</t:Time>
-          <t:DayOrder>1</t:DayOrder>
-          <t:Month>1</t:Month>
+          <t:Time>02:00:00</t:Time>
+          <t:DayOrder>5</t:DayOrder>
+          <t:Month>10</t:Month>
           <t:DayOfWeek>Sunday</t:DayOfWeek>
         </t:StandardTime>
         <t:DaylightTime>
           <t:Bias>0</t:Bias>
-          <t:Time>00:00:00</t:Time>
-          <t:DayOrder>1</t:DayOrder>
-          <t:Month>1</t:Month>
+          <t:Time>02:00:00</t:Time>
+          <t:DayOrder>5</t:DayOrder>
+          <t:Month>3</t:Month>
           <t:DayOfWeek>Sunday</t:DayOfWeek>
         </t:DaylightTime>
       </t:TimeZone>

@@ -99,6 +99,32 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     Component.assign(socket, :theme_tokens, ThemeCustomizations.tokens(theme_id, customization))
   end
 
+  @doc """
+  Assigns the organiser's profile (`:organizer_profile`, which a theme's page
+  shell may draw) and the legal links the page's footer shows
+  (`:legal_links`, `Profiles.public_legal_links/1`: the organiser's own, else
+  the instance defaults). Called on the connected mount, once the meeting's
+  organiser is known.
+  """
+  @spec assign_organizer(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t()) ::
+          LiveView.Socket.t()
+  def assign_organizer(socket, profile) do
+    Component.assign(socket,
+      organizer_profile: profile,
+      legal_links: Profiles.public_legal_links(profile)
+    )
+  end
+
+  @doc """
+  Assigns no organiser: the dead render's, before any data is read. Its
+  legal links are nil, so the footer renders nothing until the connected
+  mount knows the organiser; the first paint never shows a link that is not
+  theirs, such as an instance default they have replaced.
+  """
+  @spec no_organizer(LiveView.Socket.t()) :: LiveView.Socket.t()
+  def no_organizer(socket),
+    do: Component.assign(socket, organizer_profile: nil, legal_links: nil)
+
   @doc "Assigns no customisation: the dead render's, before any data is read."
   @spec no_customization(LiveView.Socket.t()) :: LiveView.Socket.t()
   def no_customization(socket),
@@ -204,11 +230,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   @doc """
   Mounts the payment-processing page. Authorises the meeting,
   subscribes to the payment topic, then reads meeting/payment state and
-  assigns `:meeting`, `:payment`, `:organizer_profile` (which a theme's page
-  shell may draw), `:rebook_path` (where a failed checkout can start again)
-  and the organiser's customisation (`assign_customization/2`) on success. On failure the socket is
-  redirected to `/` with a generic flash so we never leak the failure mode
-  to the attendee.
+  assigns `:meeting`, `:payment`, `:organizer_profile` and `:legal_links`
+  (`assign_organizer/2`; none on the dead render, `no_organizer/1`),
+  `:rebook_path` (where a failed checkout can start again) and the
+  organiser's customisation (`assign_customization/2`) on success. On
+  failure the socket is redirected to `/` with a generic flash so we never
+  leak the failure mode to the attendee.
 
   Subscribes *before* reading state, not after: a `:paid` (or `:expired`)
   broadcast that lands between the read and the subscribe would otherwise
@@ -236,11 +263,11 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           socket =
             socket
             |> assign_customization(profile)
+            |> assign_organizer(profile)
             |> Component.assign(
               loading: false,
               meeting: meeting,
               payment: payment,
-              organizer_profile: profile,
               rebook_path: rebook_path(profile, meeting)
             )
 
@@ -253,13 +280,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       socket =
         socket
         |> no_customization()
-        |> Component.assign(
-          loading: true,
-          meeting: nil,
-          payment: nil,
-          organizer_profile: nil,
-          rebook_path: nil
-        )
+        |> no_organizer()
+        |> Component.assign(loading: true, meeting: nil, payment: nil, rebook_path: nil)
 
       {:ok, socket}
     end

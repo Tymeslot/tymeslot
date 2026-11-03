@@ -54,6 +54,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
   alias Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity
   alias Tymeslot.Repo
 
@@ -129,8 +130,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
         # The baseline advances only once the notification is enqueued: a
         # failed enqueue rolls the transaction back, so the retry diffs
         # against the same baseline and announces the change after all.
-        with :ok <- dispatch(event, summary) do
-          persist_new_baseline(event, current, summary.next_sequence)
+        with {:ok, sequence} <- dispatch(event, summary) do
+          persist_new_baseline(event, current, sequence)
         end
       else
         log_noop(event, action_atom)
@@ -193,9 +194,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   defp normalise_attendee(%{"email" => email}) when is_binary(email), do: %{email: email}
   defp normalise_attendee(other) when is_map(other), do: other
 
+  # Sent above the revision the guest holds for the entry: the event's own,
+  # or the one recorded for it when higher, as after a write to the whole
+  # series, which brings the row back at revision 0. Answers that revision.
   defp dispatch(event, %ChangeSummary{retained_attendees: retained}) do
-    {method, sequence} =
-      IcalMethod.for(:event_updated, current_sequence: event.ical_sequence)
+    ical_uid = SeriesIdentity.entry_uid(event)
+    held = max(event.ical_sequence, SeriesEntries.sent_sequence(event, ical_uid) || 0)
+    {method, sequence} = IcalMethod.for(:event_updated, current_sequence: held)
 
     excluded = Recipients.excluded(event, user_id_for(event))
 
@@ -205,19 +210,29 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       |> Enum.map(&Map.get(&1, :email))
       |> Enum.reject(&is_nil/1)
 
-    dispatch_to(recipient_emails, event, method, sequence)
+    with :ok <- dispatch_to(recipient_emails, event, ical_uid, method, sequence) do
+      {:ok, sequence}
+    end
   end
 
   # One job for the whole recipient list, which is what the handler on the
   # other end expects (`attendee_emails` is a list it maps over). Returns the
   # scheduler's result, so a failed enqueue fails the run.
-  defp dispatch_to([], _event, _method, _sequence), do: :ok
+  defp dispatch_to([], _event, _ical_uid, _method, _sequence), do: :ok
 
-  defp dispatch_to(recipient_emails, event, method, sequence) do
+  defp dispatch_to(recipient_emails, event, ical_uid, method, sequence) do
+    with :ok <- schedule(recipient_emails, event, ical_uid, method, sequence) do
+      SeriesEntries.record(event, [
+        event |> SeriesIdentity.timing() |> Map.merge(%{uid: ical_uid, sequence: sequence})
+      ])
+    end
+  end
+
+  defp schedule(recipient_emails, event, ical_uid, method, sequence) do
     EmailScheduler.schedule_event_update_notification(%{
       user_id: user_id_for(event),
       event_uid: event.uid,
-      ical_uid: SeriesIdentity.entry_uid(event),
+      ical_uid: ical_uid,
       integration_id: integration_id_for(event),
       attendee_emails: recipient_emails,
       before_title: last_state_string(event, "title"),

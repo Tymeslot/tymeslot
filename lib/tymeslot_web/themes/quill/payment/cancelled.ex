@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Cancelled do
       theme_tokens={assigns[:theme_tokens]}
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
+      legal_links={assigns[:legal_links]}
       testid="quill-payment-cancelled"
     >
       <PaymentReturnComponents.cancelled_body rebook_path={assigns[:rebook_path]} />

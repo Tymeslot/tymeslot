@@ -19,7 +19,9 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser, as: ExchangeEventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
+  alias Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery, as: ExchangeItemDiscovery
   alias Tymeslot.Integrations.Calendar.Exchange.Provider, as: ExchangeProvider
   alias Tymeslot.Integrations.Calendar.Exchange.Writes, as: ExchangeWrites
   alias Tymeslot.Integrations.Calendar.MailboxOrg.Provider, as: MailboxOrgProvider
@@ -386,10 +388,10 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   The counterpart to `fetch_and_normalise_provider_events/3` for this provider,
   and the more important of the two: `GetUserAvailability` is what decides
   availability, and it is the only EWS read that expands a recurring series.
-  The item read the other function performs is known to be short — a grommunio
-  mailbox answers one `RecurringMaster` for a whole series — so an audit that
-  looked only at items would report a diary as free on every occurrence after
-  the first.
+  The item read the other function performs is known to be short on some
+  servers — older grommunio versions answer one `RecurringMaster` for a whole
+  series — so an audit that looked only at items would report a diary as free
+  on every occurrence after the first.
 
   Returns intervals in the order the server listed them. They carry no item
   identity, so a caller correlates them by time, never by uid.
@@ -421,7 +423,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   Returns the item id the server assigned, which is what
   `Exchange.Provider.delete_event/3` takes and what `Exchange.EventNormaliser`
   writes into `provider_event_id`. EWS assigns the iCalendar UID itself, so a
-  caller cannot choose one and must correlate by item id.
+  caller cannot choose one; `fetch_exchange_item_uid/2` reads it back.
 
   There is no matching remover here: an item planted this way is deleted
   through the provider callback like any other, since a delete addresses an
@@ -434,6 +436,41 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
         fixture
       ) do
     ExchangeWrites.create_item(exchange_config(integration), fixture)
+  end
+
+  @doc """
+  Reads back the iCalendar UID the server assigned an Exchange item.
+
+  The handle a caller needs to find a planted recurring series again: a
+  windowed read answers the series as occurrences, each with an item id of its
+  own and none with the master's, but every one of them carries this UID in
+  `provider_metadata` under `"ical_uid"`, as a single item and a master carry
+  it as their uid.
+  """
+  @spec fetch_exchange_item_uid(integration(), ExchangeWrites.item_id()) ::
+          {:ok, String.t()} | {:error, term()}
+  def fetch_exchange_item_uid(
+        %CalendarIntegrationSchema{provider: "exchange"} = integration,
+        item_id
+      )
+      when is_binary(item_id) do
+    # Only the UID is read off the result, so the folder named here is never
+    # cached under; it is the default calendar the planter writes to.
+    context = %{
+      calendar_integration_id: integration.id,
+      provider_calendar_id: "calendar",
+      synced_at: DateTime.utc_now()
+    }
+
+    with {:ok, items} <-
+           ExchangeItemDiscovery.fetch_items(exchange_config(integration), [{item_id, ""}]),
+         {:ok, [%CalendarEvent{provider_metadata: %{"ical_uid" => uid}}]} <-
+           ExchangeEventNormaliser.normalise_events(items, context) do
+      {:ok, uid}
+    else
+      {:error, _reason} = error -> error
+      {:ok, _unexpected} -> {:error, :uid_not_returned}
+    end
   end
 
   @doc """

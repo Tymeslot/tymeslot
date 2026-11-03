@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       owner_preview={assigns[:owner_preview]}
       refused_calendars={assigns[:refused_calendars] || []}
       should_show_branding={assigns[:should_show_branding]}
+      legal_links={assigns[:legal_links]}
       {Map.take(assigns, [:demo_mode])}
     >
       <DemoThemeSwitcher.switcher

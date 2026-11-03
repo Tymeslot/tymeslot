@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.FixedDates
+  alias Tymeslot.MeetingTypes.{FixedDates, OfferedTimes}
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
@@ -87,13 +87,22 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   # For each fixed-date type, the start of its next session open for
-  # registration, or nil: the card says when that is, or that the type is
-  # off the booking page for want of one.
+  # registration, or of its next offered time for a one-to-one type, or nil:
+  # the card says when that is, or that the type is off the booking page for
+  # want of one.
   defp next_dates(meeting_types) do
-    meeting_types
-    |> Enum.filter(&FixedDates.enabled?/1)
-    |> PlannedSessions.next_open_by_type()
-    |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
+    sessions =
+      meeting_types
+      |> Enum.filter(&FixedDates.sessions?/1)
+      |> PlannedSessions.next_open_by_type()
+      |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
+
+    offered =
+      meeting_types
+      |> Enum.filter(&FixedDates.offered_times?/1)
+      |> OfferedTimes.next_by_type()
+
+    Map.merge(sessions, offered)
   end
 
   # The open editor is handed `editing_type` on every render, and it saves
@@ -155,6 +164,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
          form_id: "meeting-type-form-edit-#{type.id}"
        )}
     end
+  end
+
+  def handle_event("duplicate_type", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+      do_duplicate_type(socket, String.to_integer(id), user_id)
+    end)
   end
 
   def handle_event("cancel_edit", _params, socket) do
@@ -427,6 +444,62 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     |> assign(:meeting_types, meeting_types)
     |> assign(:editing_type, updated)
   end
+
+  # The copy opens in the editor straight away, since renaming it is almost
+  # always the next step. The list reload this triggers swaps the bare
+  # inserted record for the preloaded one (`refresh_editing_type/2`).
+  defp do_duplicate_type(socket, type_id, user_id) do
+    with %{} = source <- MeetingTypes.get_meeting_type(type_id, user_id),
+         {:ok, copy} <- MeetingTypes.duplicate_meeting_type(source) do
+      send(self(), {:meeting_type_changed})
+      Flash.info(duplicated_message(copy))
+
+      {:noreply,
+       assign(socket,
+         editing_type: copy,
+         show_add_form: false,
+         show_edit_overlay: true,
+         form_id: "meeting-type-form-edit-#{copy.id}"
+       )}
+    else
+      nil ->
+        Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
+        {:noreply, socket}
+
+      {:error, reason} ->
+        Flash.error(duplicate_error_message(reason))
+        {:noreply, socket}
+    end
+  end
+
+  defp duplicated_message(copy) do
+    if copy.fixed_dates do
+      dgettext(
+        "dashboard_integrations",
+        "Meeting type duplicated and switched off. Add its dates, then switch it on."
+      )
+    else
+      dgettext(
+        "dashboard_integrations",
+        "Meeting type duplicated and switched off. Switch it on when it is ready."
+      )
+    end
+  end
+
+  defp duplicate_error_message(reason)
+       when reason in [:insufficient_plan, :group_bookings_not_allowed, :feature_disabled],
+       do:
+         dgettext(
+           "dashboard_integrations",
+           "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
+         )
+
+  defp duplicate_error_message(_reason),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "Could not duplicate this meeting type. Check its settings, then try again."
+      )
 
   defp close_form(socket) do
     assign(socket, editing_type: nil, show_edit_overlay: false, form_id: nil)

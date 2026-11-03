@@ -7,6 +7,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
   alias Tymeslot.Factory
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
 
   setup do
@@ -221,6 +222,48 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
                "fully booked"
 
       assert {:ok, %{status: :declined}} = GuestQueries.get_by_token(guest.rsvp_token)
+    end
+  end
+
+  describe "legal links" do
+    test "guest RSVP page shows the organiser's legal links", %{conn: conn} do
+      user = Factory.insert(:user)
+      profile = Factory.insert(:profile, user: user)
+
+      {:ok, _profile} =
+        Profiles.update_legal_links(profile, %{
+          legal_notice_url: "https://organiser.example/impressum",
+          privacy_policy_url: "https://organiser.example/privacy"
+        })
+
+      meeting = Factory.insert(:meeting, organizer_user_id: user.id)
+      {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["linked@example.com"])
+
+      html = conn |> get(~p"/guest/#{guest.rsvp_token}/accept") |> html_response(200)
+
+      assert html =~ ~s(href="https://organiser.example/impressum")
+      assert html =~ ~s(href="https://organiser.example/privacy")
+    end
+
+    test "an unknown token shows the instance defaults only", %{conn: conn} do
+      previous = Application.get_env(:tymeslot, :booking_privacy_policy_url)
+
+      Application.put_env(
+        :tymeslot,
+        :booking_privacy_policy_url,
+        "https://instance.example/privacy"
+      )
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:tymeslot, :booking_privacy_policy_url, previous),
+          else: Application.delete_env(:tymeslot, :booking_privacy_policy_url)
+      end)
+
+      html = conn |> get(~p"/guest/nope-not-a-token/accept") |> html_response(404)
+
+      assert html =~ ~s(href="https://instance.example/privacy")
+      refute html =~ "Legal notice"
     end
   end
 end

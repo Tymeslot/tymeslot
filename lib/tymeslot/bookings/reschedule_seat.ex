@@ -254,7 +254,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # against the schedule: it is only parsed here, keeping the seat's length,
   # and `check_target/5` decides whether a session is there to take it.
   defp new_times(params, old_meeting, meeting_type, config) do
-    if FixedDates.enabled?(meeting_type) do
+    if FixedDates.sessions?(meeting_type) do
       with {:ok, {start_time, end_time}} <-
              Validation.parse_meeting_times(
                params.date,
@@ -279,7 +279,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp check_target(old_meeting, participant, new_times, meeting_type, config) do
     guest_emails = guest_emails(participant)
 
-    if FixedDates.enabled?(meeting_type) do
+    if FixedDates.sessions?(meeting_type) do
       case GroupScheduling.join_target(
              old_meeting.meeting_type_id,
              new_times.start_time,
@@ -312,7 +312,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
         if last_live_seat?(old_meeting, participant), do: old_meeting.uid
       end,
       on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end,
-      join_only: FixedDates.enabled?(meeting_type)
+      join_only: FixedDates.sessions?(meeting_type)
     )
     |> handle_move(old_meeting, participant)
   end

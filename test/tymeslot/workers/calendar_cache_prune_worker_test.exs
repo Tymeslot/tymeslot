@@ -6,6 +6,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
   alias Tymeslot.Workers.CalendarCachePruneWorker
 
   describe "perform/1" do
@@ -83,6 +84,29 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
 
     test "returns :ok when there is nothing to prune" do
       assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
+    end
+
+    test "forgets the attendee entries of a series the cache no longer reaches" do
+      integration = insert(:calendar_integration, is_active: true, provider: "google")
+      ended = DateTime.add(DateTime.utc_now(), -(Sync.window_past_days() + 90), :day)
+
+      gone =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "google",
+          recurring_event_id: "master-gone",
+          recurrence_rule: "FREQ=WEEKLY",
+          start_at: ended,
+          end_at: DateTime.add(ended, 1, :hour)
+        )
+
+      SeriesEntries.record(gone, [
+        %{uid: "gone", start: ended, end: DateTime.add(ended, 1, :hour), sequence: 1}
+      ])
+
+      assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
+
+      assert SeriesEntries.recorded(gone) == []
     end
   end
 

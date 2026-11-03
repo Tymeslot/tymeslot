@@ -96,11 +96,18 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
     assert has_element?(view, "[data-testid='new-session']")
   end
 
-  test "is not offered on a one-to-one type", %{conn: conn, user: user} do
+  test "on a one-to-one type, offers times rather than planned dates", %{
+    conn: conn,
+    user: user
+  } do
     meeting_type = group_type(user, max_participants: 1)
     view = edit(conn, meeting_type)
 
-    refute has_element?(view, "[data-testid='fixed-dates-section']")
+    view |> element("input[phx-click='toggle_fixed_dates']") |> render_click()
+
+    assert reload(meeting_type).fixed_dates
+    assert has_element?(view, "[data-testid='new-offered-time']")
+    refute has_element?(view, "[data-testid='new-session']")
   end
 
   test "plans a date, which is listed and booked on the host's calendar", %{

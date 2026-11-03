@@ -56,7 +56,7 @@ msgid "Calendar conflict"
 msgstr "Conflito de calendário"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Cancelar"
@@ -123,7 +123,7 @@ msgstr "Não foi possível confirmar este horário. Tente novamente."
 msgid "Create a poll to propose a few times and let your guests vote."
 msgstr "Crie uma enquete para propor alguns horários e deixar os convidados votarem."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Create poll"
 msgstr "Criar enquete"
@@ -376,7 +376,7 @@ msgstr "Enquete atualizada"
 msgid "Save changes"
 msgstr "Salvar alterações"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/slot_warnings.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
 msgstr "Este horário cai dentro da sua ausência, então não pode ser confirmado enquanto ela continuar marcada."
@@ -836,3 +836,67 @@ msgstr "A votação foi encerrada. Mude o prazo para adicionar horários."
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Duração"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} to invite"
+msgid_plural "%{count} to invite"
+msgstr[0] "%{count} pessoa para convidar"
+msgstr[1] "%{count} pessoas para convidar"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Delete draft"
+msgstr "Excluir rascunho"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this draft"
+msgstr "Excluir este rascunho"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Draft"
+msgstr "Rascunho"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Draft deleted"
+msgstr "Rascunho excluído"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "Draft saved. Nobody can see it or has been invited until you publish it."
+msgstr "Rascunho salvo. Ninguém pode vê-lo nem foi convidado até você publicá-lo."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Edit draft"
+msgstr "Editar rascunho"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Publish poll"
+msgstr "Publicar enquete"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Save draft"
+msgstr "Salvar rascunho"
+
+#: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The draft “%{title}” will be removed. Nobody was invited to it, so nobody is told. This cannot be undone."
+msgstr "O rascunho “%{title}” será excluído. Ninguém foi convidado, então ninguém será avisado. Não é possível desfazer."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "This draft has already been published or deleted."
+msgstr "Este rascunho já foi publicado ou excluído."
+
+#: lib/tymeslot_web/live/dashboard/polls/slot_warnings.ex
+#, elixir-autogen, elixir-format
+msgid "This time clashes with an event in your calendar."
+msgstr "Este horário conflita com um evento do seu calendário."

@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
   attendee may arrive from any point in the flow, but the slug must still
   match the host's theme. The page carries the organiser's customisation
   (`PaymentReturn.assign_customization/2`), as their booking page does, and
-  their profile (`:organizer_profile`), which a theme's page shell may draw.
+  their profile and legal links (`PaymentReturn.assign_organizer/2`).
   """
 
   use TymeslotWeb, :live_view
@@ -42,12 +42,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
         {:ok, %{meeting: meeting, profile: profile, rebook_path: rebook_path}} ->
           socket
           |> PaymentReturn.assign_customization(profile)
-          |> assign(
-            loading: false,
-            meeting: meeting,
-            organizer_profile: profile,
-            rebook_path: rebook_path
-          )
+          |> PaymentReturn.assign_organizer(profile)
+          |> assign(loading: false, meeting: meeting, rebook_path: rebook_path)
 
         {:error, _reason} ->
           redirect(socket, to: ~p"/")
@@ -55,7 +51,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
     else
       socket
       |> PaymentReturn.no_customization()
-      |> assign(loading: true, meeting: nil, organizer_profile: nil, rebook_path: nil)
+      |> PaymentReturn.no_organizer()
+      |> assign(loading: true, meeting: nil, rebook_path: nil)
     end
   end
 end

@@ -97,7 +97,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
     |> group_meeting_attrs(meeting_type)
     |> GroupScheduling.book_seat(build_seat_request(booking_data),
       on_booked: &schedule_seat_jobs(&1, opts),
-      join_only: FixedDates.enabled?(meeting_type)
+      join_only: FixedDates.sessions?(meeting_type)
     )
     |> map_result(booking_data)
   end

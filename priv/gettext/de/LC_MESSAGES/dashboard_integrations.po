@@ -466,3 +466,23 @@ msgstr "%{service} ist gerade ausgelastet. Bitte versuchen Sie es in einer Minut
 #, elixir-autogen, elixir-format
 msgid "Authorisation was denied. Please try again."
 msgstr "Die Autorisierung wurde verweigert. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not duplicate this meeting type. Check its settings, then try again."
+msgstr "Dieser Termintyp konnte nicht dupliziert werden. Prüfen Sie die Einstellungen und versuchen Sie es dann erneut."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Add its dates, then switch it on."
+msgstr "Termintyp dupliziert und deaktiviert. Fügen Sie die Termine hinzu und aktivieren Sie ihn anschließend."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Switch it on when it is ready."
+msgstr "Termintyp dupliziert und deaktiviert. Aktivieren Sie ihn, sobald er fertig ist."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
+msgstr "Dieser Termintyp nutzt eine Funktion, die Ihr aktueller Tarif nicht enthält, daher kann er nicht dupliziert werden."

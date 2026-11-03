@@ -51,7 +51,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
       attrs = %{
         name: params["name"],
         duration_minutes: duration_minutes,
-        slot_interval_minutes: parse_optional_interval(params["slot_interval"]),
+        slot_interval_minutes: parse_optional_integer(params["slot_interval"]),
         description: params["description"],
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
@@ -67,7 +67,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
       attrs =
         attrs
-        |> Map.merge(booking_limits(params))
+        |> Map.merge(optional_integers(params))
         |> Map.merge(seat_display(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
@@ -217,36 +217,29 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   defp parse_duration(_value), do: {:error, :invalid_duration}
 
-  # Blank means "use the meeting type's own duration"; out-of-range values are
-  # left to the changeset.
-  defp parse_optional_interval(value) when is_integer(value), do: value
+  # The booking limits and the scheduling-rule overrides, each param parsed
+  # with `parse_optional_integer/1`.
+  defp optional_integers(params) do
+    Map.new(
+      Constraints.booking_limit_fields() ++ Constraints.scheduling_policy_fields(),
+      &{&1, parse_optional_integer(params[Atom.to_string(&1)])}
+    )
+  end
 
-  defp parse_optional_interval(value) when is_binary(value) do
+  # Blank means nil, which every optional number here reads as "inherit" or "no
+  # limit": the slot interval falls back to the duration, a booking limit to
+  # none, a scheduling rule to the schedule's. Out-of-range values are left to
+  # the changeset.
+  defp parse_optional_integer(value) when is_integer(value), do: value
+
+  defp parse_optional_integer(value) when is_binary(value) do
     case Integer.parse(String.trim(value)) do
-      {interval, ""} -> interval
+      {integer, ""} -> integer
       _other -> nil
     end
   end
 
-  defp parse_optional_interval(_value), do: nil
-
-  defp booking_limits(params) do
-    Map.new(Constraints.booking_limit_fields(), fn field ->
-      {field, parse_booking_limit(params[Atom.to_string(field)])}
-    end)
-  end
-
-  # Blank means no limit; out-of-range values are left to the changeset.
-  defp parse_booking_limit(value) when is_integer(value), do: value
-
-  defp parse_booking_limit(value) when is_binary(value) do
-    case Integer.parse(String.trim(value)) do
-      {limit, ""} -> limit
-      _other -> nil
-    end
-  end
-
-  defp parse_booking_limit(_value), do: nil
+  defp parse_optional_integer(_value), do: nil
 
   # Converts the max-participants form param into an integer participant
   # limit. Absent or blank means a solo type and stores 1 (the column
