@@ -32,16 +32,30 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   afterwards loses nothing. The method comes from the client, so anything
   else is ignored. Keeping it again is harmless; the confirmation shows the
   latest.
+
+  A first-person keep says how it went (`via`), since that decides what the
+  confirmation may claim: `mail` (the mail client was opened, nothing is
+  sent yet) and `copy` (the message was copied) each confirm as their own
+  `kept_method`, while the share sheet's `first_person` confirms as sent.
   """
-  @spec handle_keep_link(Phoenix.LiveView.Socket.t(), term()) ::
+  @spec handle_keep_link(Phoenix.LiveView.Socket.t(), map()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_keep_link(socket, method) do
+  def handle_keep_link(socket, %{"method" => method} = params) do
     # `phone` is the server's to claim: the handoff page opening on another
     # device says so (`handle_phone_opened/1`), never the client.
     if method != "phone" and method in Onboarding.keep_methods(),
-      do: {:noreply, keep_on_ready(socket, method)},
+      do: {:noreply, keep_on_ready(socket, method, confirmation(method, params["via"]))},
       else: {:noreply, socket}
   end
+
+  def handle_keep_link(socket, _params), do: {:noreply, socket}
+
+  @first_person_via %{"mail" => "mail_app", "copy" => "message_copy"}
+
+  defp confirmation("first_person", via) when is_map_key(@first_person_via, via),
+    do: Map.fetch!(@first_person_via, via)
+
+  defp confirmation(method, _via), do: method
 
   @doc """
   The host's booking page was opened from the handoff link (the QR code) on
@@ -49,20 +63,20 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   """
   @spec handle_phone_opened(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_phone_opened(socket), do: {:noreply, keep_on_ready(socket, "phone")}
+  def handle_phone_opened(socket), do: {:noreply, keep_on_ready(socket, "phone", "phone")}
 
-  defp keep_on_ready(%{assigns: %{current_step: :ready}} = socket, method),
-    do: keep_link(socket, method)
+  defp keep_on_ready(%{assigns: %{current_step: :ready}} = socket, method, confirmation),
+    do: keep_link(socket, method, confirmation)
 
-  defp keep_on_ready(socket, _method), do: socket
+  defp keep_on_ready(socket, _method, _confirmation), do: socket
 
-  defp keep_link(socket, method) do
+  defp keep_link(socket, method, confirmation) do
     %{current_user: user, profile: profile} = socket.assigns
 
     case Onboarding.keep_booking_link(user, profile, method) do
       {:ok, completed} ->
         socket
-        |> Component.assign(current_user: completed, kept_method: method)
+        |> Component.assign(current_user: completed, kept_method: confirmation)
         |> LiveView.clear_flash()
         # C1 registers `booking_link_kept`; until then the share event carries the method.
         |> Analytics.push("booking_link_shared", %{channel: method})
@@ -94,11 +108,21 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   @doc """
   Whether "Go to dashboard" still waits for a keep action. A page that is
-  not live offers nothing to keep, so finishing stays open there.
+  not live offers nothing to keep, so finishing stays open there, and so
+  does a debug route on an account that finished onboarding long ago: there
+  is nothing left for this visit to complete.
   """
   @spec finish_locked?(map()) :: boolean()
-  def finish_locked?(%{kept_method: nil, booking_page_live: live}), do: live != false
+  def finish_locked?(%{kept_method: nil, booking_page_live: live} = assigns),
+    do: live != false and not settled_debug_visit?(assigns)
+
   def finish_locked?(_assigns), do: false
+
+  defp settled_debug_visit?(%{live_action: action, current_user: user})
+       when action in [:debug_welcome, :debug_step],
+       do: Onboarding.onboarding_completed?(user)
+
+  defp settled_debug_visit?(_assigns), do: false
 
   @doc """
   The share step's own state, on the connected render only (the static
@@ -186,7 +210,8 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   end
 
   # A kept link has already completed onboarding, so finishing only
-  # navigates (on a debug route, back to where it started). A page that is
+  # navigates (on a debug route, back to where it started), as it does on a
+  # debug route on a settled account (`finish_locked?/1`). A page that is
   # not live has nothing to keep and finishes as before.
   defp handle_finish(%{assigns: %{kept_method: method}} = socket) when is_binary(method) do
     {:noreply, LiveView.redirect(socket, to: finish_path(socket))}
@@ -195,7 +220,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   defp handle_finish(%{assigns: %{booking_page_live: false}} = socket),
     do: {:noreply, complete_onboarding(socket, ~p"/dashboard")}
 
-  defp handle_finish(socket), do: handle_finish_locked(socket)
+  defp handle_finish(socket) do
+    if finish_locked?(socket.assigns),
+      do: handle_finish_locked(socket),
+      else: {:noreply, LiveView.redirect(socket, to: finish_path(socket))}
+  end
 
   defp finish_path(socket) do
     if socket.assigns.live_action in [:debug_welcome, :debug_step],

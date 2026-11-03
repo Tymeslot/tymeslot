@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBrandingTest do
 
   import Mox
   import Tymeslot.BookingTestHelpers
+  import Tymeslot.Factory, only: [insert: 1, insert: 2]
 
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Live.Scheduling.PreviewMode
@@ -60,5 +61,36 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBrandingTest do
   test "a visitor's page leaves branding to the extension", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/brandinghost")
     assert probe(view) == "nil"
+  end
+
+  # The page an organiser without a bookable calendar shows instead of the
+  # booking flow, as the onboarding stage frames it.
+  describe "the page that cannot take bookings yet" do
+    setup do
+      user = insert(:user)
+      insert(:profile, user: user, username: "nocalhost", timezone: "Etc/UTC")
+      %{nocal_user: user}
+    end
+
+    test "an owner preview tells the extension not to brand it", %{conn: conn, nocal_user: user} do
+      {:ok, view, _html} = live(conn, PreviewMode.owner_path("nocalhost", user.id, stage: true))
+
+      assert has_element?(view, "[data-testid='readiness-notice']")
+      assert probe(view) == "false"
+    end
+
+    test "a visitor's copy leaves branding to the extension", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/nocalhost")
+
+      assert has_element?(view, "[data-testid='readiness-notice']")
+      assert probe(view) == "nil"
+    end
+
+    test "another organiser's token is no owner preview", %{conn: conn, user: other} do
+      path = PreviewMode.owner_path("nocalhost", other.id, stage: true)
+      {:ok, view, _html} = live(conn, path)
+
+      assert probe(view) == "nil"
+    end
   end
 end

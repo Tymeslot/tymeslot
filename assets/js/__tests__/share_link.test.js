@@ -5,7 +5,14 @@
  */
 
 import { describe, expect, test, afterEach, vi } from 'vitest';
-import { ShareLink, StageIframe, mailtoHref, canUseShareSheet } from '../hooks/share_link';
+import {
+  ShareLink,
+  StageIframe,
+  STAGE_READY_MESSAGE,
+  SETTLE_MS,
+  mailtoHref,
+  canUseShareSheet
+} from '../hooks/share_link';
 
 describe('mailtoHref', () => {
   test('percent-encodes the subject and body, spaces as %20', () => {
@@ -71,6 +78,7 @@ describe('ShareLink hook', () => {
 
     // The text already ends with the link; given a url too, targets paste it twice.
     expect(navigator.share).toHaveBeenCalledWith({ text: 'Hi Sam, pick a time: https://x.test/sam' });
+    // The sheet is not the mail client: no `via`, so it confirms as sent.
     expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'share_sheet' });
   });
 
@@ -97,7 +105,7 @@ describe('ShareLink hook', () => {
 
     expect(hrefs).toHaveLength(1);
     expect(hrefs[0]).toMatch(/^mailto:\?subject=Book%20a%20time%20with%20me&body=Hi%20Sam/);
-    expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'first_person' });
+    expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'first_person', via: 'mail' });
   });
 
   test('without a share sheet it opens the mail client', async () => {
@@ -108,7 +116,9 @@ describe('ShareLink hook', () => {
     await hook.share();
 
     expect(click).toHaveBeenCalledTimes(1);
-    expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'first_person' });
+    // Opening the mail client sends nothing yet, so it says how it went.
+    expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'first_person', via: 'mail' });
+    expect(hook.pushEvent).toHaveBeenCalledTimes(1);
   });
 
   test('the focus event focuses the button and pulses its card', () => {
@@ -124,6 +134,7 @@ describe('ShareLink hook', () => {
 describe('StageIframe hook', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    vi.useRealTimers();
   });
 
   function mount({ narrow = false, inStage = true } = {}) {
@@ -140,10 +151,61 @@ describe('StageIframe hook', () => {
     return { el, hook };
   }
 
-  test('marks the frame loaded on load', () => {
+  // What the framed page posts once its LiveView has painted.
+  function ready(el, { source = el.contentWindow, origin = window.location.origin, type = STAGE_READY_MESSAGE } = {}) {
+    window.dispatchEvent(new MessageEvent('message', { data: { type }, origin, source }));
+  }
+
+  test('load alone does not switch the page on: the miniature stays until it has painted', () => {
+    vi.useFakeTimers();
     const { el } = mount();
+
     el.dispatchEvent(new Event('load'));
+    vi.advanceTimersByTime(SETTLE_MS - 1);
+
+    expect(el.hasAttribute('data-loaded')).toBe(false);
+  });
+
+  test('the framed page reporting ready switches it on at once', () => {
+    vi.useFakeTimers();
+    const { el } = mount();
+
+    el.dispatchEvent(new Event('load'));
+    ready(el);
+
     expect(el.hasAttribute('data-loaded')).toBe(true);
+  });
+
+  test('a page that never reports ready is switched on after the settle delay', () => {
+    vi.useFakeTimers();
+    const { el } = mount();
+
+    el.dispatchEvent(new Event('load'));
+    vi.advanceTimersByTime(SETTLE_MS);
+
+    expect(el.hasAttribute('data-loaded')).toBe(true);
+  });
+
+  test('ignores a ready message from another window, origin or of another type', () => {
+    const { el } = mount();
+
+    ready(el, { source: window });
+    ready(el, { origin: 'https://evil.test' });
+    ready(el, { type: 'tymeslot-resize' });
+
+    expect(el.hasAttribute('data-loaded')).toBe(false);
+  });
+
+  test('stops listening once destroyed', () => {
+    vi.useFakeTimers();
+    const { el, hook } = mount();
+
+    el.dispatchEvent(new Event('load'));
+    hook.destroyed();
+    ready(el);
+    vi.advanceTimersByTime(SETTLE_MS);
+
+    expect(el.hasAttribute('data-loaded')).toBe(false);
   });
 
   test('keeps the loaded page when only the token changes, as on a reconnect', () => {

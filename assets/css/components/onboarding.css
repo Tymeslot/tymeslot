@@ -689,6 +689,31 @@
   filter: none;
 }
 
+/* The miniature stays under the real page until it has painted, then the
+   page cross-fades in over it, so the card is never an empty box while the
+   page loads. Both sit in the body's box; neither sizes it. */
+.stage-frame-wrap[data-mode="iframe"] .stage-frame-body {
+  position: relative;
+}
+
+.stage-frame-wrap[data-mode="iframe"] .stage-frame-miniature {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  transition: opacity 300ms ease-out;
+}
+
+.stage-frame-wrap[data-mode="iframe"] .stage-iframe {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-frame-body:has(.stage-iframe[data-loaded]) .stage-frame-miniature {
+  opacity: 0;
+}
+
 /* From lg the page fills the frame at the frame's own width, and the frame
    fills the stage's height, so it reads, and is used, as the page. */
 @media (min-width: 1024px) {
@@ -718,7 +743,7 @@
   }
 
   /* The caption under the strip spells the whole link out ("You're all
-     set - host/name is live"), so the strip keeps only the Live badge and
+     set: host/name is live"), so the strip keeps only the Live badge and
      Expand rather than a cut-off copy of the address. */
   .onboarding-stage[data-step="ready"] .stage-strip-url {
     visibility: hidden;
@@ -788,6 +813,63 @@
   gap: var(--spacing-1) var(--spacing-2);
 }
 
+/* The booking link leads the live step: whole, selectable, and wrapping
+   anywhere rather than ever cut off, with its Copy button beside it. */
+.onboarding-link-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--spacing-2) var(--spacing-3);
+}
+
+/* Beside Copy while that leaves it room; on the narrowest phones Copy
+   goes under it instead. */
+.onboarding-link-text {
+  flex: 1 1 12rem;
+  max-width: 100%;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-neutral-900);
+  /* Not `anywhere`: the address stays whole beside Copy where it fits,
+     and Copy goes under it where it does not. */
+  overflow-wrap: break-word;
+  user-select: all;
+}
+
+/* The first-person card's confirmation line: its room is kept while it is
+   empty, so the confirmation never moves the card. */
+.onboarding-kept-line {
+  min-height: 1.5rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary-700);
+}
+
+/* A keep button's label and its confirmation share one grid cell; the
+   hidden one keeps its room, so the swap never resizes the button. */
+.onboarding-kept-swap {
+  display: inline-grid;
+  min-width: 0;
+}
+
+.onboarding-keep-actions .onboarding-kept-swap {
+  text-align: start;
+}
+
+.onboarding-kept-swap > span {
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboarding-kept-swap[data-kept] .onboarding-kept-swap-label,
+.onboarding-kept-swap:not([data-kept]) .onboarding-kept-swap-done {
+  visibility: hidden;
+}
+
 /* One column: the question column is never wider than 480px, too narrow
    for two of these labels side by side. */
 .onboarding-keep-actions {
@@ -847,8 +929,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stage-iframe {
-    opacity: 1;
+  /* The page still waits until it has painted, then swaps in at once. */
+  .stage-iframe,
+  .stage-frame-wrap[data-mode="iframe"] .stage-frame-miniature {
     filter: none;
     transition: none;
   }

@@ -219,6 +219,46 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
                NavigationHandlers.handle_next_step(socket)
     end
 
+    # A debug route on an account that finished onboarding long ago has
+    # nothing left to complete, so Finish stays open without a keep, and
+    # does not pretend a keep happened.
+    defp unkept_ready_socket(live_action, user) do
+      %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_step: :ready,
+          kept_method: nil,
+          booking_page_live: true,
+          current_user: user,
+          live_action: live_action,
+          base_path: "/dev/onboarding"
+        }
+      }
+    end
+
+    test "a settled account finishes a debug route without a keep" do
+      socket = unkept_ready_socket(:debug_step, %{onboarding_completed_at: DateTime.utc_now()})
+
+      refute NavigationHandlers.finish_locked?(socket.assigns)
+
+      assert {:noreply, %{redirected: {:redirect, %{to: "/dev/onboarding"}}}} =
+               NavigationHandlers.handle_next_step(socket)
+    end
+
+    test "a host still in setup must keep the link first, debug route or not" do
+      for action <- [:debug_step, nil] do
+        socket = unkept_ready_socket(action, %{onboarding_completed_at: nil})
+        assert NavigationHandlers.finish_locked?(socket.assigns)
+        assert {:noreply, %{redirected: nil}} = NavigationHandlers.handle_next_step(socket)
+      end
+
+      # On the real route even a settled account keeps the lock: it only
+      # reaches the step within the reconnect hour, to keep its link.
+      settled = unkept_ready_socket(nil, %{onboarding_completed_at: DateTime.utc_now()})
+      assert NavigationHandlers.finish_locked?(settled.assigns)
+    end
+
     test "debug finish returns to the dev route" do
       assert NavigationHandlers.base_path("http://localhost:4000/dev/onboarding/ready") ==
                "/dev/onboarding"

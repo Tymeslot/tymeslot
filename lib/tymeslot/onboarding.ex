@@ -144,6 +144,25 @@ defmodule Tymeslot.Onboarding do
   def onboarding_completed?(%{onboarding_completed_at: nil}), do: false
   def onboarding_completed?(_user), do: true
 
+  # How long after completing onboarding the live step still counts as the
+  # host's own unfinished session: the life of the preview token that step
+  # shows. A reconnect (the mail app took the screen) comes back within
+  # minutes.
+  @rejoin_window_seconds 3600
+
+  @doc """
+  Whether the user completed onboarding within the last hour, so a
+  reconnect to the live step is still the session that completed it rather
+  than a visit to a settled account.
+  """
+  @spec recently_completed?(Ecto.Schema.t() | map(), DateTime.t()) :: boolean()
+  def recently_completed?(user, now \\ DateTime.utc_now())
+
+  def recently_completed?(%{onboarding_completed_at: %DateTime{} = at}, now),
+    do: DateTime.diff(now, at) <= @rejoin_window_seconds
+
+  def recently_completed?(_user, _now), do: false
+
   @doc """
   Marks the post-onboarding dashboard tour as seen. Idempotent.
   """

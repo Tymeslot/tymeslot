@@ -3,6 +3,7 @@ defmodule TymeslotWeb.OnboardingLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Availability
+  alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Hooks.ModalHook
@@ -55,13 +56,10 @@ defmodule TymeslotWeb.OnboardingLive do
   # opens Mail, the browser drops the socket, and the LiveView mounts again
   # when the host comes back. So `/onboarding/ready` stays open for an hour
   # after completion, the life of the preview token the step shows (a
-  # reconnect comes back within minutes); after that, as for every other
-  # step, a completed account goes to the dashboard and the wizard never
-  # reopens for a settled one.
-  @rejoin_window_seconds 3600
-
-  defp rejoining_live_step?(%{onboarding_completed_at: %DateTime{} = at}, %{"step" => "ready"}),
-    do: DateTime.diff(DateTime.utc_now(), at) <= @rejoin_window_seconds
+  # reconnect comes back within minutes, `Onboarding.recently_completed?/1`);
+  # after that, as for every other step, a completed account goes to the
+  # dashboard and the wizard never reopens for a settled one.
+  defp rejoining_live_step?(user, %{"step" => "ready"}), do: Onboarding.recently_completed?(user)
 
   defp rejoining_live_step?(_user, _params), do: false
 
@@ -274,7 +272,7 @@ defmodule TymeslotWeb.OnboardingLive do
   # ------------------------------------------------------------------
 
   def handle_event("keep_link", params, socket) do
-    NavigationHandlers.handle_keep_link(socket, params["method"])
+    NavigationHandlers.handle_keep_link(socket, params)
   end
 
   def handle_event("finish_locked", _params, socket) do

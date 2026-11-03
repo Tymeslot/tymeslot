@@ -15,7 +15,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
   alias Tymeslot.Repo
 
   defp log_in_fresh_host(conn) do
-    # No integrations, nothing ticked — every setup item is outstanding.
+    # No integrations, nothing ticked and the link never shared: every item
+    # but the two the setup wizard covers (theme, meeting types) is
+    # outstanding.
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
     _profile = insert(:profile, user: user)
     {log_in_user(conn, user), user}
@@ -72,6 +74,16 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
     end
   end
 
+  test "a host who finished setup sees the wizard's own items done", %{conn: conn} do
+    {conn, _user} = log_in_fresh_host(conn)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+
+    checklist = view |> element("[data-testid=onboarding-checklist]") |> render()
+    assert checklist =~ "2/5"
+    refute has_element?(view, "button[phx-value-id='theme']")
+    refute has_element?(view, "button[phx-value-id='meeting_types']")
+  end
+
   test "ticking an item greys it out immediately and persists", %{conn: conn} do
     {conn, user} = log_in_fresh_host(conn)
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
@@ -92,12 +104,12 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
     {conn, user} = log_in_fresh_host(conn)
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
-    view |> element("button[phx-value-id='theme']") |> render_click()
-    assert "theme" in Repo.get!(UserSchema, user.id).dashboard_setup_done_items
+    view |> element("button[phx-value-id='share']") |> render_click()
+    assert "share" in Repo.get!(UserSchema, user.id).dashboard_setup_done_items
 
-    view |> element("button[phx-value-id='theme']") |> render_click()
+    view |> element("button[phx-value-id='share']") |> render_click()
 
-    assert has_element?(view, "button[phx-value-id='theme'][aria-checked='false']")
+    assert has_element?(view, "button[phx-value-id='share'][aria-checked='false']")
     assert Repo.get!(UserSchema, user.id).dashboard_setup_done_items == []
   end
 

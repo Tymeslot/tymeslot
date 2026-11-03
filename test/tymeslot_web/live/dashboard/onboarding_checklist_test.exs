@@ -134,6 +134,42 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
       assert html =~ ~s(href="/dashboard/meeting-settings")
     end
 
+    # The setup wizard has the host pick a look, set up a meeting and keep
+    # the link: none of that is left to do once it is finished.
+    test "a host who just finished setup has the wizard's items done" do
+      html =
+        render_component(&OnboardingChecklist.onboarding_checklist/1,
+          integration_status: Map.put(@no_integrations, :link_shared, true),
+          current_user: user(%{onboarding_completed_at: DateTime.utc_now(:second)}),
+          profile: profile()
+        )
+
+      # Theme, meeting types and sharing; the calendar and video stay open.
+      assert html =~ "3/5"
+      refute html =~ ~s(href="/dashboard/theme")
+      refute html =~ ~s(href="/dashboard/meeting-settings")
+      assert html =~ ~s(href="/dashboard/integrations?tab=calendars")
+      assert html =~ ~s(href="/dashboard/integrations?tab=video")
+
+      # Done from real state, so there is no tick to undo.
+      refute html =~ ~s(phx-value-id="theme")
+      refute html =~ ~s(phx-value-id="meeting_types")
+      refute html =~ ~s(phx-value-id="share")
+    end
+
+    test "a link kept or shared anywhere completes the share item on its own" do
+      html =
+        render_component(&OnboardingChecklist.onboarding_checklist/1,
+          integration_status: Map.put(@no_integrations, :link_shared, true),
+          current_user: user(),
+          profile: profile()
+        )
+
+      assert html =~ "1/5"
+      refute html =~ ~s(phx-value-id="share")
+      assert html =~ ~s(phx-value-id="theme")
+    end
+
     test "share item copies the public booking link when the page is live" do
       html =
         render_component(&OnboardingChecklist.onboarding_checklist/1,

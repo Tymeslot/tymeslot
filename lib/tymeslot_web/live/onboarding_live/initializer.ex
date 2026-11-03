@@ -150,14 +150,18 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     ]
   end
 
-  # A host who kept their link and comes back to the live step (a reconnect
-  # after the mail app took the screen) finds it kept: the confirmation and
-  # an open "Go to dashboard". Which way they kept it is not stored, so the
-  # confirmation says only that it is saved.
-  defp restore_kept_link(socket, %{onboarding_completed_at: %DateTime{}}, %{
-         booking_link_first_shared_at: %DateTime{}
-       }),
-       do: Component.assign(socket, :kept_method, "restored")
+  # A host who kept their link and comes back to the live step within the
+  # hour (a reconnect after the mail app took the screen, the window
+  # `OnboardingLive` reopens the step for) finds it kept: the confirmation
+  # and an open "Go to dashboard". Which way they kept it is not stored, so
+  # the confirmation says only that it is saved. Any later visit (a debug
+  # route on a settled account) starts with nothing confirmed, since this
+  # visit has kept nothing yet.
+  defp restore_kept_link(socket, user, %{booking_link_first_shared_at: %DateTime{}}) do
+    if Onboarding.recently_completed?(user),
+      do: Component.assign(socket, :kept_method, "restored"),
+      else: socket
+  end
 
   defp restore_kept_link(socket, _user, _profile), do: socket
 

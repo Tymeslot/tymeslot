@@ -187,7 +187,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   def caption(%{current_step: :ready, booking_page_live: true} = assigns) do
     # Only a real address is announced as live, never the placeholder name.
     if String.trim(assigns.username || "") != "" do
-      dgettext("onboarding_wizard", "You're all set - %{link} is live",
+      dgettext("onboarding_wizard", "You're all set: %{link} is live",
         link: link_text(assigns.booking_host, assigns.username)
       )
     end

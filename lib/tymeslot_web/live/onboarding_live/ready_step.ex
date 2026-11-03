@@ -3,18 +3,25 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   Final step of the onboarding flow: the page is live, and the host keeps
   the link.
 
-  The stage shows the host's real booking page (`StageFrame`, iframe mode),
-  so "Try booking yourself" leads there. The question column then asks for
-  one keep action, any of which completes onboarding
-  (`NavigationHandlers.handle_keep_link/2`):
+  The link itself leads the column, in full and selectable, with a one-tap
+  Copy beside it. The stage shows the host's real booking page
+  (`StageFrame`, iframe mode), so "Try booking yourself" leads there. The
+  question column then asks for one keep action, any of which completes
+  onboarding (`NavigationHandlers.handle_keep_link/2`):
 
+    * **Copy.** The link's own Copy button.
     * **First person.** An optional name and "Send them your link". The
       message is built here, server-side, and handed to the `ShareLink`
       hook, which opens the device's share sheet where there is one and the
       mail client otherwise. On a desktop, "Copy message" copies it instead.
-    * **For later.** Email the link to yourself, copy it, copy an email
-      signature line, or (from `lg`) scan a QR code to open the page on a
-      phone, which counts once the phone opens it.
+    * **For later.** Email the link to yourself, copy an email signature
+      line, or (from `lg`) scan a QR code to open the page on a phone, which
+      counts once the phone opens it.
+
+  Each confirmation shows where its button is: a keep button's own label
+  gives way to it (`kept_swap/1`, which reserves the wider of the two, so
+  nothing moves), and the first-person card keeps a line for its own. The
+  layout's one polite live region announces it as well.
 
   "Go to dashboard" stays locked (`aria-disabled`, still focusable) until a
   keep action, and then only navigates. A page that is not live (no
@@ -63,6 +70,11 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   def kept_label(method) when method in ["first_person", "share_sheet"],
     do: dgettext("onboarding_wizard", "Sent")
 
+  # The mail client was opened with the message: nothing is sent until the
+  # host sends it there.
+  def kept_label("mail_app"), do: dgettext("onboarding_wizard", "Opened in your email app")
+  def kept_label("message_copy"), do: dgettext("onboarding_wizard", "Message copied")
+
   def kept_label("email_me"), do: dgettext("onboarding_wizard", "Emailed to you")
   def kept_label("copy"), do: dgettext("onboarding_wizard", "Copied")
   def kept_label("signature"), do: dgettext("onboarding_wizard", "Signature copied")
@@ -80,7 +92,8 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
     explains why, with a way back to the calendar step. `nil` on the
     disconnected render, where it is not known yet: the actions stay greyed
     out without a warning, so a live page never first renders as offline.
-  * `kept_method` - The latest keep action, or `nil` before the first
+  * `kept_method` - The latest keep action's confirmation (a key of
+    `kept_label/1`), or `nil` before the first
   * `first_person_name` - The name typed for the first person
   * `email` - The host's own address, for "Sent to"
   * `handoff_qr` - The QR code's data URI once shown, else `nil`
@@ -104,11 +117,39 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
       assign(assigns,
         share_text: share_text(assigns.first_person_name, assigns.booking_url),
         signature: signature(assigns.booking_url),
+        link_parts: link_parts(assigns.booking_url),
         actions_off: assigns.page_live != true
       )
 
     ~H"""
     <div class="space-y-6">
+      <div id="onboarding-link-hero" class="onboarding-link-hero">
+        <%!-- It breaks before the name first, then anywhere, but is never
+             cut off. --%>
+        <p id="onboarding-booking-link" class="onboarding-link-text">
+          {elem(@link_parts, 0)}<wbr />{elem(@link_parts, 1)}
+        </p>
+        <.action_button
+          id="onboarding-keep-copy"
+          variant={:secondary}
+          size={:sm}
+          icon={if @kept_method == "copy", do: "hero-check-circle-mini", else: "hero-link"}
+          class="shrink-0"
+          disabled={@actions_off}
+          phx-hook="CopyOnClick"
+          phx-click="keep_link"
+          phx-value-method="copy"
+          data-copy-text={@booking_url}
+          data-copy-feedback={dgettext("onboarding_wizard", "Copied")}
+        >
+          <.kept_swap
+            kept={@kept_method == "copy"}
+            label={dgettext("onboarding_wizard", "Copy link")}
+            done={kept_label("copy")}
+          />
+        </.action_button>
+      </div>
+
       <.info_box :if={@page_live == false} variant={:warning}>
         <div id="onboarding-page-offline-warning" class="space-y-3">
           <p class="font-semibold">
@@ -117,7 +158,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           <p>
             {dgettext(
               "onboarding_wizard",
-              "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one now, or later from Integrations on your dashboard."
+              "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one to go live."
             )}
           </p>
           <.action_button
@@ -197,6 +238,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
             phx-hook="CopyOnClick"
             phx-click="keep_link"
             phx-value-method="first_person"
+            phx-value-via="copy"
             data-copy-text={@share_text}
             data-copy-feedback={dgettext("onboarding_wizard", "Message copied")}
           >
@@ -204,13 +246,17 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           </button>
         </div>
 
-        <p
-          :if={@kept_method}
-          id="onboarding-kept"
-          class="flex items-center gap-2 text-token-sm font-semibold text-turquoise-700"
-        >
-          <.icon name="hero-check-circle-mini" class="w-5 h-5 shrink-0" />
-          {kept_label(@kept_method)}
+        <%!-- Reserved whether or not there is anything to confirm, so the
+             confirmation appearing never moves the card. --%>
+        <p class="onboarding-kept-line" data-role="first-person-kept">
+          <span
+            :if={card_confirmation?(@kept_method)}
+            id="onboarding-kept"
+            class="inline-flex items-center gap-2"
+          >
+            <.icon name="hero-check-circle-mini" class="w-5 h-5 shrink-0" />
+            {kept_label(@kept_method)}
+          </span>
         </p>
       </.glass_morphism_card>
 
@@ -222,30 +268,23 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           <.action_button
             id="onboarding-keep-email"
             variant={:secondary}
-            icon="hero-envelope"
+            icon={if @kept_method == "email_me", do: "hero-check-circle-mini", else: "hero-envelope"}
             disabled={@actions_off}
             phx-click="keep_link"
             phx-value-method="email_me"
           >
-            {dgettext("onboarding_wizard", "Email me my link")}
-          </.action_button>
-          <.action_button
-            id="onboarding-keep-copy"
-            variant={:secondary}
-            icon="hero-link"
-            disabled={@actions_off}
-            phx-hook="CopyOnClick"
-            phx-click="keep_link"
-            phx-value-method="copy"
-            data-copy-text={@booking_url}
-            data-copy-feedback={dgettext("onboarding_wizard", "Copied")}
-          >
-            {dgettext("onboarding_wizard", "Copy link")}
+            <.kept_swap
+              kept={@kept_method == "email_me"}
+              label={dgettext("onboarding_wizard", "Email me my link")}
+              done={email_sent_label(@email)}
+            />
           </.action_button>
           <.action_button
             id="onboarding-keep-signature"
             variant={:secondary}
-            icon="hero-pencil-square"
+            icon={
+              if @kept_method == "signature", do: "hero-check-circle-mini", else: "hero-pencil-square"
+            }
             disabled={@actions_off}
             phx-hook="CopyOnClick"
             phx-click="keep_link"
@@ -253,30 +292,30 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
             data-copy-text={@signature}
             data-copy-feedback={dgettext("onboarding_wizard", "Signature copied")}
           >
-            {dgettext("onboarding_wizard", "Add to email signature")}
+            <.kept_swap
+              kept={@kept_method == "signature"}
+              label={dgettext("onboarding_wizard", "Add to email signature")}
+              done={kept_label("signature")}
+            />
           </.action_button>
           <%!-- A phone is already the phone: the QR code is for a desktop. --%>
           <.action_button
             id="onboarding-keep-phone"
             variant={:secondary}
-            icon="hero-qr-code"
+            icon={if @kept_method == "phone", do: "hero-check-circle-mini", else: "hero-qr-code"}
             class="onboarding-keep-phone"
             disabled={@actions_off or not @handoff_ready}
             phx-click="show_handoff_qr"
             aria-expanded={to_string(not is_nil(@handoff_qr))}
             aria-controls="onboarding-handoff-qr"
           >
-            {dgettext("onboarding_wizard", "Open on your phone")}
+            <.kept_swap
+              kept={@kept_method == "phone"}
+              label={dgettext("onboarding_wizard", "Open on your phone")}
+              done={kept_label("phone")}
+            />
           </.action_button>
         </div>
-
-        <p
-          :if={@kept_method == "email_me" and @email}
-          id="onboarding-email-sent"
-          class="text-token-sm text-tymeslot-600"
-        >
-          {dgettext("onboarding_wizard", "Sent to %{email}", email: @email)}
-        </p>
 
         <.info_box :if={@kept_method == "signature"} variant={:info} class="mb-0 p-4">
           <ul id="onboarding-signature-help" class="space-y-1 text-token-sm">
@@ -313,6 +352,20 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
         </div>
       </div>
 
+      <p
+        :if={@page_live}
+        id="onboarding-what-next"
+        class="flex items-start gap-2 text-token-sm text-tymeslot-600"
+      >
+        <.icon name="hero-bell-alert-mini" class="w-5 h-5 shrink-0 text-turquoise-600" />
+        <span>
+          {dgettext(
+            "onboarding_wizard",
+            "When someone books, you'll get an email and the meeting appears in your dashboard."
+          )}
+        </span>
+      </p>
+
       <div class="onboarding-finish">
         <.action_button
           id="onboarding-finish"
@@ -336,6 +389,40 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
       </div>
     </div>
     """
+  end
+
+  # A keep button's label, which gives way to its confirmation once that
+  # button has kept the link. Both are laid in the same grid cell and the
+  # hidden one keeps its room, so the button never changes size.
+  attr :kept, :boolean, required: true
+  attr :label, :string, required: true
+  attr :done, :string, required: true
+
+  defp kept_swap(assigns) do
+    ~H"""
+    <span class="onboarding-kept-swap" data-kept={@kept}>
+      <span class="onboarding-kept-swap-label" aria-hidden={@kept && "true"}>{@label}</span>
+      <span class="onboarding-kept-swap-done" aria-hidden={!@kept && "true"}>{@done}</span>
+    </span>
+    """
+  end
+
+  # The confirmations the first-person card shows on its own line: its own
+  # two ways to send, and the link kept on an earlier connection.
+  defp card_confirmation?(method),
+    do: method in ~w(first_person share_sheet mail_app message_copy restored)
+
+  defp email_sent_label(email) when is_binary(email),
+    do: dgettext("onboarding_wizard", "Sent to %{email}", email: email)
+
+  defp email_sent_label(_email), do: kept_label("email_me")
+
+  # The link as the address and the name, split before the last `/`.
+  defp link_parts(url) do
+    case String.split(url, ~r{(?=/[^/]*$)}, parts: 2) do
+      [address, name] -> {address, name}
+      [whole] -> {whole, ""}
+    end
   end
 
   defp signature(booking_url),

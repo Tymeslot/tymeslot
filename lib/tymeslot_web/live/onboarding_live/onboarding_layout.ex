@@ -120,7 +120,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
               tabindex="-1"
               phx-mounted={@focus_heading && JS.focus()}
             >
-              {StepConfig.step_title(@current_step)}
+              {StepConfig.step_title(@current_step, @booking_page_live)}
             </h1>
             <p class="onboarding-step-description">
               {StepConfig.step_description(@current_step, @booking_page_live)}

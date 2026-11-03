@@ -8,7 +8,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   Two of the items complete themselves from real state (a connected calendar or
   video provider tick automatically); the rest, plus any the host wants to skip
   (e.g. video for in-person-only scheduling), can be ticked off by hand and grey
-  out immediately. The whole widget can also be closed. Both the per-item ticks
+  out immediately. A hand-tickable item the host has already done elsewhere is
+  done without a tick: the theme and meeting types once the setup wizard is
+  finished (it covers both), and sharing once the link has been kept or shared. The whole widget can also be closed. Both the per-item ticks
   and the global close persist on the user via `Tymeslot.Onboarding`.
 
   Gate rendering on `visible?/2`: the widget hides once every item is done or the
@@ -121,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       description={
         dgettext(
           "onboarding_wizard",
-          "A few recommended steps - tick off the ones you don't need."
+          "A few recommended steps. Tick off the ones you don't need."
         )
       }
     >
@@ -313,15 +315,26 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     manual = current_user.dashboard_setup_done_items || []
 
     Enum.map(catalog(), fn item ->
-      manual? = is_nil(item.auto)
-      # Deterministic items complete only from real state; manual ones only from
-      # the host's own ticks — the two never mix.
-      done =
-        if manual?, do: item.key in manual, else: Map.get(integration_status, item.auto, false)
-
-      Map.merge(item, %{manual: manual?, done: done})
+      if is_nil(item.auto) do
+        # A hand-tickable item the host has already done elsewhere is done
+        # without a tick, and offers none: unticking it could not undo it.
+        settled? = settled?(item.key, current_user, integration_status)
+        Map.merge(item, %{manual: not settled?, done: settled? or item.key in manual})
+      else
+        # Deterministic items complete only from real state, never by hand.
+        Map.merge(item, %{manual: false, done: Map.get(integration_status, item.auto, false)})
+      end
     end)
   end
+
+  # The setup wizard has the host choose a look and set up a meeting, so a
+  # host who finished it has done both; the link counts once it has been
+  # kept or shared (the profile's first share, `link_shared`), wherever that
+  # happened.
+  defp settled?(key, user, _status) when key in ["theme", "meeting_types"],
+    do: match?(%{onboarding_completed_at: %DateTime{}}, user)
+
+  defp settled?("share", _user, status), do: Map.get(status, :link_shared, false)
 
   # Static definition of the setup items. `auto` names the `integration_status`
   # key that completes the item automatically, or `nil` for manual-only items.

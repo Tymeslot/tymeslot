@@ -397,20 +397,10 @@ msgstr "Ви вже завершили початкове налаштуванн
 msgid "your-username"
 msgstr "vashe-imya-korystuvacha"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "A few recommended steps - tick off the ones you don't need."
-msgstr "Кілька рекомендованих кроків - позначте ті, які вам не потрібні."
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "One click - connect %{email}"
 msgstr "В один клік - підключити %{email}"
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "You're all set - %{link} is live"
-msgstr "Усе готово - посилання %{link} активне"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
@@ -431,11 +421,6 @@ msgstr "Який із цих описів про вас?"
 #, elixir-autogen, elixir-format
 msgid "Book a time with me"
 msgstr "Забронюйте зустріч зі мною"
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one now, or later from Integrations on your dashboard."
-msgstr "Робочий календар не підключено, тож кожен, хто відкриє ваше посилання, побачить, що сторінка недоступна. Підключіть його зараз або пізніше в розділі «Інтеграції» на панелі керування."
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
@@ -992,3 +977,33 @@ msgstr "Ваша сторінка готова приймати бронюван
 #, elixir-autogen, elixir-format
 msgid "Your link is saved"
 msgstr "Ваше посилання збережено"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "A few recommended steps. Tick off the ones you don't need."
+msgstr "Кілька рекомендованих кроків. Позначте ті, які вам не потрібні."
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Almost live"
+msgstr "Майже онлайн"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Opened in your email app"
+msgstr "Відкрито у вашому поштовому застосунку"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "When someone books, you'll get an email and the meeting appears in your dashboard."
+msgstr "Коли хтось забронює зустріч, ви отримаєте лист, а зустріч з’явиться на вашій панелі."
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "You're all set: %{link} is live"
+msgstr "Усе готово: посилання %{link} активне"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one to go live."
+msgstr "Робочий календар не підключено, тож кожен, хто відкриє ваше посилання, побачить, що сторінка недоступна. Підключіть його, щоб вийти онлайн."

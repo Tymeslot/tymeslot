@@ -397,20 +397,10 @@ msgstr "Sie haben das Onboarding bereits abgeschlossen."
 msgid "your-username"
 msgstr "ihr-nutzername"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "A few recommended steps - tick off the ones you don't need."
-msgstr "Ein paar empfohlene Schritte - haken Sie ab, was Sie nicht benötigen."
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "One click - connect %{email}"
 msgstr "Ein Klick - %{email} verbinden"
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "You're all set - %{link} is live"
-msgstr "Alles bereit - %{link} ist live"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
@@ -431,11 +421,6 @@ msgstr "Welche dieser Beschreibungen passt zu Ihnen?"
 #, elixir-autogen, elixir-format
 msgid "Book a time with me"
 msgstr "Termin mit mir buchen"
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one now, or later from Integrations on your dashboard."
-msgstr "Es ist kein funktionierender Kalender verbunden, daher sieht jeder, der Ihren Link öffnet, dass die Seite nicht verfügbar ist. Verbinden Sie jetzt einen oder später unter Integrationen in Ihrem Dashboard."
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
@@ -989,3 +974,33 @@ msgstr "Ihre Seite ist bereit für Buchungen. Probieren Sie sie selbst aus und s
 #, elixir-autogen, elixir-format
 msgid "Your link is saved"
 msgstr "Ihr Link ist gespeichert"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "A few recommended steps. Tick off the ones you don't need."
+msgstr "Ein paar empfohlene Schritte. Haken Sie ab, was Sie nicht benötigen."
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Almost live"
+msgstr "Fast online"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Opened in your email app"
+msgstr "In Ihrer E-Mail-App geöffnet"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "When someone books, you'll get an email and the meeting appears in your dashboard."
+msgstr "Wenn jemand bucht, erhalten Sie eine E-Mail und der Termin erscheint in Ihrem Dashboard."
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "You're all set: %{link} is live"
+msgstr "Alles bereit: %{link} ist live"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one to go live."
+msgstr "Es ist kein funktionierender Kalender verbunden, daher sieht jeder, der Ihren Link öffnet, dass die Seite nicht verfügbar ist. Verbinden Sie einen, um online zu gehen."

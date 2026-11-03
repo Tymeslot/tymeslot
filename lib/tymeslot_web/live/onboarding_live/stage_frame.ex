@@ -20,9 +20,11 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
   miniature (`iframe_src`, an owner-preview address whose bookings are
   simulated), so it is no longer decorative: only its browser bar stays
   hidden from assistive technology, and the page is an iframe titled "Your
-  booking page". It switches on once it has loaded (the `StageIframe` hook
-  sets `data-loaded`): a brief fade from grey into colour, with the Live
-  badge lighting up, and the final state at once under reduced motion. From
+  booking page". The miniature stays beneath it until the page has painted
+  (the `StageIframe` hook sets `data-loaded` once the framed page's
+  LiveView has joined, not on the `load` event, which fires before that),
+  then the page cross-fades in from grey over it, with the Live badge
+  lighting up, and swaps at once under reduced motion. From
   `lg` it fills the frame at the frame's own width, so it reads as the page
   and is used like one. Below `lg` the card is a glimpse that never takes
   the touch (a page scrolling inside a short card is a trap); the Expand
@@ -56,7 +58,7 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
 
   attr :iframe_src, :string,
     default: nil,
-    doc: "the host's real page, shown instead of `inner_block` on the live step"
+    doc: "the host's real page, shown over `inner_block` once it has painted on the live step"
 
   slot :inner_block, required: true
 
@@ -81,8 +83,17 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
           </div>
         </div>
         <div class="stage-frame-body">
+          <%!-- The miniature stays under the real page until that page has
+               painted, so the card is never an empty box while it loads. --%>
+          <div
+            class="stage-frame-miniature"
+            data-role="stage-frame-miniature"
+            aria-hidden={@iframe_src && "true"}
+            inert={!is_nil(@iframe_src)}
+          >
+            {render_slot(@inner_block)}
+          </div>
           <.page_iframe :if={@iframe_src} id="onboarding-stage-iframe" src={@iframe_src} />
-          {!@iframe_src && render_slot(@inner_block)}
         </div>
       </div>
 

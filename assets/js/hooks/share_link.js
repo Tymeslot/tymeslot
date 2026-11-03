@@ -13,7 +13,9 @@
  *     `AbortError` (the sheet dismissed) counts as nothing; any other error
  *     falls through to the mail client.
  *   - Otherwise it opens a new message in the mail client (`mailto:`), which
- *     counts as `first_person`.
+ *     counts as `first_person` with `via: "mail"`: the keep counts, but
+ *     nothing is sent until the host sends it there, so the confirmation
+ *     says the mail app opened rather than "Sent".
  *
  * It also answers the server's `share_link:focus` event, sent when the host
  * presses the locked "Go to dashboard": the button takes the focus and its
@@ -84,7 +86,7 @@ export const ShareLink = {
     const link = document.createElement("a")
     link.href = mailtoHref(this.el.dataset.shareSubject || "", text)
     link.click()
-    this.pushEvent("keep_link", { method: "first_person" })
+    this.pushEvent("keep_link", { method: "first_person", via: "mail" })
   },
 
   focusAndPulse() {
@@ -104,8 +106,13 @@ export const ShareLink = {
 /**
  * Stage iframe: the host's real page on the onboarding stage.
  *
- *   - Marks it loaded (`data-loaded`), which is what switches the live stage
- *     on.
+ *   - Marks it loaded (`data-loaded`) once the page has painted, which is
+ *     what cross-fades it in over the miniature beneath it and switches the
+ *     live stage on. The `load` event is too early: it fires once the static
+ *     render's resources are in, before the page's LiveView has joined and
+ *     drawn what it loads on connect. So the framed page says when it has
+ *     (`iframe_embed.js` posts `STAGE_READY_MESSAGE` on the stage preview),
+ *     and a page that never says so is switched on `SETTLE_MS` after `load`.
  *   - Owns `src`: a reconnect renders a freshly signed preview token, and
  *     reloading the page for it would replay the switch-on and throw away a
  *     test booking in progress, so it loads `data-src` only when `data-page`
@@ -119,11 +126,31 @@ export const ShareLink = {
  */
 const NARROW_QUERY = "(max-width: 1023.98px)"
 
+/** What the framed stage preview posts once its LiveView has painted. */
+export const STAGE_READY_MESSAGE = "tymeslot-stage-ready"
+
+/** How long after `load` a page that never reports ready is shown anyway. */
+export const SETTLE_MS = 2500
+
 export const StageIframe = {
   mounted() {
     this.page = this.el.dataset.page
-    this.onLoad = () => this.el.setAttribute("data-loaded", "")
+    this.settle = null
+
+    this.onLoad = () => {
+      this.clearSettle()
+      this.settle = setTimeout(() => this.markLoaded(), SETTLE_MS)
+    }
     this.el.addEventListener("load", this.onLoad)
+
+    // Only this frame's own page, from this origin, may switch it on.
+    this.onMessage = (event) => {
+      if (event.source !== this.el.contentWindow) return
+      if (event.origin !== window.location.origin) return
+      if (!event.data || event.data.type !== STAGE_READY_MESSAGE) return
+      this.markLoaded()
+    }
+    window.addEventListener("message", this.onMessage)
 
     this.media = window.matchMedia(NARROW_QUERY)
     this.onMedia = () => this.syncTabindex()
@@ -134,6 +161,7 @@ export const StageIframe = {
   updated() {
     if (this.el.dataset.page !== this.page) {
       this.page = this.el.dataset.page
+      this.clearSettle()
       this.el.removeAttribute("data-loaded")
       this.el.src = this.el.dataset.src
     }
@@ -141,8 +169,20 @@ export const StageIframe = {
   },
 
   destroyed() {
+    this.clearSettle()
     this.el.removeEventListener("load", this.onLoad)
+    window.removeEventListener("message", this.onMessage)
     this.media.removeEventListener("change", this.onMedia)
+  },
+
+  markLoaded() {
+    this.clearSettle()
+    this.el.setAttribute("data-loaded", "")
+  },
+
+  clearSettle() {
+    if (this.settle) clearTimeout(this.settle)
+    this.settle = null
   },
 
   syncTabindex() {

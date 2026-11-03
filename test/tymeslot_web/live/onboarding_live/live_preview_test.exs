@@ -102,7 +102,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreviewTest do
     end
 
     test "the last step keeps the live page's caption" do
-      assert caption(:ready, @busy_week) == "You're all set - tymeslot.test/ada is live"
+      assert caption(:ready, @busy_week) == "You're all set: tymeslot.test/ada is live"
     end
   end
 

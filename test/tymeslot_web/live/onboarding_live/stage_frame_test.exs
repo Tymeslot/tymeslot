@@ -125,9 +125,17 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
 
     html = view |> click_continue() |> render()
 
-    assert html |> find(".onboarding-step-title") |> Floki.text() =~ "You're live"
+    # Not live, so it says so: no "You're live", no badge, no caption
+    # claiming the address is live, and one way to fix it.
+    title = html |> find(".onboarding-step-title") |> Floki.text()
+    assert title =~ "Almost live"
+    refute title =~ "You're live"
     assert find(html, ~s([data-role="stage-live-badge"])) == []
     assert find(html, ".onboarding-stage-caption") == []
+    refute html =~ "is live"
+
+    assert [_fix] =
+             find(html, "#onboarding-page-offline-warning button#onboarding-return-to-calendar")
   end
 
   test "the caption tells the week on the calendar and meeting steps, and the address on ready",

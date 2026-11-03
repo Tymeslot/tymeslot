@@ -120,6 +120,15 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def step_title(:ready), do: dgettext("onboarding_wizard", "You're live")
 
   @doc """
+  Returns the step title, given whether the booking page is live. Only the
+  final step reads differently: a page that refuses visitors is not live, so
+  it says so.
+  """
+  @spec step_title(step(), boolean() | nil) :: String.t()
+  def step_title(:ready, false), do: dgettext("onboarding_wizard", "Almost live")
+  def step_title(step, _booking_page_live), do: step_title(step)
+
+  @doc """
   Returns the short label the progress indicator shows for a step.
   """
   @spec progress_label(step()) :: String.t()

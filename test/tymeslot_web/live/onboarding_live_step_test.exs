@@ -16,6 +16,7 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
   import TymeslotWeb.OnboardingTestHelpers
 
   alias Ecto.Changeset
+  alias Phoenix.LiveView.Socket
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles.ProfileSchema
@@ -23,6 +24,7 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
   alias Tymeslot.Utils.QrCode
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Live.Scheduling.PreviewMode
+  alias TymeslotWeb.OnboardingLive.Initializer
 
   setup :verify_on_exit!
 
@@ -39,6 +41,27 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
     do: Repo.get_by!(ProfileSchema, user_id: user.id).booking_link_first_shared_at
 
   defp profile(user), do: Repo.get_by!(ProfileSchema, user_id: user.id)
+
+  # Each confirmation shows on the button that was pressed: its label gives
+  # way to it, so nothing else on the page moves.
+  defp kept_on?(view, id, text) do
+    has_element?(
+      view,
+      "##{id} .onboarding-kept-swap[data-kept] .onboarding-kept-swap-done",
+      text
+    )
+  end
+
+  # A disconnected socket as the onboarding LiveView mounts it.
+  defp mount_socket(user),
+    do: %Socket{assigns: %{__changed__: %{}, flash: %{}, current_user: user}}
+
+  # The account finished onboarding `seconds` from now (negative: ago).
+  defp settle(user, seconds) do
+    Repo.get!(UserSchema, user.id)
+    |> Changeset.change(onboarding_completed_at: DateTime.add(DateTime.utc_now(:second), seconds))
+    |> Repo.update!()
+  end
 
   describe "the stage" do
     test "shows the host's real page in preview mode", %{view: view, user: user} do
@@ -58,6 +81,24 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       refute src =~ "handoff"
 
       assert has_element?(view, ~s(iframe#onboarding-stage-iframe[title="Your booking page"]))
+    end
+
+    test "keeps the miniature under the page until the page has painted", %{view: view} do
+      doc = view |> render() |> Floki.parse_document!()
+      body = Floki.find(doc, ~s([data-role="onboarding-stage"] .stage-frame-body))
+
+      # Both in the card: the iframe over the miniature, which assistive
+      # technology skips, since the page itself is what it reads.
+      assert [_iframe] = Floki.find(body, "iframe#onboarding-stage-iframe")
+
+      assert [_miniature] =
+               Floki.find(
+                 body,
+                 ~s([data-role="stage-frame-miniature"][aria-hidden="true"][inert] [data-role="stage-miniature"])
+               )
+
+      # The body renders nothing but those two: no stray text beside them.
+      assert body |> Floki.text(deep: false) |> String.trim() == ""
     end
 
     test "a new username rebuilds the page the stage shows", %{view: view, user: user} do
@@ -131,17 +172,83 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       end
     end
 
-    test "each button carries its own method", %{view: view, user: user} do
+    test "each button carries its own method and confirms on itself", %{view: view, user: user} do
+      refute has_element?(view, ".onboarding-kept-swap[data-kept]")
+
       view |> element("#onboarding-keep-copy") |> render_click()
-      assert has_element?(view, "#onboarding-kept", "Copied")
+      assert kept_on?(view, "onboarding-keep-copy", "Copied")
+      refute has_element?(view, "#onboarding-kept")
       assert %DateTime{} = completed_at(user)
 
       view |> element("#onboarding-keep-signature") |> render_click()
-      assert has_element?(view, "#onboarding-kept", "Signature copied")
+      assert kept_on?(view, "onboarding-keep-signature", "Signature copied")
+      refute kept_on?(view, "onboarding-keep-copy", "Copied")
       assert has_element?(view, "#onboarding-signature-help", "Gmail")
 
       view |> element("#onboarding-copy-message") |> render_click()
+      assert has_element?(view, "#onboarding-first-person #onboarding-kept", "Message copied")
+      refute has_element?(view, ".onboarding-kept-swap[data-kept]")
+
+      assert has_element?(view, ~s([data-role="stage-announcement"]), "Message copied")
+    end
+
+    test "the share sheet confirms as sent, the mail app as opened", %{view: view, user: user} do
+      render_hook(view, "keep_link", %{"method" => "share_sheet"})
       assert has_element?(view, "#onboarding-kept", "Sent")
+
+      # The mail client opened with the message: it still counts as a
+      # first-person keep, but nothing has been sent yet.
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
+      render_hook(view, "keep_link", %{"method" => "first_person", "via" => "mail"})
+
+      assert has_element?(view, "#onboarding-kept", "Opened in your email app")
+      refute has_element?(view, "#onboarding-kept", "Sent")
+      assert has_element?(view, ~s([data-role="stage-announcement"]), "Opened in your email app")
+
+      user_id = user.id
+
+      assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{},
+                       %{user_id: ^user_id, method: "first_person"}}
+    end
+
+    test "an unknown via confirms as a plain first-person keep", %{view: view} do
+      render_hook(view, "keep_link", %{"method" => "first_person", "via" => "pigeon"})
+      assert has_element?(view, "#onboarding-kept", "Sent")
+    end
+
+    test "the link leads the step, whole, with Copy beside it", %{view: view, user: user} do
+      username = profile(user).username
+      doc = view |> render() |> Floki.parse_document!()
+
+      # Above the first-person card, right under the heading.
+      [hero] = Floki.find(doc, "#onboarding-link-hero")
+      link = hero |> Floki.find("#onboarding-booking-link") |> Floki.text() |> String.trim()
+      assert link =~ ~r{^https?://.+/#{username}$}
+
+      assert [_copy] =
+               Floki.find(
+                 hero,
+                 ~s(button#onboarding-keep-copy[phx-hook="CopyOnClick"][phx-value-method="copy"][data-copy-text="#{link}"])
+               )
+
+      ids =
+        doc
+        |> Floki.find("#onboarding-link-hero, #onboarding-first-person")
+        |> Enum.map(&Floki.attribute(&1, "id"))
+
+      assert ids == [["onboarding-link-hero"], ["onboarding-first-person"]]
+
+      # The keep-for-later row no longer repeats it.
+      assert Floki.find(doc, ".onboarding-keep-actions #onboarding-keep-copy") == []
+      assert length(Floki.find(doc, "button#onboarding-keep-copy")) == 1
+    end
+
+    test "says what happens after the first booking", %{view: view} do
+      assert has_element?(
+               view,
+               "#onboarding-what-next",
+               "When someone books, you'll get an email and the meeting appears in your dashboard."
+             )
     end
 
     test "copy buttons copy the link and the signature line", %{view: view, user: user} do
@@ -163,8 +270,8 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
         args: %{"action" => "send_booking_link_email", "user_id" => user.id}
       )
 
-      assert has_element?(view, "#onboarding-kept", "Emailed to you")
-      assert has_element?(view, "#onboarding-email-sent", "Sent to #{user.email}")
+      assert kept_on?(view, "onboarding-keep-email", "Sent to #{user.email}")
+      assert has_element?(view, ~s([data-role="stage-announcement"]), "Emailed to you")
       assert %DateTime{} = completed_at(user)
     end
 
@@ -248,13 +355,29 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       refute has_element?(again, "#onboarding-finish[aria-disabled]")
     end
 
+    test "a settled account's live step confirms nothing it has not kept", %{
+      view: view,
+      user: user
+    } do
+      # Kept, then settled: the share stays stamped, and onboarding was
+      # completed two hours back, outside the reconnect window. Only a debug
+      # route reopens the step then (not mounted in tests), so the mount's
+      # state is built directly.
+      render_hook(view, "keep_link", %{"method" => "copy"})
+      settled = settle(user, -7200)
+      assert %DateTime{} = first_shared_at(user)
+
+      assert Initializer.initialize(mount_socket(settled), settled).assigns.kept_method == nil
+
+      # Within the hour, the same account is the one that just kept it.
+      recent = settle(user, -60)
+
+      assert Initializer.initialize(mount_socket(recent), recent).assigns.kept_method ==
+               "restored"
+    end
+
     test "an account completed over an hour ago is not sent back into setup", %{user: user} do
-      user =
-        user
-        |> Changeset.change(
-          onboarding_completed_at: DateTime.add(DateTime.utc_now(:second), -7200)
-        )
-        |> Repo.update!()
+      user = settle(user, -7200)
 
       conn = build_conn() |> setup_onboarding_session() |> log_in_user(user)
 
@@ -307,7 +430,7 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
       {:ok, _page, _html} = live(build_conn(), path)
 
-      assert has_element?(view, "#onboarding-kept", "Opened on your phone")
+      assert kept_on?(view, "onboarding-keep-phone", "Opened on your phone")
       user_id = user.id
 
       assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{},
