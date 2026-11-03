@@ -906,6 +906,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "Чернетку «%{title}» буде видалено. До неї нікого не запрошували, тож ніхто не отримає сповіщення. Цю дію неможливо скасувати."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Цю чернетку вже опубліковано або видалено."
@@ -913,5 +914,4 @@ msgstr "Цю чернетку вже опубліковано або видал�
 #: lib/tymeslot_web/live/dashboard/polls/slot_warnings.ex
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event in your calendar."
-
 msgstr "Цей час перетинається з подією у вашому календарі."

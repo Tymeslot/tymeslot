@@ -213,5 +213,13 @@ defmodule Tymeslot.Polls.DraftsTest do
       assert Polls.delete_poll(draft.id, user.id) == :ok
       assert Polls.get_poll_for_host(draft.id, user.id) == {:error, :not_found}
     end
+
+    test "is not deleted once it has been published", %{user: user, future: future} do
+      {:ok, draft} = Polls.create_draft(user.id, attrs(future))
+      {:ok, _poll} = Polls.publish_draft(draft.id, user.id, attrs(future))
+
+      assert Polls.delete_poll(draft.id, user.id) == {:error, :still_open}
+      assert {:ok, %{status: :open}} = Polls.get_poll_for_host(draft.id, user.id)
+    end
   end
 end

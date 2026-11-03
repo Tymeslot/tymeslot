@@ -498,9 +498,36 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   defp fetch_selected(%{assigns: %{selected_poll_id: nil}} = socket, _opts), do: socket
 
   defp fetch_selected(socket, opts) do
-    user_id = socket.assigns.current_user.id
+    fetched =
+      Polls.get_poll_for_host(socket.assigns.selected_poll_id, socket.assigns.current_user.id)
 
-    case Polls.get_poll_for_host(socket.assigns.selected_poll_id, user_id) do
+    socket
+    |> let_go_of_taken_draft(fetched)
+    |> assign_selected(fetched, opts)
+  end
+
+  # The form holds a draft that another tab has since published or deleted.
+  # Left open, it would fall back to an empty create form without a word, so
+  # it closes, with the draft's delete prompt, saying why: a published poll's
+  # results take its place, and a deleted one leaves the list, which is
+  # reloaded for either.
+  defp let_go_of_taken_draft(socket, {:ok, %{status: :draft}}), do: socket
+
+  defp let_go_of_taken_draft(%{assigns: %{selected_poll: %{status: :draft}}} = socket, _fetched) do
+    Flash.warning(
+      dgettext("dashboard_polls", "This draft has already been published or deleted.")
+    )
+
+    socket
+    |> ModalHook.hide_modal(:delete)
+    |> assign(:show_form, false)
+    |> fetch_polls()
+  end
+
+  defp let_go_of_taken_draft(socket, _fetched), do: socket
+
+  defp assign_selected(socket, fetched, opts) do
+    case fetched do
       {:ok, %{status: :draft} = draft} ->
         # A draft opens in the create form, which keeps the host's edits:
         # it is loaded once, not refreshed under them.

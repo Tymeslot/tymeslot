@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
 
   import Mox
   import Tymeslot.AuthTestHelpers
+  import Tymeslot.TestHelpers.Eventually
   import Tymeslot.Factory
 
   alias Ecto.Changeset
@@ -109,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
 
     assert has_element?(view, "[data-testid='publish-poll']", "Publish poll")
     assert has_element?(view, "[data-testid='delete-draft']")
-    refute has_element?(view, "[data-testid='poll-results']")
+    refute has_element?(view, "#poll-results-#{draft.id}")
     assert draft.status == :draft
   end
 
@@ -172,7 +173,7 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
     assert Polls.list_polls(user.id) == []
   end
 
-  test "a draft published from another tab is not deleted from this one", %{
+  test "a draft published from another tab closes here, saying so, with its delete prompt", %{
     conn: conn,
     user: user,
     date: date
@@ -181,6 +182,7 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
     view |> open_new_form() |> submit(form_params(date, %{}), "draft")
     view |> element("[data-testid='edit-draft']") |> render_click()
     view |> element("[data-testid='delete-draft']") |> render_click()
+    assert has_element?(view, "#delete-poll-modal", "Delete this draft")
 
     [draft] = Polls.list_polls(user.id)
     {:ok, start_time, 0} = DateTime.from_iso8601("#{date}T09:00:00Z")
@@ -194,9 +196,52 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
         invitees: [%{email: "grace@example.com", name: "Grace Hopper"}]
       })
 
-    view |> element("[data-testid='confirm-delete-poll']") |> render_click()
+    # The broadcast reaches the form in hops (the LiveView, the component,
+    # then the flash), so wait for the last to land.
+    eventually(fn ->
+      assert render(view) =~ "This draft has already been published or deleted."
+    end)
 
+    refute has_element?(view, "form[phx-submit='create_poll']")
+    refute has_element?(view, "#delete-poll-modal", "Delete this draft")
+    assert has_element?(view, "#poll-results-#{draft.id}")
+    assert has_element?(view, "[data-testid='poll-status']", "Open")
     assert {:ok, %{status: :open}} = Polls.get_poll_for_host(draft.id, user.id)
+  end
+
+  test "a draft deleted from another tab closes here, saying so, and leaves the list", %{
+    conn: conn,
+    user: user,
+    date: date
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+    view |> open_new_form() |> submit(form_params(date, %{}), "draft")
+    view |> element("[data-testid='edit-draft']") |> render_click()
+
+    [draft] = Polls.list_polls(user.id)
+    :ok = Polls.delete_poll(draft.id, user.id)
+
+    # The broadcast reaches the form in hops (the LiveView, the component,
+    # then the flash), so wait for the last to land.
+    eventually(fn ->
+      assert render(view) =~ "This draft has already been published or deleted."
+    end)
+
+    refute has_element?(view, "form[phx-submit='create_poll']")
+    refute has_element?(view, "[data-testid='edit-draft']")
+  end
+
+  test "publishing a draft from its own form says nothing of another tab", %{
+    conn: conn,
+    date: date
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+    view |> open_new_form() |> submit(form_params(date, %{}), "draft")
+    view |> element("[data-testid='edit-draft']") |> render_click()
+
+    submit(view, form_params(date, %{}), "publish")
+
+    refute render(view) =~ "This draft has already been published or deleted."
   end
 
   test "warns about a time that clashes with an event in the calendar", %{conn: conn, date: date} do

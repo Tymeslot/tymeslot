@@ -892,6 +892,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "La bozza “%{title}” verrà eliminata. Nessuno è stato invitato, quindi nessuno riceverà avvisi. L'operazione non può essere annullata."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Questa bozza è già stata pubblicata o eliminata."
@@ -899,5 +900,4 @@ msgstr "Questa bozza è già stata pubblicata o eliminata."
 #: lib/tymeslot_web/live/dashboard/polls/slot_warnings.ex
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event in your calendar."
-
 msgstr "Questo orario si sovrappone a un evento nel tuo calendario."

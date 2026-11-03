@@ -892,6 +892,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "Le brouillon « %{title} » sera supprimé. Personne n'y a été invité, donc personne n'en sera informé. Cette action est irréversible."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Ce brouillon a déjà été publié ou supprimé."
@@ -899,5 +900,4 @@ msgstr "Ce brouillon a déjà été publié ou supprimé."
 #: lib/tymeslot_web/live/dashboard/polls/slot_warnings.ex
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event in your calendar."
-
 msgstr "Ce créneau chevauche un événement de votre agenda."
