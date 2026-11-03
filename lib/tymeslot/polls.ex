@@ -78,6 +78,69 @@ defmodule Tymeslot.Polls do
   defdelegate create_poll(user_id, attrs), to: Creation
 
   @doc """
+  Saves a poll as a draft, to publish later with `publish_draft/3`. Takes the
+  attributes `create_poll/2` takes, `:slots` possibly empty.
+
+  A draft is the host's alone: its link does not resolve, its `:invitees` are
+  held on it (`PollSchema.draft_invitees/1`) rather than invited, and nothing
+  is emailed. It needs no calendar or username yet. Its meeting type and
+  times are held to the rules `create_poll/2` applies, so a draft never
+  carries a time already past or more times than a poll may have.
+  """
+  @spec create_draft(integer(), map()) ::
+          {:ok, PollSchema.t()}
+          | {:error,
+             :meeting_type_not_found
+             | :payment_required_type
+             | :too_many_slots
+             | :slot_in_past
+             | Ecto.Changeset.t()}
+  defdelegate create_draft(user_id, attrs), to: Creation
+
+  @doc """
+  Replaces the user's draft with `attrs` (as `create_draft/2` takes them):
+  its details, its invitees, and all of its times. A poll that is no longer
+  a draft is `{:error, :not_draft}`.
+  """
+  @spec update_draft(Ecto.UUID.t(), integer(), map()) ::
+          {:ok, PollSchema.t()}
+          | {:error,
+             :not_found
+             | :not_draft
+             | :meeting_type_not_found
+             | :payment_required_type
+             | :too_many_slots
+             | :slot_in_past
+             | Ecto.Changeset.t()}
+  defdelegate update_draft(id, user_id, attrs), to: Creation
+
+  @doc """
+  Saves `attrs` to the user's draft, as `update_draft/3` does, and publishes
+  it in the same transaction: it opens for votes, its link starts to
+  resolve, and its invitees are invited and emailed, as `create_poll/2`
+  would have done. Refused, leaving the draft as it was, for what
+  `create_poll/2` refuses, judged at publication: a time already past
+  (`:slot_in_past`), or a deadline that has passed, as a changeset error on
+  `:deadline_at`.
+  """
+  @spec publish_draft(Ecto.UUID.t(), integer(), map()) ::
+          {:ok, PollSchema.t()}
+          | {:error,
+             :not_found
+             | :not_draft
+             | :meeting_type_not_found
+             | :payment_required_type
+             | :no_slots
+             | :too_many_slots
+             | :slot_in_past
+             | :poll_full
+             | :no_username
+             | :no_calendar
+             | {:rate_limited, non_neg_integer()}
+             | Ecto.Changeset.t()}
+  defdelegate publish_draft(id, user_id, attrs), to: Creation
+
+  @doc """
   Whether a new poll is invite-only when its host has not said: yes once they
   invite anyone with it. The dashboard presets its choice with this, so the
   form and `create_poll/2` agree.
@@ -105,7 +168,8 @@ defmodule Tymeslot.Polls do
   end
 
   @doc """
-  Fetches a poll by its public token, in any status, for the voting page.
+  Fetches a poll by its public token, in any status but draft, for the voting
+  page.
 
   Returns `{:error, :not_found}` while the poll's host is pending account
   deletion, like every other public page of that host.
@@ -145,7 +209,8 @@ defmodule Tymeslot.Polls do
   end
 
   @doc """
-  Counts the user's polls that are still open for votes.
+  Counts the user's polls that are still open for votes. Drafts are not
+  among them.
   """
   @spec count_open_polls(pos_integer()) :: non_neg_integer()
   def count_open_polls(user_id), do: PollQueries.count_open_for_user(user_id)
@@ -224,10 +289,10 @@ defmodule Tymeslot.Polls do
   defdelegate unanswered_invitee?(participant), to: PollParticipantSchema
 
   @doc """
-  Deletes the user's poll once it is over, confirmed or cancelled, with its
-  times, participants and votes, to tidy the list. The meeting a confirmed
-  poll minted stays. An open poll has to be cancelled first, so nothing
-  people are still voting on disappears.
+  Deletes the user's poll once it is over, confirmed or cancelled, or while
+  it is still a draft, with its times, participants and votes, to tidy the
+  list. The meeting a confirmed poll minted stays. An open poll has to be
+  cancelled first, so nothing people are still voting on disappears.
 
   Jobs still pending for the poll are left to run. The cancellation email
   carries what it needs and still reaches every participant. Anything else

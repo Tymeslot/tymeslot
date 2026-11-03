@@ -4,13 +4,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
   Renders one card per poll (title, status badge, slot and participant counts,
   a vote-progress summary, the shared copy-share-link control, and a view-results
-  button) and the empty state shown when the host has no polls yet. All data is
-  passed in; these are display-only function components with no internal state.
+  button) and the empty state shown when the host has no polls yet. A draft's
+  card has no link to copy and counts the people it will invite; its button
+  opens it for editing. All data is passed in; these are display-only function
+  components with no internal state.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
@@ -161,7 +164,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
       assigns
       |> assign(:slot_count, length(assigns.poll.time_slots))
       |> assign(:participant_count, length(assigns.poll.participants))
+      |> assign(:invitee_count, length(PollSchema.draft_invitees(assigns.poll)))
       |> assign(:vote_count, total_votes(tallies))
+      |> assign(:draft?, assigns.poll.status == :draft)
 
     ~H"""
     <Containers.card padding={:sm} class={@selected && "ring-2 ring-turquoise-400"}>
@@ -185,7 +190,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
                 count: @slot_count
               )}
             </span>
-            <span class="flex items-center gap-1">
+            <span :if={@draft?} class="flex items-center gap-1">
+              <Icons.icon name="hero-envelope-mini" class="w-3.5 h-3.5" />
+              {dngettext(
+                "dashboard_polls",
+                "%{count} to invite",
+                "%{count} to invite",
+                @invitee_count,
+                count: @invitee_count
+              )}
+            </span>
+            <span :if={!@draft?} class="flex items-center gap-1">
               <Icons.icon name="hero-users-mini" class="w-3.5 h-3.5" />
               {dngettext(
                 "dashboard_polls",
@@ -195,7 +210,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
                 count: @participant_count
               )}
             </span>
-            <span class="flex items-center gap-1">
+            <span :if={!@draft?} class="flex items-center gap-1">
               <Icons.icon name="hero-check-circle-mini" class="w-3.5 h-3.5" />
               {dngettext(
                 "dashboard_polls",
@@ -210,6 +225,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
         <div class="flex items-center gap-2 shrink-0">
           <PollShareLink.copy_link_button
+            :if={!@draft?}
             id={"poll-copy-#{@poll.id}"}
             poll={@poll}
             profile={@profile}
@@ -217,6 +233,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
           />
 
           <Buttons.icon_button
+            :if={@draft?}
+            icon="hero-pencil-square"
+            label={dgettext("dashboard_polls", "Edit draft")}
+            phx-click="select_poll"
+            phx-value-id={@poll.id}
+            phx-target={@myself}
+            data-testid="edit-draft"
+          />
+
+          <Buttons.icon_button
+            :if={!@draft?}
             icon="hero-chart-bar"
             label={dgettext("dashboard_polls", "View results")}
             phx-click="select_poll"
@@ -246,11 +273,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   defp status(%{status: :open}, false = _voting_open?), do: :voting_closed
   defp status(%{status: status}, _voting_open?), do: status
 
+  defp status_tone(:draft), do: :neutral
   defp status_tone(:open), do: :brand
   defp status_tone(:voting_closed), do: :warning
   defp status_tone(:confirmed), do: :info
   defp status_tone(:cancelled), do: :neutral
 
+  defp status_label(:draft), do: dgettext("dashboard_polls", "Draft")
   defp status_label(:open), do: dgettext("dashboard_polls", "Open")
   defp status_label(:voting_closed), do: dgettext("dashboard_polls", "Voting closed")
   defp status_label(:confirmed), do: dgettext("dashboard_polls", "Confirmed")

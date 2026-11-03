@@ -1,7 +1,8 @@
 defmodule Tymeslot.Polls.OpenPollLock do
   @moduledoc """
   The transaction every write to an open poll runs in: cancelling, editing,
-  removing a participant, inviting, resending a link.
+  removing a participant, inviting, resending a link. Saving and publishing a
+  draft take the same lock on the draft (`with_locked_draft/3`).
 
   The poll is read under the row lock confirmation takes
   (`Tymeslot.Polls.Confirm`), so a poll confirmed after the caller loaded its
@@ -26,15 +27,28 @@ defmodule Tymeslot.Polls.OpenPollLock do
                                                  {:ok, value} | {:error, reason})) ::
           {:ok, value} | {:error, :not_found | :not_open | reason}
         when value: term(), reason: term()
-  def with_locked(id, user_id, fun) do
+  def with_locked(id, user_id, fun), do: locked(id, user_id, :open, :not_open, fun)
+
+  @doc """
+  `with_locked/3` for the user's draft, for saving and publishing it: a poll
+  that is not a draft (published from another tab, say) is
+  `{:error, :not_draft}`.
+  """
+  @spec with_locked_draft(Ecto.UUID.t(), integer(), (PollSchema.t() ->
+                                                       {:ok, value} | {:error, reason})) ::
+          {:ok, value} | {:error, :not_found | :not_draft | reason}
+        when value: term(), reason: term()
+  def with_locked_draft(id, user_id, fun), do: locked(id, user_id, :draft, :not_draft, fun)
+
+  defp locked(id, user_id, status, refusal, fun) do
     result =
       Repo.transaction(fn ->
-        with %PollSchema{status: :open} = poll <- PollQueries.lock_for_user(id, user_id),
+        with %PollSchema{status: ^status} = poll <- PollQueries.lock_for_user(id, user_id),
              {:ok, updated} <- fun.(poll) do
           {poll.id, updated}
         else
           nil -> Repo.rollback(:not_found)
-          %PollSchema{} -> Repo.rollback(:not_open)
+          %PollSchema{} -> Repo.rollback(refusal)
           {:error, reason} -> Repo.rollback(reason)
         end
       end)
