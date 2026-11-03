@@ -683,11 +683,6 @@ msgstr "Інший календар (CalDAV)"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
-msgid "This calendar can't take bookings yet. Choose which calendar to check in Settings, or connect another."
-msgstr "Цей календар поки не може приймати бронювання. Виберіть у Налаштуваннях, який календар перевіряти, або підключіть інший."
-
-#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
-#, elixir-autogen, elixir-format
 msgid "We only read when you're busy, never what your events are."
 msgstr "Ми бачимо лише, коли ви зайняті, і ніколи не бачимо, що це за події."
 
@@ -695,3 +690,18 @@ msgstr "Ми бачимо лише, коли ви зайняті, і нікол�
 #, elixir-autogen, elixir-format
 msgid "iCloud, on your iPhone or Mac"
 msgstr "iCloud, на вашому iPhone або Mac"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} · Paused"
+msgstr "%{provider} · Призупинено"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Перепідключити"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar is paused, so it can't take bookings. Reconnect it or connect another."
+msgstr "Цей календар призупинено, тому він не може приймати бронювання. Перепідключіть його або підключіть інший."

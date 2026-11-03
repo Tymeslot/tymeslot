@@ -24,8 +24,9 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
     * **The live region.** The stage is decorative (`aria-hidden`). Whatever
       it shows that a host should hear about goes in the one polite live
       region in the question column: pass the sentence as
-      `stage_announcement` (the LiveView's `@stage_announcement` assign).
-      Assign a new sentence to announce it; `""` says nothing.
+      `stage_announcement`. The LiveView passes the stage's caption, so the
+      region and the caption under the stage always agree; `""` says
+      nothing.
   """
 
   use Phoenix.Component
@@ -64,6 +65,10 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :stage_live, :boolean, default: false, doc: "shows the Live badge on the stage"
   attr :stage_canvas, :string, required: true, doc: "the theme's canvas colour"
   attr :stage_caption, :string, default: nil, doc: "a line under the stage frame"
+
+  attr :stage_compact, :boolean,
+    default: false,
+    doc: "below lg, a short card, so the step's own controls are above the fold"
 
   slot :inner_block, required: true
   slot :stage, required: true
@@ -156,6 +161,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         class="onboarding-stage"
         data-role="onboarding-stage"
         data-step={@current_step}
+        data-compact={@stage_compact}
         data-stage-fit
         style={"--stage-canvas: #{@stage_canvas};"}
       >

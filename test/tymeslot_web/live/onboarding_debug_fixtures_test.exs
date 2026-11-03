@@ -12,6 +12,7 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Clock
   alias TymeslotWeb.OnboardingLive.DebugFixtures
+  alias TymeslotWeb.OnboardingLive.LivePreview
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   defp socket do
@@ -70,31 +71,30 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
     assert [_calendar] = assigns.connected_calendars
     assert assigns.reveal_key == 1
 
-    # Announced once, in the polite live region, in the caption's words.
-    assert assigns.stage_announcement ==
+    # The caption the stage shows, and the live region announces.
+    assert LivePreview.week_caption(assigns.stage_week) ==
              "Your Tuesday 02:00 PM is already blocked. 23 open slots this week."
   end
 
   test "reveal_empty is the same week ready with no busy blocks" do
     freeze_clock()
 
-    %{stage_week: week, stage_announcement: announcement} =
-      DebugFixtures.apply(socket(), "reveal_empty").assigns
+    %{stage_week: week} = DebugFixtures.apply(socket(), "reveal_empty").assigns
 
     assert week.state == :ready
     assert week.preview.slot_count == 23
     assert week.preview.first_busy == nil
     assert Enum.all?(week.preview.days, &(&1.busy == []))
-    assert announcement == "23 open slots this week."
+    assert LivePreview.week_caption(week) == "23 open slots this week."
   end
 
-  test "reveal_slow and reveal_failed connect the calendar and announce nothing" do
+  test "reveal_slow and reveal_failed connect the calendar and caption nothing" do
     for {name, state} <- [{"reveal_slow", :slow}, {"reveal_failed", :failed}] do
       assigns = DebugFixtures.apply(socket(), name).assigns
 
       assert assigns.stage_week == %{state: state, preview: nil}
       assert [_calendar] = assigns.connected_calendars
-      assert assigns.stage_announcement == ""
+      assert LivePreview.week_caption(assigns.stage_week) == nil
     end
   end
 end

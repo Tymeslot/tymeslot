@@ -680,11 +680,6 @@ msgstr "Anderer Kalender (CalDAV)"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
-msgid "This calendar can't take bookings yet. Choose which calendar to check in Settings, or connect another."
-msgstr "Über diesen Kalender sind noch keine Buchungen möglich. Wählen Sie in den Einstellungen, welcher Kalender geprüft werden soll, oder verbinden Sie einen anderen."
-
-#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
-#, elixir-autogen, elixir-format
 msgid "We only read when you're busy, never what your events are."
 msgstr "Wir lesen nur, wann Sie beschäftigt sind, nie, worum es in Ihren Terminen geht."
 
@@ -692,3 +687,18 @@ msgstr "Wir lesen nur, wann Sie beschäftigt sind, nie, worum es in Ihren Termin
 #, elixir-autogen, elixir-format
 msgid "iCloud, on your iPhone or Mac"
 msgstr "iCloud, auf Ihrem iPhone oder Mac"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} · Paused"
+msgstr "%{provider} · Pausiert"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Erneut verbinden"
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar is paused, so it can't take bookings. Reconnect it or connect another."
+msgstr "Dieser Kalender ist pausiert und kann daher keine Buchungen annehmen. Verbinden Sie ihn erneut oder verbinden Sie einen anderen."

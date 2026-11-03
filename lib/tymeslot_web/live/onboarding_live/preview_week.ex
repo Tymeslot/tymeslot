@@ -358,6 +358,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
       data-preview-part="times"
       data-preview-region="slots"
       data-stage-focus={@highlighted}
+      data-week-state={@view.state}
       data-reveal
     >
       <div class={["w-full", @class]}>

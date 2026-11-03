@@ -33,6 +33,7 @@ msgid "Could not save: %{reason}"
 msgstr "Nie udało się zapisać: %{reason}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Could not sign in with those credentials"
 msgstr "Logowanie przy użyciu tych danych nie powiodło się"
@@ -53,6 +54,7 @@ msgid "Integration Name"
 msgstr "Nazwa integracji"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Integration not found"
 msgstr "Nie znaleziono integracji"

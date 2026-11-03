@@ -359,7 +359,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       assert has_element?(
                view,
                ~s([data-role="calendar-not-bookable"]),
-               "This calendar can't take bookings yet."
+               "This calendar is paused, so it can't take bookings. Reconnect it or connect another."
              )
 
       assert has_element?(view, "button[phx-click='next_step'][disabled]")
@@ -415,6 +415,71 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
                ".onboarding-privacy-line",
                "We only read when you're busy, never what your events are."
              )
+    end
+  end
+
+  describe "a paused calendar" do
+    defp mount_with_paused(conn, attrs) do
+      stub_free_calendar()
+      user = insert(:user, onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "paused#{System.unique_integer([:positive])}")
+      calendar = insert(:calendar_integration, Map.merge(%{user: user, is_active: false}, attrs))
+      {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/connect_calendar")
+      {view, calendar}
+    end
+
+    test "a paused Google calendar shows as paused, and Google can be connected again",
+         %{conn: conn} do
+      original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
+
+      Application.put_env(
+        :tymeslot,
+        :google_calendar_oauth_helper,
+        TymeslotWeb.OnboardingLive.CalendarHandlersTest.GoogleHelperStub
+      )
+
+      on_exit(fn ->
+        if original,
+          do: Application.put_env(:tymeslot, :google_calendar_oauth_helper, original),
+          else: Application.delete_env(:tymeslot, :google_calendar_oauth_helper)
+      end)
+
+      {view, calendar} =
+        mount_with_paused(conn, %{provider: "google", provider_account_email: "host@gmail.com"})
+
+      row = ~s([data-calendar-state="paused"])
+      assert has_element?(view, row, "host@gmail.com")
+      assert has_element?(view, row, "Google · Paused")
+      refute has_element?(view, ~s([data-calendar-state="connected"]))
+      assert has_element?(view, ~s{button[phx-value-option="google"]})
+
+      # The row's own Reconnect goes out to Google's sign-in again.
+      assert {:error, {:redirect, %{to: url}}} =
+               view
+               |> element(~s{#{row} button[phx-value-id="#{calendar.id}"]}, "Reconnect")
+               |> render_click()
+
+      assert url =~ "accounts.google.com"
+    end
+
+    test "a paused CalDAV calendar can still open the CalDAV form, and reconnect from its row",
+         %{conn: conn} do
+      {view, calendar} = mount_with_paused(conn, %{provider: "caldav"})
+
+      assert has_element?(view, ~s([data-calendar-state="paused"]), "CalDAV · Paused")
+
+      # The tile opens a new connection.
+      open_caldav_form(view)
+      assert has_element?(view, "#caldav-form", "Discover calendars")
+      view |> element("button[phx-click='cancel_caldav']") |> render_click()
+
+      # The row reconnects this calendar, starting from its server.
+      view
+      |> element(~s{button[phx-click="reconnect_calendar"][phx-value-id="#{calendar.id}"]})
+      |> render_click()
+
+      assert has_element?(view, "#caldav-form", "Reconnect")
+      assert has_element?(view, ~s{#caldav-form input[name="url"][value="#{calendar.base_url}"]})
     end
   end
 

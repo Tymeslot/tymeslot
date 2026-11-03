@@ -30,7 +30,7 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:ok, Phoenix.LiveView.Socket.t(), keyword()}
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     user = socket.assigns.current_user
 
     if user.onboarding_completed_at && !debug?(socket) do
@@ -42,7 +42,11 @@ defmodule TymeslotWeb.OnboardingLive do
        )
        |> redirect(to: ~p"/dashboard")}
     else
-      {:ok, socket |> Initializer.initialize(user) |> focus_headings_after_first_event()}
+      {:ok,
+       socket
+       |> Initializer.initialize(user)
+       |> maybe_apply_fixture(params["fixture"])
+       |> focus_headings_after_first_event()}
     end
   end
 
@@ -59,15 +63,13 @@ defmodule TymeslotWeb.OnboardingLive do
     requested = requested_step(params["step"])
 
     socket =
-      socket
-      |> assign(
+      assign(socket,
         base_path: NavigationHandlers.base_path(uri),
         # Set by the OAuth return path of a host sent back from the share step
         # to the calendar step, and honoured only there: anywhere else it
         # would let a crafted link skip the steps in between later on.
         returning_to_share: requested == :connect_calendar and params["return"] == "share"
       )
-      |> maybe_apply_fixture(params["fixture"])
 
     cond do
       not connected?(socket) ->
@@ -84,25 +86,20 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
+    assigns = assign(assigns, :stage_caption, stage_caption(assigns))
+
     ~H"""
     <OnboardingLayout.onboarding_layout
       current_step={@current_step}
       booking_page_live={@booking_page_live}
       next_disabled={@current_step == :connect_calendar and @booking_page_live != true}
       focus_heading={@focus_heading}
-      stage_announcement={@stage_announcement}
+      stage_announcement={@stage_caption || ""}
       stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
       stage_live={@current_step == :ready and @booking_page_live == true}
       stage_canvas={LivePreview.canvas(stage_theme(@profile), @theme_customization)}
-      stage_caption={
-        LivePreview.caption(%{
-          current_step: @current_step,
-          booking_page_live: @booking_page_live,
-          booking_host: booking_host(),
-          username: Map.get(@form_data, "username", ""),
-          stage_week: @stage_week
-        })
-      }
+      stage_caption={@stage_caption}
+      stage_compact={@current_step == :connect_calendar and @booking_page_live != true}
     >
       <:stage>
         <.stage_preview
@@ -142,6 +139,7 @@ defmodule TymeslotWeb.OnboardingLive do
             calendar_state={@calendar_state}
             connected_calendars={@connected_calendars}
             booking_page_live={@booking_page_live}
+            reconnecting={not is_nil(@reconnecting_calendar)}
             google_signup_email={@google_signup_email}
             caldav_form_data={@caldav_form_data}
             caldav_form_errors={@caldav_form_errors}
@@ -293,6 +291,10 @@ defmodule TymeslotWeb.OnboardingLive do
     CalendarHandlers.handle_choose_provider(option, socket)
   end
 
+  def handle_event("reconnect_calendar", %{"id" => id}, socket) do
+    CalendarHandlers.handle_reconnect(id, socket)
+  end
+
   def handle_event("cancel_caldav", _params, socket) do
     CalendarHandlers.handle_cancel_caldav(socket)
   end
@@ -365,8 +367,20 @@ defmodule TymeslotWeb.OnboardingLive do
 
   defp debug?(socket), do: socket.assigns.live_action in [:debug_welcome, :debug_step]
 
+  # The caption under the stage, which the live region announces too.
+  defp stage_caption(assigns) do
+    LivePreview.caption(%{
+      current_step: assigns.current_step,
+      booking_page_live: assigns.booking_page_live,
+      booking_host: booking_host(),
+      username: Map.get(assigns.form_data, "username", ""),
+      stage_week: assigns.stage_week
+    })
+  end
+
   # A fixture only ever applies on the debug routes; elsewhere the parameter
-  # is ignored.
+  # is ignored. It applies once per mount, so a patch to another step does
+  # not apply it (and read the week) again.
   defp maybe_apply_fixture(socket, name) do
     if debug?(socket), do: DebugFixtures.apply(socket, name), else: socket
   end

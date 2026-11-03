@@ -21,10 +21,9 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
     * `reveal_slow` - `calendar`, and the week is taking too long to read
     * `reveal_failed` - `calendar`, and the week could not be read
 
-  A week fixture stands in for the read: it cancels any read in flight, so
-  a real answer never replaces the fixture's week. It also writes what the
-  stage shows into the live region (`stage_announcement`), as a real week
-  arriving does, and bumps `reveal_key`, so the times reveal as they would.
+  A week fixture stands in for the read: it cancels any read in flight and
+  bumps `reveal_key`, so a real answer already on its way is dropped
+  (`WeekReveal.handle_result/2`) and the times reveal as they would.
 
   Any other name, including ones reserved for fixtures still to come, leaves
   the socket as it is.
@@ -37,7 +36,6 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
   alias Tymeslot.Availability
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias TymeslotWeb.OnboardingLive.LivePreview
   alias TymeslotWeb.OnboardingLive.WeekReveal
 
   @doc """
@@ -105,14 +103,11 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
       if state == :ready,
         do: sample_week(Availability.today(socket.assigns[:profile]), opts[:busy])
 
-    week = %{state: state, preview: preview}
-
     socket
     |> connect_fake_calendar()
     |> LiveView.cancel_async(:week_preview)
     |> Component.assign(
-      stage_week: week,
-      stage_announcement: LivePreview.week_caption(week) || "",
+      stage_week: %{state: state, preview: preview},
       reveal_key: Map.get(socket.assigns, :reveal_key, 0) + 1
     )
   end

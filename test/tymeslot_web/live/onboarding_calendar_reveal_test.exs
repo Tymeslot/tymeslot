@@ -13,6 +13,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
   @moduletag :onboarding
   @moduletag :live
 
+  import ExUnit.CaptureLog
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.Integrations.Calendar, as: CalendarIntegrations
   alias Tymeslot.Mocks.Calendar, as: CalendarFixtures
+  alias TymeslotWeb.OnboardingLive.WeekReveal
 
   setup :verify_on_exit!
 
@@ -138,8 +140,101 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
       render_async(view)
 
       assert caption(view) == ""
-      assert render(view) =~ @waiting_line
+      assert has_element?(view, ~s([data-week-state="failed"]), @waiting_line)
       refute continue_disabled?(view)
+    end
+
+    test "a read that raises is shown as failed", %{conn: conn} do
+      %{user: user} = host()
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        raise "calendar down"
+      end)
+
+      capture_log(fn ->
+        {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/connect_calendar")
+        render_async(view)
+
+        assert has_element?(view, ~s([data-week-state="failed"]), @waiting_line)
+        refute continue_disabled?(view)
+      end)
+    end
+
+    # The read's own failures come back as errors (the calendar cache turns
+    # a raise into one), so a crash of the task itself is driven directly.
+    test "a read whose task exits is shown as failed" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          current_user: %{id: 1},
+          reveal_key: 1,
+          stage_week: %{state: :loading, preview: nil}
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          assert %{assigns: %{stage_week: %{state: :failed, preview: nil}}} =
+                   WeekReveal.handle_result({:exit, :killed}, socket)
+        end)
+
+      assert log =~ "Onboarding week preview crashed"
+    end
+
+    test "an answer to an older read is dropped" do
+      # A debug fixture bumps the key, so the answer of the read it stood in
+      # for, already on its way, must not replace the fixture's week.
+      week = %{state: :slow, preview: nil}
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, reveal_key: 2, stage_week: week}
+      }
+
+      preview = %Tymeslot.Availability.WeekPreview{days: [], slot_count: 0, first_busy: nil}
+
+      assert WeekReveal.handle_result({:ok, {1, {:ok, preview}}}, socket).assigns.stage_week ==
+               week
+    end
+
+    test "the first paint never reads the calendar", %{conn: conn} do
+      %{user: user} = host()
+
+      expect(CalendarMock, :get_events_for_range_fresh, 0, fn _user_id, _from, _to ->
+        {:ok, []}
+      end)
+
+      html =
+        conn |> log_in_user(user) |> get("/onboarding/connect_calendar") |> html_response(200)
+
+      assert html =~ ~s(data-week-state="loading")
+    end
+
+    test "an OAuth return to the share step reveals the week", %{conn: conn} do
+      %{user: user} = host()
+      stub_events([])
+
+      {:ok, view, _html} =
+        live(log_in_user(conn, user), "/onboarding/connect_calendar?return=share")
+
+      render_async(view)
+
+      assert caption(view) =~ ~r/^\d+ open slots this week\.$/
+    end
+
+    test "a slow timer that fires after the week arrived changes nothing", %{conn: conn} do
+      %{user: user} = host()
+      stub_events([])
+
+      {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/connect_calendar")
+      render_async(view)
+      ready = caption(view)
+      assert ready =~ ~r/^\d+ open slots this week\.$/
+
+      # The timer armed for this read, arriving late.
+      send(view.pid, {:week_preview_slow, 1})
+
+      assert caption(view) == ready
+      assert has_element?(view, ~s([data-week-state="ready"]))
     end
 
     test "a slow read shows the slow state, then the week once it arrives", %{conn: conn} do
@@ -204,7 +299,10 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
          %{conn: conn} do
       %{user: user} = host(calendar: false)
 
-      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, url, _body, _headers, _opts ->
+        send(test_pid, {:caldav_request, URI.parse(url).host})
         {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}
       end)
 
@@ -234,6 +332,54 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
       render_async(view, 2000)
 
       assert [%{provider: "apple"}] = CalendarIntegrations.list_integrations(user.id)
+      # The form has no server: the calendars were looked for on iCloud's.
+      assert_received {:caldav_request, "caldav.icloud.com"}
+      assert caption(view) =~ ~r/^\d+ open slots this week\.$/
+      refute continue_disabled?(view)
+    end
+
+    test "a paused CalDAV calendar reconnects from its row and reveals the week",
+         %{conn: conn} do
+      %{user: user} = host(calendar: false)
+
+      paused =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://cal.example.com",
+          is_active: false,
+          calendar_paths: ["/calendars/user/personal/"]
+        )
+
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}
+      end)
+
+      stub_events([])
+
+      {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/connect_calendar")
+      assert continue_disabled?(view)
+
+      view
+      |> element(~s{button[phx-click="reconnect_calendar"][phx-value-id="#{paused.id}"]})
+      |> render_click()
+
+      view
+      |> form("#caldav-form", %{
+        "url" => "https://cal.example.com",
+        "username" => "alice",
+        "password" => "new-secret"
+      })
+      |> render_submit()
+
+      # The reconnect, then the week it unlocks.
+      render_async(view, 2000)
+      render_async(view, 2000)
+
+      assert [%{id: id, is_active: true}] = CalendarIntegrations.list_integrations(user.id)
+      assert id == paused.id
+      assert has_element?(view, ~s([data-calendar-state="connected"]))
+      refute has_element?(view, ~s([data-role="calendar-not-bookable"]))
       assert caption(view) =~ ~r/^\d+ open slots this week\.$/
       refute continue_disabled?(view)
     end

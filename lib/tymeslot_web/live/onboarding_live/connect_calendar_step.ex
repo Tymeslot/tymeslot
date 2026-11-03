@@ -6,9 +6,13 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   Each provider is a tile that acts when chosen: Google and Outlook go out to
   the provider's sign-in, Apple Calendar and other CalDAV servers open an
   inline form. Apple Calendar is its own tile, since hosts do not know iCloud
-  speaks CalDAV. Connected calendars show as rows above the tiles, and a
-  calendar that is connected but cannot take bookings gets a warning saying
-  what to do.
+  speaks CalDAV. Connected calendars show as rows above the tiles.
+
+  A paused calendar (switched off, or waiting for its credentials again)
+  cannot take bookings, so its row says so and offers to reconnect it, its
+  provider's tile stays available, and while nothing is bookable a warning
+  says what to do. The warning has no link to the dashboard's settings: the
+  dashboard sends a host who has not finished setup back here.
 
   Three states:
   - `:selecting` - the tiles plus any connected calendars
@@ -20,8 +24,9 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   use Gettext, backend: TymeslotWeb.Gettext
 
   use TymeslotWeb.Components.CoreComponents,
-    only: [action_button: 1, icon: 1, info_box: 1, loading_button: 1]
+    only: [action_button: 1, icon: 1, info_box: 1, input: 1, loading_button: 1]
 
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -40,6 +45,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
     Google (`nil` otherwise); surfaces the Recommended badge and one-click hint
   * `caldav_form_data` - the inline form's field values
   * `caldav_form_errors` - the inline form's validation errors
+  * `reconnecting` - whether the inline form reconnects a paused calendar
   """
   attr :calendar_state, :atom, required: true
   attr :connected_calendars, :list, required: true
@@ -48,10 +54,14 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   attr :caldav_form_data, :map, required: true
   attr :caldav_form_errors, :map, required: true
   attr :caldav_discovering, :boolean, default: false
+  attr :reconnecting, :boolean, default: false
 
   @spec connect_calendar_step(map()) :: Phoenix.LiveView.Rendered.t()
   def connect_calendar_step(assigns) do
-    connected = MapSet.new(assigns.connected_calendars, & &1.provider)
+    connected =
+      for calendar <- assigns.connected_calendars, not paused?(calendar), into: MapSet.new() do
+        calendar.provider
+      end
 
     assigns =
       assign(assigns,
@@ -65,6 +75,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         <% :connecting_apple -> %>
           <.credentials_form
             provider={:apple}
+            reconnecting={@reconnecting}
             caldav_form_data={@caldav_form_data}
             caldav_form_errors={@caldav_form_errors}
             caldav_discovering={@caldav_discovering}
@@ -72,6 +83,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         <% :connecting_caldav -> %>
           <.credentials_form
             provider={:caldav}
+            reconnecting={@reconnecting}
             caldav_form_data={@caldav_form_data}
             caldav_form_errors={@caldav_form_errors}
             caldav_discovering={@caldav_discovering}
@@ -81,7 +93,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
             <span data-role="calendar-not-bookable">
               {dgettext(
                 "onboarding_wizard",
-                "This calendar can't take bookings yet. Choose which calendar to check in Settings, or connect another."
+                "This calendar is paused, so it can't take bookings. Reconnect it or connect another."
               )}
             </span>
           </.info_box>
@@ -131,6 +143,12 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
     """
   end
 
+  # Switched off, or waiting for its credentials again: either way it takes
+  # no bookings until the host reconnects it.
+  defp paused?(%{is_active: false}), do: true
+  defp paused?(%{needs_reauth: true}), do: true
+  defp paused?(_calendar), do: false
+
   # Google, Outlook and Apple each have a tile of their own; every other
   # CalDAV-family calendar counts as the CalDAV tile's.
   defp tile_connected?(connected, provider) when provider in @own_tiles,
@@ -172,19 +190,51 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   attr :calendar, :map, required: true
 
   defp connected_row(assigns) do
+    assigns = assign(assigns, :paused, paused?(assigns.calendar))
+
     ~H"""
-    <div class="onboarding-connected-calendar">
-      <.icon name="hero-check-circle-solid" class="w-5 h-5 text-green-600 shrink-0" />
+    <div
+      class={[
+        "onboarding-connected-calendar",
+        @paused && "onboarding-connected-calendar--paused"
+      ]}
+      data-calendar-state={if @paused, do: "paused", else: "connected"}
+    >
+      <.icon
+        :if={not @paused}
+        name="hero-check-circle-solid"
+        class="w-5 h-5 text-green-600 shrink-0"
+      />
+      <.icon
+        :if={@paused}
+        name="hero-exclamation-triangle-mini"
+        class="w-5 h-5 text-amber-600 shrink-0"
+      />
       <div class="flex-1 min-w-0">
         <div class="text-token-base font-bold text-tymeslot-800 truncate">
           {@calendar.provider_account_email || @calendar.name}
         </div>
-        <div class="text-token-sm text-tymeslot-400">
-          {dgettext("onboarding_wizard", "%{provider} · Connected",
-            provider: provider_name(@calendar.provider)
-          )}
+        <div class="text-token-sm text-tymeslot-500">
+          {if @paused,
+            do:
+              dgettext("onboarding_wizard", "%{provider} · Paused",
+                provider: provider_name(@calendar.provider)
+              ),
+            else:
+              dgettext("onboarding_wizard", "%{provider} · Connected",
+                provider: provider_name(@calendar.provider)
+              )}
         </div>
       </div>
+      <.action_button
+        :if={@paused}
+        variant={:secondary}
+        size={:sm}
+        phx-click="reconnect_calendar"
+        phx-value-id={@calendar.id}
+      >
+        {dgettext("onboarding_wizard", "Reconnect")}
+      </.action_button>
     </div>
     """
   end
@@ -199,6 +249,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
     do: dgettext("onboarding_wizard", "One click - connect %{email}", email: email)
 
   attr :provider, :atom, required: true, values: [:apple, :caldav]
+  attr :reconnecting, :boolean, default: false
   attr :caldav_form_data, :map, required: true
   attr :caldav_form_errors, :map, required: true
   attr :caldav_discovering, :boolean, default: false
@@ -206,7 +257,16 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   # One form for both: Apple Calendar's server is fixed, so it asks only for
   # the Apple ID email and an app-specific password, with the dashboard's own
   # guidance on where to make one; a CalDAV server needs its address too.
+  # Reconnecting a paused calendar fills in what is known and takes a new
+  # password.
   defp credentials_form(assigns) do
+    assigns =
+      assign(assigns,
+        apple?: assigns.provider == :apple,
+        errors: &FormValidationHelpers.field_errors(assigns.caldav_form_errors, &1),
+        value: &Map.get(assigns.caldav_form_data, &1, "")
+      )
+
     ~H"""
     <.form
       for={%{}}
@@ -214,71 +274,68 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       phx-change="validate_caldav"
       phx-submit="discover_caldav_calendars"
       class="onboarding-form"
-      id={if @provider == :apple, do: "apple-form", else: "caldav-form"}
+      id={if @apple?, do: "apple-form", else: "caldav-form"}
     >
-      <div :if={@provider == :apple} class="flex items-center gap-3">
+      <div :if={@apple?} class="flex items-center gap-3">
         <ProviderIcon.provider_icon provider="apple" type="calendar" size="medium" alt="" />
         <span class="onboarding-provider-name">
           {dgettext("onboarding_wizard", "Apple Calendar")}
         </span>
       </div>
 
-      <SharedFormComponents.app_password_hint :if={@provider == :apple} provider={:apple} />
-
-      <.credential_field
-        :if={@provider == :caldav}
-        id="caldav_url"
-        name="url"
-        label={dgettext("onboarding_wizard", "Server URL")}
-        placeholder="https://cloud.example.com/remote.php/dav"
-        form_data={@caldav_form_data}
-        errors={@caldav_form_errors}
-        error_key={:url}
+      <SharedFormComponents.app_password_hint
+        :if={@apple?}
+        provider={:apple}
+        reconnecting={@reconnecting}
       />
 
-      <.credential_field
+      <.input
+        :if={not @apple?}
+        id="caldav_url"
+        name="url"
+        value={@value.("url")}
+        label={dgettext("onboarding_wizard", "Server URL")}
+        placeholder="https://cloud.example.com/remote.php/dav"
+        errors={@errors.(:url)}
+      />
+
+      <.input
         id={"#{@provider}_username"}
         name="username"
-        type={if @provider == :apple, do: "email", else: "text"}
-        autocomplete="username"
+        type={if @apple?, do: "email", else: "text"}
+        value={@value.("username")}
         label={
-          if @provider == :apple,
+          if @apple?,
             do: dgettext("onboarding_wizard", "Apple ID email"),
             else: dgettext("onboarding_wizard", "Username")
         }
         placeholder={
-          if @provider == :apple,
+          if @apple?,
             do: "you@icloud.com",
             else: dgettext("onboarding_wizard", "your-username")
         }
-        form_data={@caldav_form_data}
-        errors={@caldav_form_errors}
-        error_key={:username}
+        errors={@errors.(:username)}
       />
 
-      <.credential_field
+      <.input
         id={"#{@provider}_password"}
         name="password"
         type="password"
-        autocomplete="off"
+        value={@value.("password")}
         label={
-          if @provider == :apple,
+          if @apple?,
             do: dgettext("onboarding_wizard", "App-specific password"),
             else: dgettext("onboarding_wizard", "Password")
         }
         placeholder={
-          if @provider == :apple,
+          if @apple?,
             do: "xxxx-xxxx-xxxx-xxxx",
             else: dgettext("onboarding_wizard", "App password or token")
         }
-        form_data={@caldav_form_data}
-        errors={@caldav_form_errors}
-        error_key={:password}
+        errors={@errors.(:password)}
       />
 
-      <%= for message <- FormValidationHelpers.field_errors(@caldav_form_errors, :discovery) do %>
-        <p class="text-token-sm text-red-600 font-bold">{message}</p>
-      <% end %>
+      <Forms.field_error id="calendar-form-error" errors={@errors.(:discovery)} />
 
       <div class="flex gap-3">
         <.action_button
@@ -294,47 +351,14 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
           loading={@caldav_discovering}
           loading_text={dgettext("onboarding_wizard", "Discovering…")}
         >
-          {if @provider == :apple,
-            do: dgettext("onboarding_wizard", "Connect Apple Calendar"),
-            else: dgettext("onboarding_wizard", "Discover calendars")}
+          {submit_label(@provider, @reconnecting)}
         </.loading_button>
       </div>
     </.form>
     """
   end
 
-  attr :id, :string, required: true
-  attr :name, :string, required: true
-  attr :label, :string, required: true
-  attr :placeholder, :string, required: true
-  attr :type, :string, default: "text"
-  attr :autocomplete, :string, default: nil
-  attr :form_data, :map, required: true
-  attr :errors, :map, required: true
-  attr :error_key, :atom, required: true
-
-  defp credential_field(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :messages,
-        FormValidationHelpers.field_errors(assigns.errors, assigns.error_key)
-      )
-
-    ~H"""
-    <div class="onboarding-form-group">
-      <label for={@id} class="label">{@label}</label>
-      <input
-        type={@type}
-        id={@id}
-        name={@name}
-        value={Map.get(@form_data, @name, "")}
-        autocomplete={@autocomplete}
-        class={["input", @messages != [] && "input-error"]}
-        placeholder={@placeholder}
-      />
-      <p :for={message <- @messages} class="mt-2 text-token-sm text-red-600 font-bold">{message}</p>
-    </div>
-    """
-  end
+  defp submit_label(_provider, true), do: dgettext("onboarding_wizard", "Reconnect")
+  defp submit_label(:apple, false), do: dgettext("onboarding_wizard", "Connect Apple Calendar")
+  defp submit_label(:caldav, false), do: dgettext("onboarding_wizard", "Discover calendars")
 end

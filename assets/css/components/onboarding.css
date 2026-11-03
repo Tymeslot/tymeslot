@@ -597,6 +597,20 @@
   background-color: var(--color-green-50);
 }
 
+/* A paused calendar takes no bookings until it is reconnected */
+.onboarding-connected-calendar--paused {
+  border-color: var(--color-warning);
+  background-color: var(--color-amber-50);
+}
+
+/* Below lg, the calendar step keeps the card short until a calendar is
+   connected, so the tiles (the step's action) are above the fold. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-compact] .stage-frame {
+    height: 26svh;
+  }
+}
+
 /* Ready step: URL display */
 .onboarding-url-display {
   display: flex;

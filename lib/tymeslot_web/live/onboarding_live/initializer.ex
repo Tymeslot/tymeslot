@@ -107,10 +107,6 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # Bumped whenever a new week arrives, so the stage reveals its times
       # once on that render and never again on a later one.
       reveal_key: 0,
-      # What the layout's live region announces about the stage (see
-      # `OnboardingLayout`); a step that changes the stage writes a sentence
-      # here.
-      stage_announcement: "",
       # Set by the LiveView after the host's first action (see
       # `OnboardingLayout`), so the page load never moves the focus.
       focus_heading: false,
@@ -128,6 +124,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       caldav_form_data: %{},
       caldav_form_errors: %{},
       caldav_discovering: false,
+      # The paused calendar the inline form reconnects, or nil for a new one.
+      reconnecting_calendar: nil,
       theme_options: ThemeInfo.theme_options(),
       theme_picker: :stories
     ]

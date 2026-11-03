@@ -24,7 +24,6 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   alias Tymeslot.Availability
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
-  alias TymeslotWeb.OnboardingLive.LivePreview
 
   @slow_after_ms 4_000
 
@@ -57,26 +56,31 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
 
     socket
     |> LiveView.cancel_async(:week_preview)
-    |> Component.assign(
-      stage_week: %{state: :loading, preview: nil},
-      stage_announcement: "",
-      reveal_key: key
-    )
+    |> Component.assign(stage_week: %{state: :loading, preview: nil}, reveal_key: key)
     |> LiveView.start_async(
       :week_preview,
-      Tasks.with_context(fn -> Availability.week_preview(profile) end)
+      Tasks.with_context(fn -> {key, Availability.week_preview(profile)} end)
     )
   end
 
   @doc """
   Folds the read's answer into the week. Dispatched from
   `OnboardingLive.handle_async/3`.
+
+  The answer carries the `reveal_key` its read was started under, and one
+  for an older key is dropped: a debug fixture that stood in for the read
+  bumps the key, so an answer already on its way cannot replace the
+  fixture's week.
   """
   @spec handle_result({:ok, term()} | {:exit, term()}, Phoenix.LiveView.Socket.t()) ::
           Phoenix.LiveView.Socket.t()
-  def handle_result({:ok, {:ok, preview}}, socket), do: put_week(socket, :ready, preview)
+  def handle_result({:ok, {key, {:ok, preview}}}, %{assigns: %{reveal_key: key}} = socket),
+    do: put_week(socket, :ready, preview)
 
-  def handle_result({:ok, {:error, _reason}}, socket), do: put_week(socket, :failed, nil)
+  def handle_result({:ok, {key, {:error, _reason}}}, %{assigns: %{reveal_key: key}} = socket),
+    do: put_week(socket, :failed, nil)
+
+  def handle_result({:ok, {_stale_key, _result}}, socket), do: socket
 
   # A read cancelled without a new one taking its place (a debug fixture
   # stood in for it) leaves the week to whatever replaced it.
@@ -102,14 +106,8 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
 
   def handle_slow(_key, socket), do: socket
 
-  defp put_week(socket, state, preview) do
-    week = %{state: state, preview: preview}
-
-    Component.assign(socket,
-      stage_week: week,
-      stage_announcement: LivePreview.week_caption(week) || ""
-    )
-  end
+  defp put_week(socket, state, preview),
+    do: Component.assign(socket, :stage_week, %{state: state, preview: preview})
 
   # Configurable so a test can watch the slow state without waiting for it.
   defp slow_after_ms,

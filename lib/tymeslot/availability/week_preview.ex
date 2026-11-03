@@ -73,7 +73,15 @@ defmodule Tymeslot.Availability.WeekPreview do
         profile.user_id |> MeetingTypes.get_active_meeting_types() |> List.first()
       end)
 
-    request = %{profile: profile, user_timezone: timezone, meeting_type: meeting_type}
+    # A preview may show a calendar as old as the booking page's own cached
+    # read, so reloading it costs no provider round trip.
+    request = %{
+      profile: profile,
+      user_timezone: timezone,
+      meeting_type: meeting_type,
+      cached_calendar: true
+    }
+
     duration = Offer.duration_minutes(meeting_type, @fallback_duration_minutes)
 
     case Offer.slots_and_busy_for_range(request, today, Date.add(today, @days - 1), duration) do
