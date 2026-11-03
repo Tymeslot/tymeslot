@@ -6,9 +6,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
+  import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
-  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
@@ -47,6 +47,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           max_bookings_per_day: pos_integer() | nil,
           max_bookings_per_week: pos_integer() | nil,
           max_bookings_per_month: pos_integer() | nil,
+          buffer_before_minutes: non_neg_integer() | nil,
+          buffer_after_minutes: non_neg_integer() | nil,
+          min_advance_hours: non_neg_integer() | nil,
+          advance_booking_days: pos_integer() | nil,
           custom_fields: [FieldDefinition.t()],
           locations: [LocationOption.t()],
           attachments: [MeetingTypeAttachment.t()],
@@ -99,6 +103,14 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:max_bookings_per_week, :integer)
     field(:max_bookings_per_month, :integer)
 
+    # Overrides of the scheduling rules the availability schedule sets. Nil
+    # means "use the schedule's value" (`Schedules.config/2` resolves them), so
+    # one schedule can serve meeting types with different buffers or notice.
+    field(:buffer_before_minutes, :integer)
+    field(:buffer_after_minutes, :integer)
+    field(:min_advance_hours, :integer)
+    field(:advance_booking_days, :integer)
+
     belongs_to(:user, Tymeslot.Auth.UserSchema)
     belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema)
     belongs_to(:calendar_integration, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema)
@@ -146,9 +158,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   # Reserved because the URL layer rewrites "<n>min" into "<n>-minutes" for
   # legacy duration links, which would break round-tripping of such a slug.
   @reserved_slug_format ~r/^\d+min$/
-  # Reserved because `/:username/poll/:token` (the public poll voting page) would
-  # otherwise shadow `/:username/poll/book` for a meeting type slugged "poll".
-  @reserved_slugs ~w(poll)
+  # Reserved because a fixed route would shadow the type's address:
+  # `/:username/poll/:token` (the public poll voting page) shadows
+  # `/:username/poll/book`, `/:username/:slug/book` shadows a booking page's
+  # `/:username/:page/book`, and `/:username/thank-you` (and a page's
+  # `/:username/:page/thank-you`) the type's own page.
+  @reserved_slugs ~w(poll book thank-you)
   @slug_max_length 80
 
   @doc """
@@ -206,7 +221,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :is_archived,
       :max_bookings_per_day,
       :max_bookings_per_week,
-      :max_bookings_per_month
+      :max_bookings_per_month,
+      :buffer_before_minutes,
+      :buffer_after_minutes,
+      :min_advance_hours,
+      :advance_booking_days
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
     |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
@@ -218,6 +237,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_length(:description, max: Constraints.description_max_length())
     |> validate_numbers()
     |> validate_booking_limits(:meeting_types)
+    |> validate_scheduling_policy(:meeting_types)
     |> validate_inclusion(:icon, @valid_icons,
       message: dgettext_noop("errors", "must be one of the available icons")
     )
@@ -228,7 +248,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
     |> validate_group_rules()
-    |> FixedDates.validate_changeset()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")

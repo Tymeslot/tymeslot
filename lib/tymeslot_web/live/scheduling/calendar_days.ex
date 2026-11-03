@@ -332,6 +332,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarDays do
           required(:buffer_before_minutes) => non_neg_integer(),
           required(:buffer_after_minutes) => non_neg_integer(),
           required(:slot_interval_minutes) => pos_integer() | nil,
+          optional(:offered_starts) => [DateTime.t()],
           required(:duration_minutes) => pos_integer(),
           required(:owner_timezone) => String.t()
         }

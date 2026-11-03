@@ -868,3 +868,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "When an admin alert arrives, share it as a GitHub issue (redacting anything sensitive), so it gets fixed for everyone."
 msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{version}"
+msgstr ""

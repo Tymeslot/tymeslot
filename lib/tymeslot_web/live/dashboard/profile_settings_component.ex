@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
     AvatarUploadComponent,
     DisplayNameFormComponent,
     IntroFormComponent,
+    LegalLinksFormComponent,
     TimeFormatFormComponent,
     TimezoneFormComponent,
     UsernameFormComponent
@@ -69,6 +70,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                   <.live_component
                     module={IntroFormComponent}
                     id="intro-form-component"
+                    profile={@profile}
+                  />
+                </div>
+
+                <div class="border-t-2 border-tymeslot-50 pt-10">
+                  <.live_component
+                    module={LegalLinksFormComponent}
+                    id="legal-links-form-component"
                     profile={@profile}
                   />
                 </div>

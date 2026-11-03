@@ -73,9 +73,9 @@ defmodule Tymeslot.Meetings.SchedulingConcurrencyTest do
   end
 
   # A writer that skips the schedule lock can commit the same slot between
-  # the conflict count and the insert. The organiser's unique slot index then
+  # the conflict read and the insert. The organiser's unique slot index then
   # refuses the insert, and that refusal is a lost race, not invalid input.
-  test "a slot taken past the conflict count by an unlocked writer is a time conflict", ctx do
+  test "a slot taken past the conflict read by an unlocked writer is a time conflict", ctx do
     insert_outside_the_lock = fn _arg ->
       {:ok, _meeting} =
         Task.await(Task.async(fn -> unboxed(fn -> insert_slot(ctx.user, ctx.start) end) end))
@@ -85,7 +85,7 @@ defmodule Tymeslot.Meetings.SchedulingConcurrencyTest do
 
     result =
       unboxed(fn ->
-        RaceConductor.arm(insert_outside_the_lock, &conflict_count?/1)
+        RaceConductor.arm(insert_outside_the_lock, &conflict_read?/1)
         Scheduling.create_meeting_with_conflict_check(meeting_attrs(ctx.user, ctx.start, 30))
       end)
 
@@ -123,8 +123,10 @@ defmodule Tymeslot.Meetings.SchedulingConcurrencyTest do
     |> Repo.insert()
   end
 
-  defp conflict_count?(metadata),
-    do: metadata[:source] == "meetings" and metadata[:query] =~ "count("
+  # The read of the organiser's live meetings, the only SELECT on `meetings`
+  # the conflict-checked create makes.
+  defp conflict_read?(metadata),
+    do: metadata[:source] == "meetings" and String.starts_with?(metadata[:query], "SELECT")
 
   defp committed_meetings(user) do
     unboxed(fn ->

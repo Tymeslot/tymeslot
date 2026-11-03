@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   Microsoft Graph API format for Outlook Calendar operations.
   """
 
+  alias Ecto.UUID
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
@@ -63,6 +64,38 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   @spec put_provenance(map(), map()) :: map()
   def put_provenance(body, %{created_by_tymeslot: false}), do: body
   def put_provenance(body, _event_data), do: add_tymeslot_fingerprint(body)
+
+  @doc """
+  Adds Graph's `transactionId` to the body of an event create whose
+  `event_data` names it with a `:creation_key`, so that a POST retried after
+  its answer was lost (a timeout after Graph wrote the event) is answered
+  with that event instead of writing a second one.
+
+  The id is derived from the key, `scope` (the integration and calendar
+  written to) and the event's time. A retry of the same create sends the same
+  id; a create for a meeting moved while the first answer was lost sends a new
+  one, since a replay would answer with the event at its old time.
+
+  The rest of the body is deliberately left out. A retry whose content changed
+  meanwhile (a video link attached while the first answer was lost) must still
+  be answered with the event already written, or Graph writes a second. The
+  replayed event carries the first attempt's content until the next update
+  reaches it: once its id is recorded, the meeting's create job switches to
+  an update.
+  Without a key the body is returned unchanged.
+  """
+  @spec put_transaction_id(map(), term(), map()) :: map()
+  def put_transaction_id(body, scope, %{creation_key: key}) when is_binary(key) do
+    timing = Map.take(body, ["start", "end", "recurrence"])
+    digest = :crypto.hash(:sha256, :erlang.term_to_binary({scope, key, timing}, [:deterministic]))
+    # The digest's first 128 bits as a version 5 UUID, the form Graph's own
+    # examples give the id in.
+    <<a::48, _version::4, b::12, _variant::2, c::62, _rest::binary>> = digest
+    {:ok, transaction_id} = UUID.load(<<a::48, 5::4, b::12, 2::2, c::62>>)
+    Map.put(body, "transactionId", transaction_id)
+  end
+
+  def put_transaction_id(body, _scope, _event_data), do: body
 
   @doc """
   Adds the Tymeslot fingerprint extended property to a Graph API event body,

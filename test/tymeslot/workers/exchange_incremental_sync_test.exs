@@ -106,6 +106,7 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
     stub_full_sync()
     assert :ok = run(integration)
     assert [row] = grid_rows(integration)
+    sent_requests()
 
     stub_full_sync(
       sync_folder_items:
@@ -121,6 +122,9 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
     # cancelled in Outlook would stay on the grid until the next full read.
     assert grid_rows(integration) == []
     assert %{exchange_sync_states: %{"calendar" => "sync-state-2"}} = Repo.reload!(integration)
+
+    # A deletion that found its row is fully applied, so it costs no full read.
+    refute Enum.any?(sent_requests(), &(&1 =~ "<m:FindItem"))
   end
 
   test "an item the feed reports as changed is refetched and upserted", %{
@@ -143,6 +147,127 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
 
     assert [updated] = grid_rows(integration)
     assert updated.summary == "Standup, renamed"
+  end
+
+  describe "a recurring series" do
+    # The feed reports a series as its master, dated to the first occurrence,
+    # while the windowed read answers the occurrences, each cached under its
+    # own id. The feed therefore cannot say which rows a series change
+    # touches, and the full read has to answer it.
+
+    test "a change the feed reports to a series is answered by a full read", %{
+      integration: integration
+    } do
+      stub_full_sync(series_responses("Weekly sync"))
+      assert :ok = run(integration)
+      assert length(grid_rows(integration)) == 3
+      sent_requests()
+
+      stub_full_sync(
+        series_responses("Weekly sync, renamed",
+          sync_folder_items:
+            ExchangeFixtures.sync_folder_items_response([{:update, "master-1"}],
+              sync_state: "sync-state-2"
+            )
+        )
+      )
+
+      assert :ok = run(integration)
+
+      rows = grid_rows(integration)
+
+      # Upserted, the master would have joined the grid as a fourth meeting
+      # on the first occurrence's day, and the occurrences kept the old name.
+      assert Enum.map(rows, & &1.summary) == List.duplicate("Weekly sync, renamed", 3)
+      refute Enum.any?(rows, &(&1.provider_event_id == "master-1"))
+      assert Enum.any?(sent_requests(), &(&1 =~ "<m:FindItem"))
+
+      # Stored once the full read has succeeded, or the next cycle replays the
+      # same change into the same full read, forever.
+      assert %{exchange_sync_states: %{"calendar" => "sync-state-2"}} = Repo.reload!(integration)
+    end
+
+    test "a deletion that matches no cached row is answered by a full read", %{
+      integration: integration
+    } do
+      stub_full_sync(series_responses("Weekly sync"))
+      assert :ok = run(integration)
+      assert length(grid_rows(integration)) == 3
+
+      # The series is gone; the mailbox holds one unrelated meeting.
+      stub_full_sync(
+        sync_folder_items:
+          ExchangeFixtures.sync_folder_items_response([{:delete, "master-1"}],
+            sync_state: "sync-state-2"
+          )
+      )
+
+      assert :ok = run(integration)
+
+      # The master's id names none of the occurrence rows, so deleting by it
+      # removed nothing; without the full read the series stayed on the grid.
+      assert [row] = grid_rows(integration)
+      assert row.uid == "uid-1"
+      assert %{exchange_sync_states: %{"calendar" => "sync-state-2"}} = Repo.reload!(integration)
+    end
+
+    test "a forced full read that fails leaves the series change to the next cycle", %{
+      integration: integration
+    } do
+      stub_full_sync(series_responses("Weekly sync"))
+      assert :ok = run(integration)
+      assert %{exchange_sync_states: %{"calendar" => first_token}} = Repo.reload!(integration)
+
+      series_change =
+        ExchangeFixtures.sync_folder_items_response([{:update, "master-1"}],
+          sync_state: "sync-state-2"
+        )
+
+      stub_full_sync(
+        series_responses("Weekly sync, renamed",
+          sync_folder_items: series_change,
+          find_item: ExchangeFixtures.failed_response("FindItem", "ErrorInternalServerError")
+        )
+      )
+
+      assert {:error, _reason} = run(integration)
+
+      # Stored now, the token would have the next cycle go incremental past a
+      # change no read applied, and the series keep its old name.
+      assert %{exchange_sync_states: %{"calendar" => ^first_token}} = Repo.reload!(integration)
+
+      stub_full_sync(series_responses("Weekly sync, renamed", sync_folder_items: series_change))
+      assert :ok = run(integration)
+
+      assert Enum.map(grid_rows(integration), & &1.summary) ==
+               List.duplicate("Weekly sync, renamed", 3)
+
+      assert %{exchange_sync_states: %{"calendar" => "sync-state-2"}} = Repo.reload!(integration)
+    end
+
+    test "the cycle after a forced full read goes back to the feed", %{
+      integration: integration
+    } do
+      stub_full_sync(series_responses("Weekly sync"))
+      assert :ok = run(integration)
+
+      stub_full_sync(
+        series_responses("Weekly sync",
+          sync_folder_items:
+            ExchangeFixtures.sync_folder_items_response([{:update, "master-1"}],
+              sync_state: "sync-state-2"
+            )
+        )
+      )
+
+      assert :ok = run(integration)
+      sent_requests()
+
+      stub_full_sync(series_responses("Weekly sync"))
+      assert :ok = run(integration)
+
+      refute Enum.any?(sent_requests(), &(&1 =~ "<m:FindItem"))
+    end
   end
 
   test "a changed item whose dates leave the sync window is dropped from the cache", %{
@@ -395,5 +520,47 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
     reloaded = Repo.reload!(integration)
     assert DateTime.compare(reloaded.last_external_sync_at, stale) == :gt
     assert is_nil(reloaded.sync_error)
+  end
+
+  # A mailbox holding one daily series of three. The windowed read lists the
+  # occurrences; a `GetItem` naming the master answers the master, as the
+  # refetch of a feed change does.
+  defp series_responses(subject, overrides \\ []) do
+    occurrences =
+      for day <- 1..3 do
+        {"occ-#{day}", "2026-09-0#{day}T10:00:00Z", "2026-09-0#{day}T11:00:00Z"}
+      end
+
+    Keyword.merge(
+      [
+        find_item:
+          ExchangeFixtures.find_item_response(
+            for {id, _start, _finish} <- occurrences, do: {id, "ck"}
+          ),
+        get_item: fn body ->
+          if body =~ ~s(Id="master-1") do
+            ExchangeFixtures.get_item_response(
+              id: "master-1",
+              uid: "series-uid",
+              subject: subject,
+              calendar_item_type: "RecurringMaster"
+            )
+          else
+            ExchangeFixtures.get_item_batch_response(
+              for {id, start, finish} <- occurrences do
+                {:ok,
+                 id: id,
+                 uid: "series-uid",
+                 subject: subject,
+                 start: start,
+                 end: finish,
+                 calendar_item_type: "Occurrence"}
+              end
+            )
+          end
+        end
+      ],
+      overrides
+    )
   end
 end

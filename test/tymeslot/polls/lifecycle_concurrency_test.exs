@@ -89,6 +89,53 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
     %{user: user, poll: poll, slot: slot, participant: participant}
   end
 
+  # The host deletes a draft in one tab while another tab publishes it. The
+  # delete read the poll as a draft before the publication committed, so only
+  # its read under the publication's lock can tell that the poll is open now.
+  test "a draft's deletion racing its publication never deletes the published poll", ctx do
+    future = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+    attrs = %{
+      title: "Team sync",
+      duration_minutes: 30,
+      timezone: "Etc/UTC",
+      deadline_at: DateTime.add(future, -1, :hour),
+      slots: [%{start_time: future}],
+      invitees: []
+    }
+
+    {:ok, draft} = unboxed(fn -> Polls.create_draft(ctx.user.id, attrs) end)
+
+    on_exit(fn ->
+      unboxed(fn ->
+        Repo.delete_all(
+          from(j in Oban.Job, where: fragment("?->>'poll_id'", j.args) == ^draft.id)
+        )
+      end)
+    end)
+
+    test_pid = self()
+
+    publisher =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(RaceConductor.park_here(test_pid), RaceConductor.lock_of("polls"))
+          Polls.publish_draft(draft.id, ctx.user.id, attrs)
+        end)
+      end)
+
+    assert_receive {:parked, publisher_pid}, 5_000
+
+    deletion = Task.async(fn -> unboxed(fn -> Polls.delete_poll(draft.id, ctx.user.id) end) end)
+    assert RaceConductor.await_finished_or_blocked(deletion) == :blocked
+
+    send(publisher_pid, :release)
+
+    assert {:ok, %PollSchema{status: :open}} = Task.await(publisher)
+    assert Task.await(deletion) == {:error, :still_open}
+    assert %PollSchema{status: :open} = committed_poll(draft)
+  end
+
   test "of a cancel and a confirmation racing, exactly one takes effect", ctx do
     results =
       race([

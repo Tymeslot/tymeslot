@@ -1,0 +1,35 @@
+/* ===================================
+   TOKEN PAGES
+   The public card pages reached from group-meeting emails (seat and RSVP).
+   Backs TymeslotWeb.Components.Shared.TokenPage.
+   =================================== */
+
+/* The organiser's legal links below the card. The markup comes from
+   TymeslotWeb.Themes.Shared.Components.LegalLinks, so the class names match
+   assets/css/scheduling/shared/components/legal-links.css; this page has no
+   theme tokens, so it takes the app palette. Neutral 700 on the page's
+   near-white gradient is well above AA. */
+.token-page .legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-700);
+}
+
+.token-page .legal-links__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.token-page .legal-links__link:hover {
+  color: var(--color-primary-700);
+}
+
+.token-page .legal-links__link:focus-visible {
+  outline: 2px solid var(--color-primary-700);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

@@ -4,8 +4,11 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
 
   @moduletag :calendar
 
+  alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntrySchema
   alias Tymeslot.Workers.CalendarCachePruneWorker
 
   describe "perform/1" do
@@ -84,6 +87,64 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
     test "returns :ok when there is nothing to prune" do
       assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
     end
+
+    test "forgets the attendee entries of a series the cache no longer reaches" do
+      integration = insert(:calendar_integration, is_active: true, provider: "google")
+      ended = DateTime.add(DateTime.utc_now(), -(Sync.window_past_days() + 90), :day)
+
+      gone =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "google",
+          recurring_event_id: "master-gone",
+          recurrence_rule: "FREQ=WEEKLY",
+          start_at: ended,
+          end_at: DateTime.add(ended, 1, :hour)
+        )
+
+      SeriesEntries.record(gone, [
+        %{uid: "gone", start: ended, end: DateTime.add(ended, 1, :hour), sequence: 1}
+      ])
+
+      written_at(ended)
+
+      assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
+
+      assert SeriesEntries.recorded(gone) == []
+    end
+
+    test "keeps what guests hold of a long-running series while a whole-series write has emptied its cache" do
+      integration = insert(:calendar_integration, is_active: true, provider: "google")
+      started = DateTime.add(DateTime.utc_now(), -(Sync.window_past_days() + 90), :day)
+
+      master =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "google",
+          provider_event_id: "master-live",
+          recurrence_rule: "FREQ=WEEKLY",
+          start_at: started,
+          end_at: DateTime.add(started, 1, :hour)
+        )
+
+      # Only the invitation's entry, sent at the series' start.
+      SeriesEntries.record(master, [
+        %{uid: "live", start: started, end: DateTime.add(started, 1, :hour), sequence: 3}
+      ])
+
+      written_at(started)
+
+      # The write drops the cached rows; the next sync has not run yet.
+      :ok = EventDeletion.delete_series_rows(integration.id, {:master, "master-live"})
+      assert remaining_event_ids([integration.id]) == []
+
+      assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
+
+      assert [%{uid: "live", sent_sequence: 3}] = SeriesEntries.recorded(master)
+    end
+
+    defp written_at(at),
+      do: Repo.update_all(SeriesEntrySchema, set: [updated_at: DateTime.truncate(at, :second)])
   end
 
   describe "uniqueness" do

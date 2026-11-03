@@ -563,6 +563,10 @@ DATABASE_SSL=                # TLS: true / verify-full / verify-none / false (de
 DATABASE_SSL_CACERT_FILE=    # CA bundle for certificate verification (default: system trust store)
 DATABASE_POOL_SIZE=10        # DB pool size (default: 10)
 
+# Booking page legal links (aimed at single-organiser instances; an organiser's own links under Dashboard → Profile override these, per link)
+BOOKING_LEGAL_NOTICE_URL=    # Legal notice (imprint) URL, http(s) only (default: none)
+BOOKING_PRIVACY_POLICY_URL=  # Privacy policy URL, http(s) only (default: none)
+
 # HTTP Proxy (for environments with restricted outbound access)
 HTTP_PROXY=                  # Proxy for HTTP requests (e.g., http://user:pass@proxy.example.com:3128)
 HTTPS_PROXY=                 # Proxy for HTTPS requests (e.g., http://user:pass@proxy.example.com:3128)

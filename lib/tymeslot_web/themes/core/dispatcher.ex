@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   alias Tymeslot.Infrastructure.ErrorTracking
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
+  alias TymeslotWeb.Live.Scheduling.PageAddress
 
   alias TymeslotWeb.Themes.Core.{
     ErrorBoundary,
@@ -30,9 +31,25 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # Initialize locale dropdown state
     socket = assign(socket, :language_dropdown_open, false)
 
-    # For all routes with username (including meeting management), resolve the username first
+    # Which start page the URL is for (the username's, or one of its booking
+    # pages), settled once here so the themes never see the difference.
+    case PageAddress.settle(params, socket.assigns[:live_action]) do
+      {:ok, params, action} ->
+        mount_settled(params, session, assign(socket, :live_action, action))
+
+      {:redirect, path} ->
+        {:ok, redirect(socket, to: path)}
+
+      :not_found ->
+        raise TymeslotWeb.NotFoundError, "No booking page found for #{inspect(params["page"])}"
+    end
+  end
+
+  defp mount_settled(params, session, socket) do
+    # For all routes with username (including meeting management), resolve the
+    # address (the username, or `<username>/<page>`) first
     if params["username"] do
-      socket = OrganizerHelpers.handle_username_resolution(socket, params["username"])
+      socket = OrganizerHelpers.handle_username_resolution(socket, PageAddress.address(params))
 
       case socket.assigns do
         %{organizer_profile: %{} = profile} ->
@@ -51,6 +68,13 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   @impl Phoenix.LiveView
   def handle_params(params, url, socket) do
+    # A patch resets the live action to the route's, so a booking page's own
+    # URL is read again as `mount/3` read it.
+    {params, action} =
+      PageAddress.follow(params, socket.assigns[:live_action], socket.assigns[:organizer_profile])
+
+    socket = assign(socket, :live_action, action)
+
     # Track the request path so the root layout can build the canonical/og:url
     # on the static (crawler) render, where no conn is available.
     socket = assign(socket, :request_path, URI.parse(url).path || "/")

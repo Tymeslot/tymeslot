@@ -5,12 +5,13 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.FixedDates
+  alias Tymeslot.MeetingTypes.{FixedDates, OfferedTimes}
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.BookingLinkShare
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
@@ -80,18 +81,29 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:calendar_integrations, data.calendar_integrations)
       |> assign(:payment_currency, price_currency(data.meeting_types, user_id))
       |> assign(:payments_accepted, payments_accepted?(data.meeting_types, user_id))
+      |> assign(:booking_pages, BookingPages.list(socket.assigns.profile.id))
+      |> assign(:page_memberships, BookingPages.memberships(socket.assigns.profile.id))
 
     {:ok, socket}
   end
 
   # For each fixed-date type, the start of its next session open for
-  # registration, or nil: the card says when that is, or that the type is
-  # off the booking page for want of one.
+  # registration, or of its next offered time for a one-to-one type, or nil:
+  # the card says when that is, or that the type is off the booking page for
+  # want of one.
   defp next_dates(meeting_types) do
-    meeting_types
-    |> Enum.filter(&FixedDates.enabled?/1)
-    |> PlannedSessions.next_open_by_type()
-    |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
+    sessions =
+      meeting_types
+      |> Enum.filter(&FixedDates.sessions?/1)
+      |> PlannedSessions.next_open_by_type()
+      |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
+
+    offered =
+      meeting_types
+      |> Enum.filter(&FixedDates.offered_times?/1)
+      |> OfferedTimes.next_by_type()
+
+    Map.merge(sessions, offered)
   end
 
   # The open editor is handed `editing_type` on every render, and it saves
@@ -158,6 +170,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
+  def handle_event("duplicate_type", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+      do_duplicate_type(socket, String.to_integer(id), user_id)
+    end)
+  end
+
   def handle_event("cancel_edit", _params, socket) do
     {:noreply, close_form(socket)}
   end
@@ -192,6 +212,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
     RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       do_toggle_private(socket, type_id, user_id)
+    end)
+  end
+
+  def handle_event("toggle_page_membership", %{"id" => id, "page" => page_id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+      do_toggle_page_membership(socket, String.to_integer(id), page_id, user_id)
     end)
   end
 
@@ -355,6 +383,26 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
+  # A booking page's listing. A type or page deleted meanwhile (in another
+  # tab) fails like a refused write: an error flash, nothing changed.
+  defp do_toggle_page_membership(socket, type_id, page_id, user_id) do
+    profile_id = socket.assigns.profile.id
+
+    with %{} = type <- MeetingTypes.get_meeting_type(type_id, user_id),
+         {:ok, page} <- BookingPages.fetch(profile_id, page_id),
+         listed_on = Map.get(socket.assigns.page_memberships, type.id, MapSet.new()),
+         :ok <-
+           BookingPages.set_meeting_type(page, type.id, not MapSet.member?(listed_on, page.id)) do
+      send(self(), {:meeting_type_changed})
+      Flash.info(dgettext("dashboard_integrations", "Visibility updated"))
+      {:noreply, assign(socket, :page_memberships, BookingPages.memberships(profile_id))}
+    else
+      _not_found_or_failed ->
+        Flash.error(dgettext("dashboard_integrations", "Failed to update visibility"))
+        {:noreply, socket}
+    end
+  end
+
   defp do_confirm_slug_change(socket, type, user_id) do
     case MeetingTypes.update_slug(type, socket.assigns.slug_draft) do
       {:ok, _updated} ->
@@ -400,6 +448,62 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     |> assign(:meeting_types, meeting_types)
     |> assign(:editing_type, updated)
   end
+
+  # The copy opens in the editor straight away, since renaming it is almost
+  # always the next step. The list reload this triggers swaps the bare
+  # inserted record for the preloaded one (`refresh_editing_type/2`).
+  defp do_duplicate_type(socket, type_id, user_id) do
+    with %{} = source <- MeetingTypes.get_meeting_type(type_id, user_id),
+         {:ok, copy} <- MeetingTypes.duplicate_meeting_type(source) do
+      send(self(), {:meeting_type_changed})
+      Flash.info(duplicated_message(copy))
+
+      {:noreply,
+       assign(socket,
+         editing_type: copy,
+         show_add_form: false,
+         show_edit_overlay: true,
+         form_id: "meeting-type-form-edit-#{copy.id}"
+       )}
+    else
+      nil ->
+        Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
+        {:noreply, socket}
+
+      {:error, reason} ->
+        Flash.error(duplicate_error_message(reason))
+        {:noreply, socket}
+    end
+  end
+
+  defp duplicated_message(copy) do
+    if copy.fixed_dates do
+      dgettext(
+        "dashboard_integrations",
+        "Meeting type duplicated and switched off. Add its dates, then switch it on."
+      )
+    else
+      dgettext(
+        "dashboard_integrations",
+        "Meeting type duplicated and switched off. Switch it on when it is ready."
+      )
+    end
+  end
+
+  defp duplicate_error_message(reason)
+       when reason in [:insufficient_plan, :group_bookings_not_allowed, :feature_disabled],
+       do:
+         dgettext(
+           "dashboard_integrations",
+           "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
+         )
+
+  defp duplicate_error_message(_reason),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "Could not duplicate this meeting type. Check its settings, then try again."
+      )
 
   defp close_form(socket) do
     assign(socket, editing_type: nil, show_edit_overlay: false, form_id: nil)

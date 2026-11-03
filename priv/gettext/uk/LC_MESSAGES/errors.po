@@ -403,11 +403,6 @@ msgstr "У вас уже є тип зустрічі з такою назвою"
 msgid "group bookings cannot offer more than one duration"
 msgstr "групові бронювання можуть пропонувати лише одну тривалість"
 
-#: lib/tymeslot/meeting_types/fixed_dates.ex
-#, elixir-autogen, elixir-format
-msgid "fixed dates need group bookings"
-msgstr "фіксовані дати потребують групових бронювань"
-
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -848,3 +843,23 @@ msgstr "перенесень зустрічей"
 #, elixir-autogen, elixir-format
 msgid "cancel the planned dates before turning fixed dates off"
 msgstr "скасуйте заплановані дати, перш ніж вимкнути фіксовані дати"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "remove the offered times before turning group bookings on"
+msgstr "видаліть запропоновані слоти, перш ніж увімкнути групові бронювання"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Використовуйте від 3 до 30 малих літер, цифр, дефісів або підкреслень, починаючи з літери чи цифри"
+
+#: lib/tymeslot/meeting_types/slugs.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your booking pages"
+msgstr "вже є адресою однієї з ваших сторінок бронювання"
+
+#: lib/tymeslot/booking_pages.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your meeting types"
+msgstr "вже є адресою одного з ваших типів зустрічей"

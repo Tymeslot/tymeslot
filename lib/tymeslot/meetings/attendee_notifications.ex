@@ -60,6 +60,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
   alias Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity
 
   @type event :: map
@@ -150,14 +151,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   defp notify_series_updated(_original, _updated, [], _owner_user_id, _scope), do: {:ok, :noop}
 
   defp notify_series_updated(original, updated, recipients, owner_user_id, scope) do
+    ical_uid = SeriesIdentity.entry_uid(original)
+
     {method, sequence} =
-      IcalMethod.for(:event_updated, current_sequence: current_sequence(original))
+      IcalMethod.for(:event_updated, current_sequence: sent_sequence(original, ical_uid))
+
+    others = other_entries(scope, original, updated, sequence)
 
     params = %{
       user_id: owner_user_id,
       event_uid: Map.get(updated, :uid),
-      ical_uid: SeriesIdentity.entry_uid(original),
-      other_entries: other_entries(scope == :all, original, updated, sequence),
+      ical_uid: ical_uid,
+      other_entries: SeriesIdentity.to_arg(others),
       integration_id: Map.get(updated, :calendar_integration_id),
       attendee_emails: recipients,
       before_title: title_for(original),
@@ -175,44 +180,63 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     }
 
     case EmailScheduler.schedule_event_update_notification(params) do
-      :ok -> {:ok, :sent}
-      {:error, reason} -> {:error, reason}
+      :ok ->
+        record_series_update(scope, original, updated, ical_uid, sequence, others)
+        {:ok, :sent}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  # An email about every occurrence, sent from another one, changes the
-  # entry the series' invitation made too. One about this occurrence and the
-  # following ones leaves it: the series' first is never among them.
-  defp other_entries(true = _whole_series, original, updated, sequence) do
-    case SeriesIdentity.series_entry(original, updated) do
-      nil -> []
-      entry -> entries_arg([entry], :event_updated, sequence)
-    end
+  # An email about every occurrence changes every entry of the series the
+  # guest holds besides the edited occurrence's own: the one the series'
+  # invitation made, and each recorded for an occurrence emailed about on
+  # its own (`SeriesIdentity.moved_entries/2`). One about this occurrence
+  # and the following ones leaves them: the series' first is never among
+  # them, and the occurrences it moves are a series of their own once split.
+  defp other_entries(:all, original, updated, sequence),
+    do: original |> SeriesIdentity.moved_entries(updated) |> sequenced(:event_updated, sequence)
+
+  defp other_entries(:following, _original, _updated, _sequence), do: []
+
+  # What an email about every occurrence sent is recorded, so a later one,
+  # or a cancellation, finds it once the series' rows are gone. A split
+  # leaves the edited occurrence in a series of its own, addressed apart
+  # from the one recorded, so nothing is recorded for it.
+  defp record_series_update(:all, original, updated, ical_uid, sequence, others) do
+    own = updated |> SeriesIdentity.timing() |> Map.merge(%{uid: ical_uid, sequence: sequence})
+    SeriesEntries.record(original, [own | others])
   end
 
-  defp other_entries(false, _original, _updated, _sequence), do: []
+  defp record_series_update(:following, _original, _updated, _uid, _sequence, _others), do: :ok
 
   # A cancellation of every occurrence removes every entry of the series the
   # guest holds; one of a single occurrence, that occurrence's own.
   defp cancelled_entries(:series, event, sequence),
-    do: event |> SeriesIdentity.cancelled_entries() |> entries_arg(:event_deleted, sequence)
+    do: event |> SeriesIdentity.cancelled_entries() |> sequenced(:event_deleted, sequence)
 
   defp cancelled_entries(_scope, _event, _sequence), do: []
+
+  # The revision the guest holds for `event`'s entry `ical_uid`: the
+  # event's own, or the one an email recorded for it when higher. A write to
+  # the whole series brings the event's row back at revision 0, while the
+  # guest keeps what it was last sent.
+  defp sent_sequence(event, ical_uid),
+    do: max(current_sequence(event), SeriesEntries.sent_sequence(event, ical_uid) || 0)
 
   # A client ignores a VEVENT whose SEQUENCE is below the one it holds for
   # that UID, and the guest may hold a further entry at a higher revision
   # than the event's: one for an occurrence emailed about on its own. So
   # each goes out at the SEQUENCE `action` gives after the one last sent for
   # it, and never below the email's own `sequence`.
-  defp entries_arg(entries, action, sequence) do
-    entries
-    |> Enum.map(fn entry ->
+  defp sequenced(entries, action, sequence) do
+    Enum.map(entries, fn entry ->
       {_method, own} =
         IcalMethod.for(action, current_sequence: Map.get(entry, :sent_sequence) || 0)
 
       Map.put(entry, :sequence, max(own, sequence))
     end)
-    |> SeriesIdentity.to_arg()
   end
 
   # The event as the update email describes it, in the job's JSON args.
@@ -260,8 +284,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   defp send_membership([], _event, _owner_user_id, _change), do: {:ok, :noop}
 
+  # Sent above the revision the guests already on the entry hold, which a
+  # write to the whole series leaves above the event's own.
   defp send_membership(recipients, event, owner_user_id, change) do
-    {method, sequence} = IcalMethod.for(change, current_sequence: current_sequence(event))
+    {method, sequence} =
+      IcalMethod.for(change,
+        current_sequence: sent_sequence(event, SeriesIdentity.entry_uid(event))
+      )
+
     extra = %{user_id: owner_user_id, removed: change == :attendees_removed}
 
     case send_immediate(event, recipients, method, sequence, extra) do
@@ -397,11 +427,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   the recipients, less anyone who declined and the user `owner_user_id`
   (who made the delete). `scope` is `:series` when the whole series was
   deleted, which the email says, and which also cancels every other entry
-  of the series the guests were sent, read from the series' cached rows
-  (`SeriesIdentity.cancelled_entries/1`), so call it before those rows are
-  purged; anything else cancels the one event. `{:ok, :noop}` when nobody is left to tell, and for an event someone else
-  organises, whose cancellation is not the user's to send (see
-  `event_deleted/3`).
+  of the series the guests were sent (`SeriesIdentity.cancelled_entries/1`),
+  read from the record the emails left and from the series' cached rows, so
+  call it before those rows are purged; anything else cancels the one
+  event. Either way the cancelled entries are forgotten
+  (`SeriesEntries`). `{:ok, :noop}` when nobody is left to tell, and for an
+  event someone else organises, whose cancellation is not the user's to
+  send (see `event_deleted/3`).
   """
   @spec event_deleted_confirm(event, pos_integer(), :occurrence | :series) ::
           {:ok, :sent | :noop} | {:error, term}
@@ -429,20 +461,31 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   defp notify_deleted(_event, [], _owner_user_id, _scope), do: {:ok, :noop}
 
   defp notify_deleted(event, recipients, owner_user_id, scope) do
+    ical_uid = SeriesIdentity.entry_uid(event)
+
     {method, sequence} =
-      IcalMethod.for(:event_deleted, current_sequence: current_sequence(event))
+      IcalMethod.for(:event_deleted, current_sequence: sent_sequence(event, ical_uid))
 
     extra = %{
       user_id: owner_user_id,
       series: scope == :series,
-      other_entries: cancelled_entries(scope, event, sequence)
+      other_entries: scope |> cancelled_entries(event, sequence) |> SeriesIdentity.to_arg()
     }
 
     case send_immediate(event, recipients, method, sequence, extra) do
-      :ok -> {:ok, :sent}
-      {:error, reason} -> {:error, reason}
+      :ok ->
+        forget_cancelled(scope, event, ical_uid)
+        {:ok, :sent}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
+
+  # A cancelled entry is gone from the guest's calendar, so nothing later
+  # moves or cancels it again.
+  defp forget_cancelled(:series, event, _ical_uid), do: SeriesEntries.forget_series(event)
+  defp forget_cancelled(_occurrence, event, ical_uid), do: SeriesEntries.forget(event, ical_uid)
 
   @doc """
   Whether a debounced job is already queued for this event.
@@ -472,6 +515,20 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     timing = invitation_timing(event)
     ical_uid = SeriesIdentity.entry_uid(event)
 
+    attendees
+    |> schedule_each(event, timing, ical_uid, method, sequence, extra)
+    |> tap(fn
+      :ok when method == :request ->
+        SeriesEntries.record(event, [
+          event |> SeriesIdentity.timing() |> Map.merge(%{uid: ical_uid, sequence: sequence})
+        ])
+
+      _cancel_or_failed ->
+        :ok
+    end)
+  end
+
+  defp schedule_each(attendees, event, timing, ical_uid, method, sequence, extra) do
     attendees
     |> Enum.map(fn attendee ->
       EmailScheduler.schedule_calendar_invitation(

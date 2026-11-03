@@ -15,7 +15,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandlers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
 
   @doc """
@@ -39,13 +41,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:selected_target_calendar_id, get_target_calendar_id(type))
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
-    |> Component.assign(:allow_guests, get_allow_guests(type))
-    |> Component.assign(:guest_limit, Map.get(type || %{}, :max_guests_per_booking))
-    |> Component.assign(:requires_approval, get_requires_approval(type))
-    |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
-    |> Component.assign(:show_as_free, get_show_as_free(type))
+    |> assign_booking_rules(type)
     |> assign_group_bookings_state(type)
-    |> Component.assign(:booking_limits, get_booking_limits(type))
     |> Component.assign(
       :week_start,
       assigns |> Map.get(:current_user) |> user_id() |> Management.get_week_start()
@@ -57,10 +54,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> assign_availability_schedules(Map.get(assigns, :current_user))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> SessionHandlers.assign_sessions()
+    |> OfferedTimeHandlers.assign_offered_times()
     |> assign_calendar_state()
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
     |> Component.assign(:__initialized__, true)
+  end
+
+  # How a booking against this meeting type is admitted: guests, approval,
+  # free/busy visibility, and the limits and rules on when it may be booked.
+  @spec assign_booking_rules(Phoenix.LiveView.Socket.t(), map() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  defp assign_booking_rules(socket, type) do
+    Component.assign(socket,
+      allow_guests: get_allow_guests(type),
+      guest_limit: Map.get(type || %{}, :max_guests_per_booking),
+      requires_approval: get_requires_approval(type),
+      approval_window_hours: get_approval_window_hours(type),
+      show_as_free: get_show_as_free(type),
+      booking_limits: get_booking_limits(type),
+      scheduling_rules: get_scheduling_rules(type)
+    )
   end
 
   # Everything the booking-destination picker needs about the integration the
@@ -197,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
     socket
     |> Component.assign(:group_bookings_enabled, limit > 1)
-    |> Component.assign(:fixed_dates, limit > 1 and Map.get(type || %{}, :fixed_dates) == true)
+    |> Component.assign(:fixed_dates, Map.get(type || %{}, :fixed_dates) == true)
     |> Component.assign(
       :max_participants,
       to_string(if limit > 1, do: limit, else: @default_group_limit)
@@ -298,6 +312,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       "max_bookings_per_week" => type.max_bookings_per_week,
       "max_bookings_per_month" => type.max_bookings_per_month
     }
+  end
+
+  @doc """
+  Returns the meeting type's scheduling-rule overrides as form values, keyed by
+  their param names. An empty string is no override: the schedule's rule applies.
+  """
+  @spec get_scheduling_rules(Ecto.Schema.t() | nil) :: %{String.t() => String.t()}
+  def get_scheduling_rules(type) do
+    Map.new(Constraints.scheduling_policy_fields(), fn field ->
+      value = if type, do: Map.get(type, field)
+      {Atom.to_string(field), if(is_nil(value), do: "", else: to_string(value))}
+    end)
   end
 
   @doc "Returns the selected icon for a meeting type, or `\"none\"` when absent."

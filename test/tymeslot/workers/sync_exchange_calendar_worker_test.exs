@@ -183,6 +183,45 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
     end
   end
 
+  describe "a recurring series the item read expands" do
+    test "puts every occurrence on the grid, not one per series", %{integration: integration} do
+      occurrences = [
+        {"occ-1", "2026-09-01T10:00:00Z", "2026-09-01T11:00:00Z"},
+        {"occ-2", "2026-09-02T10:00:00Z", "2026-09-02T11:00:00Z"},
+        {"occ-3", "2026-09-03T10:00:00Z", "2026-09-03T11:00:00Z"}
+      ]
+
+      stub_full_sync(
+        find_item:
+          ExchangeFixtures.find_item_response(
+            for {id, _start, _finish} <- occurrences, do: {id, "ck"}
+          ),
+        get_item:
+          ExchangeFixtures.get_item_batch_response(
+            for {id, start, finish} <- occurrences do
+              {:ok,
+               id: id,
+               uid: "series-uid",
+               start: start,
+               end: finish,
+               calendar_item_type: "Occurrence"}
+            end
+          )
+      )
+
+      assert :ok = run(integration)
+
+      # Every occurrence carries the series' UID. Cached under it, each
+      # occurrence overwrote the last and the grid showed one meeting.
+      rows = Enum.sort_by(grid_rows(integration), & &1.start_at, DateTime)
+
+      assert Enum.map(rows, & &1.provider_event_id) == ["occ-1", "occ-2", "occ-3"]
+
+      assert Enum.map(rows, &DateTime.truncate(&1.start_at, :second)) ==
+               [~U[2026-09-01 10:00:00Z], ~U[2026-09-02 10:00:00Z], ~U[2026-09-03 10:00:00Z]]
+    end
+  end
+
   describe "busy intervals and the availability calculation" do
     test "a busy interval removes a slot the schedule would otherwise offer", %{
       integration: integration

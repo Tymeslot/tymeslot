@@ -452,3 +452,8 @@ msgstr "З міркувань безпеки %{emphasis} лише для кон�
 #, elixir-autogen, elixir-format
 msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options."
 msgstr "Потрібна допомога? Перегляньте %{guide}, де зібрані покрокові інструкції, поради щодо платформ та варіанти налаштування."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page"
+msgstr "Сторінка бронювання"

@@ -22,6 +22,21 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  The longest booking window, in days, any of the user's active meeting types
+  sets for itself. Nil when none overrides its schedule's window.
+  """
+  @spec max_advance_booking_days_override(integer()) :: pos_integer() | nil
+  def max_advance_booking_days_override(user_id) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.is_active == true,
+        select: max(mt.advance_booking_days)
+      )
+
+    Repo.one(query)
+  end
+
+  @doc """
   Gets the publicly listed meeting types for a user (active and not private),
   ordered by sort_order. Private types are reachable only by their direct link,
   so they are excluded from the public overview this query feeds.
@@ -65,6 +80,23 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
       )
 
     Repo.one(query)
+  end
+
+  @doc """
+  The user's meeting types among `ids`, with their availability schedule
+  preloaded. Ids the user does not own are left out.
+  """
+  @spec list_with_schedules(integer(), [integer()]) :: [MeetingTypeSchema.t()]
+  def list_with_schedules(_user_id, []), do: []
+
+  def list_with_schedules(user_id, ids) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.id in ^ids,
+        preload: [:availability_schedule]
+      )
+
+    Repo.all(query)
   end
 
   @doc """

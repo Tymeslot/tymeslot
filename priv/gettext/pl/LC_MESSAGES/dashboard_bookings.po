@@ -877,3 +877,23 @@ msgstr "Stały termin przesuwa się w typie spotkania."
 #, elixir-autogen, elixir-format
 msgid "The meeting is already at that time."
 msgstr "Spotkanie jest już zaplanowane na ten termin."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "All pages"
+msgstr "Wszystkie strony"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through"
+msgstr "Zarezerwowano przez"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Main page"
+msgstr "Strona główna"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "via %{page}"
+msgstr "przez %{page}"

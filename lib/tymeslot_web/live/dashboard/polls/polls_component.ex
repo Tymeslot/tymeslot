@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   vote on the times that suit them, then confirm a booking from the winning slot.
   This module is the parent component for the Polls section: it owns the list of
   the host's polls, the show/hide state of the create form, and the selected
-  poll's live results panel. It delegates rendering to `PollList` (the cards),
+  poll's live results panel. Selecting a draft opens it in the create form
+  instead, which saves and publishes it; it has no results yet. It delegates rendering to `PollList` (the cards),
   `PollForm` (the create flow), and `PollResults` (the results panel), reloads
   the list when the form reports a new poll, and drives the confirm/cancel
   actions plus live vote updates for the selected poll.
@@ -65,8 +66,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def update(%{poll_created: true}, socket) do
-    # The child form persisted a poll: refresh the list and close the form.
-    {:ok, socket |> assign(:show_form, false) |> load_polls()}
+    # The child form persisted a poll or a draft: refresh the list and close
+    # the form, letting go of the draft it held.
+    {:ok, socket |> close_form() |> load_polls()}
   end
 
   def update(%{poll_edited: true}, socket) do
@@ -150,7 +152,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           <.live_component
             :if={@show_form}
             module={PollForm}
-            id="poll-form"
+            id={if draft = draft(@selected_poll), do: "poll-draft-#{draft.id}", else: "poll-form"}
+            draft={draft(@selected_poll)}
             current_user={@current_user}
             profile={@profile}
             meeting_types={@meeting_types}
@@ -159,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           />
 
           <PollResults.results_panel
-            :if={@selected_poll}
+            :if={@selected_poll && !draft(@selected_poll)}
             poll={@selected_poll}
             unconfirmed_count={@unconfirmed_count}
             invite_value={@invite_value}
@@ -222,19 +225,23 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   @impl Phoenix.LiveComponent
   def handle_event("new_poll", _params, socket) do
     if LinkAccessPolicy.has_calendar?(socket.assigns.integration_status),
-      do: {:noreply, assign(socket, show_form: true, meeting_types: poll_meeting_types(socket))},
+      do:
+        {:noreply,
+         socket
+         |> release_draft()
+         |> assign(show_form: true, meeting_types: poll_meeting_types(socket))},
       else: {:noreply, socket}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_poll_form", _params, socket) do
-    {:noreply, assign(socket, :show_form, false)}
+    {:noreply, close_form(socket)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("select_poll", %{"id" => id}, socket) do
     case UUID.cast(id) do
-      {:ok, id} -> {:noreply, socket |> resubscribe(id) |> open_results(id)}
+      {:ok, id} -> {:noreply, socket |> release_draft() |> resubscribe(id) |> open_results(id)}
       :error -> {:noreply, socket}
     end
   end
@@ -390,8 +397,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
     case Polls.delete_poll(poll_id, socket.assigns.current_user.id) do
       :ok ->
-        Flash.info(dgettext("dashboard_polls", "Poll deleted"))
-        {:noreply, socket |> clear_selection() |> load_polls()}
+        Flash.info(
+          if draft(socket.assigns.selected_poll),
+            do: dgettext("dashboard_polls", "Draft deleted"),
+            else: dgettext("dashboard_polls", "Poll deleted")
+        )
+
+        {:noreply, socket |> release_draft() |> clear_selection() |> load_polls()}
 
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_polls", "Couldn't delete this poll. Please try again."))
@@ -449,6 +461,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     |> reload_selected(refresh_health: true)
   end
 
+  # The draft the create form holds, or nil.
+  defp draft(%{status: :draft} = poll), do: poll
+  defp draft(_poll), do: nil
+
+  # The form holds a draft as the selected poll, so closing it lets go of the
+  # draft; a published poll's results stay open.
+  defp close_form(socket), do: socket |> assign(:show_form, false) |> release_draft()
+
+  # Lets go of a draft open in the form, closing it; anything else selected
+  # stays.
+  defp release_draft(socket) do
+    if draft(socket.assigns.selected_poll),
+      do: socket |> clear_selection() |> assign(:show_form, false),
+      else: socket
+  end
+
   defp poll_meeting_types(socket),
     do: Polls.meeting_types_for_poll(socket.assigns.current_user.id)
 
@@ -470,9 +498,45 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   defp fetch_selected(%{assigns: %{selected_poll_id: nil}} = socket, _opts), do: socket
 
   defp fetch_selected(socket, opts) do
-    user_id = socket.assigns.current_user.id
+    fetched =
+      Polls.get_poll_for_host(socket.assigns.selected_poll_id, socket.assigns.current_user.id)
 
-    case Polls.get_poll_for_host(socket.assigns.selected_poll_id, user_id) do
+    socket
+    |> let_go_of_taken_draft(fetched)
+    |> assign_selected(fetched, opts)
+  end
+
+  # The form holds a draft that another tab has since published or deleted.
+  # Left open, it would fall back to an empty create form without a word, so
+  # it closes, with the draft's delete prompt, saying why: a published poll's
+  # results take its place, and a deleted one leaves the list, which is
+  # reloaded for either.
+  defp let_go_of_taken_draft(socket, {:ok, %{status: :draft}}), do: socket
+
+  defp let_go_of_taken_draft(%{assigns: %{selected_poll: %{status: :draft}}} = socket, _fetched) do
+    Flash.warning(
+      dgettext("dashboard_polls", "This draft has already been published or deleted.")
+    )
+
+    socket
+    |> ModalHook.hide_modal(:delete)
+    |> assign(:show_form, false)
+    |> fetch_polls()
+  end
+
+  defp let_go_of_taken_draft(socket, _fetched), do: socket
+
+  defp assign_selected(socket, fetched, opts) do
+    case fetched do
+      {:ok, %{status: :draft} = draft} ->
+        # A draft opens in the create form, which keeps the host's edits:
+        # it is loaded once, not refreshed under them.
+        assign(socket,
+          selected_poll: draft,
+          show_form: true,
+          meeting_types: poll_meeting_types(socket)
+        )
+
       {:ok, poll} ->
         socket
         |> assign(:selected_poll, poll)

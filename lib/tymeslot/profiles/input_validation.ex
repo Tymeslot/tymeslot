@@ -24,6 +24,7 @@ defmodule Tymeslot.Profiles.InputValidation do
 
   @booking_text_fields ~w(booking_heading booking_greeting booking_instruction)
   @intro_fields ~w(headline bio)
+  @legal_link_fields ~w(legal_notice_url privacy_policy_url)
 
   @typedoc "String-keyed params, as submitted by a dashboard form."
   @type params :: %{optional(String.t()) => term()}
@@ -48,6 +49,18 @@ defmodule Tymeslot.Profiles.InputValidation do
   @spec validate_intro(params(), keyword()) :: result()
   def validate_intro(params, opts \\ []) when is_map(params),
     do: validate_fields(params, @intro_fields, opts)
+
+  @doc """
+  Sanitises the legal notice and privacy policy URLs in `params`, leaving every
+  other key untouched. Returns what `validate_booking_text/2` returns.
+
+  Uses `:plain_text` like the prose fields: it leaves a URL's `&`, `?`, `#` and
+  `%` intact, where `:strict` would percent-decode and rewrite the URL. Scheme
+  and host are the changeset's job (`ProfileSchema.legal_links_changeset/2`).
+  """
+  @spec validate_legal_links(params(), keyword()) :: result()
+  def validate_legal_links(params, opts \\ []) when is_map(params),
+    do: validate_fields(params, @legal_link_fields, opts)
 
   defp validate_fields(params, fields, opts) do
     metadata = Keyword.get(opts, :metadata, %{})

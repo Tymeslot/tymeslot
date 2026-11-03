@@ -1037,6 +1037,27 @@ msgstr[0] "Ваш календар %{names} потрібно підключит�
 msgstr[1] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."
 msgstr[2] "Ваші календарі %{names} потрібно підключити знову. Доки цього не буде зроблено, відвідувачі можуть не бачити тут доступного часу."
 
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Legal notice"
+msgstr "Правова інформація"
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Privacy policy"
+msgstr "Політика конфіденційності"
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} uses these details to arrange your meeting."
+msgstr "%{organizer} використовує ці дані, щоб узгодити з вами зустріч."
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser uses these details to arrange your meeting."
+msgstr "Організатор використовує ці дані, щоб узгодити з вами зустріч."
+
 #: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
 #, elixir-autogen, elixir-format
 msgid "Show less"
@@ -1056,3 +1077,14 @@ msgstr "Ви бронюєте зустріч %{meeting} (%{duration})"
 #, elixir-autogen, elixir-format
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Ви бронюєте зустріч %{meeting} (%{duration}) з %{name}"
+
+#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type has no times open for booking right now."
+msgstr "Для цього типу зустрічі зараз немає вільного часу для бронювання."
+
+#: lib/tymeslot/profiles/organizer_context.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{page} with %{name}"
+msgstr "%{page} з %{name}"

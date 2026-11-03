@@ -1030,6 +1030,27 @@ msgid_plural "Your calendars %{names} need reconnecting. Until you do, visitors 
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Legal notice"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#: lib/tymeslot_web/themes/shared/components/legal_links.ex
+#, elixir-autogen, elixir-format
+msgid "Privacy policy"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} uses these details to arrange your meeting."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/booking_form.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser uses these details to arrange your meeting."
+msgstr ""
+
 #: lib/tymeslot_web/themes/shared/components/meeting_type_description.ex
 #, elixir-autogen, elixir-format
 msgid "Show less"
@@ -1048,4 +1069,15 @@ msgstr ""
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type has no times open for booking right now."
+msgstr ""
+
+#: lib/tymeslot/profiles/organizer_context.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{page} with %{name}"
 msgstr ""

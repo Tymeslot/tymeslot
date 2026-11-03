@@ -235,6 +235,63 @@ defmodule Tymeslot.Availability.SchedulesTest do
     end
   end
 
+  describe "buffers_by_meeting_type/2" do
+    test "resolves each type's override, else its schedule's, else the default's", %{
+      user: user,
+      profile: profile
+    } do
+      {:ok, default} = Schedules.create_default(profile.id)
+
+      {:ok, _default} =
+        Schedules.update_policy(default, %{buffer_before_minutes: 5, buffer_after_minutes: 10})
+
+      {:ok, evenings} = Schedules.create(profile.id, %{name: "Evenings"})
+
+      {:ok, _evenings} =
+        Schedules.update_policy(evenings, %{buffer_before_minutes: 20, buffer_after_minutes: 25})
+
+      overriding =
+        insert(:meeting_type,
+          user: user,
+          availability_schedule_id: evenings.id,
+          buffer_after_minutes: 45
+        )
+
+      on_evenings = insert(:meeting_type, user: user, availability_schedule_id: evenings.id)
+      on_default = insert(:meeting_type, user: user, availability_schedule_id: nil)
+
+      assert Schedules.buffers_by_meeting_type(user.id, [
+               overriding.id,
+               on_evenings.id,
+               on_default.id,
+               nil
+             ]) == %{
+               overriding.id => {20, 45},
+               on_evenings.id => {20, 25},
+               on_default.id => {5, 10},
+               nil => {5, 10}
+             }
+    end
+
+    test "a meeting type of another organiser resolves this organiser's default", %{
+      user: user,
+      profile: profile
+    } do
+      {:ok, default} = Schedules.create_default(profile.id)
+
+      {:ok, _default} =
+        Schedules.update_policy(default, %{buffer_before_minutes: 5, buffer_after_minutes: 10})
+
+      foreign = insert(:meeting_type, user: insert(:user), buffer_before_minutes: 90)
+
+      assert Schedules.buffers_by_meeting_type(user.id, [foreign.id]) == %{foreign.id => {5, 10}}
+    end
+
+    test "answers an empty list with an empty map", %{user: user} do
+      assert Schedules.buffers_by_meeting_type(user.id, []) == %{}
+    end
+  end
+
   describe "resolve_for/2" do
     test "prefers the meeting type's schedule over the profile default", %{
       user: user,

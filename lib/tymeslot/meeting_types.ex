@@ -10,18 +10,17 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.BookingCalendar
   alias Tymeslot.MeetingTypes.Defaults
+  alias Tymeslot.MeetingTypes.Duplication
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
-  alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.LocationChoices
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.MeetingTypes.OneOffEvents
-  alias Tymeslot.MeetingTypes.PaymentAccess
+  alias Tymeslot.MeetingTypes.PublicListing
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
@@ -79,6 +78,16 @@ defmodule Tymeslot.MeetingTypes do
     do: MeetingTypeQueries.list_active_meeting_types(user_id)
 
   @doc """
+  The longest booking window, in days, any of the user's active meeting types
+  sets for itself, or nil when every one uses its schedule's window. Callers
+  that must cover every bookable date (the calendar prefetch) take the larger
+  of this and the schedules' own windows.
+  """
+  @spec max_advance_booking_days_override(integer()) :: pos_integer() | nil
+  def max_advance_booking_days_override(user_id),
+    do: MeetingTypeQueries.max_advance_booking_days_override(user_id)
+
+  @doc """
   Gets all meeting types for a user (active and inactive). A pure read, like
   `get_active_meeting_types/1`.
   """
@@ -95,7 +104,8 @@ defmodule Tymeslot.MeetingTypes do
 
   A paused group type (`Tymeslot.MeetingTypes.GroupAccess`) is left out, as an
   inactive one is: it takes no new bookings, so the page must not offer it. So
-  is a fixed-date type with no session left to sign up for
+  is a fixed-date type with nothing left to book: no session open for
+  sign-up, or no offered time a booker can pick now
   (`Tymeslot.MeetingTypes.FixedDates.reject_unbookable/1`), and so is a paid
   type while its host is not accepting payments
   (`Tymeslot.MeetingTypes.PaymentAccess`), since its booking could never be
@@ -105,10 +115,7 @@ defmodule Tymeslot.MeetingTypes do
   def get_public_meeting_types(user_id) do
     user_id
     |> MeetingTypeQueries.list_public_meeting_types()
-    |> GroupAccess.reject_paused()
-    |> FixedDates.reject_unbookable()
-    |> PaymentAccess.reject_unsellable()
-    |> OneOffEvents.order_for_listing()
+    |> PublicListing.offered()
   end
 
   @doc """
@@ -139,7 +146,8 @@ defmodule Tymeslot.MeetingTypes do
       Repo.transaction(fn ->
         changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs, opts)
 
-        with {:ok, promotion} <- BookingCalendar.promote(changeset),
+        with {:ok, changeset} <- Slugs.claim_address(changeset),
+             {:ok, promotion} <- BookingCalendar.promote(changeset),
              {:ok, meeting_type} <- MeetingTypeQueries.create_meeting_type(attrs, opts) do
           {meeting_type, promotion}
         else
@@ -151,6 +159,24 @@ defmodule Tymeslot.MeetingTypes do
       if promotion == :promoted, do: invalidate_after_commit(meeting_type.user_id)
       Publication.maybe_publish(meeting_type.user_id)
       {:ok, meeting_type}
+    end
+  end
+
+  @doc """
+  Copies a meeting type under a "(copy)" name, switched off, for its owner to
+  adjust (`Tymeslot.MeetingTypes.Duplication` says what a copy carries).
+
+  The copy is a new meeting type in every respect, so it passes the same
+  checks as one created from the form: a feature the owner's plan no longer
+  includes, or an integration they have since disconnected, refuses it.
+  """
+  @spec duplicate_meeting_type(MeetingTypeSchema.t()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, atom() | Ecto.Changeset.t()}
+  def duplicate_meeting_type(%MeetingTypeSchema{user_id: user_id} = source) do
+    attrs = Duplication.copy_attrs(source)
+
+    with :ok <- FormValidation.check(user_id, attrs) do
+      create_meeting_type(attrs, FormMapper.payment_opts(user_id))
     end
   end
 
@@ -184,6 +210,8 @@ defmodule Tymeslot.MeetingTypes do
     changeset = MeetingTypeSchema.changeset(meeting_type, attrs, opts)
 
     with :ok <- FixedDates.check_sessions_kept(meeting_type, changeset),
+         :ok <- FixedDates.check_offered_times_kept(meeting_type, changeset),
+         {:ok, changeset} <- Slugs.claim_address(changeset),
          {:ok, promotion} <- BookingCalendar.promote(changeset),
          {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
       sync_group_capacity(meeting_type, updated)
@@ -350,6 +378,7 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate effective_slug(meeting_type), to: Slugs
   defdelegate generate_random_slug(user_id), to: Slugs
   defdelegate update_slug(meeting_type, slug), to: Slugs
+  defdelegate slug_in_use?(user_id, slug), to: Slugs, as: :in_use?
 
   # Which meeting types offer a saved venue, asked by `Tymeslot.Venues` for
   # the Locations page, and the rewrite that takes a deleted venue off them.

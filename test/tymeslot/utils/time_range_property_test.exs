@@ -156,6 +156,39 @@ defmodule Tymeslot.Utils.TimeRangePropertyTest do
       end
     end
 
+    property "an event's own buffers widen the gap to the larger buffer, never the sum" do
+      check all(
+              {slot_start, slot_end} <- slot_gen(),
+              events <- nearby_events_gen(slot_start),
+              event_buffers <- list_of({integer(0..120), integer(0..120)}, length: length(events)),
+              buffer_before <- integer(0..120),
+              buffer_after <- integer(0..120)
+            ) do
+        events =
+          Enum.zip_with(events, event_buffers, &Map.put(&1, :buffers, &2))
+
+        # The gap an event needs in front of the slot is the larger of the
+        # slot's after-buffer and the event's before-buffer, and behind it the
+        # larger of the event's after-buffer and the slot's before-buffer.
+        expected =
+          Enum.any?(events, fn %{buffers: {event_before, event_after}} = event ->
+            TimeRange.overlaps?(
+              slot_start,
+              slot_end,
+              DateTime.add(event.start_time, -max(buffer_after, event_before), :minute),
+              DateTime.add(event.end_time, max(buffer_before, event_after), :minute)
+            )
+          end)
+
+        assert TimeRange.has_conflict_with_events?(
+                 slot_start,
+                 slot_end,
+                 events,
+                 {buffer_before, buffer_after}
+               ) == expected
+      end
+    end
+
     property "an event after the slot blocks it only through the after-buffer" do
       check all(
               {slot_start, slot_end} <- slot_gen(),

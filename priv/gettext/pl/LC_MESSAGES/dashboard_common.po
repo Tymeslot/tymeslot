@@ -137,6 +137,7 @@ msgid "View Page"
 msgstr "Zobacz stronę"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling link copied to clipboard!"
 msgstr "Link do rezerwacji skopiowany do schowka!"
@@ -374,6 +375,7 @@ msgid "Reconnect %{names}: until you do, your booking page may not take bookings
 msgstr "Połącz ponownie %{names}: do tego czasu strona rezerwacji może nie przyjmować rezerwacji"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Zapisz zmiany"

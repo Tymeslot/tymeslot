@@ -41,6 +41,7 @@ defmodule Tymeslot.Emails.EmailService do
           required(:meeting_type) => String.t(),
           optional(:attendee_locale) => String.t(),
           optional(:organizer_locale) => String.t(),
+          optional(:booking_page_name) => String.t() | nil,
           optional(:organizer_note) => String.t() | nil,
           optional(:start_time_attendee_tz) => DateTime.t(),
           optional(:start_time_owner_tz) => DateTime.t(),

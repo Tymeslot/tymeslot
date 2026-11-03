@@ -137,10 +137,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
     results =
       consume_uploaded_entries(socket, field, fn %{path: path}, entry ->
         {:ok,
-         ThemeCustomizations.attach_asset(profile.id, theme_id, field, %{
-           path: path,
-           filename: entry.client_name
-         })}
+         ThemeCustomizations.attach_asset(
+           ThemeCustomizations.scope_for(profile),
+           theme_id,
+           field,
+           %{
+             path: path,
+             filename: entry.client_name
+           }
+         )}
       end)
 
     case results do

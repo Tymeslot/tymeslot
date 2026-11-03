@@ -28,6 +28,16 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp with_id(query, nil), do: query
   defp with_id(query, id), do: from(m in query, where: m.id == ^id)
 
+  # `:main` is the profile's own page (and any booking through no page, or
+  # through one deleted since); an id is one of its booking pages.
+  defp through_booking_page(query, nil), do: query
+
+  defp through_booking_page(query, :main),
+    do: from(m in query, where: is_nil(m.booking_page_id))
+
+  defp through_booking_page(query, page_id) when is_integer(page_id),
+    do: from(m in query, where: m.booking_page_id == ^page_id)
+
   defp with_status(query, nil), do: query
   defp with_status(query, status), do: from(m in query, where: m.status == ^status)
 
@@ -335,7 +345,9 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   @doc """
   Cursor-based pagination for the organiser's meetings using keyset on start_time and id.
   Accepts opts: :after_start (DateTime), :after_id (binary_id), :per_page, :status, :time_filter (:upcoming | :past),
-  :id (one meeting only), :order (:desc, the default, newest first; or :asc, soonest first).
+  :id (one meeting only), :order (:desc, the default, newest first; or :asc, soonest first),
+  :booking_page (`:main` for bookings through no page, or a booking page id).
+  Each meeting comes with the booking page it was booked through.
   Returns a list limited to per_page.
   """
   @spec list_meetings_for_organizer_paginated_cursor(pos_integer(), Keyword.t()) :: [Meeting.t()]
@@ -357,14 +369,16 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> with_id(Keyword.get(opts, :id))
     |> with_status(status)
     |> without_status(exclude_status)
+    |> through_booking_page(Keyword.get(opts, :booking_page))
     |> apply_time_filter(time_filter, now)
     |> order_by_start_and_id(order)
     |> cursor_after(after_start, after_id, order)
     |> apply_limit(limit)
-    |> preload(
+    |> preload([
+      :booking_page,
       guests: ^live_guests_preload(),
       participants: ^card_participants_preload()
-    )
+    ])
     |> Repo.all()
   end
 

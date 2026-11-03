@@ -214,6 +214,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       contact_class="paper-booking-form__contact"
       message_rows={3}
       labels={BookingForm.short_labels()}
+      organizer_name={BookingLabels.organizer_display_name(@organizer_profile, @username_context)}
+      privacy_policy_url={BookingForm.privacy_policy_url(assigns[:legal_links])}
     >
       <GuestField.guest_field
         :if={GuestBooking.guests_allowed?(assigns)}

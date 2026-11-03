@@ -34,7 +34,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.Flash
 
-  # The fixed dates' events, all handled by `SessionHandlers`.
+  # The fixed dates' events, all handled by `SessionHandlers` (which hands a
+  # one-to-one type's offered times on to `OfferedTimeHandlers`).
   @session_events SessionHandlers.events()
 
   # The group bookings section's events, all handled by `GroupHandlers`.
@@ -47,6 +48,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - venues: the organiser's saved venues, for in-person locations
   # - parent_myself: phx-target for parent events (cancel, done, visibility)
   # - current_user: used for security metadata in validation
+  # - username: the profile's own page address, for the Visibility switches
+  # - booking_pages: the profile's booking pages, one Visibility switch each
+  # - page_memberships: `BookingPages.memberships/1`, which pages list which type
 
   # The further lengths' events, all handled by `LengthsHandlers`.
   @lengths_events LengthsHandlers.events()
@@ -103,7 +107,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        show_seat_availability: true,
        last_spots_threshold: nil,
        booking_limits: Init.get_booking_limits(nil),
+       scheduling_rules: Init.get_scheduling_rules(nil),
        active_tab: "details",
+       username: nil,
+       booking_pages: [],
+       page_memberships: %{},
        __initialized__: false
      )}
   end
@@ -358,6 +366,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply,
      socket
      |> assign(:booking_limits, limits)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_scheduling_rules", params, socket) do
+    # Kept as typed: the mapper parses them, and an out-of-range value stays in
+    # the input next to the changeset's error rather than vanishing.
+    type_params = Map.get(params, "meeting_type", %{})
+
+    rules =
+      Map.new(socket.assigns.scheduling_rules, fn {key, current} ->
+        {key, Map.get(type_params, key, current)}
+      end)
+
+    {:noreply,
+     socket
+     |> assign(:scheduling_rules, rules)
      |> Autosave.maybe_run()}
   end
 

@@ -25,9 +25,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
 
   An email about the whole series sent from another occurrence changes the
   invitation's entry too (`series_entry/2`): an edit of all of them moves it
-  as far as it moved the occurrence, and a cancellation of every occurrence
-  removes it along with every other occurrence's entry the guest was sent
-  (`cancelled_entries/1`).
+  as far as it moved the occurrence, along with every other occurrence's
+  entry the guest was sent (`moved_entries/2`), and a cancellation of every
+  occurrence removes them all (`cancelled_entries/1`). Which entries the
+  guest was sent is recorded as each email goes out (`SeriesEntries`), since
+  a write to the whole series drops the rows that would otherwise tell.
 
   A single event, a master's own row, an Exchange item, or an occurrence
   whose series' UID or first start cannot be told keeps its own uid.
@@ -39,6 +41,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
   alias Tymeslot.Utils.MapKeys
 
   @typedoc """
@@ -109,19 +112,68 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   @doc """
   Every entry besides `event`'s own that a cancellation of the whole series
   it belongs to removes from a guest's calendar: the invitation's
-  (`series_entry/2`), and that of each other cached occurrence an email went
+  (`series_entry/2`), every other entry an email recorded for the series
+  (`SeriesEntries`), and that of each other cached occurrence an email went
   out about on its own (one with a notified state or revision), which the
-  guest holds under its own UID. Read while the series' rows are still
-  cached; once they are gone only the invitation's entry is known.
+  guest holds under its own UID. The record survives a write to the whole
+  series, which drops the series' rows; the rows cover what was emailed
+  before entries were recorded.
   """
   @spec cancelled_entries(map()) :: [entry()]
   def cancelled_entries(event) do
     row = row(event)
-    own_uid = entry_uid(row)
 
-    [series_entry(row) | emailed_occurrences(row)]
-    |> Enum.reject(&(is_nil(&1) or &1.uid == own_uid))
-    |> Enum.uniq_by(& &1.uid)
+    others(
+      [series_entry(row) | SeriesEntries.recorded(row) ++ emailed_occurrences(row)],
+      entry_uid(row)
+    )
+  end
+
+  @doc """
+  Every entry besides `original`'s own that an edit of every occurrence of
+  the series `original` belongs to changes, `updated` being `original` as
+  the edit left it: the invitation's (`series_entry/2`), and every other
+  entry an email recorded for the series, each moved as far as the edit
+  moved `original` and given its new length. Read from the record, which
+  the edit's write leaves in place: by the time the email is built the
+  series' rows are gone.
+  """
+  @spec moved_entries(map(), map()) :: [entry()]
+  def moved_entries(original, updated) do
+    row = row(original)
+
+    recorded =
+      with {:ok, moved_by} <- moved_by(original, updated),
+           {:ok, duration} <- duration(updated) do
+        row
+        |> SeriesEntries.recorded()
+        |> Enum.map(fn entry ->
+          start = shift(entry.start, moved_by)
+          %{entry | start: start, end: shift(start, duration)}
+        end)
+      else
+        _untimed -> []
+      end
+
+    others([series_entry(original, updated) | recorded], entry_uid(original))
+  end
+
+  @doc """
+  `event`'s timing as an entry gives it: its dates (end exclusive) when all
+  day, its instants otherwise, and nothing when it has neither.
+  """
+  @spec timing(map()) :: %{
+          optional(:start) => Date.t() | DateTime.t(),
+          optional(:end) => Date.t() | DateTime.t()
+        }
+  def timing(%{all_day: true, start_date: %Date{} = from, end_date: %Date{} = to}),
+    do: %{start: from, end: to}
+
+  def timing(event) do
+    case {start_at(event), Map.get(event, :end_at) || Map.get(event, :end_time)} do
+      {%DateTime{} = from, %DateTime{} = to} -> %{start: from, end: to}
+      _untimed -> %{}
+    end
   end
 
   @doc "`entries` as an email job's JSON arg, each with its `:sequence` when set."
@@ -183,6 +235,23 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity do
   end
 
   defp decode(_value), do: nil
+
+  # The entries besides `own_uid`'s, once each: the first listed keeps its
+  # timing, and the highest revision any of them was sent at is kept, since
+  # the guest holds that one.
+  defp others(entries, own_uid) do
+    kept = Enum.reject(entries, &(is_nil(&1) or &1.uid == own_uid))
+    sequences = Enum.group_by(kept, & &1.uid, &Map.get(&1, :sent_sequence))
+
+    kept
+    |> Enum.uniq_by(& &1.uid)
+    |> Enum.map(fn entry ->
+      highest =
+        sequences |> Map.fetch!(entry.uid) |> Enum.reject(&is_nil/1) |> Enum.max(fn -> nil end)
+
+      Map.put(entry, :sent_sequence, highest)
+    end)
+  end
 
   defp emailed_occurrences(row) do
     row

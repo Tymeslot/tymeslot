@@ -38,7 +38,14 @@ defmodule Tymeslot.Polls.PollSchema do
     # hashed; it is looked up by `token_hash`.
     field(:token, EncryptedString, source: :token_encrypted, redact: true)
     field(:token_hash, :string)
-    field(:status, Ecto.Enum, values: [:open, :confirmed, :cancelled], default: :open)
+    # A `:draft` is the host's alone until they publish it: its link does not
+    # resolve (`PollQueries.get_by_token/1`), nobody is invited or emailed, and
+    # it is not among the open polls a username change would strand.
+    field(:status, Ecto.Enum, values: [:draft, :open, :confirmed, :cancelled], default: :open)
+    # The people a draft will invite, as `Tymeslot.Polls.Invitations.entry/0`
+    # maps, held until it is published (see `draft_invitees/1`). Nil once it
+    # is, and on every poll created published.
+    field(:draft_invitees, {:array, :map})
     # Whether the host is emailed about new votes, bundled per quarter hour
     # (`Tymeslot.Emails.EmailScheduler.schedule_poll_vote_digest/1`),
     # and when they last were, so the next update names only who voted since.
@@ -107,7 +114,8 @@ defmodule Tymeslot.Polls.PollSchema do
       :timezone,
       :notify_on_vote,
       :invite_only,
-      :reminder_config
+      :reminder_config,
+      :draft_invitees
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
     |> validate_number(:duration_minutes, Constraints.poll_duration_minutes_opts())
@@ -201,11 +209,24 @@ defmodule Tymeslot.Polls.PollSchema do
   # not stop the host fixing a typo in the title.
   defp validate_future_deadline(changeset) do
     validate_change(changeset, :deadline_at, fn :deadline_at, deadline_at ->
-      if DateTime.compare(deadline_at, DateTime.utc_now()) == :gt,
-        do: [],
-        else: [deadline_at: "must be in the future"]
+      if future?(deadline_at), do: [], else: [deadline_at: "must be in the future"]
     end)
   end
+
+  # Whatever the deadline was when it was set.
+  defp validate_deadline_ahead(changeset) do
+    case get_field(changeset, :deadline_at) do
+      nil ->
+        changeset
+
+      deadline_at ->
+        if future?(deadline_at),
+          do: changeset,
+          else: add_error(changeset, :deadline_at, "must be in the future")
+    end
+  end
+
+  defp future?(deadline_at), do: DateTime.compare(deadline_at, DateTime.utc_now()) == :gt
 
   # Turning updates on starts them from now: a vote cast before is not news
   # the host asked to hear, however long ago the last update went out.
@@ -243,6 +264,36 @@ defmodule Tymeslot.Polls.PollSchema do
   # held to that limit from the start.
   defp validate_description_length(changeset),
     do: validate_length(changeset, :description, max: MeetingSchema.organizer_note_max_length())
+
+  @doc """
+  Changeset publishing a draft: it opens for votes, and the invitees it held
+  leave it, to be invited as participants in the same transaction.
+
+  The deadline is judged here, against the moment of publication: one set
+  while drafting may have passed since, and a poll must not go out closed.
+  """
+  @spec publish_changeset(%__MODULE__{status: :draft}) :: Ecto.Changeset.t()
+  def publish_changeset(%__MODULE__{status: :draft} = poll) do
+    poll
+    |> change(status: :open, draft_invitees: nil)
+    |> validate_deadline_ahead()
+  end
+
+  @doc """
+  The invitees a draft holds, as `Tymeslot.Polls.Invitations.entry/0` maps.
+  Empty for a poll that is not a draft.
+  """
+  @spec draft_invitees(%__MODULE__{}) :: [%{email: String.t(), name: String.t() | nil}]
+  def draft_invitees(%__MODULE__{draft_invitees: nil}), do: []
+
+  def draft_invitees(%__MODULE__{draft_invitees: invitees}) do
+    for invitee <- invitees,
+        do: %{email: entry_value(invitee, :email), name: entry_value(invitee, :name)}
+  end
+
+  # Read back from the database the keys are strings; on a struct not yet
+  # saved they are still the atoms they were written with.
+  defp entry_value(invitee, key), do: Map.get(invitee, key, invitee[Atom.to_string(key)])
 
   @spec confirm_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def confirm_changeset(poll, attrs) do

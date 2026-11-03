@@ -80,6 +80,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
 
   @type event :: %{
           required(:uid) => String.t(),
@@ -395,15 +396,24 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   own row when cached, or every row of a CalDAV resource. Shared by every
   write that leaves the cached series stale: a series-wide delete, edit or
   move.
+
+  The series' attendee entries are held first (`SeriesEntries.hold/2`): the
+  cache is empty until the next sync, and the daily prune must not take
+  that for a series gone.
   """
   @spec delete_series_rows(pos_integer(), Occurrence.series_address()) :: :ok
-  def delete_series_rows(integration_id, {:master, master_id}) do
+  def delete_series_rows(integration_id, address) do
+    SeriesEntries.hold(integration_id, address)
+    drop_series_rows(integration_id, address)
+  end
+
+  defp drop_series_rows(integration_id, {:master, master_id}) do
     ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, [master_id])
     ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [master_id])
     SeriesRules.forget_orphans(integration_id)
   end
 
-  def delete_series_rows(integration_id, {:resource, href}) do
+  defp drop_series_rows(integration_id, {:resource, href}) do
     ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [href])
     :ok
   end

@@ -53,4 +53,21 @@ defmodule TymeslotWeb.AdminLiveTabsTest do
              )
     end
   end
+
+  describe "the installed version" do
+    test "is shown on every tab", %{conn: conn} do
+      version = to_string(Application.spec(:tymeslot, :vsn))
+
+      for path <- [
+            ~p"/admin/authentication",
+            ~p"/admin/email",
+            ~p"/admin/general",
+            ~p"/admin/users"
+          ] do
+        {:ok, lv, _html} = live(conn, path)
+
+        assert lv |> element("#admin-version") |> render() =~ "Version #{version}"
+      end
+    end
+  end
 end

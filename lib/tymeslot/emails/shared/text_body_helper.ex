@@ -24,7 +24,8 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
         format_duration_line(meeting_details, locale),
         format_location_line(meeting_details),
         Formatting.location_note(meeting_details),
-        format_title_line(meeting_details)
+        format_title_line(meeting_details),
+        Formatting.booked_through(meeting_details)
       ]
       |> Enum.filter(& &1)
       |> Enum.join("\n")

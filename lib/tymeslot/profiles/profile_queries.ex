@@ -74,6 +74,17 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Updates the organiser's legal notice and privacy policy links.
+  """
+  @spec update_legal_links(ProfileSchema.t(), map()) ::
+          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_legal_links(%ProfileSchema{} = profile, attrs) do
+    profile
+    |> ProfileSchema.legal_links_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Gets a profile by user ID.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.
   """
@@ -182,6 +193,15 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     ProfileSchema
     |> where([p], p.id == ^profile_id)
     |> select([p], p.user_id)
+    |> Repo.one()
+  end
+
+  @doc "The id of a user's profile, or nil when they have none."
+  @spec id_for_user(integer()) :: integer() | nil
+  def id_for_user(user_id) do
+    ProfileSchema
+    |> where([p], p.user_id == ^user_id)
+    |> select([p], p.id)
     |> Repo.one()
   end
 

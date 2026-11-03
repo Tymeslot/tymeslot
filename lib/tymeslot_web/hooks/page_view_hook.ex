@@ -131,8 +131,11 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
     end
   end
 
+  # A booking page's URL (`/<username>/<page>/<slug>`) is the username's
+  # page view, under its own path.
   defp resolve_target(%{"username" => username} = params) when is_binary(username) do
     slug = params["slug"]
+    path = build_path([username, params["page"], slug])
 
     case {Profiles.get_profile_by_username(username), slug} do
       {%{user_id: user_id}, slug} when is_binary(slug) ->
@@ -142,18 +145,18 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
             _other -> nil
           end
 
-        {user_id, meeting_type_id, build_path(username, slug)}
+        {user_id, meeting_type_id, path}
 
       {%{user_id: user_id}, _slug} ->
-        {user_id, nil, build_path(username, nil)}
+        {user_id, nil, path}
 
       {_profile, _slug} ->
-        {nil, nil, build_path(username, slug)}
+        {nil, nil, path}
     end
   end
 
   defp resolve_target(_params), do: {nil, nil, "/"}
 
-  defp build_path(username, nil), do: "/#{username}"
-  defp build_path(username, slug), do: "/#{username}/#{slug}"
+  defp build_path(segments),
+    do: "/" <> (segments |> Enum.filter(&is_binary/1) |> Enum.join("/"))
 end

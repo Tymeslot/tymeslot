@@ -52,11 +52,34 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   @doc """
   The page's introductory heading, given the theme whose default applies and the
-  name that theme introduces the organiser by.
+  name that theme introduces the organiser by. Served through a booking page,
+  a theme that names the organiser names the page with them ("Mentoring with
+  Alex") rather than "Schedule with Alex".
   """
   @spec heading(ProfileSchema.t() | nil, theme_key(), String.t() | nil) :: String.t()
   def heading(profile, theme_key, name),
-    do: custom(profile, :booking_heading) || default_heading(theme_key, name)
+    do:
+      custom(profile, :booking_heading) || page_heading(profile, theme_key, name) ||
+        default_heading(theme_key, name)
+
+  @doc """
+  The name of the booking page `profile` is served through, or nil on the
+  profile's own page. For a theme that labels its header with it.
+  """
+  @spec page_name(ProfileSchema.t() | map() | nil) :: String.t() | nil
+  def page_name(%{booking_page: %{name: name}}) when is_binary(name), do: name
+  def page_name(_profile), do: nil
+
+  defp page_heading(profile, theme_key, name) do
+    with page when is_binary(page) <- page_name(profile),
+         :named <- heading_style(theme_key) do
+      if is_binary(name),
+        do: dgettext("booking", "%{page} with %{name}", page: page, name: name),
+        else: page
+    else
+      _own_page_or_generic -> nil
+    end
+  end
 
   @doc """
   The greeting line, in the voice of the theme with key `theme_key` where it

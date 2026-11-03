@@ -16,6 +16,7 @@ defmodule Tymeslot.InviteeDataTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Polls.PollVoteSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
 
@@ -93,7 +94,18 @@ defmodule Tymeslot.InviteeDataTest do
 
       delivery = insert(:webhook_delivery, meeting_id: booked.id)
 
+      draft =
+        insert(:poll,
+          user: host,
+          status: :draft,
+          draft_invitees: [
+            %{email: "Ada@Example.com", name: "Ada"},
+            %{email: "bob@example.com", name: "Bob"}
+          ]
+        )
+
       %{
+        draft: draft,
         booked: booked,
         seat: seat,
         other_seat: other_seat,
@@ -114,6 +126,7 @@ defmodule Tymeslot.InviteeDataTest do
                participants: 1,
                guests: 1,
                poll_participants: 1,
+               draft_polls: 1,
                booking_payments: 1,
                deliveries: 1
              }
@@ -160,6 +173,14 @@ defmodule Tymeslot.InviteeDataTest do
                Repo.get!(ParticipantSchema, ctx.other_seat.id)
 
       assert %{email: "carol@example.com"} = Repo.get!(GuestSchema, ctx.guest_of_booker.id)
+    end
+
+    test "takes the person off a draft poll's invitees, keeping the others", ctx do
+      assert {:ok, _counts} = InviteeData.erase(@email)
+
+      assert PollSchema.draft_invitees(Repo.get!(PollSchema, ctx.draft.id)) == [
+               %{email: "bob@example.com", name: "Bob"}
+             ]
     end
 
     test "refuses while the person still has an upcoming booking, and changes nothing", ctx do
@@ -212,12 +233,18 @@ defmodule Tymeslot.InviteeDataTest do
       {their_poll, _slot} = poll_with_slot_ended(10, other_host)
       their_voter = insert(:poll_participant, poll: their_poll, email: @email)
 
-      assert {:ok, %{meetings: 1, poll_participants: 0}} =
+      their_draft =
+        insert(:poll, user: other_host, status: :draft, draft_invitees: [%{email: @email}])
+
+      assert {:ok, %{meetings: 1, poll_participants: 0, draft_polls: 0}} =
                InviteeData.erase_for_host(host.id, @email)
 
       assert %{attendee_email: nil} = Repo.get!(MeetingSchema, mine.id)
       assert %{attendee_email: @email} = Repo.get!(MeetingSchema, theirs.id)
       assert %{email: @email} = Repo.get!(PollParticipantSchema, their_voter.id)
+
+      assert [%{email: @email}] =
+               PollSchema.draft_invitees(Repo.get!(PollSchema, their_draft.id))
     end
 
     test "is not blocked by the person's upcoming booking with another host" do
@@ -272,6 +299,24 @@ defmodule Tymeslot.InviteeDataTest do
       assert Repo.get!(PollParticipantSchema, old_voter.id).email =~ "@erased.invalid"
       assert Repo.get(PollVoteSchema, vote.id)
       assert Repo.get!(PollParticipantSchema, mixed_voter.id).email == mixed_voter.email
+    end
+
+    test "clears the invitees of drafts last saved before the window" do
+      saved = fn days_ago ->
+        DateTime.utc_now() |> DateTime.add(-days_ago, :day) |> DateTime.truncate(:second)
+      end
+
+      invitees = [%{email: "ada@example.com", name: "Ada"}]
+      old = insert(:poll, status: :draft, draft_invitees: invitees, updated_at: saved.(731))
+      recent = insert(:poll, status: :draft, draft_invitees: invitees, updated_at: saved.(700))
+
+      assert {1, nil} = InviteeData.anonymise_expired(730)
+      assert PollSchema.draft_invitees(Repo.get!(PollSchema, old.id)) == []
+
+      assert [%{email: "ada@example.com"}] =
+               PollSchema.draft_invitees(Repo.get!(PollSchema, recent.id))
+
+      assert {0, nil} = InviteeData.anonymise_expired(730)
     end
 
     test "passes over what it has already anonymised" do
