@@ -65,15 +65,12 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
       # The void slot must not keep blocking the host's conflict detection,
       # otherwise nobody, including the original attendee, could ever book that
       # window again.
-      Repo.transaction(fn ->
-        assert {:ok, :no_conflicts} =
-                 MeetingConflictQueries.count_conflicts(
-                   meeting.start_time,
-                   meeting.end_time,
-                   nil,
-                   user.id
-                 )
-      end)
+      assert MeetingConflictQueries.list_live_in_window(
+               user.id,
+               meeting.start_time,
+               meeting.end_time,
+               nil
+             ) == []
 
       # A fresh booking with the same host at the exact original start time
       # succeeds. Conflicts are scoped per host, so only the same host can

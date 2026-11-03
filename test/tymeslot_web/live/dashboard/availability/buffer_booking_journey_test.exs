@@ -2,12 +2,15 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
   @moduledoc """
   The organiser sets a buffer before and a buffer after on the availability
   page, and a visitor on the public booking page is offered exactly the times
-  those two values allow around an existing booking, then books one of them.
+  those two values allow around a busy event in their calendar, then books one
+  of them.
 
   The values are deliberately lopsided (30 before, none after) so the journey
   fails if any step applies a buffer on the wrong side: swapped, the time that
-  ends as the booking starts would be hidden, and the time that starts as it
-  ends would be offered.
+  ends as the event starts would be hidden, and the time that starts as it
+  ends would be offered. The busy time is a calendar event rather than a
+  booking because a booking keeps the same buffers itself, which hides the
+  lopsidedness: on each side the larger of the two facing buffers decides.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -21,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
   import Tymeslot.Factory
 
   alias Tymeslot.BookingTestHelpers
+  alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -71,13 +75,18 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
     insert(:meeting_type, user: user, name: "Quick Chat", duration_minutes: 30, is_active: true)
 
     date = @timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(1)
-    booked_start = DateTime.new!(date, ~T[12:00:00], @timezone)
+    busy_start = date |> DateTime.new!(~T[12:00:00], @timezone) |> DateTime.shift_zone!("Etc/UTC")
 
-    insert(:meeting,
-      organizer_user_id: user.id,
-      start_time: booked_start,
-      end_time: DateTime.add(booked_start, 30, :minute)
-    )
+    busy = %{
+      uid: "busy-#{System.unique_integer([:positive])}",
+      start_time: busy_start,
+      end_time: DateTime.add(busy_start, 30, :minute),
+      status: :confirmed,
+      transparency: "opaque",
+      summary: "Busy"
+    }
+
+    stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end -> {:ok, [busy]} end)
 
     owner_conn = conn |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
 
@@ -103,10 +112,10 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
     view = open_day(build_conn(), profile, date)
     offered = rendered_times(view)
 
-    # 11:30-12:00 ends as the booking starts, and nothing is wanted after it
+    # 11:30-12:00 ends as the event starts, and nothing is wanted after it
     # any more (the starting 15-minute after-buffer would have hidden it).
     assert time(~T[11:30:00]) in offered
-    # 12:30 starts as the booking ends, inside the 30-minute before-buffer.
+    # 12:30 starts as the event ends, inside the 30-minute before-buffer.
     refute time(~T[12:30:00]) in offered
     # 13:00 clears it.
     assert time(~T[13:00:00]) in offered
@@ -159,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
       "booking" => %{
         "name" => "Buffer Journey",
         "email" => email,
-        "message" => "Booked right next to an existing meeting"
+        "message" => "Booked right next to a busy event"
       }
     })
     |> render_submit()
