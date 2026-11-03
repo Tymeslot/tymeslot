@@ -1,21 +1,15 @@
 defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
   @moduledoc """
   Rhythm in the onboarding wizard: compact and motion-driven, with tighter
-  corners, a single week strip and a vertical list of time slots.
+  corners, a strip of the host's coming week and the chosen day as a
+  vertical list, busy blocks between its times.
   """
   use Phoenix.Component
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
-    only: [
-      book_button: 1,
-      card_style: 2,
-      color: 3,
-      slot_row: 1,
-      slots_style: 1,
-      week_cell_style: 2
-    ]
+    only: [book_button: 1, card_style: 1, color: 3, ring: 2]
 
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.OnboardingLive.PreviewWeek
 
   @doc "Draws the `:thumbnail` or `:card` variant; see `Behaviour.onboarding_preview/1`."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -37,35 +31,34 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
   end
 
   attr :colors, :map, required: true
-  attr :slots, :list, required: true
-  attr :locale, :string, required: true
-  attr :highlight_card, :boolean, required: true
-  attr :highlight_slots, :boolean, required: true
+  attr :view, :map, required: true, doc: "the week, from `PreviewWeek.view/3`"
+  attr :reveal, :boolean, default: false
+  attr :highlight, :list, default: []
   slot :header, required: true
 
   @spec card(map()) :: Phoenix.LiveView.Rendered.t()
   def card(assigns) do
     ~H"""
-    <div
-      class="rounded-token-2xl p-5 flex flex-col items-center gap-3"
-      style={card_style(@colors, @highlight_card)}
-    >
+    <div class="rounded-token-2xl p-5 flex flex-col items-center gap-3" style={card_style(@colors)}>
       {render_slot(@header)}
-      <div class="w-full flex flex-col gap-2">
+      <div
+        class="w-full flex flex-col gap-2 rounded-token-lg"
+        style={ring(:calendar in @highlight, @colors)}
+        data-preview-region="calendar"
+      >
         <%!-- Single week strip --%>
-        <div class="flex justify-between gap-1">
-          <span
-            :for={day <- 0..6}
-            class="grow h-6 rounded-token-md inline-flex items-center justify-center text-token-2xs font-semibold"
-            style={week_cell_style(@colors, day == 2)}
-          >
-            {LocaleFormat.format_weekday_name(day + 1, @locale, :narrow)}
-          </span>
-        </div>
+        <PreviewWeek.day_strip view={@view} colors={@colors} />
 
-        <%!-- Vertical slot list --%>
-        <div class="flex flex-col gap-1.5" style={slots_style(@highlight_slots)}>
-          <.slot_row :for={slot <- @slots} colors={@colors} slot={slot} />
+        <%!-- The chosen day, its busy blocks between the times --%>
+        <div class="rounded-token-lg" style={ring(:slots in @highlight, @colors)}>
+          <PreviewWeek.times
+            view={@view}
+            colors={@colors}
+            layout={:rows}
+            limit={5}
+            class="flex flex-col gap-1.5"
+            reveal={@reveal}
+          />
         </div>
       </div>
       <.book_button

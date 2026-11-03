@@ -11,6 +11,16 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
   Fixtures:
 
     * `calendar` - a bookable Google calendar is connected
+    * `reveal_ready` - `calendar`, and the stage's week is ready: a fixed
+      sample week (`sample_week/2`) with busy blocks on Tuesday 14:00-15:00
+      and Thursday 10:00-11:30 and 23 open slots
+    * `reveal_empty` - `calendar`, and the same week ready with no busy blocks
+    * `reveal_slow` - `calendar`, and the week is taking too long to read
+    * `reveal_failed` - `calendar`, and the week could not be read
+
+  A week fixture also writes what the stage shows into the live region
+  (`stage_announcement`), as a real week arriving does, and bumps
+  `reveal_key`, so the times reveal as they would.
 
   Any other name, including ones reserved for fixtures still to come, leaves
   the socket as it is.
@@ -19,7 +29,11 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
   import Kernel, except: [apply: 2]
 
   alias Phoenix.Component
+  alias Tymeslot.Availability.WeekPreview
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Profiles
+  alias TymeslotWeb.OnboardingLive.LivePreview
 
   @doc """
   Applies the fixture named `name` to the socket.
@@ -32,7 +46,73 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
     )
   end
 
+  def apply(socket, "reveal_ready"), do: with_week(socket, :ready, busy: true)
+  def apply(socket, "reveal_empty"), do: with_week(socket, :ready, busy: false)
+  def apply(socket, "reveal_slow"), do: with_week(socket, :slow)
+  def apply(socket, "reveal_failed"), do: with_week(socket, :failed)
+
   def apply(socket, _name), do: socket
+
+  # Open slots per ISO weekday (1 is Monday), and the busy blocks between
+  # them: 23 slots in any seven days in a row.
+  @sample_slots %{
+    1 => ~w(09:00 09:30 10:00 10:30 11:00),
+    2 => ~w(13:00 13:30 15:00 15:30),
+    3 => ~w(09:00 09:30 10:00 10:30 11:00),
+    4 => ~w(09:00 09:30 11:30 12:00),
+    5 => ~w(09:00 09:30 10:00 10:30 11:00)
+  }
+
+  @sample_busy %{2 => [{~T[14:00:00], ~T[15:00:00]}], 4 => [{~T[10:00:00], ~T[11:30:00]}]}
+
+  @doc """
+  The sample week the reveal fixtures show: seven days from `today`, with
+  the same open slots and (when `busy` is set) busy blocks on each weekday
+  whatever the date, so it always has 23 slots.
+  """
+  @spec sample_week(Date.t(), boolean()) :: WeekPreview.t()
+  def sample_week(today, busy) do
+    days =
+      for offset <- 0..6 do
+        date = Date.add(today, offset)
+        weekday = Date.day_of_week(date)
+
+        %{
+          date: date,
+          slots: Map.get(@sample_slots, weekday, []),
+          busy: if(busy, do: Map.get(@sample_busy, weekday, []), else: [])
+        }
+      end
+
+    %WeekPreview{
+      days: days,
+      slot_count: days |> Enum.map(&length(&1.slots)) |> Enum.sum(),
+      first_busy:
+        Enum.find_value(days, fn
+          %{busy: [{start, _end} | _rest], date: date} -> %{date: date, start: start}
+          _day -> nil
+        end)
+    }
+  end
+
+  defp with_week(socket, state, opts \\ []) do
+    preview = if state == :ready, do: sample_week(today(socket.assigns), opts[:busy])
+    week = %{state: state, preview: preview}
+
+    socket
+    |> apply("calendar")
+    |> Component.assign(
+      stage_week: week,
+      stage_announcement: LivePreview.week_caption(week) || "",
+      reveal_key: Map.get(socket.assigns, :reveal_key, 0) + 1
+    )
+  end
+
+  defp today(assigns) do
+    timezone = Profiles.timezone(assigns[:profile])
+
+    Clock.utc_now() |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+  end
 
   # Never persisted, so it has no id; the calendar step reads only the
   # provider and the names shown on its connected row.

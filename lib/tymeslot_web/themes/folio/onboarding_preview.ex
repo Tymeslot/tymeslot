@@ -2,23 +2,18 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
   @moduledoc """
   Folio in the onboarding wizard: a light page with a cover strip, the
   portrait overlapping it above the organiser's name, then a month calendar
-  and the times, the editorial shape of the real page. The Book button's ink
+  of the host's coming week and the chosen day's times, the editorial shape
+  of the real page. The Book button's ink
   is white where it reads on the primary, otherwise the scheme's dark
   colour (the gold primaries of the dark schemes).
   """
   use Phoenix.Component
 
   alias Tymeslot.Utils.Colour
+  alias TymeslotWeb.OnboardingLive.PreviewWeek
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
-    only: [
-      book_button: 1,
-      calendar_cell_style: 2,
-      card_style: 2,
-      color: 3,
-      slot_chip: 1,
-      slots_style: 1
-    ]
+    only: [book_button: 1, card_style: 1, color: 3, ring: 2]
 
   @doc "Draws the `:thumbnail` or `:card` variant; see `Behaviour.onboarding_preview/1`."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -51,9 +46,9 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
   end
 
   attr :colors, :map, required: true
-  attr :slots, :list, required: true
-  attr :highlight_card, :boolean, default: false
-  attr :highlight_slots, :boolean, default: false
+  attr :view, :map, required: true, doc: "the week, from `PreviewWeek.view/3`"
+  attr :reveal, :boolean, default: false
+  attr :highlight, :list, default: []
   slot :header, required: true
 
   @spec card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -66,10 +61,7 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
       )
 
     ~H"""
-    <div
-      class="rounded-token-2xl overflow-hidden flex flex-col"
-      style={card_style(@colors, @highlight_card)}
-    >
+    <div class="rounded-token-2xl overflow-hidden flex flex-col" style={card_style(@colors)}>
       <span
         class="h-14 w-full"
         data-folio-cover
@@ -79,15 +71,21 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
         <div class="-mt-8 w-full flex flex-col items-center gap-3">
           {render_slot(@header)}
         </div>
-        <div class="w-full grid grid-cols-7 gap-1" style={slots_style(@highlight_slots)}>
-          <span
-            :for={day <- 0..13}
-            class="aspect-square rounded-token-md"
-            style={calendar_cell_style(@colors, day)}
-          />
-        </div>
-        <div class="w-full grid grid-cols-2 gap-1.5" style={slots_style(@highlight_slots)}>
-          <.slot_chip :for={slot <- @slots} colors={@colors} slot={slot} />
+        <div
+          class="w-full flex flex-col gap-3 rounded-token-lg"
+          style={ring(:calendar in @highlight, @colors)}
+          data-preview-region="calendar"
+        >
+          <PreviewWeek.month_grid view={@view} colors={@colors} cell_class="rounded-token-full" />
+          <div class="rounded-token-lg" style={ring(:slots in @highlight, @colors)}>
+            <PreviewWeek.times
+              view={@view}
+              colors={@colors}
+              layout={:chips}
+              class="grid grid-cols-3 gap-1.5"
+              reveal={@reveal}
+            />
+          </div>
         </div>
         <.book_button
           class="w-full py-2 rounded-token-lg font-semibold text-token-sm mt-1"

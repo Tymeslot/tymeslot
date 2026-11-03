@@ -601,3 +601,42 @@ msgstr "Postęp konfiguracji"
 #, elixir-autogen, elixir-format
 msgid "your-name"
 msgstr "twoja-nazwa"
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} free time"
+msgid_plural "%{count} free times"
+msgstr[0] "%{count} wolny termin"
+msgstr[1] "%{count} wolne terminy"
+msgstr[2] "%{count} wolnych terminów"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} open slot this week."
+msgid_plural "%{count} open slots this week."
+msgstr[0] "%{count} wolny termin w tym tygodniu."
+msgstr[1] "%{count} wolne terminy w tym tygodniu."
+msgstr[2] "%{count} wolnych terminów w tym tygodniu."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Connected. Your free times will appear on your page."
+msgstr "Połączono. Wolne terminy pojawią się na Twojej stronie."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Reading your calendar…"
+msgstr "Odczytywanie kalendarza…"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{day} %{time} is already blocked. %{count} open slot this week."
+msgid_plural "Your %{day} %{time} is already blocked. %{count} open slots this week."
+msgstr[0] "Masz już zajęty termin: %{day}, %{time}. %{count} wolny termin w tym tygodniu."
+msgstr[1] "Masz już zajęty termin: %{day}, %{time}. %{count} wolne terminy w tym tygodniu."
+msgstr[2] "Masz już zajęty termin: %{day}, %{time}. %{count} wolnych terminów w tym tygodniu."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Your free times appear here once your calendar is connected."
+msgstr "Wolne terminy pojawią się tutaj po podłączeniu kalendarza."

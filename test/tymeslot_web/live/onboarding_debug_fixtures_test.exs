@@ -9,6 +9,8 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
   @moduletag :onboarding
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.Availability.WeekPreview
+  alias Tymeslot.Clock
   alias TymeslotWeb.OnboardingLive.DebugFixtures
   alias TymeslotWeb.OnboardingLive.StepConfig
 
@@ -18,10 +20,16 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
         __changed__: %{},
         current_user: %{email: "host@example.com"},
         connected_calendars: [],
-        booking_page_live: false
+        booking_page_live: false,
+        profile: nil,
+        reveal_key: 0
       }
     }
   end
+
+  # Tuesday 3 November 2026, midday, so today is the Tuesday in any zone the
+  # default timezone might be.
+  defp freeze_clock, do: Process.put(Clock.process_key(), ~U[2026-11-03 12:00:00Z])
 
   test "debug fixture calendar shows the theme step" do
     socket = DebugFixtures.apply(socket(), "calendar")
@@ -43,8 +51,50 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
   end
 
   test "an unknown or not yet built fixture leaves the socket unchanged" do
-    for name <- [nil, "nonsense", "reveal_ready", "kept"] do
+    for name <- [nil, "nonsense", "kept"] do
       assert DebugFixtures.apply(socket(), name) == socket()
+    end
+  end
+
+  test "reveal_ready returns the fixed week" do
+    freeze_clock()
+    assigns = DebugFixtures.apply(socket(), "reveal_ready").assigns
+
+    assert %{state: :ready, preview: %WeekPreview{} = preview} = assigns.stage_week
+    assert preview.slot_count == 23
+    assert preview.first_busy == %{date: ~D[2026-11-03], start: ~T[14:00:00]}
+
+    assert %{busy: [{~T[10:00:00], ~T[11:30:00]}]} =
+             Enum.find(preview.days, &(&1.date == ~D[2026-11-05]))
+
+    assert [_calendar] = assigns.connected_calendars
+    assert assigns.reveal_key == 1
+
+    # Announced once, in the polite live region, in the caption's words.
+    assert assigns.stage_announcement ==
+             "Your Tuesday 02:00 PM is already blocked. 23 open slots this week."
+  end
+
+  test "reveal_empty is the same week ready with no busy blocks" do
+    freeze_clock()
+
+    %{stage_week: week, stage_announcement: announcement} =
+      DebugFixtures.apply(socket(), "reveal_empty").assigns
+
+    assert week.state == :ready
+    assert week.preview.slot_count == 23
+    assert week.preview.first_busy == nil
+    assert Enum.all?(week.preview.days, &(&1.busy == []))
+    assert announcement == "23 open slots this week."
+  end
+
+  test "reveal_slow and reveal_failed connect the calendar and announce nothing" do
+    for {name, state} <- [{"reveal_slow", :slow}, {"reveal_failed", :failed}] do
+      assigns = DebugFixtures.apply(socket(), name).assigns
+
+      assert assigns.stage_week == %{state: state, preview: nil}
+      assert [_calendar] = assigns.connected_calendars
+      assert assigns.stage_announcement == ""
     end
   end
 end

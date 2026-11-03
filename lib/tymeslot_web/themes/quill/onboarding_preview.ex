@@ -1,22 +1,23 @@
 defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
   @moduledoc """
   Quill in the onboarding wizard: the signature numbered step band over a
-  month calendar grid and a multi-column slot grid, generous corners, and a
-  primary-to-accent gradient on the Book button.
+  month calendar of the host's coming week and the chosen day's times as a
+  grid of chips, generous corners, and a primary-to-accent gradient on the
+  Book button.
   """
   use Phoenix.Component
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
     only: [
       book_button: 1,
-      calendar_cell_style: 2,
-      card_style: 2,
+      card_style: 1,
       color: 3,
       divider_style: 1,
-      slot_chip: 1,
-      slots_style: 1,
+      ring: 2,
       step_dot_style: 2
     ]
+
+  alias TymeslotWeb.OnboardingLive.PreviewWeek
 
   @doc "Draws the `:thumbnail` or `:card` variant; see `Behaviour.onboarding_preview/1`."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -55,18 +56,15 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
   end
 
   attr :colors, :map, required: true
-  attr :slots, :list, required: true
-  attr :highlight_card, :boolean, required: true
-  attr :highlight_slots, :boolean, required: true
+  attr :view, :map, required: true, doc: "the week, from `PreviewWeek.view/3`"
+  attr :reveal, :boolean, default: false
+  attr :highlight, :list, default: []
   slot :header, required: true
 
   @spec card(map()) :: Phoenix.LiveView.Rendered.t()
   def card(assigns) do
     ~H"""
-    <div
-      class="rounded-token-3xl p-5 flex flex-col items-center gap-3"
-      style={card_style(@colors, @highlight_card)}
-    >
+    <div class="rounded-token-3xl p-5 flex flex-col items-center gap-3" style={card_style(@colors)}>
       {render_slot(@header)}
       <div class="w-full flex flex-col gap-3">
         <%!-- Signature numbered step band --%>
@@ -82,18 +80,22 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
           </span>
         </div>
 
-        <%!-- Mini month calendar (7 columns) --%>
-        <div class="grid grid-cols-7 gap-1" style={slots_style(@highlight_slots)}>
-          <span
-            :for={day <- 0..20}
-            class="aspect-square rounded-token-sm"
-            style={calendar_cell_style(@colors, day)}
-          />
-        </div>
-
-        <%!-- Multi-column slot grid --%>
-        <div class="grid grid-cols-2 gap-1.5" style={slots_style(@highlight_slots)}>
-          <.slot_chip :for={slot <- @slots} colors={@colors} slot={slot} />
+        <div
+          class="w-full flex flex-col gap-3 rounded-token-lg"
+          style={ring(:calendar in @highlight, @colors)}
+          data-preview-region="calendar"
+        >
+          <PreviewWeek.month_grid view={@view} colors={@colors} cell_class="rounded-token-md" />
+          <div class="rounded-token-lg" style={ring(:slots in @highlight, @colors)}>
+            <PreviewWeek.times
+              view={@view}
+              colors={@colors}
+              layout={:chips}
+              class="grid grid-cols-3 gap-1.5"
+              item_class="rounded-token-lg"
+              reveal={@reveal}
+            />
+          </div>
         </div>
       </div>
       <.book_button

@@ -104,7 +104,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       view = navigate_to_theme_step(view)
 
       # Quill's signature month-calendar grid is present by default.
-      assert render(view) =~ "grid-cols-7"
+      assert render(view) =~ ~s(data-preview-part="month")
 
       html =
         view
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
         |> render_click()
 
       # Rhythm has no month grid — its body is the compact week strip + list.
-      refute html =~ "grid-cols-7"
+      refute html =~ ~s(data-preview-part="month")
     end
   end
 
@@ -299,7 +299,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
       assert profile.booking_theme == "2"
       # Rhythm's preview has no month grid (see "preview reshapes to the chosen theme").
-      refute html =~ "grid-cols-7"
+      refute html =~ ~s(data-preview-part="month")
 
       assert has_element?(
                view,

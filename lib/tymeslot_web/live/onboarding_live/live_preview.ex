@@ -10,6 +10,10 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   this module owns, so the picker feels like a real choice rather than a
   label swap.
 
+  The card shows the host's real coming week (`PreviewWeek`): their dates
+  before a calendar is connected, then their free times and busy blocks
+  once the stage's week is ready, revealed once per new week.
+
   The miniature is drawn at 400px wide on the theme's canvas colour, and the
   onboarding stage scales it to fit (`StageFrame.scaled/1`); the stage takes
   the same canvas colour (`canvas/2`) around it.
@@ -25,8 +29,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   import TymeslotWeb.OnboardingLive.PreviewParts, only: [color: 3, divider_style: 1, ring: 2]
 
+  alias Tymeslot.Availability.WeekPreview
+  alias Tymeslot.Clock
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.OnboardingLive.PreviewParts
   alias TymeslotWeb.OnboardingLive.StageFrame
   alias TymeslotWeb.Themes.Core.ThemeInfo
@@ -49,8 +56,21 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     default: nil,
     doc: "the chosen theme's customisation; `nil` draws the theme's defaults"
 
-  attr :calendar_connected, :boolean, default: false
   attr :booking_host, :string, required: true
+
+  attr :week, :map,
+    default: nil,
+    doc: "the stage's week, `%{state, preview}` (`PreviewWeek`); `nil` is the placeholder"
+
+  attr :reveal_key, :integer,
+    default: 0,
+    doc: "bumped when a new week arrives; the times reveal on the render where it changed"
+
+  attr :timezone, :string,
+    default: "Etc/UTC",
+    doc: "the host's timezone, which decides the dates of the coming week"
+
+  attr :today, :any, default: nil, doc: "today's date; defaults to today in `timezone`"
 
   @spec live_preview(map()) :: Phoenix.LiveView.Rendered.t()
   def live_preview(assigns) do
@@ -59,9 +79,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       |> assign(:colors, preview_colors(assigns.booking_theme, assigns.theme_customization))
       |> assign(:theme_module, theme_module(assigns.booking_theme))
       |> assign(:display_name, display_name(assigns.name))
-      |> assign(:link_text, link_text(assigns.booking_host, assigns.username))
-      |> assign(:slots, build_slots(assigns))
+      |> assign(:link_host, assigns.booking_host <> "/")
+      |> assign(:link_name, link_name(assigns.booking_host, assigns.username))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
+      |> assign(:today, assigns.today || today_in(assigns.timezone))
+      |> assign(:reveal, reveal?(assigns))
 
     ~H"""
     <div class="w-[400px] p-6" style={backdrop_style(@colors)}>
@@ -69,10 +91,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
         theme_module={@theme_module}
         variant={:card}
         colors={@colors}
-        slots={@slots}
+        week={@week}
+        today={@today}
         locale={@locale}
-        highlight_card={highlight?(@current_step, :card)}
-        highlight_slots={highlight?(@current_step, :slots)}
+        reveal={@reveal}
+        highlight={highlight(@current_step)}
       >
         <:header>
           <%!-- Avatar + identity --%>
@@ -82,14 +105,17 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
           >
             <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
           </div>
-          <p class="font-bold text-token-base text-center" style={text_style(@colors)}>
+          <p class="font-bold text-token-base text-center break-words" style={text_style(@colors)}>
             {@display_name}
           </p>
+          <%!-- On a narrow card the host gives way, never the name. --%>
           <span
-            class="text-token-xs px-3 py-1 rounded-token-full font-medium"
+            class="max-w-full min-w-0 inline-flex text-token-xs px-3 py-1 rounded-token-full font-medium whitespace-nowrap"
             style={link_style(@colors, highlight?(@current_step, :link))}
+            data-role="preview-address"
           >
-            {@link_text}
+            <span class="truncate">{@link_host}</span>
+            <span class="shrink-0">{@link_name}</span>
           </span>
 
           <div class="w-full h-px my-1" style={divider_style(@colors)} />
@@ -133,31 +159,31 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     ThemeInfo.get_theme_module(id) || ThemeInfo.get_theme_module(Catalog.default_id())
   end
 
-  defp build_slots(assigns) do
-    ~w(9:00 9:30 10:00 10:30)
-    |> Enum.with_index()
-    |> Enum.map(fn {label, index} ->
-      %{label: label, state: slot_state(assigns, index), check: check?(assigns, index)}
-    end)
+  defp today_in(timezone) do
+    case DateTime.shift_zone(Clock.utc_now(), timezone) do
+      {:ok, now} -> DateTime.to_date(now)
+      {:error, _reason} -> Clock.utc_today()
+    end
   end
 
-  defp check?(%{current_step: :connect_calendar, calendar_connected: true}, 0), do: true
-  defp check?(_assigns, _index), do: false
+  # The times reveal on the render where `reveal_key` changed (and on the
+  # first, which has no history), never on a later re-render. Outside a
+  # LiveView there is no change tracking, so every render is a first.
+  defp reveal?(%{__changed__: changed}) when is_map(changed),
+    do: Map.has_key?(changed, :reveal_key)
 
-  defp slot_state(%{current_step: :connect_calendar, calendar_connected: false}, _index),
-    do: :muted
-
-  defp slot_state(%{current_step: :connect_calendar}, _index), do: :filled
-  defp slot_state(_assigns, _index), do: :default
+  defp reveal?(_assigns), do: true
 
   # -------------------------------------------------------------------
   # Captions
   # -------------------------------------------------------------------
 
   @doc """
-  The line the stage shows under the page, or `nil` for none: only a page
-  that is live gets one, on the last step. Reads `current_step`,
-  `booking_page_live`, `booking_host` and `username`.
+  The line the stage shows under the page, or `nil` for none. On the last
+  step a live page gets its address; on the calendar and meeting steps a
+  week that is ready gets what it shows (`week_caption/1`). Reads
+  `current_step`, `booking_page_live`, `booking_host`, `username` and
+  `stage_week`.
   """
   @spec caption(map()) :: String.t() | nil
   def caption(%{current_step: :ready, booking_page_live: true} = assigns) do
@@ -166,13 +192,53 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     )
   end
 
+  def caption(%{current_step: step, stage_week: week}) when step in [:connect_calendar, :meeting],
+    do: week_caption(week)
+
   def caption(_assigns), do: nil
+
+  @doc """
+  What a ready week shows, in a sentence: the first busy block, if any, and
+  the number of open slots. `nil` for a week that is not ready. The stage
+  shows it under the page and the live region announces it.
+  """
+  @spec week_caption(map() | nil) :: String.t() | nil
+  def week_caption(%{state: :ready, preview: %WeekPreview{first_busy: nil} = preview}) do
+    dngettext(
+      "onboarding_wizard",
+      "%{count} open slot this week.",
+      "%{count} open slots this week.",
+      preview.slot_count
+    )
+  end
+
+  def week_caption(%{state: :ready, preview: %WeekPreview{first_busy: busy} = preview}) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    dngettext(
+      "onboarding_wizard",
+      "Your %{day} %{time} is already blocked. %{count} open slot this week.",
+      "Your %{day} %{time} is already blocked. %{count} open slots this week.",
+      preview.slot_count,
+      day: LocaleFormat.format_weekday_name(Date.day_of_week(busy.date), locale, :full),
+      time: LocaleFormat.format_time(busy.start, locale)
+    )
+  end
+
+  def week_caption(_week), do: nil
 
   # -------------------------------------------------------------------
   # Highlight regions
   # -------------------------------------------------------------------
 
-  defp highlight?(:ready, :card), do: true
+  # The regions of the theme's card ringed for a step (`PreviewParts.ring/2`).
+  # Choosing a theme changes the whole page, and the last step shows it
+  # finished, so neither rings anything.
+  defp highlight(:connect_calendar), do: [:calendar]
+  defp highlight(:meeting), do: [:meeting, :slots]
+  defp highlight(_step), do: []
+
+  # The header's own regions, which only the profile step rings.
   defp highlight?(:profile, :avatar), do: true
   defp highlight?(:profile, :link), do: true
   defp highlight?(_step, _region), do: false
@@ -189,6 +255,9 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   end
 
   defp link_text(host, username), do: StageFrame.address(host, username)
+
+  defp link_name(host, username),
+    do: String.replace_prefix(link_text(host, username), host <> "/", "")
 
   # -------------------------------------------------------------------
   # Colour resolution

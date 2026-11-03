@@ -389,6 +389,56 @@
   }
 }
 
+/* The week on the page miniature (PreviewWeek). Its colours are the
+   theme's, set inline; these rules draw with `currentColor`. */
+
+/* A busy block: hatched in the muted colour it is given. */
+.onboarding-preview-busy {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, currentColor 22%, transparent) 0 2px,
+    transparent 2px 7px
+  );
+}
+
+/* Where the times will be while the calendar is read. */
+.onboarding-preview-shimmer {
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, currentColor 14%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: onboarding-preview-shimmer 1.4s linear infinite;
+}
+
+@keyframes onboarding-preview-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* The reveal: each free time fades and rises 4px, 30ms after the one
+   before, the whole run done within 600ms. Only the render where a new
+   week arrived carries `data-reveal`. */
+[data-reveal] [data-reveal-item] {
+  animation: onboarding-preview-reveal 240ms ease-out both;
+  animation-delay: min(calc(var(--reveal-index, 0) * 30ms), 360ms);
+}
+
+@keyframes onboarding-preview-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
 /* The expanded preview (StagePreviewModal) */
 /* The page's canvas runs to the dialog's edges, so the page is drawn at
    least as large as on the stage card. */
@@ -411,6 +461,11 @@
   .onboarding-stage .stage-frame,
   .stage-frame-body {
     transition: none;
+  }
+
+  .onboarding-preview-shimmer,
+  [data-reveal] [data-reveal-item] {
+    animation: none;
   }
 }
 

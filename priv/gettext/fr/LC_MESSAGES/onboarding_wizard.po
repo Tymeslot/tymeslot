@@ -605,3 +605,39 @@ msgstr "Progression de la configuration"
 #, elixir-autogen, elixir-format
 msgid "your-name"
 msgstr "votre-nom"
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} free time"
+msgid_plural "%{count} free times"
+msgstr[0] "%{count} créneau libre"
+msgstr[1] "%{count} créneaux libres"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} open slot this week."
+msgid_plural "%{count} open slots this week."
+msgstr[0] "%{count} créneau libre cette semaine."
+msgstr[1] "%{count} créneaux libres cette semaine."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Connected. Your free times will appear on your page."
+msgstr "Connecté. Vos créneaux libres apparaîtront sur votre page."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Reading your calendar…"
+msgstr "Lecture de votre calendrier…"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{day} %{time} is already blocked. %{count} open slot this week."
+msgid_plural "Your %{day} %{time} is already blocked. %{count} open slots this week."
+msgstr[0] "Votre %{day} à %{time} est déjà pris. %{count} créneau libre cette semaine."
+msgstr[1] "Votre %{day} à %{time} est déjà pris. %{count} créneaux libres cette semaine."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Your free times appear here once your calendar is connected."
+msgstr "Vos créneaux libres apparaîtront ici une fois votre calendrier connecté."

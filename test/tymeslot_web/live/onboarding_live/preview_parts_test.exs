@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.OnboardingLive.PreviewParts
   alias TymeslotWeb.Themes.Core.ThemeInfo
@@ -17,7 +18,60 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
     # A theme module that draws no onboarding preview of its own.
   end
 
-  @sample_slots [%{label: "9:00", state: :default, check: false}]
+  # Tuesday 3 November 2026.
+  @today ~D[2026-11-03]
+
+  # A week from Tuesday whose Tuesday has two times and a busy hour, and
+  # whose Wednesday is fully booked.
+  defp ready_week do
+    days =
+      for offset <- 0..6 do
+        date = Date.add(@today, offset)
+
+        case offset do
+          0 -> %{date: date, slots: ["09:00", "09:30"], busy: [{~T[14:00:00], ~T[15:00:00]}]}
+          1 -> %{date: date, slots: [], busy: [{~T[09:00:00], ~T[17:00:00]}]}
+          _other -> %{date: date, slots: ["11:00"], busy: []}
+        end
+      end
+
+    %{
+      state: :ready,
+      preview: %WeekPreview{
+        days: days,
+        slot_count: 7,
+        first_busy: %{date: @today, start: ~T[14:00:00]}
+      }
+    }
+  end
+
+  defp card(module, week) do
+    assigns = %{module: module, week: week, today: @today}
+
+    rendered_to_string(~H"""
+    <PreviewParts.theme_preview
+      theme_module={@module}
+      variant={:card}
+      colors={%{}}
+      week={@week}
+      today={@today}
+    >
+      <:header>
+        <p id="shared-header">Ada Lovelace</p>
+      </:header>
+    </PreviewParts.theme_preview>
+    """)
+  end
+
+  defp doc(html), do: Floki.parse_fragment!(html)
+
+  defp times_text(html),
+    do: html |> doc() |> Floki.find("[data-preview-part='times']") |> Floki.text()
+
+  # Every shipped theme, and the generic mock a theme without a preview of
+  # its own gets: one contract.
+  @modules Enum.map(ThemeTestMatrix.ids(), &{"theme #{&1}", ThemeInfo.get_theme_module(&1)}) ++
+             [{"the generic mock", Bare}]
 
   describe "theme_preview/1" do
     for theme_id <- ThemeTestMatrix.ids() do
@@ -31,73 +85,144 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
 
         assert html =~ "#123456"
       end
+    end
+  end
 
-      test "theme #{theme_id} draws a card around the shared header" do
-        assigns = %{module: ThemeInfo.get_theme_module(unquote(theme_id)), slots: @sample_slots}
+  describe "the week on the card" do
+    for {name, module} <- @modules do
+      @module module
 
-        html =
-          rendered_to_string(~H"""
-          <PreviewParts.theme_preview theme_module={@module} variant={:card} colors={%{}} slots={@slots}>
-            <:header>
-              <p id="shared-header">Ada Lovelace</p>
-            </:header>
-          </PreviewParts.theme_preview>
-          """)
+      test "#{name} renders real slot labels in the ready state" do
+        html = card(@module, ready_week())
 
         assert html =~ ~s(id="shared-header")
-        assert html =~ "9:00"
         assert html =~ "Book"
+        # The chosen day is the first with times: Tuesday's two, and no
+        # other day's.
+        assert times_text(html) =~ "09:00"
+        assert times_text(html) =~ "09:30"
+        refute html =~ "10:30"
+        refute times_text(html) =~ "11:00"
+        assert html =~ "data-reveal-item"
+      end
+
+      test "#{name} renders the placeholder line before a calendar" do
+        html = card(@module, %{state: :placeholder, preview: nil})
+
+        assert html =~ "Your free times appear here once your calendar is connected."
+        refute html =~ "data-reveal-item"
+        # No day is offered before the calendar is read.
+        states =
+          html
+          |> doc()
+          |> Floki.find("[data-day-state]")
+          |> Enum.flat_map(&Floki.attribute(&1, "data-day-state"))
+
+        refute "open" in states
+        refute "selected" in states
+      end
+
+      test "#{name} says the calendar is being read while it loads" do
+        html = card(@module, %{state: :loading, preview: nil})
+
+        assert html =~ "Reading your calendar…"
+        assert html =~ "onboarding-preview-shimmer"
+      end
+
+      test "#{name} sends a slow or failed week to the page" do
+        for state <- [:slow, :failed] do
+          html = card(@module, %{state: state, preview: nil})
+
+          assert html =~ "Connected. Your free times will appear on your page."
+          refute html =~ "Your free times appear here"
+        end
       end
     end
 
-    test "falls back to the generic mock for a module without onboarding_preview/1" do
-      assigns = %{slots: @sample_slots}
+    test "a theme with a day view hatches the busy hour between the times" do
+      for module <- [TymeslotWeb.Themes.Rhythm.Theme, TymeslotWeb.Themes.Paper.Theme] do
+        entries =
+          module
+          |> card(ready_week())
+          |> doc()
+          |> Floki.find("[data-preview-part='times'] [data-entry]")
+          |> Enum.map(&{Floki.attribute(&1, "data-entry"), String.trim(Floki.text(&1))})
 
-      html =
-        rendered_to_string(~H"""
-        <PreviewParts.theme_preview theme_module={Bare} variant={:card} colors={%{}} slots={@slots}>
-          <:header>
-            <p id="shared-header">Ada Lovelace</p>
-          </:header>
-        </PreviewParts.theme_preview>
-        """)
+        assert entries == [
+                 {["slot"], "09:00 AM"},
+                 {["slot"], "09:30 AM"},
+                 {["busy"], "02:00 PM – 03:00 PM"}
+               ]
 
-      assert html =~ ~s(id="shared-header")
-      assert html =~ "9:00"
-      assert html =~ "Book"
+        assert [busy] =
+                 module
+                 |> card(ready_week())
+                 |> doc()
+                 |> Floki.find("[data-entry='busy']")
+
+        assert [class] = Floki.attribute(busy, "class")
+        assert class =~ "onboarding-preview-busy"
+      end
+    end
+
+    test "a month-grid theme numbers the real days and marks a day with no times unavailable" do
+      for module <- [TymeslotWeb.Themes.Quill.Theme, TymeslotWeb.Themes.Folio.Theme] do
+        cells =
+          module
+          |> card(ready_week())
+          |> doc()
+          |> Floki.find("[data-preview-part='month'] [data-day-state]")
+          |> Enum.map(&{String.trim(Floki.text(&1)), hd(Floki.attribute(&1, "data-day-state"))})
+
+        # Monday 2 November to Sunday 15 November.
+        assert length(cells) == 14
+        assert Enum.at(cells, 0) == {"2", "outside"}
+        assert Enum.at(cells, 1) == {"3", "selected"}
+        assert Enum.at(cells, 2) == {"4", "closed"}
+        assert Enum.at(cells, 3) == {"5", "open"}
+        assert Enum.at(cells, 8) == {"10", "outside"}
+      end
+    end
+
+    test "the week strip shows the coming seven days from today" do
+      html = card(TymeslotWeb.Themes.Rhythm.Theme, %{state: :placeholder, preview: nil})
+
+      days =
+        html
+        |> doc()
+        |> Floki.find("[data-preview-part='days'] [data-day-state]")
+        |> Enum.map(&Floki.text/1)
+
+      assert Enum.map(days, &String.replace(&1, ~r/\s+/, "")) ==
+               ~w(Tue3 Wed4 Thu5 Fri6 Sat7 Sun8 Mon9)
+    end
+
+    test "before a calendar the month grid numbers the coming week's real days" do
+      cells =
+        TymeslotWeb.Themes.Quill.Theme
+        |> card(%{state: :placeholder, preview: nil})
+        |> doc()
+        |> Floki.find("[data-preview-part='month'] [data-day-state]")
+        |> Enum.map(&{String.trim(Floki.text(&1)), hd(Floki.attribute(&1, "data-day-state"))})
+
+      assert Enum.take(cells, 3) == [{"2", "outside"}, {"3", "idle"}, {"4", "idle"}]
+    end
+
+    test "before a calendar Paper opens on today's real date" do
+      html = card(TymeslotWeb.Themes.Paper.Theme, %{state: :placeholder, preview: nil})
+
+      assert [day] = html |> doc() |> Floki.find("[data-preview-part='day']")
+      assert Floki.text(day) =~ "Tuesday, 3 November"
     end
   end
 
   describe "each theme keeps its own shape" do
-    test "Quill's card has the month calendar grid and Rhythm's does not" do
-      assigns = %{slots: @sample_slots}
+    test "Quill's card has the month calendar and Rhythm's does not" do
+      quill = card(TymeslotWeb.Themes.Quill.Theme, ready_week())
+      rhythm = card(TymeslotWeb.Themes.Rhythm.Theme, ready_week())
 
-      quill =
-        rendered_to_string(~H"""
-        <PreviewParts.theme_preview
-          theme_module={TymeslotWeb.Themes.Quill.Theme}
-          variant={:card}
-          colors={%{}}
-          slots={@slots}
-        >
-          <:header></:header>
-        </PreviewParts.theme_preview>
-        """)
-
-      rhythm =
-        rendered_to_string(~H"""
-        <PreviewParts.theme_preview
-          theme_module={TymeslotWeb.Themes.Rhythm.Theme}
-          variant={:card}
-          colors={%{}}
-          slots={@slots}
-        >
-          <:header></:header>
-        </PreviewParts.theme_preview>
-        """)
-
-      assert quill =~ "grid-cols-7"
-      refute rhythm =~ "grid-cols-7"
+      assert quill =~ ~s(data-preview-part="month")
+      refute rhythm =~ ~s(data-preview-part="month")
     end
   end
 

@@ -605,3 +605,39 @@ msgstr "Avanzamento della configurazione"
 #, elixir-autogen, elixir-format
 msgid "your-name"
 msgstr "il-tuo-nome"
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} free time"
+msgid_plural "%{count} free times"
+msgstr[0] "%{count} orario libero"
+msgstr[1] "%{count} orari liberi"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} open slot this week."
+msgid_plural "%{count} open slots this week."
+msgstr[0] "%{count} orario libero questa settimana."
+msgstr[1] "%{count} orari liberi questa settimana."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Connected. Your free times will appear on your page."
+msgstr "Collegato. I tuoi orari liberi compariranno sulla tua pagina."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Reading your calendar…"
+msgstr "Lettura del calendario…"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{day} %{time} is already blocked. %{count} open slot this week."
+msgid_plural "Your %{day} %{time} is already blocked. %{count} open slots this week."
+msgstr[0] "Hai già un impegno %{day} alle %{time}. %{count} orario libero questa settimana."
+msgstr[1] "Hai già un impegno %{day} alle %{time}. %{count} orari liberi questa settimana."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Your free times appear here once your calendar is connected."
+msgstr "I tuoi orari liberi compariranno qui dopo aver collegato il calendario."

@@ -74,6 +74,7 @@
 @source "../../../../lib/tymeslot_web/live/meeting_request_live.ex";
 @source "../../../../lib/tymeslot_web/live/meeting_request_live";
 @source "../../../../lib/tymeslot_web/live/onboarding_live/preview_parts.ex";
+@source "../../../../lib/tymeslot_web/live/onboarding_live/preview_week.ex";
 @source "../../../../lib/tymeslot_web/live/scheduling";
 @source "../../../../lib/tymeslot_web/live/shared";
 @source "../../../../lib/tymeslot_web/not_found_error.ex";

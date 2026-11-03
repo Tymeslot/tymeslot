@@ -98,7 +98,8 @@ defmodule TymeslotWeb.OnboardingLive do
           current_step: @current_step,
           booking_page_live: @booking_page_live,
           booking_host: booking_host(),
-          username: Map.get(@form_data, "username", "")
+          username: Map.get(@form_data, "username", ""),
+          stage_week: @stage_week
         })
       }
     >
@@ -108,7 +109,8 @@ defmodule TymeslotWeb.OnboardingLive do
           current_step={@current_step}
           form_data={@form_data}
           theme_customization={@theme_customization}
-          calendar_connected={@connected_calendars != [] or @calendar_choice != nil}
+          week={@stage_week}
+          reveal_key={@reveal_key}
         />
       </:stage>
       <%= case @current_step do %>
@@ -157,7 +159,8 @@ defmodule TymeslotWeb.OnboardingLive do
         current_step={@current_step}
         form_data={@form_data}
         theme_customization={@theme_customization}
-        calendar_connected={@connected_calendars != [] or @calendar_choice != nil}
+        week={@stage_week}
+        reveal_key={@reveal_key}
       />
     </StagePreviewModal.stage_preview_modal>
 
@@ -177,7 +180,8 @@ defmodule TymeslotWeb.OnboardingLive do
   attr :current_step, :atom, required: true
   attr :form_data, :map, required: true
   attr :theme_customization, :any, required: true
-  attr :calendar_connected, :boolean, required: true
+  attr :week, :map, required: true
+  attr :reveal_key, :integer, required: true
 
   defp stage_preview(assigns) do
     ~H"""
@@ -190,7 +194,9 @@ defmodule TymeslotWeb.OnboardingLive do
       username={Map.get(@form_data, "username", "")}
       avatar_url={Profiles.avatar_url(@profile, :thumb)}
       theme_customization={@theme_customization}
-      calendar_connected={@calendar_connected}
+      week={@week}
+      reveal_key={@reveal_key}
+      timezone={Profiles.timezone(@profile)}
       booking_host={booking_host()}
     />
     """

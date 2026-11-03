@@ -66,9 +66,12 @@ defmodule TymeslotWeb.Themes.Core.Behaviour do
 
     * `:thumbnail`, the theme step's picker tile, with `primary` (the
       scheme's primary colour);
-    * `:card`, the live preview card, with `colors`, `slots`, `locale`,
-      `highlight_card`, `highlight_slots` and a `header` slot holding the
-      shared identity header the card is drawn around.
+    * `:card`, the live preview card, with `colors`, `locale`, `view` (the
+      host's coming week as `TymeslotWeb.OnboardingLive.PreviewWeek.view/3`
+      resolves it, laid out with that module's components), `reveal`
+      (whether the times reveal on this render), `highlight` (the regions
+      to ring: `:calendar`, `:slots`, `:meeting`) and a `header` slot
+      holding the shared identity header the card is drawn around.
 
   Optional: `use TymeslotWeb.Themes.Core.Theme` supplies the generic mock
   (`TymeslotWeb.OnboardingLive.PreviewParts.generic/1`), and the wizard falls

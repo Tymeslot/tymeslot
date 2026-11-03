@@ -89,6 +89,9 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # The booking page's coming week, drawn on the stage once a calendar
       # is connected.
       stage_week: %{state: :placeholder, preview: nil},
+      # Bumped whenever a new week arrives, so the stage reveals its times
+      # once on that render and never again on a later one.
+      reveal_key: 0,
       # What the layout's live region announces about the stage (see
       # `OnboardingLayout`); a step that changes the stage writes a sentence
       # here.

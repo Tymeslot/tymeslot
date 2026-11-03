@@ -605,3 +605,39 @@ msgstr "Progreso de la configuración"
 #, elixir-autogen, elixir-format
 msgid "your-name"
 msgstr "tu-nombre"
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} free time"
+msgid_plural "%{count} free times"
+msgstr[0] "%{count} hueco libre"
+msgstr[1] "%{count} huecos libres"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} open slot this week."
+msgid_plural "%{count} open slots this week."
+msgstr[0] "%{count} hueco libre esta semana."
+msgstr[1] "%{count} huecos libres esta semana."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Connected. Your free times will appear on your page."
+msgstr "Conectado. Tus huecos libres aparecerán en tu página."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Reading your calendar…"
+msgstr "Leyendo tu calendario…"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{day} %{time} is already blocked. %{count} open slot this week."
+msgid_plural "Your %{day} %{time} is already blocked. %{count} open slots this week."
+msgstr[0] "Ya tienes un compromiso el %{day} a las %{time}. %{count} hueco libre esta semana."
+msgstr[1] "Ya tienes un compromiso el %{day} a las %{time}. %{count} huecos libres esta semana."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Your free times appear here once your calendar is connected."
+msgstr "Tus huecos libres aparecerán aquí cuando conectes tu calendario."

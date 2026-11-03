@@ -605,3 +605,42 @@ msgstr "Průběh nastavení"
 #, elixir-autogen, elixir-format
 msgid "your-name"
 msgstr "vase-jmeno"
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} free time"
+msgid_plural "%{count} free times"
+msgstr[0] "%{count} volný termín"
+msgstr[1] "%{count} volné termíny"
+msgstr[2] "%{count} volných termínů"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} open slot this week."
+msgid_plural "%{count} open slots this week."
+msgstr[0] "Tento týden %{count} volný termín."
+msgstr[1] "Tento týden %{count} volné termíny."
+msgstr[2] "Tento týden %{count} volných termínů."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Connected. Your free times will appear on your page."
+msgstr "Připojeno. Vaše volné termíny se zobrazí na vaší stránce."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Reading your calendar…"
+msgstr "Načítáme váš kalendář…"
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{day} %{time} is already blocked. %{count} open slot this week."
+msgid_plural "Your %{day} %{time} is already blocked. %{count} open slots this week."
+msgstr[0] "Už máte obsazeno: %{day}, %{time}. Tento týden %{count} volný termín."
+msgstr[1] "Už máte obsazeno: %{day}, %{time}. Tento týden %{count} volné termíny."
+msgstr[2] "Už máte obsazeno: %{day}, %{time}. Tento týden %{count} volných termínů."
+
+#: lib/tymeslot_web/live/onboarding_live/preview_week.ex
+#, elixir-autogen, elixir-format
+msgid "Your free times appear here once your calendar is connected."
+msgstr "Vaše volné termíny se tu zobrazí po připojení kalendáře."
