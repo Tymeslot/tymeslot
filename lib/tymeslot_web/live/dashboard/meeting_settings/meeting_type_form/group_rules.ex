@@ -16,10 +16,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingTypes.GroupLocationRule
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandlers
 
   @typedoc "Why group bookings cannot be turned on right now."
   @type blocker ::
-          :plan | :payment | :approval | :lengths | {:location, GroupLocationRule.reason()}
+          :plan
+          | :payment
+          | :approval
+          | :lengths
+          | :offered_times
+          | {:location, GroupLocationRule.reason()}
 
   @doc """
   The first reason group bookings cannot be turned on, or nil when nothing
@@ -38,6 +44,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
 
       assigns.requires_approval ->
         :approval
+
+      # A group type with fixed dates offers planned sessions, so a
+      # one-to-one type's upcoming offered times would silently stop being
+      # offered (`Tymeslot.MeetingTypes.FixedDates.check_offered_times_kept/2`).
+      OfferedTimeHandlers.times_offered?(assigns) ->
+        :offered_times
 
       # Everyone in a group slot shares one meeting, so its length cannot be
       # each booker's choice (`Tymeslot.MeetingTypes.Lengths`).

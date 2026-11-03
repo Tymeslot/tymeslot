@@ -429,3 +429,8 @@ msgid "The %{count} person who signed up is told by email."
 msgid_plural "The %{count} people who signed up are told by email."
 msgstr[0] "Die angemeldete Person wird per E-Mail benachrichtigt."
 msgstr[1] "Die %{count} angemeldeten Personen werden per E-Mail benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until it offers an upcoming time. Add a time to offer."
+msgstr "Erscheint erst auf Ihrer Buchungsseite, wenn er eine kommende Zeit anbietet. Fügen Sie eine Zeit zum Anbieten hinzu."

@@ -229,7 +229,7 @@ defmodule Tymeslot.Bookings.Create do
   # registration close again under the row lock, so a booking validated just
   # before the close that commits after it is still refused.
   defp validate_time(booking_data, user_id) do
-    if FixedDates.enabled?(Map.get(booking_data, :meeting_type)),
+    if FixedDates.sessions?(Map.get(booking_data, :meeting_type)),
       do: validate_session(booking_data),
       else: validate_schedule_time(booking_data, user_id)
   end

@@ -434,3 +434,8 @@ msgid_plural "The %{count} people who signed up are told by email."
 msgstr[0] "Přihlášená osoba se to dozví e-mailem."
 msgstr[1] "%{count} přihlášené osoby se to dozvědí e-mailem."
 msgstr[2] "%{count} přihlášených osob se to dozví e-mailem."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until it offers an upcoming time. Add a time to offer."
+msgstr "Na rezervační stránce se neobjeví, dokud nebude nabízet nějaký nadcházející čas. Přidejte čas, který chcete nabídnout."

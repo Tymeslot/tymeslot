@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles
   alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandlers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
 
   @doc """
@@ -57,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> assign_availability_schedules(Map.get(assigns, :current_user))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> SessionHandlers.assign_sessions()
+    |> OfferedTimeHandlers.assign_offered_times()
     |> assign_calendar_state()
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
@@ -197,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
     socket
     |> Component.assign(:group_bookings_enabled, limit > 1)
-    |> Component.assign(:fixed_dates, limit > 1 and Map.get(type || %{}, :fixed_dates) == true)
+    |> Component.assign(:fixed_dates, Map.get(type || %{}, :fixed_dates) == true)
     |> Component.assign(
       :max_participants,
       to_string(if limit > 1, do: limit, else: @default_group_limit)

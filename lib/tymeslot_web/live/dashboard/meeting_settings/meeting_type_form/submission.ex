@@ -197,13 +197,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   defp maybe_put_max_participants(params, _assigns), do: Map.put(params, "max_participants", "1")
 
-  # Fixed dates need group bookings, so they post as off without them.
-  defp put_fixed_dates(params, assigns) do
-    on? =
-      Map.get(assigns, :group_bookings_enabled) == true and Map.get(assigns, :fixed_dates) == true
-
-    Map.put(params, "fixed_dates", to_string(on?))
-  end
+  # Fixed dates mean planned sessions on a group type and offered times on a
+  # one-to-one type, so the setting posts as it is, whichever the type is.
+  defp put_fixed_dates(params, assigns),
+    do: Map.put(params, "fixed_dates", to_string(Map.get(assigns, :fixed_dates) == true))
 
   defp stored_max_participants(nil), do: "1"
   defp stored_max_participants(type), do: to_string(type.max_participants)

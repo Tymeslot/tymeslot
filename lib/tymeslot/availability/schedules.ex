@@ -17,6 +17,7 @@ defmodule Tymeslot.Availability.Schedules do
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.Breaks
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.MeetingTypes.OfferedTimes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
@@ -285,7 +286,8 @@ defmodule Tymeslot.Availability.Schedules do
           required(:buffer_after_minutes) => non_neg_integer(),
           required(:min_advance_hours) => non_neg_integer(),
           required(:max_advance_booking_days) => pos_integer(),
-          required(:slot_interval_minutes) => pos_integer() | nil
+          required(:slot_interval_minutes) => pos_integer() | nil,
+          optional(:offered_starts) => [DateTime.t()]
         }
 
   @doc """
@@ -300,10 +302,15 @@ defmodule Tymeslot.Availability.Schedules do
   `max_advance_booking_days` is this map's name for the schedule's
   `advance_booking_days`. `schedule_id` is carried so callers can recompute
   the schedule's own windows from the config alone.
+
+  A one-to-one type with fixed dates also carries `offered_starts`, its
+  upcoming offered times (`Tymeslot.MeetingTypes.OfferedTimes`), which
+  replace the schedule's weekly hours as the source of candidate starts
+  (`Tymeslot.Availability.SlotGrid`); every other rule here still applies.
   """
   @spec config(schedule() | nil, map() | nil) :: config()
   def config(schedule, meeting_type) do
-    %{
+    base = %{
       schedule_id: schedule && schedule.id,
       buffer_before_minutes: policy(schedule, :buffer_before_minutes),
       buffer_after_minutes: policy(schedule, :buffer_after_minutes),
@@ -311,6 +318,11 @@ defmodule Tymeslot.Availability.Schedules do
       max_advance_booking_days: policy(schedule, :advance_booking_days),
       slot_interval_minutes: slot_interval_minutes(meeting_type)
     }
+
+    case OfferedTimes.starts_for(meeting_type) do
+      nil -> base
+      starts -> Map.put(base, :offered_starts, starts)
+    end
   end
 
   @typedoc "`config/0` for a booking, with the organiser's timezone."
@@ -321,6 +333,7 @@ defmodule Tymeslot.Availability.Schedules do
           required(:min_advance_hours) => non_neg_integer(),
           required(:max_advance_booking_days) => pos_integer(),
           required(:slot_interval_minutes) => pos_integer() | nil,
+          optional(:offered_starts) => [DateTime.t()],
           required(:owner_timezone) => String.t()
         }
 

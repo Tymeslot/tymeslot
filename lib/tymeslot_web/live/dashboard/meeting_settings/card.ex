@@ -80,12 +80,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               :if={is_nil(@next_date)}
               tone={:warning}
               icon="hero-calendar-mini"
-              title={
-                dgettext(
-                  "dashboard_meeting_types",
-                  "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
-                )
-              }
+              title={no_open_dates_reason(@type)}
               data-testid="no-open-dates"
             >
               {dgettext("dashboard_meeting_types", "No open dates")}
@@ -291,6 +286,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             )
         }
     end
+  end
+
+  # A group type waits for a session open for registration; a one-to-one
+  # type for an upcoming offered time.
+  defp no_open_dates_reason(%{max_participants: max}) when is_integer(max) and max > 1 do
+    dgettext(
+      "dashboard_meeting_types",
+      "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+    )
+  end
+
+  defp no_open_dates_reason(_type) do
+    dgettext(
+      "dashboard_meeting_types",
+      "Not on your booking page until it offers an upcoming time. Add a time to offer."
+    )
   end
 
   defp next_date_label(datetime, timezone, time_format) do
