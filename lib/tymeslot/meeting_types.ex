@@ -10,6 +10,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.BookingCalendar
   alias Tymeslot.MeetingTypes.Defaults
+  alias Tymeslot.MeetingTypes.Duplication
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.FormMapper
@@ -151,6 +152,24 @@ defmodule Tymeslot.MeetingTypes do
       if promotion == :promoted, do: invalidate_after_commit(meeting_type.user_id)
       Publication.maybe_publish(meeting_type.user_id)
       {:ok, meeting_type}
+    end
+  end
+
+  @doc """
+  Copies a meeting type under a "(copy)" name, switched off, for its owner to
+  adjust (`Tymeslot.MeetingTypes.Duplication` says what a copy carries).
+
+  The copy is a new meeting type in every respect, so it passes the same
+  checks as one created from the form: a feature the owner's plan no longer
+  includes, or an integration they have since disconnected, refuses it.
+  """
+  @spec duplicate_meeting_type(MeetingTypeSchema.t()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, atom() | Ecto.Changeset.t()}
+  def duplicate_meeting_type(%MeetingTypeSchema{user_id: user_id} = source) do
+    attrs = Duplication.copy_attrs(source)
+
+    with :ok <- FormValidation.check(user_id, attrs) do
+      create_meeting_type(attrs, FormMapper.payment_opts(user_id))
     end
   end
 

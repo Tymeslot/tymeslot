@@ -215,6 +215,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           />
 
           <Buttons.icon_button
+            icon="hero-document-duplicate"
+            size={:sm}
+            label={dgettext("dashboard_meeting_types", "Duplicate %{name}", name: @type.name)}
+            tooltip={dgettext("dashboard_meeting_types", "Duplicate")}
+            phx-click="duplicate_type"
+            phx-value-id={@type.id}
+            phx-target={@myself}
+          />
+
+          <Buttons.icon_button
             icon="hero-trash"
             variant={:danger}
             size={:sm}

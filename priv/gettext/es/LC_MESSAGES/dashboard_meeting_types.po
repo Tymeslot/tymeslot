@@ -429,3 +429,23 @@ msgid "The %{count} person who signed up is told by email."
 msgid_plural "The %{count} people who signed up are told by email."
 msgstr[0] "%{count} persona inscrita recibirá un aviso por correo."
 msgstr[1] "Las %{count} personas inscritas recibirán un aviso por correo."
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(copia)"
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(copia) %{number}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplicar"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate %{name}"
+msgstr "Duplicar %{name}"
