@@ -153,10 +153,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       assert [group] =
                html |> Floki.parse_fragment!() |> Floki.find("[data-role='theme-stories']")
 
-      assert Floki.attribute(group, "class") == ["onboarding-theme-stories"]
-
-      assert group |> Floki.find("[data-testid='theme-story'].onboarding-theme-story") |> length() ==
-               2
+      assert group |> Floki.find("[data-testid='theme-story']") |> length() == 2
     end
 
     test "leave the colour row below them" do

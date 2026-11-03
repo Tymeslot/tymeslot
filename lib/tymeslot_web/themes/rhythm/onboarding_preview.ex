@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
   The background is a still: a video background shows its poster, never the
   video, so the stage costs no data or battery on a phone. A background
   with no picture (a colour, a gradient, or none) shows the palette's canvas
-  under a soft glow of the primary colour.
+  under a soft glow of the primary colour. An uploaded video has no poster,
+  so it gets that glow too, with the pause marker still saying it moves.
   """
   use Phoenix.Component
 
@@ -21,8 +22,8 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
   alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.OnboardingLive.PreviewWeek
 
-  # The still the thumbnail shows: Rhythm's own default background.
-  @thumbnail_poster "rhythm-background-poster.jpg"
+  # The still the thumbnail shows: the poster of Rhythm's own default video.
+  @thumbnail_preset "preset:rhythm-default"
 
   @doc "Draws the `:thumbnail` or `:card` variant; see `Behaviour.onboarding_preview/1`."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -33,7 +34,8 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
 
   @spec thumbnail(map()) :: Phoenix.LiveView.Rendered.t()
   def thumbnail(assigns) do
-    assigns = assign(assigns, :poster, Presets.video_poster_url(@thumbnail_poster))
+    %{poster: poster} = Presets.find_preset_by_id(:video, @thumbnail_preset)
+    assigns = assign(assigns, :poster, Presets.video_poster_url(poster))
 
     ~H"""
     <div
@@ -66,8 +68,14 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
 
     ~H"""
     <div class="relative" data-preview="rhythm">
-      <%!-- The background bleeds past the miniature's own padding to the
-           stage's edges; the stage clips it. --%>
+      <%!-- The background bleeds past the miniature to the stage's edges,
+           which clip it (`.stage-scale`'s overflow). The insets are coupled
+           to the stage: `-inset-y-6` undoes `LivePreview`'s `p-6` around
+           the page, and `-inset-x-80` (320px a side, 992px in all) covers
+           the 760px frame (`.stage-frame-wrap` in `onboarding.css`) down to
+           a scale of about 0.77 from the StageScale hook. Below that, on a
+           short desktop window, thin strips of the canvas colour show at
+           the sides, which is the colour the page shows behind a video. --%>
       <div
         class="absolute -inset-y-6 -inset-x-80 pointer-events-none bg-cover bg-center"
         style={backdrop_style(@colors, @still)}
@@ -78,7 +86,11 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
         style={glass_style(@colors)}
       >
         {render_slot(@header)}
-        <PreviewWeek.calendar_area colors={@colors} highlight={@highlight}>
+        <PreviewWeek.calendar_area
+          colors={@colors}
+          highlight={@highlight}
+          class="flex flex-col gap-2"
+        >
           <p
             class="w-full text-center text-token-xs font-semibold"
             style={"color: #{color(@colors, :text, "#e2e8f0")};"}
