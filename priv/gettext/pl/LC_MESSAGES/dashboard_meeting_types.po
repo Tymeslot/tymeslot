@@ -435,3 +435,23 @@ msgstr[2] "%{count} zapisanych osób dostanie powiadomienie e-mailem."
 #, elixir-autogen, elixir-format
 msgid "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
 msgstr "Nie pojawi się na stronie rezerwacji, dopóki nie zaoferuje terminu, który osoba rezerwująca może wybrać: po minimalnym wyprzedzeniu i w ramach maksymalnego wyprzedzenia. Dodaj oferowany termin."
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(kopia)"
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(kopia) %{number}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplikuj"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate %{name}"
+msgstr "Duplikuj %{name}"

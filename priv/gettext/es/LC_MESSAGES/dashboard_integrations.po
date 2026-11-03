@@ -466,3 +466,23 @@ msgstr "%{service} está ocupado en este momento. Inténtalo de nuevo en un minu
 #, elixir-autogen, elixir-format
 msgid "Authorisation was denied. Please try again."
 msgstr "Se denegó la autorización. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not duplicate this meeting type. Check its settings, then try again."
+msgstr "No se pudo duplicar este tipo de reunión. Revisa su configuración y vuelve a intentarlo."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Add its dates, then switch it on."
+msgstr "Tipo de reunión duplicado y desactivado. Añade sus fechas y luego actívalo."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Switch it on when it is ready."
+msgstr "Tipo de reunión duplicado y desactivado. Actívalo cuando esté listo."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
+msgstr "Este tipo de reunión usa una función que tu plan actual no incluye, así que no se puede duplicar."

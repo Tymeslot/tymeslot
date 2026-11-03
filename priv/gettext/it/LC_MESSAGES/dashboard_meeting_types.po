@@ -434,3 +434,23 @@ msgstr[1] "Le %{count} persone iscritte vengono avvisate via email."
 #, elixir-autogen, elixir-format
 msgid "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
 msgstr "Non compare sulla tua pagina di prenotazione finché non offre un orario prenotabile: successivo al preavviso minimo ed entro la finestra di prenotazione. Aggiungi un orario da offrire."
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(copia)"
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(copia) %{number}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplica"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate %{name}"
+msgstr "Duplica %{name}"

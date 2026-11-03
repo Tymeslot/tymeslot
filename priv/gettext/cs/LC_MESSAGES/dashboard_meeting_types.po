@@ -439,3 +439,23 @@ msgstr[2] "%{count} přihlášených osob se to dozví e-mailem."
 #, elixir-autogen, elixir-format
 msgid "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
 msgstr "Na rezervační stránce se neobjeví, dokud nenabídne čas, který si lze zarezervovat: po uplynutí minimálního předstihu a v rámci období pro rezervace. Přidejte nabízený čas."
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(kopie)"
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(kopie) %{number}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplikovat"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate %{name}"
+msgstr "Duplikovat %{name}"
