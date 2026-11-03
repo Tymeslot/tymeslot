@@ -309,16 +309,6 @@ msgstr "Synchronizace zabrání dvojím rezervacím"
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Synchronizujte kalendář, abyste se vyhnuli dvojím rezervacím a měli vše na jednom místě."
 
-#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "This username is already taken"
-msgstr "Toto uživatelské jméno je již obsazené"
-
-#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "This username is reserved"
-msgstr "Toto uživatelské jméno je vyhrazené"
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Tune durations and questions"
@@ -416,11 +406,6 @@ msgstr "Máte hotovo – %{link} je v provozu"
 #, elixir-autogen, elixir-format
 msgid "Choose by description instead"
 msgstr "Vybrat podle popisu"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Show all themes"
-msgstr "Zobrazit všechny motivy"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
@@ -627,11 +612,6 @@ msgstr "Připojit Apple Calendar"
 #, elixir-autogen, elixir-format
 msgid "Other calendar (CalDAV)"
 msgstr "Jiný kalendář (CalDAV)"
-
-#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
-#, elixir-autogen, elixir-format
-msgid "We only read when you're busy, never what your events are."
-msgstr "Čteme jen to, kdy jste zaneprázdněni, nikdy ne, o čem vaše události jsou."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -992,3 +972,33 @@ msgstr "Vaše stránka je připravená na rezervace. Vyzkoušejte si ji a pak ji
 #, elixir-autogen, elixir-format
 msgid "Your link is saved"
 msgstr "Váš odkaz je uložený"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Compare the looks side by side"
+msgstr "Porovnat vzhledy vedle sebe"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Someone already has this link. Try another one."
+msgstr "Tento odkaz už někdo má. Zkuste jiný."
+
+#: lib/tymeslot_web/live/onboarding_live/basic_settings_shared.ex
+#, elixir-autogen, elixir-format
+msgid "Start your link with a letter or a number."
+msgstr "Odkaz musí začínat písmenem nebo číslicí."
+
+#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This link is reserved. Try another one."
+msgstr "Tento odkaz je vyhrazený. Zkuste jiný."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "We check when you're busy and add the meetings people book. Visitors never see your events."
+msgstr "Zjišťujeme, kdy jste zaneprázdnění, a přidáváme schůzky, které si u vás lidé zarezervují. Návštěvníci vaše události nikdy neuvidí."
+
+#: lib/tymeslot_web/live/onboarding_live/basic_settings_shared.ex
+#, elixir-autogen, elixir-format
+msgid "Your link needs %{min} to %{max} characters."
+msgstr "Odkaz musí mít %{min} až %{max} znaků."

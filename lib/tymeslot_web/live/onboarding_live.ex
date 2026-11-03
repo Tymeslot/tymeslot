@@ -149,6 +149,7 @@ defmodule TymeslotWeb.OnboardingLive do
             timezone_editing={@timezone_editing}
             timezone_focus_change={@timezone_focus_change}
             link_suggested={@link_suggested}
+            link_input={@link_input}
             timezone_dropdown_open={@timezone_dropdown_open}
             timezone_search={@timezone_search}
             form_errors={@form_errors}
@@ -240,7 +241,7 @@ defmodule TymeslotWeb.OnboardingLive do
       booking_theme={stage_theme(@profile)}
       name={Map.get(@form_data, "full_name", "")}
       username={Map.get(@form_data, "username", "")}
-      avatar_url={Profiles.avatar_url(@profile, :thumb)}
+      avatar_url={@profile.avatar && Profiles.avatar_url(@profile, :thumb)}
       theme_customization={@theme_customization}
       week={@week}
       reveal_key={@reveal_key}
@@ -348,6 +349,10 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("validate_basic_settings", params, socket) do
     ProfileHandlers.handle_validate_basic_settings(params, socket)
+  end
+
+  def handle_event("link_blur", _params, socket) do
+    ProfileHandlers.handle_link_blur(socket)
   end
 
   def handle_event("update_basic_settings", _params, socket) do

@@ -135,7 +135,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
             <.icon name="hero-eye-slash-mini" class="w-4 h-4 shrink-0" />
             {dgettext(
               "onboarding_wizard",
-              "We only read when you're busy, never what your events are."
+              "We check when you're busy and add the meetings people book. Visitors never see your events."
             )}
           </p>
       <% end %>
@@ -255,8 +255,9 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   attr :caldav_discovering, :boolean, default: false
 
   # One form for both: Apple Calendar's server is fixed, so it asks only for
-  # the Apple ID email and an app-specific password, with the dashboard's own
-  # guidance on where to make one; a CalDAV server needs its address too.
+  # the Apple ID email and an app-specific password, with three short steps
+  # to making one; a CalDAV server needs its address too. Both submit to the
+  # dashboard's own validation.
   # Reconnecting a paused calendar fills in what is known and takes a new
   # password.
   defp credentials_form(assigns) do
@@ -283,11 +284,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         </span>
       </div>
 
-      <SharedFormComponents.app_password_hint
-        :if={@apple?}
-        provider={:apple}
-        reconnecting={@reconnecting}
-      />
+      <SharedFormComponents.apple_password_steps :if={@apple?} />
 
       <.input
         :if={not @apple?}

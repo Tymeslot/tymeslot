@@ -3,6 +3,8 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   Shared helpers for onboarding basic settings validation and persistence.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Settings
@@ -22,18 +24,51 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
 
   @doc """
   Validates the given params using the onboarding input processor.
+
+  The step calls the username a link, so a refused one is explained in those
+  words (`link_error/1`) rather than the validator's.
   """
   @spec validate_basic_settings(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, map()} | {:error, map()}
   @basic_settings_field_spec [{"full_name", :full_name}, {"username", :username}]
 
   def validate_basic_settings(socket, params) do
-    InputProcessor.validate_form(
-      params,
-      @basic_settings_field_spec,
-      metadata: metadata(socket),
-      universal_opts: [allow_html: false]
-    )
+    case InputProcessor.validate_form(
+           params,
+           @basic_settings_field_spec,
+           metadata: metadata(socket),
+           universal_opts: [allow_html: false]
+         ) do
+      {:error, %{username: _refused} = errors} ->
+        {:error, %{errors | username: link_error(params["username"]) || errors.username}}
+
+      result ->
+        result
+    end
+  end
+
+  @doc """
+  Why `link` cannot be the host's link, in the step's own words, or `nil`
+  when its shape is fine (it may still be reserved or taken).
+  """
+  @spec link_error(term()) :: String.t() | nil
+  def link_error(link) do
+    case Profiles.username_problem(link) do
+      nil ->
+        nil
+
+      problem when problem in [:format, :reserved] ->
+        dgettext("onboarding_wizard", "Start your link with a letter or a number.")
+
+      # Blank, too short or too long: the one rule worth stating is the length.
+      _length ->
+        {min, max} = Profiles.username_length_range()
+
+        dgettext("onboarding_wizard", "Your link needs %{min} to %{max} characters.",
+          min: min,
+          max: max
+        )
+    end
   end
 
   @doc """
@@ -80,7 +115,8 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
         "full_name" => full_name,
         "username" => if(suggested?, do: suggest_link(user, full_name), else: username)
       },
-      link_suggested: suggested?
+      link_suggested: suggested?,
+      link_input: nil
     )
   end
 

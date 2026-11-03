@@ -29,6 +29,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
+  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   import TymeslotWeb.OnboardingLive.PreviewParts, only: [color: 3, divider_style: 1, ring: 2]
 
@@ -52,7 +53,10 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   attr :booking_theme, :string, default: @default_theme_id
   attr :name, :string, default: ""
   attr :username, :string, default: ""
-  attr :avatar_url, :string, default: nil
+
+  attr :avatar_url, :string,
+    default: nil,
+    doc: "the host's photo; `nil` draws their initials instead"
 
   attr :theme_customization, :any,
     default: nil,
@@ -111,24 +115,45 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
         meeting={@meeting}
       >
         <:header>
-          <%!-- Avatar + identity --%>
+          <%!-- Avatar + identity: the photo, or until there is one the
+               host's initials as they type their name, on the theme's own
+               colour. --%>
           <div
+            :if={@avatar_url}
             class="w-16 h-16 rounded-full overflow-hidden bg-white/10"
             style={avatar_style(@colors, highlight?(@current_step, :avatar))}
           >
             <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
           </div>
+          <div
+            :if={!@avatar_url}
+            class="w-16 h-16 rounded-full flex items-center justify-center font-bold text-token-xl"
+            style={initials_style(@colors, highlight?(@current_step, :avatar))}
+            data-role="preview-initials"
+            aria-hidden="true"
+          >
+            <%= if initials = initials(@name) do %>
+              {initials}
+            <% else %>
+              <.icon name="hero-user" class="w-7 h-7" />
+            <% end %>
+          </div>
           <p class="font-bold text-token-base text-center break-words" style={text_style(@colors)}>
             {@display_name}
           </p>
-          <%!-- On a narrow card the host gives way, never the name. --%>
+          <%!-- On a narrow card (Paper's and Folio's side column) the name
+               moves onto a line of its own under the host rather than either
+               being cut. Only a host or a name wider than the card on its own
+               gives way: the host truncates, a very long name breaks. --%>
           <span
-            class="max-w-full min-w-0 inline-flex text-token-xs px-3 py-1 rounded-token-full font-medium whitespace-nowrap"
+            class="max-w-full min-w-0 inline-flex flex-wrap justify-center text-token-xs px-3 py-1 rounded-token-full font-medium"
             style={link_style(@colors, highlight?(@current_step, :link))}
             data-role="preview-address"
           >
-            <span class="truncate">{@link_host}</span>
-            <span class="shrink-0" data-role="preview-address-name">{@link_name}</span>
+            <span class="max-w-full truncate" data-role="preview-address-host">{@link_host}</span>
+            <span class="min-w-0 [overflow-wrap:anywhere]" data-role="preview-address-name">
+              {@link_name}
+            </span>
           </span>
 
           <div class="w-full h-px my-1" style={divider_style(@colors)} />
@@ -264,6 +289,24 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     end
   end
 
+  @doc """
+  The initials drawn for a host with no photo: the first letter of their
+  first and last names, or of their only one; `nil` for a blank name.
+
+      iex> initials("maya okafor")
+      "MO"
+  """
+  @spec initials(String.t() | nil) :: String.t() | nil
+  def initials(name) do
+    case String.split(name || "") do
+      [] -> nil
+      [only] -> first_letter(only)
+      [first | rest] -> first_letter(first) <> first_letter(List.last(rest))
+    end
+  end
+
+  defp first_letter(word), do: word |> String.first() |> String.upcase()
+
   defp link_text(host, username), do: StageFrame.address(host, username)
 
   defp link_name(host, username),
@@ -298,6 +341,12 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   defp avatar_style(colors, highlighted?) do
     "border: 2px solid #{color(colors, :surface, "#ffffff")};" <> ring(highlighted?, colors)
+  end
+
+  # The step dots' pairing: white on the theme's primary colour.
+  defp initials_style(colors, highlighted?) do
+    "background: #{color(colors, :primary, "#14b8a6")};color: #ffffff;" <>
+      ring(highlighted?, colors)
   end
 
   defp text_style(colors), do: "color: #{color(colors, :text, "#0f172a")};"

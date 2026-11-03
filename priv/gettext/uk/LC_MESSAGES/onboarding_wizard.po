@@ -309,16 +309,6 @@ msgstr "Синхронізуйте, щоб уникнути накладок"
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Синхронізуйте календар, щоб уникнути накладок і тримати всі записи в одному місці."
 
-#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "This username is already taken"
-msgstr "Це ім'я користувача вже зайняте"
-
-#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "This username is reserved"
-msgstr "Це ім'я користувача зарезервоване"
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Tune durations and questions"
@@ -416,11 +406,6 @@ msgstr "Усе готово - посилання %{link} активне"
 #, elixir-autogen, elixir-format
 msgid "Choose by description instead"
 msgstr "Вибрати за описом"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Show all themes"
-msgstr "Показати всі теми"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
@@ -627,11 +612,6 @@ msgstr "Підключити Apple Календар"
 #, elixir-autogen, elixir-format
 msgid "Other calendar (CalDAV)"
 msgstr "Інший календар (CalDAV)"
-
-#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
-#, elixir-autogen, elixir-format
-msgid "We only read when you're busy, never what your events are."
-msgstr "Ми бачимо лише, коли ви зайняті, і ніколи не бачимо, що це за події."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -992,3 +972,33 @@ msgstr "Ваша сторінка готова приймати бронюван
 #, elixir-autogen, elixir-format
 msgid "Your link is saved"
 msgstr "Ваше посилання збережено"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Compare the looks side by side"
+msgstr "Порівняти вигляд поруч"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Someone already has this link. Try another one."
+msgstr "Це посилання вже хтось має. Спробуйте інше."
+
+#: lib/tymeslot_web/live/onboarding_live/basic_settings_shared.ex
+#, elixir-autogen, elixir-format
+msgid "Start your link with a letter or a number."
+msgstr "Посилання має починатися з літери або цифри."
+
+#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This link is reserved. Try another one."
+msgstr "Це посилання зарезервоване. Спробуйте інше."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "We check when you're busy and add the meetings people book. Visitors never see your events."
+msgstr "Ми перевіряємо, коли ви зайняті, і додаємо зустрічі, які у вас бронюють. Відвідувачі ніколи не бачать ваших подій."
+
+#: lib/tymeslot_web/live/onboarding_live/basic_settings_shared.ex
+#, elixir-autogen, elixir-format
+msgid "Your link needs %{min} to %{max} characters."
+msgstr "Посилання має містити від %{min} до %{max} символів."

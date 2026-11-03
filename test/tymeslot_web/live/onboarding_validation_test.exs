@@ -79,86 +79,94 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     end
   end
 
-  describe "profile - username validation" do
-    test "empty username shows error on submit", %{conn: conn} do
+  describe "profile - link validation" do
+    test "an empty link says what the link needs, on change and on continue", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # Submit with empty username
-      fill_basic_settings(view, "Valid Name", "")
+      html = fill_basic_settings(view, "Valid Name", "")
+      assert link_error(html) == "Your link needs 3 to 30 characters."
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
-      html = render(view)
-
-      # Should show error
-      assert html =~ "Username is required"
-    end
-
-    test "username with spaces is rejected", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      # Username with spaces
-      fill_basic_settings(view, "Valid Name", "user with spaces")
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Should not proceed
+      assert link_error(render(view)) == "Your link needs 3 to 30 characters."
+      refute render(view) =~ "Username"
       assert has_element?(view, "#profile-form")
     end
 
-    test "username with invalid characters is rejected", %{conn: conn} do
+    test "typed text becomes a valid link: lowercase, hyphens for spaces, the rest dropped",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+
+      html = fill_basic_settings(view, "Maya Okafor", "Maya O!")
+
+      # The page's address shows the link at once, and nothing is wrong with it.
+      assert view
+             |> element("[data-role='stage-address']")
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.text() =~ ~r{/maya-o$}
+
+      assert has_element?(view, "[data-role='preview-address-name']", "maya-o")
+      refute has_element?(view, "[data-role='preview-address-name']", "Maya O!")
+      assert link_error(html) == nil
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, ".onboarding-provider-cards")
+      assert Profiles.get_profile(user.id).username == "maya-o"
+    end
+
+    test "the field keeps what was typed until it is left, then shows the link",
+         %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # Username with special characters
-      fill_basic_settings(view, "Valid Name", "user@name!")
+      fill_basic_settings(view, "Maya Okafor", "Maya O!")
+      assert link_field_value(view) == "Maya O!"
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      render_blur(element(view, "#username"))
+      assert link_field_value(view) == "maya-o"
+    end
 
-      # Should not proceed
+    test "a link that is too short is explained as the host types", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+
+      html = fill_basic_settings(view, "Valid Name", "ab")
+
+      assert link_error(html) == "Your link needs 3 to 30 characters."
+
+      view |> element("button[phx-click='next_step']") |> render_click()
       assert has_element?(view, "#profile-form")
     end
 
-    test "username too short is rejected", %{conn: conn} do
+    test "a link that is too long is explained as the host types", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # 2 character username
-      fill_basic_settings(view, "Valid Name", "ab")
+      html = fill_basic_settings(view, "Valid Name", String.duplicate("a", 31))
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      assert link_error(html) == "Your link needs 3 to 30 characters."
 
-      # Should not proceed
+      view |> element("button[phx-click='next_step']") |> render_click()
       assert has_element?(view, "#profile-form")
     end
 
-    test "username too long is rejected", %{conn: conn} do
+    test "a link starting with a hyphen is explained in the step's words", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # 31+ character username
-      long_username = String.duplicate("a", 31)
+      html = fill_basic_settings(view, "Valid Name", "-maya")
 
-      fill_basic_settings(view, "Valid Name", long_username)
+      assert link_error(html) == "Start your link with a letter or a number."
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
-      # Should not proceed
+      assert link_error(render(view)) == "Start your link with a letter or a number."
       assert has_element?(view, "#profile-form")
     end
 
-    test "valid username with lowercase, numbers, underscore, dash is accepted", %{conn: conn} do
+    test "valid link with lowercase, numbers, underscore, dash is accepted", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # Valid username with allowed characters
-      fill_basic_settings(view, "Valid Name", "valid_user-123")
+      html = fill_basic_settings(view, "Valid Name", "valid_user-123")
+      assert link_error(html) == nil
 
       view
       |> element("button[phx-click='next_step']")
@@ -167,6 +175,22 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       # Should proceed to connect_calendar
       assert has_element?(view, ".onboarding-provider-cards")
     end
+  end
+
+  # The inline error under the link field, or nil when there is none.
+  defp link_error(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("[data-role='link-error']")
+    |> Enum.map(&String.trim(Floki.text(&1)))
+    |> List.first()
+  end
+
+  defp link_field_value(view) do
+    [value] =
+      view |> render() |> Floki.parse_document!() |> Floki.attribute("#username", "value")
+
+    value
   end
 
   describe "username availability" do
@@ -190,7 +214,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       html = render(view)
 
       # Should show error
-      assert html =~ "This username is already taken"
+      assert html =~ "Someone already has this link. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
     end
@@ -199,7 +223,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
       fill_basic_settings(view, "New User", "racehandle")
-      refute render(view) =~ "already taken"
+      refute render(view) =~ "already has this link"
 
       # Someone else claims it while this user is still on the form.
       insert(:profile, username: "racehandle")
@@ -207,7 +231,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       html = render(view)
-      assert html =~ "This username is already taken"
+      assert html =~ "Someone already has this link. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
     end
@@ -225,7 +249,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       html = render(view)
-      assert html =~ "This username is already taken"
+      assert html =~ "Someone already has this link. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
     end
@@ -238,7 +262,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       html = render(view)
-      assert html =~ "This username is reserved"
+      assert html =~ "This link is reserved. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
       refute Profiles.get_profile(user.id).username == "admin"
@@ -253,7 +277,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      assert render(view) =~ "This username is reserved"
+      assert render(view) =~ "This link is reserved. Try another one."
       assert has_element?(view, "#profile-form")
       refute Profiles.get_profile(user.id).username == demo_username
     end

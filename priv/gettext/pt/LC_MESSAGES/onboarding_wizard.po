@@ -309,16 +309,6 @@ msgstr "Sincronize para evitar agendamentos duplicados"
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Sincronize seu calendário para evitar agendamentos duplicados e manter tudo num lugar só."
 
-#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "This username is already taken"
-msgstr "Este nome de usuário já está em uso"
-
-#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "This username is reserved"
-msgstr "Este nome de usuário é reservado"
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Tune durations and questions"
@@ -416,11 +406,6 @@ msgstr "Tudo pronto: %{link} está no ar"
 #, elixir-autogen, elixir-format
 msgid "Choose by description instead"
 msgstr "Escolher pela descrição"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Show all themes"
-msgstr "Mostrar todos os temas"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
@@ -624,11 +609,6 @@ msgstr "Conectar Apple Calendar"
 #, elixir-autogen, elixir-format
 msgid "Other calendar (CalDAV)"
 msgstr "Outra agenda (CalDAV)"
-
-#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
-#, elixir-autogen, elixir-format
-msgid "We only read when you're busy, never what your events are."
-msgstr "Só lemos quando você está ocupado, nunca do que tratam seus eventos."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -989,3 +969,33 @@ msgstr "Sua página está pronta para receber agendamentos. Teste você mesmo e 
 #, elixir-autogen, elixir-format
 msgid "Your link is saved"
 msgstr "Seu link está salvo"
+
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
+#, elixir-autogen, elixir-format
+msgid "Compare the looks side by side"
+msgstr "Comparar os visuais lado a lado"
+
+#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Someone already has this link. Try another one."
+msgstr "Alguém já usa este link. Tente outro."
+
+#: lib/tymeslot_web/live/onboarding_live/basic_settings_shared.ex
+#, elixir-autogen, elixir-format
+msgid "Start your link with a letter or a number."
+msgstr "Comece seu link com uma letra ou um número."
+
+#: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This link is reserved. Try another one."
+msgstr "Este link é reservado. Tente outro."
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
+#, elixir-autogen, elixir-format
+msgid "We check when you're busy and add the meetings people book. Visitors never see your events."
+msgstr "Verificamos quando você está ocupado e adicionamos as reuniões que as pessoas agendam. Os visitantes nunca veem seus eventos."
+
+#: lib/tymeslot_web/live/onboarding_live/basic_settings_shared.ex
+#, elixir-autogen, elixir-format
+msgid "Your link needs %{min} to %{max} characters."
+msgstr "Seu link precisa ter de %{min} a %{max} caracteres."

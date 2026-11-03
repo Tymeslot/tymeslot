@@ -410,11 +410,15 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
         assert has_element?(view, ~s{#{tile} img[src*="/providers/calendar/"][src*="#{logo}"]})
       end
 
+      # Tymeslot writes booked meetings into the calendar, so the line says so
+      # rather than promising read-only access the consent screen contradicts.
       assert has_element?(
                view,
                ".onboarding-privacy-line",
-               "We only read when you're busy, never what your events are."
+               "We check when you're busy and add the meetings people book. Visitors never see your events."
              )
+
+      refute render(view) =~ "We only read"
     end
   end
 

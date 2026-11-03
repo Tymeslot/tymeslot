@@ -326,7 +326,18 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
                "#apple-form input[name='password'][autocomplete='current-password']"
              )
 
-      assert has_element?(view, "#apple-form a[href='https://appleid.apple.com']")
+      # Three short steps, the second opening Apple's account page in a new tab.
+      assert [_first, _second, _third] =
+               view
+               |> render()
+               |> Floki.parse_document!()
+               |> Floki.find("#apple-form [data-role='apple-steps'] > li")
+
+      assert has_element?(
+               view,
+               "#apple-form [data-role='apple-steps'] li:nth-child(2) a[href='https://account.apple.com'][target='_blank'][rel~='noopener']",
+               "Open your Apple Account"
+             )
 
       view
       |> form("#apple-form", %{

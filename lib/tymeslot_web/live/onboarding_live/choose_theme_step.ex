@@ -4,9 +4,10 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
 
   Asks the organiser which theme's story sounds like them: one button per
   offered theme, its first-person story (`story/0`, from the theme's persona
-  sheet) above its name. "Show all themes" swaps the stories for the visual
-  picker of every theme's look, and "Choose by description instead" swaps
-  back; both send the same `select_theme` event. Below either sits whatever
+  sheet) above its name. "Compare the looks side by side" swaps the stories
+  for a thumbnail of every theme's look, and "Choose by description instead"
+  swaps back. The stage shows one theme at a time, so the thumbnails are the
+  only place a host who chooses by eye sees them all at once; both send the same `select_theme` event. Below either sits whatever
   the chosen theme's customisation spec offers for onboarding (a colour
   scheme, for a theme with a palette).
 
@@ -111,7 +112,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
           phx-click="show_all_themes"
           class="mt-3 text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
         >
-          {dgettext("onboarding_wizard", "Show all themes")}
+          {dgettext("onboarding_wizard", "Compare the looks side by side")}
         </button>
       </div>
 
