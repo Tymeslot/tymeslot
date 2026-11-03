@@ -79,7 +79,7 @@ defmodule Tymeslot.Bookings.CancelRaceTest do
       refute_received {:cancellation_emails_scheduled, _id}
 
       assert {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "cancelled"
+      assert reloaded.status == :cancelled
       assert reloaded.cancelled_at == cancelled.cancelled_at
     end
 
@@ -102,11 +102,11 @@ defmodule Tymeslot.Bookings.CancelRaceTest do
     # it before the withdrawal wrote.
     setup do
       %{user: user} = create_user_with_profile()
-      %{meeting: insert_meeting_for_user(user, %{status: "awaiting_approval"})}
+      %{meeting: insert_meeting_for_user(user, %{status: :awaiting_approval})}
     end
 
     test "the invitee's withdrawal reports the request as already cancelled", %{meeting: meeting} do
-      release_behind_the_caller(meeting, "cancelled")
+      release_behind_the_caller(meeting, :cancelled)
 
       errors =
         LogCapture.with_capture([level: :error], fn ->
@@ -115,12 +115,12 @@ defmodule Tymeslot.Bookings.CancelRaceTest do
         end)
 
       assert errors_about(errors, meeting) == []
-      assert {:ok, %{status: "cancelled"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :cancelled}} = MeetingQueries.get_meeting(meeting.id)
     end
 
     test "the calendar sync's withdrawal of an expired request is already cancelled too",
          %{meeting: meeting} do
-      release_behind_the_caller(meeting, "expired")
+      release_behind_the_caller(meeting, :expired)
 
       errors =
         LogCapture.with_capture([level: :error], fn ->
@@ -129,7 +129,7 @@ defmodule Tymeslot.Bookings.CancelRaceTest do
         end)
 
       assert errors_about(errors, meeting) == []
-      assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     end
   end
 
@@ -148,7 +148,7 @@ defmodule Tymeslot.Bookings.CancelRaceTest do
       )
 
       assert {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "cancelled"
+      assert reloaded.status == :cancelled
       assert DateTime.compare(reloaded.start_time, meeting.start_time) == :eq
       assert DateTime.compare(reloaded.end_time, meeting.end_time) == :eq
 
@@ -167,7 +167,7 @@ defmodule Tymeslot.Bookings.CancelRaceTest do
                Reschedule.execute(meeting.uid, params, user.id)
 
       assert {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
-      assert reloaded.status == "cancelled"
+      assert reloaded.status == :cancelled
       assert is_nil(reloaded.approval_requested_at)
     end
   end
@@ -207,7 +207,7 @@ defmodule Tymeslot.Bookings.CancelRaceTest do
       )
 
     meeting =
-      insert_meeting_for_user(user, %{meeting_type_id: meeting_type.id, status: "confirmed"})
+      insert_meeting_for_user(user, %{meeting_type_id: meeting_type.id, status: :confirmed})
 
     params = %{
       date: Date.to_string(Date.add(Date.utc_today(), 2)),

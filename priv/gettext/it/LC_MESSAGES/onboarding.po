@@ -175,6 +175,16 @@ msgstr "Trasforma qualsiasi tipo di riunione in una sessione di gruppo. Imposta 
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Two new booking page themes: Folio and Paper"
+msgstr "Due nuovi temi per la pagina di prenotazione: Folio e Paper"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Folio introduces you before anyone picks a time: a cover image, your portrait, headline and bio, in serif type on one continuous page. Paper does the opposite: one calm card in the colour palette you choose, light or dark, and the time and details on a single screen. Open the Theme page to preview either on your own booking page before you switch."
+msgstr "Folio ti presenta prima ancora che qualcuno scelga un orario: immagine di copertina, il tuo ritratto, titolo e biografia, in caratteri con grazie su un'unica pagina continua. Paper fa l'opposto: una scheda sobria nella tavolozza di colori che preferisci, chiara o scura, con orario e dettagli in una sola schermata. Apri la pagina Tema per vedere l'anteprima di entrambi sulla tua pagina di prenotazione prima di cambiare."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "Polls that invite, confirm and keep you posted"
 msgstr "Sondaggi che invitano, confermano e ti tengono al corrente"
 
@@ -182,3 +192,13 @@ msgstr "Sondaggi che invitano, confermano e ti tengono al corrente"
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
 msgstr "Un sondaggio può essere aperto, e allora chiunque abbia il link richiede un link di voto via email, oppure solo su invito. Puoi ricevere un'email a ogni nuovo voto. Dopo l'invio puoi cambiare la scadenza, aggiungere orari, reinviare un invito e rimuovere persone; i promemoria vanno agli invitati che non hanno ancora votato. La riunione che un sondaggio conferma è tua: tutti i partecipanti sono ospiti e solo tu puoi spostarla o annullarla."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot now speaks Spanish"
+msgstr "Tymeslot ora parla spagnolo"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Your dashboard, booking pages and every email are now available in Spanish. Tymeslot follows your browser's language, or you can choose one yourself in Account Settings. People who book you see booking pages and confirmations in their own language too."
+msgstr "La tua dashboard, le pagine di prenotazione e tutte le email sono ora disponibili in spagnolo. Tymeslot segue la lingua del tuo browser, oppure puoi sceglierne una tu nelle Impostazioni dell'account. Anche chi prenota con te vede le pagine di prenotazione e le conferme nella propria lingua."

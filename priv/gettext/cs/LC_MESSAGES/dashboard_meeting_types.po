@@ -27,11 +27,6 @@ msgstr "Změnit rezervační odkaz"
 msgid "Changing this link will stop any links you have already shared for this meeting type from working."
 msgstr "Po změně tohoto odkazu přestanou fungovat všechny odkazy, které jste pro tento typ schůzky již sdíleli."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Hidden from your public booking page; reachable only by its direct link"
-msgstr "Skryté na veřejné rezervační stránce; dostupné jen přes přímý odkaz"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Link address"
@@ -434,3 +429,38 @@ msgid_plural "The %{count} people who signed up are told by email."
 msgstr[0] "Přihlášená osoba se to dozví e-mailem."
 msgstr[1] "%{count} přihlášené osoby se to dozvědí e-mailem."
 msgstr[2] "%{count} přihlášených osob se to dozví e-mailem."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
+msgstr "Na rezervační stránce se neobjeví, dokud nenabídne čas, který si lze zarezervovat: po uplynutí minimálního předstihu a v rámci období pro rezervace. Přidejte nabízený čas."
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(kopie)"
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(kopie) %{number}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplikovat"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate %{name}"
+msgstr "Duplikovat %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; reachable only by its direct link"
+msgstr "Na žádné rezervační stránce; přístup jen přes přímý odkaz"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link"
+msgstr "Rezervační odkaz"

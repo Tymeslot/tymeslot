@@ -16,7 +16,9 @@ defmodule Tymeslot.Availability.Events do
   `uid` is carried through unchanged (falling back to a string-keyed `"uid"`
   for OAuth fresh-fetch plain maps), so callers can identify and selectively
   exclude a specific event without a second lookup — see
-  `Tymeslot.Availability.Conflicts`'s `:ignore_event_uids` option.
+  `Tymeslot.Availability.Conflicts`'s `:ignore_event_uids` option. A booking's
+  own `buffers` (see `Tymeslot.Meetings.BusyPeriods`) are carried through too,
+  so the conflict check can keep them clear.
 
   - **All-day events** (`all_day: true`): dates are anchored to midnight in the
     owner's timezone, then shifted to the target timezone.
@@ -53,7 +55,13 @@ defmodule Tymeslot.Availability.Events do
   defp convert_event(event, owner_timezone, target_timezone) do
     case interval(event, owner_timezone, target_timezone) do
       {:ok, {s, e}} ->
-        %{start_time: s, end_time: e, uid: Map.get(event, :uid) || Map.get(event, "uid")}
+        event
+        |> Map.take([:buffers])
+        |> Map.merge(%{
+          start_time: s,
+          end_time: e,
+          uid: Map.get(event, :uid) || Map.get(event, "uid")
+        })
 
       :error ->
         nil

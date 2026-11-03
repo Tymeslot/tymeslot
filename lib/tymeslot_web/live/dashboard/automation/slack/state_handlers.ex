@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
   alias Tymeslot.Slack
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @spec handle_toggle_active(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -48,14 +49,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
   def handle_test(%{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:webhook_test, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      :ok ->
-        run_test(id, socket)
-    end
+    RateLimit.with_rate_limit(RateLimiter.check(:webhook_test, user_id), socket, fn ->
+      run_test(id, socket)
+    end)
   end
 
   defp run_test(id, socket) do
@@ -95,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_disconnect(%{"id" => id}, socket) do
     case AutomationHelpers.get_slack_for_user(socket, id) do
-      {:ok, %{app_mode: "oauth"} = integration} ->
+      {:ok, %{app_mode: :oauth} = integration} ->
         case Slack.disconnect(integration) do
           {:ok, _updated} ->
             Flash.info(

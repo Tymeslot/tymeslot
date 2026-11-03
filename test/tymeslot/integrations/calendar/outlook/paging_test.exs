@@ -70,6 +70,69 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.PagingTest do
 
       assert {:error, :delta_link_expired, _message} = Paging.delta_all("token", {:link, @delta})
     end
+
+    # What Graph answered, live, for a `$deltatoken` it never issued.
+    test "a link whose token Graph cannot read is :delta_link_expired" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "error" => %{"code" => "BadRequest", "message" => "Badly formed token."}
+             })
+         }}
+      end)
+
+      assert {:error, :delta_link_expired, _message} = Paging.delta_all("token", {:link, @delta})
+    end
+
+    test "a link naming a sync state Graph has dropped is :delta_link_expired" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body: %{
+             "error" => %{"code" => "syncStateNotFound", "message" => "Sync state not found"}
+           }
+         }}
+      end)
+
+      assert {:error, :delta_link_expired, _message} = Paging.delta_all("token", {:link, @delta})
+    end
+
+    test "a 400 that only mentions a token is refused as before" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "error" => %{"code" => "BadRequest", "message" => "Invalid $skiptoken value."}
+             })
+         }}
+      end)
+
+      assert {:error, :refused, _message} = Paging.delta_all("token", {:link, @delta})
+    end
+
+    test "any other 400 on a delta read is refused as before" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "error" => %{"code" => "ErrorInvalidUrlQuery", "message" => "bad $select"}
+             })
+         }}
+      end)
+
+      refute match?(
+               {:error, :delta_link_expired, _message},
+               Paging.delta_all("token", {:link, @delta})
+             )
+    end
   end
 
   describe "the page cap" do

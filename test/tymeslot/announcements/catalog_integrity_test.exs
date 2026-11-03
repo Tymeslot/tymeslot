@@ -171,6 +171,14 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
       assert entry.image_path == "/images/announcements/meeting-polls.svg"
       assert DateTime.after?(entry.expires_at, entry.published_at)
     end
+
+    test "the catalogue announces the Spanish translation", %{entries: entries} do
+      entry = Enum.find(entries, &(&1.key == "spanish_language"))
+
+      assert entry, "expected a spanish_language announcement"
+      assert entry.image_path == "/images/announcements/spanish.svg"
+      assert DateTime.after?(entry.expires_at, entry.published_at)
+    end
   end
 
   defp long_expired([]), do: []

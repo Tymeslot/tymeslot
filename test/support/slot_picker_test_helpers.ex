@@ -1,8 +1,9 @@
 defmodule Tymeslot.SlotPickerTestHelpers do
   @moduledoc """
-  Fixture and page-reading helpers shared by the two themes' slot-picker tests.
+  Fixture and page-reading helpers shared by Quill's and Rhythm's slot-picker
+  tests.
 
-  Both themes present the same feature over the same organiser setup, so the
+  Quill and Rhythm present the same feature over the same organiser setup, so the
   fixture and the generic attribute reads live here. What stays in each theme's
   own test file is the part that is genuinely per-theme: how its calendar is
   navigated (Quill pages by month, Rhythm by week), which selector its slot

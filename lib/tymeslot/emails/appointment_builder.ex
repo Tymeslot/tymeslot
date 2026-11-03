@@ -5,6 +5,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
 
   require Logger
+  alias Tymeslot.BookingPages
+  alias Tymeslot.BookingPages.BookedThrough
   alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Emails.HostClock
@@ -197,6 +199,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.put(:organizer_locale, organizer_locale)
       |> Map.put(:organizer_time_format, organizer_time_format(meeting, organizer_locale))
       |> Map.put(:booking_payment, booking_payment_for(meeting))
+      # Only the host's emails name it (`TemplateHelper.organizer_meeting_details/1`):
+      # which of their pages a booking came through is the host's business.
+      |> Map.put(:booking_page_name, BookedThrough.name(meeting))
     end)
   end
 
@@ -335,9 +340,15 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       reschedule_url: links.reschedule_url,
       cancel_url: links.cancel_url,
       # The host's public booking page, resolved at send time rather than read
-      # from the meeting row. Unlike the per-meeting action URLs it is not
-      # persisted, so it always reflects the host's current username.
-      booking_url: UrlBuilder.booking_url(organizer_profile && organizer_profile.username),
+      # from the meeting row: the booking page the meeting came through while
+      # that page exists, else the host's current username.
+      booking_url:
+        UrlBuilder.booking_url(
+          BookingPages.address_for_meeting(
+            meeting,
+            organizer_profile && organizer_profile.username
+          )
+        ),
       meeting_url: meeting.meeting_url,
       organizer_video_url: meeting.organizer_video_url,
       attendee_video_url: meeting.attendee_video_url,

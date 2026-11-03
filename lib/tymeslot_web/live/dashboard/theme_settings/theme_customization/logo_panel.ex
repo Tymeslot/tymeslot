@@ -33,32 +33,26 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanel do
       data-testid="logo-panel"
     >
       <div class="flex flex-col sm:flex-row sm:items-start gap-8">
-        <div class="w-40 h-40 shrink-0 p-4 rounded-token-2xl bg-tymeslot-50 border-2 border-tymeslot-100 flex items-center justify-center overflow-hidden">
-          <%= if @logo do %>
-            <img
-              src={@logo.src}
-              alt={dgettext("dashboard_appearance", "Your logo")}
-              class="max-w-full max-h-full object-contain"
-              data-testid="logo-preview"
-            />
-          <% else %>
-            <.icon name="hero-photo" class="w-10 h-10 text-tymeslot-300" />
-          <% end %>
-        </div>
-
-        <div class="flex-1 space-y-6">
-          <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
-            <.image_upload
-              id="theme-logo-form"
-              field={:logo_path}
-              uploads={@uploads}
-              myself={@myself}
-            />
+        <div class="w-40 shrink-0 flex flex-col items-center gap-4 mx-auto sm:mx-0">
+          <div class="w-40 h-40 p-4 rounded-token-2xl bg-tymeslot-50 border-2 border-tymeslot-100 flex items-center justify-center overflow-hidden">
+            <%= if @logo do %>
+              <img
+                src={@logo.src}
+                alt={dgettext("dashboard_appearance", "Your logo")}
+                class="max-w-full max-h-full object-contain"
+                data-testid="logo-preview"
+              />
+            <% else %>
+              <.icon name="hero-photo" class="w-10 h-10 text-tymeslot-300" />
+            <% end %>
           </div>
 
           <%= if @logo do %>
             <.action_button
               variant={:secondary}
+              size={:sm}
+              icon="hero-trash"
+              class="w-full"
               phx-click="theme:set_option"
               phx-value-option={@group.key}
               phx-value-field="logo_path"
@@ -66,14 +60,22 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanel do
               phx-target={@myself}
               data-testid="remove-logo"
             >
-              <.icon name="hero-trash-mini" class="w-4 h-4" />
               {dgettext("dashboard_appearance", "Remove logo")}
             </.action_button>
           <% else %>
-            <p class="text-token-sm text-tymeslot-500 font-bold">
+            <p class="text-token-sm text-tymeslot-500 font-bold text-center">
               {dgettext("dashboard_appearance", "No logo uploaded yet.")}
             </p>
           <% end %>
+        </div>
+
+        <div class="flex-1 min-w-0 bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
+          <.image_upload
+            id="theme-logo-form"
+            field={:logo_path}
+            uploads={@uploads}
+            myself={@myself}
+          />
         </div>
       </div>
     </.card>

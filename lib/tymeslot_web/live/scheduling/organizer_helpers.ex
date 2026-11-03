@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Demo
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
@@ -45,6 +46,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, nil)
         |> assign(:organizer_profile, nil)
+        |> assign(:legal_links, Profiles.public_legal_links(nil))
         |> assign(:booking_window_days, booking_window_days(nil))
         |> assign(:organizer_user_id, nil)
         |> assign(:meeting_types, [])
@@ -55,6 +57,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, context.username)
         |> assign(:organizer_profile, context.profile)
+        |> assign(:legal_links, Profiles.public_legal_links(context.profile))
         |> assign(:booking_window_days, booking_window_days(context.profile))
         |> assign(:organizer_user_id, context.user_id)
         |> assign(:meeting_types, context.meeting_types)
@@ -80,11 +83,12 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   @doc """
   Resolves the booking window, in days, to show a visitor for an organiser.
 
-  Read from the schedule the given meeting type resolves to, falling back to the
-  organiser's default schedule before one is chosen. It cannot be read from the
-  default alone: this figure both advertises the window and disables the
-  calendar's forward navigation, and a meeting type's schedule may open a
-  *longer* window than the default, whose dates would then be unreachable.
+  The given meeting type's own window when it overrides one, else the window of
+  the schedule it resolves to, falling back to the organiser's default schedule
+  before a meeting type is chosen. It cannot be read from the default alone:
+  this figure both advertises the window and disables the calendar's forward
+  navigation, and a meeting type (or its schedule) may open a *longer* window
+  than the default, whose dates would then be unreachable.
 
   Demo organisers are plain maps supplied by the overlay rather than persisted
   profiles, so they carry no schedule and are answered by the demo provider.
@@ -98,10 +102,9 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
     if Demo.demo_profile?(profile) do
       Demo.booking_window_days(profile)
     else
-      case Schedules.resolve_for(meeting_type, profile) do
-        nil -> @default_booking_window_days
-        schedule -> schedule.advance_booking_days
-      end
+      meeting_type
+      |> Schedules.resolve_for(profile)
+      |> Schedules.effective_policy(meeting_type, :advance_booking_days)
     end
   end
 

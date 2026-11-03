@@ -13,6 +13,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -203,7 +204,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   end
 
   # The deadline has passed but the expiry sweep has not yet run, so the
-  # meeting row still reads "awaiting_approval". Distinct from `:expired`
+  # meeting row still reads :awaiting_approval. Distinct from `:expired`
   # (the sweep already released it) so the host is never told the slot is
   # free again before it actually is.
   defp outcome_body(:lapsed, meeting) do
@@ -252,19 +253,10 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
 
   defp displayed(nil, _timezone), do: dgettext("booking_manage", "Not set")
 
-  # `DateTime.shift_zone/2` is called directly, rather than through
-  # `Tymeslot.Utils.DateTimeUtils.convert_to_timezone/2`, because that helper
-  # swallows a resolution failure by silently returning the unshifted UTC
-  # time, which this call site would then go on to label with the zone name
-  # that failed to resolve. Failing honestly here means falling back to an
-  # explicit "UTC" label instead.
   defp displayed(datetime, timezone) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    {local, zone} = DateTimeUtils.shift_or_utc(datetime, timezone)
 
-    case DateTime.shift_zone(datetime, timezone) do
-      {:ok, local} -> "#{LocaleFormat.format_weekday_datetime(local, locale)} (#{timezone})"
-      {:error, _reason} -> "#{LocaleFormat.format_weekday_datetime(datetime, locale)} UTC"
-    end
+    "#{LocaleFormat.format_weekday_datetime(local, Gettext.get_locale(TymeslotWeb.Gettext))} (#{zone})"
   end
 
   defp duration_line(%{duration: nil}), do: dgettext("booking_manage", "Not set")

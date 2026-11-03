@@ -55,7 +55,7 @@ defmodule Tymeslot.Meetings.SeatViewTest do
 
       view = SeatView.at_event(meeting, gone)
 
-      assert view.status == "cancelled"
+      assert view.status == :cancelled
       assert view.cancelled_at == cancelled_at
     end
   end

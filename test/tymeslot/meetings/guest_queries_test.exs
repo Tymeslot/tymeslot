@@ -84,11 +84,11 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
     end
 
     test "the RSVP goes back to pending", %{meeting: meeting, guest: guest} do
-      {:ok, _rsvp} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      {:ok, _rsvp} = Guests.record_rsvp(guest.rsvp_token, :accepted)
 
       assert GuestQueries.reset_for_new_time(meeting.id) == 1
 
-      assert [%{status: "pending", responded_at: nil}] = GuestQueries.list_for_meeting(meeting.id)
+      assert [%{status: :pending, responded_at: nil}] = GuestQueries.list_for_meeting(meeting.id)
     end
 
     # The invitation is what makes a guest eligible for a reminder at all, so

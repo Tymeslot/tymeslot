@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagementRefusalTest do
 
     meeting =
       insert(:meeting,
-        status: "confirmed",
+        status: :confirmed,
         organizer_user_id: user.id,
         start_time: start_time,
         end_time: DateTime.add(start_time, 60, :minute)
@@ -53,6 +53,6 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagementRefusalTest do
     assert socket.assigns.flash["error"] ==
              "Ein bereits begonnener Termin kann nicht abgesagt werden"
 
-    assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
   end
 end

@@ -242,7 +242,7 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
 
       meeting =
         insert(:meeting,
-          status: "confirmed",
+          status: :confirmed,
           attendee_locale: "de",
           attendee_timezone: "America/New_York",
           start_time: start_time,

@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.BookingPreview
   alias TymeslotWeb.Dashboard.Calendar.PreviewGuests
+  alias TymeslotWeb.Dashboard.Calendar.UndeliveredNotice
   alias TymeslotWeb.Dashboard.Calendar.TreatAs
   alias TymeslotWeb.Helpers.LocaleFormat
 
@@ -50,7 +51,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       integrations: assigns.integrations,
       integration_tokens: assigns.integration_tokens,
       calendar_tokens: assigns.calendar_tokens,
-      bookability: Map.get(assigns, :bookability, %{})
+      bookability: Map.get(assigns, :bookability, %{}),
+      user_id: assigns.current_user.id
     }
   end
 
@@ -78,7 +80,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       treat_as: TreatAs.state(event, blocking?(integration, entry), context),
       meeting_id: Map.get(event, :meeting_id),
       booking: BookingPreview.state(event, context.now),
-      move_to: move_to(event, context)
+      move_to: move_to(event, context),
+      undelivered: UndeliveredNotice.for_event(event, context.user_id)
     }
   end
 
@@ -129,6 +132,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           phx-target={@target}
         />
       </div>
+      <UndeliveredNotice.notice
+        :if={@preview.undelivered != []}
+        emails={@preview.undelivered}
+        target={@target}
+      />
       <div class="mt-3 space-y-2 text-token-sm text-tymeslot-700">
         <.row :if={@preview.source} icon="hero-calendar">{@preview.source}</.row>
         <.row icon="hero-clock">

@@ -10,22 +10,23 @@ defmodule Tymeslot.Polls do
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Polls.{
+    Creation,
     Editing,
+    HostReadiness,
     Invitations,
+    MeetingTypeRule,
+    OpenPollLock,
     PollParticipantQueries,
     PollParticipantSchema,
     PollQueries,
     PollSchema,
-    PollTimeSlotQueries,
-    PollTimeSlotSchema,
     Voting
   }
 
-  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.EncryptedString
 
@@ -75,14 +76,70 @@ defmodule Tymeslot.Polls do
              | :no_calendar
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
-  def create_poll(user_id, attrs) do
-    with :ok <- ensure_calendar(user_id),
-         :ok <- ensure_username(user_id, Map.get(attrs, :invitees, [])),
-         {:ok, attrs} <- apply_meeting_type(user_id, attrs),
-         {:ok, slots} <- prepare_slots(attrs) do
-      insert_poll(user_id, attrs, slots)
-    end
-  end
+  defdelegate create_poll(user_id, attrs), to: Creation
+
+  @doc """
+  Saves a poll as a draft, to publish later with `publish_draft/3`. Takes the
+  attributes `create_poll/2` takes, `:slots` possibly empty.
+
+  A draft is the host's alone: its link does not resolve, its `:invitees` are
+  held on it (`PollSchema.draft_invitees/1`) rather than invited, and nothing
+  is emailed. It needs no calendar or username yet. Its meeting type and
+  times are held to the rules `create_poll/2` applies, so a draft never
+  carries a time already past or more times than a poll may have.
+  """
+  @spec create_draft(integer(), map()) ::
+          {:ok, PollSchema.t()}
+          | {:error,
+             :meeting_type_not_found
+             | :payment_required_type
+             | :too_many_slots
+             | :slot_in_past
+             | Ecto.Changeset.t()}
+  defdelegate create_draft(user_id, attrs), to: Creation
+
+  @doc """
+  Replaces the user's draft with `attrs` (as `create_draft/2` takes them):
+  its details, its invitees, and all of its times. A poll that is no longer
+  a draft is `{:error, :not_draft}`.
+  """
+  @spec update_draft(Ecto.UUID.t(), integer(), map()) ::
+          {:ok, PollSchema.t()}
+          | {:error,
+             :not_found
+             | :not_draft
+             | :meeting_type_not_found
+             | :payment_required_type
+             | :too_many_slots
+             | :slot_in_past
+             | Ecto.Changeset.t()}
+  defdelegate update_draft(id, user_id, attrs), to: Creation
+
+  @doc """
+  Saves `attrs` to the user's draft, as `update_draft/3` does, and publishes
+  it in the same transaction: it opens for votes, its link starts to
+  resolve, and its invitees are invited and emailed, as `create_poll/2`
+  would have done. Refused, leaving the draft as it was, for what
+  `create_poll/2` refuses, judged at publication: a time already past
+  (`:slot_in_past`), or a deadline that has passed, as a changeset error on
+  `:deadline_at`.
+  """
+  @spec publish_draft(Ecto.UUID.t(), integer(), map()) ::
+          {:ok, PollSchema.t()}
+          | {:error,
+             :not_found
+             | :not_draft
+             | :meeting_type_not_found
+             | :payment_required_type
+             | :no_slots
+             | :too_many_slots
+             | :slot_in_past
+             | :poll_full
+             | :no_username
+             | :no_calendar
+             | {:rate_limited, non_neg_integer()}
+             | Ecto.Changeset.t()}
+  defdelegate publish_draft(id, user_id, attrs), to: Creation
 
   @doc """
   Whether a new poll is invite-only when its host has not said: yes once they
@@ -112,7 +169,8 @@ defmodule Tymeslot.Polls do
   end
 
   @doc """
-  Fetches a poll by its public token, in any status, for the voting page.
+  Fetches a poll by its public token, in any status but draft, for the voting
+  page.
 
   Returns `{:error, :not_found}` while the poll's host is pending account
   deletion, like every other public page of that host.
@@ -141,19 +199,19 @@ defmodule Tymeslot.Polls do
 
   @doc """
   The host's meeting types a poll may take its title and length from: active
-  ones, but not a paid type (confirming a poll takes no payment) nor a
-  one-off event, which is a single dated session rather than a kind of
-  meeting.
+  ones that pass `Tymeslot.Polls.MeetingTypeRule`, so not a paid type nor a
+  one-off event.
   """
   @spec meeting_types_for_poll(integer()) :: [Ecto.Schema.t()]
   def meeting_types_for_poll(user_id) do
     user_id
     |> MeetingTypes.get_active_meeting_types()
-    |> Enum.reject(&(&1.payment_required or &1.one_off))
+    |> Enum.filter(&match?({:ok, _meeting_type}, MeetingTypeRule.check(&1)))
   end
 
   @doc """
-  Counts the user's polls that are still open for votes.
+  Counts the user's polls that are still open for votes. Drafts are not
+  among them.
   """
   @spec count_open_polls(pos_integer()) :: non_neg_integer()
   def count_open_polls(user_id), do: PollQueries.count_open_for_user(user_id)
@@ -192,7 +250,7 @@ defmodule Tymeslot.Polls do
   def remove_participant(id, user_id, participant_id) do
     with {:ok, participant_id} <- cast_participant_id(participant_id),
          {:ok, _poll} <-
-           with_open_poll_locked(id, user_id, &delete_participant(&1, participant_id)) do
+           OpenPollLock.with_locked(id, user_id, &delete_participant(&1, participant_id)) do
       :ok
     end
   end
@@ -213,10 +271,10 @@ defmodule Tymeslot.Polls do
              :not_found | :not_open | :no_username | :no_calendar | Invitations.resend_error()}
   def resend_invitation(id, user_id, participant_id) do
     with {:ok, participant_id} <- cast_participant_id(participant_id),
-         :ok <- ensure_calendar(user_id),
+         :ok <- HostReadiness.ensure_calendar(user_id),
          {:ok, _poll} <-
-           with_open_poll_locked(id, user_id, fn poll ->
-             with :ok <- ensure_username(user_id, [participant_id]),
+           OpenPollLock.with_locked(id, user_id, fn poll ->
+             with :ok <- HostReadiness.ensure_username(user_id, [participant_id]),
                   do: Invitations.resend(poll, participant_id)
            end) do
       :ok
@@ -232,10 +290,10 @@ defmodule Tymeslot.Polls do
   defdelegate unanswered_invitee?(participant), to: PollParticipantSchema
 
   @doc """
-  Deletes the user's poll once it is over, confirmed or cancelled, with its
-  times, participants and votes, to tidy the list. The meeting a confirmed
-  poll minted stays. An open poll has to be cancelled first, so nothing
-  people are still voting on disappears.
+  Deletes the user's poll once it is over, confirmed or cancelled, or while
+  it is still a draft, with its times, participants and votes, to tidy the
+  list. The meeting a confirmed poll minted stays. An open poll has to be
+  cancelled first, so nothing people are still voting on disappears.
 
   Jobs still pending for the poll are left to run. The cancellation email
   carries what it needs and still reaches every participant. Anything else
@@ -245,15 +303,32 @@ defmodule Tymeslot.Polls do
   @spec delete_poll(Ecto.UUID.t(), integer()) :: :ok | {:error, :not_found | :still_open}
   def delete_poll(id, user_id) do
     case get_poll_for_host(id, user_id) do
-      {:ok, %{status: :open}} ->
-        {:error, :still_open}
+      {:ok, %{status: :open}} -> {:error, :still_open}
+      {:ok, _poll} -> delete_locked(id, user_id)
+      {:error, :not_found} = error -> error
+    end
+  end
 
-      {:ok, poll} ->
-        {:ok, _deleted} = PollQueries.delete(poll)
-        broadcast_update(poll.id)
+  # Re-read under the row lock publishing takes, so a draft published from
+  # another tab since the read above is refused as open, not deleted with its
+  # invitations already sent. An open poll is refused before locking, so the
+  # host's refusal never waits on a vote being saved.
+  defp delete_locked(id, user_id) do
+    result =
+      Repo.transaction(fn ->
+        case PollQueries.lock_for_user(id, user_id) do
+          nil -> Repo.rollback(:not_found)
+          %{status: :open} -> Repo.rollback(:still_open)
+          poll -> {:ok, _deleted} = PollQueries.delete(poll)
+        end
+      end)
+
+    case result do
+      {:ok, _deleted} ->
+        broadcast_update(id)
         :ok
 
-      {:error, :not_found} = error ->
+      {:error, _reason} = error ->
         error
     end
   end
@@ -285,11 +360,11 @@ defmodule Tymeslot.Polls do
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def invite_participants(id, user_id, entries) do
-    with :ok <- ensure_calendar(user_id),
+    with :ok <- HostReadiness.ensure_calendar(user_id),
          {:ok, result} <-
-           with_open_poll_locked(id, user_id, fn poll ->
+           OpenPollLock.with_locked(id, user_id, fn poll ->
              with :ok <- ensure_voting_open(poll),
-                  :ok <- ensure_username(user_id, entries),
+                  :ok <- HostReadiness.ensure_username(user_id, entries),
                   do: {:ok, Invitations.insert(poll, entries)}
            end) do
       :ok = Invitations.send_invitations(result.invited)
@@ -304,7 +379,7 @@ defmodule Tymeslot.Polls do
   @spec cancel_poll(Ecto.UUID.t(), integer()) ::
           {:ok, PollSchema.t()} | {:error, :not_found | :not_open | Ecto.Changeset.t()}
   def cancel_poll(id, user_id) do
-    with_open_poll_locked(id, user_id, fn poll ->
+    OpenPollLock.with_locked(id, user_id, fn poll ->
       with {:ok, cancelled} <- PollQueries.update(PollSchema.cancel_changeset(poll)) do
         :ok = EmailScheduler.cancel_poll_deadline_jobs(cancelled.id)
         :ok = EmailScheduler.schedule_poll_cancellation(cancelled)
@@ -385,6 +460,27 @@ defmodule Tymeslot.Polls do
   end
 
   @doc """
+  The slot of a confirmed poll that its meeting was booked at: the one
+  starting when the meeting does. Nil for a poll that is not confirmed, and
+  when its meeting is gone or starts at none of the poll's times.
+  """
+  @spec winning_slot_id(PollSchema.t()) :: Ecto.UUID.t() | nil
+  def winning_slot_id(%{status: :confirmed, confirmed_meeting_id: meeting_id} = poll)
+      when is_binary(meeting_id) do
+    case Meetings.get_meeting(meeting_id) do
+      {:ok, meeting} ->
+        Enum.find_value(poll.time_slots, fn slot ->
+          DateTime.compare(slot.start_time, meeting.start_time) == :eq && slot.id
+        end)
+
+      {:error, _reason} ->
+        nil
+    end
+  end
+
+  def winning_slot_id(_poll), do: nil
+
+  @doc """
   Whether voting is open at `now` (by default the current time): open status
   and no deadline, or a deadline still in the future.
   """
@@ -409,181 +505,7 @@ defmodule Tymeslot.Polls do
     Phoenix.PubSub.broadcast(@pubsub, topic(poll_id), {:poll_updated, poll_id})
   end
 
-  # --- Creation helpers ---
-
-  defp put_default_access(attrs, invitees) do
-    case Map.get(attrs, :invite_only) do
-      nil -> Map.put(attrs, :invite_only, default_invite_only?(invitees))
-      _chosen -> attrs
-    end
-  end
-
-  defp apply_meeting_type(_user_id, %{meeting_type_id: nil} = attrs), do: {:ok, attrs}
-
-  defp apply_meeting_type(user_id, %{meeting_type_id: meeting_type_id} = attrs) do
-    case MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
-      nil -> {:error, :meeting_type_not_found}
-      %{payment_required: true} -> {:error, :payment_required_type}
-      %{one_off: true} -> {:error, :meeting_type_not_found}
-      meeting_type -> {:ok, snapshot_meeting_type(attrs, meeting_type)}
-    end
-  end
-
-  defp apply_meeting_type(_user_id, attrs), do: {:ok, attrs}
-
-  # A poll takes the type's *primary* duration, deliberately, even for a type
-  # that offers several lengths: a poll asks a group to agree on one slot, so
-  # the length has to be settled before the candidates go out, and the host is
-  # the one who settles it rather than each invitee. `Map.put_new/3` leaves a
-  # length the host passed in untouched, which is where another one is chosen.
-  defp snapshot_meeting_type(attrs, meeting_type) do
-    attrs
-    |> Map.put_new(:title, meeting_type.name)
-    |> Map.put_new(:duration_minutes, meeting_type.duration_minutes)
-  end
-
-  defp prepare_slots(attrs) do
-    slots = Map.get(attrs, :slots, [])
-    duration = Map.get(attrs, :duration_minutes)
-
-    cond do
-      slots == [] -> {:error, :no_slots}
-      length(slots) > PollSchema.max_slots() -> {:error, :too_many_slots}
-      true -> build_slots(slots, duration)
-    end
-  end
-
-  defp build_slots(slots, duration) do
-    now = DateTime.utc_now()
-
-    result =
-      slots
-      |> Enum.with_index()
-      |> Enum.reduce_while({:ok, []}, fn {slot, index}, {:ok, acc} ->
-        if DateTime.compare(slot.start_time, now) == :gt do
-          {:cont, {:ok, [build_slot(slot, index, duration) | acc]}}
-        else
-          {:halt, {:error, :slot_in_past}}
-        end
-      end)
-
-    case result do
-      {:ok, built} -> {:ok, Enum.reverse(built)}
-      error -> error
-    end
-  end
-
-  defp build_slot(slot, index, duration) do
-    %{start_time: slot.start_time, end_time: end_time_for(slot, duration), position: index}
-  end
-
-  defp end_time_for(slot, duration) do
-    case {Map.get(slot, :end_time), duration} do
-      {nil, minutes} when is_integer(minutes) ->
-        DateTime.add(slot.start_time, minutes * 60, :second)
-
-      {nil, _minutes} ->
-        nil
-
-      {end_time, _minutes} ->
-        end_time
-    end
-  end
-
-  defp insert_poll(user_id, attrs, slots) do
-    {invitees, attrs} = Map.pop(attrs, :invitees, [])
-
-    poll_attrs =
-      attrs
-      |> put_default_access(invitees)
-      |> Map.put(:user_id, user_id)
-      |> Map.drop([:slots])
-
-    transaction =
-      Repo.transaction(fn ->
-        with {:ok, poll} <-
-               PollQueries.insert(PollSchema.creation_changeset(%PollSchema{}, poll_attrs)),
-             :ok <- insert_slots(poll, slots) do
-          {poll, Invitations.insert(poll, invitees)}
-        else
-          {:error, changeset} -> Repo.rollback(changeset)
-        end
-      end)
-
-    case transaction do
-      {:ok, {poll, invitations}} ->
-        :ok = EmailScheduler.schedule_poll_deadline_nudge(poll)
-        :ok = Invitations.send_invitations(invitations.invited)
-        {:ok, PollQueries.get_for_user(poll.id, user_id)}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp insert_slots(poll, slots) do
-    Enum.reduce_while(slots, :ok, fn slot_attrs, :ok ->
-      changeset =
-        PollTimeSlotSchema.changeset(
-          %PollTimeSlotSchema{},
-          Map.put(slot_attrs, :poll_id, poll.id)
-        )
-
-      case PollTimeSlotQueries.insert(changeset) do
-        {:ok, _slot} -> {:cont, :ok}
-        {:error, changeset} -> {:halt, {:error, changeset}}
-      end
-    end)
-  end
-
   # --- Lifecycle helpers ---
-
-  # A lifecycle write on an open poll (cancel, removing a participant,
-  # inviting, resending a link) reads the poll under the row lock confirmation takes
-  # (`Tymeslot.Polls.Confirm`), so a poll confirmed after the caller loaded its
-  # page is seen as confirmed here and refused, rather than written over. `fun`
-  # gets the locked open poll and returns `{:ok, value}` or `{:error, reason}`
-  # (which rolls the transaction back); subscribers are told once the write has
-  # committed, and `{:ok, value}` is returned.
-  defp with_open_poll_locked(id, user_id, fun) do
-    result =
-      Repo.transaction(fn ->
-        with %PollSchema{status: :open} = poll <- PollQueries.lock_for_user(id, user_id),
-             {:ok, updated} <- fun.(poll) do
-          {poll.id, updated}
-        else
-          nil -> Repo.rollback(:not_found)
-          %PollSchema{} -> Repo.rollback(:not_open)
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-
-    with {:ok, {poll_id, updated}} <- result do
-      broadcast_update(poll_id)
-      {:ok, updated}
-    end
-  end
-
-  # Guests vote on the public page, which opens only once the host has a
-  # calendar connected (`Tymeslot.Scheduling.LinkAccessPolicy`). A poll
-  # created, or an invitation sent, before then hands out a link nobody can
-  # use, so both wait for the calendar the dashboard asks them to connect.
-  defp ensure_calendar(user_id) do
-    if Calendar.has_bookable_integration?(user_id), do: :ok, else: {:error, :no_calendar}
-  end
-
-  # Every email to a participant carries a link under the host's username, and
-  # one sent without it is discarded (`Tymeslot.Notifications.Email.PollEmails`)
-  # after the invitation has been counted against the host's limits. Refused up
-  # front instead, when anyone is to be emailed.
-  defp ensure_username(_user_id, []), do: :ok
-
-  defp ensure_username(user_id, _recipients) do
-    case Profiles.get_profile(user_id) do
-      %{username: username} when is_binary(username) -> :ok
-      _profile -> {:error, :no_username}
-    end
-  end
 
   defp ensure_voting_open(poll),
     do: if(voting_open?(poll), do: :ok, else: {:error, :voting_closed})

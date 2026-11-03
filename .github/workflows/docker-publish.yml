@@ -6,11 +6,25 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  IMAGE: luka1thb/tymeslot
+
+# Each architecture builds natively on its own runner and pushes by digest;
+# the merge job then stitches the digests into the multi-arch tags. Building
+# arm64 under QEMU on an amd64 runner made a single release take ~50 minutes.
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  build:
     # Only run on GitHub, not Gitea
     if: github.server_url == 'https://github.com'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout code
@@ -25,6 +39,70 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+
+      - name: Build and push Docker image by digest
+        id: full
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.docker
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.IMAGE }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=docker-${{ matrix.arch }}
+          cache-to: type=gha,scope=docker-${{ matrix.arch }},mode=max
+
+      # The database-free variant: same application, no bundled PostgreSQL
+      # server. `release` is built on top of `release-slim`, so every layer is
+      # already in this runner's builder and this step only exports and pushes.
+      - name: Build and push slim Docker image by digest
+        id: slim
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.docker
+          target: release-slim
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.IMAGE }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=docker-${{ matrix.arch }}
+
+      - name: Record digests
+        env:
+          FULL_DIGEST: ${{ steps.full.outputs.digest }}
+          SLIM_DIGEST: ${{ steps.slim.outputs.digest }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests/full" "$RUNNER_TEMP/digests/slim"
+          touch "$RUNNER_TEMP/digests/full/${FULL_DIGEST#sha256:}"
+          touch "$RUNNER_TEMP/digests/slim/${SLIM_DIGEST#sha256:}"
+
+      - name: Upload digests
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    if: github.server_url == 'https://github.com'
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout mix.exs
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: mix.exs
+          sparse-checkout-cone-mode: false
+
       - name: Extract version from mix.exs
         id: version
         run: |
@@ -32,41 +110,42 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extracted version: $VERSION"
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - name: Download digests
+        uses: actions/download-artifact@v5
         with:
-          images: luka1thb/tymeslot
-          tags: |
-            type=raw,value=${{ steps.version.outputs.version }}
-            type=raw,value=latest
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.docker
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # The database-free variant: same application, no bundled PostgreSQL
-      # server. It shares every build-stage layer with the image above, so the
-      # GHA cache makes this step cheap — only the runtime layers differ.
-      - name: Build and push slim Docker image
-        uses: docker/build-push-action@v6
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          context: .
-          file: ./Dockerfile.docker
-          target: release-slim
-          push: true
-          tags: |
-            luka1thb/tymeslot:${{ steps.version.outputs.version }}-slim
-            luka1thb/tymeslot:slim
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create multi-arch manifests
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          refs() {
+            for digest in "$RUNNER_TEMP/digests/$1"/*; do
+              printf '%s@sha256:%s ' "$IMAGE" "$(basename "$digest")"
+            done
+          }
+
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            -t "$IMAGE:$VERSION" -t "$IMAGE:latest" $(refs full)
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            -t "$IMAGE:$VERSION-slim" -t "$IMAGE:slim" $(refs slim)
+
+      - name: Inspect published images
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+          docker buildx imagetools inspect "$IMAGE:$VERSION-slim"

@@ -330,7 +330,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # confirm. A payment still awaiting its money is recorded paid and refunded
   # in full like a refused one; one already recorded is a replay of this.
   defp refund_orphaned(%{status: status} = payment, event_id, object)
-       when status in ["pending", "failed"] do
+       when status in [:pending, :failed] do
     with {:ok, paid} <- mark_paid(payment, event_id, object),
          {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
       {:ok, {:refused, paid, nil}}
@@ -339,8 +339,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   defp refund_orphaned(_payment, _event_id, _object), do: {:ok, :no_op}
 
-  defp expire(%{status: "expired"} = meeting), do: {:ok, meeting}
-  defp expire(meeting), do: MeetingQueries.update_meeting_status(meeting, %{status: "expired"})
+  defp expire(%{status: :expired} = meeting), do: {:ok, meeting}
+  defp expire(meeting), do: MeetingQueries.update_meeting_status(meeting, %{status: :expired})
 
   defp slot_checked(:recovered, :unchecked), do: {:error, :slot_unchecked}
   defp slot_checked(_transition, _slot), do: :ok
@@ -395,20 +395,20 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # is no cancellation pipeline involved, because the attendee never got a
   # confirmed meeting to weigh a partial refund against. The confirm branch
   # explicitly nulls both approval columns rather than leaving them
-  # untouched, so a row that reaches "confirmed" never carries a stale
+  # untouched, so a row that reaches :confirmed never carries a stale
   # approval clock alongside it.
   defp post_payment_status(%{approval_requested_at: %DateTime{}} = meeting) do
     requested_at = DateTime.truncate(Clock.utc_now(), :second)
 
     %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       approval_requested_at: requested_at,
       approval_deadline_at: Approval.restart_deadline(meeting, requested_at)
     }
   end
 
   defp post_payment_status(_meeting),
-    do: %{status: "confirmed", approval_requested_at: nil, approval_deadline_at: nil}
+    do: %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
 
   # Scheduled inside the same DB transaction as `mark_paid`/the meeting
   # transition: `CalendarJobs.schedule_job/2` inserts through Oban's
@@ -416,7 +416,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # atomically with the payment/meeting state change. If the insert fails
   # (a transient DB error, not the absorbed unique-constraint conflict —
   # see `CalendarJobs.schedule_job/2`), rolling back here leaves the
-  # booking_payment "pending" and the meeting "awaiting_payment", so a
+  # booking_payment :pending and the meeting :awaiting_payment, so a
   # Stripe redelivery of this same event — no longer blocked by the
   # `last_event_id` replay guard, since that write rolled back too — or the
   # next `ReconcileAwaitingPayments` sweep can retry the whole transition.
@@ -452,8 +452,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   #                ran first); re-confirmed only if the slot is still free,
   #                refunded otherwise (see `complete/3`)
   #   :no_op     — meeting already in a non-recoverable terminal state; skip
-  defp check_transition(%{status: "awaiting_payment"}, _payment), do: {:proceed, :advanced}
-  defp check_transition(%{status: "expired"}, %{status: "failed"}), do: {:proceed, :recovered}
+  defp check_transition(%{status: :awaiting_payment}, _payment), do: {:proceed, :advanced}
+  defp check_transition(%{status: :expired}, %{status: :failed}), do: {:proceed, :recovered}
 
   defp check_transition(_meeting, _payment), do: :no_op
 
@@ -477,8 +477,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # instant it is captured). When it has, the row is already `disputed` — record
   # the payment_intent and timestamp but keep the dispute status rather than
   # clobbering it back to `paid`.
-  defp paid_status("disputed"), do: "disputed"
-  defp paid_status(_status), do: "paid"
+  defp paid_status(:disputed), do: :disputed
+  defp paid_status(_status), do: :paid
 
   defp emit_payment_succeeded(paid, meeting) do
     :telemetry.execute(

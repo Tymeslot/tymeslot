@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.ApprovalDisplay do
   Whether the booking a confirmation screen is describing is currently held
   for the host's approval.
 
-  Both themes' confirmation components read this from the same source: the
+  Every theme's confirmation component reads this from the same source: the
   meeting's own `status`, assigned once a meeting exists (it is what
   `Tymeslot.Bookings.Reschedule` may have re-gated, which the meeting type's
   `requires_approval` flag alone cannot tell), falling back to the meeting
@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Themes.Shared.ApprovalDisplay do
   def awaiting_approval?(%{owner_preview: true} = assigns),
     do: Approval.required?(assigns[:meeting_type])
 
-  def awaiting_approval?(%{meeting_status: status}) when is_binary(status),
+  def awaiting_approval?(%{meeting_status: status}) when is_atom(status) and status != nil,
     do: MeetingState.awaiting_approval_status?(status)
 
   def awaiting_approval?(assigns), do: Approval.required?(assigns[:meeting_type])

@@ -46,16 +46,17 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Fetches a meeting with its guests loaded.
+  Fetches a meeting as a webhook payload describes it: with its guests, and
+  the booking page it was booked through with that page's profile.
 
   A webhook payload describes the meeting to an external system, and the people
-  invited to it are part of that description, so the delivery path needs them
-  alongside the meeting itself.
+  invited to it and the page it was booked through are part of that
+  description, so the delivery path needs them alongside the meeting itself.
   """
-  @spec get_meeting_with_guests(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
-  def get_meeting_with_guests(id) do
+  @spec get_meeting_for_webhook(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
+  def get_meeting_for_webhook(id) do
     with {:ok, meeting} <- get_meeting(id) do
-      {:ok, Repo.preload(meeting, :guests)}
+      {:ok, Repo.preload(meeting, [:guests, booking_page: :profile])}
     end
   end
 
@@ -181,7 +182,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Moves a meeting out of `"awaiting_approval"`, atomically.
+  Moves a meeting out of `:awaiting_approval`, atomically.
 
   The guard is in the `WHERE` clause rather than read-then-write, because
   every exit from the approval gate races every other one: the host can
@@ -211,7 +212,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
     query =
       from(m in Meeting,
-        where: m.id == ^meeting_id and m.status == "awaiting_approval",
+        where: m.id == ^meeting_id and m.status == :awaiting_approval,
         select: m
       )
 
@@ -231,7 +232,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Moves a meeting to `"cancelled"`, atomically, unless it is already over.
+  Moves a meeting to `:cancelled`, atomically, unless it is already over.
 
   Like `transition_from_awaiting_approval/2`, the guard is in the `WHERE`
   clause rather than read-then-write: a guest cancelling from the email link,
@@ -256,7 +257,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
     changes =
       changes
-      |> Keyword.put(:status, "cancelled")
+      |> Keyword.put(:status, :cancelled)
       |> Keyword.put_new(:updated_at, now)
 
     case Repo.update_all(query, set: changes) do
@@ -411,8 +412,8 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   cancelled, completed and expired bookings are excluded. Used by the booking
   limits feature to bucket bookings into host-timezone periods.
 
-  Nothing writes the `"completed"` status, so a booking that has already
-  happened is still `"confirmed"` and still counts towards its period's cap.
+  Nothing writes the `:completed` status, so a booking that has already
+  happened is still `:confirmed` and still counts towards its period's cap.
   That is what the caps are meant to measure — a day's load, not what is left
   of it — but it does mean the exclusion above is latent, not observed.
 
@@ -485,7 +486,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   def count_awaiting_payment_for_organizer(organizer_user_id) do
     Repo.aggregate(
       from(m in Meeting,
-        where: m.organizer_user_id == ^organizer_user_id and m.status == "awaiting_payment"
+        where: m.organizer_user_id == ^organizer_user_id and m.status == :awaiting_payment
       ),
       :count,
       :id

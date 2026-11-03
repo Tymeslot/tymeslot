@@ -111,14 +111,14 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
       {_user, meeting} = setup_user_meeting_with_automations()
 
       assert {:ok, cancelled} = Cancel.execute_external(meeting)
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
       assert %DateTime{} = cancelled.cancelled_at
       assert cancelled.cancellation_reason == "Cancelled externally via calendar sync"
     end
 
     test "returns {:ok, meeting} without side effects when called on an already-cancelled meeting" do
       user = insert(:user)
-      meeting = insert(:meeting, organizer_user: user, status: "cancelled")
+      meeting = insert(:meeting, organizer_user: user, status: :cancelled)
       insert(:webhook, user: user, events: ["meeting.cancelled"])
       insert(:telegram_integration, user: user, events: ["meeting.cancelled"])
 
@@ -136,7 +136,7 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
       meeting =
         insert(:meeting,
           organizer_user: user,
-          status: "confirmed",
+          status: :confirmed,
           reschedule_requested_at: DateTime.utc_now()
         )
 
@@ -144,7 +144,7 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
       insert(:telegram_integration, user: user, events: ["meeting.cancelled"])
 
       assert {:ok, result} = Cancel.execute_external(meeting)
-      assert result.status == "confirmed"
+      assert result.status == :confirmed
 
       assert all_enqueued(worker: EmailWorker) == []
       assert all_enqueued(worker: WebhookWorker) == []

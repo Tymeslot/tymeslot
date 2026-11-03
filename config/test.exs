@@ -72,6 +72,15 @@ config :tymeslot, :extra_themes, [
     module: TymeslotWeb.Test.JourneyFixtures.Express.Theme
   },
   %{
+    id: "93",
+    key: :fixture_two,
+    name: "Fixture Two",
+    heading_style: :generic,
+    customization_spec: Tymeslot.Test.JourneyFixtureSpec,
+    status: :beta,
+    module: TymeslotWeb.Test.JourneyFixtures.Two.Theme
+  },
+  %{
     id: "99",
     key: :fixture,
     name: "Fixture",

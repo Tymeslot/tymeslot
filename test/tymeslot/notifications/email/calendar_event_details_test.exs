@@ -77,6 +77,58 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
     end
   end
 
+  describe "changes/2" do
+    @event %{
+      uid: "uid-1",
+      summary: "Planning",
+      location: nil,
+      description: "Agenda\n\nJoin video call: https://zoom.example/j/new",
+      video_link: "https://zoom.example/j/new",
+      all_day: false,
+      start_at: ~U[2026-11-02 23:30:00Z],
+      end_at: ~U[2026-11-03 00:30:00Z]
+    }
+
+    test "a new room is a video change, not a description change" do
+      args = %{
+        "before_title" => "Planning",
+        "before_description" => "Agenda\n\nJoin video call: https://zoom.example/j/old",
+        "before_video_link" => "https://zoom.example/j/old"
+      }
+
+      assert CalendarEventDetails.changes(@event, args) == [
+               {:video_link, "https://zoom.example/j/old", "https://zoom.example/j/new"}
+             ]
+    end
+
+    test "a job that never recorded the previous link announces no video change" do
+      args = %{"before_title" => "Planning", "before_description" => "Agenda"}
+
+      assert CalendarEventDetails.changes(@event, args) == []
+    end
+
+    test "a first notification states the link and the description without its join line" do
+      changes = CalendarEventDetails.changes(@event, %{"first_notification" => true})
+
+      assert {:description, nil, "Agenda"} in changes
+      assert {:video_link, nil, "https://zoom.example/j/new"} in changes
+    end
+
+    test "the event a series update carries keeps its link" do
+      {:ok, event} =
+        CalendarEventDetails.snapshot_event(%{
+          "uid" => "uid-1",
+          "summary" => "Planning",
+          "video_link" => "https://zoom.example/j/new",
+          "start_at" => "2026-11-02T23:30:00Z",
+          "end_at" => "2026-11-03T00:30:00Z"
+        })
+
+      changes = CalendarEventDetails.changes(event, %{"before_video_link" => nil})
+      assert {:video_link, nil, "https://zoom.example/j/new"} in changes
+    end
+  end
+
   defp invitation_args do
     %{
       "event_title" => "Planning",

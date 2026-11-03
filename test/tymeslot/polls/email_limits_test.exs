@@ -141,6 +141,34 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       assert invitation_jobs() == []
     end
 
+    test "publishing a draft past the host's allowance leaves the draft as it was", %{
+      user: user
+    } do
+      start_time = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+      ada = address("ada")
+
+      attrs = %{
+        title: "Team sync",
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        slots: [%{start_time: start_time}],
+        invitees: [%{email: ada, name: nil}]
+      }
+
+      {:ok, draft} = Polls.create_draft(user.id, attrs)
+      fill(:poll_host_invitations, user.id)
+
+      assert Polls.publish_draft(draft.id, user.id, %{attrs | title: "Final title"}) ==
+               {:error, {:rate_limited, 0}}
+
+      assert {:ok, %PollSchema{status: :draft, title: "Team sync"} = kept} =
+               Polls.get_poll_for_host(draft.id, user.id)
+
+      assert PollSchema.draft_invitees(kept) == [%{email: ada, name: nil}]
+      assert kept.participants == []
+      assert invitation_jobs() == []
+    end
+
     test "an address over its own limit is skipped and reported, the rest invited", %{
       poll: poll
     } do

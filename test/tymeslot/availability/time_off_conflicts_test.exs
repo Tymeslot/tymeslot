@@ -40,7 +40,7 @@ defmodule Tymeslot.Availability.TimeOffConflictsTest do
       profile = insert(:profile, timezone: "Etc/UTC")
       period = period_for(profile, ~D[2026-09-10], ~D[2026-09-12])
 
-      booking(profile, ~U[2026-09-10 09:00:00Z], status: "cancelled")
+      booking(profile, ~U[2026-09-10 09:00:00Z], status: :cancelled)
 
       booking(profile, ~U[2026-09-10 10:00:00Z],
         reschedule_requested_at: ~U[2026-09-01 08:00:00Z]

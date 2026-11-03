@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="Two new booking page themes: an editorial page with a cover image and portrait, and a calm single card">
+  <defs>
+    <linearGradient id="nt-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <linearGradient id="nt-cover" x1="96" y1="36" x2="296" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#99f6e4"/>
+      <stop offset="1" stop-color="#5eead4"/>
+    </linearGradient>
+    <filter id="nt-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#nt-bg)"/>
+
+  <!-- Folio: cover image, portrait, serif name and bio, then the calendar -->
+  <g filter="url(#nt-shadow)">
+    <rect x="80" y="28" width="232" height="184" rx="16" fill="#fffdf8"/>
+  </g>
+  <path d="M80 44a16 16 0 0 1 16-16h200a16 16 0 0 1 16 16v44H80z" fill="url(#nt-cover)"/>
+  <circle cx="196" cy="88" r="22" fill="#0d9488" stroke="#fffdf8" stroke-width="4"/>
+  <text x="196" y="132" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-weight="700" fill="#1e293b" text-anchor="middle">Folio</text>
+  <rect x="124" y="144" width="144" height="6" rx="3" fill="#cbd5e1"/>
+  <rect x="140" y="156" width="112" height="6" rx="3" fill="#e2e8f0"/>
+  <rect x="104" y="176" width="88" height="22" rx="8" fill="#ccfbf1"/>
+  <rect x="200" y="176" width="88" height="22" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+
+  <!-- Paper: one calm card, one accent colour, light or dark -->
+  <g filter="url(#nt-shadow)">
+    <rect x="352" y="44" width="208" height="152" rx="14" fill="#ffffff"/>
+  </g>
+  <text x="372" y="72" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1e293b">Paper</text>
+  <circle cx="532" cy="67" r="8" fill="#0f172a"/>
+  <path d="M532 59a8 8 0 0 1 0 16z" fill="#f1f5f9"/>
+  <rect x="372" y="88" width="80" height="80" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <circle cx="390" cy="106" r="4" fill="#cbd5e1"/>
+  <circle cx="412" cy="106" r="4" fill="#cbd5e1"/>
+  <circle cx="434" cy="106" r="4" fill="#cbd5e1"/>
+  <circle cx="390" cy="128" r="4" fill="#cbd5e1"/>
+  <circle cx="412" cy="128" r="6" fill="#0d9488"/>
+  <circle cx="434" cy="128" r="4" fill="#cbd5e1"/>
+  <circle cx="390" cy="150" r="4" fill="#cbd5e1"/>
+  <circle cx="412" cy="150" r="4" fill="#cbd5e1"/>
+  <rect x="468" y="88" width="72" height="20" rx="6" fill="#ccfbf1"/>
+  <rect x="468" y="116" width="72" height="20" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="468" y="148" width="72" height="20" rx="6" fill="#0d9488"/>
+</svg>

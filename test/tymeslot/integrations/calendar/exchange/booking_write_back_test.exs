@@ -138,7 +138,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.BookingWriteBackTest do
     {:ok, cancelled} = MeetingQueries.get_meeting(meeting.id)
 
     cancelled
-    |> Changeset.change(%{status: "cancelled", cancelled_at: DateTime.utc_now(:second)})
+    |> Changeset.change(%{status: :cancelled, cancelled_at: DateTime.utc_now(:second)})
     |> Repo.update!()
 
     capture_bodies(

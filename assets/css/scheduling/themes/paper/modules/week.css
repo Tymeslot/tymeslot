@@ -1,0 +1,370 @@
+/* The schedule step's week view (.paper-card--week): the details, then the
+   step's heading, the timezone picker and the shared week grid
+   (shared/components/week-grid.css, imported just before this file), then
+   the actions bar with the chosen day and time.
+
+   Laid out by the card's own width. Seven day columns need about 40rem of
+   grid (the shared file shows three below that): at a 0.5rem gap each
+   column is then 5.3rem, which holds "09:00 AM" in Paper's semibold sm
+   with the slot's padding and border to spare. Beside the details
+   (15rem and the rule's 1.5rem) that is 59rem of card:
+     below 59rem  the details are a compact row above the week (avatar,
+                  organiser and meeting name, then the facts on one line),
+                  and the week takes the full width
+     from 59rem   the details on the left, the week on the right
+   The card is wider than the month's (--paper-card-width-week) so the
+   seven columns have room once the details stand beside them.
+
+   Every rule is scoped to .paper-card--week or .paper-week, so it outranks
+   the shared file's and never reaches the month view. */
+
+.paper-card--wide.paper-card--week {
+  width: min(100%, var(--paper-card-width-week));
+}
+
+.paper-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+/* --- The step's heading and the timezone picker --- */
+
+.paper-week__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-lg);
+}
+
+/* Sized like the month calendar's title (.paper-calendar__title). */
+.paper-week__title {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+}
+
+.paper-week__header .paper-timezone {
+  flex: 0 1 20rem;
+  min-width: 0;
+  margin-left: auto;
+}
+
+/* The picker sits at the header's right end, so its panel opens from that
+   edge, over the week. */
+.paper-week .paper-timezone .tz-picker__panel {
+  right: 0;
+  left: auto;
+}
+
+/* --- The week's navigation: Paper's month navigation --- */
+
+.paper-week .week-grid__range {
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.paper-week .week-grid__nav-button {
+  width: var(--paper-nav-size);
+  height: var(--paper-nav-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--paper-accent-ink);
+  transition: background var(--transition-fast);
+}
+
+.paper-week .week-grid__nav-button:hover:not(:disabled) {
+  background: var(--paper-tint);
+}
+
+.paper-week .week-grid__nav-button:disabled {
+  color: var(--paper-ink-disabled);
+}
+
+/* A text link, underlined: an accent near the text colour (graphite)
+   cannot mark it by colour alone. */
+.paper-week .week-grid__jump {
+  border-radius: var(--radius-control);
+  color: var(--paper-accent-ink);
+  text-decoration: underline;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.2em;
+}
+
+.paper-week .week-grid__jump:hover {
+  background: var(--paper-tint);
+}
+
+/* Paper's one focus ring on every week control. */
+.paper-week .week-grid__jump:focus-visible,
+.paper-week .week-grid__nav-button:focus-visible,
+.paper-week .week-grid__slot:focus-visible {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--border-width-medium);
+}
+
+/* The chosen (filled) time's ring takes the on-primary colour inside it,
+   so it stays visible on the fill. */
+.paper-week .week-grid__slot.week-grid__slot--selected:focus-visible {
+  outline-color: var(--theme-on-primary);
+  outline-offset: calc(-1 * (var(--border-width-medium) + var(--space-hairline)));
+}
+
+/* --- The days --- */
+
+/* Room for a time's focus ring, which the sideways scroll of a narrow
+   week would otherwise clip. */
+.paper-week .week-grid__days {
+  padding: var(--space-3xs);
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-scrollbar-thumb) transparent;
+}
+
+/* Like the month calendar's weekday row: the weekday small, upper case and
+   secondary; the date under it. */
+.paper-week .week-grid__day-heading {
+  gap: var(--space-hairline);
+  padding-bottom: var(--space-2xs);
+  margin-bottom: var(--space-3xs);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-week .week-grid__day-name {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.paper-week .week-grid__day-date {
+  position: relative;
+  padding-bottom: var(--space-2xs);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--theme-line-height-snug);
+}
+
+/* Today: in the accent ink (4.5:1 on the card in every tone and mode,
+   where the bare accent may not be), with the month calendar's dot. */
+.paper-week .week-grid__day--today .week-grid__day-name,
+.paper-week .week-grid__day--today .week-grid__day-date {
+  color: var(--paper-accent-ink);
+}
+
+.paper-week .week-grid__day--today .week-grid__day-date::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: var(--paper-dot-size);
+  height: var(--paper-dot-size);
+  border-radius: var(--radius-full);
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+.paper-week .week-grid__slots {
+  gap: var(--space-2xs);
+}
+
+/* A time: the slot list's outlined button in the accent, filled when
+   chosen. */
+.paper-week .week-grid__slot {
+  box-sizing: border-box;
+  min-height: var(--paper-week-slot-height);
+  padding: 0 var(--space-2xs);
+  border: var(--border-width-thin) solid var(--theme-primary);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--theme-primary);
+  font: inherit;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.paper-week .week-grid__slot:not(.week-grid__slot--selected):hover:not(:disabled) {
+  background: var(--paper-tint);
+  border-color: var(--theme-primary);
+  color: var(--paper-accent-ink);
+}
+
+.paper-week .week-grid__slot.week-grid__slot--selected {
+  border-color: var(--theme-primary-solid);
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.paper-week .week-grid__slot:disabled {
+  cursor: progress;
+}
+
+/* A day with no times: a dashed box, like the slot list's empty state, so
+   the column reads as empty rather than missing. */
+.paper-week .week-grid__empty {
+  padding: var(--space-xs) var(--space-2xs);
+  border: var(--border-width-thin) dashed var(--line-2);
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-xs);
+}
+
+/* The loading and error states hold the space the days will take, as the
+   slot list's do. */
+.paper-week .week-grid__loading,
+.paper-week .week-grid__error {
+  display: grid;
+  place-items: center;
+  min-height: 12rem;
+  padding: var(--space-lg) var(--space-md);
+  border: var(--border-width-thin) dashed var(--line-2);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.paper-week .week-grid__error {
+  border-style: solid;
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
+}
+
+/* Three days, or one, in view: touch sizes, and the times as full
+   controls. */
+@container week-grid (max-width: 40rem) {
+  .paper-week .week-grid__slot {
+    min-height: var(--paper-control-height);
+  }
+}
+
+/* --- The actions bar: Back, the chosen day and time, Next --- */
+
+.paper-selection {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 var(--space-xs);
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  text-align: center;
+}
+
+.paper-actions:not(.paper-actions--split) .paper-selection {
+  justify-content: flex-start;
+  text-align: start;
+}
+
+.paper-selection__date {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-selection__time {
+  color: var(--paper-accent-ink);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The bar stays in view while a long week scrolls past, so the choice is
+   always at hand. Inside an embed the frame is as tall as the page, so it
+   never sticks there. */
+.paper-card--week .paper-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-bottom: var(--space-sm);
+  background: var(--surface-card);
+}
+
+/* Once the details are open they name the choice themselves, and a bar
+   stuck to the bottom of a phone would cover the field or the submit the
+   browser scrolls into view, so it settles after the details instead. */
+.paper-card--week:has(.paper-book) .paper-actions {
+  position: static;
+}
+
+/* --- Below 59rem of card: the details as a compact row above the week --- */
+
+@container scheduling (width < 59rem) {
+  .paper-schedule.paper-schedule--week {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg);
+  }
+
+  .paper-card--week .paper-details {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-hairline) var(--space-sm);
+    padding: 0 0 var(--space-lg);
+    border-right: 0;
+    border-bottom: var(--border-width-thin) solid var(--line-1);
+  }
+
+  .paper-card--week .paper-details .paper-avatar {
+    grid-row: span 2;
+  }
+
+  .paper-card--week .paper-details__organiser {
+    align-self: end;
+    margin: 0;
+  }
+
+  .paper-card--week .paper-details__title {
+    align-self: start;
+    font-size: var(--theme-font-size-lg);
+  }
+
+  .paper-card--week .paper-details .paper-facts {
+    flex-direction: row;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    gap: var(--space-2xs) var(--space-md);
+    margin-top: var(--space-xs);
+  }
+
+  .paper-card--week .paper-details__description {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- From 59rem of card: the details on the left, the week beside them --- */
+
+@container scheduling (min-width: 59rem) {
+  .paper-week {
+    padding-left: var(--space-lg);
+  }
+}
+
+/* A narrow card: the timezone picker takes the heading's left edge on a
+   row of its own, and the chosen day and time take a row of their own
+   above Back and Next. */
+@container scheduling (max-width: 30rem) {
+  .paper-week__header .paper-timezone {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .paper-selection,
+  .paper-actions:not(.paper-actions--split) .paper-selection {
+    flex-basis: 100%;
+    order: -1;
+    justify-content: center;
+    text-align: center;
+  }
+}

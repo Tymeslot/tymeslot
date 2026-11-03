@@ -75,10 +75,6 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     |> element("button[phx-value-duration='quick-chat']")
     |> render_click()
 
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
     BookingTestHelpers.show_month(view, target_date)
@@ -129,7 +125,7 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     meeting =
       Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
   end
 
   @tag :capture_log
@@ -185,10 +181,6 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     |> element("button[phx-value-duration='60-minutes']")
     |> render_click()
 
-    view
-    |> element("button[phx-click='next_step']")
-    |> render_click()
-
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
     BookingTestHelpers.show_month(view, target_date)
@@ -237,7 +229,7 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     meeting =
       Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
     assert meeting.duration == 60, "Expected 60-minute duration but got #{meeting.duration}"
   end
 end

@@ -1,0 +1,250 @@
+/* Paper's controls: the action row that ends each card, buttons, labels
+   and fields (CoreComponents' .label, .input and .form-field-error, as the
+   booking form and the questions render them), the meeting facts, the
+   badge, the empty state and the spinner. */
+
+/* --- Action row --- */
+
+.paper-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-actions--split {
+  justify-content: space-between;
+}
+
+.paper-actions--center {
+  justify-content: center;
+}
+
+/* --- Top bar: the schedule's Back, heading the card --- */
+
+.paper-topbar {
+  display: flex;
+  margin-bottom: var(--space-sm);
+}
+
+/* The quiet button's own padding pulled back, so its arrow lines up with
+   the card's content edge below it. */
+.paper-topbar__back {
+  margin-inline-start: calc(-1 * var(--space-sm));
+}
+
+/* --- Buttons --- */
+
+.paper-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  box-sizing: border-box;
+  min-height: var(--paper-control-height);
+  padding: 0 var(--space-lg);
+  border: var(--border-width-thin) solid transparent;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.paper-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.paper-button--primary {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.paper-button--primary:hover:not(:disabled) {
+  background: var(--theme-primary-solid-hover);
+}
+
+.paper-button--secondary {
+  background: var(--theme-surface);
+  border-color: var(--paper-control-line);
+  color: var(--ink-1);
+}
+
+.paper-button--secondary:hover:not(:disabled) {
+  background: var(--surface-light);
+}
+
+.paper-button--quiet {
+  padding: 0 var(--space-sm);
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.paper-button--quiet:hover:not(:disabled) {
+  background: var(--surface-light);
+  color: var(--ink-1);
+}
+
+.paper-button__icon {
+  flex-shrink: 0;
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+}
+
+/* --- Labels and fields --- */
+
+.paper-theme-wrapper .label {
+  display: block;
+  margin-bottom: var(--space-2xs);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* The required marker inside a label. */
+.paper-theme-wrapper .label span {
+  color: var(--theme-danger);
+}
+
+.paper-theme-wrapper .input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--paper-control-height);
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  font: inherit;
+  font-size: var(--theme-font-size-base);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.paper-theme-wrapper textarea.input {
+  min-height: 6rem;
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
+  resize: vertical;
+}
+
+.paper-theme-wrapper .input::placeholder {
+  color: var(--ink-2);
+  opacity: 1;
+}
+
+.paper-theme-wrapper .input:hover {
+  border-color: var(--ink-2);
+}
+
+.paper-theme-wrapper .input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.paper-theme-wrapper .input.input-error {
+  border-color: var(--theme-danger);
+}
+
+.paper-theme-wrapper .form-field-error {
+  margin-top: var(--space-3xs);
+  color: var(--theme-danger);
+  font-size: var(--theme-font-size-sm);
+}
+
+/* --- Meeting facts --- */
+
+.paper-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.paper-fact {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.paper-fact__icon {
+  flex-shrink: 0;
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  margin-top: var(--space-hairline);
+  color: var(--ink-2);
+}
+
+.paper-fact__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Badge --- */
+
+.paper-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-hairline) var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--paper-tint);
+  color: var(--paper-accent-ink);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* --- Empty state --- */
+
+.paper-empty {
+  padding: var(--space-xl) var(--space-md);
+  border: var(--border-width-thin) dashed var(--line-2);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  color: var(--ink-2);
+  text-align: center;
+}
+
+.paper-empty__title {
+  margin: 0 0 var(--space-3xs);
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.paper-empty__text {
+  margin: 0;
+}
+
+/* --- Spinner --- */
+
+.paper-spinner {
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  animation: paper-spin 0.8s linear infinite;
+}
+
+@keyframes paper-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paper-spinner {
+    animation-duration: 2.4s;
+  }
+}

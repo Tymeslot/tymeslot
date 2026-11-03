@@ -197,7 +197,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
     end
 
     upcoming = room.(%{video_room_id: "upcoming1"})
-    cancelled = room.(%{video_room_id: "cancelled1", status: "cancelled"})
+    cancelled = room.(%{video_room_id: "cancelled1", status: :cancelled})
     ended = room.(%{video_room_id: "ended0001", start_offset: -2 * 86_400, duration: 1800})
 
     {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)

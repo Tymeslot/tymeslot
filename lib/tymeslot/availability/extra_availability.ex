@@ -10,9 +10,9 @@ defmodule Tymeslot.Availability.ExtraAvailability do
 
   They belong to one schedule, so they reach exactly the meeting types booked
   against it, and they are stored as `availability_overrides` rows of type
-  `extra_hours`. Time off still outranks them: a period away closes an extra
-  time too. Past dates are deleted by the daily retention run
-  (`prune_past/1`).
+  `extra_hours`. Time off and an `unavailable` override on the date still
+  outrank them: either closes an extra time too. Past dates are deleted by
+  the daily retention run (`prune_past/1`).
   """
 
   alias Ecto.Changeset
@@ -20,7 +20,7 @@ defmodule Tymeslot.Availability.ExtraAvailability do
   alias Tymeslot.Availability.{AvailabilityOverrideQueries, AvailabilityOverrideSchema}
   alias Tymeslot.Availability.AvailabilityScheduleSchema
 
-  @type_name "extra_hours"
+  @type_name :extra_hours
   # Plenty for office hours a few times a month for a year or more, and a
   # bound on what a schedule's slot calculation has to read.
   @max_per_schedule 100

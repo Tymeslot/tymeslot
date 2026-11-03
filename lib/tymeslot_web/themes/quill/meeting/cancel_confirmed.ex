@@ -11,8 +11,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
   use TymeslotWeb.Components.CoreComponents
 
   attr :theme_tokens, :any, required: true
+  attr :meeting, :map, default: nil, doc: "the cancelled meeting"
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :legal_links, :map, required: true
 
   @doc """
   Renders the cancel confirmed page in Quill theme style.
@@ -24,9 +26,13 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      legal_links={@legal_links}
       show_language_switcher={true}
     >
-      <div class="min-h-screen flex items-center justify-center px-4 py-8">
+      <div
+        class="min-h-screen flex items-center justify-center px-4 py-8"
+        data-testid="quill-cancel-confirmed"
+      >
         <div class="w-full max-w-md">
           <.glass_morphism_card class="booker-card">
             <div class="p-8">
@@ -38,6 +44,13 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                 <h1 class="text-3xl font-bold mb-2 meeting-page-title">
                   {dgettext("booking_manage", "Meeting Cancelled")}
                 </h1>
+                <p
+                  :if={assigns[:meeting] && @meeting.meeting_type not in [nil, ""]}
+                  class="meeting-page-subject"
+                  data-testid="chosen-meeting-type"
+                >
+                  {@meeting.meeting_type}
+                </p>
                 <p class="text-lg mb-8 meeting-page-lead">
                   {dgettext("booking_manage", "Your meeting has been successfully cancelled.")}
                 </p>

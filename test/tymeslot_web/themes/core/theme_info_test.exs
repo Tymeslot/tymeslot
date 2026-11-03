@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
   describe "get_voice/1" do
     test "is the voice the theme names, or nil" do
       assert ThemeInfo.get_voice("99") == FixtureVoice
-      assert ThemeInfo.get_voice("1") == nil
+      assert ThemeInfo.get_voice("2") == nil
       assert ThemeInfo.get_voice("no-such-theme") == nil
     end
   end
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
                status: :active,
                preview_image: "/images/ui/theme-previews/rhythm-theme-preview.webp",
                description:
-                 "Modern sliding design with video background and a 4-slide booking flow."
+                 "Modern sliding design: each step slides in on a glass card over a video background."
              } = ThemeInfo.get_theme("2")
     end
 
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
                Gettext.dgettext(
                  TymeslotWeb.Gettext,
                  "dashboard_appearance",
-                 "Modern sliding design with video background and a 4-slide booking flow."
+                 "Modern sliding design: each step slides in on a glass card over a video background."
                )
 
       refute Rhythm.metadata().description =~ "Modern sliding design"

@@ -13,11 +13,13 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
   @moduletag :live
   @moduletag :bookings
   @moduletag :meetings
 
+  alias Plug.HTML
   alias Plug.Test
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
@@ -44,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
   defp held_meeting(user, attrs \\ %{}) do
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       organizer_email: user.email,
@@ -143,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     end
 
     test "the tab is hidden when a host has nothing to answer", %{conn: conn, user: user} do
-      held_meeting(user, %{status: "confirmed", approval_deadline_at: nil})
+      held_meeting(user, %{status: :confirmed, approval_deadline_at: nil})
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings")
 
@@ -160,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       # time can still be days away — "upcoming" has to read the resolved
       # status, not just the clock, or a lapsed request looks like a live
       # booking again.
-      held_meeting(user, %{status: "expired", attendee_name: "Sam Overdue"})
+      held_meeting(user, %{status: :expired, attendee_name: "Sam Overdue"})
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings")
 
@@ -174,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       past = DateTime.add(DateTime.utc_now(:second), -2, :hour)
 
       held_meeting(user, %{
-        status: "expired",
+        status: :expired,
         attendee_name: "Sam Overdue",
         start_time: past,
         end_time: DateTime.add(past, 30, :minute),
@@ -195,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     test "an awaiting_payment booking is badged honestly, not as Scheduled",
          %{conn: conn, user: user} do
       insert(:meeting,
-        status: "awaiting_payment",
+        status: :awaiting_payment,
         organizer_user: user,
         organizer_user_id: user.id,
         organizer_email: user.email,
@@ -243,7 +245,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       view |> element("[data-testid='approve-request']") |> render_click()
       render_async(view, 1000)
 
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
     end
 
     # The transition and its calendar/video/notification fan-out run off the
@@ -277,7 +279,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       render_async(view, 1000)
 
       stored = reload(meeting)
-      assert stored.status == "cancelled"
+      assert stored.status == :cancelled
       assert stored.decline_reason == "Away that week"
     end
 
@@ -295,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       assert Process.alive?(view.pid)
       stored = reload(meeting)
-      assert stored.status == "cancelled"
+      assert stored.status == :cancelled
       assert stored.decline_reason == nil
     end
 
@@ -314,7 +316,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       assert Process.alive?(view.pid)
       stored = reload(meeting)
-      assert stored.status == "cancelled"
+      assert stored.status == :cancelled
       refute stored.decline_reason =~ "\x00"
     end
 
@@ -328,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       render_async(view, 1000)
 
       # The decline stands; approving after it must not overwrite the answer.
-      assert reload(meeting).status == "cancelled"
+      assert reload(meeting).status == :cancelled
     end
 
     test "a request that lapsed while the page was open is reloaded, not left stale",
@@ -382,7 +384,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       view |> element("[data-testid='approve-request']") |> render_click()
 
       assert render(view) =~ "reached the limit"
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
 
     test "declining is refused once the per-host limit is exhausted", %{conn: conn, user: user} do
@@ -400,7 +402,49 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       |> render_submit()
 
       assert render(view) =~ "reached the limit"
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
+    end
+
+    test "switching the filter is refused once the per-host limit is exhausted",
+         %{conn: conn, user: user} do
+      held_meeting(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      message = exhaust_limit!(:meeting_filter, user.id)
+
+      render_click(element(view, "button", "Requests"))
+
+      html = render(view)
+      assert html =~ HTML.html_escape(message)
+      # Still on the upcoming tab, which does not list a held request.
+      refute html =~ "Alex Guest"
+    end
+
+    test "cancelling is refused once the per-host limit is exhausted", %{conn: conn, user: user} do
+      meeting = held_meeting(user, %{status: :confirmed})
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      push_to_component(view, "show_cancel_modal", %{"id" => meeting.id})
+
+      message = exhaust_limit!(:dashboard_cancel, user.id)
+
+      push_to_component(view, "confirm_cancel_meeting", %{})
+
+      assert render(view) =~ HTML.html_escape(message)
+      assert reload(meeting).status == :confirmed
+    end
+
+    test "asking to reschedule is refused once the per-host limit is exhausted",
+         %{conn: conn, user: user} do
+      meeting = held_meeting(user, %{status: :confirmed})
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      push_to_component(view, "show_reschedule_modal", %{"id" => meeting.id})
+
+      message = exhaust_limit!(:dashboard_reschedule, user.id)
+
+      push_to_component(view, "confirm_reschedule_request", %{})
+
+      assert render(view) =~ HTML.html_escape(message)
+      assert reload(meeting).status == :confirmed
     end
   end
 
@@ -416,7 +460,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       push_to_component(view, "approve_request", %{"id" => theirs.id})
 
-      assert reload(theirs).status == "awaiting_approval"
+      assert reload(theirs).status == :awaiting_approval
     end
 
     test "and cannot be opened in the decline modal either", %{conn: conn, user: user} do
@@ -444,7 +488,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       push_to_component(view, "approve_request", %{"id" => meeting.id})
 
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
 
     test "the attendee cannot decline their own request either", %{user: host} do
@@ -460,7 +504,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       html = push_to_component(view, "show_decline_modal", %{"id" => meeting.id})
 
       refute html =~ "confirm_decline_request"
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
   end
 end

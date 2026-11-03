@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Wrapper do
   use Phoenix.Component
 
   alias Tymeslot.Themes.Catalog
-  alias TymeslotWeb.Themes.Shared.Components.ThemeShell
+  alias TymeslotWeb.Themes.Shared.Components.{LegalLinks, ThemeShell}
 
   import TymeslotWeb.Themes.Shared.Customization.Helpers, only: [prepare_wrapper_assigns: 1]
 
@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Wrapper do
   attr :owner_preview, :boolean, default: false
   attr :refused_calendars, :list, default: []
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
+  attr :legal_links, :map, required: true
   slot :inner_block, required: true
 
   @doc "Fixture Scroll's wrapper."
@@ -36,6 +37,10 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Wrapper do
   @doc "Fixture Express's wrapper."
   @spec express(map()) :: Phoenix.LiveView.Rendered.t()
   def express(assigns), do: shell(assigns, :fixture_express, "journey-fixture-express")
+
+  @doc "Fixture Two's wrapper."
+  @spec two(map()) :: Phoenix.LiveView.Rendered.t()
+  def two(assigns), do: shell(assigns, :fixture_two, "journey-fixture-two")
 
   defp shell(assigns, key, class) do
     {:ok, theme_id} = Catalog.key_to_id(key)
@@ -62,6 +67,7 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Wrapper do
         should_show_branding={@should_show_branding}
         {Map.take(assigns, [:demo_mode])}
       />
+      <LegalLinks.footer links={@legal_links} />
     </ThemeShell.theme_shell>
     """
   end

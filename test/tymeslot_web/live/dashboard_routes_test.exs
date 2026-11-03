@@ -189,7 +189,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> element("button[phx-click='show_customization'][phx-value-theme='1']")
       |> render_click()
 
-      assert render(view) =~ "Customise Style"
+      assert render(view) =~ "Customise Quill"
       assert has_element?(view, "#theme-customization-uploads")
 
       view

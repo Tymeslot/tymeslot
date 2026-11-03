@@ -34,10 +34,14 @@ defmodule TymeslotWeb.BookingDriver do
 
   A page that moves on by itself renders no way on: there `continue/1`
   checks, through `data-moment` and `data-moment-state` on the moments'
-  roots, that the next moment opened. A page that defaulted the meeting type
+  roots, that the next moment opened. That includes every shipped
+  overview, where choosing a meeting type is the way on. A page that defaulted the meeting type
   renders no choice: there `choose_meeting_type/2` reads the type the
   booking holds (`:selected_duration`) and does nothing when it is the one
-  asked for.
+  asked for. It does nothing either when that type is already chosen in a
+  moment the page has moved past (a continuous page opened on a reschedule
+  keeps its list of types above the calendar), since choosing it again
+  moves nothing.
 
   `book/2` composes the steps in the order the page asks for them; the other
   functions are the steps, for a test that drives one itself. Reading the
@@ -113,16 +117,27 @@ defmodule TymeslotWeb.BookingDriver do
 
   @doc """
   What `choose_meeting_type/2` does on the page `html`, `chosen` being the
-  meeting type the booking holds (`:selected_duration`): `:click` while the
-  page renders a meeting-type choice; `:chosen` when it renders none and
-  `duration` is the type held; otherwise `{:stuck, reason}`. Public so the
-  driver's tests pin the decision without a page of each kind.
+  meeting type the booking holds (`:selected_duration`): `:chosen` when
+  `duration` is the type held and its choice sits in a moment marked done;
+  `:click` while the page renders a meeting-type choice; `:chosen` when it
+  renders none and `duration` is the type held; otherwise
+  `{:stuck, reason}`. Public so the driver's tests pin the decision without
+  a page of each kind.
   """
   @spec choice_move(String.t(), String.t() | nil, String.t()) ::
           :click | :chosen | {:stuck, String.t()}
   def choice_move(html, chosen, duration) do
+    doc = Floki.parse_document!(html)
+
     cond do
-      html |> Floki.parse_document!() |> Floki.find(@meeting_type) != [] ->
+      chosen == duration and
+          Floki.find(
+            doc,
+            "[data-moment-state='done'] #{@meeting_type}[data-value='#{duration}']"
+          ) != [] ->
+        :chosen
+
+      Floki.find(doc, @meeting_type) != [] ->
         :click
 
       chosen == duration ->
@@ -318,8 +333,9 @@ defmodule TymeslotWeb.BookingDriver do
   acted, or the page marks no moments):
 
     * `:opened` - the page has moved on by itself since that action: the
-      moment `last` is now marked done (`data-moment-state="done"`) and
-      another is current. A way on the newly opened moment renders is not
+      moment `last` is now marked done (`data-moment-state="done"`) or
+      gone from the page (a paged journey replaced it), and another is
+      current. A way on the newly opened moment renders is not
       taken (it belongs to that moment, which has asked nothing yet);
     * `:click` - otherwise, the page renders a way on
       (`data-intent="continue"`), enabled or about to be;
@@ -373,7 +389,7 @@ defmodule TymeslotWeb.BookingDriver do
   @doc "Types `attrs` into the booking form, as the visitor typing would (`phx-change`)."
   @spec fill_attendee(View.t(), attendee()) :: :ok
   def fill_attendee(view, attrs) do
-    view |> form(@attendee, %{"booking" => booking_params(attrs)}) |> render_change()
+    view |> form(@attendee, %{"booking" => form_params(attrs)}) |> render_change()
     sync(view)
   end
 
@@ -384,7 +400,7 @@ defmodule TymeslotWeb.BookingDriver do
   """
   @spec submit(View.t(), attendee()) :: String.t() | {:error, term()}
   def submit(view, attrs \\ %{}) do
-    case view |> form(@attendee, %{"booking" => booking_params(attrs)}) |> render_submit() do
+    case view |> form(@attendee, %{"booking" => form_params(attrs)}) |> render_submit() do
       html when is_binary(html) ->
         sync(view)
         render(view)
@@ -557,19 +573,6 @@ defmodule TymeslotWeb.BookingDriver do
     end
   end
 
-  defp slot_of(node) do
-    case {Floki.attribute(node, "data-date"), Floki.attribute(node, "data-time")} do
-      {[iso], [time]} ->
-        {iso, time}
-
-      _missing ->
-        flunk(
-          "a data-fact=\"slot\" button lacks its data-date or data-time: " <>
-            Floki.raw_html(node)
-        )
-    end
-  end
-
   defp marks_slot_fact!(view) do
     unless shows_picker?(view),
       do: flunk("the slot moment marks no day (data-fact=date) and no slot (data-fact=slot)")
@@ -643,6 +646,4 @@ defmodule TymeslotWeb.BookingDriver do
     view |> element(selector <> @enabled) |> render_click()
     sync(view)
   end
-
-  defp booking_params(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 end

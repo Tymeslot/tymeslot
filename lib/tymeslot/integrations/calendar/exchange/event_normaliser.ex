@@ -36,6 +36,18 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   thirteen hours, so the window is `(-11:00, +13:00]`: it reaches New Zealand
   year-round, and misfiles `-11:00`, `+13:45` and `+14:00`, which
   `StartTimeZone` gets right wherever a server provides it.
+
+  ## An occurrence is cached under its own item id
+
+  A windowed read can answer a recurring series as its occurrences: Exchange
+  always does, and grommunio does in current versions. Every occurrence carries
+  the series' iCalendar `UID`, so keying the cache on it, as a single item is,
+  would have the occurrences overwrite one another and leave one per series on
+  the grid. An `Occurrence` or `Exception` is therefore keyed by its item id,
+  which is distinct per occurrence and stable across reads, as Google keys an
+  instance by its own event id. The series' `UID` is kept in
+  `provider_metadata` under `"ical_uid"`. A single item and a recurring master
+  keep the `UID`, so their cached rows and anything keyed on them survive.
   """
 
   # Only the sigil: every xpath goes through `Soap.xpath/2,3`, which binds the
@@ -57,6 +69,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   # See the module doc on all-day events for why this number and not another.
   @all_day_anchor 13 * 60 * 60
+
+  # The series members a windowed read expands a recurring series into. Each
+  # carries the series' `UID`, so each is cached under its own item id.
+  @expanded_series_types ["Occurrence", "Exception"]
 
   @doc """
   Returns the `CalendarItem` elements of a parsed `GetItem` response.
@@ -180,6 +196,20 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
     {:ok, events}
   end
 
+  @doc """
+  Whether a normalised event is a recurring series' master item.
+
+  A master's dates describe only the series' first occurrence, so it cannot
+  stand in for the series on the grid. It reaches a reader only where the
+  server answers the series unexpanded: a change feed always does, and older
+  grommunio versions do for a windowed read too.
+  """
+  @spec series_master?(CalendarEvent.t()) :: boolean()
+  def series_master?(%CalendarEvent{provider_metadata: %{"calendar_item_type" => type}}),
+    do: type == "RecurringMaster"
+
+  def series_master?(%CalendarEvent{}), do: false
+
   defp normalise_item(item, context) do
     attrs = extract(item, context)
 
@@ -213,10 +243,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   defp extract(item, context) do
     item_id = Soap.text(item, ~x"./t:ItemId/@Id")
+    ical_uid = Soap.text(item, ~x"./t:UID/text()")
+    item_type = Soap.text(item, ~x"./t:CalendarItemType/text()")
     all_day = Soap.text(item, ~x"./t:IsAllDayEvent/text()") == "true"
 
     base = %{
-      uid: Soap.text(item, ~x"./t:UID/text()") || item_id,
+      uid: cache_uid(item_type, ical_uid, item_id),
       calendar_integration_id: context.calendar_integration_id,
       provider: :exchange,
       provider_calendar_id: context.provider_calendar_id,
@@ -228,7 +260,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
       all_day: all_day,
       status: map_status(Soap.text(item, ~x"./t:IsCancelled/text()")),
       transparency: map_transparency(Soap.text(item, ~x"./t:LegacyFreeBusyStatus/text()")),
-      provider_metadata: metadata(item)
+      provider_metadata: metadata(item_type, ical_uid)
     }
 
     Map.merge(base, timing(item, all_day))
@@ -266,13 +298,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   defp map_transparency("Free"), do: :transparent
   defp map_transparency(_other), do: :opaque
 
-  # Recorded because it is the only signal distinguishing a single item from an
-  # expanded occurrence of a series, which the recurrence work will need.
-  defp metadata(item) do
-    case Soap.text(item, ~x"./t:CalendarItemType/text()") do
-      nil -> %{}
-      type -> %{"calendar_item_type" => type}
-    end
+  # The moduledoc's "An occurrence is cached under its own item id" says why
+  # the two series members a window expands into are keyed apart from the
+  # `UID` they share. An item without an id falls through to the `UID`, and
+  # `CalendarEvent.new/1` rejects it for the missing id regardless.
+  defp cache_uid(type, _ical_uid, item_id)
+       when type in @expanded_series_types and is_binary(item_id),
+       do: item_id
+
+  defp cache_uid(_type, ical_uid, item_id), do: ical_uid || item_id
+
+  # The item type is the only signal distinguishing a single item from a
+  # member of a series (`Recurrence.Series.member?/1` reads it), and the `UID`
+  # is what still ties an occurrence to its series once its row is keyed by
+  # item id. An element the server omitted is left out rather than stored nil.
+  defp metadata(type, ical_uid) do
+    Map.reject(%{"calendar_item_type" => type, "ical_uid" => ical_uid}, fn {_key, value} ->
+      is_nil(value)
+    end)
   end
 
   # An omitted boundary reads back as nil and leaves the field unset, which is

@@ -16,6 +16,7 @@ defmodule Tymeslot.InviteeDataTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Polls.PollVoteSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
 
@@ -34,7 +35,7 @@ defmodule Tymeslot.InviteeDataTest do
   end
 
   defp past_meeting(attrs) do
-    insert(:meeting, Keyword.merge(ended(10) ++ [status: "completed"], attrs))
+    insert(:meeting, Keyword.merge(ended(10) ++ [status: :completed], attrs))
   end
 
   defp add_guest(meeting, email, attrs \\ %{}) do
@@ -72,7 +73,7 @@ defmodule Tymeslot.InviteeDataTest do
           cancellation_reason: "Something came up"
         )
 
-      group = insert(:group_meeting, [organizer_user: host, status: "completed"] ++ ended(10))
+      group = insert(:group_meeting, [organizer_user: host, status: :completed] ++ ended(10))
       seat = insert(:participant, meeting: group, email: @email, name: "Ada", phone: "123")
       other_seat = insert(:participant, meeting: group, email: "bob@example.com", name: "Bob")
 
@@ -93,7 +94,18 @@ defmodule Tymeslot.InviteeDataTest do
 
       delivery = insert(:webhook_delivery, meeting_id: booked.id)
 
+      draft =
+        insert(:poll,
+          user: host,
+          status: :draft,
+          draft_invitees: [
+            %{email: "Ada@Example.com", name: "Ada"},
+            %{email: "bob@example.com", name: "Bob"}
+          ]
+        )
+
       %{
+        draft: draft,
         booked: booked,
         seat: seat,
         other_seat: other_seat,
@@ -114,6 +126,7 @@ defmodule Tymeslot.InviteeDataTest do
                participants: 1,
                guests: 1,
                poll_participants: 1,
+               draft_polls: 1,
                booking_payments: 1,
                deliveries: 1
              }
@@ -131,7 +144,7 @@ defmodule Tymeslot.InviteeDataTest do
                custom_field_answers: %{},
                visitor_hash: nil,
                cancellation_reason: nil,
-               status: "completed",
+               status: :completed,
                meeting_type: "Intro call"
              } = meeting
 
@@ -162,6 +175,14 @@ defmodule Tymeslot.InviteeDataTest do
       assert %{email: "carol@example.com"} = Repo.get!(GuestSchema, ctx.guest_of_booker.id)
     end
 
+    test "takes the person off a draft poll's invitees, keeping the others", ctx do
+      assert {:ok, _counts} = InviteeData.erase(@email)
+
+      assert PollSchema.draft_invitees(Repo.get!(PollSchema, ctx.draft.id)) == [
+               %{email: "bob@example.com", name: "Bob"}
+             ]
+    end
+
     test "refuses while the person still has an upcoming booking, and changes nothing", ctx do
       upcoming = insert(:future_meeting, attendee_email: @email)
 
@@ -182,7 +203,7 @@ defmodule Tymeslot.InviteeDataTest do
     end
 
     test "erases despite an upcoming booking that was cancelled", ctx do
-      insert(:future_meeting, attendee_email: @email, status: "cancelled")
+      insert(:future_meeting, attendee_email: @email, status: :cancelled)
 
       assert {:ok, %{meetings: 2}} = InviteeData.erase(@email)
       assert %{attendee_email: nil} = Repo.get!(MeetingSchema, ctx.booked.id)
@@ -212,12 +233,18 @@ defmodule Tymeslot.InviteeDataTest do
       {their_poll, _slot} = poll_with_slot_ended(10, other_host)
       their_voter = insert(:poll_participant, poll: their_poll, email: @email)
 
-      assert {:ok, %{meetings: 1, poll_participants: 0}} =
+      their_draft =
+        insert(:poll, user: other_host, status: :draft, draft_invitees: [%{email: @email}])
+
+      assert {:ok, %{meetings: 1, poll_participants: 0, draft_polls: 0}} =
                InviteeData.erase_for_host(host.id, @email)
 
       assert %{attendee_email: nil} = Repo.get!(MeetingSchema, mine.id)
       assert %{attendee_email: @email} = Repo.get!(MeetingSchema, theirs.id)
       assert %{email: @email} = Repo.get!(PollParticipantSchema, their_voter.id)
+
+      assert [%{email: @email}] =
+               PollSchema.draft_invitees(Repo.get!(PollSchema, their_draft.id))
     end
 
     test "is not blocked by the person's upcoming booking with another host" do
@@ -274,6 +301,24 @@ defmodule Tymeslot.InviteeDataTest do
       assert Repo.get!(PollParticipantSchema, mixed_voter.id).email == mixed_voter.email
     end
 
+    test "clears the invitees of drafts last saved before the window" do
+      saved = fn days_ago ->
+        DateTime.utc_now() |> DateTime.add(-days_ago, :day) |> DateTime.truncate(:second)
+      end
+
+      invitees = [%{email: "ada@example.com", name: "Ada"}]
+      old = insert(:poll, status: :draft, draft_invitees: invitees, updated_at: saved.(731))
+      recent = insert(:poll, status: :draft, draft_invitees: invitees, updated_at: saved.(700))
+
+      assert {1, nil} = InviteeData.anonymise_expired(730)
+      assert PollSchema.draft_invitees(Repo.get!(PollSchema, old.id)) == []
+
+      assert [%{email: "ada@example.com"}] =
+               PollSchema.draft_invitees(Repo.get!(PollSchema, recent.id))
+
+      assert {0, nil} = InviteeData.anonymise_expired(730)
+    end
+
     test "passes over what it has already anonymised" do
       host = insert(:user)
       past_meeting(ended(731))
@@ -293,7 +338,7 @@ defmodule Tymeslot.InviteeDataTest do
     end
 
     test "anonymises and stamps every expired meeting when there is more than one batch" do
-      template = build(:meeting, ended(800) ++ [status: "completed"])
+      template = build(:meeting, ended(800) ++ [status: :completed])
 
       ids =
         insert_copies(MeetingSchema, template, @over_one_batch, fn i ->
@@ -375,14 +420,14 @@ defmodule Tymeslot.InviteeDataTest do
       end_time = DateTime.add(cutoff(), -1, :day)
 
       statuses = [
-        "pending",
-        "awaiting_approval",
-        "confirmed",
-        "cancelled",
-        "completed",
-        "reschedule_requested",
-        "awaiting_payment",
-        "expired"
+        :pending,
+        :awaiting_approval,
+        :confirmed,
+        :cancelled,
+        :completed,
+        :reschedule_requested,
+        :awaiting_payment,
+        :expired
       ]
 
       meetings =
@@ -392,7 +437,7 @@ defmodule Tymeslot.InviteeDataTest do
 
       declined =
         meeting_ending_at(end_time,
-          status: "cancelled",
+          status: :cancelled,
           decline_reason: "Fully booked",
           approval_declined_at: end_time
         )
@@ -453,7 +498,7 @@ defmodule Tymeslot.InviteeDataTest do
       [
         start_time: DateTime.add(now, start_offset_minutes, :minute),
         end_time: DateTime.add(now, end_offset_minutes, :minute),
-        status: "confirmed"
+        status: :confirmed
       ] ++ attrs
     )
   end
@@ -461,7 +506,7 @@ defmodule Tymeslot.InviteeDataTest do
   defp meeting_ending_at(end_time, attrs \\ []) do
     insert(
       :meeting,
-      [start_time: DateTime.add(end_time, -60, :minute), end_time: end_time, status: "completed"] ++
+      [start_time: DateTime.add(end_time, -60, :minute), end_time: end_time, status: :completed] ++
         attrs
     )
   end

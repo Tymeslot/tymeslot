@@ -109,7 +109,7 @@ defmodule Tymeslot.Telegram do
 
   @spec disconnect_integration(TelegramIntegrationSchema.t()) ::
           {:ok, TelegramIntegrationSchema.t()} | {:error, :own_bot_mode | :not_found}
-  def disconnect_integration(%TelegramIntegrationSchema{bot_mode: "own"}),
+  def disconnect_integration(%TelegramIntegrationSchema{bot_mode: :own}),
     do: {:error, :own_bot_mode}
 
   def disconnect_integration(%TelegramIntegrationSchema{} = integration) do
@@ -119,7 +119,7 @@ defmodule Tymeslot.Telegram do
   @spec reconnect_integration(TelegramIntegrationSchema.t()) ::
           {:ok, TelegramIntegrationSchema.t(), String.t()}
           | {:error, :own_bot_mode | :not_found | Ecto.Changeset.t()}
-  def reconnect_integration(%TelegramIntegrationSchema{bot_mode: "own"}),
+  def reconnect_integration(%TelegramIntegrationSchema{bot_mode: :own}),
     do: {:error, :own_bot_mode}
 
   def reconnect_integration(%TelegramIntegrationSchema{} = integration) do
@@ -205,14 +205,14 @@ defmodule Tymeslot.Telegram do
   # ============================================================================
 
   @spec resolve_bot_token(TelegramIntegrationSchema.t()) :: {:ok, String.t()} | {:error, atom()}
-  def resolve_bot_token(%TelegramIntegrationSchema{bot_mode: "shared"}) do
+  def resolve_bot_token(%TelegramIntegrationSchema{bot_mode: :shared}) do
     case Application.get_env(:tymeslot, :telegram_bot_token) do
       nil -> {:error, :no_shared_token}
       token -> {:ok, token}
     end
   end
 
-  def resolve_bot_token(%TelegramIntegrationSchema{bot_mode: "own"} = integration) do
+  def resolve_bot_token(%TelegramIntegrationSchema{bot_mode: :own} = integration) do
     decrypted = TelegramIntegrationSchema.decrypt_token(integration)
 
     case decrypted.bot_token do
@@ -292,7 +292,7 @@ defmodule Tymeslot.Telegram do
     issued_after = DateTime.add(DateTime.utc_now(), -@link_token_ttl_ms, :millisecond)
 
     case TelegramQueries.find_by_link_token(token, issued_after) do
-      {:ok, %TelegramIntegrationSchema{bot_mode: "shared"} = integration} ->
+      {:ok, %TelegramIntegrationSchema{bot_mode: :shared} = integration} ->
         case TelegramQueries.update_link_state(integration, %{
                chat_id: chat_id_str,
                link_token: nil
@@ -427,11 +427,12 @@ defmodule Tymeslot.Telegram do
   follows the integration's own mode, which never changes after creation;
   creating one follows the installation's, which is the mode it will get.
   """
-  @spec form_bot_mode(:create | :edit, TelegramIntegrationSchema.t() | nil) :: String.t()
+  @spec form_bot_mode(:create | :edit, TelegramIntegrationSchema.t() | nil) ::
+          TelegramIntegrationSchema.bot_mode()
   def form_bot_mode(:edit, %TelegramIntegrationSchema{bot_mode: bot_mode}), do: bot_mode
   def form_bot_mode(_mode, _integration), do: installation_bot_mode()
 
-  defp installation_bot_mode, do: if(shared_bot_mode?(), do: "shared", else: "own")
+  defp installation_bot_mode, do: if(shared_bot_mode?(), do: :shared, else: :own)
 
   @spec telegram_enabled?() :: boolean()
   def telegram_enabled? do
@@ -466,7 +467,7 @@ defmodule Tymeslot.Telegram do
   defp replace_pending_stubs(user_id) do
     attrs = %{
       user_id: user_id,
-      bot_mode: "shared",
+      bot_mode: :shared,
       name: dgettext("dashboard_automation_chat", "My Telegram"),
       events: ["meeting.created"]
     }

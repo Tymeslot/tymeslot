@@ -31,7 +31,11 @@ defmodule TymeslotWeb.Themes.Core.Theme do
       names a function component (`page_shell: &MyTheme.Pages.page_shell/1`),
       the six pages from `TymeslotWeb.Themes.Shared.DefaultPages`, the
       shared bodies inside that shell: a theme then writes no page modules
-      at all;
+      at all. The shell is called with `page`, `theme_tokens`,
+      `organizer_profile` (the organiser's profile, or `nil` before a
+      payment page has read it), `locale`, `language_dropdown_open` and the
+      body as its inner block (`DefaultPages` documents each); it may
+      ignore all but `page`;
     * `onboarding_preview/1`, defaulting to the generic mock in
       `TymeslotWeb.OnboardingLive.PreviewParts`;
     * `option_panels/0`, returning `:option_panels` (default `%{}`): the

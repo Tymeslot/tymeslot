@@ -262,14 +262,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
           </.input>
 
           <%= case field_value(@changeset, :kind) do %>
-            <% "video" -> %>
+            <% :video -> %>
               <.video_integration_picker
                 changeset={@changeset}
                 video_integrations={@video_integrations}
                 field_errors={@field_errors}
                 myself={@myself}
               />
-            <% "in_person" -> %>
+            <% :in_person -> %>
               <VenuePicker.venue_picker
                 changeset={@changeset}
                 venues={@venues}
@@ -277,7 +277,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 field_errors={@field_errors}
                 myself={@myself}
               />
-            <% "phone" -> %>
+            <% :phone -> %>
               <.input
                 name="location[collect_from_guest]"
                 value={field_value(@changeset, :collect_from_guest)}
@@ -347,7 +347,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
         <%!-- Outside the form above: HTML forms cannot nest. --%>
         <.live_component
-          :if={@creating_venue and field_value(@changeset, :kind) == "in_person"}
+          :if={@creating_venue and field_value(@changeset, :kind) == :in_person}
           module={NewVenueComponent}
           id={"new-venue-#{@id}"}
           editor_id={@id}
@@ -490,11 +490,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   # written is never overwritten.
   defp default_label_for_kind(params, changeset) do
     previous_kind = Changeset.get_field(changeset, :kind)
+    kind = posted_kind(params)
     label = Map.get(params, "label", Changeset.get_field(changeset, :label))
 
     if blank?(label) or
-         (params["kind"] != previous_kind and label == default_label(previous_kind)) do
-      Map.put(params, "label", default_label(params["kind"]))
+         (kind != previous_kind and label == default_label(previous_kind)) do
+      Map.put(params, "label", default_label(kind))
     else
       params
     end
@@ -502,9 +503,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   defp blank?(value), do: value in [nil, ""]
 
-  defp default_label("video"), do: dgettext("dashboard_meeting_locations", "Video call")
-  defp default_label("phone"), do: dgettext("dashboard_meeting_locations", "Phone call")
-  defp default_label("in_person"), do: dgettext("dashboard_meeting_locations", "In person")
+  # The posted kind is a string; one outside the known kinds is left for the
+  # changeset to refuse, and gets the catch-all label meanwhile.
+  defp posted_kind(params) do
+    case LocationOption.parse_kind(params["kind"]) do
+      {:ok, kind} -> kind
+      :error -> nil
+    end
+  end
+
+  defp default_label(:video), do: dgettext("dashboard_meeting_locations", "Video call")
+  defp default_label(:phone), do: dgettext("dashboard_meeting_locations", "Phone call")
+  defp default_label(:in_person), do: dgettext("dashboard_meeting_locations", "In person")
   defp default_label(_kind), do: dgettext("dashboard_meeting_locations", "Somewhere else")
 
   # A pill shows the integration's name, with the account in its tooltip. Two
@@ -520,7 +530,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
       %{
         value: integration.id,
         label: integration_label(integration, integration.name in shared_names),
-        icon: LocationIcons.icon("video"),
+        icon: LocationIcons.icon(:video),
         title: integration.provider_account_email
       }
     end)
@@ -534,10 +544,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   defp kind_options do
     for {label, kind} <- [
-          {dgettext("dashboard_meeting_locations", "In person"), "in_person"},
-          {dgettext("dashboard_meeting_locations", "Video call"), "video"},
-          {dgettext("dashboard_meeting_locations", "Phone call"), "phone"},
-          {dgettext("dashboard_meeting_locations", "Something else"), "custom"}
+          {dgettext("dashboard_meeting_locations", "In person"), :in_person},
+          {dgettext("dashboard_meeting_locations", "Video call"), :video},
+          {dgettext("dashboard_meeting_locations", "Phone call"), :phone},
+          {dgettext("dashboard_meeting_locations", "Something else"), :custom}
         ] do
       %{value: kind, label: label, icon: LocationIcons.icon(kind)}
     end

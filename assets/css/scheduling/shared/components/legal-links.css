@@ -1,0 +1,51 @@
+/* ==========================================================================
+   Legal links: the organiser's legal notice and privacy policy
+
+   Matches TymeslotWeb.Themes.Shared.Components.LegalLinks, which every
+   theme's wrapper renders as the last row of its page grid, after the theme
+   extensions, on every public page (payment return pages included).
+
+   Small and quiet, centred at the foot of the page. It sits on the page
+   background itself, which may be a photo or a video, so it takes the demo
+   theme switcher's ground (shared/components/preview-notice.css): the
+   theme's --surface-2 over an opaque --theme-canvas, with --ink-1 on it,
+   10:1 or more on every shipped palette, light and dark. Reads only the
+   theme roles, so no theme needs CSS of its own for it.
+   ========================================================================== */
+
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs) var(--space-sm);
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: calc(100% - 2 * var(--space-md));
+  margin: 0 auto var(--space-sm);
+  padding: var(--space-3xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-control);
+  background: linear-gradient(var(--surface-2), var(--surface-2)) var(--theme-canvas);
+  color: var(--ink-1);
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-xs);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+.legal-links__link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: var(--border-width-thin);
+  text-underline-offset: 0.2em;
+}
+
+.legal-links__link:hover {
+  text-decoration-thickness: var(--border-width-medium);
+}
+
+.legal-links__link:focus-visible {
+  outline: var(--border-width-medium) solid var(--ink-1);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}

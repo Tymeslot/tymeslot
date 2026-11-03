@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
       _integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           channel_id: nil,
           channel_name: nil,
           bot_token_encrypted: nil,

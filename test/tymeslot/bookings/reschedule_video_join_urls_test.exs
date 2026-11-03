@@ -277,8 +277,8 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
 
       # Approval keeps whatever room is already attached, so links left pinned
       # to the old time here would never be rebuilt.
-      assert updated.status == "awaiting_approval"
-      assert stored.status == "awaiting_approval"
+      assert updated.status == :awaiting_approval
+      assert stored.status == :awaiting_approval
       assert stored.video_room_id == attached.video_room_id
 
       expected_exp = DateTime.to_unix(new_start) + @grace_seconds
@@ -372,7 +372,7 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
           start_time: start_time,
           end_time: DateTime.add(start_time, 60, :minute),
           duration: 60,
-          status: "confirmed"
+          status: :confirmed
         },
         attrs
       )

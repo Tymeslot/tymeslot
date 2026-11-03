@@ -466,3 +466,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Authorisation was denied. Please try again."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not duplicate this meeting type. Check its settings, then try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Add its dates, then switch it on."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Switch it on when it is ready."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
+msgstr ""

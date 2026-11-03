@@ -10,6 +10,9 @@
  * 1. Inline: <div id="tymeslot-booking" data-username="sarah"></div>
  * 2. Popup: <button onclick="TymeslotBooking.open('sarah')">Book</button>
  * 3. Floating: TymeslotBooking.initFloating('sarah')
+ *
+ * A booking page of an organiser is addressed as `<username>/<page>`, e.g.
+ * data-username="sarah/coaching".
  */
 
 (function() {
@@ -177,7 +180,10 @@
   function createBookingIframe(username, options = {}) {
     const iframe = document.createElement('iframe');
     const base = BASE_URL.replace(/\/$/, '');
-    const url = new URL(`${base}/${encodeURIComponent(username)}`);
+    // A booking page's address is `<username>/<page>`: each segment is
+    // escaped on its own, so the slash between them stays a path separator.
+    const path = String(username).split('/').map(encodeURIComponent).join('/');
+    const url = new URL(`${base}/${path}`);
     
     // Build URL with customization params - STRICT ALLOWLIST
     const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale', 'layout', 'previewToken'];
@@ -221,7 +227,12 @@
     url.searchParams.append('parent-origin', window.location.origin);
 
     iframe.src = url.toString();
+    // display: block, as an inline iframe sits on a line box whose descender
+    // gap makes the wrapper's content a few pixels taller than the wrapper:
+    // the modal's frame clips with overflow hidden, so that overflow can be
+    // scrolled and cut the top of the booking page off.
     iframe.style.cssText = `
+      display: block;
       width: 100%;
       height: 100%;
       border: none;

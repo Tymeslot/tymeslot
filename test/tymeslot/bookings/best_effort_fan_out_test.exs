@@ -182,7 +182,7 @@ defmodule Tymeslot.Bookings.BestEffortFanOutTest do
     test "approving a request sends one Slack notice", %{user: user} do
       held =
         insert_meeting_for_user(user, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 1, :day)
         })
@@ -200,7 +200,7 @@ defmodule Tymeslot.Bookings.BestEffortFanOutTest do
     # transaction and dispatches once that has committed
     # (`MeetingPayments.Webhooks.CheckoutSessionCompleted`).
     test "activating in the confirming transaction sends one Slack notice", %{user: user} do
-      meeting = insert_meeting_for_user(user, %{status: "confirmed"})
+      meeting = insert_meeting_for_user(user, %{status: :confirmed})
 
       assert {:ok, {:ok, pending}} =
                Repo.transaction(fn ->
@@ -223,7 +223,7 @@ defmodule Tymeslot.Bookings.BestEffortFanOutTest do
     end
 
     test "is refused through a whole event", %{user: user} do
-      meeting = insert_meeting_for_user(user, %{status: "confirmed"})
+      meeting = insert_meeting_for_user(user, %{status: :confirmed})
 
       assert_raise DispatchInTransactionError, fn ->
         Repo.transaction(fn -> Events.meeting_created(meeting) end)
@@ -235,7 +235,7 @@ defmodule Tymeslot.Bookings.BestEffortFanOutTest do
     test "is refused through an approval", %{user: user} do
       held =
         insert_meeting_for_user(user, %{
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 1, :day)
         })

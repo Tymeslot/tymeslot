@@ -17,6 +17,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   import Ecto.Changeset
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.ThemeCustomizations.Spec
   alias Tymeslot.ThemeCustomizations.Specs
@@ -25,6 +26,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   @type t :: %__MODULE__{
           id: integer() | nil,
           profile_id: integer() | nil,
+          booking_page_id: integer() | nil,
           theme_id: String.t() | nil,
           settings: Spec.settings() | nil,
           video_processing_status: %{optional(String.t()) => String.t()},
@@ -39,6 +41,8 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
     field(:video_processing_status, :map, default: %{})
 
     belongs_to(:profile, ProfileSchema, foreign_key: :profile_id)
+    # Set for a booking page's own colours; NULL for the profile's own page.
+    belongs_to(:booking_page, BookingPageSchema)
 
     timestamps(type: :utc_datetime)
   end
@@ -52,11 +56,13 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(theme_customization, attrs) do
     theme_customization
-    |> cast(attrs, [:profile_id, :theme_id])
+    |> cast(attrs, [:profile_id, :theme_id, :booking_page_id])
     |> validate_required([:profile_id, :theme_id])
     |> apply_theme_spec(attrs)
     |> foreign_key_constraint(:profile_id)
+    |> foreign_key_constraint(:booking_page_id)
     |> unique_constraint([:profile_id, :theme_id])
+    |> unique_constraint([:booking_page_id, :theme_id])
   end
 
   defp apply_theme_spec(changeset, attrs) do

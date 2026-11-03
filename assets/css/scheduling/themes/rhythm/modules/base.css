@@ -66,6 +66,15 @@ body.rhythm-theme {
   position: relative;
 }
 
+/* A demo page's theme switcher (shared/components/preview-notice.css) sits
+   above the box, like everything else that shares the flow. It is no wider
+   than the box, which keeps it out of the lane beside the box where the
+   language switcher floats from 1024px. */
+.video-background-theme.theme-grid .content-area > .demo-theme-switcher {
+  flex-shrink: 0;
+  max-width: min(520px, calc(100% - 2 * var(--space-md)));
+}
+
 /* A column item may shrink along the main axis; the box keeps its content
    height and the content area scrolls instead. */
 .video-background-theme.theme-grid .content-area > .scheduling-box {
@@ -77,8 +86,8 @@ body.rhythm-theme {
   container-type: inline-size;
   container-name: scheduling;
   background: var(--box-surface);
-  backdrop-filter: blur(var(--box-blur)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%);
+  backdrop-filter: blur(var(--box-blur)) saturate(150%) var(--box-backdrop-floor);
+  -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%) var(--box-backdrop-floor);
   border-radius: var(--radius-2xl);
   box-shadow: var(--box-shadow);
   width: min(520px, 100%);
@@ -91,6 +100,14 @@ body.rhythm-theme {
   border: var(--border-width-thin) solid var(--border-medium);
   color: var(--theme-text);
   box-sizing: border-box;
+}
+
+/* A background the organiser chose may be light anywhere, so the box's
+   text gets a dark floor under it (variables.css, --box-backdrop-floor).
+   The wrapper names the kind; the theme's video and its own default
+   gradient keep the glass as it is. */
+.video-background-theme:is([data-background="color"], [data-background="image"], [data-background="gradient"]) {
+  --box-backdrop-floor: var(--box-backdrop-floor-static);
 }
 
 /* Slide System */
@@ -123,6 +140,27 @@ body.rhythm-theme {
 .slide.active {
   opacity: 1;
   transform: translateX(0);
+}
+
+/* A step's slide enters as it mounts. Only the booking steps after the
+   overview carry slide--enter (the overview is the first paint; the meeting
+   and poll pages share the .slide markup and stay still), and each step's
+   root has an id of its own, so a step change inserts a new slide and this
+   plays. */
+@keyframes rhythm-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--slide-enter-offset));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide--enter.active {
+  animation: rhythm-slide-in var(--transition-slow) both;
 }
 
 .slide-content {
@@ -346,6 +384,10 @@ body.rhythm-theme {
     padding: 0;
   }
 
+  .video-background-theme.theme-grid .content-area > .demo-theme-switcher {
+    margin-top: var(--space-sm);
+  }
+
   .scheduling-box {
     width: 100%;
     max-width: 100%;
@@ -442,6 +484,10 @@ body.rhythm-theme {
 @media (prefers-reduced-motion: reduce) {
   .slide {
     transition: none;
+  }
+
+  .slide--enter.active {
+    animation: none;
   }
 }
 

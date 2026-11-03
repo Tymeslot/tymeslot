@@ -57,8 +57,11 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
               icon="hero-cog-6-tooth"
               title={dgettext("dashboard_admin", "Admin")}
             />
-            <p class="mt-2 mb-8 text-base text-tymeslot-600 font-medium">
+            <p class="mt-2 text-base text-tymeslot-600 font-medium">
               {dgettext("dashboard_admin", "Manage this self-hosted Tymeslot install.")}
+            </p>
+            <p id="admin-version" class="mt-1 mb-8 text-token-sm text-tymeslot-500 font-medium">
+              {dgettext("dashboard_admin", "Version %{version}", version: tymeslot_version())}
             </p>
 
             <%!-- Pill-style tab bar. Wraps rather than overflowing: the tab
@@ -86,6 +89,13 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
       </div>
     </div>
     """
+  end
+
+  defp tymeslot_version do
+    case Application.spec(:tymeslot, :vsn) do
+      nil -> "unknown"
+      vsn -> to_string(vsn)
+    end
   end
 
   # Verified routes need a literal path, so each tab names its own rather than

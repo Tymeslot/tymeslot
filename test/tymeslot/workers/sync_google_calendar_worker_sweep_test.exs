@@ -460,7 +460,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerSweepTest do
       assert cached_uids(integration) == ["booking-uid"]
 
       reloaded = Repo.get!(MeetingSchema, meeting.id)
-      assert reloaded.status == "confirmed"
+      assert reloaded.status == :confirmed
       assert reloaded.calendar_sync_status == meeting.calendar_sync_status
     end
 

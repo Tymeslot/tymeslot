@@ -177,7 +177,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   # --- Private helpers ---
 
   defp extract_event_fields(event_data) do
-    timezone = get_field_value(event_data, :timezone)
+    timezone = write_timezone(event_data)
 
     %{
       "summary" => get_field_value(event_data, :summary),
@@ -198,6 +198,19 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
       "visibility" => map_visibility(get_field_value(event_data, :visibility)),
       "attendees" => build_attendees(event_data)
     }
+  end
+
+  # Google refuses a recurring timed event whose start names no zone
+  # ("Missing time zone definition for start time"): it steps the series in
+  # one. A series written without a zone is a series in UTC, which is how its
+  # instants already read, so that is the zone it is given.
+  defp write_timezone(event_data) do
+    case {get_field_value(event_data, :timezone), get_field_value(event_data, :recurrence_rule),
+          get_field_value(event_data, :start_time)} do
+      {zone, _rule, _start} when is_binary(zone) and zone != "" -> zone
+      {_none, rule, %DateTime{}} when is_binary(rule) and rule != "" -> "Etc/UTC"
+      {zone, _rule, _start} -> zone
+    end
   end
 
   defp build_attendees(event_data) do

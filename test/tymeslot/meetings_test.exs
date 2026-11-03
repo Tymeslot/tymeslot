@@ -186,14 +186,14 @@ defmodule Tymeslot.MeetingsTest do
 
   describe "send_reschedule_request/1" do
     test "successfully processes reschedule request" do
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
 
       assert :ok = Meetings.send_reschedule_request(meeting)
 
       # `status` is left untouched — only `reschedule_requested_at` marks the
       # meeting as awaiting a new time (see `Bookings.RescheduleRequest`).
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
-      assert updated_meeting.status == "confirmed"
+      assert updated_meeting.status == :confirmed
       assert %DateTime{} = updated_meeting.reschedule_requested_at
     end
 
@@ -201,7 +201,7 @@ defmodule Tymeslot.MeetingsTest do
       # Create a meeting in the past which shouldn't be reschedulable by default policy
       meeting =
         insert(:meeting,
-          status: "confirmed",
+          status: :confirmed,
           start_time: DateTime.add(DateTime.utc_now(), -3600),
           end_time: DateTime.add(DateTime.utc_now(), -1800)
         )
@@ -213,7 +213,7 @@ defmodule Tymeslot.MeetingsTest do
     test "blocks a reschedule request against a held request awaiting approval" do
       meeting =
         insert(:meeting,
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
         )
@@ -249,7 +249,7 @@ defmodule Tymeslot.MeetingsTest do
     end
 
     test "exports a confirmed meeting with STATUS:CONFIRMED" do
-      meeting = exportable_meeting(status: "confirmed")
+      meeting = exportable_meeting(status: :confirmed)
 
       assert {:ok, ics} = Meetings.calendar_export(meeting.uid, meeting.organizer_user_id)
       assert ics =~ "STATUS:CONFIRMED"
@@ -259,7 +259,7 @@ defmodule Tymeslot.MeetingsTest do
     test "exports a held request with STATUS:TENTATIVE, not STATUS:CONFIRMED" do
       meeting =
         exportable_meeting(
-          status: "awaiting_approval",
+          status: :awaiting_approval,
           approval_requested_at: DateTime.utc_now(:second),
           approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
         )
@@ -271,7 +271,7 @@ defmodule Tymeslot.MeetingsTest do
 
     test "carries the organiser's note to the guest" do
       meeting =
-        exportable_meeting(status: "confirmed", organizer_note: "Bring the Q3 numbers.")
+        exportable_meeting(status: :confirmed, organizer_note: "Bring the Q3 numbers.")
 
       assert {:ok, ics} = Meetings.calendar_export(meeting.uid, meeting.organizer_user_id)
       assert ics =~ "Bring the Q3 numbers."
@@ -281,7 +281,7 @@ defmodule Tymeslot.MeetingsTest do
     test "titles the event in the guest's language, not the organiser's" do
       meeting =
         exportable_meeting(
-          status: "confirmed",
+          status: :confirmed,
           title: "Consultation mit Jane Doe",
           meeting_type: "Consultation",
           attendee_name: "Jane Doe",
@@ -293,7 +293,7 @@ defmodule Tymeslot.MeetingsTest do
     end
 
     test "returns not_found for a cancelled meeting" do
-      meeting = exportable_meeting(status: "cancelled")
+      meeting = exportable_meeting(status: :cancelled)
 
       assert {:error, :not_found} =
                Meetings.calendar_export(meeting.uid, meeting.organizer_user_id)

@@ -32,8 +32,8 @@ defmodule Tymeslot.Meetings.CalendarExport do
   A group meeting is refused the same way: its row is the shared slot, and
   each booker's calendar entry is their seat's (`seat/1`).
 
-  Note that nothing writes the `"completed"` status: a booking that has
-  happened is still `"confirmed"`, so a past meeting stays exportable and
+  Note that nothing writes the `:completed` status: a booking that has
+  happened is still `:confirmed`, so a past meeting stays exportable and
   only the other two arms of that predicate are reachable today.
 
   Runs the meeting through `ContentBuilder.build_appointment_details/1` — the

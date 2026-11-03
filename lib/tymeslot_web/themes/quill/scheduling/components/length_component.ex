@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
 
   alias Tymeslot.MeetingTypes.Lengths
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
@@ -34,7 +35,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
       )
 
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale} data-testid="length-step">
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      data-testid="length-step"
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         current_step={1}
@@ -45,9 +53,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
           <div class="w-full">
             <.glass_morphism_card class="booker-card">
               <div class="overview-card-body">
-                <h1 class="section-header overview-title">
+                <JourneyComponents.moment_heading
+                  tag="h1"
+                  moment={assigns[:moment]}
+                  moment_state={assigns[:moment_state]}
+                  focus={assigns[:journey_focus]}
+                  class="section-header overview-title"
+                >
                   {@meeting_type && @meeting_type.name}
-                </h1>
+                </JourneyComponents.moment_heading>
                 <p class="overview-description text-glass-primary">
                   {dgettext("booking", "How long should the meeting be?")}
                 </p>
@@ -80,7 +94,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                       <h3 class="duration-card-title font-bold text-left">
                         {LocalizationHelpers.format_duration(minutes)}
                       </h3>
-                      <.icon name="hero-clock" class="duration-card-icon text-white" />
+                      <.icon name="hero-clock" class="duration-card-icon" />
                     </div>
                   </button>
                 </div>

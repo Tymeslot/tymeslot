@@ -10,8 +10,9 @@ defmodule TymeslotWeb.Components.PaymentHelpers do
   alias Tymeslot.MeetingPayments.Money
   alias TymeslotWeb.Helpers.LocaleFormat
 
-  # The locales that write the symbol after the amount ("45,00 €").
-  @symbol_after_locales ~w(de fr it cs pl uk)
+  # The locales that write the symbol after the amount ("45,00 €"). Spanish
+  # follows the RAE here, though Latin American shops often put "$" first.
+  @symbol_after_locales ~w(de fr it cs pl uk es)
 
   @doc """
   Formats an integer cent amount with `Tymeslot.MeetingPayments.Money.format/3`.

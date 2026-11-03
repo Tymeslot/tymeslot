@@ -266,7 +266,7 @@ defmodule Tymeslot.Meetings.Guests do
   @doc """
   Records a guest's RSVP from their token and notifies the organiser.
 
-  `response` must be `"accepted"` or `"declined"`. Stamps `responded_at` with
+  `response` must be `:accepted` or `:declined`. Stamps `responded_at` with
   the current time and broadcasts `{:guest_rsvp_updated, meeting_id}` to the
   organiser's RSVP topic. Returns the updated guest with its `:meeting`
   preloaded, `{:error, :not_found}` for an unknown token,
@@ -279,11 +279,11 @@ defmodule Tymeslot.Meetings.Guests do
   then free for others. An answer that frees or takes a seat refreshes what
   the booking page offers at once.
   """
-  @spec record_rsvp(String.t(), String.t()) ::
+  @spec record_rsvp(String.t(), :accepted | :declined) ::
           {:ok, GuestSchema.t()}
           | {:error,
              :not_found | :meeting_closed | :full | :invalid_response | Ecto.Changeset.t()}
-  def record_rsvp(token, response) when response in ["accepted", "declined"] do
+  def record_rsvp(token, response) when response in [:accepted, :declined] do
     with {:ok, guest} <- get_open_invitation(token),
          {:ok, updated} <- update_response(guest, response) do
       broadcast_rsvp_update(updated.meeting)
@@ -301,7 +301,7 @@ defmodule Tymeslot.Meetings.Guests do
   `record_rsvp/2` decides under the slot's lock.
   """
   @spec can_accept?(GuestSchema.t()) :: boolean()
-  def can_accept?(%GuestSchema{status: "declined", participant_id: id, meeting: meeting})
+  def can_accept?(%GuestSchema{status: :declined, participant_id: id, meeting: meeting})
       when is_binary(id) and is_struct(meeting, MeetingSchema),
       do: Seats.seats_left(meeting, meeting.capacity) > 0
 
@@ -310,13 +310,13 @@ defmodule Tymeslot.Meetings.Guests do
   # A declined guest of a group booking answering yes takes a seat again, so
   # the seat is checked under the slot's lock, as a booking's are
   # (`GroupScheduling`): two such answers for the last seat cannot both win.
-  defp update_response(%{status: "declined", participant_id: id} = guest, "accepted")
+  defp update_response(%{status: :declined, participant_id: id} = guest, :accepted)
        when is_binary(id) do
     Repo.transaction(fn ->
       meeting = GroupMeetingQueries.lock_for_update(guest.meeting_id)
 
       with true <- seat_for_yes?(guest, meeting) || {:error, :full},
-           {:ok, updated} <- GuestQueries.update_rsvp(guest, rsvp_attrs("accepted")) do
+           {:ok, updated} <- GuestQueries.update_rsvp(guest, rsvp_attrs(:accepted)) do
         updated
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -330,7 +330,7 @@ defmodule Tymeslot.Meetings.Guests do
   # seat the first submit took already its own, rather than none left.
   defp seat_for_yes?(guest, meeting),
     do:
-      GuestQueries.get_status(guest) != "declined" or
+      GuestQueries.get_status(guest) != :declined or
         Seats.seats_left(meeting, meeting.capacity) > 0
 
   defp rsvp_attrs(response), do: %{status: response, responded_at: now()}
@@ -339,7 +339,7 @@ defmodule Tymeslot.Meetings.Guests do
   # yes after a decline takes one.
   defp seat_changed?(%{participant_id: id, status: before}, %{status: now_status})
        when is_binary(id),
-       do: before == "declined" != (now_status == "declined")
+       do: before == :declined != (now_status == :declined)
 
   defp seat_changed?(_guest, _updated), do: false
 
@@ -376,7 +376,7 @@ defmodule Tymeslot.Meetings.Guests do
     Enum.reduce(guests, GuestSchema.empty_summary(), fn %GuestSchema{status: status}, acc ->
       acc
       |> Map.update!(:total, &(&1 + 1))
-      |> Map.update!(GuestSchema.status_key(status), &(&1 + 1))
+      |> Map.update!(status, &(&1 + 1))
     end)
   end
 

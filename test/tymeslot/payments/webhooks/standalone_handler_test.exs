@@ -184,7 +184,7 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
       _transaction =
         insert(:payment_transaction,
           user: user,
-          status: "completed",
+          status: :completed,
           stripe_customer_id: "cus_123",
           subscription_id: nil
         )
@@ -213,7 +213,7 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
       _transaction =
         insert(:payment_transaction,
           user: user,
-          status: "completed",
+          status: :completed,
           stripe_customer_id: "cus_456",
           subscription_id: nil
         )

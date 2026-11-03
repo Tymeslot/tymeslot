@@ -59,7 +59,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert event.end_date == nil
       assert event.transparency == :opaque
       assert event.status == :confirmed
-      assert event.provider_metadata == %{"calendar_item_type" => "Single"}
+
+      assert event.provider_metadata == %{
+               "calendar_item_type" => "Single",
+               "ical_uid" => "040000008200E00074C5B7101A82E008"
+             }
     end
 
     test "leaves the optional content fields nil when the server omits them" do
@@ -77,10 +81,53 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert event.uid == "uid-bare"
       assert event.summary == nil
       assert event.location == nil
-      assert event.provider_metadata == %{}
+      # No item type: only the `UID` the server did answer is recorded.
+      assert event.provider_metadata == %{"ical_uid" => "uid-bare"}
       # No `IsAllDayEvent` means a timed event, not a discarded one.
       assert event.all_day == false
       assert event.start_at == ~U[2026-09-01 10:00:00Z]
+    end
+
+    test "keys each occurrence of a series by its own item id, keeping the series UID" do
+      occurrences =
+        for {id, day} <- [{"occ-1", "01"}, {"occ-2", "02"}, {"occ-3", "03"}] do
+          series_item(id, "Occurrence", "2026-09-#{day}T10:00:00Z")
+        end
+
+      assert {:ok, events} = EventNormaliser.normalise_events(items(occurrences), @context)
+
+      # Keyed on the shared UID, the cache would keep one of the three.
+      assert Enum.map(events, & &1.uid) == ["occ-1", "occ-2", "occ-3"]
+      assert Enum.map(events, & &1.provider_event_id) == ["occ-1", "occ-2", "occ-3"]
+      assert Enum.all?(events, &(&1.provider_metadata["ical_uid"] == "series-uid"))
+    end
+
+    test "keys a moved occurrence of a series by its own item id too" do
+      item = series_item("exc-1", "Exception", "2026-09-02T15:00:00Z")
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.uid == "exc-1"
+      assert event.provider_metadata["ical_uid"] == "series-uid"
+    end
+
+    test "keys a series master by the series UID, as before" do
+      item = series_item("master-1", "RecurringMaster", "2026-09-01T10:00:00Z")
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.uid == "series-uid"
+      assert EventNormaliser.series_master?(event)
+    end
+
+    test "does not take a single item or an occurrence for a series master" do
+      single = series_item("single-1", "Single", "2026-09-01T10:00:00Z")
+      occurrence = series_item("occ-1", "Occurrence", "2026-09-01T10:00:00Z")
+
+      assert {:ok, events} =
+               EventNormaliser.normalise_events(items([single, occurrence]), @context)
+
+      refute Enum.any?(events, &EventNormaliser.series_master?/1)
     end
 
     test "maps an all-day event onto Date fields with no datetimes" do
@@ -290,7 +337,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert event.start_at == ~U[2026-09-01 10:00:00Z]
       assert event.end_at == ~U[2026-09-01 11:00:00Z]
       assert event.transparency == :transparent
-      assert event.provider_metadata == %{"calendar_item_type" => "Single"}
+      assert event.provider_metadata == %{"calendar_item_type" => "Single", "ical_uid" => "uid-9"}
 
       assert all_day_event.all_day == true
       assert all_day_event.status == :cancelled
@@ -543,5 +590,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       """)
 
     EventNormaliser.parse_items(doc)
+  end
+
+  defp series_item(id, type, start) do
+    {:ok, start_at, 0} = DateTime.from_iso8601(start)
+
+    """
+    <t:CalendarItem>
+      <t:ItemId Id="#{id}" ChangeKey="ck-#{id}"/>
+      <t:Subject>Weekly sync</t:Subject>
+      <t:UID>series-uid</t:UID>
+      <t:Start>#{start}</t:Start>
+      <t:End>#{start_at |> DateTime.add(3600, :second) |> DateTime.to_iso8601()}</t:End>
+      <t:IsAllDayEvent>false</t:IsAllDayEvent>
+      <t:LegacyFreeBusyStatus>Busy</t:LegacyFreeBusyStatus>
+      <t:CalendarItemType>#{type}</t:CalendarItemType>
+    </t:CalendarItem>
+    """
   end
 end

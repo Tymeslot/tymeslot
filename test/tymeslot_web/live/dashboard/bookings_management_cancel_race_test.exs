@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
         amount_cents: 5000,
         application_fee_cents: 25,
         currency: "eur",
-        status: "paid",
+        status: :paid,
         paid_at: DateTime.utc_now(:second),
         refunded_amount_cents: 0
       )
@@ -96,13 +96,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
     refute html =~ "Are you sure you want to cancel"
 
     reloaded = BookingPaymentQueries.get(payment.id)
-    assert reloaded.status == "paid"
+    assert reloaded.status == :paid
     assert reloaded.refunded_amount_cents == 0
   end
 
   defp cancel_behind_the_modal(meeting) do
     meeting
-    |> Changeset.change(status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+    |> Changeset.change(status: :cancelled, cancelled_at: DateTime.utc_now(:second))
     |> Repo.update!()
   end
 end

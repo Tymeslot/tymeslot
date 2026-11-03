@@ -106,7 +106,14 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Moments.You do
 
   defp asking?(_assigns), do: false
 
-  defp details(assigns) do
+  @doc """
+  The details part of the moment: the location choice, the booking form with
+  the guest field, the approval notice and the submit control. Fixture Two's
+  `Pick` renders it below its picker; `assigns` are the moment's own, `@myself`
+  included.
+  """
+  @spec details(map()) :: Phoenix.LiveView.Rendered.t()
+  def details(assigns) do
     ~H"""
     <LocationField.location_field
       :if={BookingLocation.choice_required?(assigns)}

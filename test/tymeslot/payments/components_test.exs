@@ -56,7 +56,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: "pending",
+          status: :pending,
           metadata: %{"source" => "test"}
         )
 
@@ -68,7 +68,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       assert :ok = PendingTransactions.supersede_pending_transaction(pending_tx)
 
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
-      assert updated.status == "failed"
+      assert updated.status == :failed
       assert updated.metadata["superseded"] == true
     end
 
@@ -78,7 +78,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: "pending",
+          status: :pending,
           stripe_id: "pi_abc123"
         )
 
@@ -86,7 +86,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       assert :ok = PendingTransactions.supersede_pending_transaction(pending_tx)
 
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
-      assert updated.status == "failed"
+      assert updated.status == :failed
     end
 
     test "supersede_pending_transaction_if_needed/1 returns ok with no pending transactions" do
@@ -101,13 +101,13 @@ defmodule Tymeslot.Payments.ComponentsTest do
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: "pending"
+          status: :pending
         )
 
       assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
 
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
-      assert updated.status == "failed"
+      assert updated.status == :failed
       assert updated.metadata["superseded"] == true
     end
   end
@@ -127,7 +127,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: "pending",
+          status: :pending,
           stripe_id: session_id
         )
 
@@ -138,7 +138,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       assert :ok = PendingTransactions.supersede_pending_transaction(pending_tx)
 
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
-      assert updated.status == "failed"
+      assert updated.status == :failed
       assert updated.metadata["superseded"] == true
     end
 
@@ -149,7 +149,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: "pending",
+          status: :pending,
           stripe_id: session_id
         )
 
@@ -160,7 +160,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
       assert :ok = PendingTransactions.supersede_pending_transaction(pending_tx)
 
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
-      assert updated.status == "failed"
+      assert updated.status == :failed
       assert updated.metadata["superseded"] == true
     end
   end

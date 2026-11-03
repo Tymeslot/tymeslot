@@ -3,12 +3,12 @@ defmodule TymeslotWeb.Themes.Shared.SlotGrouping do
   Decides how a day's slots are presented, and groups them accordingly.
 
   A meeting type may offer starts on a grid finer than its own duration, which
-  turns a working day into around a hundred slots. Both themes already group
-  slots into parts of the day; at that density the grouping stops helping, so
+  turns a working day into around a hundred slots. Every theme's slot list
+  already groups slots into parts of the day; at that density the grouping stops helping, so
   the slots are nested one level deeper, under the hour they fall in, and the
   booker opens one hour at a time.
 
-  The decision is made here rather than in either theme so the two cannot
+  The decision is made here rather than in any one theme so no two can
   disagree, and so a theme renders whichever shape it is handed without
   knowing why.
   """

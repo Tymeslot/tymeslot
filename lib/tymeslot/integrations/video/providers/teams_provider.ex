@@ -12,6 +12,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.HttpAuth
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.Providers.OAuthRoom
@@ -19,6 +21,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   require Logger
 
@@ -92,6 +95,19 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         log_create_meeting_room_error(reason)
         error
     end
+  end
+
+  @doc """
+  The fields that make a new Outlook event of the integration's Microsoft
+  account carry its Teams meeting, for an event created with the meeting on
+  it rather than given one afterwards
+  (`Tymeslot.Integrations.MeetingProvisioning.booking_online_meeting/1`).
+  """
+  @spec online_meeting_fields(VideoIntegrationSchema.t()) :: map()
+  def online_meeting_fields(%VideoIntegrationSchema{} = integration) do
+    Payload.online_meeting(%{
+      tenant_id: VideoIntegrationSchema.decrypt_credentials(integration).tenant_id
+    })
   end
 
   # `:calendar_event_id` names the booking's own Outlook event when the Teams
@@ -330,51 +346,77 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   # The booking's own calendar event, made into the Teams meeting, so the
-  # organiser's calendar holds one entry for the booking rather than two.
+  # organiser's calendar holds one entry for the booking rather than two. A
+  # booking's event may have been created with the meeting already on it
+  # (`MeetingProvisioning.booking_online_meeting/1`, signalled by
+  # `:adopt_calendar_meeting`), and is then only read: Graph mails the
+  # event's attendees on every write to it, so switching on a meeting it
+  # already has would send the guest an update for nothing.
   defp attach_to_calendar_event(token, event_id, config) do
-    :patch
-    |> graph_request(token, event_path(event_id), Payload.online_meeting(config))
-    |> handle_room_event(token, config, :calendar_event)
-  end
+    case existing_online_meeting(token, event_id, config) do
+      {:ok, event} ->
+        extract_join_info(token, event, :calendar_event)
 
-  defp handle_room_event({:ok, %Req.Response{status: status, body: body}}, token, _config, owner)
-       when status in [200, 201] do
-    case decode_body(body) do
-      {:ok, event} -> extract_join_info(token, event, owner)
-      error -> error
+      :none ->
+        :patch
+        |> graph_request(token, event_path(event_id), Payload.online_meeting(config))
+        |> handle_room_event(token, config, :calendar_event)
     end
   end
 
-  defp handle_room_event(response, _token, config, _owner),
-    do: handle_failed_write(response, config)
+  defp existing_online_meeting(token, event_id, %{adopt_calendar_meeting: true}),
+    do: read_online_meeting(token, event_id)
+
+  defp existing_online_meeting(_token, _event_id, _config), do: :none
+
+  # Any failure to read is left to the write, which reports it properly.
+  defp read_online_meeting(token, event_id) do
+    with {:ok, %{status: 200, body: body}} <-
+           graph_request(:get, token, event_path(event_id), nil),
+         {:ok, event} <- decode_event(body),
+         join_url when is_binary(join_url) <- Payload.join_url(event) do
+      {:ok, event}
+    else
+      _no_meeting -> :none
+    end
+  end
+
+  defp decode_event(body) when is_map(body), do: {:ok, body}
+  defp decode_event(body) when is_binary(body), do: Jason.decode(body)
+  defp decode_event(_body), do: :error
+
+  defp handle_room_event(response, token, config, owner) do
+    with {:ok, event} <- write_result(response, config, success: [200, 201]) do
+      extract_join_info(token, event, owner)
+    end
+  end
+
+  # A room's later writes (a reschedule, a cancellation) only need to land: a
+  # 404 is the room already gone, which a delete counts as done.
+  defp handle_room_write(response, config),
+    do: write_result(response, config, custom: &room_write_status/1)
+
+  defp room_write_status({:ok, %{status: status}}) when status in 200..299, do: :ok
+  defp room_write_status({:ok, %{status: 404}}), do: {:error, :meeting_not_found}
+  defp room_write_status(_response), do: :default
+
+  defp write_result(response, config, opts) do
+    response
+    |> ApiResponse.handle_tagged(api_options(opts))
+    |> flag_on_unauthorized(config)
+  end
 
   # The access token was rejected by Graph even though it had survived token
   # validation/refresh, which means server-side revocation or a consent
   # withdrawal. Flag the integration so the dashboard surfaces the "Reconnect
   # required" badge immediately, rather than waiting for the async HealthCheck
   # cycle. Mirrors Zoom's flag_revoked_token/1.
-  defp handle_failed_write({:ok, %Req.Response{status: 401, body: body}}, config) do
+  defp flag_on_unauthorized({:error, {:http_error, 401, _message}} = error, config) do
     flag_revoked_token(config)
-    decode_and_format_error(401, body)
+    error
   end
 
-  defp handle_failed_write({:ok, %Req.Response{status: status, body: body}}, _config),
-    do: decode_and_format_error(status, body)
-
-  # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
-  # transport reason atom) rather than flattened to prose, so `BreakerOutcome`
-  # recognises a genuine transport failure and lets the breaker witness it.
-  defp handle_failed_write({:error, reason}, _config), do: {:error, reason}
-
-  # A room's later writes (a reschedule, a cancellation) only need to land: a
-  # 404 is the room already gone, which a delete counts as done.
-  defp handle_room_write({:ok, %Req.Response{status: status}}, _config) when status in 200..299,
-    do: :ok
-
-  defp handle_room_write({:ok, %Req.Response{status: 404}}, _config),
-    do: {:error, :meeting_not_found}
-
-  defp handle_room_write(response, config), do: handle_failed_write(response, config)
+  defp flag_on_unauthorized(result, _config), do: result
 
   # Flags the integration as needing reauthentication after a 401 from Graph —
   # i.e. the credentials are no longer accepted server-side. The dashboard
@@ -392,9 +434,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         )
     )
   end
-
-  defp decode_body(body) when is_binary(body), do: Jason.decode(body)
-  defp decode_body(body) when is_map(body), do: {:ok, body}
 
   defp extract_join_info(token, event, owner) do
     case Payload.join_url(event) do
@@ -432,18 +471,22 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   defp delete_orphaned_event(_token, nil), do: :ok
 
   defp delete_orphaned_event(token, event_id) do
-    case graph_request(:delete, token, event_path(event_id), nil) do
-      {:ok, %Req.Response{status: status}} when status in [200, 202, 204] ->
+    response = graph_request(:delete, token, event_path(event_id), nil)
+
+    case ApiResponse.handle_tagged(
+           response,
+           api_options(success: [200, 202, 204], log_level: :warning)
+         ) do
+      {:ok, _body} ->
         Logger.info("Deleted Teams calendar event left without a join link")
-        :ok
 
-      other ->
+      {:error, reason} ->
         Logger.warning("Could not delete Teams calendar event left without a join link",
-          result: LogFormat.reason(other)
+          result: LogFormat.reason(reason)
         )
-
-        :ok
     end
+
+    :ok
   end
 
   defp graph_request(method, token, path, body) do
@@ -463,52 +506,27 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # reach the path unescaped.
   defp event_path(event_id), do: "/me/events/#{URI.encode(event_id, &URI.char_unreserved?/1)}"
 
-  defp graph_headers(token) do
-    [
-      {"Authorization", "Bearer #{token}"},
-      {"Content-Type", "application/json"}
-    ]
-  end
+  defp graph_headers(token), do: [HttpAuth.bearer(token), {"Content-Type", "application/json"}]
 
   defp teams_oauth_helper do
     Application.get_env(:tymeslot, :teams_oauth_helper, TeamsOAuthHelper)
   end
 
-  # Formats a Teams/Graph API error response into an `{:error, {:http_error,
-  # status, message}}` tuple. Tagged with `status` (rather than flattened to
-  # prose) so `BreakerOutcome` can tell a genuine outage (5xx/429/408) from a
-  # request problem and let the breaker witness it.
-  defp decode_and_format_error(status, body) do
-    case Jason.decode(body) do
-      {:ok, %{"error" => error}} ->
-        message = error["message"] || "Unknown error"
-        code = error["code"] || "Unknown"
+  @reauth_hint ". This usually means the integration needs to be re-authenticated with " <>
+                 "Teams-specific permissions. Please disconnect and reconnect your " <>
+                 "Microsoft Teams integration in the dashboard."
 
-        # Graph's own message/code are provider-supplied and can echo request
-        # fragments, so they are redacted and bounded before they reach the
-        # returned reason (and, downstream, a log line or Oban's stored error).
-        detail = Redactor.redact_and_truncate("#{code} - #{message}", 512)
+  defp api_options(opts), do: [label: "Teams", detail: &graph_error_detail/1] ++ opts
 
-        # Check if this is an authentication error that might be due to missing scopes
-        error_message =
-          if code == "AuthenticationError" do
-            "Teams API error (#{status}): #{detail}. " <>
-              "This usually means the integration needs to be re-authenticated with Teams-specific permissions. " <>
-              "Please disconnect and reconnect your Microsoft Teams integration in the dashboard."
-          else
-            "Teams API error (#{status}): #{detail}"
-          end
+  # Graph's own code and message, for `ApiResponse.handle_tagged/2`'s
+  # `:detail`. An `AuthenticationError` here usually means the grant predates
+  # the Teams-specific permissions, which only reconnecting can add.
+  defp graph_error_detail(%{"error" => %{} = error}) do
+    code = error["code"] || "Unknown"
+    detail = "#{code} - #{error["message"] || "Unknown error"}"
 
-        {:error, {:http_error, status, error_message}}
-
-      _other ->
-        # Undecodable body: still bounded and scrubbed before it reaches a log
-        # line, so a provider that answers with something unexpected cannot
-        # write an unbounded blob (or whatever it happens to contain) to disk.
-        {:error,
-         {:http_error, status,
-          "Failed to create meeting with status #{status}: " <>
-            Redactor.redact_and_truncate(body)}}
-    end
+    if code == "AuthenticationError", do: detail <> @reauth_hint, else: detail
   end
+
+  defp graph_error_detail(_body), do: nil
 end

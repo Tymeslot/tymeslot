@@ -150,7 +150,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationAvailabilityTest do
       summary: event_data.summary,
       start_time: event_data.start_time,
       end_time: event_data.end_time,
-      status: "confirmed",
+      status: :confirmed,
       transparency: "opaque"
     }
   end

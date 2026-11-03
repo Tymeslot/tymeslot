@@ -47,13 +47,13 @@ defmodule Tymeslot.Utils.DateTimeUtils.TimeFormatTest do
     end
 
     test "presets the 24-hour languages" do
-      for locale <- ~w(de fr it uk cs pl pt) do
+      for locale <- ~w(de fr it uk cs pl pt es) do
         assert TimeFormat.for_locale(locale) == "24h", "expected #{locale} to preset 24h"
       end
     end
 
     test "falls back to 12h for an unknown or missing locale" do
-      assert TimeFormat.for_locale("es") == "12h"
+      assert TimeFormat.for_locale("ja") == "12h"
       assert TimeFormat.for_locale(nil) == "12h"
     end
   end

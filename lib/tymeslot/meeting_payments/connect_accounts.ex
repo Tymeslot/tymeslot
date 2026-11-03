@@ -68,7 +68,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
            ConnectAccountQueries.update(placeholder, %{
              stripe_account_id: stripe_account.id,
              default_currency: stripe_account.default_currency,
-             status: "active"
+             status: :active
            }) do
       {:ok, %{url: link.url, account: account}}
     end

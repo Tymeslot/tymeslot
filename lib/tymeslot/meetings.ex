@@ -56,7 +56,7 @@ defmodule Tymeslot.Meetings do
   defdelegate get_guest_invitation(token), to: Guests, as: :get_open_invitation
 
   @doc """
-  Records a guest's RSVP (`"accepted"` / `"declined"`) from their token and
+  Records a guest's RSVP (`:accepted` / `:declined`) from their token and
   notifies the organiser's dashboard.
   """
   defdelegate record_guest_rsvp(token, response), to: Guests, as: :record_rsvp

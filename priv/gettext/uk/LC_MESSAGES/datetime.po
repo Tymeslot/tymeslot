@@ -261,3 +261,8 @@ msgid_plural "%{count} minutes"
 msgstr[0] "%{count} хв"
 msgstr[1] "%{count} хв"
 msgstr[2] "%{count} хв"
+
+#: lib/tymeslot/timezones/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "%{city} time (%{offset})"
+msgstr "Час: %{city} (%{offset})"

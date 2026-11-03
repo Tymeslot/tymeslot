@@ -220,7 +220,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
     test "does not auto-disable a shared-mode integration on 401, and alerts instead",
          %{user: user, meeting: meeting} do
       setup_config(:tymeslot, telegram_bot_token: "shared_token_123")
-      integration = insert(:telegram_integration, user: user, bot_mode: "shared")
+      integration = insert(:telegram_integration, user: user, bot_mode: :shared)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %{status: 401, body: ~s({"ok":false,"description":"Unauthorized"})}}
@@ -248,7 +248,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
     test "alerts on a shared-mode 401 even when it is not the job's first attempt",
          %{user: user, meeting: meeting} do
       setup_config(:tymeslot, telegram_bot_token: "shared_token_123")
-      integration = insert(:telegram_integration, user: user, bot_mode: "shared")
+      integration = insert(:telegram_integration, user: user, bot_mode: :shared)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %{status: 401, body: ~s({"ok":false,"description":"Unauthorized"})}}
@@ -326,7 +326,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
     test "still auto-disables a shared-mode integration when the bot is blocked",
          %{user: user, meeting: meeting} do
       setup_config(:tymeslot, telegram_bot_token: "shared_token_123")
-      integration = insert(:telegram_integration, user: user, bot_mode: "shared")
+      integration = insert(:telegram_integration, user: user, bot_mode: :shared)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,

@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :minlength, :any
   attr :maxlength, :any
   attr :pattern, :any
-  attr :rest, :global
+  attr :rest, :global, include: ~w(autocomplete)
 
   slot :inner_block
   slot :leading_icon

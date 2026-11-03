@@ -1,0 +1,181 @@
+/* The month calendar: its title and month navigation, the weekday row and
+   the days. A day the booker can pick is tinted in the accent; the chosen
+   one is filled; today carries a dot; the neighbouring months' days keep
+   their place in the grid and are hidden. */
+
+.paper-calendar__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+/* The same size and line height as the times' heading
+   (.paper-slots .slot-list__heading), so the two read as one row when
+   the times stand beside the calendar. */
+.paper-calendar__title {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+}
+
+/* The month navigation has a row of its own, as wide as the grid under
+   it: the chevrons at its ends, the month centred between them. Beside
+   the title it would wrap under it in longer languages and narrower
+   cards anyway, so it always sits here. */
+.paper-calendar__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2xs);
+}
+
+.paper-calendar__month {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
+.paper-calendar__nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--paper-nav-size);
+  height: var(--paper-nav-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--paper-accent-ink);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.paper-calendar__nav-button:hover:not(:disabled) {
+  background: var(--paper-tint);
+}
+
+.paper-calendar__nav-button:disabled {
+  color: var(--paper-ink-disabled);
+  cursor: not-allowed;
+}
+
+.paper-calendar__nav-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.paper-calendar__notice {
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--notice-warning-border);
+  border-radius: min(var(--radius-control), var(--paper-radius-box));
+  background: var(--notice-warning-surface);
+  color: var(--notice-warning);
+  font-size: var(--theme-font-size-xs);
+}
+
+/* An empty month or week is a plain fact, not a warning: the dashed hairline
+   box of the week's empty day, in ink, not amber. */
+.paper-calendar__notice--empty {
+  border-style: dashed;
+  border-color: var(--line-2);
+  background: transparent;
+  color: var(--ink-2);
+}
+
+/* --- The grid --- */
+
+.paper-calendar__weekdays,
+.paper-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-3xs);
+}
+
+.paper-calendar__weekdays {
+  margin-bottom: var(--space-2xs);
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--paper-day-size);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--paper-ink-disabled);
+  font: inherit;
+  font-size: var(--theme-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.calendar-day:not(:disabled) {
+  background: var(--paper-tint);
+  color: var(--paper-accent-ink);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+/* The chosen day keeps its fill under the pointer: the stronger tint would
+   put the on-primary number on a pale ground. */
+.calendar-day:not(:disabled):not(.calendar-day--selected):hover {
+  background: var(--paper-tint-strong);
+}
+
+.calendar-day.calendar-day--selected {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+
+.calendar-day--other-month {
+  visibility: hidden;
+}
+
+.calendar-day--today::after {
+  content: "";
+  position: absolute;
+  bottom: 16%;
+  left: 50%;
+  width: var(--paper-dot-size);
+  height: var(--paper-dot-size);
+  border-radius: var(--radius-full);
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+.calendar-day--loading {
+  animation: paper-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes paper-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-day--loading {
+    animation: none;
+  }
+}

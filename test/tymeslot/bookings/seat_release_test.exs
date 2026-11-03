@@ -75,14 +75,14 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
 
   test "cancels an emptied meeting", %{meeting: meeting} do
     assert {:ok, :meeting_cancelled} = SeatRelease.release(meeting)
-    assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
   end
 
   test "reports seats remaining without touching the meeting", %{meeting: meeting} do
     other = insert(:participant, meeting: meeting, cancelled_at: nil)
 
     assert {:ok, :seats_remain} = SeatRelease.release(meeting)
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
     assert ParticipantQueries.count_live_for_meeting(meeting.id) == 1
     assert other.cancelled_at == nil
   end
@@ -111,7 +111,7 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
 
     # The transaction rolled back — status is untouched, not flipped to
     # "cancelled" and not silently left ambiguous either.
-    assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
 
     assert_receive {:send_alert, :group_meeting_release_failed, payload}
     assert payload.meeting_id == meeting.id

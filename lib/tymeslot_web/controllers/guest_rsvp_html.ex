@@ -19,8 +19,8 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   @spec confirm(map()) :: Phoenix.LiveView.Rendered.t()
   def confirm(assigns) do
     ~H"""
-    <% accepting? = @status == "accepted" %>
-    <TokenPage.shell>
+    <% accepting? = @status == :accepted %>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <.rsvp_badge accepted?={accepting?} />
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
@@ -67,8 +67,8 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   @spec confirmation(map()) :: Phoenix.LiveView.Rendered.t()
   def confirmation(assigns) do
     ~H"""
-    <% accepted? = @status == "accepted" %>
-    <TokenPage.shell>
+    <% accepted? = @status == :accepted %>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <.rsvp_badge accepted?={accepted?} />
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   @spec closed(map()) :: Phoenix.LiveView.Rendered.t()
   def closed(assigns) do
     ~H"""
-    <TokenPage.shell>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
         <.icon name="hero-calendar-days" class="h-9 w-9" />
       </div>
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   @spec full(map()) :: Phoenix.LiveView.Rendered.t()
   def full(assigns) do
     ~H"""
-    <TokenPage.shell>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
         <.icon name="hero-user-group" class="h-9 w-9" />
       </div>
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   @spec invalid(map()) :: Phoenix.LiveView.Rendered.t()
   def invalid(assigns) do
     ~H"""
-    <TokenPage.shell>
+    <TokenPage.shell legal_links={assigns[:legal_links]}>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
         <.icon name="hero-link-slash" class="h-9 w-9" />
       </div>

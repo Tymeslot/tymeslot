@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugSurfaceTest do
     end
 
     test "an Accept-Language naming nothing supported reaches the surface fallback" do
-      conn = resolve([surface: :admin], [{"accept-language", "es,nl;q=0.8"}])
+      conn = resolve([surface: :admin], [{"accept-language", "ja,nl;q=0.8"}])
 
       assert conn.assigns.locale == "de"
     end

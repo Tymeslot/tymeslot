@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.FeedCalendar
+  alias Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubs
   alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesMaster
@@ -59,12 +60,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
       read_at = DateTime.utc_now(:microsecond)
 
       with {:ok, {events, delta_link}} <- fetch_initial_delta(token),
-           {:ok, calendar_events} <- normalise_delta_events(events, integration, read_at),
+           {:ok, calendar_events, master_reads} <-
+             normalise_delta_events(events, integration, read_at),
            :ok <-
              SeriesRules.refresh(
                integration.id,
                calendar_events,
-               SeriesMaster.reader(integration)
+               SeriesMaster.reader(integration),
+               already_read: master_reads
              ),
            # Through `Sync.upsert_cache/2` for the ownership flagging it adds;
            # see the note in `DeltaSync.apply_delta/3`.
@@ -283,7 +286,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
       synced_at: read_at
     }
 
-    OutlookProvider.normalise_events(events, context)
+    {completed, master_reads} = OccurrenceStubs.complete(events, integration)
+
+    with {:ok, calendar_events} <- OutlookProvider.normalise_events(completed, context) do
+      {:ok, calendar_events, master_reads}
+    end
   end
 
   defp create_subscription(token, client_state, expiration, webhook_base_url) do

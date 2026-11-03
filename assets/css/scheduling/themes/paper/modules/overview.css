@@ -1,0 +1,156 @@
+/* Overview: the organiser's introduction on the left, the meeting types
+   as one bordered list on the right, then Next under the list. The card is
+   the schedule step's wide one (.paper-card--wide), and the panes are the
+   two-pane frame in base.css: the introduction above the list on a narrow
+   card, beside it from 40rem of card, the rule between them.
+
+   The list is a container of its own (paper-types), so a row reflows by
+   the room the list has, beside the introduction or under it, rather than
+   by the card's width. */
+
+.paper-intro .paper-avatar {
+  margin-bottom: var(--space-xs);
+}
+
+.paper-intro__greeting,
+.paper-intro__instruction {
+  max-width: 32rem;
+  margin: 0;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.paper-choices {
+  container-name: paper-types;
+  container-type: inline-size;
+}
+
+/* --- The list --- */
+
+.paper-types {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+}
+
+.paper-types__item + .paper-types__item {
+  border-top: var(--border-width-thin) solid var(--line-1);
+}
+
+/* --- A row: name, description and the type's facts, then a chevron --- */
+
+.paper-type {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-md);
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  border: 0;
+  border-left: var(--border-width-thick) solid transparent;
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.paper-type:hover {
+  background: var(--surface-subtle);
+}
+
+.paper-type[aria-current="true"] {
+  border-left-color: var(--theme-primary);
+  background: var(--paper-selected-surface);
+}
+
+/* The chosen row's tint takes a little contrast from the secondary text. */
+.paper-type[aria-current="true"] .paper-type__description,
+.paper-type[aria-current="true"] .paper-type__meta,
+.paper-type[aria-current="true"] .paper-fact__icon {
+  color: var(--paper-ink-selected);
+}
+
+/* The list clips its rows to its corners, so the focus ring sits inside
+   the row instead of around it. */
+.paper-type:focus-visible {
+  outline-offset: calc(-2 * var(--border-width-medium));
+}
+
+.paper-type__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  min-width: 0;
+}
+
+/* The name and its approval pill: side by side while they fit, the pill
+   under the name, flush with it, when they do not. */
+.paper-type__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3xs) var(--space-xs);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  overflow-wrap: anywhere;
+}
+
+.paper-type__name .approval-pill {
+  margin-left: 0;
+}
+
+.paper-type__description {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+/* The facts: length, each location and the price, one line while they
+   fit, as the schedule step's facts are drawn (controls.css). */
+.paper-type__meta.paper-facts {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-3xs) var(--space-md);
+  margin-top: var(--space-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.paper-type__price {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-type__chevron {
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  color: var(--ink-2);
+}
+
+.paper-type[aria-current="true"] .paper-type__chevron {
+  color: var(--paper-accent-ink);
+}
+
+/* A narrow list: the rows give up their chevron and some padding. */
+@container paper-types (max-width: 30rem) {
+  .paper-type {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .paper-type__meta.paper-facts {
+    gap: var(--space-3xs) var(--space-sm);
+  }
+
+  .paper-type__chevron {
+    display: none;
+  }
+}

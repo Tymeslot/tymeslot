@@ -40,7 +40,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
+  alias Plug.HTML
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
@@ -176,6 +178,81 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
     end
   end
 
+  describe "integration-write rate limit on card actions" do
+    @tag :capture_log
+    test "toggle_integration is refused and leaves the integration as it was", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      refusal = exhaust_limit!(:integration_write, user.id)
+
+      view
+      |> element("#toggle-#{integration.id}")
+      |> render_click()
+
+      # The component forwards the flash to the LiveView, which renders it.
+      html = render(view)
+      assert html =~ HTML.html_escape(refusal)
+      refute html =~ "Integration status updated"
+      assert Repo.get!(VideoIntegrationSchema, integration.id).is_active
+    end
+
+    @tag :capture_log
+    test "reconnect_integration is refused and does not redirect to the provider", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:video_integration, user: user, provider: "google_meet", is_active: true)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      refusal = exhaust_limit!(:integration_write, user.id)
+
+      # A passing limit redirects to the provider, which `render_click/1`
+      # returns as `{:error, {:redirect, _}}` rather than HTML.
+      clicked =
+        view
+        |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+        |> render_click()
+
+      assert clicked =~ "Reconnect"
+      assert render(view) =~ HTML.html_escape(refusal)
+    end
+
+    @tag :capture_log
+    test "add_integration is refused and creates nothing", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      refusal = exhaust_limit!(:integration_write, user.id)
+
+      view
+      |> form("#mirotalk-config-modal form", %{
+        "integration" => %{
+          "name" => "Blocked Room",
+          "base_url" => "https://miro.test",
+          "api_key" => "secret-key-long-enough"
+        }
+      })
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ HTML.html_escape(refusal)
+      refute html =~ "Video integration added successfully"
+      assert Repo.all(VideoIntegrationSchema) == []
+    end
+  end
+
+  # The rendered flash HTML-escapes the limiter's apostrophe.
   describe "edit modal — credential preservation" do
     @tag :capture_log
     test "blanking the api_key surfaces an error without wiping the stored secret", %{

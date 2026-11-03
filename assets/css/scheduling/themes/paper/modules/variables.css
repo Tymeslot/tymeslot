@@ -1,0 +1,251 @@
+/* Paper theme tokens: every colour Paper paints with, and its scale.
+
+   Paper paints with the palette the server writes on :root:root: the
+   tone's light set, its dark set inside @media (prefers-color-scheme:
+   dark), or the dark set alone, as the colour mode says, with the accent
+   in the primary family. Every surface, line and status colour below is
+   mixed from those inputs, so a tone, a colour mode, an accent or a custom
+   seed moves all of them, and Paper needs no dark rules of its own. The
+   status colours are mixed towards the text colour, which darkens them on
+   a light card and lightens them on a dark one; each clears 4.5:1 as text
+   on every tone's card and canvas, in both sets.
+
+   The input values here are the neutral tone's light set with the default
+   accent fitted to its card: what a page with no customisation block shows
+   (the payment return pages render without one). */
+
+:root {
+  /* --- Palette inputs (the server overrides them) --- */
+  --theme-primary: #07819e;
+  --theme-primary-hover: #066c84;
+  --theme-on-primary: #ffffff;
+  --theme-primary-solid: #07819e;
+  --theme-primary-solid-hover: #066c84;
+  --theme-secondary: #0891b2;
+  --theme-accent: #0d9488;
+  --theme-on-accent: #111111;
+  --theme-accent-solid: #0d9488;
+  --theme-canvas: #f5f5f5;
+  --theme-surface: #ffffff;
+  --theme-text: #111111;
+  --theme-text-secondary: #5f6368;
+  --theme-color-scheme: light;
+
+  /* --- Status inputs, mixed towards the text colour --- */
+  --theme-success: color-mix(in srgb, #16a34a 70%, var(--theme-text));
+  --theme-warning: color-mix(in srgb, #d97706 70%, var(--theme-text));
+  --theme-danger: color-mix(in srgb, #dc2626 70%, var(--theme-text));
+  --theme-info: color-mix(in srgb, #4f46e5 70%, var(--theme-text));
+  --theme-error: var(--theme-danger);
+  --theme-error-light: var(--theme-danger);
+
+  /* Coloured-shadow geometry (offset and blur; shared/tokens.css mixes the colour). */
+  --shadow-geometry-sm: 0 1px 2px;
+  --shadow-geometry-md: 0 4px 12px;
+  --shadow-geometry-lg: 0 12px 32px;
+
+  /* --- Surfaces and lines: the text colour over the card --- */
+  --surface-card: var(--theme-surface);
+  --surface-subtle: color-mix(in srgb, var(--theme-text) 3%, var(--theme-surface));
+  --surface-light: color-mix(in srgb, var(--theme-text) 5%, var(--theme-surface));
+  --surface-medium: color-mix(in srgb, var(--theme-text) 8%, var(--theme-surface));
+  --surface-intense: color-mix(in srgb, var(--theme-text) 12%, var(--theme-surface));
+  --border-subtle: color-mix(in srgb, var(--theme-text) 8%, var(--theme-surface));
+  --border-light: color-mix(in srgb, var(--theme-text) 12%, var(--theme-surface));
+  --border-medium: color-mix(in srgb, var(--theme-text) 20%, var(--theme-surface));
+  /* An input's or an outlined control's edge: 3:1 against the card in every
+     tone and mode (WCAG 1.4.11). */
+  --paper-control-line: color-mix(in srgb, var(--theme-text) 48%, var(--theme-surface));
+
+  /* --- The accent on the card --- */
+  --paper-tint: color-mix(in srgb, var(--theme-primary) 10%, var(--theme-surface));
+  --paper-tint-strong: color-mix(in srgb, var(--theme-primary) 18%, var(--theme-surface));
+  --paper-selected-surface: color-mix(in srgb, var(--theme-primary) 6%, var(--theme-surface));
+  --paper-success-surface: color-mix(in srgb, var(--theme-success) 14%, var(--theme-surface));
+  /* Text on a tint: the fitted primary pulled towards the text colour, so it
+     keeps 4.5:1 on --paper-tint as well as on the card. */
+  --paper-accent-ink: color-mix(in srgb, var(--theme-primary) 70%, var(--theme-text));
+  /* Secondary text on --paper-selected-surface: the secondary ink pulled
+     towards the text colour, 5.41:1 at worst (warm tone, light set,
+     graphite accent), where the secondary ink alone measures 4.47:1. */
+  --paper-ink-selected: color-mix(in srgb, var(--theme-text-secondary) 85%, var(--theme-text));
+
+  /* --- Ink --- */
+  --ink-1: var(--theme-text);
+  --ink-2: var(--theme-text-secondary);
+  --ink-3: var(--theme-text-secondary);
+  --paper-ink-disabled: color-mix(in srgb, var(--theme-text-secondary) 55%, var(--theme-surface));
+
+  /* --- Roles (shared/tokens.css, section 2) --- */
+  --surface-2: var(--surface-light);
+  --surface-3: var(--surface-medium);
+  --notice-warning: color-mix(in srgb, var(--theme-warning) 85%, var(--theme-text));
+  --notice-warning-surface: color-mix(in srgb, var(--theme-warning) 10%, var(--theme-surface));
+  --notice-warning-border: color-mix(in srgb, var(--theme-warning) 40%, var(--theme-surface));
+  /* The preview notice sits on the page's own canvas, a flat colour from
+     the palette rather than an organiser's media, so it takes the card
+     instead of the shared dark scrim, under which the warning ink, mixed
+     towards a light scheme's dark text, would all but vanish. */
+  --preview-notice-ground: var(--theme-surface);
+
+  /* Seat availability on a group meeting's slots (shared slot-list.css):
+     the status hues on a wash of themselves over the surface, so they follow
+     the colour mode and the tones. The exact count without the traffic light
+     takes the slot's own text colour; a selected slot's badge takes the
+     selected slot's text colour, --theme-on-primary. */
+  --seat-green: var(--theme-success);
+  --seat-amber: var(--theme-warning);
+  --seat-red: var(--theme-danger);
+  --seat-green-bg: color-mix(in srgb, var(--theme-success) 14%, var(--theme-surface));
+  --seat-amber-bg: color-mix(in srgb, var(--theme-warning) 14%, var(--theme-surface));
+  --seat-red-bg: color-mix(in srgb, var(--theme-danger) 14%, var(--theme-surface));
+  --seat-neutral: currentColor;
+  --seat-neutral-bg: color-mix(in srgb, currentColor 12%, transparent);
+  --seat-selected: var(--theme-on-primary);
+  --seat-selected-bg: color-mix(in srgb, var(--theme-on-primary) 14%, transparent);
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --theme-font-family: var(--font-stack-system);
+
+  /* --- Shadows: black at a low alpha. On a dark card they all but vanish,
+     and the borders carry the shape. --- */
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --paper-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05);
+  --paper-panel-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  --paper-scrollbar-thumb: color-mix(in srgb, var(--theme-text) 22%, transparent);
+  --paper-focus-outline: var(--border-width-medium) solid var(--theme-primary);
+
+  /* --- Shared status screens (shared/layout.css: awaiting payment, readiness) --- */
+  --status-surface: var(--theme-surface);
+  --status-surface-opaque: var(--theme-surface);
+  --status-shadow: var(--paper-card-shadow);
+  --status-ink-heading: var(--ink-1);
+  --status-ink: var(--ink-1);
+  --status-ink-soft: var(--ink-2);
+  --status-ink-hint: var(--ink-2);
+
+  /* --- Approval notice (shared/components/approval-notice.css) --- */
+  --approval-pill-surface: color-mix(in srgb, var(--theme-warning) 12%, var(--theme-surface));
+  --approval-icon-surface: color-mix(in srgb, var(--theme-warning) 18%, var(--theme-surface));
+  --approval-notice-gap: var(--space-xs);
+  --approval-notice-font-size: var(--theme-font-size-sm);
+  --approval-notice-ink: var(--ink-2);
+  /* As wide as the card's content, like the details box under it. */
+  --approval-notice-max-width: none;
+
+  /* --- reCAPTCHA notice (shared/components/booking-fields.css): its links
+     in the palette's primary, contrast-checked against Paper's surfaces --- */
+  --recaptcha-notice-link-ink: var(--theme-primary);
+
+  /* --- Poll voting page (shared/components/polls.css); Paper's card already pads it --- */
+  --poll-voting-padding: 0;
+  --poll-panel-surface: var(--surface-subtle);
+  --poll-input-surface: var(--theme-surface);
+  --poll-input-line: var(--paper-control-line);
+  --poll-input-focus-ring: var(--focus-ring);
+  --poll-row-surface: var(--theme-surface);
+  --poll-row-line: var(--border-light);
+  --poll-option-line: var(--paper-control-line);
+  --poll-option-selected-surface: var(--paper-tint);
+
+  /* --- Readiness notice (shared/layout.css): Paper's card width, so it
+     lines up with the language switcher's row above it --- */
+  --readiness-card-max-width: var(--paper-card-width);
+
+  /* --- Payment return pages (shared/components/payment-pages.css) --- */
+  --payment-page-max-width: 40rem;
+  --payment-card-surface: var(--theme-surface);
+  --payment-card-line: var(--border-light);
+  --payment-card-radius: var(--radius-card);
+  --payment-heading-ink: var(--ink-1);
+  --payment-body-ink: var(--ink-2);
+  --payment-link-radius: var(--radius-control);
+  --payment-link-weight: var(--font-weight-semibold);
+  --payment-link-transition: background var(--transition-fast);
+
+  /* --- Booking fields (shared/components/booking-fields.css) ---
+     The remove glyph is drawn on --theme-danger on hover; the card colour
+     clears 4.5:1 on it in every tone and mode (4.83:1 at worst, cool dark). */
+  --guest-remove-ink-hover: var(--theme-surface);
+
+  /* --- Language switcher (shared/components/language-switcher.css) --- */
+  --lang-switcher-surface: var(--theme-surface);
+  --lang-switcher-surface-hover: var(--surface-light);
+  --lang-switcher-panel-surface: var(--theme-surface);
+  --lang-switcher-panel-line: var(--border-light);
+  --lang-switcher-item-line: var(--border-subtle);
+  --lang-switcher-item-hover: var(--surface-light);
+  --lang-switcher-item-active: var(--paper-tint);
+
+  /* --- Slot list and timezone picker --- */
+  --slot-list-grid-gap: var(--space-xs);
+  --week-grid-gap: var(--space-xs);
+  --dropdown-surface: var(--theme-surface);
+
+  /* --- Answer tiles and option cards (shared/components/custom-questions.css) --- */
+  --option-tile-border: var(--paper-control-line);
+  --option-tile-bg: var(--theme-surface);
+  --option-tile-text: var(--ink-1);
+  --option-tile-text-hover: var(--paper-accent-ink);
+  --option-tile-bg-hover: var(--paper-tint);
+  --option-tile-border-hover: var(--theme-primary);
+  --option-indicator-idle: var(--paper-control-line);
+  --option-indicator-hover: var(--theme-primary);
+
+  /* --- Type: a fixed rem scale --- */
+  --theme-font-size-3xs: 0.6875rem;
+  --theme-font-size-2xs: 0.75rem;
+  --theme-font-size-xs: 0.8125rem;
+  --theme-font-size-sm: 0.875rem;
+  --theme-font-size-base: 0.9375rem;
+  --theme-font-size-md: 1rem;
+  --theme-font-size-lg: 1.125rem;
+  --theme-font-size-xl: 1.375rem;
+  --theme-font-size-2xl: 1.5rem;
+  --theme-font-size-3xl: 1.875rem;
+  --paper-line-height: 1.5;
+  --letter-spacing-wide: 0.04em;
+
+  /* --- Spacing --- */
+  --space-hairline: 0.125rem;
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.375rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 2.5rem;
+
+  /* --- Sizes --- */
+  --icon-sm: 1.25rem;
+  --paper-icon-sm: 1rem;
+  --paper-icon-md: 1.5rem;
+  --paper-card-width: 40rem;
+  --paper-card-width-wide: 64rem;
+  /* The schedule step's week view: wide enough for the details beside
+     seven day columns of a comfortable width (week.css). */
+  --paper-card-width-week: 72rem;
+  --paper-details-width: 15rem;
+  /* The schedule screen's details part: a reading width for the form on
+     the wide card. */
+  --paper-book-width: 40rem;
+  --paper-slots-width: 13rem;
+  --paper-avatar-lg: 4rem;
+  --paper-avatar-sm: 2.5rem;
+  --paper-logo-height: 2rem;
+  --paper-logo-max-width: 10rem;
+  --paper-control-height: 2.75rem;
+  --paper-day-size: 2.75rem;
+  --paper-nav-size: 2.25rem;
+  /* A week's time: shorter than a full control while seven days stand side
+     by side, a full control once the week narrows to touch sizes. */
+  --paper-week-slot-height: 2.25rem;
+  /* A poll's Yes / If need be / No pills: a compact segmented control,
+     shorter than a full control. */
+  --paper-vote-height: 2.25rem;
+  --paper-badge-size: 3rem;
+  --paper-dot-size: 0.25rem;
+  /* The largest corner a box taller than one line takes, whatever the radius option. */
+  --paper-radius-box: 0.75rem;
+}

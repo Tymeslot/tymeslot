@@ -2,7 +2,7 @@ defmodule Tymeslot.InviteeData do
   @moduledoc """
   Erasure and retention of the personal data invitees give a host: the
   people who book a meeting, take a group seat, are added as a guest, or
-  answer a poll.
+  answer a poll, and the people a host lists on a draft poll.
 
   Two paths remove it, and both anonymise rather than delete, so a host's
   meeting history and statistics (time, meeting type, status, how the booking
@@ -15,7 +15,11 @@ defmodule Tymeslot.InviteeData do
       `Tymeslot.Workers.DataRetentionWorker` with `invitee_data_days` (two
       years by default). It clears every meeting that ended before the window,
       with its seats, guests and booking payments, and the participants of
-      every poll whose last proposed time did.
+      every poll whose last proposed time did. A draft poll last saved before
+      the window loses the invitees it held.
+
+  A draft poll's invitees are not yet participants, so an erasure takes the
+  person off the draft's list rather than anonymising them.
 
   An erasure removes only that person's own entries. The guests a booker
   added are people in their own right and are left as they are, until their
@@ -43,6 +47,7 @@ defmodule Tymeslot.InviteeData do
           participants: non_neg_integer(),
           guests: non_neg_integer(),
           poll_participants: non_neg_integer(),
+          draft_polls: non_neg_integer(),
           booking_payments: non_neg_integer(),
           deliveries: non_neg_integer()
         }
@@ -66,7 +71,7 @@ defmodule Tymeslot.InviteeData do
 
   @doc """
   Anonymises the invitee data of meetings and polls that ended more than
-  `days` days ago. Returns `{anonymised_count, nil}`, the shape
+  `days` days ago, and clears the invitees of drafts last saved before then. Returns `{anonymised_count, nil}`, the shape
   `DataRetentionWorker` expects; a window that is not a positive number of
   days anonymises nothing.
   """
@@ -87,7 +92,9 @@ defmodule Tymeslot.InviteeData do
         &(&1 |> Queries.scrub_poll_participants(now) |> elem(0))
       )
 
-    {meetings + poll_participants, nil}
+    draft_polls = count(Queries.clear_draft_invitees_saved_before(cutoff))
+
+    {meetings + poll_participants + draft_polls, nil}
   end
 
   def anonymise_expired(_days), do: {0, nil}
@@ -133,6 +140,7 @@ defmodule Tymeslot.InviteeData do
         count(Queries.scrub_participants({:ids, Enum.map(participants, &elem(&1, 0))}, now)),
       guests: count(Queries.scrub_guests({:ids, Enum.map(guests, &elem(&1, 0))}, now)),
       poll_participants: count(Queries.scrub_poll_participants(poll_participant_ids, now)),
+      draft_polls: count(Queries.remove_draft_invitee(email, scope)),
       booking_payments: count(Queries.scrub_booking_payments({:email, email, scope}, now)),
       deliveries: Queries.delete_deliveries(touched_meetings)
     }

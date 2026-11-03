@@ -13,8 +13,8 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
 
-  @min_duration Constraints.duration_minutes_range().first
-  @max_duration Constraints.duration_minutes_range().last
+  @min_name_length 2
+  @max_name_length Constraints.name_length_range().last
 
   @doc """
   Validates meeting type form input (name, duration, description, icon).
@@ -167,7 +167,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     SecurityLogger.log_security_event(event_name, log_params)
   end
 
-  defp validate_numeric_setting(value_str, min, max, label, event_name, opts) do
+  defp validate_numeric_setting(value_str, range, label, event_name, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
     with {:ok, sanitized_input} <-
@@ -176,7 +176,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
              metadata: metadata
            ),
          {:ok, validated_value} <-
-           validate_numeric_range(sanitized_input, min, max, label) do
+           validate_numeric_range(sanitized_input, range, label) do
       SecurityLogger.log_security_event("#{event_name}_validation_success", %{
         ip_address: metadata[:ip],
         user_agent: metadata[:user_agent],
@@ -198,80 +198,55 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_meeting_name(nil, _metadata),
-    do: {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name is required")}}
+  defp validate_meeting_name(name, metadata) do
+    sanitise_field(name, :name, metadata,
+      sanitise: [mode: :plain_text],
+      blank: {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name is required")}},
+      invalid: {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name must be text")}},
+      then: &check_meeting_name/1
+    )
+  end
 
-  defp validate_meeting_name("", _metadata),
-    do: {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name is required")}}
+  # The message names the maximum literally, so it reads the same as
+  # `Constraints.name_length_range/0` only while that maximum is 100.
+  defp check_meeting_name(sanitized_name) do
+    trimmed = String.trim(sanitized_name)
+    slug = trimmed |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> String.trim("-")
 
-  defp validate_meeting_name(name, metadata) when is_binary(name) do
-    case UniversalSanitizer.sanitize_and_validate(name, mode: :plain_text, metadata: metadata) do
-      {:ok, sanitized_name} ->
-        trimmed = String.trim(sanitized_name)
+    cond do
+      String.length(trimmed) > @max_name_length ->
+        {:error,
+         %{
+           name: dgettext("dashboard_meeting_form", "Meeting name must be 100 characters or less")
+         }}
 
-        slug =
-          trimmed |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> String.trim("-")
+      String.length(trimmed) < @min_name_length ->
+        {:error,
+         %{name: dgettext("dashboard_meeting_form", "Meeting name must be at least 2 characters")}}
 
-        cond do
-          String.length(trimmed) > 100 ->
-            {:error,
-             %{
-               name:
-                 dgettext("dashboard_meeting_form", "Meeting name must be 100 characters or less")
-             }}
+      slug == "" ->
+        {:error,
+         %{
+           name:
+             dgettext(
+               "dashboard_meeting_form",
+               "Meeting name must contain at least one letter or number"
+             )
+         }}
 
-          String.length(trimmed) < 2 ->
-            {:error,
-             %{
-               name:
-                 dgettext("dashboard_meeting_form", "Meeting name must be at least 2 characters")
-             }}
-
-          slug == "" ->
-            {:error,
-             %{
-               name:
-                 dgettext(
-                   "dashboard_meeting_form",
-                   "Meeting name must contain at least one letter or number"
-                 )
-             }}
-
-          true ->
-            {:ok, trimmed}
-        end
-
-      {:error, error} ->
-        {:error, %{name: error}}
+      true ->
+        {:ok, trimmed}
     end
   end
 
-  defp validate_meeting_name(_invalid, _metadata) do
-    {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name must be text")}}
-  end
-
-  defp validate_meeting_duration(nil, _metadata, _stored_duration),
-    do: {:error, %{duration: dgettext("dashboard_meeting_form", "Duration is required")}}
-
-  defp validate_meeting_duration("", _metadata, _stored_duration),
-    do: {:error, %{duration: dgettext("dashboard_meeting_form", "Duration is required")}}
-
-  defp validate_meeting_duration(duration_str, metadata, stored_duration)
-       when is_binary(duration_str) do
-    case UniversalSanitizer.sanitize_and_validate(duration_str,
-           allow_html: false,
-           metadata: metadata
-         ) do
-      {:ok, sanitized_duration} ->
-        validate_duration_value(sanitized_duration, stored_duration)
-
-      {:error, error} ->
-        {:error, %{duration: error}}
-    end
-  end
-
-  defp validate_meeting_duration(_invalid, _metadata, _stored_duration) do
-    {:error, %{duration: dgettext("dashboard_meeting_form", "Duration must be a number")}}
+  defp validate_meeting_duration(duration, metadata, stored_duration) do
+    sanitise_field(duration, :duration, metadata,
+      sanitise: [allow_html: false],
+      blank: {:error, %{duration: dgettext("dashboard_meeting_form", "Duration is required")}},
+      invalid:
+        {:error, %{duration: dgettext("dashboard_meeting_form", "Duration must be a number")}},
+      then: &validate_duration_value(&1, stored_duration)
+    )
   end
 
   defp validate_duration_value(sanitized_duration, stored_duration) do
@@ -288,40 +263,43 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_duration_constraints(duration, _stored) when duration < @min_duration do
-    {:error,
-     %{
-       duration:
-         dgettext("dashboard_meeting_form", "Duration must be at least %{min} minutes",
-           min: @min_duration
-         )
-     }}
-  end
+  defp validate_duration_constraints(duration, stored) do
+    range = Constraints.duration_minutes_range()
+    step = Constraints.duration_step_minutes()
 
-  defp validate_duration_constraints(duration, _stored) when duration > @max_duration do
-    {:error,
-     %{
-       duration:
-         dgettext("dashboard_meeting_form", "Duration cannot exceed 24 hours (%{max} minutes)",
-           max: @max_duration
-         )
-     }}
-  end
+    case range_position(duration, range) do
+      :below ->
+        {:error,
+         %{
+           duration:
+             dgettext("dashboard_meeting_form", "Duration must be at least %{min} minutes",
+               min: range.first
+             )
+         }}
 
-  defp validate_duration_constraints(duration, stored)
-       when rem(duration, unquote(Constraints.duration_step_minutes())) != 0 and
-              duration != stored do
-    {:error,
-     %{
-       duration:
-         dgettext("dashboard_meeting_form", "Duration must be a multiple of %{step} minutes",
-           step: Constraints.duration_step_minutes()
-         )
-     }}
-  end
+      :above ->
+        {:error,
+         %{
+           duration:
+             dgettext(
+               "dashboard_meeting_form",
+               "Duration cannot exceed 24 hours (%{max} minutes)",
+               max: range.last
+             )
+         }}
 
-  defp validate_duration_constraints(duration, _stored) do
-    {:ok, to_string(duration)}
+      :within when rem(duration, step) != 0 and duration != stored ->
+        {:error,
+         %{
+           duration:
+             dgettext("dashboard_meeting_form", "Duration must be a multiple of %{step} minutes",
+               step: step
+             )
+         }}
+
+      :within ->
+        {:ok, to_string(duration)}
+    end
   end
 
   @doc """
@@ -415,25 +393,15 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   # Blank means "use the meeting type's own duration" — the field is optional,
   # unlike duration.
-  defp validate_meeting_slot_interval(nil, _metadata), do: {:ok, ""}
-  defp validate_meeting_slot_interval("", _metadata), do: {:ok, ""}
-
-  defp validate_meeting_slot_interval(interval_str, metadata) when is_binary(interval_str) do
-    case UniversalSanitizer.sanitize_and_validate(interval_str,
-           allow_html: false,
-           metadata: metadata
-         ) do
-      {:ok, sanitized_interval} ->
-        validate_slot_interval_value(sanitized_interval)
-
-      {:error, error} ->
-        {:error, %{slot_interval: error}}
-    end
-  end
-
-  defp validate_meeting_slot_interval(_invalid, _metadata) do
-    {:error,
-     %{slot_interval: dgettext("dashboard_meeting_form", "Slot interval must be a number")}}
+  defp validate_meeting_slot_interval(interval, metadata) do
+    sanitise_field(interval, :slot_interval, metadata,
+      sanitise: [allow_html: false],
+      blank: {:ok, ""},
+      invalid:
+        {:error,
+         %{slot_interval: dgettext("dashboard_meeting_form", "Slot interval must be a number")}},
+      then: &validate_slot_interval_value/1
+    )
   end
 
   defp validate_slot_interval_value(""), do: {:ok, ""}
@@ -455,8 +423,8 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   defp validate_slot_interval_constraints(interval) do
     range = Constraints.slot_interval_minutes_range()
 
-    cond do
-      interval < range.first ->
+    case range_position(interval, range) do
+      :below ->
         {:error,
          %{
            slot_interval:
@@ -465,7 +433,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
              )
          }}
 
-      interval > range.last ->
+      :above ->
         {:error,
          %{
            slot_interval:
@@ -474,60 +442,50 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
              )
          }}
 
-      true ->
+      :within ->
         {:ok, to_string(interval)}
     end
   end
 
-  defp validate_meeting_description(nil, _metadata), do: {:ok, ""}
-  defp validate_meeting_description("", _metadata), do: {:ok, ""}
+  defp validate_meeting_description(description, metadata) do
+    sanitise_field(description, :description, metadata,
+      sanitise: [mode: :plain_text],
+      blank: {:ok, ""},
+      invalid:
+        {:error, %{description: dgettext("dashboard_meeting_form", "Description must be text")}},
+      then: &check_description_length/1
+    )
+  end
 
-  defp validate_meeting_description(description, metadata) when is_binary(description) do
-    case UniversalSanitizer.sanitize_and_validate(description,
-           mode: :plain_text,
-           metadata: metadata
-         ) do
-      {:ok, sanitized_description} ->
-        if String.length(sanitized_description) > Constraints.description_max_length() do
-          {:error,
-           %{
-             description:
-               dgettext("dashboard_meeting_form", "Description must be %{max} characters or less",
-                 max: Constraints.description_max_length()
-               )
-           }}
-        else
-          {:ok, String.trim(sanitized_description)}
-        end
-
-      {:error, error} ->
-        {:error, %{description: error}}
+  defp check_description_length(sanitized_description) do
+    if String.length(sanitized_description) > Constraints.description_max_length() do
+      {:error,
+       %{
+         description:
+           dgettext("dashboard_meeting_form", "Description must be %{max} characters or less",
+             max: Constraints.description_max_length()
+           )
+       }}
+    else
+      {:ok, String.trim(sanitized_description)}
     end
   end
 
-  defp validate_meeting_description(_invalid, _metadata) do
-    {:error, %{description: dgettext("dashboard_meeting_form", "Description must be text")}}
+  defp validate_icon(icon, metadata) do
+    sanitise_field(icon, :icon, metadata,
+      sanitise: [allow_html: false],
+      blank: {:ok, "none"},
+      invalid: {:error, %{icon: dgettext("dashboard_meeting_form", "Invalid icon format")}},
+      then: &check_icon/1
+    )
   end
 
-  defp validate_icon(nil, _metadata), do: {:ok, "none"}
-  defp validate_icon("", _metadata), do: {:ok, "none"}
-
-  defp validate_icon(icon, metadata) when is_binary(icon) do
-    case UniversalSanitizer.sanitize_and_validate(icon, allow_html: false, metadata: metadata) do
-      {:ok, sanitized_icon} ->
-        if sanitized_icon in MeetingTypeSchema.valid_icons() do
-          {:ok, sanitized_icon}
-        else
-          {:error, %{icon: dgettext("dashboard_meeting_form", "Invalid icon selected")}}
-        end
-
-      {:error, error} ->
-        {:error, %{icon: error}}
+  defp check_icon(sanitized_icon) do
+    if sanitized_icon in MeetingTypeSchema.valid_icons() do
+      {:ok, sanitized_icon}
+    else
+      {:error, %{icon: dgettext("dashboard_meeting_form", "Invalid icon selected")}}
     end
-  end
-
-  defp validate_icon(_invalid, _metadata) do
-    {:error, %{icon: dgettext("dashboard_meeting_form", "Invalid icon format")}}
   end
 
   defp validate_calendar_integration_id(nil, _metadata), do: {:ok, nil}
@@ -587,8 +545,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   defp validate_max_participants(value, metadata, range) when is_binary(value) do
     case validate_numeric_setting(
            value,
-           range.first,
-           range.last,
+           range,
            "Participant limit",
            "max_participants",
            metadata: metadata
@@ -607,38 +564,65 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
        }}
 
   # Re-derives which bound was violated so the user-facing message is
-  # translated, without changing `validate_numeric_setting/6`'s plain-English
-  # message (shared with schedule-settings validators outside this form).
+  # translated; `validate_numeric_setting/5`'s plain-English message is only
+  # written to the security log.
   defp participant_limit_message(value, range) do
-    case Integer.parse(value) do
-      {parsed, ""} when parsed < range.first ->
+    position =
+      case Integer.parse(value) do
+        {parsed, ""} -> range_position(parsed, range)
+        _invalid -> :invalid
+      end
+
+    case position do
+      :below ->
         dgettext("dashboard_meeting_form", "Participant limit must be at least %{min}",
           min: range.first
         )
 
-      {parsed, ""} when parsed > range.last ->
+      :above ->
         dgettext("dashboard_meeting_form", "Participant limit cannot exceed %{max}",
           max: range.last
         )
 
-      _invalid ->
+      _within_or_invalid ->
         dgettext("dashboard_meeting_form", "Participant limit must be a valid number")
     end
   end
 
-  defp validate_numeric_range(value_str, min, max, field_name) do
+  defp validate_numeric_range(value_str, range, field_name) do
     case Integer.parse(value_str) do
-      {value, ""} when value >= min and value <= max ->
-        {:ok, value}
-
-      {value, ""} when value < min ->
-        {:error, "#{field_name} must be at least #{min}"}
-
-      {value, ""} when value > max ->
-        {:error, "#{field_name} cannot exceed #{max}"}
+      {value, ""} ->
+        case range_position(value, range) do
+          :within -> {:ok, value}
+          :below -> {:error, "#{field_name} must be at least #{range.first}"}
+          :above -> {:error, "#{field_name} cannot exceed #{range.last}"}
+        end
 
       _invalid ->
         {:error, "#{field_name} must be a valid number"}
     end
   end
+
+  # Where an integer falls against an inclusive range.
+  defp range_position(value, first.._last//_step) when value < first, do: :below
+  defp range_position(value, _first..last//_step) when value > last, do: :above
+  defp range_position(_value, _range), do: :within
+
+  # The shape the text-like fields share: a blank value (`nil` or `""`) gives
+  # `:blank`, anything but a binary gives `:invalid`, and a binary is
+  # sanitised with the `:sanitise` options and handed to `:then`, a sanitiser
+  # refusal being reported under `field`.
+  defp sanitise_field(value, _field, _metadata, rules) when value in [nil, ""],
+    do: Keyword.fetch!(rules, :blank)
+
+  defp sanitise_field(value, field, metadata, rules) when is_binary(value) do
+    opts = Keyword.fetch!(rules, :sanitise) ++ [metadata: metadata]
+
+    case UniversalSanitizer.sanitize_and_validate(value, opts) do
+      {:ok, sanitised} -> Keyword.fetch!(rules, :then).(sanitised)
+      {:error, error} -> {:error, %{field => error}}
+    end
+  end
+
+  defp sanitise_field(_value, _field, _metadata, rules), do: Keyword.fetch!(rules, :invalid)
 end

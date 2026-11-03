@@ -164,7 +164,12 @@ defmodule Tymeslot.Payments do
   Records a checkout session's outcome against its transaction row, attaching
   the subscription it produced.
   """
-  @spec update_transaction_for_subscription(String.t(), String.t(), String.t(), map()) ::
+  @spec update_transaction_for_subscription(
+          String.t(),
+          String.t(),
+          PaymentTransaction.status(),
+          map()
+        ) ::
           {:ok, transaction()} | {:error, term()}
   defdelegate update_transaction_for_subscription(
                 checkout_session_id,

@@ -11,7 +11,9 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
+  alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Demo
   alias Tymeslot.Polls
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
@@ -119,6 +121,9 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
 
     case MeetingManagement.validate_and_load_meeting(meeting_uid, action, profile.user_id) do
       {:ok, meeting} ->
+        # A booking made through a booking page is managed in that page's look.
+        profile = BookingPages.for_meeting(profile, meeting)
+
         socket =
           setup_meeting_management_socket(
             socket,
@@ -219,6 +224,9 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
         socket =
           socket
           |> Context.assign_to_socket(context)
+          # Only a demo provider's organiser is a demo one; `Demo.NoOp`
+          # answers false for every profile.
+          |> assign(:demo_theme_switcher, Demo.demo_profile?(profile))
           |> ThemeCustomizationHelpers.assign_theme_customization(profile, context.theme_id)
 
         {:ok, context, socket}

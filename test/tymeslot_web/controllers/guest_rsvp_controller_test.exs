@@ -7,6 +7,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
   alias Tymeslot.Factory
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
 
   setup do
@@ -36,7 +37,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
       assert html_response(conn, 200) =~ "about to accept"
       assert {:ok, reloaded} = GuestQueries.get_by_token(guest.rsvp_token)
-      assert reloaded.status == "pending"
+      assert reloaded.status == :pending
     end
 
     test "decline link shows the pre-confirmation page without recording the RSVP", %{
@@ -47,7 +48,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
       assert html_response(conn, 200) =~ "about to decline"
       assert {:ok, reloaded} = GuestQueries.get_by_token(guest.rsvp_token)
-      assert reloaded.status == "pending"
+      assert reloaded.status == :pending
     end
 
     test "an unknown token shows the invalid page", %{conn: conn} do
@@ -61,13 +62,13 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
       assert html_response(conn, 404) =~ "link is not valid"
       assert {:ok, reloaded} = GuestQueries.get_by_token(guest.rsvp_token)
-      assert reloaded.status == "pending"
+      assert reloaded.status == :pending
     end
   end
 
   describe "GET /guest/:token/:response — meeting no longer taking responses" do
     test "a cancelled meeting shows the closed page", %{conn: conn} do
-      guest = guest_for(status: "cancelled")
+      guest = guest_for(status: :cancelled)
 
       conn = get(conn, ~p"/guest/#{guest.rsvp_token}/accept")
 
@@ -89,7 +90,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
       assert html_response(conn, 200) =~ "going!"
       assert {:ok, reloaded} = GuestQueries.get_by_token(guest.rsvp_token)
-      assert reloaded.status == "accepted"
+      assert reloaded.status == :accepted
       assert %DateTime{} = reloaded.responded_at
     end
 
@@ -98,7 +99,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
       assert html_response(conn, 200) =~ "declined"
       assert {:ok, reloaded} = GuestQueries.get_by_token(guest.rsvp_token)
-      assert reloaded.status == "declined"
+      assert reloaded.status == :declined
     end
 
     test "an unknown token shows the invalid page", %{conn: conn} do
@@ -112,7 +113,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
       assert html_response(conn, 404) =~ "link is not valid"
       assert {:ok, reloaded} = GuestQueries.get_by_token(guest.rsvp_token)
-      assert reloaded.status == "pending"
+      assert reloaded.status == :pending
     end
 
     test "the success page links to the opposite response", %{conn: conn, guest: guest} do
@@ -124,12 +125,12 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
 
   describe "POST /guest/:token/:response — meeting no longer taking responses" do
     test "a cancelled meeting is not answered", %{conn: conn} do
-      guest = guest_for(status: "cancelled")
+      guest = guest_for(status: :cancelled)
 
       conn = post(conn, ~p"/guest/#{guest.rsvp_token}/accept")
 
       assert html_response(conn, 410) =~ "no longer taking responses"
-      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      assert {:ok, %{status: :pending}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
 
     test "a meeting that has already started is not answered", %{conn: conn} do
@@ -138,7 +139,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
       conn = post(conn, ~p"/guest/#{guest.rsvp_token}/decline")
 
       assert html_response(conn, 410) =~ "no longer taking responses"
-      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      assert {:ok, %{status: :pending}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
   end
 
@@ -181,7 +182,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
       conn = post(conn, ~p"/guest/#{guest.rsvp_token}/accept")
 
       assert html_response(conn, 429) =~ "Too many attempts"
-      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      assert {:ok, %{status: :pending}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
   end
 
@@ -195,7 +196,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
       {:ok, [guest]} =
         Guests.create_for_participant(meeting.id, participant.id, ["g@example.com"])
 
-      {:ok, _declined} = Guests.record_rsvp(guest.rsvp_token, "declined")
+      {:ok, _declined} = Guests.record_rsvp(guest.rsvp_token, :declined)
       %{meeting: meeting, guest: guest}
     end
 
@@ -204,7 +205,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
                "about to accept"
 
       post(conn, ~p"/guest/#{guest.rsvp_token}/accept")
-      assert {:ok, %{status: "accepted"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      assert {:ok, %{status: :accepted}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
 
     test "is told the meeting is fully booked once their seat has gone", %{
@@ -220,7 +221,49 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
       assert html_response(post(conn, ~p"/guest/#{guest.rsvp_token}/accept"), 409) =~
                "fully booked"
 
-      assert {:ok, %{status: "declined"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      assert {:ok, %{status: :declined}} = GuestQueries.get_by_token(guest.rsvp_token)
+    end
+  end
+
+  describe "legal links" do
+    test "guest RSVP page shows the organiser's legal links", %{conn: conn} do
+      user = Factory.insert(:user)
+      profile = Factory.insert(:profile, user: user)
+
+      {:ok, _profile} =
+        Profiles.update_legal_links(profile, %{
+          legal_notice_url: "https://organiser.example/impressum",
+          privacy_policy_url: "https://organiser.example/privacy"
+        })
+
+      meeting = Factory.insert(:meeting, organizer_user_id: user.id)
+      {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["linked@example.com"])
+
+      html = conn |> get(~p"/guest/#{guest.rsvp_token}/accept") |> html_response(200)
+
+      assert html =~ ~s(href="https://organiser.example/impressum")
+      assert html =~ ~s(href="https://organiser.example/privacy")
+    end
+
+    test "an unknown token shows the instance defaults only", %{conn: conn} do
+      previous = Application.get_env(:tymeslot, :booking_privacy_policy_url)
+
+      Application.put_env(
+        :tymeslot,
+        :booking_privacy_policy_url,
+        "https://instance.example/privacy"
+      )
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:tymeslot, :booking_privacy_policy_url, previous),
+          else: Application.delete_env(:tymeslot, :booking_privacy_policy_url)
+      end)
+
+      html = conn |> get(~p"/guest/nope-not-a-token/accept") |> html_response(404)
+
+      assert html =~ ~s(href="https://instance.example/privacy")
+      refute html =~ "Legal notice"
     end
   end
 end

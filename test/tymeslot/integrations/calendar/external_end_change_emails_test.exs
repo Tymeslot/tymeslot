@@ -185,7 +185,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeEmailsTest do
   describe "who is not told" do
     test "nobody, when the change lost its race with a cancellation", ctx do
       read = ctx.meeting
-      read |> Changeset.change(status: "cancelled") |> Repo.update!()
+      read |> Changeset.change(status: :cancelled) |> Repo.update!()
 
       assert :ok = Meetings.apply_external_end_change(read, DateTime.add(read.end_time, 1, :hour))
 

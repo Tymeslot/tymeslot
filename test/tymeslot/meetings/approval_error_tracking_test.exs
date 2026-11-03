@@ -32,7 +32,7 @@ defmodule Tymeslot.Meetings.ApprovalErrorTrackingTest do
 
     meeting =
       insert(:meeting,
-        status: "awaiting_approval",
+        status: :awaiting_approval,
         organizer_user: user,
         organizer_user_id: user.id,
         approval_requested_at: DateTime.utc_now(:second),
@@ -46,7 +46,7 @@ defmodule Tymeslot.Meetings.ApprovalErrorTrackingTest do
       amount_cents: 5000,
       refunded_amount_cents: 0,
       application_fee_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     })
 

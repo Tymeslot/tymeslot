@@ -16,6 +16,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   `build!/2` checks either while the theme compiles; at run time the theme
   builds the same literal with `new/1`.
 
+  A declared journey's address follows its facts (`url: :facts`,
+  `Runtime.follow_url/1`); the classic expansion keeps the route the visit
+  arrived on (`url: :route`).
+
   The facts are `facts/0`: the five shipped ones, plus any fact module listed
   in `config :tymeslot, :extra_booking_facts` (read at compile time; empty in
   every shipped build).
@@ -28,14 +32,19 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   require Logger
 
   @enforce_keys [:navigator, :moments, :outcomes]
-  defstruct [:navigator, :moments, :outcomes]
+  defstruct [:navigator, :moments, :outcomes, url: :facts]
 
   @type outcomes :: %{
           required(:confirmation) => module(),
           required(:awaiting_payment) => module() | :shared
         }
 
-  @type t :: %__MODULE__{navigator: module(), moments: [Moment.t()], outcomes: outcomes()}
+  @type t :: %__MODULE__{
+          navigator: module(),
+          moments: [Moment.t()],
+          outcomes: outcomes(),
+          url: :route | :facts
+        }
 
   # Plain atoms from config, read at compile time, so they add no
   # compile-time dependency.
@@ -130,21 +139,24 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
             {:questions, collects: [:answers], component: steps.questions},
             {:booking, collects: [:attendee], component: steps.booking}
           ],
-      outcomes: %{confirmation: steps.confirmation, awaiting_payment: :shared}
+      outcomes: %{confirmation: steps.confirmation, awaiting_payment: :shared},
+      url: :route
     ]
   end
 
   @doc """
   The journey `opts` describe (`navigator:`, `moments:` as `{key, opts}`
-  entries, `outcomes:`), unchecked; `build!/2` is the checked form. The
-  payment wait defaults to the shared one.
+  entries, `outcomes:`, `url:`), unchecked; `build!/2` is the checked form.
+  The payment wait defaults to the shared one, and the address to following
+  the facts (`url: :facts`).
   """
   @spec new(keyword()) :: t()
   def new(opts) do
-    opts = Keyword.validate!(opts, [:navigator, :moments, :outcomes])
+    opts = Keyword.validate!(opts, [:navigator, :moments, :outcomes, url: :facts])
 
     %__MODULE__{
       navigator: Keyword.fetch!(opts, :navigator),
+      url: Keyword.fetch!(opts, :url),
       moments: Enum.map(Keyword.fetch!(opts, :moments), &Moment.new/1),
       outcomes:
         Map.merge(
@@ -164,7 +176,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   component that is not a loaded LiveComponent; a default for a fact the
   moment does not collect, or with a strategy its fact does not take; a
   navigator that is not one; a moment key used twice or named like an
-  outcome; an unknown outcome; a malformed entry.
+  outcome; an unknown outcome; a `url:` other than `:facts` or `:route`; a
+  malformed entry.
   """
   @spec build!(keyword(), Macro.Env.t()) :: t()
   def build!(opts, caller) do
@@ -240,6 +253,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
 
     Enum.concat([
       navigator_problems(journey.navigator),
+      url_problems(journey.url),
       moment_key_problems(journey.moments),
       unknown_fact_problems(collected, facts),
       twice_problems(collected),
@@ -266,6 +280,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
       ["navigator #{inspect(navigator)} is not a loaded module implementing Journey.Navigator"]
     end
   end
+
+  defp url_problems(url) when url in [:facts, :route], do: []
+  defp url_problems(url), do: ["url #{inspect(url)} is not :facts or :route"]
 
   defp moment_key_problems(moments) do
     keys = Enum.map(moments, & &1.key)

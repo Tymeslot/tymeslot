@@ -499,7 +499,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
       IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
 
       IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-        status: "unhealthy",
+        status: :unhealthy,
         failures: 3,
         became_unhealthy_at: DateTime.add(DateTime.utc_now(), -50, :hour),
         notification_sent_at: DateTime.add(DateTime.utc_now(), -2, :day)

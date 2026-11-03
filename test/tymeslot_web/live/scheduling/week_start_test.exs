@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekStartTest do
   The booking calendar starts its weeks on the visitor's day: the region in
   their `Accept-Language` first, then a language that settles it alone, and
   otherwise the organiser's own first day of the week from their calendar
-  settings. Both themes: Quill's month grid and Rhythm's week strip.
+  settings. Covered here in Quill's month grid and Rhythm's week strip.
   """
 
   use TymeslotWeb.LiveCase, async: false

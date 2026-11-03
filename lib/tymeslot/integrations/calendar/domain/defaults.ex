@@ -5,11 +5,19 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   Centralizes logic for deriving a reasonable default calendar ID from
   provider-specific calendar lists and fields. Keep this module dependency-free
   from other contexts to allow easy reuse.
+
+  `ensure_default_booking_calendar/1` is the one write here: it stores the
+  derived default on a newly created integration, through
+  `Tymeslot.Integrations.Calendar.Blocking`.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Utils.UriUtils
+  require Logger
 
   @doc """
   The calendar a booking, and the booking calendar's own reads, address on
@@ -184,5 +192,96 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
       %CalendarEntry{read_only: true} = entry -> {:read_only, entry}
       entry -> {:ok, entry}
     end
+  end
+
+  @doc """
+  Gives a newly created integration a default booking calendar when its user
+  has none yet.
+
+  Leaves the integration as it is when it already names one, when the user
+  already has a default elsewhere (the `unique_booking_calendar_per_user`
+  constraint), or when no default can be resolved. A unique conflict, or the
+  integration vanishing or no longer decrypting before the write, keeps it
+  without a default and still returns `{:ok, integration}`; any other changeset
+  error is returned.
+  """
+  @spec ensure_default_booking_calendar(CalendarIntegrationSchema.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def ensure_default_booking_calendar(%{default_booking_calendar_id: nil} = integration) do
+    # Only set a default booking calendar automatically if the user doesn't
+    # already have one (to satisfy the unique_booking_calendar_per_user constraint
+    # and keep the existing primary unchanged when adding more integrations).
+    if has_existing_default?(integration.user_id) do
+      {:ok, integration}
+    else
+      set_default_booking_calendar(integration)
+    end
+  end
+
+  def ensure_default_booking_calendar(integration), do: {:ok, integration}
+
+  defp has_existing_default?(user_id) do
+    CalendarIntegrationQueries.user_has_default_booking_calendar?(user_id)
+  end
+
+  defp set_default_booking_calendar(integration) do
+    case resolve_default_calendar_id(integration) do
+      nil ->
+        {:ok, integration}
+
+      default_id ->
+        update_default_booking_calendar(integration, default_id)
+    end
+  end
+
+  # The booking calendar must block availability, so storing one makes it
+  # block in the same write (see `Blocking`).
+  defp update_default_booking_calendar(integration, default_id) do
+    case Blocking.set_default_booking_calendar(integration, default_id) do
+      {:ok, updated} ->
+        {:ok, updated}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        handle_booking_calendar_update_error(integration, changeset)
+
+      # Deleted, or no longer decrypting, between the insert and this write.
+      # The integration was still created, so it is kept without a default,
+      # as on a unique conflict; the owner can pick one from the dashboard.
+      {:error, reason} ->
+        Logger.warning("Could not set default booking calendar",
+          user_id: integration.user_id,
+          integration_id: integration.id,
+          error: LogFormat.reason(reason)
+        )
+
+        {:ok, integration}
+    end
+  end
+
+  defp handle_booking_calendar_update_error(integration, changeset) do
+    if unique_booking_calendar_conflict?(changeset) do
+      # If the unique constraint is hit (another integration already has a default),
+      # keep the existing primary/default and proceed without error.
+      {:ok, integration}
+    else
+      Logger.error("Failed to set default booking calendar",
+        user_id: integration.user_id,
+        integration_id: integration.id,
+        errors: changeset.errors
+      )
+
+      {:error, changeset}
+    end
+  end
+
+  defp unique_booking_calendar_conflict?(%Ecto.Changeset{} = changeset) do
+    Enum.any?(changeset.errors, fn
+      {:default_booking_calendar_id, {_msg, opts}} ->
+        opts[:constraint] == :unique &&
+          to_string(opts[:constraint_name]) == "unique_booking_calendar_per_user"
+
+      _other ->
+        false
+    end)
   end
 end

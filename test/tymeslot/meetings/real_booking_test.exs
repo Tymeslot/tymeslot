@@ -43,7 +43,7 @@ defmodule Tymeslot.Meetings.RealBookingTest do
       organizer_user: user,
       organizer_email: user.email,
       attendee_email: "guest@example.com",
-      status: "cancelled"
+      status: :cancelled
     )
 
     refute booked?(user)
@@ -75,7 +75,7 @@ defmodule Tymeslot.Meetings.RealBookingTest do
     user = host()
 
     insert(:participant,
-      meeting: group_meeting(user, status: "cancelled"),
+      meeting: group_meeting(user, status: :cancelled),
       email: "guest@example.com"
     )
 

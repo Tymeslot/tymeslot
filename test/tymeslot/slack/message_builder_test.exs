@@ -199,6 +199,16 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
       json = Jason.encode!(blocks)
       assert json =~ "12 Mar 2026, 16:00 (Europe/Tallinn)"
     end
+
+    test "labels times UTC, not the failed zone, when the organiser's zone is unknown" do
+      meeting = Map.put(@meeting, :approval_deadline_at, ~U[2026-03-12 14:00:00Z])
+      blocks = MessageBuilder.build_blocks("meeting.requested", meeting, "Mars/Olympus_Mons")
+      json = Jason.encode!(blocks)
+
+      assert json =~ "Tue 10 Mar 2026, 14:00–14:30 (UTC)"
+      assert json =~ "12 Mar 2026, 14:00 (UTC)"
+      refute json =~ "Mars/Olympus_Mons"
+    end
   end
 
   describe "escaping" do

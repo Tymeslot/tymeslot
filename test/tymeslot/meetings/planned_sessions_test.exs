@@ -25,6 +25,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
@@ -101,7 +102,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
 
       assert %MeetingSchema{
                planned: true,
-               status: "confirmed",
+               status: :confirmed,
                capacity: 2,
                attendee_email: nil,
                title: "Introduction to X"
@@ -227,7 +228,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       {:ok, _cancelled} = PlannedSessions.cancel(session, ctx.user.id)
 
       assert {:error, :slot_taken} = book(ctx, starts_at, "one@example.com")
-      assert [%{status: "cancelled"}] = Repo.all(MeetingSchema)
+      assert [%{status: :cancelled}] = Repo.all(MeetingSchema)
     end
   end
 
@@ -241,7 +242,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       assert {:ok, _cancelled} = CancelSeat.execute(participant.management_token)
 
       assert ParticipantQueries.list_live_for_meeting(session.id) == []
-      assert Repo.get!(MeetingSchema, session.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, session.id).status == :confirmed
     end
 
     test "moving the seat to another session leaves the first one on", ctx do
@@ -265,7 +266,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
                )
 
       assert moved_to.id == second_session.id
-      assert Repo.get!(MeetingSchema, first_session.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, first_session.id).status == :confirmed
     end
 
     test "a seat cannot move to a time that is not a session", ctx do
@@ -409,7 +410,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
         start_time: starts_at,
         end_time: DateTime.add(starts_at, 90, :minute),
         duration: 90,
-        status: "confirmed",
+        status: :confirmed,
         organizer_user_id: ctx.user.id,
         organizer_name: "Host",
         organizer_email: "host@example.com",
@@ -465,7 +466,8 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   end
 
   describe "the meeting type" do
-    test "refuses fixed dates on a type that is not a group type", ctx do
+    test "takes fixed dates on a one-to-one type, which offers times rather than sessions",
+         ctx do
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
           name: "Solo",
@@ -475,8 +477,16 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
           fixed_dates: true
         })
 
-      refute changeset.valid?
-      assert {"fixed dates need group bookings", _opts} = changeset.errors[:fixed_dates]
+      assert changeset.valid?
+
+      solo = Changeset.apply_changes(changeset)
+      refute FixedDates.sessions?(solo)
+      assert FixedDates.offered_times?(solo)
+
+      starts_at = DateTime.add(DateTime.utc_now(), 3, :day)
+
+      assert {:error, :not_fixed_dates} =
+               PlannedSessions.add(%{solo | id: 0}, ctx.user.id, starts_at)
     end
   end
 end

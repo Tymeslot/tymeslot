@@ -164,13 +164,13 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
     end
 
     test "cancelled bookings free their capacity", %{user: user} do
-      existing_booking(user, target_date(), ~T[10:00:00], %{status: "cancelled"})
+      existing_booking(user, target_date(), ~T[10:00:00], %{status: :cancelled})
 
       assert {:ok, _meeting} = Create.execute(booking_params(user), form_data())
     end
 
     test "awaiting_payment bookings hold their slot and count", %{user: user} do
-      existing_booking(user, target_date(), ~T[10:00:00], %{status: "awaiting_payment"})
+      existing_booking(user, target_date(), ~T[10:00:00], %{status: :awaiting_payment})
 
       assert {:error, :booking_limit_reached} =
                Create.execute(booking_params(user), form_data())

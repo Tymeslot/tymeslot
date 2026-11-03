@@ -389,11 +389,6 @@ msgstr "Hai già un tipo di riunione con questo nome"
 msgid "group bookings cannot offer more than one duration"
 msgstr "le prenotazioni di gruppo possono offrire una sola durata"
 
-#: lib/tymeslot/meeting_types/fixed_dates.ex
-#, elixir-autogen, elixir-format
-msgid "fixed dates need group bookings"
-msgstr "le date fisse richiedono le prenotazioni di gruppo"
-
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -832,3 +827,23 @@ msgstr "spostamenti di riunioni"
 #, elixir-autogen, elixir-format
 msgid "cancel the planned dates before turning fixed dates off"
 msgstr "annulla le date pianificate prima di disattivare le date fisse"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "remove the offered times before turning group bookings on"
+msgstr "rimuovi gli orari offerti prima di attivare le prenotazioni di gruppo"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Usa da 3 a 30 lettere minuscole, numeri, trattini o trattini bassi, iniziando con una lettera o un numero"
+
+#: lib/tymeslot/meeting_types/slugs.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your booking pages"
+msgstr "è già l'indirizzo di una delle tue pagine di prenotazione"
+
+#: lib/tymeslot/booking_pages.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your meeting types"
+msgstr "è già l'indirizzo di uno dei tuoi tipi di riunione"

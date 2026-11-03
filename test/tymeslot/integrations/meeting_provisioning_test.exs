@@ -6,8 +6,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.MeetingProvisioning
+  alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.ClockHelpers
+  alias Tymeslot.Workers.CalendarEventWorker
 
   setup :verify_on_exit!
 
@@ -251,7 +254,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
         insert(:video_integration,
           user: user,
           provider: Keyword.get(opts, :video_provider, "teams"),
-          provider_account_id: account_id
+          provider_account_id: account_id,
+          tenant_id_encrypted: opts |> Keyword.get(:tenant_id) |> encrypt_present()
         )
 
       meeting =
@@ -265,6 +269,54 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       %{user: user, calendar: calendar, video: video, meeting: meeting}
     end
+
+    # Walks the wait second by second and returns the seconds at which the
+    # create adds the meeting, after checking that at each of them the Teams
+    # job is still waiting `deadline_ms` later.
+    defp assert_meeting_added_only_while_outwaited(deadline_ms) do
+      booked_at = ~U[2026-03-01 10:00:00Z]
+
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, inserted_at: booked_at)
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      at = fn seconds, fun ->
+        ClockHelpers.with_frozen_clock(DateTime.add(booked_at, seconds, :second), fun)
+      end
+
+      adding_seconds =
+        Enum.filter(0..180, fn seconds ->
+          at.(seconds, fn -> MeetingProvisioning.booking_online_meeting(meeting) != nil end)
+        end)
+
+      assert adding_seconds != []
+
+      deadline_seconds = div(deadline_ms + 999, 1_000)
+
+      outrun =
+        Enum.reject(adding_seconds, fn seconds ->
+          at.(seconds + deadline_seconds, fn ->
+            MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+          end)
+        end)
+
+      assert outrun == []
+      adding_seconds
+    end
+
+    defp with_calendar_deadline(ms, fun) do
+      Application.put_env(:tymeslot, :calendar_timeout_ms, ms)
+
+      try do
+        fun.()
+      after
+        Application.delete_env(:tymeslot, :calendar_timeout_ms)
+      end
+    end
+
+    defp encrypt_present(nil), do: nil
+    defp encrypt_present(value), do: Encryption.encrypt(value)
 
     test "attaches to the booking's event when it is already in the same account's Outlook calendar" do
       %{calendar: calendar, meeting: meeting} = teams_booking(provider_event_id: "AAMk-event-1")
@@ -358,6 +410,94 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       end)
 
       assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+    end
+  end
+
+  # Graph mails the attendees of an organiser's event on every write to it, so
+  # the booking's event is created with its Teams meeting rather than given it
+  # by a second write (issue #191).
+  describe "MeetingProvisioning.booking_online_meeting/1" do
+    test "has the event created with the meeting while the meeting waits for it" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, tenant_id: "11111111-2222-3333-4444-555555555555")
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) ==
+               %{isOnlineMeeting: true, onlineMeetingProvider: "teamsForBusiness"}
+    end
+
+    test "names no provider for a personal Microsoft account" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, tenant_id: MicrosoftConfig.consumer_tenant_id())
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) == %{isOnlineMeeting: true}
+    end
+
+    # The Teams job may give up waiting while a create late in the wait is
+    # still in flight, and make a meeting of its own beside it.
+    test "creates the event without the meeting late in the wait" do
+      booked_at = DateTime.add(DateTime.utc_now(:second), -91, :second)
+
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, inserted_at: booked_at)
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+    end
+
+    # The race behind a second Teams meeting: a create that adds the meeting
+    # late in the wait is still running when the Teams job gives up and makes
+    # its own. A run is stopped at the calendar job's deadline, so every
+    # second at which the create adds the meeting must leave the Teams job
+    # still waiting that deadline later.
+    test "the Teams job outwaits every create that adds the meeting" do
+      assert_meeting_added_only_while_outwaited(CalendarEventWorker.attempt_timeout_ms())
+    end
+
+    test "the margin follows the calendar job's configured deadline" do
+      with_calendar_deadline(30_000, fn ->
+        seconds = assert_meeting_added_only_while_outwaited(30_000)
+
+        # Under the 90-second default this second is already too late.
+        assert 60 in seconds
+      end)
+    end
+
+    test "a calendar deadline as long as the wait never adds the meeting" do
+      with_calendar_deadline(120_000, fn ->
+        booked_at = ~U[2026-03-01 10:00:00Z]
+
+        %{calendar: calendar, meeting: meeting} =
+          teams_booking(provider_event_id: nil, inserted_at: booked_at)
+
+        stub_booking_calendar(meeting, calendar.id)
+
+        ClockHelpers.with_frozen_clock(booked_at, fn ->
+          assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+          assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+        end)
+      end)
+    end
+
+    test "adds nothing to an event the booking already has" do
+      %{calendar: calendar, meeting: meeting} = teams_booking(provider_event_id: "AAMk-event-1")
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+    end
+
+    test "adds nothing when the Outlook calendar is another Microsoft account" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(calendar_account: "entra-oid-other", provider_event_id: nil)
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
     end
   end
 end

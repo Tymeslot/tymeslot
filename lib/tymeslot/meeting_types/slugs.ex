@@ -8,9 +8,14 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   that reaches a single meeting type without exposing the rest of a public page.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Ecto.Changeset
+  alias Tymeslot.BookingPages
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.PaymentAccess
+  alias Tymeslot.Repo
 
   @doc """
   Finds a meeting type by its effective slug.
@@ -80,6 +85,13 @@ defmodule Tymeslot.MeetingTypes.Slugs do
     end)
   end
 
+  @doc """
+  Whether one of the user's meeting types (active or not) has `slug` as its
+  effective slug, so its address is `/<username>/<slug>`.
+  """
+  @spec in_use?(integer(), String.t()) :: boolean()
+  def in_use?(user_id, slug), do: MapSet.member?(taken_slugs(user_id, nil), slug)
+
   # Normalises a user-supplied slug the same way the schema does: blank becomes
   # `nil` (derive from name), otherwise trimmed and downcased.
   defp normalize_slug(nil), do: nil
@@ -97,7 +109,8 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   Pass `nil` or a blank string to revert to the name-derived slug. Changing the
   slug invalidates any link previously shared for this type, so callers must
   confirm intent before calling this. Returns `{:error, :slug_taken}` when the
-  slug collides with another of the user's meeting types.
+  slug collides with another of the user's meeting types or with one of their
+  booking pages (`claim_address/1`).
   """
   @spec update_slug(Ecto.Schema.t(), String.t() | nil) ::
           {:ok, Ecto.Schema.t()} | {:error, :slug_taken | Ecto.Changeset.t()}
@@ -105,9 +118,58 @@ defmodule Tymeslot.MeetingTypes.Slugs do
     attrs = %{slug: normalize_slug(slug)}
 
     with :ok <- gate_slug_available(meeting_type.user_id, attrs, meeting_type.id) do
-      MeetingTypeQueries.update_slug(meeting_type, attrs)
+      Repo.transaction(fn ->
+        with :ok <- claim(meeting_type, %{meeting_type | slug: attrs.slug}),
+             {:ok, updated} <- MeetingTypeQueries.update_slug(meeting_type, attrs) do
+          updated
+        else
+          {:error, :taken_by_page} -> Repo.rollback(:slug_taken)
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
     end
   end
+
+  @doc """
+  Checks, inside the caller's transaction, that the effective slug
+  `changeset` leaves its meeting type with is not the slug of one of the
+  owner's booking pages, which share `/<username>/<x>` with it
+  (`Tymeslot.BookingPages.claim_meeting_type_slug/2`). An unchanged slug, and
+  a changeset already invalid, are left alone. A clash is an error on the
+  field the slug comes from: the custom slug, or else the name.
+  """
+  @spec claim_address(Changeset.t()) :: {:ok, Changeset.t()} | {:error, Changeset.t()}
+  def claim_address(%Changeset{valid?: true, data: before} = changeset) do
+    after_change = Changeset.apply_changes(changeset)
+
+    case claim(before, after_change) do
+      :ok ->
+        {:ok, changeset}
+
+      {:error, :taken_by_page} ->
+        field = if after_change.slug in [nil, ""], do: :name, else: :slug
+        action = if before.id, do: :update, else: :insert
+
+        {:error,
+         changeset
+         |> Changeset.add_error(field, page_clash_message(), validation: :booking_page_slug)
+         |> Map.put(:action, action)}
+    end
+  end
+
+  def claim_address(changeset), do: {:ok, changeset}
+
+  defp claim(before, after_change) do
+    slug = effective_slug(after_change)
+
+    if before.id != nil and effective_slug(before) == slug,
+      do: :ok,
+      else: BookingPages.claim_meeting_type_slug(after_change.user_id, slug)
+  end
+
+  # Built at call time so it follows the caller's locale.
+  defp page_clash_message,
+    do: dgettext("errors", "is already the address of one of your booking pages")
 
   defp random_slug_token do
     8 |> :crypto.strong_rand_bytes() |> Base.encode32(case: :lower, padding: false)

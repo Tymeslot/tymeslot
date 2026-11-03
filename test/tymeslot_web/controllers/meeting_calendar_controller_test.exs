@@ -29,7 +29,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
     insert(
       :meeting,
       Keyword.merge(
-        [status: "confirmed", start_time: start_time, end_time: end_time],
+        [status: :confirmed, start_time: start_time, end_time: end_time],
         attrs
       )
     )
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
          %{conn: conn} do
       user = insert(:user)
       profile = insert(:profile, user: user, username: "cancelledhost")
-      meeting = confirmed_meeting(organizer_user: user, status: "cancelled")
+      meeting = confirmed_meeting(organizer_user: user, status: :cancelled)
 
       conn = get(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/calendar.ics")
 
@@ -118,7 +118,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
     test "404s for an awaiting-payment meeting that never became a real booking", %{conn: conn} do
       user = insert(:user)
       profile = insert(:profile, user: user, username: "unpaidhost")
-      meeting = confirmed_meeting(organizer_user: user, status: "awaiting_payment")
+      meeting = confirmed_meeting(organizer_user: user, status: :awaiting_payment)
 
       conn = get(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/calendar.ics")
 
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
          %{conn: conn} do
       user = insert(:user)
       profile = insert(:profile, user: user, username: "pendinghost")
-      meeting = confirmed_meeting(organizer_user: user, status: "pending")
+      meeting = confirmed_meeting(organizer_user: user, status: :pending)
 
       conn = get(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/calendar.ics")
 
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
         insert(:group_meeting,
           organizer_user: user,
           title: "Pottery Workshop",
-          status: "confirmed",
+          status: :confirmed,
           start_time: start_time,
           end_time: DateTime.add(start_time, 3600)
         )
@@ -260,7 +260,7 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
       meeting: meeting,
       seat: seat
     } do
-      meeting |> Changeset.change(status: "cancelled") |> Repo.update!()
+      meeting |> Changeset.change(status: :cancelled) |> Repo.update!()
 
       conn = get(conn, ~p"/seat/#{seat.management_token}/calendar.ics")
 

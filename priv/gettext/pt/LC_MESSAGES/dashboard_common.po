@@ -140,6 +140,7 @@ msgid "View Page"
 msgstr "Ver página"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling link copied to clipboard!"
 msgstr "Link de agendamento copiado!"
@@ -374,6 +375,12 @@ msgstr[1] "As integrações %{names} precisam ser reconectadas. Enquanto você n
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Reconecte %{names}: até lá, sua página de agendamento pode não receber agendamentos"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Salvar alterações"
 
 #: lib/tymeslot_web/live/dashboard/calendar/zone_link.ex
 #, elixir-autogen, elixir-format

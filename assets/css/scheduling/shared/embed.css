@@ -12,7 +12,7 @@
      [data-booker-root]  the theme's outermost element, sized to content
      .booker-card        every card that fills the column layout
      .booker-scroll      the time-slot scroll region
-   A theme with a page grid of its own (Quill's and Rhythm's .booker-page)
+   A theme with a page grid of its own (every shipped theme's .booker-page)
    sizes it to content in its own modules/iframe.css, which keeps only what
    is specific to the theme.
 

@@ -32,20 +32,65 @@ defmodule Tymeslot.Announcements.Catalog do
   @group_bookings_published_at ~U[2026-10-07 00:00:00Z]
   @group_bookings_expires_at ~U[2026-11-06 00:00:00Z]
 
+  @new_themes_published_at ~U[2026-11-02 00:00:00Z]
+  @new_themes_expires_at ~U[2026-12-02 00:00:00Z]
+
   @meeting_polls_published_at ~U[2026-10-23 00:00:00Z]
   @meeting_polls_expires_at ~U[2026-11-22 00:00:00Z]
+
+  @spanish_published_at ~U[2026-11-02 00:00:00Z]
+  @spanish_expires_at ~U[2026-12-02 00:00:00Z]
 
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
     # entry's translatable copy readable in isolation.
     [
+      spanish(),
+      new_themes(),
       meeting_polls(),
       group_bookings(),
       meeting_locations(),
       video_providers(),
       time_off()
     ]
+  end
+
+  defp spanish do
+    %Announcement{
+      key: "spanish_language",
+      title: dgettext("onboarding", "Tymeslot now speaks Spanish"),
+      body:
+        dgettext(
+          "onboarding",
+          "Your dashboard, booking pages and every email are now available in Spanish. " <>
+            "Tymeslot follows your browser's language, or you can choose one yourself in " <>
+            "Account Settings. People who book you see booking pages and confirmations in " <>
+            "their own language too."
+        ),
+      image_path: "/images/announcements/spanish.svg",
+      published_at: @spanish_published_at,
+      expires_at: @spanish_expires_at
+    }
+  end
+
+  defp new_themes do
+    %Announcement{
+      key: "new_themes_folio_paper",
+      title: dgettext("onboarding", "Two new booking page themes: Folio and Paper"),
+      body:
+        dgettext(
+          "onboarding",
+          "Folio introduces you before anyone picks a time: a cover image, your portrait, " <>
+            "headline and bio, in serif type on one continuous page. Paper does the opposite: " <>
+            "one calm card in the colour palette you choose, light or dark, and the time " <>
+            "and details on a single screen. Open the Theme page to preview either on your own " <>
+            "booking page before you switch."
+        ),
+      image_path: "/images/announcements/new-themes.svg",
+      published_at: @new_themes_published_at,
+      expires_at: @new_themes_expires_at
+    }
   end
 
   defp meeting_polls do

@@ -133,4 +133,22 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
 
     count
   end
+
+  @doc """
+  The raw Graph event (`provider_metadata`) of every cached Outlook
+  occurrence of the integration still held as `calendarView/delta` listed
+  it, a stub without the fields its master completes it with, leaving out
+  the rows whose `provider_event_id` is in `except`.
+  """
+  @spec list_unresolved_outlook_stubs(integer(), [String.t()]) :: [map()]
+  def list_unresolved_outlook_stubs(calendar_integration_id, except) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.provider == "outlook" and not is_nil(e.recurring_event_id))
+    |> where([e], e.provider_event_id not in ^except)
+    |> where([e], fragment("?->>'type' = 'occurrence'", e.provider_metadata))
+    |> where([e], fragment("(?->'isAllDay') IS NULL", e.provider_metadata))
+    |> select([e], e.provider_metadata)
+    |> Repo.all()
+  end
 end

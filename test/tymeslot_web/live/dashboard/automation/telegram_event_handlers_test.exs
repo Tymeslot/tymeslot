@@ -266,7 +266,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
         feature_access_checker: __MODULE__.InsufficientPlanChecker
       )
 
-      disconnected = insert(:telegram_integration, user: user, bot_mode: "shared", chat_id: nil)
+      disconnected = insert(:telegram_integration, user: user, bot_mode: :shared, chat_id: nil)
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_telegram_tab(view)
@@ -323,7 +323,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       disconnected =
         insert(:telegram_integration,
           user: user,
-          bot_mode: "shared",
+          bot_mode: :shared,
           chat_id: nil,
           linked_at: an_hour_ago
         )

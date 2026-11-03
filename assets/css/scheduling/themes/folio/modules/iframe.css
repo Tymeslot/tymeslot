@@ -1,0 +1,58 @@
+/* iframe.css: Folio's own embed rules. The shell every theme shares (body
+   sizing, the booker root sized to content, the footer hidden, the slot
+   region released, full width in the column layout) is shared/embed.css,
+   imported just before this file. What follows is specific to Folio,
+   starting with its page grid, which is Folio's own markup. Scoped to
+   data-embedded, which iframe_embed.js sets, and to data-embed-layout,
+   which the server sets. */
+
+/* The page grid (.booker-page on .folio-page in Folio's wrapper): sized to
+   content. It must stay the first rule after shared/embed.css, where it
+   used to live, so its place in the cascade does not change. */
+html.scheduling-app[data-embedded] .booker-page {
+  min-height: auto;
+  grid-template-rows: auto;
+}
+
+html.folio-theme[data-embedded],
+html.folio-theme[data-embedded] > body {
+  background: var(--theme-canvas);
+}
+
+html.folio-theme[data-embedded] .folio-page > .content-area {
+  padding: 0 0 var(--space-sm);
+}
+
+/* The card sits on the host's page: no floating shadow. */
+html.folio-theme[data-embedded] .folio-card {
+  box-shadow: none;
+}
+
+/* The column layout uses the embed container's whole width. */
+html.folio-theme[data-embed-layout="column"] .folio-page > .content-area {
+  max-width: 100%;
+  padding-inline: 0;
+}
+
+/* ...and so does the page's column: the shared rule above gives every
+   .booker-card (Folio's sections among them) the container's whole width,
+   so the sections count their gutter inside it, and the identity, the
+   language row and the summary bar follow rather than keep the standalone
+   reading column. The confirmation's section is no .booker-card itself (its
+   page is), so it is released here. */
+html.folio-theme[data-embed-layout="column"] .folio-section {
+  box-sizing: border-box;
+}
+
+html.folio-theme[data-embed-layout="column"] .folio-outcome {
+  max-width: none;
+}
+
+html.folio-theme[data-embed-layout="column"] .folio-identity,
+html.folio-theme[data-embed-layout="column"] .folio-language {
+  max-width: none;
+}
+
+html.folio-theme[data-embed-layout="column"] .folio-summary-bar {
+  padding-inline: var(--folio-gutter);
+}

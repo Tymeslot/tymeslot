@@ -38,7 +38,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       insert(:availability_override,
         schedule: schedule,
         date: target,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00]
       )
@@ -75,7 +75,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
         insert(:availability_override,
           schedule: schedule,
           date: target,
-          override_type: "unavailable"
+          override_type: :unavailable
         )
 
       assert {:ok, []} =
@@ -97,7 +97,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       insert(:availability_override,
         schedule: schedule,
         date: target,
-        override_type: "available",
+        override_type: :available,
         start_time: ~T[09:00:00],
         end_time: ~T[17:00:00]
       )
@@ -152,7 +152,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       insert(:availability_override,
         schedule: schedule,
         date: target,
-        override_type: "available",
+        override_type: :available,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00]
       )
@@ -182,7 +182,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       insert(:availability_override,
         schedule: schedule,
         date: target,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[14:00:00]
       )
@@ -223,7 +223,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       insert(:availability_override,
         schedule: schedule,
         date: saturday,
-        override_type: "available",
+        override_type: :available,
         start_time: nil,
         end_time: nil
       )

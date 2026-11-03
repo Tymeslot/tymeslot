@@ -82,7 +82,7 @@
 /* Duration Cards */
 .duration-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--container-sm), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--container-sm), 100%), 1fr));
   gap: var(--space-sm);
   margin-top: var(--space-lg);
   flex: 0 0 auto;
@@ -95,7 +95,7 @@
    types says nothing about whether there's room to show them. They collapse
    only when vertical space is genuinely tight (short-viewport rule below). */
 .duration-grid:has(.duration-card:nth-child(5)) {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .duration-grid:has(.duration-card:nth-child(5)) .duration-button {
@@ -139,9 +139,13 @@
   flex-shrink: 0;
 }
 
+/* A meeting type's name or description may hold one long word (a German
+   compound, a URL): it wraps inside the card instead of running past it. */
 .duration-info {
   text-align: left;
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .duration-name {
@@ -149,7 +153,7 @@
 }
 
 .duration-time {
-  color: var(--theme-text-secondary);
+  color: var(--rhythm-ink-quiet);
   margin-bottom: var(--space-3xs);
 }
 

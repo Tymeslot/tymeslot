@@ -140,6 +140,7 @@ msgid "View Page"
 msgstr "Моя сторінка"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling link copied to clipboard!"
 msgstr "Посилання для планування скопійовано в буфер обміну!"
@@ -375,6 +376,12 @@ msgstr[2] "Інтеграції %{names} потрібно перепідключ
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Перепідключіть %{names}: доти ваша сторінка бронювання може не приймати бронювань"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Зберегти зміни"
 
 #: lib/tymeslot_web/live/dashboard/calendar/zone_link.ex
 #, elixir-autogen, elixir-format

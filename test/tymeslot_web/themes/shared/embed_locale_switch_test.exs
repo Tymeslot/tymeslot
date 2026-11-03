@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Themes.Shared.EmbedLocaleSwitchTest do
     meeting =
       Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
 
     # Still embedded after the switch: the page kept its verified embed, so the
     # next switch (here from the confirmation step) rebuilds it again.

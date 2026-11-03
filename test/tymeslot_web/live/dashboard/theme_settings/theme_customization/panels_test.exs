@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PanelsTest do
 
   alias Tymeslot.ThemeCustomizations.Options.Accent
   alias Tymeslot.ThemeCustomizations.Options.Background
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Cover
   alias Tymeslot.ThemeCustomizations.Options.Density
@@ -17,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PanelsTest do
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.AccentPanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.BackgroundPanel
+  alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CalendarViewPanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ColourModePanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanel
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.DensityPanel
@@ -75,5 +77,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PanelsTest do
   test "the radius and density groups get their built-in panels" do
     assert Panels.for_group("1", %{key: :radius, module: Radius}) == RadiusPanel
     assert Panels.for_group("1", %{key: :density, module: Density}) == DensityPanel
+  end
+
+  test "the calendar view group gets the built-in calendar view panel" do
+    assert Panels.for_group("1", %{key: :calendar_view, module: CalendarView}) ==
+             CalendarViewPanel
   end
 end

@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.GroupMeetingActionsTest do
     view |> form("#cancel-meeting-form") |> render_submit()
 
     assert render(view) =~ "Meeting cancelled successfully"
-    assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
 
     assert_enqueued(
       worker: EmailWorker,

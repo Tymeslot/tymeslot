@@ -26,8 +26,9 @@ defmodule TymeslotWeb.Live.Scheduling.VenueChoiceFlowTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias Tymeslot.Venues
+  alias TymeslotWeb.ThemeTestMatrix
 
-  @themes [{"Quill", "1"}, {"Rhythm", "2"}]
+  @themes Enum.map(ThemeTestMatrix.all(), &{&1.name, &1.id})
   @note "The address will be arranged with you after booking."
 
   setup :verify_on_exit!

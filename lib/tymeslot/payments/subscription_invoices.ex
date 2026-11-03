@@ -193,7 +193,7 @@ defmodule Tymeslot.Payments.SubscriptionInvoices do
     %{
       user_id: transaction.user_id,
       amount: event.amount_paid || transaction.amount,
-      status: "completed",
+      status: :completed,
       # Use the invoice ID as the stripe_id for this transaction
       stripe_id: event.id,
       stripe_customer_id: transaction.stripe_customer_id,

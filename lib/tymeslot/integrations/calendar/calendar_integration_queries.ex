@@ -158,16 +158,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
           | {:error, :not_found}
           | {:error, :requires_reencryption, CalendarIntegrationSchema.t()}
   def get(id) do
-    case Repo.get(CalendarIntegrationSchema, id) do
-      nil ->
-        {:error, :not_found}
-
-      integration ->
-        case CalendarIntegrationSchema.decryption_status(integration) do
-          :ok -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
-          :requires_reencryption -> {:error, :requires_reencryption, integration}
-        end
-    end
+    CalendarIntegrationSchema
+    |> Repo.get(id)
+    |> fetch_decrypted()
   end
 
   @doc """
@@ -194,21 +187,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
           | {:error, :not_found}
           | {:error, :requires_reencryption, CalendarIntegrationSchema.t()}
   def get_for_user(id, user_id) do
-    result =
-      CalendarIntegrationSchema
-      |> where([c], c.id == ^id and c.user_id == ^user_id)
-      |> Repo.one()
-
-    case result do
-      nil ->
-        {:error, :not_found}
-
-      integration ->
-        case CalendarIntegrationSchema.decryption_status(integration) do
-          :ok -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
-          :requires_reencryption -> {:error, :requires_reencryption, integration}
-        end
-    end
+    CalendarIntegrationSchema
+    |> where([c], c.id == ^id and c.user_id == ^user_id)
+    |> Repo.one()
+    |> fetch_decrypted()
   end
 
   @doc """
@@ -222,16 +204,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   @spec get_by_user_and_provider(integer(), String.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
   def get_by_user_and_provider(user_id, provider) do
-    result =
-      CalendarIntegrationSchema
-      |> where([c], c.user_id == ^user_id and c.provider == ^provider)
-      |> limit(1)
-      |> Repo.one()
-
-    case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, decrypt_if_readable(integration)}
-    end
+    CalendarIntegrationSchema
+    |> where([c], c.user_id == ^user_id and c.provider == ^provider)
+    |> limit(1)
+    |> Repo.one()
+    |> fetch_readable()
   end
 
   @doc """
@@ -241,22 +218,17 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
   def get_by_account_for_user(user_id, provider, provider_account_id)
       when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
-    result =
-      CalendarIntegrationSchema
-      |> where(
-        [c],
-        c.user_id == ^user_id and
-          c.provider == ^provider and
-          c.provider_account_id == ^provider_account_id and
-          c.is_active == true
-      )
-      |> limit(1)
-      |> Repo.one()
-
-    case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, decrypt_if_readable(integration)}
-    end
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and
+        c.provider == ^provider and
+        c.provider_account_id == ^provider_account_id and
+        c.is_active == true
+    )
+    |> limit(1)
+    |> Repo.one()
+    |> fetch_readable()
   end
 
   @doc """
@@ -282,22 +254,17 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
   def get_any_by_account_for_user(user_id, provider, provider_account_id)
       when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
-    result =
-      CalendarIntegrationSchema
-      |> where(
-        [c],
-        c.user_id == ^user_id and
-          c.provider == ^provider and
-          c.provider_account_id == ^provider_account_id
-      )
-      |> order_by([c], desc: c.is_active)
-      |> limit(1)
-      |> Repo.one()
-
-    case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, decrypt_if_readable(integration)}
-    end
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and
+        c.provider == ^provider and
+        c.provider_account_id == ^provider_account_id
+    )
+    |> order_by([c], desc: c.is_active)
+    |> limit(1)
+    |> Repo.one()
+    |> fetch_readable()
   end
 
   @doc """
@@ -526,6 +493,20 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
       :ok
     end
   end
+
+  # The three-outcome lookup shape of `get/1` and `get_for_user/2`.
+  defp fetch_decrypted(nil), do: {:error, :not_found}
+
+  defp fetch_decrypted(integration) do
+    case CalendarIntegrationSchema.decryption_status(integration) do
+      :ok -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+      :requires_reencryption -> {:error, :requires_reencryption, integration}
+    end
+  end
+
+  # The two-outcome lookup shape: an unreadable row is returned as stored.
+  defp fetch_readable(nil), do: {:error, :not_found}
+  defp fetch_readable(integration), do: {:ok, decrypt_if_readable(integration)}
 
   defp decrypt_if_readable(integration) do
     case CalendarIntegrationSchema.decryption_status(integration) do

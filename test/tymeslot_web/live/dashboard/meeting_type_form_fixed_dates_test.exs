@@ -96,11 +96,18 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
     assert has_element?(view, "[data-testid='new-session']")
   end
 
-  test "is not offered on a one-to-one type", %{conn: conn, user: user} do
+  test "on a one-to-one type, offers times rather than planned dates", %{
+    conn: conn,
+    user: user
+  } do
     meeting_type = group_type(user, max_participants: 1)
     view = edit(conn, meeting_type)
 
-    refute has_element?(view, "[data-testid='fixed-dates-section']")
+    view |> element("input[phx-click='toggle_fixed_dates']") |> render_click()
+
+    assert reload(meeting_type).fixed_dates
+    assert has_element?(view, "[data-testid='new-offered-time']")
+    refute has_element?(view, "[data-testid='new-session']")
   end
 
   test "plans a date, which is listed and booked on the host's calendar", %{
@@ -140,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
 
     view |> element("[data-testid='remove-session']") |> render_click()
 
-    assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, session.id).status == :cancelled
     refute has_element?(view, "[data-testid='planned-session']")
   end
 
@@ -171,12 +178,12 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
 
     view |> element("[data-testid='remove-session']") |> render_click()
 
-    assert Repo.get!(MeetingSchema, session.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, session.id).status == :confirmed
     assert render(view) =~ "1 person is booked and will be told"
 
     view |> element("[data-testid='confirm-cancel-session']") |> render_click()
 
-    assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, session.id).status == :cancelled
   end
 
   defp book_seat(user, meeting_type, starts_at) do
@@ -266,7 +273,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
     |> render_click()
 
     assert reload(meeting_type) == nil
-    assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, session.id).status == :cancelled
 
     # Everyone booked on the date hears about it through the cancel path.
     assert [_cancellation] =

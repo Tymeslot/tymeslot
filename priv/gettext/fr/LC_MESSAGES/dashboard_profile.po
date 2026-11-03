@@ -264,6 +264,46 @@ msgstr "Ce nom d’utilisateur est déjà pris"
 msgid "This username is reserved"
 msgstr "Ce nom d’utilisateur est réservé"
 
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "A few sentences about you and how you work."
+msgstr "Quelques phrases sur vous et votre façon de travailler."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "About You"
+msgstr "À propos de vous"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Bio"
+msgstr "Biographie"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save your headline and bio"
+msgstr "Impossible d’enregistrer votre accroche et votre biographie"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "For example: Career coach for first-time managers"
+msgstr "Par exemple : coach de carrière pour les nouveaux managers"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Headline"
+msgstr "Accroche"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Headline and bio saved"
+msgstr "Accroche et biographie enregistrées"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on your booking page by themes that introduce you, such as Folio. Leave an empty line between paragraphs."
+msgstr "Affiché sur votre page de réservation par les thèmes qui vous présentent, comme Folio. Laissez une ligne vide entre les paragraphes."
+
 #: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
@@ -273,3 +313,38 @@ msgstr "Supprimer l’avatar"
 #, elixir-autogen, elixir-format
 msgid "Username"
 msgstr "Nom d’utilisateur"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save your legal links"
+msgstr "Impossible d’enregistrer vos liens juridiques"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Instance default in use: %{url}"
+msgstr "Valeur par défaut de l’instance utilisée : %{url}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Legal links"
+msgstr "Liens juridiques"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Legal links saved"
+msgstr "Liens juridiques enregistrés"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Legal notice (imprint)"
+msgstr "Mentions légales"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Privacy policy"
+msgstr "Politique de confidentialité"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown in a small footer on your booking pages and on the pages guests open from your emails. Link the pages on your own website."
+msgstr "Affichés dans un petit pied de page sur vos pages de réservation et sur les pages que les invités ouvrent depuis vos e-mails. Indiquez les liens vers les pages correspondantes de votre propre site."

@@ -40,9 +40,14 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_date(~D[2026-03-15], "pl") == "15 marca 2026"
     end
 
+    test "formats date in Spanish with a lowercase month" do
+      assert LocaleFormat.format_date(~D[2026-04-05], "es") == "5 de abril de 2026"
+      assert LocaleFormat.format_date(~D[2026-09-15], "es") == "15 de septiembre de 2026"
+    end
+
     test "falls back to English for unknown locale" do
       date = ~D[2026-03-15]
-      assert LocaleFormat.format_date(date, "es") == "15 March 2026"
+      assert LocaleFormat.format_date(date, "ja") == "15 March 2026"
     end
   end
 
@@ -92,9 +97,14 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_time(time, "pl") == "14:30"
     end
 
+    test "formats time in 24-hour format for Spanish" do
+      time = ~T[14:30:00]
+      assert LocaleFormat.format_time(time, "es") == "14:30"
+    end
+
     test "falls back to English for unknown locale" do
       time = ~T[14:30:00]
-      assert LocaleFormat.format_time(time, "es") == "02:30 PM"
+      assert LocaleFormat.format_time(time, "ja") == "02:30 PM"
     end
   end
 
@@ -149,7 +159,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "falls back to English for unknown locale" do
-      months = LocaleFormat.get_month_names("es")
+      months = LocaleFormat.get_month_names("ja")
       assert Enum.at(months, 0) == "January"
     end
   end
@@ -181,7 +191,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "falls back to English for unknown locale in short format" do
-      months = LocaleFormat.get_month_names("es", :short)
+      months = LocaleFormat.get_month_names("ja", :short)
       assert Enum.at(months, 0) == "Jan"
       assert Enum.at(months, 11) == "Dec"
     end
@@ -211,6 +221,12 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       weekdays = LocaleFormat.get_weekday_names("en", :narrow)
       assert Enum.at(weekdays, 0) == "S"
       assert Enum.at(weekdays, 1) == "M"
+    end
+
+    test "returns Spanish weekday names, with X for miércoles" do
+      assert Enum.at(LocaleFormat.get_weekday_names("es", :full), 3) == "miércoles"
+      assert Enum.at(LocaleFormat.get_weekday_names("es", :short), 3) == "mié"
+      assert LocaleFormat.get_weekday_names("es", :narrow) == ~w(D L M X J V S)
     end
 
     test "defaults to short format when not specified" do
@@ -305,13 +321,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "writes the first as a plain number in the other locales" do
-      for locale <- ~w(en de uk cs pl) do
+      for locale <- ~w(en de uk cs pl es) do
         assert {locale, LocaleFormat.format_day_of_month(1, locale)} == {locale, "1"}
       end
     end
 
     test "writes every later day as a plain number in every locale" do
-      for locale <- ~w(en de fr it uk cs pl pt), day <- [2, 13, 31] do
+      for locale <- ~w(en de fr it uk cs pl pt es), day <- [2, 13, 31] do
         assert {locale, LocaleFormat.format_day_of_month(day, locale)} ==
                  {locale, Integer.to_string(day)}
       end
@@ -460,6 +476,14 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
                "30 de abril – 2 de maio de 2026"
     end
 
+    test "links day, month and year with \"de\" in Spanish" do
+      assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "es") ==
+               "10–12 de abril de 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-04-30], ~D[2026-05-02], "es") ==
+               "30 de abril – 2 de mayo de 2026"
+    end
+
     test "keeps the period after the day in Czech" do
       assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "cs") ==
                "10.–12. dubna 2026"
@@ -475,6 +499,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_integer(1500, "uk") == "1#{@nbsp}500"
       assert LocaleFormat.format_integer(1500, "fr") == "1#{@nbsp}500"
       assert LocaleFormat.format_integer(1500, "pl") == "1#{@nbsp}500"
+      assert LocaleFormat.format_integer(1500, "es") == "1#{@nbsp}500"
     end
 
     test "leaves values below a thousand ungrouped" do
@@ -499,7 +524,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
   describe "group_separator/1" do
     test "reports the same separator format_integer/2 applies" do
-      for locale <- ~w(en de it cs uk fr pl) do
+      for locale <- ~w(en de it cs uk fr pl es) do
         separator = LocaleFormat.group_separator(locale)
         assert LocaleFormat.format_integer(1000, locale) == "1" <> separator <> "000"
       end
@@ -515,6 +540,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_number(520.0, "en", 1) == "520.0"
       assert LocaleFormat.format_number(2080.0, "cs", 1) == "2#{@nbsp}080,0"
       assert LocaleFormat.format_number(2080.0, "pl", 1) == "2#{@nbsp}080,0"
+      assert LocaleFormat.format_number(2080.0, "es", 1) == "2#{@nbsp}080,0"
     end
 
     test "omits the decimal separator entirely for zero decimals" do
@@ -563,6 +589,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_month_year(9, 2026, "uk") == "Вересень 2026"
       assert LocaleFormat.format_month_year(10, 2026, "pl") == "Październik 2026"
       assert LocaleFormat.format_month_year(10, 2026, "pt") == "Outubro de 2026"
+      assert LocaleFormat.format_month_year(10, 2026, "es") == "Octubre de 2026"
     end
 
     test "capitalises the heading in languages that lowercase month names" do

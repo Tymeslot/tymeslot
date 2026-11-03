@@ -522,7 +522,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       "all_day" => event.all_day,
       "calendar" => Transfer.calendar_key(event, integrations),
       "location" => Map.get(event, :location) || "",
-      "description" => EventVideo.strip_join_links(Map.get(event, :description)) || "",
+      "description" => EventVideo.without_join_lines(Map.get(event, :description)) || "",
       "free" => Map.get(event, :transparency) == "transparent",
       "guests" => []
     })

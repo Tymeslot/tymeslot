@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.BookingsRemindersTest do
         organizer_user_id: user.id,
         organizer_email: user.email,
         attendee_name: "Ada Lovelace",
-        status: "cancelled",
+        status: :cancelled,
         reminders: [%{"value" => 20, "unit" => "minutes"}]
       )
 
@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.BookingsRemindersTest do
         organizer_user_id: user.id,
         organizer_email: user.email,
         attendee_name: "Ada Lovelace",
-        status: "awaiting_approval",
+        status: :awaiting_approval,
         reminders: [%{"value" => 20, "unit" => "minutes"}]
       )
 

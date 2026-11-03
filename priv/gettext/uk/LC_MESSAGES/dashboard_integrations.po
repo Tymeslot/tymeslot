@@ -471,3 +471,23 @@ msgstr "Сервіс %{service} зараз перевантажений. Спр�
 #, elixir-autogen, elixir-format
 msgid "Authorisation was denied. Please try again."
 msgstr "В авторизації відмовлено. Спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not duplicate this meeting type. Check its settings, then try again."
+msgstr "Не вдалося продублювати цей тип зустрічі. Перевірте його налаштування й спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Add its dates, then switch it on."
+msgstr "Тип зустрічі продубльовано й вимкнено. Додайте дати, а потім увімкніть його."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Switch it on when it is ready."
+msgstr "Тип зустрічі продубльовано й вимкнено. Увімкніть його, коли він буде готовий."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
+msgstr "Цей тип зустрічі використовує функцію, якої немає у вашому поточному тарифі, тому його не можна продублювати."

@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.ApiStatus do
   4xx refusal is in the shared envelope.
   """
 
-  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.ApiResponse
 
   @doc """
   The error a Google response stands for, or `:default` when the shared

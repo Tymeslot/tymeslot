@@ -93,11 +93,13 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       synced_at: DateTime.utc_now()
     }
 
-    {:ok, normalised} =
+    {:ok, [cached] = normalised} =
       doc |> EventNormaliser.parse_items() |> EventNormaliser.normalise_events(context)
 
     {:ok, 1} = Sync.upsert_cache(exchange, normalised)
-    {:ok, event} = ProviderCalendarEventQueries.get_by_uid(exchange.id, "weekly-standup")
+    # Read back by whatever uid the normaliser keyed it on: an occurrence is
+    # keyed by its item id, a master by the series UID.
+    {:ok, event} = ProviderCalendarEventQueries.get_by_uid(exchange.id, cached.uid)
 
     {exchange, event}
   end

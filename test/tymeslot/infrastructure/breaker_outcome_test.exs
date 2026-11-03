@@ -6,7 +6,7 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Integrations.Calendar.Google.ApiStatus
-  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
+  alias Tymeslot.Integrations.Shared.ApiResponse
 
   describe "classify/1" do
     test "classifies :ok as :success" do

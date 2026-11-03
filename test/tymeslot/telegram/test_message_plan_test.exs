@@ -29,7 +29,7 @@ defmodule Tymeslot.Telegram.TestMessagePlanTest do
     assert {:error, :insufficient_plan} =
              Telegram.test_integration(%TelegramIntegrationSchema{
                user_id: insert(:user).id,
-               bot_mode: "own",
+               bot_mode: :own,
                bot_token: "1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789",
                chat_id: "42"
              })

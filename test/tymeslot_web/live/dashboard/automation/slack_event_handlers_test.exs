@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           webhook_url_encrypted:
             Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
           bot_token_encrypted: nil,
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           webhook_url_encrypted:
             Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
           bot_token_encrypted: nil,
@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           webhook_url_encrypted:
             Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
           bot_token_encrypted: nil,
@@ -307,7 +307,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       pending =
         insert(:slack_integration,
           user: user,
-          app_mode: "oauth",
+          app_mode: :oauth,
           channel_id: nil,
           channel_name: nil
         )
@@ -334,7 +334,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       pending =
         insert(:slack_integration,
           user: user,
-          app_mode: "oauth",
+          app_mode: :oauth,
           channel_id: nil,
           channel_name: nil
         )
@@ -400,7 +400,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       pending =
         insert(:slack_integration,
           user: user,
-          app_mode: "oauth",
+          app_mode: :oauth,
           channel_id: nil,
           channel_name: nil
         )

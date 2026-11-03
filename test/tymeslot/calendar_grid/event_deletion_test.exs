@@ -148,7 +148,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       {:ok, cancelled} = MeetingQueries.get_meeting(meeting.id)
 
       assert {cancelled.status, cancelled.calendar_sync_status} ==
-               {"cancelled", "externally_deleted"}
+               {:cancelled, :externally_deleted}
     end
   end
 

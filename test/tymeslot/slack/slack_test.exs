@@ -36,7 +36,7 @@ defmodule Tymeslot.SlackTest do
       assert {:ok, integration} =
                Slack.create_integration(user.id, %{
                  name: "Acme Slack",
-                 app_mode: "oauth",
+                 app_mode: :oauth,
                  bot_token: "xoxb-real",
                  team_id: "T1",
                  channel_id: "C1",
@@ -57,7 +57,7 @@ defmodule Tymeslot.SlackTest do
                  events: ["meeting.created"]
                })
 
-      assert integration.app_mode == "webhook_url"
+      assert integration.app_mode == :webhook_url
       assert integration.is_active == true
     end
 
@@ -127,7 +127,7 @@ defmodule Tymeslot.SlackTest do
     end
 
     test "rejects pending_oauth integrations" do
-      integration = insert(:slack_integration, app_mode: "oauth", channel_id: nil)
+      integration = insert(:slack_integration, app_mode: :oauth, channel_id: nil)
       assert {:error, :invalid_state} = Slack.toggle_integration(integration)
     end
   end
@@ -148,7 +148,7 @@ defmodule Tymeslot.SlackTest do
       assert SlackIntegrationSchema.status(stub) == :pending_oauth
       assert SlackIntegrationSchema.bot_token(stub) == "xoxb-new"
       assert stub.user_id == user.id
-      assert stub.app_mode == "oauth"
+      assert stub.app_mode == :oauth
       assert stub.team_id == "T1"
       assert stub.authed_user_id == "U7"
       assert stub.scope == "chat:write"
@@ -195,7 +195,7 @@ defmodule Tymeslot.SlackTest do
 
       insert(:slack_integration,
         user: user,
-        app_mode: "oauth",
+        app_mode: :oauth,
         channel_id: nil,
         bot_token_encrypted: Encryption.encrypt("xoxb-old-1"),
         name: "Stale 1"
@@ -203,7 +203,7 @@ defmodule Tymeslot.SlackTest do
 
       insert(:slack_integration,
         user: user,
-        app_mode: "oauth",
+        app_mode: :oauth,
         channel_id: nil,
         bot_token_encrypted: Encryption.encrypt("xoxb-old-2"),
         name: "Stale 2"
@@ -292,7 +292,7 @@ defmodule Tymeslot.SlackTest do
 
   describe "test_integration/1" do
     test "sends a Block Kit message via the bot token (oauth mode)" do
-      integration = insert(:slack_integration, app_mode: "oauth", channel_id: "C9")
+      integration = insert(:slack_integration, app_mode: :oauth, channel_id: "C9")
 
       expect(Tymeslot.HTTPClientMock, :post, fn url, _body, _headers, _opts ->
         assert url == "https://slack.com/api/chat.postMessage"
@@ -305,7 +305,7 @@ defmodule Tymeslot.SlackTest do
     test "posts to the webhook URL for webhook_url mode" do
       integration =
         insert(:slack_integration,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           channel_id: nil,
           bot_token_encrypted: nil,
           webhook_url_encrypted: Encryption.encrypt("https://hooks.slack.com/services/T/B/abc"),
@@ -322,7 +322,7 @@ defmodule Tymeslot.SlackTest do
 
     test "sends nothing while the plan doesn't include automations" do
       setup_config(:tymeslot, feature_access_checker: Tymeslot.SlackTest.DenyAccessChecker)
-      integration = insert(:slack_integration, app_mode: "oauth", channel_id: "C9")
+      integration = insert(:slack_integration, app_mode: :oauth, channel_id: "C9")
       expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :unused end)
 
       assert {:error, :insufficient_plan} = Slack.test_integration(integration)
@@ -334,7 +334,7 @@ defmodule Tymeslot.SlackTest do
     # of the install whatever their plan.
     test "disconnects while the plan doesn't include automations" do
       setup_config(:tymeslot, feature_access_checker: Tymeslot.SlackTest.DenyAccessChecker)
-      integration = insert(:slack_integration, app_mode: "oauth", channel_id: "C9")
+      integration = insert(:slack_integration, app_mode: :oauth, channel_id: "C9")
 
       assert {:ok, disconnected} = Slack.disconnect(integration)
       assert is_nil(disconnected.channel_id)
@@ -468,7 +468,7 @@ defmodule Tymeslot.SlackTest do
       integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "oauth",
+          app_mode: :oauth,
           events: ["meeting.created"],
           is_active: true
         )

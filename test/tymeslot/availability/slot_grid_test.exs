@@ -72,6 +72,25 @@ defmodule Tymeslot.Availability.SlotGridTest do
     end
   end
 
+  describe "a break in the hour spring forward skips" do
+    # 2027-03-14 is a Sunday. 02:00 to 02:15 never happens in New York that
+    # day, so the break blocks nothing: the 01:15 meeting runs 01:15 EST to
+    # 03:05 EDT. The engine before overnight windows rejected it.
+    test "blocks no time, so a meeting may run across the gap" do
+      config =
+        pure_config(
+          days: [
+            day(7, ~T[01:15:00], ~T[04:15:00], %{
+              breaks: [%{start_time: ~T[02:00:00], end_time: ~T[02:15:00]}]
+            })
+          ]
+        )
+
+      assert labels(~D[2027-03-14], 50, "America/New_York", "America/New_York", config) ==
+               ["1:15 AM", "3:05 AM"]
+    end
+  end
+
   describe "an overnight window across the Europe/London autumn change" do
     # Sat 2026-10-24 22:00 BST to Sun 2026-10-25 03:00 GMT. The clocks go back
     # at 02:00 BST, so the window reads as five hours but lasts six, and the
@@ -271,7 +290,7 @@ defmodule Tymeslot.Availability.SlotGridTest do
     end
 
     test "unavailable on Tuesday keeps Monday's tail", %{days: days} do
-      config = pure_config(days: days, overrides: [%{date: @tue, override_type: "unavailable"}])
+      config = pure_config(days: days, overrides: [%{date: @tue, override_type: :unavailable}])
 
       assert labels(@mon, 60, "Europe/London", "Europe/London", config) == [
                "10:00 PM",
@@ -282,7 +301,7 @@ defmodule Tymeslot.Availability.SlotGridTest do
     end
 
     test "unavailable on Monday removes the whole overnight window", %{days: days} do
-      config = pure_config(days: days, overrides: [%{date: @mon, override_type: "unavailable"}])
+      config = pure_config(days: days, overrides: [%{date: @mon, override_type: :unavailable}])
 
       assert labels(@mon, 60, "Europe/London", "Europe/London", config) == []
       assert List.first(labels(@tue, 60, "Europe/London", "Europe/London", config)) == "9:00 AM"
@@ -310,7 +329,7 @@ defmodule Tymeslot.Availability.SlotGridTest do
           overrides: [
             %{
               date: ~D[2027-06-16],
-              override_type: "custom_hours",
+              override_type: :custom_hours,
               start_time: ~T[20:00:00],
               end_time: ~T[01:00:00],
               ends_next_day: true

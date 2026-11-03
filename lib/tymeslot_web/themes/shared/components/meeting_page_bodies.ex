@@ -198,6 +198,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
         organizer_profile={@organizer_profile}
         locale={@locale}
         organizer_name={@meeting.organizer_name}
+        meeting_type={@meeting.meeting_type}
       />
     </section>
     """

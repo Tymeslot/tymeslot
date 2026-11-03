@@ -81,7 +81,7 @@ defmodule Tymeslot.Bookings.GuestInvitePrivacyIntegrationTest do
         start_time: start_time,
         end_time: DateTime.add(start_time, 30, :minute),
         duration: 30,
-        status: "confirmed",
+        status: :confirmed,
         # Stamped when a booking is announced; only an announced booking's
         # guests are told it was cancelled.
         first_announced_at: DateTime.utc_now(:second),

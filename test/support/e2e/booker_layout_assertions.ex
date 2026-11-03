@@ -170,27 +170,58 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   end
 
   @doc """
-  The primary CTA lives inside the scrollable page (reachable by scrolling),
-  not clipped beyond the document's scroll height.
+  The page's primary action lives inside the scrollable page (reachable by
+  scrolling), not clipped beyond the document's scroll height. On the overview
+  that is its first meeting type, which is the way on; on the schedule it is
+  the actions row's Next. Whichever of the two the page renders is the one
+  measured.
   """
   @spec assert_cta_reachable(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
   def assert_cta_reachable(session, context) do
     value =
       evaluate_script(session, """
-      const cta = document.querySelector("[data-testid='next-step']");
+      const cta = document.querySelector("[data-testid='next-step']") || document.querySelector("[data-fact='meeting_type']");
       if (!cta) return null;
       const r = cta.getBoundingClientRect();
       return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];
       """)
 
-    assert is_list(value), "next-step CTA not found at #{context}"
+    assert is_list(value),
+           "primary action (a Next, or else a meeting type) not found at #{context}"
+
     [cta_doc_bottom, cta_height, scroll_height] = value
 
-    assert cta_height > 0, "next-step CTA has zero height at #{context}"
+    assert cta_height > 0, "primary action has zero height at #{context}"
 
     assert cta_doc_bottom <= scroll_height + @overflow_tolerance,
-           "next-step CTA at #{context} sits below the document scroll height " <>
+           "primary action at #{context} sits below the document scroll height " <>
              "(#{cta_doc_bottom}px > #{scroll_height}px): it is clipped and unreachable."
+
+    session
+  end
+
+  @doc """
+  The first element matching `selector` lives inside the scrollable page (its
+  document bottom within the scroll height), not clipped beyond it.
+  """
+  @spec assert_reachable(Wallaby.Session.t(), String.t(), String.t()) :: Wallaby.Session.t()
+  def assert_reachable(session, selector, context) do
+    value =
+      evaluate_script(session, """
+      const el = document.querySelector(#{Jason.encode!(selector)});
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];
+      """)
+
+    assert is_list(value), "#{context}: not found"
+
+    [doc_bottom, height, scroll_height] = value
+    assert height > 0, "#{context}: zero height"
+
+    assert doc_bottom <= scroll_height + @overflow_tolerance,
+           "#{context} sits below the document scroll height " <>
+             "(#{doc_bottom}px > #{scroll_height}px): it is clipped and unreachable."
 
     session
   end

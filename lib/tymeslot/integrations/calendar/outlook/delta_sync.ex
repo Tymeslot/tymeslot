@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.FeedCalendar
+  alias Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubs
   alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesMaster
@@ -178,12 +179,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
 
   defp apply_delta(integration, events, new_delta_link, read_at) do
     {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
-    calendar_events = build_calendar_events(changed, integration, read_at)
+
+    # The stubs an earlier sweep could not complete are tried again: the delta
+    # will not list them again until their series changes. Not the ones this
+    # delta lists or removes, which it supersedes.
+    retry = OccurrenceStubs.unresolved(integration, Enum.map(events, & &1["id"]))
+    {calendar_events, master_reads} = build_calendar_events(changed, retry, integration, read_at)
     removed_uids = process_removed(removed, integration)
 
     :ok =
       SeriesRules.refresh(integration.id, calendar_events, SeriesMaster.reader(integration),
-        changed: true
+        changed: true,
+        already_read: master_reads
       )
 
     # Writes through `Sync.upsert_cache/2` rather than straight to the queries
@@ -261,15 +268,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     end
   end
 
-  defp build_calendar_events(events, integration, read_at) do
+  defp build_calendar_events(events, retry, integration, read_at) do
     context = %{
       calendar_integration_id: integration.id,
       provider_calendar_id: FeedCalendar.id(integration),
       synced_at: read_at
     }
 
-    {:ok, calendar_events} = OutlookProvider.normalise_events(events, context)
-    calendar_events
+    {completed, master_reads} = OccurrenceStubs.complete(events, integration, retry)
+    {:ok, calendar_events} = OutlookProvider.normalise_events(completed, context)
+
+    {calendar_events, master_reads}
   end
 
   defp persist_delta_link(_integration, nil), do: :ok

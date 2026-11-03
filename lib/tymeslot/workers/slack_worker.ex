@@ -38,6 +38,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.MeetingNotificationJob
+  alias Tymeslot.Workers.RetryHelpers
 
   @behaviour ExpectedJobOutcome
 
@@ -141,14 +142,14 @@ defmodule Tymeslot.Workers.SlackWorker do
       else: {:error, :disabled}
   end
 
-  defp deliver(%SlackIntegrationSchema{app_mode: "oauth"} = integration, blocks) do
+  defp deliver(%SlackIntegrationSchema{app_mode: :oauth} = integration, blocks) do
     case Slack.resolve_bot_token(integration) do
       {:ok, token} -> API.post_message_via_token(token, integration.channel_id, blocks)
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp deliver(%SlackIntegrationSchema{app_mode: "webhook_url"} = integration, blocks) do
+  defp deliver(%SlackIntegrationSchema{app_mode: :webhook_url} = integration, blocks) do
     case SlackIntegrationSchema.webhook_url(integration) do
       nil -> {:error, :no_webhook_url}
       url -> API.post_message_via_webhook(url, blocks)
@@ -308,8 +309,8 @@ defmodule Tymeslot.Workers.SlackWorker do
   defp sanitize_body(body) when is_binary(body), do: body
   defp sanitize_body(body), do: inspect(body)
 
-  defp retry_after_from(seconds) when is_integer(seconds) and seconds >= 0, do: min(seconds, 600)
-  defp retry_after_from(_other), do: 30
+  defp retry_after_from(seconds),
+    do: RetryHelpers.clamp_retry_after(seconds, max: 600, default: 30)
 
   defp truncate(text, max) when is_binary(text) do
     if String.length(text) > max do

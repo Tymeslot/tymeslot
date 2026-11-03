@@ -65,18 +65,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTeamsTest do
     stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
       send(test_pid, {:graph, method, url, body})
       event_id = graph_event_id(method, url)
-
-      {:ok,
-       %Req.Response{
-         status: if(method == :post, do: 201, else: 200),
-         body:
-           Jason.encode!(%{
-             "id" => event_id,
-             "onlineMeeting" => %{
-               "joinUrl" => "https://teams.microsoft.com/l/meetup-join/#{event_id}"
-             }
-           })
-       }}
+      graph_answer(method, event_id, "https://teams.microsoft.com/l/meetup-join/#{event_id}")
     end)
 
     %{user: user, profile: profile, video: video}
@@ -203,6 +192,9 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTeamsTest do
 
       assert :ok = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
 
+      # The event is read first, for a meeting it was created with, and has none.
+      assert_received {:graph, :get, read_url, _body}
+      assert read_url == @graph <> "/me/events/AAMk-booking-event"
       assert_received {:graph, :patch, url, body}
       assert url == @graph <> "/me/events/AAMk-booking-event"
       # Only the online meeting is switched on: calendar sync owns the rest.
@@ -215,6 +207,52 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTeamsTest do
       assert updated.video_room_id == updated.provider_event_id
       assert updated.meeting_url =~ "teams.microsoft.com"
       assert updated.uid == meeting.uid
+    end
+
+    # Graph mails the event's attendees on every write to it, so a meeting the
+    # booking's event was created with is taken as it is, and the event is
+    # not written again, neither here nor by calendar sync (issue #191).
+    test "takes the meeting the booking's event was created with, writing nothing", %{
+      meeting: meeting,
+      calendar: calendar
+    } do
+      meeting
+      |> Changeset.change(
+        calendar_integration_id: calendar.id,
+        calendar_path: "primary",
+        provider_event_id: "AAMk-booking-event"
+      )
+      |> Repo.update!()
+
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :get, url, body, _headers, _opts ->
+        send(test_pid, {:graph, :get, url, body})
+        event_id = graph_event_id(:get, url)
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "id" => event_id,
+               "onlineMeeting" => %{
+                 "joinUrl" => "https://teams.microsoft.com/l/meetup-join/created"
+               }
+             })
+         }}
+      end)
+
+      assert :ok = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
+
+      assert_received {:graph, :get, url, _body}
+      assert url == @graph <> "/me/events/AAMk-booking-event"
+      refute_received {:graph, _method, _url, _body}
+      refute_enqueued(worker: CalendarEventWorker, args: %{"action" => "update"})
+
+      updated = Repo.get!(MeetingSchema, meeting.id)
+      assert updated.video_room_id == "AAMk-booking-event"
+      assert updated.meeting_url == "https://teams.microsoft.com/l/meetup-join/created"
     end
 
     test "gives the meeting an event of its own once the booking's event is two minutes overdue",
@@ -256,21 +294,25 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTeamsTest do
       # Graph switches the online meeting on while the booking is rescheduled
       # to a location without video: the event now carries a Teams meeting the
       # booking no longer has.
-      stub(Tymeslot.HTTPClientMock, :request, fn :patch, url, _body, _headers, _opts ->
-        meeting |> Changeset.change(video_integration_id: nil) |> Repo.update!()
-        event_id = graph_event_id(:patch, url)
+      stub(Tymeslot.HTTPClientMock, :request, fn
+        :get, url, _body, _headers, _opts ->
+          graph_answer(:get, graph_event_id(:get, url), nil)
 
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "id" => event_id,
-               "onlineMeeting" => %{
-                 "joinUrl" => "https://teams.microsoft.com/l/meetup-join/#{event_id}"
-               }
-             })
-         }}
+        :patch, url, _body, _headers, _opts ->
+          meeting |> Changeset.change(video_integration_id: nil) |> Repo.update!()
+          event_id = graph_event_id(:patch, url)
+
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body:
+               Jason.encode!(%{
+                 "id" => event_id,
+                 "onlineMeeting" => %{
+                   "joinUrl" => "https://teams.microsoft.com/l/meetup-join/#{event_id}"
+                 }
+               })
+           }}
       end)
 
       assert :ok = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
@@ -331,16 +373,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTeamsTest do
 
       stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
         send(test_pid, {:graph, method, url, body})
-
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "id" => graph_event_id(method, url),
-               "onlineMeeting" => %{"joinUrl" => @live_join_url}
-             })
-         }}
+        graph_answer(method, graph_event_id(method, url), @live_join_url)
       end)
 
       %{meeting: meeting}
@@ -391,6 +424,20 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTeamsTest do
 
   # A new event gets its id from Graph; an existing one keeps the id it was
   # addressed by.
+  # Graph's answer for the event `event_id`. A read finds the booking's event
+  # as calendar sync created it before the meeting was switched on, without
+  # one; a write answers with the meeting at `join_url`.
+  defp graph_answer(:get, event_id, _join_url),
+    do: {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => event_id})}}
+
+  defp graph_answer(method, event_id, join_url) do
+    {:ok,
+     %Req.Response{
+       status: if(method == :post, do: 201, else: 200),
+       body: Jason.encode!(%{"id" => event_id, "onlineMeeting" => %{"joinUrl" => join_url}})
+     }}
+  end
+
   defp graph_event_id(:post, _url), do: "AAMk-own-event"
   defp graph_event_id(_method, url), do: url |> String.split("/") |> List.last()
 

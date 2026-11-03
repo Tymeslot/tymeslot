@@ -178,7 +178,9 @@ defmodule Tymeslot.BookingTestHelpers do
   tomorrow's first offered time and moves on to the booking form.
 
   Public for a page that opens on the schedule step, as `/:username/:slug`
-  does, where there is no overview card to pick.
+  does, where there is no overview card to pick. On a screen that also asks
+  for the details (Fixture Two) the form and the questions are already
+  there, and nothing more is clicked.
   """
   @spec walk_from_schedule_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t()) ::
           Phoenix.LiveViewTest.View.t()
@@ -187,7 +189,12 @@ defmodule Tymeslot.BookingTestHelpers do
       timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(1) |> Date.to_iso8601()
 
     _picked = BookingDriver.pick_first_slot(view, on: tomorrow)
-    BookingDriver.continue(view)
+
+    # A screen that picks the time and asks for the details shows the form,
+    # with the questions above it, as soon as the time is picked: there is
+    # no way on to take.
+    unless has_element?(view, "form[data-fact='attendee'], [data-fact='answer']"),
+      do: BookingDriver.continue(view)
 
     view
   end
@@ -198,9 +205,31 @@ defmodule Tymeslot.BookingTestHelpers do
   (`TymeslotWeb.Themes.Shared.ChoicesInUrl`). Every patch is a message to the
   test process, so the last one drained is the current URL; fails when the
   page never patched.
+
+  A patch reaches the test in two hops, the LiveView to the test's client
+  proxy and the proxy on to the test, so both are synced before draining: a
+  patch still in the proxy's mailbox would otherwise be missed and the URL
+  before it returned.
   """
   @spec last_patched_url(Phoenix.LiveViewTest.View.t()) :: String.t()
-  def last_patched_url(view), do: last_patched_url(view, nil)
+  def last_patched_url(view) do
+    Page.sync(view)
+    _html = render(view)
+    last_patched_url(view, nil)
+  end
+
+  @doc """
+  Waits for the page to patch to a URL the given function accepts and returns
+  it. For a change whose patch follows its assigns (a timezone switch decides
+  the day afterwards), where `last_patched_url/1` would read the URL before
+  that patch lands. Draining consumes patches, so it cannot simply be retried.
+  """
+  @spec await_patched_url(Phoenix.LiveViewTest.View.t(), (String.t() -> boolean()), timeout()) ::
+          String.t()
+  def await_patched_url(view, accept?, timeout \\ 1_000) do
+    url = assert_patch(view, timeout)
+    if accept?.(url), do: url, else: await_patched_url(view, accept?, timeout)
+  end
 
   defp last_patched_url(view, last) do
     case next_patch(view) do

@@ -219,7 +219,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   def cancel(_session, _user_id), do: {:error, :not_found}
 
   defp check_fixed_dates(meeting_type) do
-    if FixedDates.enabled?(meeting_type), do: :ok, else: {:error, :not_fixed_dates}
+    if FixedDates.sessions?(meeting_type), do: :ok, else: {:error, :not_fixed_dates}
   end
 
   defp check_start(starts_at, now) do

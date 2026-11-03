@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
       # Verify pending integration persisted
       [integration] = Slack.list_integrations(user.id)
       assert integration.user_id == user.id
-      assert integration.app_mode == "oauth"
+      assert integration.app_mode == :oauth
       assert integration.team_id == "TTEST01"
       assert SlackIntegrationSchema.status(integration) == :pending_oauth
     end

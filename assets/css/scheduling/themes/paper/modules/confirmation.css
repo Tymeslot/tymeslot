@@ -1,0 +1,179 @@
+/* Confirmation: a check in a success-tinted circle (a clock on the warning
+   tint for a request the organiser has still to accept), the headline and
+   message, the meeting's details in a quiet box, where the confirmation
+   went, the guest's answers, the actions and the help line. */
+
+.paper-confirmation__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.paper-confirmation__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--paper-badge-size);
+  height: var(--paper-badge-size);
+  border-radius: var(--radius-full);
+  background: var(--paper-success-surface);
+  color: var(--theme-success);
+}
+
+.paper-confirmation__badge--pending {
+  background: var(--notice-warning-surface);
+  color: var(--notice-warning);
+}
+
+.paper-confirmation__icon {
+  width: var(--paper-icon-md);
+  height: var(--paper-icon-md);
+}
+
+.paper-confirmation__message {
+  max-width: 30rem;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.paper-theme-wrapper .approval-notice-after {
+  margin-bottom: var(--space-lg);
+}
+
+/* --- The meeting's details --- */
+
+.paper-confirmation__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  background: var(--surface-subtle);
+}
+
+.paper-confirmation__meeting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.paper-confirmation__meeting-name {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.paper-confirmation__details .paper-facts {
+  color: var(--ink-1);
+}
+
+/* One centred run of text with the icon inline at its start, so a long
+   address wraps under the icon instead of leaving it at the card's edge. */
+.paper-confirmation__sent {
+  margin: 0 0 var(--space-lg);
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  text-align: center;
+}
+
+.paper-confirmation__sent strong {
+  color: var(--ink-1);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.paper-confirmation__sent-icon {
+  display: inline-block;
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  /* With the space after it in the markup, the gap the row had. */
+  margin-inline-end: var(--space-hairline);
+  vertical-align: -0.1875em;
+}
+
+/* The actions' labels run long in some languages ("Add tentative hold to
+   calendar"), so here a label wraps inside the card instead of running
+   out of it. */
+.paper-confirmation__actions .paper-button {
+  max-width: 100%;
+  padding-block: var(--space-xs);
+  line-height: var(--theme-line-height-snug);
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.paper-confirmation__help {
+  margin: var(--space-md) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-xs);
+  text-align: center;
+}
+
+/* --- The guest's answers (Shared.Components.CustomAnswers) --- */
+
+.paper-theme-wrapper .custom-answers {
+  margin: 0 0 var(--space-lg);
+}
+
+.paper-theme-wrapper .custom-answers__heading {
+  margin: 0 0 var(--space-xs);
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.paper-theme-wrapper .custom-answers__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.paper-theme-wrapper .custom-answers__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+/* The actions' divider follows the list, so the last row needs no line. */
+.paper-theme-wrapper .custom-answers__row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.paper-theme-wrapper .custom-answers__label {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}
+
+.paper-theme-wrapper .custom-answers__value {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+/* A narrow card: each answer under its question. */
+@container scheduling (max-width: 26rem) {
+  .paper-theme-wrapper .custom-answers__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3xs);
+  }
+}
+
+/* Under the details: the address is still to be arranged. */
+.paper-confirmation__details .paper-confirmation__note {
+  margin: var(--space-xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+}

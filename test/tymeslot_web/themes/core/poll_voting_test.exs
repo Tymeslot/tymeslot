@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
   @moduletag :unit
   @moduletag :polls
 
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
+
   alias Ecto.UUID
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Voting
@@ -157,6 +159,32 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert flash(updated, :info) =~ "saved"
       assert updated.assigns.tallies[slot.id].yes == 1
       assert %DateTime{} = updated.assigns.participant.voted_at
+    end
+
+    test "cast_votes with a rate-limited IP flashes without storing any vote" do
+      poll = insert(:poll)
+      slot = insert(:poll_time_slot, poll: poll)
+      participant = insert(:poll_participant, poll: poll)
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+
+      client_ip = "ratelimit-vote-#{System.unique_integer([:positive])}"
+      socket = socket(%{poll: poll, participant: participant, client_ip: client_ip})
+
+      exhaust_limit!(:poll_vote, client_ip)
+
+      assert {:noreply, updated} =
+               PollVoting.handle_poll_event(
+                 "cast_votes",
+                 %{"votes" => %{slot.id => "yes"}},
+                 socket
+               )
+
+      assert flash(updated, :error) =~ "Too many attempts"
+      refute flash(updated, :info)
+      assert Repo.reload!(participant).voted_at == nil
+
+      {:ok, reloaded} = Polls.get_poll_for_voting(poll.token)
+      assert Polls.tallies(reloaded)[slot.id].yes == 0
     end
 
     test "register with a rate-limited IP flashes without registering" do

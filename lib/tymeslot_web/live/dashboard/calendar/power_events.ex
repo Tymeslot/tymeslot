@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   @moduledoc """
   The one door the calendar surface's power layer comes through: display
-  options, and later the `.ics` import, calendar sets and the command bar.
+  options, the `.ics` import, calendar sets, the command bar and the preview's
+  undelivered-update notice.
   `CalendarSurface` routes every event in `events/0` to `handle/3`, which
   hands it to the module `@routes` names; each of those exposes the same
   `handle/3` and parses its params again, ignoring anything else.
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   alias TymeslotWeb.Dashboard.Calendar.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
   alias TymeslotWeb.Dashboard.Calendar.SetEvents
+  alias TymeslotWeb.Dashboard.Calendar.UndeliveredNotice
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -38,7 +40,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
     "calendar:save_set" => SetEvents,
     "calendar:delete_set" => SetEvents,
     "calendar:command_query" => CommandSearch,
-    "calendar:command_close" => CommandSearch
+    "calendar:command_close" => CommandSearch,
+    "calendar:dismiss_undelivered" => UndeliveredNotice
   }
 
   # The power layer's `start_async/3` work: the task's name, then the module

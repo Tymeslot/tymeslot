@@ -41,6 +41,10 @@ config :tymeslot,
   logo_links_to_marketing: false,
   legal_terms_url: nil,
   legal_privacy_url: nil,
+  # Per-instance fallbacks for organisers' booking pages, distinct from the
+  # instance operator's own policy URLs above.
+  booking_legal_notice_url: nil,
+  booking_privacy_policy_url: nil,
 
   # Navigation: Where the logo/home link points to
   site_home_path: "/dashboard",
@@ -228,6 +232,7 @@ config :tymeslot, :feature_assigns,
   custom_questions_allowed: true,
   group_bookings_allowed: true,
   analytics_allowed: true,
+  booking_pages_allowed: true,
   meeting_payments: false
 
 # Dashboard Feature Gates - Maps live_action atoms to feature flag assign keys.
@@ -347,7 +352,8 @@ config :tymeslot, :locales,
     %{code: "uk", name: "Українська", country_code: :ukr},
     %{code: "cs", name: "Čeština", country_code: :cze},
     %{code: "pl", name: "Polski", country_code: :pol},
-    %{code: "pt", name: "Português (Brasil)", country_code: :bra}
+    %{code: "pt", name: "Português (Brasil)", country_code: :bra},
+    %{code: "es", name: "Español", country_code: :esp}
   ],
   default: "en"
 
@@ -505,7 +511,7 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 # suite (test/tymeslot/timezones/iana_freshness_test.exs, run by the Excluded
 # suites workflow) fails once IANA publishes a release newer than this pin.
 config :tz, :data_dir, Path.expand("../priv/tz", __DIR__)
-config :tz, :iana_version, "2026e"
+config :tz, :iana_version, "2026f"
 
 # Authentication configuration
 config :tymeslot, :auth,

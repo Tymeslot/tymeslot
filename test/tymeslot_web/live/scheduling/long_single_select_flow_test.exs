@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Live.Scheduling.LongSingleSelectFlowTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.ThemeTestMatrix
 
   @question_id "cf-long-select"
@@ -53,21 +54,16 @@ defmodule TymeslotWeb.Live.Scheduling.LongSingleSelectFlowTest do
       test "keeps the chosen option through to the meeting", %{conn: conn} do
         profile = seed_organiser(unquote(theme.id), "long-select-#{unquote(theme.slug)}")
         view = navigate_to_booking_form(conn, profile, nil)
-
-        # Required: without the answer committed, "next" stays on the question.
-        view
-        |> form("#cq-form-#{@question_id}", %{"value" => "k3"})
-        |> render_change()
-
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
-
         email = "long-select.#{unquote(theme.slug)}@example.com"
 
-        view
-        |> form("form[phx-submit='submit']", %{
-          "booking" => %{"name" => "Select Booker", "email" => email, "message" => ""}
-        })
-        |> render_submit()
+        # Required: without the answer committed, the booking goes no further.
+        # The driver changes the select through its form, on the questions
+        # step or, on Paper, above the details form.
+        BookingDriver.book(view,
+          answers: %{@question_id => "k3"},
+          attendee: %{name: "Select Booker", email: email},
+          until: :submitted
+        )
 
         _drain = :sys.get_state(view.pid)
 

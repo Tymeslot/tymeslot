@@ -420,7 +420,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     # guard doesn't skip these as stale.
     test "deletes event" do
       %{meeting: meeting} = setup_calendar_scenario()
-      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
       uid = meeting.calendar_uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _id, _opts -> :ok end)
@@ -434,7 +434,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
     test "considers not_found as success for deletion (idempotent)" do
       %{integration: integration, meeting: meeting} = setup_calendar_scenario()
-      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
       uid = meeting.calendar_uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, meeting, _opts ->

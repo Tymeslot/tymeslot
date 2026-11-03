@@ -13,9 +13,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DeliveryCompositionTest do
       reshape between producer (`CalendarScheduler.schedule_event_update_notification/1`)
       and consumer (`Email.IntegrationEmails.handle_event_update_notification/2`)
       surfaces here.
-    * the **inner** handler's partial-delivery branch, which returns
-      `{:discard, "Partial delivery failure: N of M failed"}` when any
-      recipient's send fails — a shape nothing else in the suite locks in.
+    * the **inner** handler's partial-delivery branch, which retries the job
+      when any recipient's send fails and records that recipient on the event
+      for the organiser.
   """
 
   use Tymeslot.DataCase, async: false
@@ -27,6 +27,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DeliveryCompositionTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.AttendeeNotifications.Worker, as: AttendeeWorker
@@ -107,7 +108,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DeliveryCompositionTest do
   end
 
   describe "inner EmailWorker — partial delivery failure" do
-    test "discards with 'Partial delivery failure: X of N' when any recipient send fails" do
+    test "retries the job and records the guest when any recipient send fails" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
@@ -127,7 +128,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DeliveryCompositionTest do
         end
       end)
 
-      assert {:discard, message} =
+      assert {:error, _reason} =
                perform_job(EmailWorker, %{
                  "action" => "send_event_update_notification",
                  "user_id" => user.id,
@@ -147,7 +148,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DeliveryCompositionTest do
                  "sequence" => 2
                })
 
-      assert message == "Partial delivery failure: 1 of 3 failed"
+      assert UndeliveredUpdates.list_for_event(user.id, integration.id, event.uid) ==
+               ["b@example.com"]
     end
 
     test "returns :ok when every recipient's send succeeds" do

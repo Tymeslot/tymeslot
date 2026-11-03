@@ -46,12 +46,12 @@ defmodule Tymeslot.CursorPaginationTestCases do
                                 %{user: user} = create_user_with_profile()
 
                                 insert_meeting_for_user(user)
-                                insert_meeting_for_user(user, %{status: "cancelled"})
+                                insert_meeting_for_user(user, %{status: :cancelled})
 
-                                assert {:ok, page} = fetch_cursor_page(user, status: "confirmed")
+                                assert {:ok, page} = fetch_cursor_page(user, status: :confirmed)
 
                                 assert length(page.items) == 1
-                                assert hd(page.items).status == "confirmed"
+                                assert hd(page.items).status == :confirmed
                               end
 
                               test "returns error for invalid cursor" do

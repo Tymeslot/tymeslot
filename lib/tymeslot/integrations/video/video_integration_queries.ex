@@ -131,16 +131,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
           | {:error, :not_found}
           | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
   def get(id) do
-    case Repo.get(VideoIntegrationSchema, id) do
-      nil ->
-        {:error, :not_found}
-
-      integration ->
-        case VideoIntegrationSchema.decryption_status(integration) do
-          :ok -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
-          :requires_reencryption -> {:error, :requires_reencryption, integration}
-        end
-    end
+    VideoIntegrationSchema
+    |> Repo.get(id)
+    |> fetch_decrypted()
   end
 
   @doc """
@@ -168,7 +161,8 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   def get_for_user(id, user_id) do
     VideoIntegrationSchema
     |> where([v], v.id == ^id and v.user_id == ^user_id)
-    |> one_decrypted()
+    |> Repo.one()
+    |> fetch_decrypted()
   end
 
   @doc "As `get_for_user/2`, but a disconnected (soft-deleted) integration is not found."
@@ -180,21 +174,26 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     VideoIntegrationSchema
     |> where([v], v.id == ^id and v.user_id == ^user_id)
     |> exclude_deleted()
-    |> one_decrypted()
+    |> Repo.one()
+    |> fetch_decrypted()
   end
 
-  defp one_decrypted(query) do
-    case Repo.one(query) do
-      nil ->
-        {:error, :not_found}
+  # The three-outcome lookup shape of `get/1`, `get_for_user/2` and
+  # `get_live_for_user/2`.
+  defp fetch_decrypted(nil), do: {:error, :not_found}
 
-      integration ->
-        case VideoIntegrationSchema.decryption_status(integration) do
-          :ok -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
-          :requires_reencryption -> {:error, :requires_reencryption, integration}
-        end
+  defp fetch_decrypted(integration) do
+    case VideoIntegrationSchema.decryption_status(integration) do
+      :ok -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+      :requires_reencryption -> {:error, :requires_reencryption, integration}
     end
   end
+
+  # The two-outcome lookup shape of the provider and account lookups.
+  defp fetch_found(nil), do: {:error, :not_found}
+
+  defp fetch_found(integration),
+    do: {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
 
   @doc """
   Gets an active video integration by provider for a specific user.
@@ -203,17 +202,12 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @spec get_by_provider_for_user(integer(), String.t()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
   def get_by_provider_for_user(user_id, provider) do
-    result =
-      VideoIntegrationSchema
-      |> exclude_deleted()
-      |> where([v], v.user_id == ^user_id and v.provider == ^provider and v.is_active == true)
-      |> limit(1)
-      |> Repo.one()
-
-    case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
-    end
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where([v], v.user_id == ^user_id and v.provider == ^provider and v.is_active == true)
+    |> limit(1)
+    |> Repo.one()
+    |> fetch_found()
   end
 
   @doc """
@@ -223,23 +217,18 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
           {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
   def get_by_account_for_user(user_id, provider, provider_account_id)
       when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
-    result =
-      VideoIntegrationSchema
-      |> exclude_deleted()
-      |> where(
-        [v],
-        v.user_id == ^user_id and
-          v.provider == ^provider and
-          v.provider_account_id == ^provider_account_id and
-          v.is_active == true
-      )
-      |> limit(1)
-      |> Repo.one()
-
-    case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
-    end
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where(
+      [v],
+      v.user_id == ^user_id and
+        v.provider == ^provider and
+        v.provider_account_id == ^provider_account_id and
+        v.is_active == true
+    )
+    |> limit(1)
+    |> Repo.one()
+    |> fetch_found()
   end
 
   # Finds an active video integration for a user and provider whose
@@ -257,13 +246,8 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     )
     |> limit(1)
     |> Repo.one()
-    |> null_account_result()
+    |> fetch_found()
   end
-
-  defp null_account_result(nil), do: {:error, :not_found}
-
-  defp null_account_result(integration),
-    do: {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
 
   @doc """
   Finds any video integration (active or inactive) by provider and account ID for a user.
@@ -273,23 +257,18 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
           {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
   def get_any_by_account_for_user(user_id, provider, provider_account_id)
       when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
-    result =
-      VideoIntegrationSchema
-      |> exclude_deleted()
-      |> where(
-        [v],
-        v.user_id == ^user_id and
-          v.provider == ^provider and
-          v.provider_account_id == ^provider_account_id
-      )
-      |> order_by([v], desc: v.is_active)
-      |> limit(1)
-      |> Repo.one()
-
-    case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
-    end
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where(
+      [v],
+      v.user_id == ^user_id and
+        v.provider == ^provider and
+        v.provider_account_id == ^provider_account_id
+    )
+    |> order_by([v], desc: v.is_active)
+    |> limit(1)
+    |> Repo.one()
+    |> fetch_found()
   end
 
   @doc """

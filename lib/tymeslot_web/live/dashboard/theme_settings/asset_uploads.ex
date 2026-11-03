@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   alias Tymeslot.ThemeCustomizations
   alias TymeslotWeb.Helpers.ImageUploadErrors
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @doc """
   Declares an upload input for each asset field the theme's spec lists
@@ -103,22 +104,17 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   end
 
   defp rate_limited(socket, fun) do
-    user_id = socket.assigns.profile.user_id
-
-    case RateLimiter.check(:theme_upload, user_id) do
-      :ok ->
-        fun.()
-
-      {:error, :rate_limited, _message} ->
-        Flash.error(
-          dgettext(
-            "dashboard_appearance",
-            "Too many upload attempts. Please wait a few minutes and try again."
-          )
-        )
-
-        socket
-    end
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:theme_upload, socket.assigns.profile.user_id),
+      socket,
+      fun,
+      message:
+        dgettext(
+          "dashboard_appearance",
+          "Too many upload attempts. Please wait a few minutes and try again."
+        ),
+      reply: :socket
+    )
   end
 
   defp progress_callback(component, field) do
@@ -141,10 +137,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
     results =
       consume_uploaded_entries(socket, field, fn %{path: path}, entry ->
         {:ok,
-         ThemeCustomizations.attach_asset(profile.id, theme_id, field, %{
-           path: path,
-           filename: entry.client_name
-         })}
+         ThemeCustomizations.attach_asset(
+           ThemeCustomizations.scope_for(profile),
+           theme_id,
+           field,
+           %{
+             path: path,
+             filename: entry.client_name
+           }
+         )}
       end)
 
     case results do

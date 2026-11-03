@@ -37,5 +37,16 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabelsTest do
     test "keeps the request labels the voice does not word" do
       assert BookingLabels.submit_label(false, @gated, "Book", :fixture) == "Request meeting"
     end
+
+    test "names the payment that follows on a paid meeting type" do
+      paid = %{requires_approval: false, payment_required: true}
+
+      assert BookingLabels.submit_label(false, paid, "Book") == "Continue to payment"
+      # A request is still a request, and a move is not paid again.
+      assert BookingLabels.submit_label(false, %{paid | requires_approval: true}, "Book") ==
+               "Request meeting"
+
+      assert BookingLabels.submit_label(true, paid, "Book") == "Reschedule Meeting"
+    end
   end
 end

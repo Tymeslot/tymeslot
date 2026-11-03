@@ -20,6 +20,12 @@ defmodule Tymeslot.Availability.SlotGrid do
   For a same-day window that touches no other, this is exactly the grid the
   engine offered before overnight windows: same anchor, same steps, and
   "fits inside available time" is "inside the window, overlapping no break".
+
+  A config carrying `:offered_starts` (a one-to-one type with fixed dates,
+  `Tymeslot.MeetingTypes.OfferedTimes`) replaces steps 2 to 4 and 6: the
+  candidates are those exact instants, and the weekly hours, date overrides,
+  extra times and breaks play no part. Step 5 applies unchanged, and time
+  off still closes a start whose meeting would overlap it.
   """
 
   alias Tymeslot.Availability.{BusinessHours, Calculate, Intervals, TimeSlots}
@@ -70,21 +76,52 @@ defmodule Tymeslot.Availability.SlotGrid do
           owner_date(reach, owner_timezone)
         )
 
-      windows = BusinessHours.owner_windows(dates, schedule_id, owner_timezone, config)
       time_off = BusinessHours.time_off_intervals(dates, schedule_id, owner_timezone, config)
-      free = available_time(windows, time_off)
-      interval = Map.get(config, :slot_interval_minutes)
+      day = {day_start, next_day_start}
 
       starts =
-        windows
-        |> candidates({day_start, next_day_start}, duration_minutes, interval, owner_timezone)
-        |> listed_on(date, user_timezone)
-        |> Stream.filter(
-          &Intervals.covers?(free, &1, DateTime.add(&1, duration_minutes, :minute))
-        )
+        case Map.get(config, :offered_starts) do
+          offered when is_list(offered) ->
+            offered_starts(offered, day, date, user_timezone, duration_minutes, time_off)
+
+          nil ->
+            windows = BusinessHours.owner_windows(dates, schedule_id, owner_timezone, config)
+            free = available_time(windows, time_off)
+            interval = Map.get(config, :slot_interval_minutes)
+
+            windows
+            |> candidates(day, duration_minutes, interval, owner_timezone)
+            |> listed_on(date, user_timezone)
+            |> Stream.filter(&fits?(free, &1, duration_minutes))
+        end
 
       {:ok, starts}
     end
+  end
+
+  # The host's listed starts that fall within the booker's day, under the
+  # same listing rule as a schedule's, less those whose meeting would run
+  # into time off.
+  defp offered_starts(offered, day, date, user_timezone, duration_minutes, time_off) do
+    offered
+    |> Enum.filter(&within?(&1, day))
+    |> Enum.sort(DateTime)
+    |> listed_on(date, user_timezone)
+    |> Stream.reject(&overlaps_any?(time_off, &1, DateTime.add(&1, duration_minutes, :minute)))
+  end
+
+  defp fits?(free, start, duration_minutes),
+    do: Intervals.covers?(free, start, DateTime.add(start, duration_minutes, :minute))
+
+  defp within?(instant, {day_start, next_day_start}),
+    do:
+      DateTime.compare(instant, day_start) != :lt and
+        DateTime.compare(instant, next_day_start) == :lt
+
+  defp overlaps_any?(intervals, from, to) do
+    Enum.any?(intervals, fn {start, stop} ->
+      DateTime.compare(start, to) == :lt and DateTime.compare(from, stop) == :lt
+    end)
   end
 
   # A break blocks clock time for every weekly window, not only its own, but

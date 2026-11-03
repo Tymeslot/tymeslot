@@ -2,6 +2,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
   @moduledoc """
   The dashboard panel for an `Options.Palette` group: the group's preset
   schemes and a custom seed colour.
+
+  In a `follow_os` group (Paper's) a scheme with a dark set is drawn as a
+  small page in its light set beside the same page in its dark set, since
+  the visitor may see either; any other scheme is drawn as dots of its
+  colours.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -22,23 +27,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
     ~H"""
     <.card
       title={dgettext("dashboard_appearance", "Colour Palette")}
-      description={
-        dgettext(
-          "dashboard_appearance",
-          "Select the primary colours for your booking page interface."
-        )
-      }
+      description={description(@group)}
     >
       <:actions>
         <% current_scheme = Palette.resolve(@customization.settings, @group) %>
         <% custom_selected = not is_nil(@customization.settings["custom_palette_seed"]) %>
         <%= if current_scheme do %>
           <.current_indicator
-            swatches={
-              if custom_selected,
-                do: primary_swatches(current_scheme),
-                else: swatches(current_scheme, @group)
-            }
+            swatches={primary_swatches(current_scheme)}
             label={scheme_name(current_scheme)}
             code={
               if custom_selected,
@@ -98,8 +94,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
             phx-value-choice={scheme_id}
             phx-target={@myself}
           >
-            <% backing = swatch_backing(scheme, @group) %>
+            <.tone_preview :if={tone?(scheme, @group)} scheme={scheme} />
+            <% backing = swatch_backing(scheme) %>
             <div
+              :if={not tone?(scheme, @group)}
               class={[
                 "flex items-center gap-2 mb-4 p-2 rounded-token-xl group-hover/scheme:scale-110 transition-transform",
                 if(backing, do: "ring-1 ring-tymeslot-100", else: "bg-tymeslot-50/50")
@@ -108,7 +106,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
               data-testid="scheme-swatches"
             >
               <div
-                :for={colour <- swatches(scheme, @group)}
+                :for={colour <- primary_swatches(scheme)}
                 class="w-6 h-6 rounded-token-full shadow-sm border border-white"
                 style={"background-color: #{colour}"}
               >
@@ -148,6 +146,59 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
     """
   end
 
+  attr :scheme, :map, required: true
+
+  # A scheme as a page: its ground, a card on it, a line of text and a button
+  # in its primary, in the light set on the left and the dark set on the right.
+  defp tone_preview(assigns) do
+    ~H"""
+    <div
+      class="flex w-full h-20 mb-4 rounded-token-xl overflow-hidden ring-1 ring-tymeslot-100 group-hover/scheme:scale-105 transition-transform"
+      data-testid="tone-preview"
+      aria-hidden="true"
+    >
+      <div
+        :for={colours <- [@scheme.colors, @scheme.dark_colors]}
+        class="flex-1 p-2.5"
+        style={"background-color: #{colours.background}"}
+      >
+        <div
+          class="h-full rounded-token-md p-2 flex flex-col justify-center gap-1.5"
+          style={"background-color: #{colours.surface}"}
+        >
+          <div class="h-1.5 w-3/4 rounded-token-full" style={"background-color: #{colours.text}"}>
+          </div>
+          <div
+            class="h-1.5 w-1/2 rounded-token-full"
+            style={"background-color: #{colours.text_secondary}"}
+          >
+          </div>
+          <div class="h-2.5 w-2/3 rounded-token-sm" style={"background-color: #{colours.primary}"}>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  # A scheme without `dark_colors` falls back to the dots.
+  defp tone?(scheme, group),
+    do: Map.get(group, :follow_os, false) and Map.has_key?(scheme, :dark_colors)
+
+  defp description(group) do
+    if Map.get(group, :follow_os, false),
+      do:
+        dgettext(
+          "dashboard_appearance",
+          "The colours of your booking page, shown here light and dark. Colour Mode decides which one visitors see."
+        ),
+      else:
+        dgettext(
+          "dashboard_appearance",
+          "Select the primary colours for your booking page interface."
+        )
+  end
+
   # The seed picker is open exactly while a seed drives the palette, both on
   # load and after a save: choosing a scheme drops the seed and closes it.
   @impl Panel
@@ -173,22 +224,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
   def telemetry(_group, _field, value),
     do: {:color_scheme_changed, "color_scheme", %{scheme_id: value}}
 
-  # The three dots drawn for a scheme. The tones of a `follow_os` group share
-  # one primary family by design, so their primary, secondary and accent look
-  # the same; they differ in their grounds, so a tone shows its light ground,
-  # its secondary text and its dark ground. Any other scheme (and a tone
-  # without `dark_colors`) shows its primary, secondary and accent.
-  defp swatches(%{colors: colors, dark_colors: %{background: dark_background}}, %{follow_os: true}),
-       do: [colors.background, colors.text_secondary, dark_background]
-
-  defp swatches(scheme, _group), do: primary_swatches(scheme)
-
-  # The ground a scheme card's dots sit on. A tone's swatches already show its
-  # grounds, so it keeps the panel's neutral backing; any other scheme's dots
-  # sit on its own background, so a dark scheme reads dark.
-  defp swatch_backing(%{dark_colors: %{background: _dark}}, %{follow_os: true}), do: nil
-  defp swatch_backing(%{colors: %{background: background}}, _group), do: background
-  defp swatch_backing(_scheme, _group), do: nil
+  # The ground a scheme card's dots sit on: the scheme's own background, so a
+  # dark scheme reads dark.
+  defp swatch_backing(%{colors: %{background: background}}), do: background
+  defp swatch_backing(_scheme), do: nil
 
   # No `style` attribute at all without a backing, rather than the empty one
   # HEEx renders for `style={nil}`.
@@ -198,8 +237,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
   defp primary_swatches(%{colors: colors}),
     do: [colors.primary, colors.secondary, colors.accent]
 
-  # A tone's name is registered for extraction in `Presets.ColourSchemes`;
-  # the older schemes' names have no entry and come back as they are.
+  # The presets' names (every theme's, Paper's palettes sharing Quill and
+  # Rhythm's) and a seed's "Custom" all have `dashboard_appearance` entries.
   defp scheme_name(%{name: name}),
     do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_appearance", name)
 end

@@ -100,7 +100,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   @doc "Reads a guest's RSVP status as it stands now; `nil` when the guest is gone."
-  @spec get_status(Guest.t()) :: String.t() | nil
+  @spec get_status(Guest.t()) :: Guest.status() | nil
   def get_status(%Guest{id: id}) do
     Guest
     |> where([g], g.id == ^id)
@@ -192,7 +192,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
       |> where([g], g.meeting_id == ^meeting_id)
       |> Repo.update_all(
         set: [
-          status: "pending",
+          status: :pending,
           responded_at: nil,
           reminders_sent: nil,
           updated_at: DateTime.utc_now(:second)
@@ -213,10 +213,10 @@ defmodule Tymeslot.Meetings.GuestQueries do
   def reset_for_moved_session(meeting_id) do
     {count, _rows} =
       Guest
-      |> where([g], g.meeting_id == ^meeting_id and g.status != "declined")
+      |> where([g], g.meeting_id == ^meeting_id and g.status != :declined)
       |> Repo.update_all(
         set: [
-          status: "pending",
+          status: :pending,
           responded_at: nil,
           reminders_sent: nil,
           updated_at: DateTime.utc_now(:second)
@@ -285,7 +285,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> where([g], g.meeting_id == ^meeting_id)
     |> live_owner()
     |> where([g], not is_nil(g.confirmation_sent_at))
-    |> where([g], g.status != "declined")
+    |> where([g], g.status != :declined)
     |> order_by([g], asc: g.inserted_at, asc: g.email)
     |> Repo.all()
     |> Enum.reject(&reminder_sent?(&1, value, unit))

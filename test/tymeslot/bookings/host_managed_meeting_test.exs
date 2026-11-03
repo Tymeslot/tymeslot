@@ -34,7 +34,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
         organizer_user: user,
         organizer_email: user.email,
         attendee_email: "ada@example.com",
-        status: "confirmed",
+        status: :confirmed,
         managed_by_host: true,
         meeting_type_id: nil,
         organizer_email_sent: false,
@@ -108,7 +108,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     test "a cancellation goes to the host and the guests", ctx do
       Repo.update!(
         Changeset.change(ctx.meeting,
-          status: "cancelled",
+          status: :cancelled,
           first_announced_at: DateTime.utc_now(:second)
         )
       )
@@ -155,7 +155,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     test "moves the meeting, keeping its length, and tells the host and every guest", ctx do
       Repo.update_all(
         from(g in GuestSchema, where: g.meeting_id == ^ctx.meeting.id),
-        set: [status: "accepted"]
+        set: [status: :accepted]
       )
 
       new_start = DateTime.add(ctx.meeting.start_time, 2, :day)
@@ -188,7 +188,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
       # Everyone is asked again whether they can come.
       assert ctx.meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.status) ==
-               ["pending", "pending"]
+               [:pending, :pending]
     end
 
     test "refuses a time the host already has another meeting at", ctx do
@@ -197,7 +197,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       insert(:meeting,
         organizer_user: ctx.user,
         organizer_email: ctx.user.email,
-        status: "confirmed",
+        status: :confirmed,
         start_time: new_start,
         end_time: DateTime.add(new_start, 30, :minute)
       )
@@ -215,7 +215,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       insert(:meeting,
         organizer_user: ctx.user,
         organizer_email: ctx.user.email,
-        status: "confirmed",
+        status: :confirmed,
         start_time: DateTime.new!(day, ~T[09:00:00], "Etc/UTC"),
         end_time: DateTime.new!(day, ~T[10:00:00], "Etc/UTC")
       )
@@ -240,7 +240,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
         insert(:meeting,
           organizer_user: ctx.user,
           organizer_email: ctx.user.email,
-          status: "confirmed",
+          status: :confirmed,
           start_time: other_start,
           end_time: DateTime.add(other_start, 30, :minute)
         )
@@ -289,7 +289,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     test "refuses the time it already has, so nobody is told of a move or asked again", ctx do
       Repo.update_all(
         from(g in GuestSchema, where: g.meeting_id == ^ctx.meeting.id),
-        set: [status: "accepted"]
+        set: [status: :accepted]
       )
 
       assert {:error, :same_time} =
@@ -300,7 +300,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       assert Repo.get!(MeetingSchema, ctx.meeting.id).ical_sequence == ctx.meeting.ical_sequence
 
       assert ctx.meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.status) ==
-               ["accepted", "accepted"]
+               [:accepted, :accepted]
     end
 
     test "is not for a meeting with a booker, who moves it themselves", ctx do

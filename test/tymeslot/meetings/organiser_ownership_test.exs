@@ -89,7 +89,7 @@ defmodule Tymeslot.Meetings.OrganiserOwnershipTest do
     test "can still open and cancel them", %{host: host, meeting: meeting} do
       assert {:ok, _meeting} = Meetings.get_meeting_for_organizer(meeting.id, host.id)
       assert {:ok, cancelled} = Meetings.cancel_meeting_with_refund(meeting, host.id, :none)
-      assert cancelled.status == "cancelled"
+      assert cancelled.status == :cancelled
     end
   end
 
@@ -113,7 +113,7 @@ defmodule Tymeslot.Meetings.OrganiserOwnershipTest do
       assert {:error, :not_found} =
                Meetings.cancel_meeting_with_refund(meeting, claimant.id, :none)
 
-      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
     end
   end
 
@@ -146,14 +146,14 @@ defmodule Tymeslot.Meetings.OrganiserOwnershipTest do
       assert {:error, :not_found} =
                Meetings.cancel_meeting_with_refund(booked_on, attendee.id, :none)
 
-      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(booked_on.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(booked_on.id)
     end
   end
 
   describe "cancelling with no acting user" do
     test "is refused", %{meeting: meeting} do
       assert {:error, :not_found} = Meetings.cancel_meeting_with_refund(meeting, nil, :none)
-      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
     end
   end
 end

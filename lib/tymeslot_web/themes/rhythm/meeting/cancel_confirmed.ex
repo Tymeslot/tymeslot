@@ -11,8 +11,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
   attr :theme_tokens, :any, required: true
+  attr :meeting, :map, default: nil, doc: "the cancelled meeting"
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :legal_links, :map, required: true
 
   @doc """
   Renders the cancel confirmed page in Rhythm theme style.
@@ -24,9 +26,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      legal_links={@legal_links}
       show_language_switcher={true}
     >
-      <div class="scheduling-box booker-card">
+      <div class="scheduling-box booker-card" data-testid="rhythm-cancel-confirmed">
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">
@@ -41,6 +44,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                   <h1 class="confirmation-headline">
                     {dgettext("booking_manage", "Meeting Cancelled")}
                   </h1>
+                  <p
+                    :if={assigns[:meeting] && @meeting.meeting_type not in [nil, ""]}
+                    class="confirmation-subject"
+                    data-testid="chosen-meeting-type"
+                  >
+                    {@meeting.meeting_type}
+                  </p>
 
                   <p class="confirmation-message">
                     {dgettext("booking_manage", "Your meeting has been successfully cancelled.")}

@@ -56,7 +56,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       account = ConnectAccountQueries.live_for_user(user.id)
       assert account.stripe_account_id == "acct_TEST_123"
       assert account.default_currency == "chf"
-      assert account.status == "active"
+      assert account.status == :active
       assert_received {:idempotency_key, key}
       assert key == "connect_account:#{account.id}"
     end
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       end)
 
       account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.status == "creating"
+      assert account.status == :creating
       assert account.default_currency == nil
     end
 
@@ -215,7 +215,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       # Row must still exist in "creating" state — not left in "active" with a
       # stripe_account_id set, since the link never succeeded.
       account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.status == "creating"
+      assert account.status == :creating
       assert is_nil(account.stripe_account_id)
     end
   end
@@ -248,11 +248,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         insert(:booking_payment,
           host_user_id: user.id,
           stripe_checkout_session_id: "cs_race_test",
-          status: "pending"
+          status: :pending
         )
 
       # Simulate the concurrent webhook arriving: flip the row to "paid" directly.
-      {:ok, _updated} = BookingPaymentQueries.update(payment, %{status: "paid"})
+      {:ok, _updated} = BookingPaymentQueries.update(payment, %{status: :paid})
 
       # disconnect/1 pre-fetches the payment as "pending" (it was pending when
       # list_pending_for_host ran), but inside the transaction the conditional
@@ -265,7 +265,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       # The payment row must still be "paid" — not "failed".
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
     end
 
     # A row that no longer passes the full meeting validation (here a solo
@@ -274,7 +274,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     test "expires a pending booking's meeting whose other fields no longer pass validation" do
       user = insert(:user)
       {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-      meeting = insert(:meeting, status: "awaiting_payment", organizer_user_id: user.id)
+      meeting = insert(:meeting, status: :awaiting_payment, organizer_user_id: user.id)
 
       Repo.update_all(from(m in Meeting, where: m.id == ^meeting.id), set: [attendee_name: nil])
 
@@ -282,13 +282,13 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         host_user_id: user.id,
         meeting: meeting,
         stripe_checkout_session_id: "cs_LEGACY",
-        status: "pending"
+        status: :pending
       )
 
       stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
 
       assert {:ok, %{cancelled_count: 1}} = ConnectAccounts.disconnect(user)
-      assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     end
 
     # Disconnecting neither settles nor cancels a refund the host already owes;
@@ -299,14 +299,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       user = insert(:user)
       {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
 
-      meeting = insert(:meeting, status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      meeting = insert(:meeting, status: :cancelled, cancelled_at: DateTime.utc_now(:second))
       payment = insert(:paid_booking_payment, host_user_id: user.id, meeting: meeting)
 
       assert {:ok, %{outstanding_refunds_count: 1}} = ConnectAccounts.disconnect(user)
 
       # Untouched: still owed, still unrefunded, just no longer refundable here.
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
     end
 
@@ -316,7 +316,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       insert(:paid_booking_payment,
         host_user_id: user.id,
-        meeting: insert(:meeting, status: "confirmed")
+        meeting: insert(:meeting, status: :confirmed)
       )
 
       assert {:ok, %{outstanding_refunds_count: 0}} = ConnectAccounts.disconnect(user)
@@ -331,7 +331,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_EVENT",
-          status: "active"
+          status: :active
         })
 
       stripe_account = %{
@@ -357,7 +357,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_REJECTED",
-          status: "active"
+          status: :active
         })
 
       stripe_account = %{
@@ -397,7 +397,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_RESTRICT",
-          status: "active",
+          status: :active,
           disabled_reason: nil
         })
 
@@ -431,7 +431,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_UNSUBMITTED",
-          status: "active",
+          status: :active,
           disabled_reason: nil
         })
 
@@ -457,7 +457,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_SAME",
-          status: "active",
+          status: :active,
           disabled_reason: "requirements.past_due"
         })
 
@@ -481,7 +481,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_CHANGE",
-          status: "active",
+          status: :active,
           disabled_reason: "requirements.past_due"
         })
 
@@ -511,7 +511,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_CLEAR",
-          status: "active",
+          status: :active,
           disabled_reason: "requirements.past_due"
         })
 
@@ -537,7 +537,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_OOO",
-          status: "active",
+          status: :active,
           charges_enabled: true,
           last_account_event_at: now
         })
@@ -565,7 +565,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_REPLAY",
-          status: "active",
+          status: :active,
           disabled_reason: nil
         })
 
@@ -598,7 +598,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       {:ok, _updated} =
         ConnectAccountQueries.update(account, %{
           stripe_account_id: "acct_DELETED",
-          status: "active",
+          status: :active,
           charges_enabled: true
         })
 

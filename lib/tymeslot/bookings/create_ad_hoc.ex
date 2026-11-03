@@ -201,7 +201,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       # missing or unsupported choice falls back to the booking default.
       attendee_locale:
         Locales.acceptable(params[:attendee_locale]) || Locales.booking_default_locale(),
-      status: "confirmed",
+      status: :confirmed,
       managed_by_host: params[:managed_by_host] == true,
       meeting_url: nil
     })

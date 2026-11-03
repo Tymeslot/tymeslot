@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
   @moduledoc """
   A meeting type can offer several lengths. The booker then picks one in a
-  step of its own, between the meeting type and the calendar, in both themes;
-  a type with one length never shows that step.
+  step of its own, between the meeting type and the calendar, in Quill and
+  Rhythm; a type with one length never shows that step.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
       start_time: start,
       end_time: DateTime.add(start, 60, :minute),
       duration: 60,
-      status: "confirmed"
+      status: :confirmed
     )
   end
 
@@ -103,11 +103,9 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
         # The overview card shows the span rather than one length.
         assert html =~ "15–60 min"
 
-        view
-        |> element("button[data-testid='duration-option'][data-duration='quick-chat']")
-        |> render_click()
-
-        view |> element("button[data-testid='next-step']") |> render_click()
+        # Choosing the type is the way on: the overview has no Next.
+        BookingDriver.choose_meeting_type(view, "quick-chat")
+        BookingDriver.continue(view)
 
         assert has_element?(view, "[data-testid='length-step']")
         assert length_options(view) == ["15", "30", "60"]
@@ -284,11 +282,9 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
 
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
 
-        view
-        |> element("button[data-testid='duration-option'][data-duration='quick-chat']")
-        |> render_click()
-
-        view |> element("button[data-testid='next-step']") |> render_click()
+        # Choosing the type is the way on: the overview has no Next.
+        BookingDriver.choose_meeting_type(view, "quick-chat")
+        BookingDriver.continue(view)
 
         refute has_element?(view, "[data-testid='length-step']")
       end
@@ -309,17 +305,15 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
             start_time: start,
             end_time: DateTime.add(start, 60, :minute),
             duration: 60,
-            status: "confirmed"
+            status: :confirmed
           )
 
         {:ok, view, _html} =
           live(conn, ~p"/#{profile.username}?reschedule_meeting_uid=#{meeting.uid}")
 
-        view
-        |> element("button[data-testid='duration-option'][data-duration='quick-chat']")
-        |> render_click()
-
-        view |> element("button[data-testid='next-step']") |> render_click()
+        # Choosing the type is the way on: the overview has no Next.
+        BookingDriver.choose_meeting_type(view, "quick-chat")
+        BookingDriver.continue(view)
 
         refute has_element?(view, "[data-testid='length-step']")
         assert render(view) =~ "1 hour"

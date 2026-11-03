@@ -226,7 +226,7 @@ span.tz-picker__option-flag {
 @container scheduling (max-width: 479px) {
   /* Duration grid - single column on mobile */
   .duration-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-xs);
     margin-top: var(--space-sm);
   }
@@ -280,7 +280,7 @@ span.tz-picker__option-flag {
 @media (max-height: 600px) {
   :where(html:not([data-embedded])) {
     .duration-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       margin-top: var(--space-sm);
     }
 

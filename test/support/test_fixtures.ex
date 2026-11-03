@@ -36,7 +36,7 @@ defmodule Tymeslot.TestFixtures do
       duration: duration,
       start_time: start_time,
       end_time: end_time,
-      status: "confirmed",
+      status: :confirmed,
       video_room_id: "test-room",
       organizer_video_url: "https://test.mirotalk.com/join/test-room?role=organizer",
       attendee_video_url: "https://test.mirotalk.com/join/test-room?role=attendee",

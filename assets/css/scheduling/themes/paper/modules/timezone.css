@@ -1,0 +1,100 @@
+/* The timezone picker (shared/components/timezone-picker.css): an outlined
+   control above the calendar in the month view and in the header in the
+   week view, opening a panel on the card. The trigger's
+   content is Paper's (flag, zone name, chevron). */
+
+.paper-timezone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.paper-timezone__label {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-timezone .tz-picker {
+  width: min(100%, 20rem);
+}
+
+.paper-timezone .tz-picker__trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  box-sizing: border-box;
+  min-height: var(--paper-control-height);
+  padding: 0 var(--space-sm);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  font: inherit;
+  font-size: var(--theme-font-size-sm);
+  text-align: left;
+}
+
+.paper-timezone .tz-picker__trigger:hover {
+  background: var(--surface-subtle);
+}
+
+.paper-tz__flag {
+  flex-shrink: 0;
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  border-radius: var(--space-hairline);
+  object-fit: cover;
+}
+
+.paper-tz__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paper-tz__chevron {
+  flex-shrink: 0;
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  color: var(--ink-2);
+}
+
+.paper-timezone .tz-picker__panel {
+  right: auto;
+  left: 0;
+  width: min(22rem, 90vw);
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: min(var(--radius-card), var(--paper-radius-box));
+  box-shadow: var(--paper-panel-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.paper-timezone .tz-picker__search {
+  border-color: var(--paper-control-line);
+  border-radius: var(--radius-control);
+  background: var(--theme-surface);
+  color: var(--ink-1);
+}
+
+/* The rule above resets the shared focus border, so the focus treatment of
+   Paper's other inputs comes back here. */
+.paper-timezone .tz-picker__search:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* The panel clips and scrolls its list, so an option's focus ring sits
+   inside the option instead of around it. */
+.paper-timezone .tz-picker__option:focus-visible {
+  outline-offset: calc(-2 * var(--border-width-medium));
+}
+
+.paper-timezone .tz-picker__option-offset {
+  font-variant-numeric: tabular-nums;
+}

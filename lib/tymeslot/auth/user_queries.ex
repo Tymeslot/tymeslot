@@ -12,6 +12,8 @@ defmodule Tymeslot.Auth.UserQueries do
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
   @doc """
@@ -172,27 +174,62 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Lists up to `limit` abandoned sign-ups: password accounts still unverified
-  and signed up before `cutoff`, oldest first.
+  Lists up to `limit` abandoned sign-ups: accounts still unverified and
+  signed up before `cutoff`, oldest first, leaving out the ids in
+  `excluded_ids` (accounts the deployment protects from the purge, such as
+  paying subscribers), so a protected account never takes a place in the
+  batch.
 
   An account sent a verification link since `cutoff` is left out, so a link
-  its owner asked for recently still works when it is followed. So is any
-  account that is evidently in use: an admin, one that has had a session or
-  finished onboarding, and every social account. A social sign-in only
-  creates an account with a provider-vouched, already verified email, so an
-  unverified social account predates that rule and was signed in to.
+  its owner asked for recently still works when it is followed. So is an
+  admin, and so is an account with a meeting still to come that nobody has
+  cancelled: its booking page took that booking from a guest, so it goes only
+  once the meeting is over. Nothing else is spared: no route gives an
+  unverified account a session (a sign-in either verifies it, when a provider
+  vouches for the email, or is refused and sent a fresh link), so one used
+  under older rules is as locked out as one never used.
   """
-  @spec list_stale_unverified_users(DateTime.t(), pos_integer()) :: [UserSchema.t()]
-  def list_stale_unverified_users(%DateTime{} = cutoff, limit) do
-    UserSchema
-    |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
-    |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
-    |> where([u], is_nil(u.provider) or u.provider == "email")
-    |> where([u], not u.is_admin)
-    |> where([u], is_nil(u.last_active_at) and is_nil(u.onboarding_completed_at))
+  @spec list_stale_unverified_users(DateTime.t(), pos_integer(), [integer()]) :: [UserSchema.t()]
+  def list_stale_unverified_users(%DateTime{} = cutoff, limit, excluded_ids \\ [])
+      when is_list(excluded_ids) do
+    cutoff
+    |> stale_unverified_users()
+    |> where([u], u.id not in ^excluded_ids)
     |> order_by([u], asc: u.inserted_at, asc: u.id)
     |> limit(^limit)
     |> Repo.all()
+  end
+
+  @doc """
+  Whether user `id` still meets every condition of
+  `list_stale_unverified_users/3` for `cutoff`: still unverified, not an
+  admin, not sent a fresh link, and with no meeting still to come. Run under
+  the row lock just before a purge deletes the account, it catches one that
+  was verified, promoted or booked since the list was read.
+  """
+  @spec stale_unverified_user?(integer(), DateTime.t()) :: boolean()
+  def stale_unverified_user?(id, %DateTime{} = cutoff) do
+    cutoff
+    |> stale_unverified_users()
+    |> where([u], u.id == ^id)
+    |> Repo.exists?()
+  end
+
+  defp stale_unverified_users(cutoff) do
+    from(u in UserSchema, as: :user)
+    |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
+    |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
+    |> where([u], not u.is_admin)
+    |> where([u], not exists(upcoming_meetings_of_user(DateTime.utc_now())))
+  end
+
+  defp upcoming_meetings_of_user(now) do
+    MeetingState.where_not_terminal(
+      from(m in MeetingSchema,
+        where: m.organizer_user_id == parent_as(:user).id and m.end_time > ^now,
+        select: 1
+      )
+    )
   end
 
   @doc """

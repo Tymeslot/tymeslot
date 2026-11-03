@@ -82,7 +82,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionAlreadyGoneTest do
       {:ok, cancelled} = MeetingQueries.get_meeting(meeting.id)
 
       assert {cancelled.status, cancelled.calendar_sync_status} ==
-               {"cancelled", "externally_deleted"}
+               {:cancelled, :externally_deleted}
 
       assert_enqueued(
         worker: EmailWorker,

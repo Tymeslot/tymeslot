@@ -2,6 +2,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   @moduledoc """
   Quill theme component for the overview/duration selection step.
   Features glassmorphism design with elegant transparency effects.
+
+  Choosing a meeting type goes straight on to the schedule step
+  (`choose_duration`); there is no Next.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -14,6 +17,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
@@ -41,7 +45,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   defp duration_card(assigns) do
     ~H"""
     <button
-      phx-click="select_duration"
+      phx-click="choose_duration"
       phx-value-duration={@duration}
       phx-target={@target}
       data-testid="duration-option"
@@ -53,7 +57,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       <%!-- The gap keeps the duration badge clear of the icon, which a range
             such as "15–120 min" would otherwise run into. --%>
       <div class="flex items-center justify-between gap-4">
-        <div class="text-left flex-1">
+        <div class="text-left flex-1 min-w-0">
           <div class="flex items-start justify-between gap-2 mb-1">
             <h3 class="duration-card-title font-bold flex-1">
               {@title}
@@ -76,7 +80,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
         </div>
         <%= if @icon != "none" do %>
           <%= if String.starts_with?(@icon, "hero-") do %>
-            <.icon name={sanitize_css_class(@icon)} class="duration-card-icon text-white" />
+            <.icon name={sanitize_css_class(@icon)} class="duration-card-icon" />
           <% else %>
             <div class="duration-card-emoji">{@icon}</div>
           <% end %>
@@ -88,8 +92,23 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    profile = assigns.organizer_profile
+
+    # Either line may be unsaid (`nil`), and then is not rendered at all.
+    assigns =
+      assign(assigns,
+        greeting: BookingText.greeting(profile, Profiles.display_name(profile), :quill),
+        instruction: BookingText.instruction(profile, :quill)
+      )
+
     ~H"""
-    <div class="container quill-container flex-1" data-locale={@locale}>
+    <div
+      class="container quill-container flex-1"
+      data-locale={@locale}
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <.page_layout
         show_steps={true}
         current_step={1}
@@ -108,31 +127,31 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         alt={Demo.avatar_alt_text(@organizer_profile)}
                         class="overview-avatar rounded-full object-cover shadow-2xl border-4 border-white/50 transition-all duration-300 hover:scale-105 cursor-pointer"
                       />
-                      <div class="overview-success-badge absolute rounded-full flex items-center justify-center shadow-lg">
-                        <%!-- An inline icon, not an emoji: an emoji paints only where
-                             the visitor's system has a colour emoji font, and as an
-                             empty box everywhere else. --%>
-                        <.icon name="hero-check-mini" class="overview-success-badge-icon" />
-                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <h1 class="section-header overview-title">
+                    <JourneyComponents.moment_heading
+                      tag="h1"
+                      moment={assigns[:moment]}
+                      moment_state={assigns[:moment_state]}
+                      focus={assigns[:journey_focus]}
+                      class="section-header overview-title"
+                    >
                       {BookingText.heading(
                         @organizer_profile,
                         :quill,
                         Profiles.display_name(@organizer_profile)
                       )}
-                    </h1>
+                    </JourneyComponents.moment_heading>
                     <%!-- Greeting and instruction are separate settings, often
                          separate thoughts; each starts on its own line, as the
                          Rhythm theme shows them. --%>
-                    <p class="overview-description text-glass-primary">
-                      <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile), :quill) do %>
-                        {greeting}<br />
-                      <% end %>
-                      {BookingText.instruction(@organizer_profile, :quill)}
+                    <p
+                      :if={@greeting || @instruction}
+                      class="overview-description text-glass-primary"
+                    >
+                      {@greeting}<br :if={@greeting && @instruction} />{@instruction}
                     </p>
 
                     <div class="overview-duration-list">
@@ -164,24 +183,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                           />
                         <% end %>
                       <% end %>
-                    </div>
-
-                    <div class="overview-next-action animate-fade-in-up">
-                      <.action_button
-                        phx-click="next_step"
-                        phx-target={@myself}
-                        data-testid="next-step"
-                        data-intent="continue"
-                        disabled={!assigns[:selected_duration]}
-                        title={
-                          unless assigns[:selected_duration],
-                            do: dgettext("booking", "Please select a meeting duration first")
-                        }
-                        class="w-full gap-2"
-                      >
-                        {dgettext("booking", "Next")}
-                        <.icon name="hero-arrow-right" class="inline-icon" />
-                      </.action_button>
                     </div>
                   </div>
                 </div>

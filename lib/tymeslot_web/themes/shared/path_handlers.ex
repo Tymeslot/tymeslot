@@ -5,78 +5,232 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   use TymeslotWeb, :verified_routes
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
+
+  # The route's own segments, which arrive in `params` beside the query.
+  @path_params ["username", "page", "slug"]
+
+  # What makes a page a reschedule rather than a booking.
+  @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
+
+  # What the path or the booking's facts now say, and what a classic
+  # confirmation link names (who booked, and which meeting), never carried in
+  # a facts address's query.
+  @fact_params ~w(date time duration name email meeting_uid)
+
+  # What a page carries of the visitor's choices: the deep-link parameters
+  # `put_choices/2` writes, the chosen length, and a facts address's mark of
+  # a visit that came through the overview (`facts_address/1`).
+  @choice_params ["duration", "date", "time", "minutes", "visitor_timezone", "step", "via"]
 
   @doc """
   Builds a path with locale and theme query parameters.
   """
   @spec build_path_with_locale(Phoenix.LiveView.Socket.t(), String.t()) :: String.t()
   def build_path_with_locale(socket, locale) do
-    base_path = get_base_path(socket)
-    query_params = build_query_params(socket, locale)
-    query_string = URI.encode_query(query_params)
-    if query_string == "", do: base_path, else: "#{base_path}?#{query_string}"
+    socket.assigns
+    |> current_base_path()
+    |> with_query(build_query_params(socket, locale))
   end
 
-  defp get_base_path(socket) do
-    username = socket.assigns[:username_context]
-
-    if is_nil(username) do
-      "/"
-    else
-      do_get_base_path(socket.assigns[:live_action], username, socket)
+  @doc """
+  The path of the step the page's route names (`/username`,
+  `/username/slug`, `/username/slug/book`, ...), with no query. Under a
+  booking page, `username` is the page's address, `<username>/<page>`
+  (`TymeslotWeb.Live.Scheduling.PageAddress`), and every path here follows
+  it. The page's
+  links back to itself start from it: the locale switch and the demo's theme
+  switcher.
+  """
+  @spec current_base_path(map()) :: String.t()
+  def current_base_path(assigns) do
+    case assigns[:username_context] do
+      nil -> "/"
+      username -> base_path(route(assigns), username, assigns)
     end
   end
 
-  defp do_get_base_path(:overview, username, _socket), do: "/#{username}"
+  @doc """
+  The address a booking's known facts give, for a journey whose address
+  follows them (`url: :facts`): `/:username` before a meeting type is known,
+  `/:username/:slug` with one (the type's own slug, `MeetingTypes.effective_slug/1`),
+  `/:username/:slug/book` once the day and the time are, and
+  `/:username/thank-you` on the confirmation. `nil` without an organiser.
+  """
+  @spec facts_path(map()) :: String.t() | nil
+  def facts_path(%{username_context: username} = assigns) when is_binary(username) do
+    slug = facts_slug(assigns)
 
-  defp do_get_base_path(:schedule, username, socket) do
-    slug = get_slug(socket)
+    cond do
+      assigns[:current_state] == :confirmation -> "/#{username}/thank-you"
+      is_nil(slug) -> "/#{username}"
+      slot_known?(assigns) -> "/#{username}/#{slug}/book"
+      true -> "/#{username}/#{slug}"
+    end
+  end
+
+  def facts_path(_assigns), do: nil
+
+  @doc """
+  The whole address a journey whose address follows its facts moves to
+  (`ChoicesInUrl`): `facts_path/1`, with the page's own query
+  (`facts_query/1`) and the choices the path cannot say, as
+  `choices_query/1` carries them on any other journey: the day and the time
+  (the path says only that both are known), a timezone the visitor chose,
+  the length and the moment on screen. The meeting type is the path's, so
+  it never goes as `duration`; an outcome carries no choices. A visit that
+  came through the overview, whose route the path has left, goes as
+  `via=overview`, so a reconnect keeps the way back to the meeting types
+  (`LiveHelpers.Mount` honours it only for a type the overview lists).
+  `nil` without an organiser.
+  """
+  @spec facts_address(map()) :: String.t() | nil
+  def facts_address(assigns) do
+    if path = facts_path(assigns) do
+      query =
+        assigns
+        |> facts_query_params()
+        |> Map.drop(@choice_params)
+        |> maybe_put_query_param("minutes", chosen_length(assigns))
+        |> put_choices(assigns)
+        |> Map.delete("duration")
+        |> maybe_put_query_param("via", overview_mark(path, assigns))
+
+      with_query(path, query)
+    end
+  end
+
+  defp overview_mark(path, assigns) do
+    if assigns[:entered_via_overview] == true and path != "/#{assigns[:username_context]}" and
+         assigns[:current_state] not in [:confirmation, :awaiting_payment],
+       do: "overview"
+  end
+
+  @doc """
+  The start of a journey whose address follows its facts, `/:username`, with
+  the page's own query (`facts_query/1`); `/` without an organiser.
+  """
+  @spec facts_start(map()) :: String.t()
+  def facts_start(%{username_context: username} = assigns) when is_binary(username) do
+    case facts_query(assigns) do
+      nil -> "/#{username}"
+      query -> "/#{username}?#{query}"
+    end
+  end
+
+  def facts_start(_assigns), do: "/"
+
+  defp facts_slug(assigns) do
+    slug =
+      case assigns[:meeting_type] do
+        %{} = meeting_type ->
+          MeetingTypes.effective_slug(meeting_type)
+
+        _none ->
+          MeetingTypes.normalize_duration_slug(assigns[:duration] || assigns[:selected_duration])
+      end
+
+    if is_binary(slug) and slug != "", do: URI.encode(slug, &URI.char_unreserved?/1)
+  end
+
+  defp slot_known?(assigns),
+    do: is_binary(assigns[:selected_date]) and is_binary(assigns[:selected_time])
+
+  @doc """
+  The query string a journey whose address follows its facts keeps: the
+  page's own parameters (`:page_query_params`) less the day, the time and
+  the duration, which the facts now say, less a confirmation link's name,
+  email and meeting, and less the reschedule once it is abandoned (no
+  `reschedule_meeting_uid` and no `reschedule_seat_token` left on the
+  page). `nil` when nothing is left.
+  """
+  @spec facts_query(map()) :: String.t() | nil
+  def facts_query(assigns) do
+    case facts_query_params(assigns) do
+      empty when map_size(empty) == 0 -> nil
+      query -> URI.encode_query(query)
+    end
+  end
+
+  defp facts_query_params(assigns) do
+    dropped =
+      if is_nil(assigns[:reschedule_meeting_uid]) and is_nil(assigns[:reschedule_seat_token]),
+        do: @fact_params ++ @reschedule_params,
+        else: @fact_params
+
+    Map.drop(assigns[:page_query_params] || %{}, dropped)
+  end
+
+  @doc "`path` with `query` appended, or `path` alone when `query` is empty."
+  @spec with_query(String.t(), map()) :: String.t()
+  def with_query(path, query) when map_size(query) == 0, do: path
+  def with_query(path, query), do: path <> "?" <> URI.encode_query(query)
+
+  @doc """
+  The `theme` parameter a demo page's redirects carry: the theme the page
+  shows, when it is not the organiser's own, so a visitor who picked another
+  one in the demo's switcher (`Components.DemoThemeSwitcher`) keeps it on the
+  page the flow sends them to. Empty on every page that is not a demo, where
+  only previews and embeds carry `?theme=` (issue #84).
+  """
+  @spec demo_theme_param(map()) :: %{optional(String.t()) => String.t()}
+  def demo_theme_param(%{demo_theme_switcher: true, theme_id: theme_id} = assigns)
+      when is_binary(theme_id) do
+    case assigns[:organizer_profile] do
+      %{booking_theme: ^theme_id} -> %{}
+      _another_theme -> %{"theme" => theme_id}
+    end
+  end
+
+  def demo_theme_param(_assigns), do: %{}
+
+  defp base_path(:overview, username, _assigns), do: "/#{username}"
+
+  defp base_path(:schedule, username, assigns) do
+    slug = get_slug(assigns)
     if slug, do: "/#{username}/#{slug}", else: "/#{username}"
   end
 
-  defp do_get_base_path(:booking, username, socket) do
-    slug = get_slug(socket)
+  defp base_path(:booking, username, assigns) do
+    slug = get_slug(assigns)
     if slug, do: "/#{username}/#{slug}/book", else: "/#{username}"
   end
 
-  defp do_get_base_path(:confirmation, username, _socket), do: "/#{username}/thank-you"
+  defp base_path(:confirmation, username, _assigns), do: "/#{username}/thank-you"
 
-  defp do_get_base_path(:cancel, username, socket) do
-    meeting_uid = socket.assigns[:meeting_uid]
+  defp base_path(:cancel, username, assigns) do
+    meeting_uid = assigns[:meeting_uid]
     if meeting_uid, do: "/#{username}/meeting/#{meeting_uid}/cancel", else: "/#{username}"
   end
 
-  defp do_get_base_path(:cancel_confirmed, username, socket) do
-    meeting_uid = socket.assigns[:meeting_uid]
+  defp base_path(:cancel_confirmed, username, assigns) do
+    meeting_uid = assigns[:meeting_uid]
 
     if meeting_uid,
       do: "/#{username}/meeting/#{meeting_uid}/cancel-confirmed",
       else: "/#{username}"
   end
 
-  defp do_get_base_path(:reschedule, username, socket) do
-    meeting_uid = socket.assigns[:meeting_uid]
+  defp base_path(:reschedule, username, assigns) do
+    meeting_uid = assigns[:meeting_uid]
     if meeting_uid, do: "/#{username}/meeting/#{meeting_uid}/reschedule", else: "/#{username}"
   end
 
-  defp do_get_base_path(_action, username, _socket), do: "/#{username}"
+  defp base_path(_action, username, _assigns), do: "/#{username}"
 
   defp build_query_params(socket, locale) do
     %{"locale" => locale}
     |> put_embed_params(socket)
     |> put_preview_params(socket)
+    |> Map.merge(demo_theme_param(socket.assigns))
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
     |> maybe_put_query_param("minutes", chosen_length(socket.assigns))
     |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
     |> put_choices(socket.assigns)
   end
-
-  # What a page carries of the visitor's choices: the deep-link parameters
-  # `put_choices/2` writes, and the chosen length.
-  @choice_params ["duration", "date", "time", "minutes", "visitor_timezone", "step"]
 
   # What a fresh booking forgets of them: everything built on the meeting
   # type, which a restart keeps (`Journey.Runtime.restart/1`).
@@ -148,10 +302,21 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   defp paged_moment(_assigns), do: nil
 
-  defp overview_choice(%{live_action: :overview} = assigns),
-    do: MeetingTypes.normalize_duration_slug(assigns[:selected_duration])
+  defp overview_choice(assigns) do
+    if route(assigns) == :overview,
+      do: MeetingTypes.normalize_duration_slug(assigns[:selected_duration])
+  end
 
-  defp overview_choice(_assigns), do: nil
+  # The route the switch rebuilds: on a journey whose address follows its
+  # facts, the one the visit started on (the address has moved since, and
+  # the choices travel as parameters, `put_choices/2`); otherwise the
+  # current one. The journey is matched as a map, so this module takes no
+  # compile-time dependency on it.
+  defp route(%{journey: %{url: :facts}, entry_action: action})
+       when is_atom(action) and action != nil,
+       do: action
+
+  defp route(assigns), do: assigns[:live_action]
 
   # `theme` rides along here and nowhere else, which is the fix for #84. It used
   # to be emitted on every locale switch from `:theme_id`, an assign the
@@ -166,6 +331,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # land the owner on a page that still looks like their preview but persists a
   # real meeting; dropping `preview_token` would fail their booking closed. Both
   # were live defects the moment `?theme=` stopped standing in for the claim.
+  # A demo page is the one other carrier, through `demo_theme_param/1`, and
+  # only for a theme the visitor chose.
   defp put_preview_params(params, socket) do
     if preview_session?(socket) do
       params
@@ -214,20 +381,14 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     socket.assigns[:theme_preview] || socket.assigns[:owner_preview] || false
   end
 
-  defp get_slug(socket) do
-    duration = socket.assigns[:duration] || socket.assigns[:selected_duration]
+  defp get_slug(assigns) do
+    duration = assigns[:duration] || assigns[:selected_duration]
     MeetingTypes.normalize_duration_slug(duration)
   end
 
   defp maybe_put_query_param(params, _param_key, value) when value in [nil, ""], do: params
   # As the URL will read it back: a string (the chosen length is an integer).
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, to_string(value))
-
-  # The route's own segments, which arrive in `params` beside the query.
-  @path_params ["username", "slug"]
-
-  # What makes a page a reschedule rather than a booking.
-  @reschedule_params ["reschedule_meeting_uid", "reschedule_seat_token"]
 
   @doc """
   The query string parameters of a booking page's `params`: everything but
@@ -267,7 +428,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   end
 
   defp restart_base(:schedule, username, socket),
-    do: do_get_base_path(:schedule, username, socket)
+    do: base_path(:schedule, username, socket.assigns)
 
   defp restart_base(_overview, username, _socket), do: "/#{username}"
 
@@ -279,7 +440,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   @doc """
   Returns the organizer's scheduling page path for restarting a booking,
-  e.g. "/username".
+  e.g. "/username", or "/username/page" for an organiser resolved through
+  one of their booking pages.
 
   Invoked from the reschedule flow's "Choose New Time" CTA. When a
   `:meeting_uid` is present in the assigns it is carried forward as the
@@ -292,9 +454,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   """
   @spec organizer_scheduling_path(map()) :: String.t()
   def organizer_scheduling_path(assigns) do
-    case assigns[:organizer_profile] do
-      %{username: username} when is_binary(username) and username != "" ->
-        maybe_append_reschedule_uid("/#{username}", assigns[:meeting_uid])
+    case BookingPages.public_address(assigns[:organizer_profile]) do
+      address when is_binary(address) and address != "" ->
+        maybe_append_reschedule_uid("/#{address}", assigns[:meeting_uid])
 
       _other ->
         "/"
@@ -322,9 +484,13 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   @spec calendar_ics_path(map()) :: String.t() | nil
   def calendar_ics_path(%{seat_calendar_url: url}) when is_binary(url) and url != "", do: url
 
-  def calendar_ics_path(%{username_context: username, meeting_uid: uid})
-      when is_binary(username) and username != "" and is_binary(uid) and uid != "",
-      do: ~p"/#{username}/meeting/#{uid}/calendar.ics"
+  # The meeting's file is the host's, under the username, whichever of their
+  # pages (`<username>/<page>`) it was booked on.
+  def calendar_ics_path(%{username_context: address, meeting_uid: uid})
+      when is_binary(address) and address != "" and is_binary(uid) and uid != "" do
+    [username | _page] = String.split(address, "/", parts: 2)
+    ~p"/#{username}/meeting/#{uid}/calendar.ics"
+  end
 
   def calendar_ics_path(_assigns), do: nil
 end

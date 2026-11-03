@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Processing do
   subscribes to PubSub and re-reads the meeting on `:paid` or `:expired`
   (`PaymentReturn.refresh/1`); the webhook, not this page, is the source of
   truth, and this page never mutates state. Paid does not always mean
-  confirmed: a paid, approval-gated booking moves to `"awaiting_approval"`,
+  confirmed: a paid, approval-gated booking moves to `:awaiting_approval`,
   which `PaymentReturn.outcome/3` reports as such.
   """
 

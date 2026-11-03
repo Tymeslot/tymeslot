@@ -34,7 +34,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       # `status` is left untouched — only `reschedule_requested_at` marks the
       # request, so the underlying lifecycle status survives it.
-      assert updated.status == "confirmed"
+      assert updated.status == :confirmed
       assert %DateTime{} = updated.reschedule_requested_at
 
       # The calendar event is removed from the organizer's calendar...
@@ -65,15 +65,12 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
       # The void slot must not keep blocking the host's conflict detection,
       # otherwise nobody, including the original attendee, could ever book that
       # window again.
-      Repo.transaction(fn ->
-        assert {:ok, :no_conflicts} =
-                 MeetingConflictQueries.count_conflicts(
-                   meeting.start_time,
-                   meeting.end_time,
-                   nil,
-                   user.id
-                 )
-      end)
+      assert MeetingConflictQueries.list_live_in_window(
+               user.id,
+               meeting.start_time,
+               meeting.end_time,
+               nil
+             ) == []
 
       # A fresh booking with the same host at the exact original start time
       # succeeds. Conflicts are scoped per host, so only the same host can
@@ -173,7 +170,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
       assert {:error, _cancelled_refusal} = RescheduleRequest.send_reschedule_request(meeting)
 
       {:ok, current} = MeetingQueries.get_meeting(meeting.id)
-      assert current.status == "cancelled"
+      assert current.status == :cancelled
       assert is_nil(current.reschedule_requested_at)
 
       refute_enqueued(
@@ -188,7 +185,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
 
       # The attendee moved the booking into an approval-gated time after the
       # host's page loaded it as confirmed.
-      {:ok, _held} = MeetingQueries.update_meeting_status(meeting, %{status: "awaiting_approval"})
+      {:ok, _held} = MeetingQueries.update_meeting_status(meeting, %{status: :awaiting_approval})
 
       assert {:error, {:not_reschedulable, :awaiting_approval}} =
                RescheduleRequest.send_reschedule_request(meeting)
@@ -248,7 +245,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
                RescheduleRequest.send_reschedule_request(meeting)
 
       {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
-      assert unchanged.status == "confirmed"
+      assert unchanged.status == :confirmed
 
       refute_enqueued(
         worker: CalendarEventWorker,

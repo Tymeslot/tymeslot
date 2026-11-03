@@ -21,8 +21,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @valid_statuses ~w(pending paid failed refunded partially_refunded disputed)
-  @refundable_statuses ~w(paid partially_refunded)
+  @valid_statuses [:pending, :paid, :failed, :refunded, :partially_refunded, :disputed]
+  @refundable_statuses [:paid, :partially_refunded]
+
+  @type status :: :pending | :paid | :failed | :refunded | :partially_refunded | :disputed
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
@@ -40,10 +42,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           amount_cents: integer() | nil,
           currency: String.t() | nil,
           application_fee_cents: integer() | nil,
-          status: String.t(),
+          status: status(),
           paid_at: DateTime.t() | nil,
           refunded_amount_cents: integer(),
           last_event_id: String.t() | nil,
+          stripe_dispute_id: String.t() | nil,
+          dispute_closed_at: DateTime.t() | nil,
           host_deleted_at: DateTime.t() | nil,
           meeting_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -68,11 +72,17 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     field :currency, :string
     field :application_fee_cents, :integer
 
-    field :status, :string, default: "pending"
+    field :status, Ecto.Enum, values: @valid_statuses, default: :pending
     field :paid_at, :utc_datetime
     field :refunded_amount_cents, :integer, default: 0
 
     field :last_event_id, :string
+
+    # The Stripe dispute this payment last saw, and when it closed. Lets a
+    # `charge.dispute.created` that Stripe delivers after its own
+    # `charge.dispute.closed` be told apart from a new dispute.
+    field :stripe_dispute_id, :string
+    field :dispute_closed_at, :utc_datetime
     field :host_deleted_at, :utc_datetime
 
     belongs_to :meeting, MeetingSchema, type: :binary_id
@@ -91,6 +101,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
                 meeting_id host_name attendee_email attendee_name booking_theme_id
                 stripe_checkout_session_id stripe_payment_intent_id stripe_charge_id
                 status paid_at refunded_amount_cents last_event_id host_deleted_at
+                stripe_dispute_id dispute_closed_at
               )a
 
   @spec create_changeset(map()) :: Ecto.Changeset.t()
@@ -98,7 +109,6 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     %__MODULE__{}
     |> cast(attrs, @castable)
     |> validate_required(@required_on_create)
-    |> validate_inclusion(:status, @valid_statuses)
     |> validate_number(:amount_cents, greater_than: 0)
     |> validate_number(:application_fee_cents, greater_than_or_equal_to: 0)
     |> validate_refunded_bounds()
@@ -113,12 +123,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   def update_changeset(schema, attrs) do
     schema
     |> cast(attrs, @castable -- @required_on_create)
-    |> validate_inclusion(:status, @valid_statuses)
     |> validate_refunded_bounds()
     |> check_constraint(:refunded_amount_cents, name: :refunded_amount_within_bounds)
   end
 
-  @spec valid_statuses() :: [String.t()]
+  @spec valid_statuses() :: [status()]
   def valid_statuses, do: @valid_statuses
 
   @doc """
@@ -129,7 +138,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   so the refund rule and the queries that look for outstanding refunds read
   the same list.
   """
-  @spec refundable_statuses() :: [String.t()]
+  @spec refundable_statuses() :: [status()]
   def refundable_statuses, do: @refundable_statuses
 
   defp validate_refunded_bounds(changeset) do

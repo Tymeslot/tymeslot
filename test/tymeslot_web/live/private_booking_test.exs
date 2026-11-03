@@ -54,7 +54,7 @@ defmodule TymeslotWeb.PrivateBookingTest do
     meeting =
       Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
     assert meeting.meeting_type_id
   end
 
@@ -124,10 +124,6 @@ defmodule TymeslotWeb.PrivateBookingTest do
 
     overview
     |> element("button[phx-value-duration='open-chat']")
-    |> render_click()
-
-    overview
-    |> element("button[phx-click='next_step']")
     |> render_click()
 
     assert has_element?(overview, "[data-testid='back-step']")

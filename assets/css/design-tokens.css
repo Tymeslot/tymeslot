@@ -6,17 +6,21 @@
    =================================== */
 
 @layer components {
-  /* Token-based Typography - Use prefix to avoid conflicts */
+  /* Token-based Typography - Use prefix to avoid conflicts.
+     Display headings balance their lines (no lone last word) and break a word
+     that is wider than the column instead of overflowing it, which long German
+     compounds otherwise do on a phone. Hyphenation is limited to phones, where
+     such words are the norm; wider, it would split words that fit whole. */
   .display-xl {
-    @apply text-token-5xl sm:text-token-6xl lg:text-token-7xl font-black tracking-tight leading-[1.05];
+    @apply text-token-4xl sm:text-token-6xl lg:text-token-7xl font-black tracking-tight leading-[1.05] text-balance wrap-break-word max-sm:hyphens-auto;
   }
 
   .display-lg {
-    @apply text-token-4xl md:text-token-5xl font-black tracking-tight;
+    @apply text-token-4xl md:text-token-5xl font-black tracking-tight text-balance wrap-break-word max-sm:hyphens-auto;
   }
 
   .display-md {
-    @apply text-token-3xl md:text-token-4xl font-black tracking-tight;
+    @apply text-token-3xl md:text-token-4xl font-black tracking-tight text-balance wrap-break-word max-sm:hyphens-auto;
   }
 
   /* A dashboard page's h1 (section_header level 1): small enough on a phone

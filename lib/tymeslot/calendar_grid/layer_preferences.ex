@@ -25,13 +25,13 @@ defmodule Tymeslot.CalendarGrid.LayerPreferences do
   @type choice :: %{id: pos_integer(), name: String.t(), duration: pos_integer()}
 
   @doc """
-  The organiser's active, unarchived meeting types without fixed dates, in
+  The organiser's active, unarchived meeting types without planned sessions, in
   their own order.
   """
   @spec meeting_types(pos_integer()) :: [choice()]
   def meeting_types(user_id) do
     for type <- MeetingTypes.get_bookable_meeting_types(user_id),
-        not FixedDates.enabled?(type),
+        not FixedDates.sessions?(type),
         do: %{id: type.id, name: type.name, duration: type.duration_minutes}
   end
 

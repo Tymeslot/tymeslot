@@ -30,7 +30,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     user = insert(:user)
 
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       approval_requested_at: DateTime.utc_now(:second),
@@ -98,7 +98,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     end
 
     test "sends nothing once the request has been answered" do
-      meeting = held_meeting(%{status: "confirmed"})
+      meeting = held_meeting(%{status: :confirmed})
 
       # No `expect` is set: a call to either send function fails the test.
       assert {:discard, _reason} = request_job(meeting)
@@ -355,7 +355,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       meeting = held_meeting()
 
       {:ok, _declined} =
-        MeetingQueries.transition_from_awaiting_approval(meeting.id, status: "cancelled")
+        MeetingQueries.transition_from_awaiting_approval(meeting.id, status: :cancelled)
 
       assert {:discard, _reason} = nudge_job(Repo.reload!(meeting))
     end
@@ -431,7 +431,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
         held_meeting(%{
           organizer_user: host,
           organizer_user_id: host.id,
-          status: "expired",
+          status: :expired,
           attendee_locale: "fr",
           first_announced_at: DateTime.utc_now(:second)
         })
@@ -446,14 +446,14 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     end
 
     test "sends nothing for a request that never was a confirmed booking" do
-      meeting = held_meeting(%{status: "expired", first_announced_at: nil})
+      meeting = held_meeting(%{status: :expired, first_announced_at: nil})
 
       assert {:discard, _reason} = expired_job(meeting)
     end
 
     test "sends nothing once the booking is no longer the lapsed request" do
       meeting =
-        held_meeting(%{status: "confirmed", first_announced_at: DateTime.utc_now(:second)})
+        held_meeting(%{status: :confirmed, first_announced_at: DateTime.utc_now(:second)})
 
       assert {:discard, _reason} = expired_job(meeting)
     end
@@ -461,7 +461,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
 
   describe "the outcome email" do
     test "sends the declined variant for a request the host refused" do
-      meeting = held_meeting(%{status: "cancelled", decline_reason: "Away that week"})
+      meeting = held_meeting(%{status: :cancelled, decline_reason: "Away that week"})
 
       expect(Tymeslot.EmailServiceMock, :send_booking_request_outcome, fn :declined, sent ->
         assert sent.id == meeting.id
@@ -472,7 +472,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     end
 
     test "sends the expired variant for a request nobody answered" do
-      meeting = held_meeting(%{status: "expired"})
+      meeting = held_meeting(%{status: :expired})
 
       expect(Tymeslot.EmailServiceMock, :send_booking_request_outcome, fn :expired, _sent ->
         {:ok, :sent}
@@ -485,13 +485,13 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       # The status is the authority, not the job's args. A request returned to
       # the gate and then approved between enqueue and execution must not
       # produce a decline email for a meeting that is going ahead.
-      meeting = held_meeting(%{status: "confirmed"})
+      meeting = held_meeting(%{status: :confirmed})
 
       assert {:discard, _reason} = outcome_job(meeting, "declined")
     end
 
     test "refuses to call an expiry a decline" do
-      meeting = held_meeting(%{status: "expired"})
+      meeting = held_meeting(%{status: :expired})
 
       assert {:discard, _reason} = outcome_job(meeting, "declined")
     end

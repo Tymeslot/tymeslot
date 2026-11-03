@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
   describe "get_locations/1" do
     test "opens a new meeting type on a single in-person location" do
       assert [location] = Init.get_locations(nil)
-      assert location.kind == "in_person"
+      assert location.kind == :in_person
       assert location.position == 0
       refute location.id in [nil, ""]
     end
@@ -128,8 +128,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
     test "returns the meeting type's own locations, in the host's order" do
       type = %{
         locations: [
-          %LocationOption{id: "b", kind: "phone", label: "Ring us", details: "+44", position: 1},
-          %LocationOption{id: "a", kind: "in_person", label: "The office", position: 0}
+          %LocationOption{id: "b", kind: :phone, label: "Ring us", details: "+44", position: 1},
+          %LocationOption{id: "a", kind: :in_person, label: "The office", position: 0}
         ]
       }
 
@@ -139,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
     test "falls back to one video location for a type saved before the list existed" do
       type = %{locations: [], allow_video: true, video_integration_id: 42}
 
-      assert [%{kind: "video", video_integration_ids: [42]}] = Init.get_locations(type)
+      assert [%{kind: :video, video_integration_ids: [42]}] = Init.get_locations(type)
     end
   end
 

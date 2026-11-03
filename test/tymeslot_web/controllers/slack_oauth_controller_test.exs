@@ -133,7 +133,7 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
 
       [integration] = Repo.all(SlackIntegrationSchema)
       assert integration.user_id == user.id
-      assert integration.app_mode == "oauth"
+      assert integration.app_mode == :oauth
       assert integration.team_id == "T7"
       assert integration.team_name == "Acme"
       assert integration.name == "Acme"

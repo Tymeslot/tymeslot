@@ -1,0 +1,231 @@
+/* Folio theme variables.
+
+   The palette inputs below are Ivory's, the spec's default; the server's
+   style block replaces them on :root for the organiser's scheme or seed.
+   Everything else that has a colour is derived from those inputs with
+   color-mix(), so the one stylesheet serves Folio's light and dark schemes:
+   lines and quiet surfaces mix the text colour into transparency, tints mix
+   the primary into the card, and the status colours mix a fixed hue with
+   the text, which darkens them on a light scheme and lightens them on a dark
+   one (each clears 4.5:1 on every scheme's card and canvas). Shadows are a
+   fixed dark rgba() that disappears on a dark canvas, where the card's
+   border carries its edge.
+
+   Folio has no height media query (the page scrolls), so it has no height
+   ladder. */
+:root {
+  /* Typography: the classic pairing (Source Serif 4 over Inter) until the
+     font option says otherwise. */
+  --theme-font-family: var(--font-stack-classic);
+  --theme-font-heading: var(--font-heading-classic);
+  --theme-font-size-3xs: 0.6875rem;
+  --theme-font-size-2xs: 0.75rem;
+  --theme-font-size-xs: 0.8125rem;
+  --theme-font-size-sm: 0.875rem;
+  --theme-font-size-base: 1rem;
+  --theme-font-size-md: 1.0625rem;
+  --theme-font-size-lg: 1.1875rem;
+  --theme-font-size-xl: clamp(1.375rem, 1.1rem + 1.2cqi, 1.625rem);
+  --theme-font-size-2xl: clamp(1.625rem, 1.2rem + 2cqi, 2.125rem);
+  --theme-font-size-3xl: clamp(1.875rem, 1.3rem + 3cqi, 2.75rem);
+  --font-weight-regular: 400;
+  --letter-spacing-wide: 0.08em;
+  --folio-letter-spacing-heading: -0.01em;
+  --folio-line-height-body: 1.6;
+  --folio-line-height-heading: 1.15;
+
+  /* Palette inputs (Ivory). */
+  --theme-primary: #b4532a;
+  --theme-primary-hover: #96431f;
+  --theme-secondary: #7a6450;
+  --theme-accent: #a0612f;
+  --theme-on-primary: #ffffff;
+  --theme-primary-solid: #b4532a;
+  --theme-primary-solid-hover: #96431f;
+  --theme-on-accent: #ffffff;
+  --theme-accent-solid: #a0612f;
+  --theme-canvas: #faf7f2;
+  --theme-surface: #fffdf9;
+  --theme-text: #1f1b16;
+  --theme-text-secondary: #6b6158;
+
+  /* Status inputs: a fixed hue, 65% of it, mixed with the text colour. */
+  --folio-danger-hue: #d1352b;
+  --folio-success-hue: #2f8f4e;
+  --folio-warning-hue: #c27c0e;
+  --folio-info-hue: #3b6fd8;
+  --theme-danger: color-mix(in srgb, var(--folio-danger-hue) 65%, var(--theme-text));
+  --theme-success: color-mix(in srgb, var(--folio-success-hue) 65%, var(--theme-text));
+  --theme-warning: color-mix(in srgb, var(--folio-warning-hue) 65%, var(--theme-text));
+  --theme-info: color-mix(in srgb, var(--folio-info-hue) 65%, var(--theme-text));
+  --theme-error-light: var(--theme-danger);
+
+  /* Seat availability on a group meeting's slots (shared slot-list.css):
+     the status hues on a wash of themselves over the surface, so they follow
+     the colour mode and the tones. The exact count without the traffic light
+     takes the slot's own text colour; a selected slot's badge takes the
+     selected slot's text colour, --theme-on-primary. */
+  --seat-green: var(--theme-success);
+  --seat-amber: var(--theme-warning);
+  --seat-red: var(--theme-danger);
+  --seat-green-bg: color-mix(in srgb, var(--theme-success) 14%, var(--theme-surface));
+  --seat-amber-bg: color-mix(in srgb, var(--theme-warning) 14%, var(--theme-surface));
+  --seat-red-bg: color-mix(in srgb, var(--theme-danger) 14%, var(--theme-surface));
+  --seat-neutral: currentColor;
+  --seat-neutral-bg: color-mix(in srgb, currentColor 12%, transparent);
+  --seat-selected: var(--theme-on-primary);
+  --seat-selected-bg: color-mix(in srgb, var(--theme-on-primary) 14%, transparent);
+
+  /* Coloured-shadow geometry (offset and blur); the colour is mixed from
+     the palette in shared/tokens.css. */
+  --shadow-geometry-sm: 0 1px 3px;
+  --shadow-geometry-md: 0 4px 12px;
+  --shadow-geometry-lg: 0 10px 28px;
+  --shadow-md: 0 4px 12px rgba(24, 18, 10, 0.1);
+  --folio-card-shadow: 0 1px 2px rgba(24, 18, 10, 0.05), 0 12px 32px rgba(24, 18, 10, 0.07);
+
+  /* Lines and quiet surfaces: the text colour over whatever is beneath. */
+  --border-subtle: color-mix(in srgb, var(--theme-text) 8%, transparent);
+  --border-light: color-mix(in srgb, var(--theme-text) 12%, transparent);
+  --border-medium: color-mix(in srgb, var(--theme-text) 20%, transparent);
+  --folio-border-strong: color-mix(in srgb, var(--theme-text) 32%, transparent);
+  --surface-subtle: color-mix(in srgb, var(--theme-text) 3%, transparent);
+  --surface-light: color-mix(in srgb, var(--theme-text) 5%, transparent);
+  --surface-medium: color-mix(in srgb, var(--theme-text) 8%, transparent);
+  --surface-intense: color-mix(in srgb, var(--theme-text) 12%, transparent);
+  --folio-line: var(--border-light);
+
+  /* Tints: the primary over the card. */
+  --folio-tint: color-mix(in srgb, var(--theme-primary) 7%, var(--theme-surface));
+  --folio-tint-strong: color-mix(in srgb, var(--theme-primary) 14%, var(--theme-surface));
+
+  /* Roles (shared/tokens.css, section 2). */
+  --surface-2: var(--surface-light);
+  --surface-3: var(--surface-medium);
+  --ink-1: var(--theme-text);
+  --ink-2: var(--theme-text-secondary);
+  --ink-3: color-mix(in srgb, var(--theme-text-secondary) 90%, var(--theme-surface));
+  --notice-warning-surface: color-mix(in srgb, var(--folio-warning-hue) 12%, var(--theme-surface));
+  --notice-warning-border: color-mix(in srgb, var(--folio-warning-hue) 40%, var(--theme-surface));
+  /* The preview notice sits on the page's own canvas, a flat colour from
+     the palette rather than an organiser's media, so it takes the card
+     instead of the shared dark scrim, under which the warning ink, mixed
+     towards a light scheme's dark text, would all but vanish. */
+  --preview-notice-ground: var(--theme-surface);
+  --radius-control: 8px;
+  --radius-card: 12px;
+  /* Boxes taller than one line (the message field, the timezone panel, the
+     location choices, notices): the control radius, never more than the
+     card's, so "round" keeps pill controls without turning these into
+     capsules. */
+  --folio-radius-panel: min(var(--radius-control), var(--radius-card));
+
+  /* Spacing. */
+  --space-hairline: 1px;
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.375rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  /* Sizes. */
+  --icon-sm: 1.25rem;
+  --icon-md: 1.75rem;
+  --folio-column: 40rem;
+  --folio-gutter: clamp(var(--space-md), 6cqi, var(--space-2xl));
+  --folio-control-height: 2.75rem;
+  --folio-chevron-size: 0.3125rem;
+  --folio-cover-height: clamp(8.5rem, 34cqi, 15rem);
+  --folio-cover-height-slim: clamp(4rem, 13cqi, 6rem);
+  --folio-portrait-size: clamp(5.5rem, 20cqi, 7.5rem);
+  --folio-portrait-size-slim: 3.5rem;
+  --folio-day-size: clamp(2.25rem, 10cqi, 2.875rem);
+  --folio-cover-fallback: linear-gradient(135deg, color-mix(in srgb, var(--theme-primary) 35%, var(--theme-canvas)) 0%, color-mix(in srgb, var(--theme-primary) 12%, var(--theme-canvas)) 100%);
+  /* The cover's lower third eases into the card, so the portrait's ring
+     meets a calm edge; the upper two thirds keep the photo as it is. */
+  --folio-cover-fade: linear-gradient(to bottom, transparent 62%, color-mix(in srgb, var(--theme-surface) 30%, transparent) 82%, color-mix(in srgb, var(--theme-surface) 80%, transparent) 100%);
+  /* On the booking page there is no card: the cover eases into the canvas,
+     and the portrait's ring is the canvas's colour. */
+  --folio-cover-fade-page: linear-gradient(to bottom, transparent 62%, color-mix(in srgb, var(--theme-canvas) 30%, transparent) 82%, color-mix(in srgb, var(--theme-canvas) 80%, transparent) 100%);
+  /* How far below the window's top a section a summary link jumps to
+     stops, so the sticky summary bar does not cover its heading. */
+  --folio-summary-offset: 4.5rem;
+  /* The summary bar's ground (shared/blocks/summary-bar.css). */
+  --summary-bar-surface: var(--theme-canvas);
+  /* The organiser's portrait in the summary bar. */
+  --folio-bar-portrait: 1.75rem;
+
+  /* Shared status screens (shared/layout.css: awaiting payment, readiness). */
+  --status-surface: var(--theme-surface);
+  --status-surface-opaque: var(--theme-surface);
+  --status-shadow: var(--folio-card-shadow);
+  --status-ink-heading: var(--theme-text);
+  --status-ink: var(--theme-text);
+  --status-ink-soft: var(--theme-text-secondary);
+  --status-ink-hint: var(--ink-3);
+
+  /* Approval notice (shared/components/approval-notice.css). */
+  --approval-pill-surface: color-mix(in srgb, var(--folio-warning-hue) 14%, var(--theme-surface));
+  --approval-icon-surface: color-mix(in srgb, var(--folio-warning-hue) 20%, var(--theme-surface));
+  --approval-notice-gap: var(--space-xs);
+  --approval-notice-font-size: var(--theme-font-size-sm);
+  --approval-notice-ink: var(--theme-text-secondary);
+  --approval-notice-max-width: none; /* the column's full width, as on the booking step */
+
+  /* Poll voting page (shared/components/polls.css). */
+  --poll-voting-padding: var(--space-lg);
+  --poll-panel-surface: var(--surface-subtle);
+  --poll-input-surface: var(--theme-surface);
+  --poll-input-line: var(--border-medium);
+  --poll-input-focus-ring: var(--focus-ring);
+  --poll-row-surface: var(--theme-surface);
+  --poll-row-line: var(--border-light);
+  --poll-option-line: var(--border-medium);
+  --poll-option-selected-surface: var(--folio-tint-strong);
+  /* The poll's "yes" in the success colour: Folio's accent is a brown close
+     to its warning colour, so "yes" and "if need be" would read alike. */
+  --poll-yes-ink: var(--theme-success);
+
+  /* Payment return pages (shared/components/payment-pages.css). */
+  --payment-page-max-width: 36rem;
+  --payment-card-surface: var(--theme-surface);
+  --payment-card-line: var(--border-light);
+  --payment-card-radius: var(--radius-card);
+  --payment-heading-ink: var(--theme-text);
+  --payment-body-ink: var(--theme-text-secondary);
+  --payment-link-radius: var(--radius-control);
+  --payment-link-weight: var(--font-weight-semibold);
+  --payment-link-transition: background var(--transition-normal);
+
+  /* Booking fields (shared/components/booking-fields.css): the remove
+     button's ink over the danger colour, the card colour reading on it in
+     both modes. */
+  --guest-remove-ink-hover: var(--theme-surface);
+
+  /* Language switcher (shared/components/language-switcher.css). */
+  --lang-switcher-surface: var(--theme-surface);
+  --lang-switcher-surface-hover: color-mix(in srgb, var(--theme-text) 6%, var(--theme-surface));
+  --lang-switcher-panel-surface: var(--theme-surface);
+  --lang-switcher-panel-line: var(--border-light);
+  --lang-switcher-item-line: var(--border-subtle);
+  --lang-switcher-item-hover: var(--surface-light);
+  --lang-switcher-item-active: var(--surface-medium);
+
+  /* Slot list (shared/components/slot-list.css). */
+  --slot-list-grid-gap: var(--space-xs);
+
+  /* Timezone picker (shared/components/timezone-picker.css). */
+  --dropdown-surface: var(--theme-surface);
+
+  /* Answer tiles and option cards (shared/components/custom-questions.css). */
+  --option-tile-bg: var(--theme-surface);
+  --option-tile-border: var(--border-medium);
+  --option-tile-text: var(--theme-text);
+  --option-tile-bg-hover: var(--folio-tint);
+
+  /* Default meeting pages (shared/components/manage-pages.css). */
+  --manage-page-danger-ink: var(--theme-danger);
+}

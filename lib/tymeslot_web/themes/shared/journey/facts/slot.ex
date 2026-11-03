@@ -124,7 +124,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
   defp selection(assigns),
     do: Calculate.validate_time_selection(assigns[:selected_date], assigns[:selected_time])
 
-  # Defensive on the nil date: neither theme's day button deselects any
+  # Defensive on the nil date: no theme's day button deselects any
   # more, so nothing reaches here with nil today. The guard stays because
   # sending {:load_slots, nil} would fetch slots for no day at all.
   #

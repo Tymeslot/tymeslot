@@ -98,10 +98,10 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPagesTest do
     meeting = %{
       start_time: ~U[2027-03-03 09:00:00Z],
       attendee_timezone: "Europe/Berlin",
-      status: "confirmed"
+      status: :confirmed
     }
 
-    payment = %{status: "paid"}
+    payment = %{status: :paid}
 
     out =
       payment(:processing, %{

@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
       # Moving a booking is never charged again, so the price that was paid
       # for it must not read as a price for the move.
       test "rescheduling a paid booking shows no price",
-           %{conn: conn, user: user, profile: profile, paid_type: paid_type} do
+           %{conn: conn, user: user, profile: profile, paid_type: paid_type, paid: paid} do
         start = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
 
         meeting =
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
             end_time: DateTime.add(start, 45, :minute),
             duration: 45,
             attendee_timezone: "UTC",
-            status: "confirmed"
+            status: :confirmed
           )
 
         {:ok, view, _html} =
@@ -179,7 +179,8 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
 
         if step(view) == :overview do
           refute has_element?(view, @price)
-          BookingDriver.continue(view)
+          # The overview has no Next: choosing the booked type moves on.
+          BookingDriver.choose_meeting_type(view, paid)
         end
 
         assert step(view) == :schedule

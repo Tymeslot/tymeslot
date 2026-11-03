@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.MeetingTypes
+  alias Tymeslot.BookingPages
   alias Tymeslot.MeetingTypes.OneOffEvents
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
@@ -69,14 +69,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                     type="text"
                     readonly
                     aria-label={dgettext("dashboard_integrations", "Direct booking link")}
-                    value={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
+                    value={type_url(assigns, @editing_type)}
                     class="font-mono text-token-sm flex-1 min-w-[12rem] px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
                   />
                   <.action_button
                     variant={:secondary}
                     id={"copy-booking-link-#{@editing_type.id}"}
                     phx-hook="CopyOnClick"
-                    data-copy-text={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
+                    data-copy-text={type_url(assigns, @editing_type)}
                     data-copy-feedback={dgettext("dashboard_integrations", "Booking link copied!")}
                   >
                     {dgettext("dashboard_integrations", "Copy")}
@@ -116,13 +116,16 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               user_agent={@user_agent}
               custom_questions_allowed={@custom_questions_allowed}
               group_bookings_allowed={@group_bookings_allowed}
+              username={@profile.username}
+              booking_pages={@booking_pages}
+              page_memberships={@page_memberships}
             />
 
             <BookingLinkModal.booking_link_modal
               show={@show_slug_modal}
               meeting_type={@slug_modal_data}
               slug_draft={@slug_draft}
-              base_url={booking_base_url(@profile) || ""}
+              base_url={type_base_url(assigns, @slug_modal_data)}
               myself={@myself}
             />
           </div>
@@ -142,6 +145,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 timezone={(@profile && @profile.timezone) || "Etc/UTC"}
                 time_format={@time_format}
                 payments_accepted={@payments_accepted}
+                username={@profile.username}
+                booking_pages={@booking_pages}
+                page_memberships={@page_memberships}
                 parent_myself={@myself}
               />
             </div>
@@ -149,6 +155,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
             <EventsListComponent.events_section
               events={@events}
               booking_base_url={booking_base_url(@profile)}
+              link_paths={event_link_paths(@profile, @events, @booking_pages, @page_memberships)}
               timezone={(@profile && @profile.timezone) || "Etc/UTC"}
               time_format={@time_format}
               venues={@venues}
@@ -187,4 +194,24 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
   end
 
   defp booking_base_url(_profile), do: nil
+
+  # A meeting type's one booking address (`BookingPages.meeting_type_path/2`),
+  # which lies under a page for a type only pages list, worked out from the
+  # pages and listings already held rather than a query per render.
+  defp type_url(assigns, type) do
+    paths = type_paths(assigns.profile, [type], assigns.booking_pages, assigns.page_memberships)
+    Endpoint.url() <> Map.fetch!(paths, type.id)
+  end
+
+  # Everything before the slug, for the link editor's prefix.
+  defp type_base_url(_assigns, nil), do: ""
+  defp type_base_url(assigns, type), do: assigns |> type_url(type) |> Path.dirname()
+
+  defp event_link_paths(profile, events, pages, memberships),
+    do: type_paths(profile, Enum.map(events, & &1.type), pages, memberships)
+
+  defp type_paths(%{username: _username} = profile, types, pages, memberships),
+    do: BookingPages.meeting_type_paths(profile, types, pages, memberships)
+
+  defp type_paths(_no_profile, _types, _pages, _memberships), do: %{}
 end

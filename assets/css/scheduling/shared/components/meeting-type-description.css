@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Meeting type description: the chosen type's description on a step after
+   the choice
+
+   Matching the shared component
+   (TymeslotWeb.Themes.Shared.Components.MeetingTypeDescription):
+
+     .meeting-type-description          - the block
+     .meeting-type-description__text    - the text, cut to three lines until
+                                          the block is .is-expanded
+     .meeting-type-description__toggle  - Show more / Show less, shown only
+                                          while the text runs past the cut
+                                          ([data-overflowing], set by the
+                                          ClampedText hook) or is expanded
+
+   Secondary text in the colour around it, so it reads on every theme's
+   surface; a theme sets size and spacing where it places the block.
+   ========================================================================== */
+
+.meeting-type-description {
+  color: inherit;
+  font-size: var(--theme-font-size-sm);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+.meeting-type-description__text {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.meeting-type-description:not(.is-expanded) .meeting-type-description__text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.meeting-type-description__toggle {
+  display: none;
+  margin-top: var(--space-3xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.meeting-type-description__toggle:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.meeting-type-description[data-overflowing] .meeting-type-description__toggle,
+.meeting-type-description.is-expanded .meeting-type-description__toggle {
+  display: inline-block;
+}
+
+.meeting-type-description__less,
+.meeting-type-description.is-expanded .meeting-type-description__more {
+  display: none;
+}
+
+.meeting-type-description.is-expanded .meeting-type-description__less {
+  display: inline;
+}

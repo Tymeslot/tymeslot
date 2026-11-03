@@ -27,7 +27,8 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:min_advance_hours) => non_neg_integer(),
           optional(:limit_checker) => (DateTime.t() -> boolean()) | nil,
           optional(:ignore_event_uids) => MapSet.t(String.t()),
-          optional(:limit_exempt_starts) => MapSet.t(integer())
+          optional(:limit_exempt_starts) => MapSet.t(integer()),
+          optional(:offered_starts) => [DateTime.t()]
         }
 
   @typedoc "The scheduling policy values an `availability_config` carries."

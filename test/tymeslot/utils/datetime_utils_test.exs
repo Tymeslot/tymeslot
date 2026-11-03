@@ -260,6 +260,31 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     end
   end
 
+  describe "shift_or_utc/2" do
+    test "shifts into a known zone and labels it with that zone" do
+      assert {shifted, "Europe/Tallinn"} =
+               DateTimeUtils.shift_or_utc(~U[2026-03-10 14:00:00Z], "Europe/Tallinn")
+
+      assert shifted.hour == 16
+      assert shifted.time_zone == "Europe/Tallinn"
+    end
+
+    test "falls back to the same instant in UTC, labelled UTC, for an unknown zone" do
+      {:ok, berlin} = DateTime.shift_zone(~U[2026-03-10 14:00:00Z], "Europe/Berlin")
+
+      assert {utc, "UTC"} = DateTimeUtils.shift_or_utc(berlin, "Mars/Olympus_Mons")
+      assert utc == ~U[2026-03-10 14:00:00Z]
+    end
+
+    test "falls back to UTC when no zone is given" do
+      assert {~U[2026-03-10 14:00:00Z], "UTC"} =
+               DateTimeUtils.shift_or_utc(~U[2026-03-10 14:00:00Z], nil)
+
+      assert {~U[2026-03-10 14:00:00Z], "UTC"} =
+               DateTimeUtils.shift_or_utc(~U[2026-03-10 14:00:00Z], "")
+    end
+  end
+
   describe "convert_to_utc/2" do
     test "converts naive datetime with valid IANA timezone to UTC" do
       # Europe/Brussels is UTC+2 in summer (CEST)

@@ -148,6 +148,13 @@ describe('modal sizing', () => {
     expect(container.style.maxHeight).toContain('calc(100vh - 100px)')
   })
 
+  test('the iframe is a block, so the clipping frame has no line-box gap to scroll', () => {
+    window.TymeslotBooking.open('alice')
+
+    const iframe = document.querySelector('#tymeslot-modal [data-tymeslot-frame] iframe')
+    expect(iframe.style.display).toBe('block')
+  })
+
   test('mobile full-screen stylesheet is injected once', () => {
     window.TymeslotBooking.open('alice')
     const first = document.getElementById('tymeslot-modal-styles')
@@ -274,16 +281,28 @@ describe('embed()', () => {
     expect(iframe.src).toContain('alice')
   })
 
-  test('URL-encodes the username in the embedded iframe src', () => {
+  test('URL-encodes each segment of the address in the embedded iframe src', () => {
     const container = document.createElement('div')
     container.id = 'booking-container'
     document.body.appendChild(container)
 
-    window.TymeslotBooking.embed('#booking-container', 'user/name')
+    window.TymeslotBooking.embed('#booking-container', 'user name/page?x')
 
     const iframe = container.querySelector('iframe')
-    expect(iframe.src).toContain('user%2Fname')
-    expect(iframe.src).not.toContain('user/name')
+    expect(new URL(iframe.src).pathname).toBe('/user%20name/page%3Fx')
+  })
+
+  // A booking page's address is `<username>/<page>`: the slash between the
+  // two stays a path separator, or the page would be a username of its own.
+  test('keeps the slash of a booking page address', () => {
+    const container = document.createElement('div')
+    container.id = 'booking-container'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#booking-container', 'joern/coaching')
+
+    const iframe = container.querySelector('iframe')
+    expect(new URL(iframe.src).pathname).toBe('/joern/coaching')
   })
 
   test('logs an error when the selector matches no element', () => {

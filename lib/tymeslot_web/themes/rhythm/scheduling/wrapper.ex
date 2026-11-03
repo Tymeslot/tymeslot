@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
   use Phoenix.Component
 
   alias Tymeslot.Themes.Catalog
-  alias TymeslotWeb.Themes.Shared.Components.ThemeShell
+  alias TymeslotWeb.Themes.Shared.Components.{LegalLinks, ThemeShell}
   alias TymeslotWeb.Themes.Shared.ThemeStyle
 
   import TymeslotWeb.Components.BackgroundMotionToggle,
@@ -27,6 +27,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
   attr :owner_preview, :boolean, default: false
   attr :refused_calendars, :list, default: []
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
+
+  attr :legal_links, :map,
+    required: true,
+    doc: "the organiser's legal links (`Profiles.public_legal_links/1`), or nil for none"
 
   attr :show_extensions, :boolean,
     default: true,
@@ -83,7 +87,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
             <div class="video-background-container"></div>
         <% end %>
       </:background>
-      <div class="booker-page video-background-theme theme-grid">
+      <div
+        class="booker-page video-background-theme theme-grid"
+        data-background={background_kind(@background)}
+      >
         <div class="content-area">
           <ThemeShell.chrome
             language_class="language-switcher-container"
@@ -102,10 +109,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
           should_show_branding={@should_show_branding}
           {Map.take(assigns, [:demo_mode])}
         />
+        <LegalLinks.footer links={@legal_links} />
       </div>
     </ThemeShell.theme_shell>
     """
   end
+
+  # Names the background kind for the stylesheet, which puts a dark floor
+  # under the box on a background it cannot vouch for (base.css).
+  defp background_kind(%{kind: kind}), do: kind
+  defp background_kind(_theme_default), do: nil
 
   defp theme_id do
     {:ok, id} = Catalog.key_to_id(:rhythm)

@@ -22,7 +22,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
   describe "attendee payment receipt block" do
     test "renders payment block with receipt URL when charge fetch succeeds" do
       booking_payment = %{
-        status: "paid",
+        status: :paid,
         amount_cents: 5000,
         currency: "eur",
         application_fee_cents: 25,
@@ -50,7 +50,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
 
     test "links no receipt whose URL is not a web address" do
       booking_payment = %{
-        status: "paid",
+        status: :paid,
         amount_cents: 5000,
         currency: "eur",
         application_fee_cents: 25,
@@ -82,7 +82,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
 
     test "renders payment block without link when receipt fetch fails" do
       booking_payment = %{
-        status: "paid",
+        status: :paid,
         amount_cents: 5000,
         currency: "eur",
         application_fee_cents: 25,
@@ -105,7 +105,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
 
     test "renders payment block without link when receipt URL is missing" do
       booking_payment = %{
-        status: "paid",
+        status: :paid,
         amount_cents: 5000,
         currency: "eur",
         application_fee_cents: 25,
@@ -126,7 +126,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
   describe "organizer received-amount block" do
     test "renders received-amount block for a paid booking" do
       booking_payment = %{
-        status: "paid",
+        status: :paid,
         amount_cents: 5000,
         currency: "eur",
         application_fee_cents: 25,
@@ -183,7 +183,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
 
     test "block is English even when locale is non-English" do
       booking_payment = %{
-        status: "paid",
+        status: :paid,
         amount_cents: 10_000,
         currency: "eur",
         application_fee_cents: 50,
@@ -209,7 +209,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
 
   defp render_paid_organizer_email(extra_details) do
     booking_payment = %{
-      status: "paid",
+      status: :paid,
       amount_cents: 5000,
       currency: "eur",
       application_fee_cents: 25,

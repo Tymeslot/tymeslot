@@ -21,6 +21,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.NoteTest do
     assert html =~ "I acknowledge the above"
   end
 
+  test "a body that only repeats the label is left out, the acknowledgement keeps its name" do
+    d = %{"type" => "note", "label" => "Anything else?", "body" => "  anything ELSE? "}
+    html = render_input(d)
+
+    refute html =~ "custom-question-note-body"
+    assert html =~ "I acknowledge the above"
+  end
+
   test "the checkbox is unchecked when the booker has not confirmed yet" do
     d = %{"type" => "note", "label" => "Terms", "body" => "Be nice."}
 

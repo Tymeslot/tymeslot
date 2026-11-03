@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Live.Scheduling.ExtraAvailabilityBookingJourneyTest do
       wait_until(fn -> Repo.get_by(MeetingSchema, organizer_user_id: user.id) end)
       meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
 
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
       assert DateTime.compare(meeting.start_time, DateTime.new!(day, ~T[18:00:00])) == :eq
     end
   end

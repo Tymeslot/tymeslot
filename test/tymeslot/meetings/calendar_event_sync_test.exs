@@ -314,7 +314,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       meeting: meeting
     } do
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+        {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
         {:ok, CreatedEvent.provider_minted("replacement-event")}
       end)
 
@@ -359,7 +359,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
     test "leaves the event of a meeting cancelled in the meantime to its delete job", %{
       meeting: meeting
     } do
-      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
 
       # Any calendar call would fail the test: none is expected.
       assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
@@ -374,7 +374,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
     # doesn't skip these as stale.
     test "deletes the event" do
       %{meeting: meeting} = setup_calendar_scenario()
-      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
       uid = meeting.calendar_uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx, _opts -> :ok end)
@@ -390,7 +390,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       {:ok, meeting} =
         MeetingQueries.update_meeting(meeting, %{
           provider_event_id: provider_event_id,
-          status: "cancelled"
+          status: :cancelled
         })
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^provider_event_id, _ctx, _opts -> :ok end)
@@ -400,7 +400,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
     test "treats a not_found event as success (idempotent)" do
       %{meeting: meeting} = setup_calendar_scenario()
-      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
       uid = meeting.calendar_uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx, _opts ->

@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
   attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :legal_links, :map, required: true
   attr :poll, :map, required: true
   attr :tallies, :map, required: true
   attr :voting_open, :boolean, required: true
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      legal_links={@legal_links}
       show_language_switcher={true}
     >
       <div class="scheduling-box booker-card poll-voting-page rhythm-poll-voting">

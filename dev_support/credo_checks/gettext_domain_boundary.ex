@@ -63,7 +63,7 @@ defmodule CredoChecks.GettextDomainBoundary do
         auth account onboarding onboarding_wizard
         dashboard_common
         dashboard_home dashboard_meeting_types dashboard_meeting_form dashboard_meeting_lengths
-        dashboard_meeting_questions dashboard_meeting_locations
+        dashboard_meeting_questions dashboard_meeting_locations dashboard_meeting_fixed_dates
         dashboard_availability dashboard_calendar_settings dashboard_calendar
         dashboard_calendar_events dashboard_calendar_repeat dashboard_calendar_editing
         dashboard_calendar_booking dashboard_calendar_views dashboard_calendar_power
@@ -71,6 +71,7 @@ defmodule CredoChecks.GettextDomainBoundary do
         dashboard_integrations
         dashboard_calendar_providers
         dashboard_automation dashboard_automation_chat dashboard_appearance
+        dashboard_booking_pages
         dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
         dashboard_analytics dashboard_admin dashboard_video dashboard_polls
         integrations

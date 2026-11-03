@@ -8,7 +8,7 @@ defmodule Tymeslot.CalendarGrid.GuestReplies do
   answer, then the guests invited to it through Tymeslot, with the answer
   each gave on the RSVP page.
 
-  A reply is `"accepted"`, `"declined"`, `"tentative"` or `"pending"`
+  A reply is `:accepted`, `:declined`, `:tentative` or `:pending`
   (invited, no answer yet), the statuses `GuestStatusPill` shows. `nil` is
   a person with no reply to show: someone who booked, or an attendee whose
   calendar reported none (a missing reply is not a pending one, see
@@ -16,9 +16,8 @@ defmodule Tymeslot.CalendarGrid.GuestReplies do
   """
 
   alias Tymeslot.Integrations.Calendar.Attendee
-  alias Tymeslot.Meetings.GuestSchema
 
-  @type reply :: String.t() | nil
+  @type reply :: :accepted | :declined | :tentative | :pending | nil
   @type guest :: %{name: String.t(), reply: reply()}
   @type summary :: %{
           total: pos_integer(),
@@ -41,10 +40,8 @@ defmodule Tymeslot.CalendarGrid.GuestReplies do
 
   @doc "A calendar's reported reply as a reply (`nil` when it reported none)."
   @spec reply(Attendee.response_status() | nil) :: reply()
-  def reply(:accepted), do: "accepted"
-  def reply(:declined), do: "declined"
-  def reply(:tentative), do: "tentative"
-  def reply(:needs_action), do: "pending"
+  def reply(:needs_action), do: :pending
+  def reply(status) when status in [:accepted, :declined, :tentative], do: status
   def reply(nil), do: nil
 
   @doc """
@@ -60,8 +57,8 @@ defmodule Tymeslot.CalendarGrid.GuestReplies do
       answered ->
         %{
           total: length(answered),
-          accepted: Enum.count(answered, &(&1.reply == "accepted")),
-          declined: Enum.count(answered, &(&1.reply == "declined"))
+          accepted: Enum.count(answered, &(&1.reply == :accepted)),
+          declined: Enum.count(answered, &(&1.reply == :declined))
         }
     end
   end
@@ -74,10 +71,8 @@ defmodule Tymeslot.CalendarGrid.GuestReplies do
   defp booked(booking),
     do: guest(label(Map.get(booking, :attendee_name), Map.get(booking, :attendee_email)), nil)
 
-  # Anything but a yes or a no is an invitation still waiting, as the
-  # guest schema reads it.
   defp invited(%{name: name, email: email, status: status}),
-    do: guest(label(name, email), status |> GuestSchema.status_key() |> Atom.to_string())
+    do: guest(label(name, email), status)
 
   defp guest(nil, _reply), do: []
   defp guest(name, reply), do: [%{name: name, reply: reply}]

@@ -359,7 +359,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
       meeting =
         insert_meeting_for_user(user, %{
-          status: "cancelled",
+          status: :cancelled,
           video_integration_id: integration.id,
           video_provider: "zoom",
           video_room_id: "4343",

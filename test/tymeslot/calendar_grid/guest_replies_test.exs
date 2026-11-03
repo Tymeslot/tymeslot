@@ -42,10 +42,10 @@ defmodule Tymeslot.CalendarGrid.GuestRepliesTest do
     }
 
     assert GuestReplies.of_event(event) == [
-             %{name: "Ada", reply: "accepted"},
-             %{name: "grace@example.com", reply: "pending"},
-             %{name: "alan@example.com", reply: "tentative"},
-             %{name: "kurt@example.com", reply: "declined"},
+             %{name: "Ada", reply: :accepted},
+             %{name: "grace@example.com", reply: :pending},
+             %{name: "alan@example.com", reply: :tentative},
+             %{name: "kurt@example.com", reply: :declined},
              %{name: "linus@example.com", reply: nil}
            ]
   end
@@ -56,17 +56,17 @@ defmodule Tymeslot.CalendarGrid.GuestRepliesTest do
         attendee_name: "Anna Kowalski",
         attendee_email: "anna@example.com",
         guests: [
-          %{name: nil, email: "grace@example.com", status: "pending"},
-          %{name: "Alan", email: "alan@example.com", status: "declined"},
-          %{name: nil, email: "kurt@example.com", status: "invited"}
+          %{name: nil, email: "grace@example.com", status: :pending},
+          %{name: "Alan", email: "alan@example.com", status: :declined},
+          %{name: nil, email: "kurt@example.com", status: :pending}
         ]
       })
 
     assert GuestReplies.of_event(one_to_one) == [
              %{name: "Anna Kowalski", reply: nil},
-             %{name: "grace@example.com", reply: "pending"},
-             %{name: "Alan", reply: "declined"},
-             %{name: "kurt@example.com", reply: "pending"}
+             %{name: "grace@example.com", reply: :pending},
+             %{name: "Alan", reply: :declined},
+             %{name: "kurt@example.com", reply: :pending}
            ]
   end
 
@@ -87,10 +87,10 @@ defmodule Tymeslot.CalendarGrid.GuestRepliesTest do
 
   test "summary/1 counts those with an answer, and is nil when nobody has one" do
     guests = [
-      %{name: "a", reply: "accepted"},
-      %{name: "b", reply: "declined"},
-      %{name: "c", reply: "pending"},
-      %{name: "d", reply: "tentative"},
+      %{name: "a", reply: :accepted},
+      %{name: "b", reply: :declined},
+      %{name: "c", reply: :pending},
+      %{name: "d", reply: :tentative},
       %{name: "e", reply: nil}
     ]
 

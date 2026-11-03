@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Live.Themes.IgnoredStepEventTest do
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
   @message "Booking step event ignored"
@@ -63,9 +64,9 @@ defmodule TymeslotWeb.Live.Themes.IgnoredStepEventTest do
 
       {:ok, view, _html} = live(conn, "/#{profile.username}")
 
-      # The overview step's own component receives the event, as a template's
+      # The meeting types' own component receives the event, as a template's
       # phx-click with phx-target={@myself} would send it.
-      step = "[data-phx-component]:has([data-testid='duration-option'])"
+      step = "[data-phx-component]:has([data-fact='meeting_type'])"
 
       for _twice <- 1..2 do
         view
@@ -77,7 +78,7 @@ defmodule TymeslotWeb.Live.Themes.IgnoredStepEventTest do
                       %{level: :warning, meta: %{event: "step-probe-unknown"} = meta} = log}
 
       assert meta.theme_id == unquote(theme.id)
-      assert meta.step == :overview
+      assert meta.step == offer_moment(view)
       refute LogCapture.dump(log) =~ "a@b.c"
       refute_receive {:captured_log, %{meta: %{event: "step-probe-unknown"}}}, 100
     end
@@ -95,7 +96,7 @@ defmodule TymeslotWeb.Live.Themes.IgnoredStepEventTest do
                       %{level: :warning, meta: %{event: "probe-unknown"} = meta} = log}
 
       assert meta.theme_id == unquote(theme.id)
-      assert meta.step == :overview
+      assert meta.step == offer_moment(view)
       refute LogCapture.dump(log) =~ "a@b.c"
       refute_receive {:captured_log, %{meta: %{event: "probe-unknown"}}}, 100
     end
@@ -114,5 +115,12 @@ defmodule TymeslotWeb.Live.Themes.IgnoredStepEventTest do
 
       assert ignored == [], Enum.map_join(ignored, "\n", &LogCapture.dump/1)
     end
+  end
+
+  # The moment that offers the meeting types, on screen when the page opens:
+  # the classic journey's `:overview`, Folio's `:offer`.
+  defp offer_moment(view) do
+    journey = :sys.get_state(view.pid).socket.assigns.journey
+    Progress.moment_for(journey, :meeting_type)
   end
 end

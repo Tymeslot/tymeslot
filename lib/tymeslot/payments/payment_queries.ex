@@ -38,7 +38,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
     query =
       from(t in PaymentTransaction,
         where: t.subscription_id == ^subscription_id,
-        where: t.status == "completed",
+        where: t.status == :completed,
         order_by: [desc: t.inserted_at, desc: t.id],
         limit: 1
       )
@@ -59,7 +59,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
       from(t in PaymentTransaction,
         where: t.stripe_customer_id == ^stripe_customer_id,
         where: is_nil(t.subscription_id),
-        where: t.status == "completed",
+        where: t.status == :completed,
         order_by: [desc: t.inserted_at, desc: t.id],
         limit: 1
       )
@@ -104,7 +104,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
     query =
       from(t in PaymentTransaction,
         where: t.stripe_customer_id == ^stripe_customer_id,
-        where: t.status == "completed",
+        where: t.status == :completed,
         order_by: [desc: t.inserted_at, desc: t.id],
         limit: 1
       )
@@ -129,7 +129,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
   @doc """
   Updates transaction status.
   """
-  @spec update_transaction_status(PaymentTransaction.t(), String.t()) ::
+  @spec update_transaction_status(PaymentTransaction.t(), PaymentTransaction.status()) ::
           {:ok, PaymentTransaction.t()} | {:error, Ecto.Changeset.t()}
   def update_transaction_status(transaction, status) do
     update_transaction(transaction, %{status: status})
@@ -138,7 +138,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
   @doc """
   Gets transactions by status for a specific user.
   """
-  @spec get_transactions_by_status(String.t(), pos_integer()) ::
+  @spec get_transactions_by_status(PaymentTransaction.status(), pos_integer()) ::
           {:ok, [PaymentTransaction.t()]} | {:error, term()}
   def get_transactions_by_status(status, user_id) do
     query =
@@ -164,7 +164,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
     query =
       from(t in PaymentTransaction,
         where: t.user_id == ^user_id,
-        where: t.status == "pending",
+        where: t.status == :pending,
         where: fragment("? ->> 'payment_type' = ?", t.metadata, "subscription"),
         order_by: [desc: t.inserted_at, desc: t.id],
         limit: 1
@@ -268,7 +268,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
     cutoff = Keyword.fetch!(opts, :cutoff)
 
     PaymentTransaction
-    |> where([t], t.status == "pending" and t.inserted_at < ^cutoff)
+    |> where([t], t.status == :pending and t.inserted_at < ^cutoff)
     |> filter_products(Keyword.get(opts, :product_identifiers))
     |> filter_payment_type(Keyword.get(opts, :payment_type))
   end

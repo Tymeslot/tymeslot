@@ -17,16 +17,18 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   through the generic loop. Its logo row takes an upload instead of a form
   field, and its accent row needs derived preview data, so routing it through
   the generic components would mean handing that state to every other setting
-  as well. The two share `row_header/1` with the generic rows, so both look
-  identical. The section's assigns come from what `TymeslotWeb.AdminLive`
-  builds in `load_data/1`.
+  as well. Those two rows live in `EmailBranding`; every row, generic or not,
+  shares `SettingRow.row_header/1`, so they all look identical. The section's
+  assigns come from what `TymeslotWeb.AdminLive` builds in `load_data/1`.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.AppSettings
+  alias TymeslotWeb.AdminLive.Components.EmailBranding
   alias TymeslotWeb.AdminLive.Components.LocaleSetting
+  alias TymeslotWeb.AdminLive.Components.SettingRow
   alias TymeslotWeb.AdminLive.Formatters
   alias TymeslotWeb.AdminLive.Tabs
 
@@ -130,13 +132,13 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
 
       <.card padding={:none} class="overflow-hidden divide-y divide-tymeslot-100">
         <.admin_setting_row key={:email_brand_name} effective_values={@effective_values} />
-        <.brand_accent_row
+        <EmailBranding.brand_accent_row
           effective={Map.fetch!(@effective_values, :email_brand_accent)}
           stock_accent={@stock_accent}
           accent_preview={@accent_preview}
           accent_draft={@accent_draft}
         />
-        <.email_logo_row
+        <EmailBranding.email_logo_row
           logo_url={@email_logo_url}
           upload={@upload}
           errors={@logo_errors}
@@ -177,46 +179,9 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
 
     ~H"""
     <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
-      <.row_header key={@key} muted={@muted} pinned_by={@effective.env_var} />
+      <SettingRow.row_header key={@key} muted={@muted} pinned_by={@effective.env_var} />
 
       <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />
-    </div>
-    """
-  end
-
-  # The left-hand half of a settings row: name, description, and the
-  # recommended-value chip where one applies. Shared so the branding rows,
-  # which render their own controls, stay visually identical to the generic
-  # ones.
-  attr :key, :atom, required: true
-  attr :muted, :boolean, default: false
-  attr :pinned_by, :string, default: nil
-
-  # The pinned note sits outside the muted wrapper so it stays legible on a
-  # pinned setting whose value is off.
-  defp row_header(assigns) do
-    ~H"""
-    <div class="flex-1 basis-full sm:basis-0 min-w-0">
-      <div class={["transition-opacity", @muted && "opacity-60"]}>
-        <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">
-          {Formatters.humanise(@key)}
-        </h4>
-        <p class="mt-1 text-token-sm text-tymeslot-600 font-medium leading-relaxed">
-          {Formatters.describe(@key)}
-        </p>
-        <.recommended_chip
-          :if={Formatters.recommended(@key) != nil}
-          value={Formatters.recommended(@key)}
-        />
-      </div>
-      <p
-        :if={@pinned_by}
-        id={"setting-pinned-#{@key}"}
-        class="mt-3 flex items-start gap-1.5 text-token-xs font-bold text-tymeslot-700"
-      >
-        <.icon name="hero-lock-closed-mini" class="w-4 h-4 mt-px shrink-0 text-tymeslot-500" />
-        <span>{Formatters.pinned_reason(@pinned_by)}</span>
-      </p>
     </div>
     """
   end
@@ -293,13 +258,18 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         phx-debounce="blur"
         value={format_score(@effective.value)}
         disabled={@disabled}
-        class={text_input_classes("w-24 text-center", @disabled)}
+        class={SettingRow.text_input_classes("w-24 text-center", @disabled)}
       />
     </form>
     """
   end
 
-  defp setting_control(%{kind: :email} = assigns) do
+  defp setting_control(%{kind: kind} = assigns) when kind in [:email, :text] do
+    assigns =
+      assigns
+      |> assign(:input_type, Atom.to_string(kind))
+      |> assign(:placeholder, text_placeholder(kind, assigns.key))
+
     ~H"""
     <form
       id={"admin-setting-form-#{@key}"}
@@ -310,42 +280,12 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
       <input
         id={"setting-input-#{@key}"}
-        type="email"
+        type={@input_type}
         name="value"
         value={@effective.value || ""}
-        placeholder={dgettext("dashboard_admin", "admin@example.com")}
+        placeholder={@placeholder}
         disabled={@disabled}
-        class={text_input_classes("w-64 max-w-full", @disabled)}
-      />
-      <.action_button
-        type="submit"
-        variant={:secondary}
-        size={:sm}
-        disabled={@disabled}
-      >
-        {dgettext("dashboard_admin", "Save")}
-      </.action_button>
-    </form>
-    """
-  end
-
-  defp setting_control(%{kind: :text} = assigns) do
-    ~H"""
-    <form
-      id={"admin-setting-form-#{@key}"}
-      phx-submit="save_setting"
-      class="flex items-center gap-2 shrink-0 max-w-full"
-      aria-label={dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(@key))}
-    >
-      <input type="hidden" name="key" value={Atom.to_string(@key)} />
-      <input
-        id={"setting-input-#{@key}"}
-        type="text"
-        name="value"
-        value={@effective.value || ""}
-        placeholder={AppSettings.default_for(@key)}
-        disabled={@disabled}
-        class={text_input_classes("w-64 max-w-full", @disabled)}
+        class={SettingRow.text_input_classes("w-64 max-w-full", @disabled)}
       />
       <.action_button
         type="submit"
@@ -362,221 +302,6 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   defp setting_control(%{kind: :locale} = assigns) do
     ~H"""
     <LocaleSetting.locale_control key={@key} effective={@effective} disabled={@disabled} />
-    """
-  end
-
-  # The accent row is its own component rather than a `setting_control` kind
-  # because it is the only control needing the derived preview data, and
-  # threading that through the generic row would hand it to every other
-  # setting too.
-  #
-  # The control pairs a native swatch picker with the hex text field so an
-  # admin can either pick visually or paste a brand hex they already have.
-  # Only the hex form ever writes to `AppSettings`: the swatch is
-  # preview-only and pushes its pick into `accent_draft`, which the hex
-  # field's `value` mirrors. Letting both forms write the same setting used
-  # to race - the swatch's autosave-on-blur could land after the hex form's
-  # stale submit and null the setting out. Routing every persist through the
-  # one hex form removes the second writer instead of narrowing the window.
-  attr :effective, :map, required: true
-  attr :stock_accent, :string, required: true
-  attr :accent_preview, :map, default: nil
-  attr :accent_draft, :string, default: nil
-
-  defp brand_accent_row(assigns) do
-    assigns =
-      assigns
-      |> assign(:current, assigns.effective.value || assigns.stock_accent)
-      |> assign(:hex_value, assigns.accent_draft || assigns.effective.value || "")
-
-    ~H"""
-    <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
-      <.row_header key={:email_brand_accent} />
-
-      <div class="flex flex-col items-end gap-2 shrink-0">
-        <form
-          id="admin-setting-form-email_brand_accent"
-          phx-change="preview_accent"
-          class="flex items-center gap-2"
-        >
-          <input
-            id="setting-swatch-email_brand_accent"
-            type="color"
-            name="value"
-            value={@current}
-            phx-debounce="blur"
-            aria-label={dgettext("dashboard_admin", "Pick a colour")}
-            aria-describedby="email-brand-accent-feedback"
-            class="h-9 w-12 rounded-token-lg border-2 border-tymeslot-100 bg-white p-1 cursor-pointer"
-          />
-        </form>
-
-        <form
-          id="admin-setting-hex-form-email_brand_accent"
-          phx-submit="save_setting"
-          class="flex items-center gap-2"
-          aria-label={
-            dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(:email_brand_accent))
-          }
-        >
-          <input type="hidden" name="key" value="email_brand_accent" />
-          <input
-            id="setting-input-email_brand_accent"
-            type="text"
-            name="value"
-            value={@hex_value}
-            placeholder={@stock_accent}
-            spellcheck="false"
-            aria-describedby="email-brand-accent-feedback"
-            class={text_input_classes("w-32 font-mono", false)}
-          />
-          <.action_button type="submit" variant={:secondary} size={:sm}>
-            {dgettext("dashboard_admin", "Save")}
-          </.action_button>
-        </form>
-
-        <div id="email-brand-accent-feedback" aria-live="polite">
-          <.contrast_warning
-            :if={@accent_preview != nil and @accent_preview.low_contrast?}
-            ratio={@accent_preview.contrast}
-          />
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  # The email logo is not a plain form field: it takes an upload, so it is
-  # its own row rather than a `setting_control` kind, reading the LiveView's
-  # upload state and the currently stored logo from its own attrs.
-  #
-  # The visible control is a plain file input, not `live_file_input`: the hook
-  # rasterises whatever the admin picked to a PNG in the browser and hands the
-  # result to the uploader via `this.upload/2`. That keeps SVG and WebP sources
-  # working without a rasteriser on the server, and means the only bytes that
-  # ever reach the server are a PNG — which `Branding.store_logo/1` re-validates,
-  # because a client-side conversion is a convenience, not a trust boundary.
-  attr :logo_url, :string, default: nil
-  attr :upload, :map, required: true
-  attr :errors, :list, default: []
-  # What the file picker offers, not what is uploaded: the browser rasterises
-  # whatever the admin picked to a PNG before it reaches the server.
-  attr :accept, :string, default: "image/png,image/jpeg,image/webp,image/svg+xml"
-  # 2x the 150px the email displays the logo at, so it stays sharp on retina
-  # without carrying a needlessly large attachment on every send.
-  attr :render_width, :integer, default: 300
-  # A 300px-wide PNG lands far under this; the cap is a backstop against a
-  # client that ignores the hook and posts something else entirely. Sourced
-  # from the caller's `@logo_max_bytes`, the single place the limit is
-  # declared - it also feeds `allow_upload/3` and the hook's own client-side
-  # size guard, so there is exactly one number to keep in sync.
-  attr :max_bytes, :integer, required: true
-
-  defp email_logo_row(assigns) do
-    ~H"""
-    <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
-      <.row_header key={:email_logo_path} />
-
-      <div class="flex flex-col items-end gap-3 shrink-0">
-        <div
-          :if={@logo_url}
-          class="flex items-center gap-3 px-4 py-3 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100"
-        >
-          <img
-            src={@logo_url}
-            alt={dgettext("dashboard_admin", "Current email logo")}
-            class="h-10 w-auto max-w-[150px] object-contain"
-          />
-          <.action_button variant={:danger_soft} size={:sm} phx-click="remove_email_logo">
-            {dgettext("dashboard_admin", "Remove")}
-          </.action_button>
-        </div>
-
-        <form id="admin-email-logo-form" phx-change="validate_email_logo">
-          <%!--
-            The uploader input is present but hidden. `this.upload/2` in the hook
-            resolves the uploader by looking up upload inputs in the DOM by name,
-            so it has to exist even though the admin never interacts with it.
-          --%>
-          <.live_file_input upload={@upload} class="hidden" />
-
-          <label class={[
-            button_classes(:secondary, :sm),
-            "focus-within:outline-hidden focus-within:ring-2 focus-within:ring-turquoise-500 focus-within:ring-offset-2"
-          ]}>
-            <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
-            {if @logo_url,
-              do: dgettext("dashboard_admin", "Replace"),
-              else: dgettext("dashboard_admin", "Upload")}
-            <input
-              id="email-logo-picker"
-              type="file"
-              accept={@accept}
-              class="sr-only"
-              phx-hook="EmailLogoUpload"
-              phx-update="ignore"
-              aria-describedby="email-logo-errors"
-              data-upload-name={@upload.name}
-              data-render-width={@render_width}
-              data-max-bytes={@max_bytes}
-            />
-          </label>
-        </form>
-
-        <div id="email-logo-errors" aria-live="polite">
-          <p
-            :for={message <- @errors}
-            class="max-w-[16rem] text-token-xs font-bold text-red-600 text-right"
-          >
-            {message}
-          </p>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  attr :ratio, :float, required: true
-
-  defp contrast_warning(assigns) do
-    ~H"""
-    <p class="flex items-start gap-1.5 max-w-[16rem] text-token-xs font-bold text-amber-700 text-right">
-      <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 shrink-0 mt-px" />
-      <span>
-        {dgettext(
-          "dashboard_admin",
-          "White button text on this colour has a contrast of only %{ratio}:1. Buttons may be hard to read.",
-          ratio: :erlang.float_to_binary(@ratio, decimals: 1)
-        )}
-      </span>
-    </p>
-    """
-  end
-
-  # Shared classes for the score and email text inputs. Disabled inputs get a
-  # muted background and tone-down on text, mirroring the locked boolean-tag
-  # styling so disabled controls are visually unambiguous.
-  defp text_input_classes(size_classes, disabled?) do
-    [
-      "px-3 py-1.5 rounded-token-lg border-2 text-token-sm font-bold focus:outline-hidden focus:ring-2 focus:ring-turquoise-500 focus:border-turquoise-500",
-      size_classes,
-      if(disabled?,
-        do: "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-300 cursor-not-allowed",
-        else: "border-tymeslot-100 text-tymeslot-900"
-      )
-    ]
-  end
-
-  attr :value, :boolean, required: true
-
-  defp recommended_chip(assigns) do
-    ~H"""
-    <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg bg-turquoise-50 border border-turquoise-100">
-      <.icon name="hero-check-badge-mini" class="w-4 h-4 text-turquoise-600" />
-      <span class="text-token-xs font-bold text-turquoise-700">
-        {dgettext("dashboard_admin", "Recommended:")} {Formatters.recommended_label(@value)}
-      </span>
-    </div>
     """
   end
 
@@ -614,6 +339,9 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     </button>
     """
   end
+
+  defp text_placeholder(:email, _key), do: dgettext("dashboard_admin", "admin@example.com")
+  defp text_placeholder(:text, key), do: AppSettings.default_for(key)
 
   # Renders a float as a fixed two-decimal string so the input value stays
   # human-readable (0.30 instead of 0.3000000000000001).

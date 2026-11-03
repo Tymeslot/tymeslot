@@ -117,7 +117,7 @@ defmodule Tymeslot.Telegram.InputValidationTest do
         "events" => ["meeting.created"]
       }
 
-      assert {:ok, sanitized} = InputValidation.validate_form(params, bot_mode: "own")
+      assert {:ok, sanitized} = InputValidation.validate_form(params, bot_mode: :own)
       assert sanitized.name
       assert sanitized.bot_token
       assert sanitized.chat_id
@@ -130,7 +130,7 @@ defmodule Tymeslot.Telegram.InputValidationTest do
         "events" => ["meeting.created", "meeting.cancelled"]
       }
 
-      assert {:ok, sanitized} = InputValidation.validate_form(params, bot_mode: "shared")
+      assert {:ok, sanitized} = InputValidation.validate_form(params, bot_mode: :shared)
       assert sanitized.name
       assert is_nil(Map.get(sanitized, :bot_token))
       assert sanitized.events
@@ -143,7 +143,7 @@ defmodule Tymeslot.Telegram.InputValidationTest do
         "events" => ["meeting.created"]
       }
 
-      assert {:ok, sanitized} = InputValidation.validate_form(params, bot_mode: "shared")
+      assert {:ok, sanitized} = InputValidation.validate_form(params, bot_mode: :shared)
       refute Map.has_key?(sanitized, :chat_id)
     end
 
@@ -155,7 +155,7 @@ defmodule Tymeslot.Telegram.InputValidationTest do
         "events" => ["meeting.created"]
       }
 
-      for bot_mode <- ["own", "shared"], mode <- [:create, :edit] do
+      for bot_mode <- [:own, :shared], mode <- [:create, :edit] do
         assert {:ok, sanitized} =
                  InputValidation.validate_form(params, bot_mode: bot_mode, mode: mode)
 
@@ -164,7 +164,7 @@ defmodule Tymeslot.Telegram.InputValidationTest do
     end
 
     test "returns errors for missing fields" do
-      assert {:error, errors} = InputValidation.validate_form(%{}, bot_mode: "own")
+      assert {:error, errors} = InputValidation.validate_form(%{}, bot_mode: :own)
       assert Map.has_key?(errors, :name)
       assert Map.has_key?(errors, :bot_token)
       assert Map.has_key?(errors, :chat_id)

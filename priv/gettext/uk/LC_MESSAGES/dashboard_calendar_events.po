@@ -394,3 +394,16 @@ msgstr "Учасника додано, але не вдалося надісла
 #, elixir-autogen, elixir-format
 msgid "Attendee removed, but they could not be notified."
 msgstr "Учасника видалено, але не вдалося його сповістити."
+
+#: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The latest update could not be emailed to this guest. Let them know another way."
+msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""

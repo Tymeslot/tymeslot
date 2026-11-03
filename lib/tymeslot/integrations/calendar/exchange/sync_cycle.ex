@@ -209,28 +209,36 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SyncCycle do
   # hold it permanently fresh and the daily full re-read would never come due
   # again, so items sliding into the window would never be picked up.
   #
-  # `{:error, :full_sync_required, integration}` is the incremental read asking
-  # for the other one rather than failing: the server refused a stored token,
-  # `ItemCache` has already dropped it, and the integration handed back is the
-  # one without it, so the full read's bootstrap re-establishes it. Reporting
-  # the refusal instead would have the folder fail identically every cycle,
-  # forever.
+  # `{:error, :full_sync_required, integration, pending}` is the incremental read asking
+  # for the other one rather than failing, for one of two reasons. Either the
+  # server refused a stored token, `ItemCache` has already dropped it, and the
+  # integration handed back is the one without it, so the full read's
+  # bootstrap re-establishes it; reporting the refusal instead would have the
+  # folder fail identically every cycle, forever. Or the feed reported a
+  # recurring series change it cannot apply item by item, and the integration
+  # handed back is unchanged and `pending` holds the advanced tokens, which
+  # the bootstrap stores once the full read has succeeded.
   defp refresh_items(integration, from, to) do
     if ItemCache.full_sync_due?(integration) do
-      full_refresh_items(integration, from, to)
+      full_refresh_items(integration, from, to, %{})
     else
       case ItemCache.incremental_refresh(integration, from, to) do
-        {:ok, uids} -> {:ok, uids, :incremental}
-        {:error, :full_sync_required, integration} -> full_refresh_items(integration, from, to)
-        {:error, _reason} = error -> error
+        {:ok, uids} ->
+          {:ok, uids, :incremental}
+
+        {:error, :full_sync_required, integration, pending} ->
+          full_refresh_items(integration, from, to, pending)
+
+        {:error, _reason} = error ->
+          error
       end
     end
   end
 
-  defp full_refresh_items(integration, from, to) do
+  defp full_refresh_items(integration, from, to, pending) do
     with {:ok, events} <- fetch_all_calendars(integration, from, to),
          {:ok, uids} <- write(integration, @display_only, events, from, to) do
-      ItemCache.bootstrap_sync_states(integration)
+      ItemCache.bootstrap_sync_states(integration, pending)
       {:ok, uids, :full}
     end
   end

@@ -39,13 +39,15 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
 
   Position this wherever the notice should appear in the layout; the token
   input from `recaptcha_token_field/1` must still live inside the form.
+  Its inks are each theme's, through the `--recaptcha-notice-*` tokens
+  (`shared/components/booking-fields.css`).
   """
   @spec recaptcha_notice_block(map()) :: Phoenix.LiveView.Rendered.t()
   def recaptcha_notice_block(assigns) do
     ~H"""
     <div
       :if={RecaptchaHelpers.booking_active?()}
-      class="recaptcha-notice text-xs text-tymeslot-500 text-center"
+      class="recaptcha-notice text-xs text-center"
     >
       {Phoenix.HTML.raw(recaptcha_notice())}
     </div>
@@ -53,14 +55,12 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   end
 
   defp recaptcha_notice do
-    link_class = "text-turquoise-600 underline hover:text-turquoise-700"
-
     privacy_link =
-      ~s(<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="#{link_class}">) <>
+      ~s(<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="underline">) <>
         dgettext("booking", "Privacy Policy") <> "</a>"
 
     terms_link =
-      ~s(<a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" class="#{link_class}">) <>
+      ~s(<a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" class="underline">) <>
         dgettext("booking", "Terms of Service") <> "</a>"
 
     dgettext(

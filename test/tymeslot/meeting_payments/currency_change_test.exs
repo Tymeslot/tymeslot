@@ -45,7 +45,7 @@ defmodule Tymeslot.MeetingPayments.CurrencyChangeTest do
     end
 
     test "refuses while a booking awaits payment, so its price keeps its currency", ctx do
-      insert(:meeting, organizer_user_id: ctx.user.id, status: "awaiting_payment")
+      insert(:meeting, organizer_user_id: ctx.user.id, status: :awaiting_payment)
 
       assert {:error, :pending_payments_exist} =
                MeetingPayments.change_default_currency(ctx.account, "gbp")

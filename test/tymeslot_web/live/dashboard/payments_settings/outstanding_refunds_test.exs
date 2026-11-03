@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefundsTest do
       attendee_email: "outofpocket@example.com",
       amount_cents: 5000,
       currency: "eur",
-      meeting: build(:meeting, status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      meeting: build(:meeting, status: :cancelled, cancelled_at: DateTime.utc_now(:second))
     }
 
     build(:paid_booking_payment, Map.merge(defaults, Map.new(attrs)))

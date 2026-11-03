@@ -27,11 +27,6 @@ msgstr "Trocar link de agendamento"
 msgid "Changing this link will stop any links you have already shared for this meeting type from working."
 msgstr "Ao trocar este link, todos os links que você já compartilhou para este tipo de reunião deixam de funcionar."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Hidden from your public booking page; reachable only by its direct link"
-msgstr "Oculto na sua página pública de agendamento; acessível só pelo link direto"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Link address"
@@ -409,7 +404,7 @@ msgstr "Nenhuma data aberta"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
-msgstr "Não aparece na sua página de reservas até que uma das datas esteja aberta para inscrições. Planeje uma data ou mude o fim das inscrições."
+msgstr "Não aparece na sua página de agendamento até que uma das datas esteja aberta para inscrições. Planeje uma data ou mude o fim das inscrições."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen
@@ -429,3 +424,38 @@ msgid "The %{count} person who signed up is told by email."
 msgid_plural "The %{count} people who signed up are told by email."
 msgstr[0] "A pessoa inscrita será avisada por e-mail."
 msgstr[1] "As %{count} pessoas inscritas serão avisadas por e-mail."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
+msgstr "Não aparece na sua página de agendamento até oferecer um horário que quem agenda possa escolher: um posterior à antecedência mínima e dentro do limite de antecedência. Adicione um horário para oferecer."
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(cópia)"
+
+#: lib/tymeslot/meeting_types/duplication.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(cópia) %{number}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplicar"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate %{name}"
+msgstr "Duplicar %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; reachable only by its direct link"
+msgstr "Em nenhuma página de agendamento; acessível só pelo link direto"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link"
+msgstr "Link de reserva"

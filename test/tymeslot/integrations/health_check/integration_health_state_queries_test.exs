@@ -19,20 +19,50 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
     {:ok, _row} =
       %IntegrationHealthStateSchema{}
       |> IntegrationHealthStateSchema.changeset(%{
-        integration_type: "calendar",
+        integration_type: :calendar,
         integration_id: integration_id,
         user_id: user.id,
-        status: "unhealthy",
+        status: :unhealthy,
         failures: 5,
         consecutive_hard_failures: 5,
         successes: 0,
         backoff_ms: :timer.hours(1),
         last_check_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-        last_error_class: "hard",
+        last_error_class: :hard,
         became_unhealthy_at: DateTime.add(DateTime.utc_now(), -3 * 24 * 3600, :second),
         notification_sent_at: DateTime.add(DateTime.utc_now(), -2 * 24 * 3600, :second)
       })
       |> Repo.insert()
+  end
+
+  describe "update_fields/3" do
+    test "refuses a status outside the known set before it reaches the database",
+         %{user: user} do
+      integration = insert(:calendar_integration, user: user)
+      {:ok, _row} = insert_unhealthy_row(user, integration.id)
+
+      assert_raise Ecto.Query.CastError, fn ->
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id, status: :unknown)
+      end
+
+      assert Repo.get_by!(IntegrationHealthStateSchema, integration_id: integration.id).status ==
+               :unhealthy
+    end
+
+    test "refuses an error class outside the known set before it reaches the database",
+         %{user: user} do
+      integration = insert(:calendar_integration, user: user)
+      {:ok, _row} = insert_unhealthy_row(user, integration.id)
+
+      assert_raise Ecto.Query.CastError, fn ->
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          last_error_class: :fatal
+        )
+      end
+
+      assert %{last_error_class: :hard} =
+               Repo.get_by!(IntegrationHealthStateSchema, integration_id: integration.id)
+    end
   end
 
   describe "reset/2" do
@@ -43,7 +73,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
 
       {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 42)
 
-      assert row.status == "healthy"
+      assert row.status == :healthy
       assert row.failures == 0
       assert row.consecutive_hard_failures == 0
       assert row.successes == 0
@@ -63,7 +93,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
       {0, nil} = IntegrationHealthStateQueries.reset(:video, 7)
 
       {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 7)
-      assert row.status == "unhealthy"
+      assert row.status == :unhealthy
     end
   end
 
@@ -82,7 +112,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
 
       # Everything else is the episode, not the streak. Clearing it here would
       # restart the 48-hour notification clock on every intermittent success.
-      assert row.status == "unhealthy"
+      assert row.status == :unhealthy
       assert row.became_unhealthy_at == before.became_unhealthy_at
       assert row.notification_sent_at == before.notification_sent_at
       assert row.failures == before.failures
@@ -122,8 +152,8 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
       active = insert(:calendar_integration, user: user, is_active: true)
       inactive = insert(:calendar_integration, user: user, is_active: false)
 
-      insert_health_row(user, active.id, "calendar", "unhealthy")
-      insert_health_row(user, inactive.id, "calendar", "unhealthy")
+      insert_health_row(user, active.id, "calendar", :unhealthy)
+      insert_health_row(user, inactive.id, "calendar", :unhealthy)
 
       ids =
         user.id
@@ -135,15 +165,15 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
     end
 
     test "ignores orphaned rows whose integration row no longer exists", %{user: user} do
-      insert_health_row(user, 999_999, "calendar", "unhealthy")
+      insert_health_row(user, 999_999, "calendar", :unhealthy)
 
       assert IntegrationHealthStateQueries.list_unhealthy_for_user(user.id) == []
     end
 
     test "ignores healthy and degraded rows even when integration is active", %{user: user} do
       active = insert(:calendar_integration, user: user, is_active: true)
-      insert_health_row(user, active.id, "calendar", "healthy")
-      insert_health_row(user, active.id + 1_000_000, "calendar", "degraded")
+      insert_health_row(user, active.id, "calendar", :healthy)
+      insert_health_row(user, active.id + 1_000_000, "calendar", :degraded)
 
       assert IntegrationHealthStateQueries.list_unhealthy_for_user(user.id) == []
     end

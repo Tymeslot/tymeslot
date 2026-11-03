@@ -25,13 +25,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLegacyRowTes
   alias Tymeslot.Repo
 
   test "confirms the meeting" do
-    meeting = legacy_meeting(status: "awaiting_payment")
+    meeting = legacy_meeting(status: :awaiting_payment)
     bp = insert_payment(meeting, "LEGACY")
 
     assert :ok = CheckoutSessionCompleted.handle(completed_event(meeting, "LEGACY"))
 
-    assert Repo.reload!(bp).status == "paid"
-    assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+    assert Repo.reload!(bp).status == :paid
+    assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
   end
 
   test "moves a gated meeting into the approval gate, its clock restarted" do
@@ -39,7 +39,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLegacyRowTes
 
     meeting =
       legacy_meeting(
-        status: "awaiting_payment",
+        status: :awaiting_payment,
         approval_requested_at: requested_at,
         approval_deadline_at: DateTime.add(requested_at, 12, :hour)
       )
@@ -49,7 +49,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLegacyRowTes
     assert :ok = CheckoutSessionCompleted.handle(completed_event(meeting, "LEGACY_GATED"))
 
     {:ok, gated} = MeetingQueries.get_meeting(meeting.id)
-    assert gated.status == "awaiting_approval"
+    assert gated.status == :awaiting_approval
     assert DateTime.after?(gated.approval_requested_at, requested_at)
   end
 
@@ -63,7 +63,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLegacyRowTes
     insert(:booking_payment,
       stripe_account_id: @account,
       meeting: meeting,
-      status: "pending",
+      status: :pending,
       stripe_checkout_session_id: "cs_#{suffix}"
     )
   end

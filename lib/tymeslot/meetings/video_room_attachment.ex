@@ -65,7 +65,9 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
       {:ok, {:attached, updated_meeting}} ->
         # Schedule the calendar update only once we have definitively attached the
         # video room in this call path.
-        schedule_calendar_update(updated_meeting)
+        unless rides_booking_event?(updated_meeting),
+          do: schedule_calendar_update(updated_meeting)
+
         {:ok, updated_meeting}
 
       {:ok, {:location_changed, moved_meeting}} ->
@@ -136,6 +138,15 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
   end
 
   defp releasable_duplicate?(_video_room_attrs, _existing_meeting, _meeting), do: false
+
+  # A Teams meeting placed on the booking's own calendar event is already on
+  # that event, which Graph shows with its join link. Rewriting the event to
+  # add the link would only mail the guest an update (issue #191).
+  defp rides_booking_event?(%MeetingSchema{video_room_id: event_id, provider_event_id: event_id})
+       when is_binary(event_id),
+       do: true
+
+  defp rides_booking_event?(_meeting), do: false
 
   defp schedule_calendar_update(meeting) do
     case CalendarEventScheduler.schedule_calendar_update(meeting.id) do

@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.HostAddresses
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
@@ -229,6 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
       # than all under the first one.
       provider_calendar_id: List.first(calendar_paths),
       calendar_paths: calendar_paths,
+      host_addresses: HostAddresses.for_integration(integration),
       synced_at: DateTime.utc_now(:microsecond)
     }
   end

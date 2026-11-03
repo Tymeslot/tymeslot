@@ -63,10 +63,18 @@
   box-sizing: border-box;
 }
 
+/* The select's light ink is drawn by the browser on its native option list
+   too; a dark colour scheme gives that list a dark ground to match, where
+   the browser's light default would leave the ink unreadable. Scoped to the
+   select: on the page root it would also make an embedding iframe opaque. */
+.rhythm-theme-wrapper select.input {
+  color-scheme: dark;
+}
+
 .rhythm-theme-wrapper .input::placeholder,
 .rhythm-theme-wrapper input.input::placeholder,
 .rhythm-theme-wrapper textarea.input::placeholder {
-  color: var(--theme-text-secondary);
+  color: var(--rhythm-ink-quiet);
 }
 
 .rhythm-theme-wrapper .input:hover,

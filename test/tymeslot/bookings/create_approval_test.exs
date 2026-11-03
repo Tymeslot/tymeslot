@@ -78,7 +78,7 @@ defmodule Tymeslot.Bookings.CreateApprovalTest do
       meeting_type = insert(:meeting_type, user: user, requires_approval: true)
 
       assert {:ok, meeting} = book(user, form_data, meeting_type)
-      assert meeting.status == "awaiting_approval"
+      assert meeting.status == :awaiting_approval
     end
 
     test "stamps the clock the host is answering against", %{user: user, form_data: form_data} do
@@ -197,7 +197,7 @@ defmodule Tymeslot.Bookings.CreateApprovalTest do
 
       assert {:ok, meeting} = book(user, form_data, meeting_type)
 
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
       assert meeting.approval_requested_at == nil
       assert meeting.approval_deadline_at == nil
 

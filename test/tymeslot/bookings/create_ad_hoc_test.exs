@@ -47,7 +47,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert meeting.meeting_type == "Quick sync"
       assert meeting.attendee_name == "Jane Doe"
       assert meeting.attendee_email == "jane@example.com"
-      assert meeting.status == "confirmed"
+      assert meeting.status == :confirmed
     end
 
     test "stores the organiser's note trimmed, never as the attendee's message", %{

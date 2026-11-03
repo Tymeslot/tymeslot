@@ -30,12 +30,12 @@ defmodule Tymeslot.AppSettings.AppSettingsSchemaTest do
     end
 
     test "rejects a well-formed code that is simply not in the supported set" do
-      # "es" is a real locale and would pass any format check; only the
+      # "ja" is a real locale and would pass any format check; only the
       # configured set can reject it.
-      refute "es" in Locales.supported_codes()
+      refute "ja" in Locales.supported_codes()
 
       changeset =
-        AppSettingsSchema.changeset(%AppSettingsSchema{}, %{booking_default_locale: "es"})
+        AppSettingsSchema.changeset(%AppSettingsSchema{}, %{booking_default_locale: "ja"})
 
       refute changeset.valid?
     end

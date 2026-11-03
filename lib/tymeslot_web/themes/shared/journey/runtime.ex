@@ -33,16 +33,26 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   `enter/2` of each collected fact the booking requires, with `params`, the
   URL's or `%{}` for a move inside the page) and lets the navigator settle
   (`settle/1`). The navigators and `BookingFlow` move through it. A fact's
-  or an ambient event settles too, and when that moves `:current_state` the
-  new current moment becomes `:journey_focus`. `clear/2` forgets facts and
+  or an ambient event settles too, and when that moves `:current_state` on to
+  a moment after the one the event came from, the new current moment
+  becomes `:journey_focus`. Next, Back and the step indicator do the same
+  for every navigator, in either direction: a move that makes another
+  moment current makes it `:journey_focus`. Nothing sets it on page load
+  or on a reconnect, which mounts afresh. `clear/2` forgets facts and
   those depending on them. `navigate_to_step/2` is the step indicator's
   click, handed to the navigator's `go_to/3`.
+
+  A fact whose prerequisite its own moment collects is entered once that
+  prerequisite is known (`enter_ready/1`, after every step event), so one
+  paged moment can pick the time and then open the details. On a declared
+  journey the address then follows the facts (`follow_url/1`).
   """
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias Phoenix.LiveView.Socket
   alias Tymeslot.MeetingPayments
+  alias TymeslotWeb.Themes.Shared.ChoicesInUrl
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Ambient
@@ -60,19 +70,22 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   """
   @spec handle_step_event(Socket.t(), atom(), atom(), term()) :: reply() | :unhandled
   def handle_step_event(%Socket{assigns: %{journey: journey}} = socket, moment_key, event, data) do
-    cond do
-      navigation?(journey, socket.assigns, moment_key, event) ->
-        navigate(journey, socket, event)
+    reply =
+      cond do
+        navigation?(journey, socket.assigns, moment_key, event) ->
+          focus_on_move(navigate(journey, socket, event), socket)
 
-      restart?(socket.assigns, moment_key, event) ->
-        {:noreply, restart(socket)}
+        restart?(socket.assigns, moment_key, event) ->
+          {:noreply, restart(socket)}
 
-      event in Ambient.events() ->
-        ambient_event(journey, socket, moment_key, event, data)
+        event in Ambient.events() ->
+          ambient_event(journey, socket, moment_key, event, data)
 
-      true ->
-        fact_event(journey, socket, moment_key, event, data)
-    end
+        true ->
+          fact_event(journey, socket, moment_key, event, data)
+      end
+
+    enter_ready_after(reply)
   end
 
   def handle_step_event(_socket, _moment_key, _event, _data), do: :unhandled
@@ -80,8 +93,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   @doc """
   Shows the moment or outcome `key`. A moment is opened (`open_moment/3`),
   then the navigator settles what the booking now reaches (`settle/1`).
+  The confirmation means the booking was made, so the details typed for it
+  (`:form`) are dropped there rather than carried into the next booking.
   """
   @spec transition_to(Socket.t(), atom(), map()) :: Socket.t()
+  def transition_to(socket, :confirmation, _params),
+    do: assign(socket, current_state: :confirmation, form: nil)
+
   def transition_to(socket, key, params) do
     socket = assign(socket, :current_state, key)
 
@@ -97,6 +115,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   that the booking requires, with `params` (the URL parameters on arrival,
   `%{}` inside the page), and records the moment in `:journey_opened`, so a
   navigator showing several moments enters each once while it stays shown.
+  A fact waiting on a prerequisite that the same moment collects and that
+  is not yet known (the attendee beside the slot on one screen) is not
+  entered here but put off, with `params`, until `enter_ready/1` finds its
+  prerequisites known.
   """
   @spec open_moment(Socket.t(), Moment.t(), map()) :: Socket.t()
   def open_moment(socket, %Moment{} = moment, params) do
@@ -104,9 +126,56 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
     socket
     |> apply_defaults(moment, facts)
+    |> forget_deferred(moment.key)
     |> enter_facts(moment, params, facts)
     |> then(&assign(&1, :journey_opened, MapSet.put(opened(&1), moment.key)))
   end
+
+  @doc """
+  Enters each fact a visible moment put off (`open_moment/3`) whose
+  prerequisites are now all known, with the parameters its moment opened
+  with. Runs after every step event, so a time picked on a screen that also
+  asks for the details opens the details' form and token.
+  """
+  @spec enter_ready(Socket.t()) :: Socket.t()
+  def enter_ready(%Socket{assigns: %{journey: %Journey{navigator: navigator} = journey}} = socket) do
+    visible =
+      MapSet.new(navigator.visible(journey, socket.assigns), fn {moment, _state} ->
+        moment.key
+      end)
+
+    socket
+    |> deferred()
+    |> Enum.filter(fn {{moment_key, fact_key}, _params} ->
+      MapSet.member?(visible, moment_key) and ready?(Journey.fact!(fact_key), socket.assigns)
+    end)
+    |> Enum.reduce(socket, fn {{_moment_key, fact_key} = entry, params}, acc ->
+      fact = Journey.fact!(fact_key)
+
+      acc
+      |> assign(:journey_deferred, Map.delete(deferred(acc), entry))
+      |> fact.enter(params)
+    end)
+  end
+
+  def enter_ready(socket), do: socket
+
+  @doc """
+  On a journey whose address follows its facts (`url: :facts`), moves the
+  address with them through `ChoicesInUrl.sync/1`, the one writer of a
+  booking page's address (`PathHandlers.facts_address/1`), replacing the
+  history entry, so the browser's Back leaves the page. A socket already
+  redirecting or patching, any other journey, and a page not yet connected
+  keep their address.
+  """
+  @spec follow_url(Socket.t()) :: Socket.t()
+  def follow_url(%Socket{assigns: %{journey: %Journey{url: :facts}}} = socket),
+    do: ChoicesInUrl.sync(socket)
+
+  def follow_url(socket), do: socket
+
+  defp ready?(fact, assigns),
+    do: Enum.all?(fact.requires(assigns), &Journey.fact!(&1).known?(assigns))
 
   @doc """
   Forgets `keys` and every fact depending on them for this booking
@@ -164,7 +233,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   Starts the booking again, in place: the confirmation's "Schedule another
   meeting". It keeps the meeting type and forgets every fact depending on
   it (the time, the answers, the booking just made). A booker who came
-  through the overview returns to the journey's opening moment; any other
+  through the overview, or whose booking names no meeting type (a
+  confirmation reached by its own address), returns to the journey's
+  opening moment, as a visit to the overview would; any other
   (a private or direct link, a reschedule) to the moment a meeting type's
   own link opens on, for the same meeting type, so the organiser's other
   types stay hidden.
@@ -176,9 +247,12 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # on them, with a time that is no longer free. The answers are the last
   # booker's, and the booking's `meeting_uid` would leave the attendee
   # known, so the next booking's details moment would open as done; what
-  # its payment took is that booking's too (`:paid_payment`). A
+  # its payment took is that booking's too (`:paid_payment`). The form
+  # goes too: the details moment carries what was typed into it while the
+  # page stays on one booking (`StepEntry`), never into the next. A
   # reschedule still named in the URL is patched out of it, to the route the
-  # booking starts again on, so a reload does not start the move over.
+  # booking starts again on, so a reload does not start the move over. That
+  # route is also the one the language switch now rebuilds (`:entry_action`).
   @spec restart(Socket.t()) :: Socket.t()
   def restart(socket) do
     journey = socket.assigns.journey
@@ -190,8 +264,12 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     |> forget_payment_wait()
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
-    |> assign(selected_date: nil, selected_time: nil, paid_payment: nil)
-    |> assign(:journey_opened, MapSet.new())
+    |> assign(selected_date: nil, selected_time: nil, form: nil, paid_payment: nil)
+    |> assign(
+      journey_opened: MapSet.new(),
+      entry_action: route,
+      entered_via_overview: route == :overview
+    )
     |> transition_to(opening, %{})
     |> ReschedulePin.drop_from_url(route)
   end
@@ -220,7 +298,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   @spec navigate_to_step(Socket.t(), map()) :: reply()
   def navigate_to_step(%Socket{assigns: %{journey: journey}} = socket, %{"step" => step})
       when is_binary(step),
-      do: journey.navigator.go_to(journey, socket, step)
+      do: focus_on_move(journey.navigator.go_to(journey, socket, step), socket)
 
   def navigate_to_step(socket, _params), do: {:noreply, socket}
 
@@ -261,14 +339,29 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   defp navigate(journey, socket, :next_step), do: journey.navigator.continue(journey, socket)
   defp navigate(journey, socket, :back_step), do: journey.navigator.back(journey, socket)
 
+  # Next, Back and the step indicator are the visitor's own moves: whatever
+  # the navigator, one that makes another moment current sends the focus to
+  # it (its `Journey.Components.moment_heading/1`), forward or back. A move
+  # refused, or one that stays inside the moment (the questions wizard's
+  # next question), leaves the focus on the control just pressed.
+  defp focus_on_move({:noreply, socket}, before) do
+    now = socket.assigns[:current_state]
+
+    if now == before.assigns[:current_state],
+      do: {:noreply, socket},
+      else: {:noreply, assign(socket, :journey_focus, now)}
+  end
+
   # The route whose entry the booking starts again on: the overview, or the
   # meeting type's own link (`/:username/:slug`, live action `:schedule`),
-  # so a restart opens where a fresh visit by the same way in would. A page
-  # holding no meeting type (a direct visit to `/:username/thank-you`) has no
-  # schedule to return to, so it starts again on the overview.
+  # so a restart opens where a fresh visit by the same way in would. A
+  # booking with no meeting type known (a confirmation reached by its own
+  # address) starts on the overview, since a type's link needs a type.
   defp restart_route(%{entered_via_overview: true}), do: :overview
-  defp restart_route(%{meeting_type: %{}}), do: :schedule
-  defp restart_route(_assigns), do: :overview
+
+  defp restart_route(assigns) do
+    if Journey.fact!(:meeting_type).known?(assigns), do: :schedule, else: :overview
+  end
 
   defp restart?(assigns, moment_key, event) do
     event == :schedule_another and moment_key == :confirmation and
@@ -277,18 +370,24 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   defp ambient_event(journey, socket, moment_key, event, data) do
     case visible_moment(journey, socket.assigns, moment_key) do
-      {:ok, _moment, _state} -> socket |> Ambient.handle(event, data) |> after_event()
-      :none -> :unhandled
+      {:ok, _moment, _state} ->
+        socket |> Ambient.handle(event, data) |> after_event(journey, moment_key)
+
+      :none ->
+        :unhandled
     end
   end
 
   defp fact_event(journey, socket, moment_key, event, data) do
     case owner(journey, socket.assigns, moment_key, event) do
       {:ok, fact, :current} ->
-        socket |> fact.handle(event, data) |> after_event()
+        socket |> fact.handle(event, data) |> after_event(journey, moment_key)
 
       {:ok, fact, _answered} ->
-        socket |> fact.handle(event, data) |> forget_dependents(fact, socket) |> after_event()
+        socket
+        |> fact.handle(event, data)
+        |> forget_dependents(fact, socket)
+        |> after_event(journey, moment_key)
 
       :none ->
         :unhandled
@@ -342,28 +441,73 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     end)
   end
 
-  defp enter_facts(socket, %Moment{collects: collects}, params, facts) do
+  defp enter_facts(socket, %Moment{key: moment_key, collects: collects}, params, facts) do
     Enum.reduce(collects, socket, fn key, acc ->
       fact = Map.fetch!(facts, key)
-      if fact.required?(acc.assigns), do: fact.enter(acc, params), else: acc
+
+      cond do
+        not fact.required?(acc.assigns) -> acc
+        waits_in_moment?(fact, collects, acc.assigns) -> defer(acc, moment_key, key, params)
+        true -> fact.enter(acc, params)
+      end
     end)
   end
+
+  # A prerequisite the same moment still has to collect puts the fact off: the
+  # attendee beside the slot on one screen is entered once the time is picked.
+  # A prerequisite another moment collects does not: that entry runs as it
+  # always did, redirect included (a `/book` link with no day and time).
+  defp waits_in_moment?(fact, collects, assigns) do
+    Enum.any?(fact.requires(assigns), fn required ->
+      required in collects and not Journey.fact!(required).known?(assigns)
+    end)
+  end
+
+  defp defer(socket, moment_key, fact_key, params),
+    do:
+      assign(
+        socket,
+        :journey_deferred,
+        Map.put(deferred(socket), {moment_key, fact_key}, params)
+      )
+
+  # A moment opening again decides afresh what it puts off.
+  defp forget_deferred(socket, moment_key) do
+    kept = Map.reject(deferred(socket), fn {{key, _fact}, _params} -> key == moment_key end)
+    assign(socket, :journey_deferred, kept)
+  end
+
+  defp deferred(socket), do: socket.assigns[:journey_deferred] || %{}
+
+  defp enter_ready_after({:noreply, socket}),
+    do: {:noreply, socket |> enter_ready() |> follow_url()}
+
+  defp enter_ready_after(other), do: other
 
   defp opened(socket), do: socket.assigns[:journey_opened] || MapSet.new()
 
   # A navigator that reveals moments by itself moves the focus to the moment
-  # an event made current; one that does not leaves `:current_state` alone,
-  # and so the assigns.
-  defp after_event({:noreply, socket}) do
+  # an event made current, when that moment comes after the one the event
+  # was sent from: the visitor is sent on to what is next. One that comes
+  # back to the sender's moment, or stops above it (another day picked while
+  # the details were open, which closes them), leaves the focus where the
+  # visitor is, on the control just pressed. A navigator that does not
+  # reveal moments leaves `:current_state` alone, and so the assigns.
+  defp after_event({:noreply, socket}, journey, moment_key) do
     before = socket.assigns[:current_state]
     settled = settle(socket)
+    now = settled.assigns[:current_state]
 
-    if settled.assigns[:current_state] == before,
-      do: {:noreply, settled},
-      else: {:noreply, assign(settled, :journey_focus, settled.assigns[:current_state])}
+    if now != before and position(journey, now) > position(journey, moment_key),
+      do: {:noreply, assign(settled, :journey_focus, now)},
+      else: {:noreply, settled}
   end
 
-  defp after_event(other), do: other
+  defp after_event(other, _journey, _moment_key), do: other
+
+  # A moment's place in the journey; an outcome comes after every moment.
+  defp position(%Journey{moments: moments}, key),
+    do: Enum.find_index(moments, &(&1.key == key)) || length(moments)
 
   # The fact owning `event` among those `moment_key` collects, when that
   # moment is on screen, this booking needs the owner, and every fact the

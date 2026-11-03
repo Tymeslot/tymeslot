@@ -45,7 +45,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
         start_time: start_time,
         duration: duration,
         attendee_timezone: attendee_timezone,
-        status: "confirmed"
+        status: :confirmed
       )
 
     {:ok, user: user, profile: profile, meeting: meeting}

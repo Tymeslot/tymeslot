@@ -81,7 +81,7 @@ defmodule Tymeslot.Bookings.RescheduleLimitsTest do
     meeting = meeting_on(user, target_date(), ~T[14:00:00])
 
     _cancelled =
-      meeting_on(user, Date.add(target_date(), 1), ~T[09:00:00], %{status: "cancelled"})
+      meeting_on(user, Date.add(target_date(), 1), ~T[09:00:00], %{status: :cancelled})
 
     assert {:ok, _updated} =
              Reschedule.execute(

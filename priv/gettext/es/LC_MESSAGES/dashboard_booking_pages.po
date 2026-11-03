@@ -1,0 +1,199 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Address"
+msgstr "Dirección"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page created"
+msgstr "Página de reservas creada"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page deleted"
+msgstr "Página de reservas eliminada"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page saved"
+msgstr "Página de reservas guardada"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Páginas de reservas"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr "Copiar enlace"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the booking page. Please try again."
+msgstr "No se pudo crear la página de reservas. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete the booking page. Please try again."
+msgstr "No se pudo eliminar la página de reservas. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not update this page's meeting types. Please try again."
+msgstr "No se pudieron actualizar los tipos de reunión de esta página. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Create page"
+msgstr "Crear página"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete booking page"
+msgstr "Eliminar página de reservas"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete page"
+msgstr "Eliminar página"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Inactive: not offered anywhere until you turn it back on."
+msgstr "Inactivo: no se ofrece en ninguna parte hasta que lo vuelvas a activar."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types on this page"
+msgstr "Tipos de reunión en esta página"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New booking page"
+msgstr "Nueva página de reservas"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "New page"
+msgstr "Nueva página"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting types yet."
+msgstr "Todavía no hay tipos de reunión."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Open"
+msgstr "Abrir"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Page name"
+msgstr "Nombre de la página"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Guardar"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The page starts with your main page's theme and colours, its own texts switched off, and no meeting types."
+msgstr "La página parte del tema y los colores de tu página principal, con sus textos propios desactivados y sin tipos de reunión."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page no longer exists."
+msgstr "Esta página de reservas ya no existe."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "You have reached the limit of %{count} booking pages. Delete one to add another."
+msgstr "Alcanzaste el límite de %{count} páginas de reservas. Elimina una para agregar otra."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings made through it keep working and show your main page's look. Its colours and uploaded backgrounds are removed."
+msgstr "Las reservas hechas a través de ella siguen funcionando y muestran el aspecto de tu página principal. Sus colores y los fondos subidos se eliminan."
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{address}? Its address will lead to your main page at %{main}, and websites that embed it will show your main page."
+msgstr "¿Eliminar %{address}? Su dirección llevará a tu página principal en %{main}, y los sitios web que la incrusten mostrarán tu página principal."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Draft"
+msgstr "Borrador"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Main page"
+msgstr "Página principal"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Page you are editing"
+msgstr "Página que estás editando"
+
+#: lib/tymeslot/booking_pages/access.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page is read-only on your current plan. Upgrade to change it."
+msgstr "Esta página de reservas es de solo lectura con tu plan actual. Mejora tu plan para modificarla."
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/delete_page_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type is listed only on this page and will be unlisted everywhere, bookable only by its direct link:"
+msgid_plural "These meeting types are listed only on this page and will be unlisted everywhere, bookable only by their direct links:"
+msgstr[0] "Este tipo de reunión solo aparece en esta página y quedará oculto en todas partes; solo se podrá reservar mediante su enlace directo:"
+msgstr[1] "Estos tipos de reunión solo aparecen en esta página y quedarán ocultos en todas partes; solo se podrán reservar mediante sus enlaces directos:"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This page is a draft: visitors cannot open it yet. It goes live once it lists a meeting type that can be booked. Until then, only you can see it through Live Preview."
+msgstr "Esta página es un borrador: los visitantes aún no pueden abrirla. Se publica en cuanto incluya un tipo de reunión que se pueda reservar. Hasta entonces, solo tú puedes verla, en la vista previa en vivo."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This page is read-only on your current plan. It stays published and bookable, and you can still delete it. To change it, upgrade your plan."
+msgstr "Esta página es de solo lectura con tu plan actual. Sigue publicada y se puede reservar, y todavía puedes eliminarla. Para modificarla, mejora tu plan."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "You can change the address at any time: the old one keeps leading to this page."
+msgstr "Puedes cambiar la dirección en cualquier momento: la anterior seguirá llevando a esta página."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/pages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your main page is included in every plan. Extra booking pages need an upgraded plan."
+msgstr "Tu página principal está incluida en todos los planes. Las páginas de reservas adicionales requieren un plan superior."

@@ -30,9 +30,11 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.ThemeTestMatrix
@@ -81,26 +83,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   for theme <- ThemeTestMatrix.registered() do
     describe "#{theme.slug}" do
       setup do
-        %{user: user, profile: profile} =
-          seed_organiser(unquote(theme.id), "paid-#{unquote(theme.slug)}",
-            types: [
-              [
-                name: "Paid Consult",
-                duration_minutes: 30,
-                payment_required: true,
-                price_cents: 5000
-              ]
-            ]
-          )
-
-        insert(:connect_account,
-          user: user,
-          stripe_account_id: "acct_RETURN",
-          default_currency: "usd",
-          charges_enabled: true
-        )
-
-        %{profile: profile}
+        %{profile: seed_paid_organiser(unquote(theme.id), "paid-#{unquote(theme.slug)}")}
       end
 
       @tag :capture_log
@@ -115,7 +98,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
             success_url
           ) || flunk("expected a #{slug} processing URL, got #{success_url}")
 
-        assert Repo.get!(MeetingSchema, meeting_id).status == "awaiting_payment"
+        assert Repo.get!(MeetingSchema, meeting_id).status == :awaiting_payment
 
         {:ok, view, _html} = live(conn, success_url)
         shell = "[data-testid='#{slug}-payment-processing']"
@@ -141,7 +124,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
 
         assert has_element?(view, "#{shell} h1", "Booking confirmed")
         assert has_element?(view, "#{shell} [data-testid='payment-paid-amount']", "Paid: $50.00")
-        assert Repo.get!(MeetingSchema, meeting_id).status == "confirmed"
+        assert Repo.get!(MeetingSchema, meeting_id).status == :confirmed
       end
 
       @tag :capture_log
@@ -164,6 +147,67 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
                )
       end
     end
+  end
+
+  describe "the organiser on the return pages" do
+    @tag :capture_log
+    test "Folio draws the organiser's portrait and name above both pages", %{conn: conn} do
+      {:ok, folio} = Catalog.key_to_id(:folio)
+      profile = seed_paid_organiser(folio, "paid-folio-organiser", full_name: "Mia Laurent")
+      %{success_url: success_url, cancel_url: cancel_url} = book_to_checkout(conn, profile)
+      avatar = Profiles.avatar_url(profile, :original)
+
+      for url <- [success_url, cancel_url] do
+        {:ok, view, _html} = live(conn, url)
+
+        assert has_element?(view, ".folio-plain-page .folio-masthead img.folio-portrait")
+        assert has_element?(view, ".folio-masthead img.folio-portrait[src='#{avatar}']")
+        assert has_element?(view, ".folio-masthead .folio-identity__name", "Mia Laurent")
+      end
+    end
+
+    # Paper's shell is handed the profile too, and must draw nothing of it.
+    @tag :capture_log
+    test "Paper's pages stay without the organiser's portrait or name", %{conn: conn} do
+      {:ok, paper} = Catalog.key_to_id(:paper)
+      profile = seed_paid_organiser(paper, "paid-paper-organiser", full_name: "Mia Laurent")
+      %{success_url: success_url, cancel_url: cancel_url} = book_to_checkout(conn, profile)
+      avatar = Profiles.avatar_url(profile, :original)
+
+      for {url, page} <- [{success_url, "payment-processing"}, {cancel_url, "payment-cancelled"}] do
+        {:ok, view, _html} = live(conn, url)
+
+        assert has_element?(view, "[data-testid='paper-#{page}']")
+        refute has_element?(view, "img[src='#{avatar}']")
+        refute render(view) =~ "Mia Laurent"
+      end
+    end
+  end
+
+  # An organiser on `theme_id` with one paid meeting type, "Paid Consult",
+  # and a Stripe account that takes charges.
+  defp seed_paid_organiser(theme_id, username, profile_attrs \\ []) do
+    %{user: user, profile: profile} =
+      seed_organiser(theme_id, username,
+        profile: profile_attrs,
+        types: [
+          [
+            name: "Paid Consult",
+            duration_minutes: 30,
+            payment_required: true,
+            price_cents: 5000
+          ]
+        ]
+      )
+
+    insert(:connect_account,
+      user: user,
+      stripe_account_id: "acct_RETURN",
+      default_currency: "usd",
+      charges_enabled: true
+    )
+
+    profile
   end
 
   # Books the paid meeting type on the organiser's page through the markup

@@ -232,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
         organizer_user_id: user.id,
         organizer_email: user.email,
         attendee_name: "Cancelled Meeting",
-        status: "cancelled"
+        status: :cancelled
       )
 
       insert(:meeting,
@@ -286,7 +286,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "No upcoming meetings"
 
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
-      assert updated_meeting.status == "cancelled"
+      assert updated_meeting.status == :cancelled
     end
 
     test "a duplicate cancel confirmation after cancellation is a no-op, not a crash",
@@ -317,7 +317,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
         |> render_submit("confirm_cancel_meeting", %{})
 
       assert html =~ "No upcoming meetings"
-      assert Repo.get(MeetingSchema, meeting.id).status == "cancelled"
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
     end
 
     test "dismissing the cancel modal does not cancel the meeting", %{conn: conn, user: user} do
@@ -336,7 +336,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       view |> element("button", "Keep Meeting") |> render_click()
       refute render(view) =~ "Are you sure you want to cancel"
 
-      assert Repo.get(MeetingSchema, meeting.id).status == "confirmed"
+      assert Repo.get(MeetingSchema, meeting.id).status == :confirmed
     end
 
     test "disables cancel and reschedule actions for meetings that have already started",
@@ -384,7 +384,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
       # The request marks the meeting as awaiting a new time and leaves the
       # lifecycle status alone, so it survives the round trip to rebooking.
-      assert updated_meeting.status == "confirmed"
+      assert updated_meeting.status == :confirmed
       assert %DateTime{} = updated_meeting.reschedule_requested_at
     end
 
@@ -404,7 +404,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       view |> element("#reschedule-request-modal button", "Cancel") |> render_click()
       refute render(view) =~ "Send a reschedule request to"
 
-      assert Repo.get(MeetingSchema, meeting.id).status == "confirmed"
+      assert Repo.get(MeetingSchema, meeting.id).status == :confirmed
     end
 
     test "allows cancelling a meeting with reschedule_requested status", %{conn: conn, user: user} do
@@ -413,7 +413,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           organizer_user_id: user.id,
           organizer_email: user.email,
           attendee_name: "Reschedule Then Cancel",
-          status: "reschedule_requested"
+          status: :reschedule_requested
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
@@ -429,7 +429,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
 
       assert render(view) =~ "Meeting cancelled successfully"
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
-      assert updated_meeting.status == "cancelled"
+      assert updated_meeting.status == :cancelled
     end
 
     test "cancelling a paid booking with full refund issues the refund and cancels",
@@ -451,7 +451,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           amount_cents: 5000,
           application_fee_cents: 25,
           currency: "eur",
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           refunded_amount_cents: 0
         )
@@ -471,10 +471,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Meeting cancelled and refund issued"
 
       updated = BookingPaymentQueries.get(payment.id)
-      assert updated.status == "refunded"
+      assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
 
-      assert Repo.get(MeetingSchema, meeting.id).status == "cancelled"
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
     end
 
     test "cancelling a paid booking without refund requires the acknowledgement",
@@ -496,7 +496,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           amount_cents: 5000,
           application_fee_cents: 25,
           currency: "eur",
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           refunded_amount_cents: 0
         )
@@ -510,10 +510,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       |> render_submit()
 
       assert render(view) =~ "Tick the acknowledgement"
-      assert Repo.get(MeetingSchema, meeting.id).status == "confirmed"
+      assert Repo.get(MeetingSchema, meeting.id).status == :confirmed
 
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
     end
 
@@ -536,7 +536,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           amount_cents: 5000,
           application_fee_cents: 25,
           currency: "eur",
-          status: "paid",
+          status: :paid,
           paid_at: DateTime.utc_now(:second),
           refunded_amount_cents: 0
         )
@@ -552,10 +552,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       |> render_submit()
 
       assert render(view) =~ "Meeting cancelled successfully"
-      assert Repo.get(MeetingSchema, meeting.id).status == "cancelled"
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
 
       reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
       assert reloaded.refunded_amount_cents == 0
     end
   end

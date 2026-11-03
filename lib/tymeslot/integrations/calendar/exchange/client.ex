@@ -273,6 +273,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   # defaults to verifying. Nothing is passed at all in the default case:
   # `connect_options` makes Req abandon the shared Finch pool, and that is not
   # a price worth paying to say "verify as you already would".
+  # sobelow_skip ["Config.TLSVerify"]
   defp tls_options(%{verify_ssl: false}),
     do: [connect_options: [transport_opts: [verify: :verify_none]]]
 

@@ -317,7 +317,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
 
     meeting_integration_ids =
       from(m in MeetingSchema,
-        where: m.status == "confirmed" and m.start_time >= ^meeting_since_dt,
+        where: m.status == :confirmed and m.start_time >= ^meeting_since_dt,
         where: not is_nil(m.calendar_integration_id),
         select: m.calendar_integration_id,
         distinct: true

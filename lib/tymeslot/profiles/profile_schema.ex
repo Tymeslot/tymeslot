@@ -1,12 +1,16 @@
 defmodule Tymeslot.Profiles.ProfileSchema do
   @moduledoc """
   Schema for user profiles containing calendar and appointment settings.
+
+  Besides `changeset/2`, focused changesets cover single concerns:
+  `booking_text_changeset/2`, `intro_changeset/2` and `legal_links_changeset/2`.
   """
   use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
+  alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
@@ -33,10 +37,13 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           booking_page_published_at: DateTime.t() | nil,
           booking_text_enabled: boolean(),
           booking_heading: String.t() | nil,
+          booking_page: map() | nil,
           booking_greeting: String.t() | nil,
           booking_instruction: String.t() | nil,
           headline: String.t() | nil,
           bio: String.t() | nil,
+          legal_notice_url: String.t() | nil,
+          privacy_policy_url: String.t() | nil,
           freebusy_token: String.t() | nil,
           freebusy_token_hash: String.t() | nil,
           primary_calendar_integration_id: integer() | nil,
@@ -69,6 +76,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:booking_instruction, :string)
     field(:headline, :string)
     field(:bio, :string)
+    field(:legal_notice_url, :string)
+    field(:privacy_policy_url, :string)
 
     # Grants read access to the host's busy times, and the host copies the
     # feed URL from the dashboard again whenever they like, so it is
@@ -78,6 +87,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:freebusy_token_hash, :string)
 
     field(:meeting_types, {:array, :map}, virtual: true)
+    # Set when this profile was resolved through one of its booking pages:
+    # the page whose theme and texts `Tymeslot.BookingPages.apply_to_profile/2`
+    # laid over these fields. Never persisted.
+    field(:booking_page, :map, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
     belongs_to(
@@ -197,15 +210,19 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
   The three strings are kept whether or not they are in use, so switching the
   customisation off and back on restores the organiser's wording instead of
-  losing it. That is why `validate_required/2` applies only while
-  `booking_text_enabled` is true: a blank field is an error when the text is
-  live and unremarkable when it is not.
+  losing it. That is why the heading is required only while
+  `booking_text_enabled` is true: a blank heading is an error when the text is
+  live and unremarkable when it is not. The greeting and the instruction are
+  never required; with the customisation on, a blank one is stored as `nil`
+  and the page shows nothing for it.
 
   Casts with `empty_values: []` deliberately. Ecto's default treats `""` as
   absent, which would silently drop the change when an organiser clears a field,
   leaving the old wording on the page.
   """
-  @spec booking_text_changeset(t(), map()) :: Ecto.Changeset.t()
+  # Also applied to `Tymeslot.BookingPages.BookingPageSchema`, which carries
+  # the same three fields and switch, so a page's texts follow the same rules.
+  @spec booking_text_changeset(t() | struct(), map()) :: Ecto.Changeset.t()
   def booking_text_changeset(profile, attrs) do
     profile
     |> cast(attrs, [:booking_text_enabled | @booking_text_fields], empty_values: [])
@@ -238,9 +255,12 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
 
+  # Only the heading is required: a theme's voice may leave the greeting or the
+  # instruction unsaid (Paper greets nobody, Folio gives no instruction), so an
+  # organiser may too, and a blank line is dropped from the page.
   defp validate_booking_text_present(changeset) do
     if fetch_field!(changeset, :booking_text_enabled) do
-      validate_required(changeset, @booking_text_fields)
+      validate_required(changeset, [:booking_heading])
     else
       changeset
     end
@@ -281,6 +301,36 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     do: value |> String.replace(~r/\r\n?/, "\n") |> normalize_text()
 
   defp normalize_bio(nil), do: nil
+
+  @legal_link_fields [:legal_notice_url, :privacy_policy_url]
+
+  @doc """
+  Focused changeset for the organiser's own legal links: the `legal_notice_url`
+  (imprint) and the `privacy_policy_url` a booking page may link to.
+
+  Each is trimmed and stored as `nil` when blank, so clearing a field removes
+  the link. Null bytes are stripped, as Postgres rejects them. A link must be
+  an http(s) URL of at most the shared URL length; https is required for a
+  public host, while a private or local host may use http, and so may an
+  intranet name such as `wiki.lan` or `intranet`: the links are never fetched,
+  so the name's shape is all that needs trusting.
+
+  Casts with `empty_values: []` for the reason `booking_text_changeset/2`
+  gives: a cleared field has to reach `normalize_text/1` to become `nil`.
+  """
+  @spec legal_links_changeset(t(), map()) :: Ecto.Changeset.t()
+  def legal_links_changeset(profile, attrs) do
+    changeset = cast(profile, attrs, @legal_link_fields, empty_values: [])
+
+    Enum.reduce(@legal_link_fields, changeset, fn field, acc ->
+      acc
+      |> update_change(field, &normalize_text/1)
+      |> URLValidator.validate_url(field,
+        enforce_https_for_public: true,
+        internal_names_local: true
+      )
+    end)
+  end
 
   defp validate_username(changeset) do
     changeset

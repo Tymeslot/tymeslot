@@ -17,9 +17,12 @@ defmodule Tymeslot.Availability.Schedules do
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.Breaks
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.MeetingTypes.OfferedTimes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Utils.TimeRange
   alias Tymeslot.Validation.Constraints
 
   @default_schedule_name "Working hours"
@@ -285,7 +288,8 @@ defmodule Tymeslot.Availability.Schedules do
           required(:buffer_after_minutes) => non_neg_integer(),
           required(:min_advance_hours) => non_neg_integer(),
           required(:max_advance_booking_days) => pos_integer(),
-          required(:slot_interval_minutes) => pos_integer() | nil
+          required(:slot_interval_minutes) => pos_integer() | nil,
+          optional(:offered_starts) => [DateTime.t()]
         }
 
   @doc """
@@ -297,20 +301,89 @@ defmodule Tymeslot.Availability.Schedules do
   reaches both; a key present in one copy but not the other is how a slot
   comes to be offered and then refused.
 
+  Each rule is the meeting type's override where it sets one, and the
+  schedule's value otherwise (see `effective_policy/3`).
+
   `max_advance_booking_days` is this map's name for the schedule's
   `advance_booking_days`. `schedule_id` is carried so callers can recompute
   the schedule's own windows from the config alone.
+
+  A one-to-one type with fixed dates also carries `offered_starts`, its
+  upcoming offered times (`Tymeslot.MeetingTypes.OfferedTimes`), which
+  replace the schedule's weekly hours as the source of candidate starts
+  (`Tymeslot.Availability.SlotGrid`); every other rule here still applies.
   """
   @spec config(schedule() | nil, map() | nil) :: config()
   def config(schedule, meeting_type) do
-    %{
+    base = %{
       schedule_id: schedule && schedule.id,
-      buffer_before_minutes: policy(schedule, :buffer_before_minutes),
-      buffer_after_minutes: policy(schedule, :buffer_after_minutes),
-      min_advance_hours: policy(schedule, :min_advance_hours),
-      max_advance_booking_days: policy(schedule, :advance_booking_days),
+      buffer_before_minutes: effective_policy(schedule, meeting_type, :buffer_before_minutes),
+      buffer_after_minutes: effective_policy(schedule, meeting_type, :buffer_after_minutes),
+      min_advance_hours: effective_policy(schedule, meeting_type, :min_advance_hours),
+      max_advance_booking_days: effective_policy(schedule, meeting_type, :advance_booking_days),
       slot_interval_minutes: slot_interval_minutes(meeting_type)
     }
+
+    case OfferedTimes.starts_for(meeting_type) do
+      nil -> base
+      starts -> Map.put(base, :offered_starts, starts)
+    end
+  end
+
+  @doc """
+  The `{before, after}` buffers each of an organiser's meeting types books
+  with, keyed by meeting type id, resolved as `booking_config/2` resolves
+  them: the type's own override, else its schedule's value, else the
+  organiser's default schedule's.
+
+  `nil` among the ids (a meeting with no type) and an id the organiser does
+  not own resolve the default schedule, like `booking_config/2` given a nil
+  meeting type. Answers any number of meeting types in at most three queries,
+  so a caller weighing many bookings does not resolve them one at a time.
+  """
+  @spec buffers_by_meeting_type(integer(), [integer() | nil]) ::
+          %{optional(integer() | nil) => TimeRange.buffers()}
+  def buffers_by_meeting_type(organizer_user_id, meeting_type_ids) do
+    meeting_type_ids = Enum.uniq(meeting_type_ids)
+
+    types =
+      organizer_user_id
+      |> MeetingTypeQueries.list_with_schedules(Enum.reject(meeting_type_ids, &is_nil/1))
+      |> Map.new(&{&1.id, &1})
+
+    # Read only when some id falls back to it.
+    default =
+      if Enum.any?(meeting_type_ids, &falls_back_to_default?(Map.get(types, &1))),
+        do: resolve_for_meeting_type(%{user_id: organizer_user_id})
+
+    Map.new(meeting_type_ids, fn id ->
+      type = Map.get(types, id)
+      schedule = (type && type.availability_schedule) || default
+
+      {id,
+       {effective_policy(schedule, type, :buffer_before_minutes),
+        effective_policy(schedule, type, :buffer_after_minutes)}}
+    end)
+  end
+
+  defp falls_back_to_default?(nil), do: true
+  defp falls_back_to_default?(%{availability_schedule: nil}), do: true
+  defp falls_back_to_default?(_type), do: false
+
+  @doc """
+  One scheduling rule as it applies to a meeting type: the meeting type's own
+  override when it sets one, else the schedule's value (`policy/2`).
+
+  A nil override means "use the schedule's", so a meeting type follows later
+  changes to its schedule until it is given a value of its own. Meeting-type
+  maps that omit the key (such as the demo provider's) inherit too.
+  """
+  @spec effective_policy(schedule() | nil, map() | nil, atom()) :: integer()
+  def effective_policy(schedule, meeting_type, key) do
+    case meeting_type && Map.get(meeting_type, key) do
+      value when is_integer(value) -> value
+      _inherit -> policy(schedule, key)
+    end
   end
 
   @typedoc "`config/0` for a booking, with the organiser's timezone."
@@ -321,6 +394,7 @@ defmodule Tymeslot.Availability.Schedules do
           required(:min_advance_hours) => non_neg_integer(),
           required(:max_advance_booking_days) => pos_integer(),
           required(:slot_interval_minutes) => pos_integer() | nil,
+          optional(:offered_starts) => [DateTime.t()],
           required(:owner_timezone) => String.t()
         }
 

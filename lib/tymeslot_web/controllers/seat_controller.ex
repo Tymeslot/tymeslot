@@ -40,6 +40,7 @@ defmodule TymeslotWeb.SeatController do
            Meetings.fetch_cancellable_seat(token) do
       conn
       |> put_participant_locale(participant)
+      |> assign_legal_links(meeting)
       |> seat_page(dgettext("booking_manage", "Cancel your spot"))
       |> render(:cancel_confirm,
         participant: participant,
@@ -64,6 +65,7 @@ defmodule TymeslotWeb.SeatController do
          {:ok, _outcome} <- Meetings.cancel_seat(token) do
       conn
       |> put_participant_locale(participant)
+      |> assign_legal_links(meeting)
       |> seat_page(dgettext("booking_manage", "Spot cancelled"))
       |> render(:cancelled,
         participant: participant,
@@ -98,6 +100,7 @@ defmodule TymeslotWeb.SeatController do
           # still works.
           conn
           |> put_participant_locale(participant)
+          |> assign_legal_links(meeting)
           |> seat_page(dgettext("booking_manage", "Spot cannot be moved"))
           |> render(:not_movable, token: token)
 
@@ -187,8 +190,31 @@ defmodule TymeslotWeb.SeatController do
   defp render_error(conn, error, token) do
     conn
     |> assign(:booking_path, spent_link_booking_path(error, token))
+    |> assign_error_legal_links(error, token)
     |> render_error(error)
   end
+
+  # The organiser's legal links for a page about their meeting.
+  defp assign_legal_links(conn, %{organizer_user_id: user_id}),
+    do: assign(conn, :legal_links, organiser_legal_links(user_id))
+
+  # An error page knows its organiser only while the token still resolves to
+  # a seat; otherwise (and for a rate-limited visitor, whose token is not
+  # looked at) it shows the instance defaults.
+  defp assign_error_legal_links(conn, {:error, :rate_limited, _message}, _token),
+    do: assign(conn, :legal_links, Profiles.public_legal_links(nil))
+
+  defp assign_error_legal_links(conn, _error, token) do
+    case Meetings.seat_organizer_user_id(token) do
+      {:ok, user_id} -> assign(conn, :legal_links, organiser_legal_links(user_id))
+      {:error, :not_found} -> assign(conn, :legal_links, Profiles.public_legal_links(nil))
+    end
+  end
+
+  defp organiser_legal_links(user_id) when is_integer(user_id),
+    do: user_id |> Profiles.get_profile() |> Profiles.public_legal_links()
+
+  defp organiser_legal_links(_no_organiser), do: Profiles.public_legal_links(nil)
 
   defp spent_link_booking_path({:error, reason}, token)
        when reason in [:already_cancelled, :meeting_cancelled, :meeting_past] do

@@ -16,9 +16,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
   import Mox
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
   import Ecto.Query
 
+  alias Plug.HTML
   alias Plug.Test
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
@@ -148,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       Repo.update_all(from(m in MeetingSchema, where: m.id == ^meeting.id),
-        set: [status: "cancelled"]
+        set: [status: :cancelled]
       )
 
       view |> element("#add-guests-#{meeting.id}") |> render_click()
@@ -161,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       conn: conn,
       user: user
     } do
-      meeting = upcoming_meeting(user, %{status: "reschedule_requested"})
+      meeting = upcoming_meeting(user, %{status: :reschedule_requested})
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       refute has_element?(view, "#add-guests-#{meeting.id}")
@@ -175,6 +177,31 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       refute has_element?(view, "#add-guests-#{meeting.id}")
+    end
+  end
+
+  describe "rate limiting" do
+    test "sending invitations is refused once the per-host limit is exhausted", %{
+      conn: conn,
+      user: user
+    } do
+      meeting = upcoming_meeting(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      view |> element("#add-guests-#{meeting.id}") |> render_click()
+      stage(view, "one@example.com")
+
+      message = exhaust_limit!(:dashboard_add_guests, user.id)
+
+      view |> element("button", "Send invitation") |> render_click()
+
+      assert render(view) =~ HTML.html_escape(message)
+      assert GuestQueries.list_for_meeting(meeting.id) == []
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_guest_invitations", "meeting_id" => meeting.id}
+      )
     end
   end
 

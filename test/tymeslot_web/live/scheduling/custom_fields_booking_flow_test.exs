@@ -1,7 +1,11 @@
 defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
   @moduledoc """
   End-to-end integration test for the custom fields booking flow, walked on
-  every theme in `TymeslotWeb.ThemeTestMatrix`.
+  every theme in `TymeslotWeb.ThemeTestMatrix` on the classic journey, one
+  page per step (the wizard of questions, and the bare thank-you address);
+  the regression without custom fields runs on every shipped theme. Paper
+  asks its questions all at once on its schedule screen, and
+  `paper_theme_test.exs` walks them there.
 
   Each theme ships its own questions and confirmation components, and the
   dispatcher routes a booker to whichever theme the organiser picked, so the
@@ -96,7 +100,8 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
     %{profile: profile, user: user}
   end
 
-  for theme <- ThemeTestMatrix.all() do
+  # One page per step: the classic journey's shape (Quill, Rhythm).
+  for theme <- Enum.filter(ThemeTestMatrix.all(), &(&1.journey == :classic)) do
     describe "#{theme.name}: booking flow with custom fields" do
       @describetag theme_id: theme.id
 
@@ -145,35 +150,31 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
         assert html =~ "Company"
 
         # --- Required field blocks advance when empty ---
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+        press_continue(view)
         assert render(view) =~ "Question 1 of 2"
 
         # --- Fill the short_text field and advance ---
-        view
-        |> form("form[phx-submit='next_step']", %{"value" => "Acme Corp"})
-        |> render_change()
+        BookingDriver.answer(view, "cf-text-001", "Acme Corp")
 
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+        press_continue(view)
 
         assert render(view) =~ "Question 2 of 2"
         assert render(view) =~ "Please agree to the call recording terms."
 
         # --- Note acknowledgement is enforced ---
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+        press_continue(view)
         assert render(view) =~ "Question 2 of 2"
 
         # --- Tick acknowledgement then advance to booking ---
-        view
-        |> element("input[type='checkbox'][phx-value-value='acknowledge']")
-        |> render_click()
+        BookingDriver.answer(view, "cf-note-002", "acknowledge")
 
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+        press_continue(view)
 
         # --- Booking step ---
         assert has_element?(view, @booking_form)
 
         view
-        |> form("form[phx-submit='submit']", %{
+        |> form("form[data-fact='attendee']", %{
           "booking" => %{
             "name" => "Jane Doe",
             "email" => "jane.cf@example.com",
@@ -229,7 +230,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
            %{conn: conn, profile: profile} do
         view = navigate_to_booking_form(conn, profile, nil, locale: "de")
 
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+        press_continue(view)
 
         html = render(view)
         assert html =~ "Text ist erforderlich"
@@ -271,16 +272,14 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
         view = navigate_to_booking_form_with_questions(conn, profile)
 
         # Fill in the answer and advance to :booking.
-        view
-        |> form("form[phx-submit='next_step']", %{"value" => "Acme Corp"})
-        |> render_change()
+        BookingDriver.answer(view, "cf-preserve-001", "Acme Corp")
 
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+        press_continue(view)
 
         assert has_element?(view, @booking_form)
 
         # Go back to :questions.
-        view |> element("button[data-testid='back-step']") |> render_click()
+        BookingDriver.back(view)
 
         html = render(view)
 
@@ -304,18 +303,14 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
         # dead-end.
         assert render(view) =~ "Company"
 
-        view |> element("button[phx-click='back_step'][phx-target]") |> render_click()
+        BookingDriver.back(view)
 
         html = render(view)
 
         refute html =~ "Company"
 
-        assert has_element?(
-                 view,
-                 "button[data-testid='time-slot'], button[data-testid='week-slot']"
-               )
-
-        assert has_element?(view, "button[phx-click='next_step']")
+        assert has_element?(view, "[data-fact='time'], [data-fact='slot']")
+        assert has_element?(view, "[data-intent='continue']")
       end
     end
 
@@ -352,11 +347,9 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
            %{conn: conn, profile: profile} do
         view = navigate_to_booking_form_with_questions(conn, profile)
 
-        view
-        |> form("form[phx-submit='next_step']", %{"value" => "Acme Corp"})
-        |> render_change()
+        BookingDriver.answer(view, "cf-text-001", "Acme Corp")
 
-        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+        press_continue(view)
 
         assert has_element?(view, @booking_form)
         before = render(view)
@@ -368,7 +361,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
         assert render(view) == before
 
         view
-        |> form("form[phx-submit='submit']", %{
+        |> form("form[data-fact='attendee']", %{
           "booking" => %{
             "name" => "Mallory",
             "email" => "mallory@example.com",
@@ -407,33 +400,6 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
         assert has_element?(view, "form[data-fact='answer'][data-question='cf-text-001']")
         refute render(view) =~ "Acme Corp"
-      end
-    end
-
-    describe "#{theme.name}: booking flow without custom fields (regression)" do
-      @describetag theme_id: theme.id
-
-      setup %{user: user} do
-        mt =
-          insert(:meeting_type,
-            user: user,
-            duration_minutes: 30,
-            name: "No Fields Chat",
-            is_active: true
-          )
-
-        %{meeting_type: mt}
-      end
-
-      @tag :capture_log
-      test "no questions step is rendered when meeting type has no custom fields",
-           %{conn: conn, profile: profile} do
-        # navigate_to_booking_form ends at :booking — no :questions detour.
-        view = navigate_to_booking_form(conn, profile, nil)
-
-        html = render(view)
-        refute html =~ "Question 1 of"
-        assert has_element?(view, @booking_form)
       end
     end
 
@@ -486,6 +452,35 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
     end
   end
 
+  for theme <- ThemeTestMatrix.all() do
+    describe "#{theme.name}: booking flow without custom fields (regression)" do
+      @describetag theme_id: theme.id
+
+      setup %{user: user} do
+        mt =
+          insert(:meeting_type,
+            user: user,
+            duration_minutes: 30,
+            name: "No Fields Chat",
+            is_active: true
+          )
+
+        %{meeting_type: mt}
+      end
+
+      @tag :capture_log
+      test "no questions step is rendered when meeting type has no custom fields",
+           %{conn: conn, profile: profile} do
+        # navigate_to_booking_form ends at :booking — no :questions detour.
+        view = navigate_to_booking_form(conn, profile, nil)
+
+        html = render(view)
+        refute html =~ "Question 1 of"
+        assert has_element?(view, @booking_form)
+      end
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
@@ -496,4 +491,9 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
   defp navigate_to_booking_form_with_questions(conn, profile) do
     navigate_to_booking_form(conn, profile, nil)
   end
+
+  # Presses the way on whether or not it is enabled, as a booker can: the
+  # driver's `continue/1` waits for an enabled one, and these tests are about
+  # what a press does while an answer is still missing.
+  defp press_continue(view), do: view |> element("[data-intent='continue']") |> render_click()
 end

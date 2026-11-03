@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Tymeslot.RefreshHeroicons do
 
   @repo_url "https://github.com/tailwindlabs/heroicons.git"
   @styles ["16", "20", "24"]
-  @priv_dir Path.expand("../../../priv/heroicons", __DIR__)
+  @priv_dir Path.expand("../../../../priv/heroicons", __DIR__)
 
   @impl Mix.Task
   def run([tag]) when is_binary(tag) do

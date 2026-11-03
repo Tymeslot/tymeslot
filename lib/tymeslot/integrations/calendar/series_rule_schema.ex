@@ -11,7 +11,10 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRuleSchema do
   `rule` is stored without its `RRULE:` prefix, as every cached rule is, and
   is nil when the master was read and found to be gone or not a series.
   `master_start` is the series' first start, which a `COUNT` is counted
-  from; `fetched_at` says when the master was last read.
+  from; `ical_uid` is the master's iCalendar UID, which Outlook gives no
+  occurrence (each has its own), so an email about one occurrence names the
+  series its guests were invited to from it; `fetched_at` says when the
+  master was last read.
   """
   use Ecto.Schema
 
@@ -25,6 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRuleSchema do
           provider_master_id: String.t() | nil,
           rule: String.t() | nil,
           master_start: DateTime.t() | nil,
+          ical_uid: String.t() | nil,
           fetched_at: DateTime.t() | nil
         }
 
@@ -32,6 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRuleSchema do
     field(:provider_master_id, :string)
     field(:rule, :string)
     field(:master_start, :utc_datetime)
+    field(:ical_uid, :string)
     field(:fetched_at, :utc_datetime)
 
     belongs_to(:calendar_integration, CalendarIntegrationSchema)
@@ -47,6 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRuleSchema do
       :provider_master_id,
       :rule,
       :master_start,
+      :ical_uid,
       :fetched_at
     ])
     |> validate_required([:calendar_integration_id, :provider_master_id, :fetched_at])

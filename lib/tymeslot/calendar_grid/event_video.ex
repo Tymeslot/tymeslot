@@ -429,15 +429,14 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   def join_links(_description), do: []
 
   @doc """
-  `description` without any "Join video call" line, for text that is copied
-  to another event, which has its own link.
+  `description` without any of its "Join video call" lines: the text the
+  organiser wrote, for an email that states the link on its own.
   """
-  @spec strip_join_links(String.t() | nil) :: String.t() | nil
-  def strip_join_links(description) do
-    description
-    |> join_links()
-    |> Enum.reduce(description, &remove_join_line(&2, &1))
-  end
+  @spec without_join_lines(String.t() | nil) :: String.t() | nil
+  def without_join_lines(description) when is_binary(description),
+    do: Enum.reduce(join_links(description), description, &remove_join_line(&2, &1))
+
+  def without_join_lines(description), do: description
 
   defp remove_join_line(description, url) when is_binary(description) and is_binary(url) do
     line = join_line(url)

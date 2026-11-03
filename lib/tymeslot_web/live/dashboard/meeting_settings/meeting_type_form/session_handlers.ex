@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   Event handling for the meeting-type form's fixed dates
   (`MeetingTypeForm.FixedDatesSection`): the toggle, planning a date,
   editing one (moving it, or when its registration closes), and cancelling
-  one.
+  one. A one-to-one type's offered times are handed on to
+  `OfferedTimeHandlers`.
 
   The dates are the type's planned sessions (`Tymeslot.Meetings.PlannedSessions`),
   read fresh after every change rather than kept in the form's own state:
@@ -20,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
-  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Autosave, OfferedTimeHandlers}
 
   @doc "Assigns the type's planned dates, the host's time zone and the input row's state."
   @spec assign_sessions(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -48,11 +49,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   def events,
     do: ~w(toggle_fixed_dates update_session_input add_session remove_session cancel_session
            keep_session edit_session update_session_edit save_session_edit
-           discard_session_edit)
+           discard_session_edit) ++ OfferedTimeHandlers.events()
 
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           Phoenix.LiveView.Socket.t()
   def handle_event("toggle_fixed_dates", _params, socket), do: toggle_fixed_dates(socket)
+
   def handle_event("update_session_input", params, socket), do: update_input(params, socket)
   def handle_event("add_session", _params, socket), do: add(socket)
   def handle_event("remove_session", %{"id" => id}, socket), do: ask_to_cancel(id, socket)
@@ -72,7 +74,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   def handle_event("discard_session_edit", _params, socket),
     do: Component.assign(socket, :editing_session, nil)
 
-  def handle_event(_event, _params, socket), do: socket
+  # Any other event of `events/0` is an offered time's.
+  def handle_event(event, params, socket),
+    do: OfferedTimeHandlers.handle_event(event, params, socket)
 
   @doc "The rows the section lists for `type`: every live planned date, past ones included."
   @spec rows(map() | nil) :: [map()]
@@ -143,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     input = socket.assigns[:new_session] || %{}
 
     with %{} = type <- type && MeetingTypes.get_meeting_type(type.id, user_id),
-         true <- FixedDates.enabled?(type) || {:error, :not_fixed_dates},
+         true <- FixedDates.sessions?(type) || {:error, :not_fixed_dates},
          {:ok, starts_at} <- parse_start(input, timezone),
          {:ok, closes_at} <- parse_close(input["closes_at"], timezone),
          {:ok, _session} <-
@@ -252,11 +256,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   defp local_input(datetime, timezone),
     do: datetime |> DateTime.shift_zone!(timezone) |> Calendar.strftime("%Y-%m-%dT%H:%M")
 
-  # A local time the clock change skips or repeats resolves as everywhere
-  # else in the app (`DateTimeUtils.resolve_local/3`): to the end of the
-  # gap, or to its first occurrence.
-  defp parse_start(%{"date" => date, "time" => time}, timezone)
-       when is_binary(date) and is_binary(time) do
+  @doc """
+  The instant (UTC) a `"date"` and `"time"` the host entered in `timezone`
+  name. A local time the clock change skips or repeats resolves as
+  everywhere else in the app (`DateTimeUtils.resolve_local/3`): to the end
+  of the gap, or to its first occurrence.
+  """
+  @spec parse_start(map(), String.t()) :: {:ok, DateTime.t()} | {:error, :invalid_start}
+  def parse_start(%{"date" => date, "time" => time}, timezone)
+      when is_binary(date) and is_binary(time) do
     with {:ok, date} <- Date.from_iso8601(date),
          {:ok, time} <- Time.from_iso8601(pad_seconds(time)),
          {:ok, local} <- DateTimeUtils.resolve_local(date, time, timezone) do
@@ -266,7 +274,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     end
   end
 
-  defp parse_start(_input, _timezone), do: {:error, :invalid_start}
+  def parse_start(_input, _timezone), do: {:error, :invalid_start}
 
   defp parse_close(value, _timezone) when value in [nil, ""], do: {:ok, nil}
 
@@ -288,27 +296,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   end
 
   defp error_message(:invalid_start),
-    do: dgettext("dashboard_meeting_form", "Enter the date and time of the session.")
+    do: dgettext("dashboard_meeting_fixed_dates", "Enter the date and time of the session.")
 
   defp error_message(:start_in_past),
-    do: dgettext("dashboard_meeting_form", "The date has to lie in the future.")
+    do: dgettext("dashboard_meeting_fixed_dates", "The date has to lie in the future.")
 
   defp error_message(:invalid_registration_close),
     do:
       dgettext(
-        "dashboard_meeting_form",
+        "dashboard_meeting_fixed_dates",
         "Registration has to close in the future, and no later than the session starts."
       )
 
   defp error_message(:session_started),
-    do: dgettext("dashboard_meeting_form", "This date has already started.")
+    do: dgettext("dashboard_meeting_fixed_dates", "This date has already started.")
 
   defp error_message(:time_conflict),
-    do: dgettext("dashboard_meeting_form", "You already have a booking at that time.")
+    do: dgettext("dashboard_meeting_fixed_dates", "You already have a booking at that time.")
 
   defp error_message(:not_fixed_dates),
-    do: dgettext("dashboard_meeting_form", "Turn on fixed dates and group bookings first.")
+    do: dgettext("dashboard_meeting_fixed_dates", "Turn on fixed dates and group bookings first.")
 
   defp error_message(_reason),
-    do: dgettext("dashboard_meeting_form", "The date could not be planned. Please try again.")
+    do:
+      dgettext(
+        "dashboard_meeting_fixed_dates",
+        "The date could not be planned. Please try again."
+      )
 end

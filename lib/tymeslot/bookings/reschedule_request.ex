@@ -55,10 +55,10 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
 
   ## Examples
 
-      iex> send_reschedule_request(%Meeting{id: 123, status: "confirmed"})
+      iex> send_reschedule_request(%Meeting{id: 123, status: :confirmed})
       :ok
 
-      iex> send_reschedule_request(%Meeting{id: 123, status: "cancelled"})
+      iex> send_reschedule_request(%Meeting{id: 123, status: :cancelled})
       {:error, :cannot_reschedule_cancelled}
 
       iex> send_reschedule_request(%Meeting{id: 123, reschedule_requested_at: ~U[...]})

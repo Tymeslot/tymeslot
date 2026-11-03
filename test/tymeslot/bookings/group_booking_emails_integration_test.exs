@@ -370,7 +370,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     first = Enum.find(ParticipantQueries.list_live_for_meeting(meeting.id), & &1)
 
     assert {:ok, _cancelled} =
-             MeetingQueries.update_meeting_status(meeting, %{status: "cancelled"})
+             MeetingQueries.update_meeting_status(meeting, %{status: :cancelled})
 
     assert {:discard, _reason} =
              GroupMeetingEmails.handle_seat_reminder_emails(%{
@@ -434,7 +434,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     first_id = participant_id!(meeting.id, "first@example.com")
 
     assert {:ok, _cancelled} =
-             MeetingQueries.update_meeting_status(meeting, %{status: "cancelled"})
+             MeetingQueries.update_meeting_status(meeting, %{status: :cancelled})
 
     expect(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
       {:error, :circuit_open}

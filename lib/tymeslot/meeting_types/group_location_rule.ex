@@ -16,7 +16,7 @@ defmodule Tymeslot.MeetingTypes.GroupLocationRule do
       do);
     * a phone call on a number the host publishes, never one the booker
       gives;
-    * anything else ("custom") as written.
+    * anything else (`custom`) as written.
 
   A location passing this rule offers no choice by
   `Tymeslot.MeetingTypes.LocationSelection.choice_required?/3`, so the
@@ -51,18 +51,18 @@ defmodule Tymeslot.MeetingTypes.GroupLocationRule do
   @spec check_meeting_type(map()) :: :ok | {:error, reason()}
   def check_meeting_type(meeting_type), do: meeting_type |> LocationSelection.options() |> check()
 
-  defp check_option(%LocationOption{kind: "video", video_integration_ids: [_one]}), do: :ok
-  defp check_option(%LocationOption{kind: "video"}), do: {:error, :provider_choice}
+  defp check_option(%LocationOption{kind: :video, video_integration_ids: [_one]}), do: :ok
+  defp check_option(%LocationOption{kind: :video}), do: {:error, :provider_choice}
 
-  defp check_option(%LocationOption{kind: "in_person", venue_ids: [_one]}), do: :ok
+  defp check_option(%LocationOption{kind: :in_person, venue_ids: [_one]}), do: :ok
 
-  defp check_option(%LocationOption{kind: "in_person", venue_ids: ids})
+  defp check_option(%LocationOption{kind: :in_person, venue_ids: ids})
        when ids in [nil, []],
        do: {:error, :address_after_booking}
 
-  defp check_option(%LocationOption{kind: "in_person"}), do: {:error, :venue_choice}
+  defp check_option(%LocationOption{kind: :in_person}), do: {:error, :venue_choice}
 
-  defp check_option(%LocationOption{kind: "phone", collect_from_guest: true}),
+  defp check_option(%LocationOption{kind: :phone, collect_from_guest: true}),
     do: {:error, :booker_phone}
 
   defp check_option(%LocationOption{}), do: :ok

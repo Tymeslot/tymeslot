@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   @moduledoc """
   LiveView component for managing user profile settings including timezone,
-  display name, scheduling preferences, and username configuration.
+  display name, headline and bio, scheduling preferences, and username
+  configuration.
 
   This component acts as a container for specialized profile settings forms.
   """
@@ -13,6 +14,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   alias TymeslotWeb.Dashboard.ProfileSettings.{
     AvatarUploadComponent,
     DisplayNameFormComponent,
+    IntroFormComponent,
+    LegalLinksFormComponent,
     TimeFormatFormComponent,
     TimezoneFormComponent,
     UsernameFormComponent
@@ -62,6 +65,22 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                   id="display-name-form"
                   profile={@profile}
                 />
+
+                <div class="border-t-2 border-tymeslot-50 pt-10">
+                  <.live_component
+                    module={IntroFormComponent}
+                    id="intro-form-component"
+                    profile={@profile}
+                  />
+                </div>
+
+                <div class="border-t-2 border-tymeslot-50 pt-10">
+                  <.live_component
+                    module={LegalLinksFormComponent}
+                    id="legal-links-form-component"
+                    profile={@profile}
+                  />
+                </div>
 
                 <div class="border-t-2 border-tymeslot-50 pt-10">
                   <.live_component

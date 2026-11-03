@@ -225,7 +225,7 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
         participant_id: ada.id,
         name: "Not Coming",
         email: "declined@example.com",
-        status: "declined",
+        status: :declined,
         invited_by: :booker
       })
 
@@ -275,7 +275,7 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
     end
 
     test "sends nothing for a cancelled session", ctx do
-      ctx.session |> Changeset.change(status: "cancelled") |> Repo.update!()
+      ctx.session |> Changeset.change(status: :cancelled) |> Repo.update!()
 
       assert {:discard, _reason} = after_close(ctx, fn -> run_list_job(ctx.session) end)
       assert_no_email_sent()

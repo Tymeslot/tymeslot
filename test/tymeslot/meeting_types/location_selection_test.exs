@@ -9,13 +9,13 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
 
   defp option(attrs), do: struct!(%LocationOption{}, attrs)
 
-  defp office, do: option(id: "loc-office", kind: "in_person", label: "The office", position: 0)
+  defp office, do: option(id: "loc-office", kind: :in_person, label: "The office", position: 0)
 
   defp zoom,
     do:
       option(
         id: "loc-zoom",
-        kind: "video",
+        kind: :video,
         label: "Zoom",
         video_integration_ids: [7],
         position: 1
@@ -25,7 +25,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     do:
       option(
         id: "loc-teams",
-        kind: "video",
+        kind: :video,
         label: "Teams",
         video_integration_ids: [9],
         position: 2
@@ -35,7 +35,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     do:
       option(
         id: "loc-video",
-        kind: "video",
+        kind: :video,
         label: "Video call",
         video_integration_ids: [7, 9],
         position: 1
@@ -45,7 +45,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     do:
       option(
         id: "loc-call",
-        kind: "phone",
+        kind: :phone,
         label: "Phone call",
         collect_from_guest: true,
         position: 3
@@ -62,14 +62,14 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     test "a meeting type with no list falls back to the video call it already offered" do
       type = %{locations: [], allow_video: true, video_integration_id: 42}
 
-      assert [%LocationOption{kind: "video", video_integration_ids: [42]}] =
+      assert [%LocationOption{kind: :video, video_integration_ids: [42]}] =
                LocationSelection.options(type)
     end
 
     test "a meeting type with no list and no video falls back to one in-person location" do
       type = %{locations: [], allow_video: false, video_integration_id: nil}
 
-      assert [%LocationOption{kind: "in_person"}] = LocationSelection.options(type)
+      assert [%LocationOption{kind: :in_person}] = LocationSelection.options(type)
     end
 
     test "the fallback ids are stable, so a submitted id still resolves" do
@@ -80,7 +80,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     end
 
     test "shows a stored English default label in the current language, as the fallback does" do
-      stored = %{locations: [option(id: "loc-1", kind: "in_person", label: "In person")]}
+      stored = %{locations: [option(id: "loc-1", kind: :in_person, label: "In person")]}
       fallback = %{locations: [], allow_video: false, video_integration_id: nil}
 
       Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
@@ -106,7 +106,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
 
       assert %{
                location: "The office",
-               location_kind: "in_person",
+               location_kind: :in_person,
                location_option_id: "loc-office",
                video_integration_id: nil,
                address_to_arrange: true,
@@ -117,7 +117,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     test "a video location carries the integration its room will be created on" do
       type = %{locations: [office(), zoom(), teams()]}
 
-      assert %{location_kind: "video", video_integration_id: 9, location: "Teams"} =
+      assert %{location_kind: :video, video_integration_id: 9, location: "Teams"} =
                LocationSelection.resolve(type, "loc-teams")
     end
 
@@ -139,7 +139,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
 
       assert %{
                location: "Phone call (+44 7700 900123)",
-               location_kind: "phone",
+               location_kind: :phone,
                attendee_phone: "+44 7700 900123"
              } = LocationSelection.resolve(type, "loc-call", "  +44 7700 900123  ")
     end
@@ -200,7 +200,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
       office =
         option(
           id: "loc-office",
-          kind: "in_person",
+          kind: :in_person,
           label: "Our office",
           details: "12 High Street",
           position: 0

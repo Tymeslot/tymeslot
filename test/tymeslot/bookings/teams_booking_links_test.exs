@@ -131,7 +131,7 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
              |> render_click()
 
     assert to =~ "/meeting/#{meeting.uid}/cancel-confirmed"
-    assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
   end
 
   # A Teams meeting with an event of its own (no booking calendar here) holds
@@ -195,7 +195,7 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
     refute_received {:graph, _method, _url, _body}
 
     cancelled = Repo.get!(MeetingSchema, meeting.id)
-    assert cancelled.status == "cancelled"
+    assert cancelled.status == :cancelled
     assert cancelled.video_room_id == nil
   end
 

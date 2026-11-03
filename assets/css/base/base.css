@@ -7,25 +7,17 @@
   box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-/* Prevent horizontal overflow globally */
-* {
-  box-sizing: border-box;
-}
-
+/* The document itself scrolls. `overflow-x: clip` on body stops stray
+   horizontal overflow without turning body into a second scroll container:
+   `hidden` (with a fixed height) did, which let absolutely positioned
+   descendants escape it, made <html> scrollable as well and, wherever
+   scrollbars take up space, narrowed the page below its breakpoints. */
 html {
-  overflow-x: hidden;
   width: 100%;
 }
 
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   margin: 0;
   padding: 0;

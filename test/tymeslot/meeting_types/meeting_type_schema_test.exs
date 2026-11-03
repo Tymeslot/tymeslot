@@ -78,7 +78,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
           duration_minutes: 60,
           user_id: user.id,
           max_participants: 999,
-          locations: [%{kind: "custom", label: "Main hall"}]
+          locations: [%{kind: :custom, label: "Main hall"}]
         })
 
       assert changeset.valid?
@@ -558,7 +558,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       duration_minutes: 60,
       user_id: 1,
       max_participants: 10,
-      locations: [%{kind: "custom", label: "Main hall"}],
+      locations: [%{kind: :custom, label: "Main hall"}],
       last_spots_threshold: threshold
     })
   end

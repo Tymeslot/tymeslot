@@ -13,6 +13,10 @@ defmodule CredoChecks.ThinWrapperFunctions do
   ## Good
 
       # Use ItemFormatter.format_item(x) directly at call sites
+
+  A function with more than one clause is never flagged: its clauses dispatch
+  between targets, so no single one of them is a wrapper. Clauses are matched
+  by name alone, so a same-named function of another arity also exempts it.
   """
 
   use Credo.Check,
@@ -26,6 +30,9 @@ defmodule CredoChecks.ThinWrapperFunctions do
       Thin wrapper functions add unnecessary indirection and make code less transparent.
       Instead of creating private functions that just wrap module calls, use the
       aliased module directly.
+
+      A function with more than one clause is never flagged, since its clauses
+      dispatch between targets rather than forward to one.
       """,
       params: []
     ]
@@ -44,15 +51,28 @@ defmodule CredoChecks.ThinWrapperFunctions do
 
     # Pattern to match thin wrapper functions
     thin_wrapper_regex = ~r/^\s*defp\s+(\w+)\([^)]*\),\s*do:\s*(\w+)\.(\w+)\(/
+    multi_clause = multi_clause_names(lines)
 
-    Enum.reduce(lines, [], &process_line(&1, &2, thin_wrapper_regex, issue_meta))
+    Enum.reduce(lines, [], &process_line(&1, &2, thin_wrapper_regex, multi_clause, issue_meta))
   end
 
-  defp process_line({line_no, line}, issues, regex, issue_meta) do
+  # Names of private functions defined by more than one clause
+  defp multi_clause_names(lines) do
+    lines
+    |> Enum.flat_map(fn {_line_no, line} ->
+      Regex.run(~r/^\s*defp\s+(\w+[?!]?)\(/, line, capture: :all_but_first) || []
+    end)
+    |> Enum.frequencies()
+    |> Enum.flat_map(fn {name, count} -> if count > 1, do: [name], else: [] end)
+    |> MapSet.new()
+  end
+
+  defp process_line({line_no, line}, issues, regex, multi_clause, issue_meta) do
     case Regex.run(regex, line, capture: :all_but_first) do
       [function_name, module_name, target_function] ->
-        # Only flag if it's a direct wrapper (same function name or obvious wrapper)
-        if should_flag_as_wrapper?(function_name, target_function) do
+        # Only flag a single-clause direct wrapper (same function name or obvious wrapper)
+        if not MapSet.member?(multi_clause, function_name) and
+             should_flag_as_wrapper?(function_name, target_function) do
           issue =
             issue_for(issue_meta, line_no, function_name, "#{module_name}.#{target_function}")
 

@@ -39,6 +39,45 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
     end
   end
 
+  # `MeetingProvisioning.booking_online_meeting/1` counts on a run recording
+  # nothing once `attempt_timeout_ms/0` has passed: a create still running
+  # after it could record an event carrying a Teams meeting after the Teams
+  # job has made one of its own.
+  describe "attempt_timeout_ms/0 bounds a run" do
+    test "a run's calendar work is stopped at the deadline, not left running" do
+      meeting = insert(:meeting)
+      test_pid = self()
+
+      Mox.stub(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        send(test_pid, {:calendar_call, self()})
+        Process.sleep(:infinity)
+      end)
+
+      Application.put_env(:tymeslot, :calendar_timeout_ms, 50)
+
+      try do
+        assert CalendarEventWorker.attempt_timeout_ms() == 50
+
+        assert {:snooze, _seconds} =
+                 perform_job(CalendarEventWorker, %{
+                   "action" => "create",
+                   "meeting_id" => meeting.id
+                 })
+      after
+        Application.delete_env(:tymeslot, :calendar_timeout_ms)
+      end
+
+      assert_received {:calendar_call, call_pid}
+      refute Process.alive?(call_pid)
+    end
+
+    # An Oban timeout would kill the job but not the unlinked task running
+    # its work, which could then record an event past the deadline.
+    test "sets no Oban timeout that could stop the job before the run's own deadline" do
+      assert CalendarEventWorker.timeout(%Oban.Job{args: %{}}) == :infinity
+    end
+  end
+
   describe "perform/1 - a crashed calendar operation" do
     # The job's error is stored in `oban_jobs.errors` and logged by Oban, so
     # the crash reason in it must not carry the credentials a CalDAV client

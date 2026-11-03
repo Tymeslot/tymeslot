@@ -249,6 +249,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
         "Remove the additional durations to enable group bookings."
       )
 
+  defp blocker_message(:offered_times),
+    do:
+      dgettext(
+        "dashboard_meeting_form",
+        "Remove the offered times to enable group bookings."
+      )
+
+  defp blocker_message(:hidden_offered_times),
+    do:
+      dgettext(
+        "dashboard_meeting_form",
+        "This type still has offered times. Turn on fixed dates and remove them to enable group bookings."
+      )
+
   defp blocker_message({:location, reason}), do: GroupRules.location_message(reason)
 
   # Bracket access works for both a keyword list and a map. Core leaves the

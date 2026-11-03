@@ -12,7 +12,12 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   alias Wallaby.Element
 
   @doc """
-  Walks the overview to the schedule step: picks the first duration, then Next.
+  Walks the overview to the schedule. Choosing a meeting type is the way on
+  (no shipped theme has an overview Next): on a paged theme it shows the
+  schedule step; on a continuous page (Folio) it opens the calendar below.
+  Either way a day, a time or a slot to pick shows: at its narrowest Quill
+  hides the month grid that carries the days' marks and shows the landed
+  day's times.
 
   This is the only entry path that renders the Back button, and so the only one
   that produces the full two-button actions row: a direct booking link sets
@@ -20,19 +25,23 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   It is also the journey an embedded booker actually takes.
 
   Short-viewport tests deliberately deep-link instead. Below roughly 250px of
-  usable height the overview's own CTA sits past the end of a page that doesn't
-  scroll, so it can't be clicked: a limit of the overview, not of the schedule
-  layout those tests guard.
+  usable height the overview's own primary action sits past the end of a page
+  that doesn't scroll, so it can't be clicked: a limit of the overview, not of
+  the schedule layout those tests guard.
   """
   @spec advance_to_schedule(Wallaby.Session.t()) :: Wallaby.Session.t()
   def advance_to_schedule(session) do
-    session
-    |> pick_first("[data-testid='duration-option']")
-    # Both themes disable Next until the selected duration round-trips to the
-    # server. Clicking it before then is a no-op, so wait for it to enable.
-    |> assert_has(css("[data-testid='next-step']:not([disabled])"))
-    |> click_next_step()
-    |> assert_has(css("[data-testid='back-step']"))
+    session =
+      session
+      |> pick_first("[data-testid='duration-option']")
+      |> assert_has(css("[data-fact='date'], [data-fact='time'], [data-fact='slot']", minimum: 1))
+
+    # The Back the overflow checks are meant to prove: one that never
+    # rendered would leave only the primary action to measure. A continuous
+    # page (Folio) has no page to go back to.
+    if has?(session, css(".journey--continuous")),
+      do: session,
+      else: assert_has(session, css("[data-testid='back-step']"))
   end
 
   @doc """
@@ -72,6 +81,35 @@ defmodule TymeslotWeb.E2E.BookerSteps do
     session
     |> assert_has(css(selector, minimum: 1))
     |> find(css(selector, count: :any))
+    |> List.first()
+    |> Element.click()
+
+    session
+  end
+
+  @doc """
+  Clicks the first day on offer, by its `data-fact`, whichever theme renders
+  it.
+  """
+  @spec click_first_free_date(Wallaby.Session.t()) :: Wallaby.Session.t()
+  def click_first_free_date(session) do
+    session
+    |> find(css("[data-fact='date']:not([disabled])", count: :any))
+    |> List.first()
+    |> Element.click()
+
+    session
+  end
+
+  @doc """
+  Clicks the first time on offer, a slot or a time by its `data-fact`.
+  """
+  @spec pick_first_free_slot(Wallaby.Session.t()) :: Wallaby.Session.t()
+  def pick_first_free_slot(session) do
+    session
+    |> find(
+      css("[data-fact='slot']:not([disabled]), [data-fact='time']:not([disabled])", count: :any)
+    )
     |> List.first()
     |> Element.click()
 

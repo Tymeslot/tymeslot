@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.BookingDriver.Page
 
   @fixture_theme_id "99"
   @timezone "Etc/UTC"
@@ -69,7 +70,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
         attendee_email: "week-booker@example.com"
       )
 
-    assert meeting.status == "confirmed"
+    assert meeting.status == :confirmed
     assert DateTime.compare(meeting.start_time, at(day, ~T[10:00:00])) == :eq
   end
 
@@ -92,7 +93,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
         start_time: original_start,
         end_time: DateTime.add(original_start, 30, :minute),
         duration: 30,
-        status: "confirmed"
+        status: :confirmed
       )
 
     day = linked_day()
@@ -107,7 +108,7 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
     moved = Repo.get!(MeetingSchema, meeting.id)
 
     assert DateTime.compare(moved.start_time, at(day, ~T[14:00:00])) == :eq
-    assert moved.status == "confirmed"
+    assert moved.status == :confirmed
 
     assert Repo.aggregate(
              from(m in MeetingSchema, where: m.organizer_user_id == ^user.id),
@@ -115,6 +116,43 @@ defmodule TymeslotWeb.Live.Scheduling.WeekGridJourneyTest do
            ) ==
              1,
            "rescheduling through the week grid must move the meeting, not book a second one"
+  end
+
+  # A narrow grid scrolls sideways, and its `WeekGridScroll` hook keeps the
+  # day named in `data-reveal-date` in view. A booker who goes back from the
+  # details step must find the time they chose on screen, not whatever days
+  # the row last showed: the day named is the chosen one, not the linked day
+  # or the week's first day with times.
+  @tag :capture_log
+  test "a booker returning to the week finds the chosen day kept in view", %{conn: conn} do
+    %{profile: profile} = seed_booking_account(@fixture_theme_id, "week-back", @timezone)
+
+    day = Date.to_iso8601(linked_day())
+    view = open_week(conn, profile, linked_day())
+    BookingDriver.load(view)
+
+    days_with_times = view |> Page.attribute("[data-fact='slot']", "data-date") |> Enum.uniq()
+    assert length(days_with_times) >= 2, "the linked week needs times on two days"
+
+    chosen = days_with_times |> Enum.reject(&(&1 == day)) |> List.last()
+    refute chosen == hd(days_with_times)
+
+    [time | _later] =
+      Page.attribute(view, "[data-fact='slot'][data-date='#{chosen}']", "data-time")
+
+    BookingDriver.pick_slot(view, chosen, time)
+    BookingDriver.continue(view)
+    assert has_element?(view, "form[data-fact='attendee']")
+
+    BookingDriver.back(view)
+    BookingDriver.load(view)
+
+    assert has_element?(
+             view,
+             ".week-grid__slot--selected[data-date='#{chosen}'][data-time='#{time}']"
+           )
+
+    assert Page.attribute(view, ".week-grid__days", "data-reveal-date") == [chosen]
   end
 
   # Nine days out: inside the host's 30-day window, and never today.

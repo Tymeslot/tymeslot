@@ -217,6 +217,7 @@ msgid "Link not recognised"
 msgstr "Odkaz nebyl rozpoznán"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
 msgstr "Schůzka"

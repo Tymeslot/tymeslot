@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
 
       assert html =~ "Schedule with Sarah Rodriguez"
       assert html =~ "Hi! I&#39;m Sarah Rodriguez."
-      assert html =~ "Pick an option below."
+      assert html =~ "Pick an option to get started."
     end
 
     test "shows the organiser's wording in place of all three lines" do
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
       assert html =~ "I am Sarah, and I help teams ship."
       assert html =~ "Choose whichever session suits you."
       refute html =~ "Schedule with Sarah Rodriguez"
-      refute html =~ "Pick an option below."
+      refute html =~ "Pick an option to get started."
     end
 
     test "keeps each welcome line in its own paragraph" do
@@ -55,6 +55,39 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
 
       assert html =~ ~r/organizer-greeting[^>]*>\s*I am Sarah\./
       assert html =~ ~r/organizer-instruction[^>]*>\s*Choose a session\./
+    end
+
+    test "leaves out a greeting the organiser left blank rather than an empty paragraph" do
+      profile =
+        build(:profile,
+          full_name: "Sarah Rodriguez",
+          booking_text_enabled: true,
+          booking_heading: "Book a call",
+          booking_greeting: nil,
+          booking_instruction: "Choose a session."
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ ~r/organizer-instruction[^>]*>\s*Choose a session\./
+      refute html =~ "organizer-greeting"
+      refute html =~ "Hi! I&#39;m"
+    end
+
+    test "drops the welcome block when the organiser left both lines blank" do
+      profile =
+        build(:profile,
+          full_name: "Sarah Rodriguez",
+          booking_text_enabled: true,
+          booking_heading: "Book a call",
+          booking_greeting: nil,
+          booking_instruction: nil
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ "Book a call"
+      refute html =~ "organizer-info"
     end
 
     test "keeps the theme's wording when the organiser has switched the customisation off" do
@@ -113,6 +146,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
 
   defp render_overview(overrides) do
     base = %{
+      host_currency: nil,
       id: "overview-step",
       locale: "en",
       host_currency: nil,

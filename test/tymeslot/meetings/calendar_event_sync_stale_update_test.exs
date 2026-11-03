@@ -20,7 +20,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncStaleUpdateTest do
   # The cancellation deleted the event.
   test "leaves the event of a meeting cancelled since the update was scheduled alone" do
     %{meeting: meeting} = setup_calendar_scenario()
-    {:ok, _cancelled} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+    {:ok, _cancelled} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
 
     # Any calendar call would fail the test: none is expected.
     assert :ok = CalendarEventSync.update(meeting.id, 1)

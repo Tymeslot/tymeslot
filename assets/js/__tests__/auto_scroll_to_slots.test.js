@@ -247,4 +247,24 @@ describe('AutoScrollToSlots auto-scroll', () => {
 
     document.documentElement.removeAttribute('data-embedded');
   });
+
+  test('a list that opts out does not scroll, but still moves the focus', () => {
+    // SlotList's `auto_scroll={false}`: a continuous page, whose opening
+    // section's heading takes the focus, places the view itself.
+    const { el, heading } = buildSlotList({ loaded: false });
+    el.dataset.autoScroll = 'off';
+    const day = makeCalendarDay();
+    day.focus();
+    const hook = makeHook(el);
+    hook.mounted();
+
+    const grid = document.createElement('div');
+    grid.setAttribute('data-slots-loaded', '2026-09-01');
+    el.appendChild(grid);
+    hook.handleSlotsUpdate();
+    vi.advanceTimersByTime(100);
+
+    expect(el.scrollIntoView).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(heading);
+  });
 });

@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Workers.EmailWorker
 
@@ -392,7 +393,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   own calendar, which the organiser's copy then says.
   """
   @spec schedule_reschedule_emails(
-          %{id: term(), start_time: DateTime.t(), status: String.t()},
+          %{id: term(), start_time: DateTime.t(), status: MeetingState.status()},
           map() | nil,
           keyword()
         ) :: :ok | {:error, term()}
@@ -401,7 +402,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       "action" => "send_reschedule_emails",
       "meeting_id" => meeting.id,
       "rescheduled_to" => DateTime.to_iso8601(meeting.start_time),
-      "status" => meeting.status
+      "status" => Atom.to_string(meeting.status)
     }
     |> maybe_put_original(original)
     |> maybe_put_moved_by(Keyword.get(opts, :moved_by))

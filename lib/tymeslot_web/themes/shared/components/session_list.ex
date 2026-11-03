@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
   """
   @spec load(map() | nil, String.t(), DateTime.t()) :: t() | nil
   def load(meeting_type, timezone, now \\ Clock.utc_now()) do
-    if FixedDates.enabled?(meeting_type) do
+    if FixedDates.sessions?(meeting_type) do
       # One read of every session: the upcoming ones are listed, and the
       # past ones only tell an ended event from one with nothing planned.
       sessions = PlannedSessions.list(meeting_type)

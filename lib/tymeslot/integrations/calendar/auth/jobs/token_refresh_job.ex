@@ -41,6 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.ReauthHandling
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.RetryHelpers
   alias Tymeslot.Workers.SnoozePolicy
 
@@ -64,24 +65,9 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   @impl Oban.Worker
   @spec backoff(Oban.Job.t()) :: non_neg_integer()
   def backoff(%Oban.Job{attempt: attempt}) do
-    case attempt do
-      # 1 second (network hiccup)
-      1 -> 1
-      # 3 seconds (quick retry)
-      2 -> 3
-      # 10 seconds (maybe temporary issue)
-      3 -> 10
-      # 5 minutes (avoid rate limits)
-      4 -> 300
-      # 15 minutes (longer cooldown)
-      5 -> 900
-      # 30 minutes (significant backoff)
-      6 -> 1800
-      # 1 hour (final attempt)
-      7 -> 3600
-      # Cap at 1 hour
-      _other -> 3600
-    end
+    # 1s and 3s for a network hiccup, 10s for a temporary issue, then 5, 15
+    # and 30 minutes to stay clear of rate limits, capped at an hour.
+    Backoff.ladder(attempt, [1, 3, 10, 300, 900, 1_800, 3_600])
   end
 
   @behaviour ExpectedJobOutcome

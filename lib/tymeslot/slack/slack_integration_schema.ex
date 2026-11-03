@@ -1,8 +1,8 @@
 defmodule Tymeslot.Slack.SlackIntegrationSchema do
   @moduledoc """
   Schema for Slack integration records linking users to either a Slack
-  workspace via OAuth (`app_mode: "oauth"`) or a pasted Incoming Webhook URL
-  (`app_mode: "webhook_url"`).
+  workspace via OAuth (`app_mode: :oauth`) or a pasted Incoming Webhook URL
+  (`app_mode: :webhook_url`).
 
   Sensitive credentials (`bot_token`, `webhook_url`) are AES-encrypted at rest
   using `Tymeslot.Security.Encryption`. Plaintext access is exposed via the
@@ -19,11 +19,14 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
 
   @type status :: :pending_oauth | :active | :paused | :auto_disabled
 
+  @typedoc "How the integration posts: through an installed app, or a pasted webhook."
+  @type app_mode :: :oauth | :webhook_url
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
           name: String.t() | nil,
-          app_mode: String.t() | nil,
+          app_mode: app_mode() | nil,
           bot_token: String.t() | nil,
           bot_token_encrypted: binary() | nil,
           team_id: String.t() | nil,
@@ -46,12 +49,11 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
         }
 
   @valid_events EventTypes.all()
-  @valid_modes ~w(oauth webhook_url)
   @webhook_url_regex ~r{\Ahttps://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+\z}
 
   schema "slack_integrations" do
     field(:name, :string)
-    field(:app_mode, :string)
+    field(:app_mode, Ecto.Enum, values: [:oauth, :webhook_url])
 
     field(:bot_token, :string, virtual: true, redact: true)
     field(:bot_token_encrypted, :binary)
@@ -101,7 +103,6 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     %__MODULE__{}
     |> cast(attrs, @context_fields)
     |> validate_required([:user_id, :app_mode])
-    |> validate_inclusion(:app_mode, @valid_modes)
     |> encrypt_bot_token()
     |> user_changeset(attrs)
     |> foreign_key_constraint(:user_id)
@@ -148,7 +149,6 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
       :events
     ])
     |> validate_required([:user_id, :name, :app_mode, :bot_token, :team_id, :events])
-    |> validate_inclusion(:app_mode, @valid_modes)
     |> validate_subset(:events, @valid_events)
     |> validate_length(:name, Constraints.integration_name_length_opts())
     |> encrypt_bot_token()
@@ -210,12 +210,12 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
 
   defp validate_by_mode(changeset) do
     case get_field(changeset, :app_mode) do
-      "oauth" ->
+      :oauth ->
         changeset
         |> validate_token_present()
         |> validate_required([:channel_id])
 
-      "webhook_url" ->
+      :webhook_url ->
         changeset
         |> validate_webhook_url_present()
         |> validate_format(:webhook_url, @webhook_url_regex,
@@ -299,8 +299,8 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
   @spec status(t()) :: status()
   def status(%__MODULE__{disabled_at: %DateTime{}}), do: :auto_disabled
   def status(%__MODULE__{is_active: false}), do: :paused
-  def status(%__MODULE__{app_mode: "oauth", channel_id: nil}), do: :pending_oauth
-  def status(%__MODULE__{app_mode: "oauth", bot_token_encrypted: nil}), do: :pending_oauth
+  def status(%__MODULE__{app_mode: :oauth, channel_id: nil}), do: :pending_oauth
+  def status(%__MODULE__{app_mode: :oauth, bot_token_encrypted: nil}), do: :pending_oauth
   def status(%__MODULE__{}), do: :active
 
   @spec subscribed_to?(t(), String.t()) :: boolean()

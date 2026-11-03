@@ -41,7 +41,7 @@ defmodule Tymeslot.Workers.EmailWorkerOutcomeTest do
       insert(:meeting,
         organizer_user: host,
         organizer_user_id: host.id,
-        status: "expired",
+        status: :expired,
         first_announced_at: DateTime.utc_now(:second)
       )
 

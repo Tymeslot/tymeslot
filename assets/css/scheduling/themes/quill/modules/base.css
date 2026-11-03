@@ -58,8 +58,11 @@ body.quill-theme {
    scroll even when the booking content fits. Drop the bias when the banner is
    present (the card's auto margins still leave a gap above it) so card + banner
    share the viewport. Self-hosted Core has no banner (`:has` doesn't match), so
-   the full 10vh bias is kept there. */
-.main-gradient.theme-grid:has(.branding-footer) .content-area {
+   the full 10vh bias is kept there. The organiser's legal links
+   (shared/components/legal-links.css) are a footer row of the same kind, so
+   they drop the bias too; a page with neither keeps it. */
+.main-gradient.theme-grid:has(.branding-footer) .content-area,
+.main-gradient.theme-grid:has(.legal-links) .content-area {
   padding-bottom: 0;
 }
 
@@ -105,6 +108,16 @@ body.quill-theme {
   flex: initial;
   margin-top: auto;
   margin-bottom: auto;
+}
+
+/* A demo page's theme switcher (shared/components/preview-notice.css)
+   leads the column, centred, with the gap above it the language switcher's
+   row has at 640px and below; the card's auto margins centre it in the
+   space below. Where the language switcher floats in the corner,
+   language-switcher.css moves it down clear of it. */
+.main-gradient.theme-grid .content-area > .demo-theme-switcher {
+  flex-shrink: 0;
+  margin-top: var(--space-lg);
 }
 
 /* ===== Schedule Step — Viewport-Locked App Shell =====

@@ -6,9 +6,12 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   making it easy for users to parse in their automation tools (n8n, Zapier, etc.).
   """
 
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Utils.UrlBuilder
 
   @doc """
   Builds a webhook payload for a meeting event.
@@ -64,13 +67,14 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       start_time: format_datetime(meeting.start_time),
       end_time: format_datetime(meeting.end_time),
       duration: meeting.duration,
-      status: meeting.status,
+      status: Atom.to_string(meeting.status),
       meeting_type: meeting.meeting_type,
       location: meeting.location,
       organizer: build_organizer_data(meeting),
       attendee: build_attendee_data(meeting),
       guests: build_guests_data(meeting),
       urls: build_urls(meeting),
+      booking_page: build_booking_page_data(meeting),
       video: build_video_data(meeting),
       created_at: format_datetime(meeting.inserted_at),
       updated_at: format_datetime(meeting.updated_at)
@@ -110,13 +114,30 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       %{
         email: guest.email,
         name: guest.name,
-        status: guest.status,
+        status: Atom.to_string(guest.status),
         responded_at: format_datetime(guest.responded_at)
       }
     end)
   end
 
   defp build_guests_data(_meeting), do: []
+
+  # The booking page the booking came through, read from the loaded
+  # association as guests are (`WebhookWorker` loads it with the page's
+  # profile, whose username the page's address sits under). `nil` for the
+  # host's own page, for a page deleted since, and for a meeting arriving
+  # without the association.
+  defp build_booking_page_data(%MeetingSchema{
+         booking_page: %BookingPageSchema{profile: %ProfileSchema{username: username}} = page
+       }) do
+    %{
+      name: page.name,
+      slug: page.slug,
+      url: UrlBuilder.booking_url(username && username <> "/" <> page.slug)
+    }
+  end
+
+  defp build_booking_page_data(_meeting), do: nil
 
   defp build_urls(meeting) do
     links = MeetingLinks.for_meeting(meeting)
@@ -163,7 +184,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
 
   defp maybe_add_approval_data(data, _meeting), do: data
 
-  # A decline and an ordinary cancellation share `status: "cancelled"` (see
+  # A decline and an ordinary cancellation share `status: :cancelled` (see
   # the comment on `MeetingSchema.approval_declined_at`), but they mean
   # different things to a consumer: a decline is the host refusing a request
   # that was never accepted, not the withdrawal of one that was. Only
@@ -173,7 +194,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   # subscribers already parse. The reason comes from `decline_reason` — the
   # field the host actually filled in — rather than the unrelated
   # `cancellation_reason`.
-  defp maybe_add_cancellation_data(data, %MeetingSchema{status: "cancelled"} = meeting) do
+  defp maybe_add_cancellation_data(data, %MeetingSchema{status: :cancelled} = meeting) do
     if Approval.declined?(meeting) do
       Map.put(data, :decline, %{
         declined_at: format_datetime(meeting.approval_declined_at),

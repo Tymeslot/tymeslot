@@ -17,7 +17,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       attrs = %{
         name: "My Telegram Bot",
         user_id: user.id,
-        bot_mode: "own"
+        bot_mode: :own
       }
 
       changeset = TelegramIntegrationSchema.create_changeset(attrs)
@@ -41,7 +41,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "",
           user_id: user.id,
-          bot_mode: "own"
+          bot_mode: :own
         })
 
       refute changeset.valid?
@@ -59,7 +59,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: String.duplicate("a", 101),
           user_id: user.id,
-          bot_mode: "own"
+          bot_mode: :own
         })
 
       refute changeset.valid?
@@ -69,7 +69,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
     test "validates bot_mode inclusion" do
       user = insert(:user)
 
-      for mode <- ["shared", "own"] do
+      for mode <- [:shared, :own] do
         changeset =
           TelegramIntegrationSchema.create_changeset(%{
             name: "Bot",
@@ -102,7 +102,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
-          bot_mode: "own",
+          bot_mode: :own,
           events: ["meeting.created", "meeting.cancelled"]
         })
 
@@ -116,7 +116,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
-          bot_mode: "own",
+          bot_mode: :own,
           events: ["meeting.created", "invalid.event"]
         })
 
@@ -131,7 +131,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
-          bot_mode: "own"
+          bot_mode: :own
         })
 
       assert get_field(changeset, :events) == []
@@ -146,7 +146,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: insert(:user).id,
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token: "test_bot_token_123",
           chat_id: "123456"
         })
@@ -161,7 +161,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: insert(:user).id,
-          bot_mode: "shared",
+          bot_mode: :shared,
           chat_id: "123456"
         })
 
@@ -175,7 +175,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: insert(:user).id,
-          bot_mode: "shared",
+          bot_mode: :shared,
           link_token: "forged",
           is_active: false,
           failure_count: 9,
@@ -191,17 +191,17 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
 
   describe "user_changeset/2" do
     test "never changes the bot mode" do
-      integration = insert(:telegram_integration, bot_mode: "own")
+      integration = insert(:telegram_integration, bot_mode: :own)
 
       changeset =
-        TelegramIntegrationSchema.user_changeset(integration, %{name: "New", bot_mode: "shared"})
+        TelegramIntegrationSchema.user_changeset(integration, %{name: "New", bot_mode: :shared})
 
       assert changeset.valid?
-      assert get_field(changeset, :bot_mode) == "own"
+      assert get_field(changeset, :bot_mode) == :own
     end
 
     test "changes the chat id of an own-bot integration" do
-      integration = insert(:telegram_integration, bot_mode: "own")
+      integration = insert(:telegram_integration, bot_mode: :own)
 
       changeset = TelegramIntegrationSchema.user_changeset(integration, %{chat_id: "424242"})
 
@@ -209,7 +209,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
     end
 
     test "ignores a chat id for a shared-bot integration" do
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: nil)
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: nil)
 
       changeset =
         TelegramIntegrationSchema.user_changeset(integration, %{name: "New", chat_id: "424242"})
@@ -235,7 +235,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
 
   describe "link_changeset/2" do
     test "links a chat and stamps linked_at" do
-      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: nil)
+      integration = insert(:telegram_integration, bot_mode: :shared, chat_id: nil)
 
       changeset =
         TelegramIntegrationSchema.link_changeset(integration, %{chat_id: "777", link_token: nil})
@@ -251,7 +251,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       changeset =
         TelegramIntegrationSchema.link_changeset(integration, %{
           name: "Changed",
-          bot_mode: "shared"
+          bot_mode: :shared
         })
 
       assert changeset.changes == %{}
@@ -414,7 +414,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token: "test_bot_token_123"
         })
 
@@ -432,7 +432,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token: ""
         })
 
@@ -446,7 +446,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
-          bot_mode: "own"
+          bot_mode: :own
         })
 
       assert get_change(changeset, :bot_token_encrypted) == nil
@@ -470,7 +470,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
-          bot_mode: "own",
+          bot_mode: :own,
           bot_token: original_token
         })
 

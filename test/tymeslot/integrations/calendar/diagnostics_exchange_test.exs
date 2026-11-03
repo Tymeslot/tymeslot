@@ -212,6 +212,35 @@ defmodule Tymeslot.Integrations.Calendar.DiagnosticsExchangeTest do
     end
   end
 
+  describe "fetch_exchange_item_uid/2" do
+    test "answers the iCalendar UID the server assigned the item" do
+      respond_by_operation(%{"GetItem" => get_item_response()})
+
+      assert {:ok, "040000008200E00074C5B7101A82E00800000000"} =
+               Diagnostics.fetch_exchange_item_uid(exchange_integration(), @item_id)
+    end
+
+    test "fails rather than answering a UID when the item cannot be read" do
+      respond_with(
+        200,
+        soap_envelope("""
+        <m:GetItemResponse>
+          <m:ResponseMessages>
+            <m:GetItemResponseMessage ResponseClass="Error">
+              <m:ResponseCode>ErrorItemNotFound</m:ResponseCode>
+            </m:GetItemResponseMessage>
+          </m:ResponseMessages>
+        </m:GetItemResponse>
+        """)
+      )
+
+      assert {:error, reason} =
+               Diagnostics.fetch_exchange_item_uid(exchange_integration(), @item_id)
+
+      assert inspect(reason) =~ "ErrorItemNotFound"
+    end
+  end
+
   describe "fetch_exchange_busy_intervals/3" do
     test "returns every occurrence the server expands a series into" do
       respond_by_operation(%{

@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestRepliesTest do
              ~r/grace@example\.com\s+Awaiting reply/
            )
 
-    {:ok, _guest} = Meetings.record_guest_rsvp(guest.rsvp_token, "accepted")
+    {:ok, _guest} = Meetings.record_guest_rsvp(guest.rsvp_token, :accepted)
 
     assert_push_event(lv, "calendar:events", %{reset: true})
     assert has_element?(lv, "#calendar-preview-guests li", ~r/grace@example\.com\s+Going/)

@@ -1,0 +1,80 @@
+/* The ways to work below the masthead: one entry per meeting type with its
+   description in full (page.css rules them as editorial entries). */
+
+.folio-meetings {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.folio-meeting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2xs) var(--space-md);
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  box-sizing: border-box;
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-card);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.folio-meeting:hover {
+  border-color: color-mix(in srgb, var(--theme-primary) 55%, var(--border-medium));
+  background: var(--folio-tint);
+}
+
+.folio-meeting[aria-current="true"] {
+  border-color: var(--theme-primary);
+  background: var(--folio-tint);
+  box-shadow: inset 0 0 0 var(--border-width-thin) var(--theme-primary);
+}
+
+.folio-meeting__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+}
+
+.folio-meeting__duration {
+  white-space: nowrap;
+}
+
+.folio-meeting__description {
+  grid-column: 1 / -1;
+  font-size: var(--theme-font-size-base);
+  line-height: var(--folio-line-height-body);
+  color: var(--theme-text-secondary);
+}
+
+/* No meeting types. */
+.folio-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-xl) var(--space-md);
+  border: var(--border-width-thin) dashed var(--border-medium);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.folio-empty__title {
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}

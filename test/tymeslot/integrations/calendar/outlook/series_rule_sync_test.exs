@@ -203,7 +203,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesRuleSyncTest do
               "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
           })
 
-        select == "id,type,recurrence,start" ->
+        is_binary(select) and String.starts_with?(select, "id,type,recurrence,start") ->
           id = path |> String.split("/") |> List.last()
           send(test_pid, {:master_read, id})
           answer(Map.fetch!(masters, id))

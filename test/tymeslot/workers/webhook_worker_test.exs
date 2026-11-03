@@ -15,9 +15,11 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   alias Oban.Job
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Test.ProcessAccessChecker
+  alias Tymeslot.Webhooks.MeetingSnapshot
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -157,6 +159,50 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
         assert [%{"email" => "colleague@example.com", "status" => "pending"}] = guests
 
+        {:ok, %{status: 200, body: "ok"}}
+      end)
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "carries the booking page the meeting was booked through" do
+      profile = insert(:profile, username: "joern")
+      page = insert(:booking_page, profile: profile, name: "Einfach ISO", slug: "einfachiso")
+      meeting = insert(:meeting, organizer_user_id: profile.user_id, booking_page_id: page.id)
+      webhook = insert(:webhook)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        booking_page = body |> Jason.decode!() |> get_in(["data", "meeting", "booking_page"])
+
+        assert booking_page == %{
+                 "name" => "Einfach ISO",
+                 "slug" => "einfachiso",
+                 "url" => Endpoint.url() <> "/joern/einfachiso"
+               }
+
+        {:ok, %{status: 200, body: "ok"}}
+      end)
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "sends a null booking page for a booking through the host's own page" do
+      meeting = insert(:meeting)
+      webhook = insert(:webhook)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        meeting_data = body |> Jason.decode!() |> get_in(["data", "meeting"])
+        assert Map.fetch!(meeting_data, "booking_page") == nil
         {:ok, %{status: 200, body: "ok"}}
       end)
 
@@ -446,24 +492,6 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
     end
   end
 
-  describe "snapshot/1" do
-    test "captures the event-defining fields as JSON-safe values" do
-      meeting =
-        insert(:meeting,
-          status: "awaiting_approval",
-          approval_requested_at: ~U[2026-01-14 09:00:00Z],
-          approval_deadline_at: ~U[2026-01-15 09:00:00Z]
-        )
-
-      snapshot = WebhookWorker.snapshot(meeting)
-
-      assert snapshot["status"] == "awaiting_approval"
-      assert snapshot["approval_requested_at"] == "2026-01-14T09:00:00Z"
-      assert snapshot["approval_deadline_at"] == "2026-01-15T09:00:00Z"
-      assert is_nil(snapshot["decline_reason"])
-    end
-  end
-
   describe "schedule_delivery/4" do
     test "carries the snapshot through to the enqueued job's args" do
       meeting_id = UUID.generate()
@@ -550,14 +578,14 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
   describe "perform/1 - replays the dispatch-time snapshot on retry" do
     test "reports the status the event asserted, not the meeting's current status" do
-      meeting = insert(:meeting, status: "awaiting_approval")
+      meeting = insert(:meeting, status: :awaiting_approval)
       webhook = insert(:webhook)
-      snapshot = WebhookWorker.snapshot(meeting)
+      snapshot = MeetingSnapshot.snapshot(meeting)
 
       # Simulates the host declining the request before a retried delivery of
       # the original meeting.requested job runs.
       meeting
-      |> Changeset.change(status: "cancelled", decline_reason: "Not a fit")
+      |> Changeset.change(status: :cancelled, decline_reason: "Not a fit")
       |> Repo.update!()
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
@@ -579,7 +607,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
     end
 
     test "falls back to the live meeting for a job enqueued before snapshots existed" do
-      meeting = insert(:meeting, status: "confirmed")
+      meeting = insert(:meeting, status: :confirmed)
       webhook = insert(:webhook)
 
       expect_http_success()

@@ -39,6 +39,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
 
   alias Tymeslot.Utils.DateTimeUtils
 
+  alias Tymeslot.BookingPages.BookedThrough
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
@@ -242,16 +243,28 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
       meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-      timezone: clock.timezone,
+      timezone: host_time.time_zone,
       time_format: clock.time_format,
-      audience: :host
+      audience: :host,
+      booking_page_name: BookedThrough.name(meeting)
     }
+  end
+
+  defp booked_through_line(details) do
+    case Formatting.booked_through(details) do
+      nil -> ""
+      line -> "\n" <> line
+    end
   end
 
   defp attendee_time_sentence(meeting, attendee_time, clock, locale) do
     formatted = Formatting.format_datetime(attendee_time, locale, clock.time_format)
-    zone = meeting.attendee_timezone || "UTC"
-    time_with_zone = if zone != "UTC", do: "#{formatted} (#{zone})", else: formatted
+    # Named by the zone the time is actually in: an unresolvable attendee
+    # zone leaves it in UTC, which must not be labelled with the failed name.
+    time_with_zone =
+      if attendee_time.time_zone == "Etc/UTC",
+        do: formatted,
+        else: "#{formatted} (#{attendee_time.time_zone})"
 
     dgettext("emails_booking_requests", "For %{name}, that's %{time}.",
       name: meeting.attendee_name,
@@ -301,7 +314,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     #{dgettext("emails_booking_requests", "Time:")} #{Formatting.format_time(details.start_time, locale, details.time_format)}
     #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
     #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
-    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
+    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}#{booked_through_line(details)}
     #{previous || ""}
 
     #{attendee_time_sentence(meeting, attendee_time, clock, locale)}

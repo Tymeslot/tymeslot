@@ -18,7 +18,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           stripe_charge_id: "ch_WON"
@@ -29,14 +29,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert :ok = ChargeDisputeClosed.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
     end
 
     test "won dispute preserves prior partial refunds and reverts to partially_refunded" do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           refunded_amount_cents: 1500,
           stripe_charge_id: "ch_WON_PART"
@@ -47,8 +47,65 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert :ok = ChargeDisputeClosed.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "partially_refunded"
+      assert reloaded.status == :partially_refunded
       assert reloaded.refunded_amount_cents == 1500
+    end
+  end
+
+  # An inquiry Stripe closes without a chargeback (`warning_closed`), or one
+  # stopped before it became one (`prevented`), is final and takes no funds.
+  describe "handle/1 — inquiries closed without a chargeback" do
+    for status <- ["warning_closed", "prevented"] do
+      test "#{status} reverts a disputed booking to paid" do
+        bp =
+          insert(:booking_payment,
+            stripe_account_id: @account,
+            status: :disputed,
+            amount_cents: 5000,
+            refunded_amount_cents: 0,
+            stripe_charge_id: "ch_#{unquote(status)}"
+          )
+
+        event =
+          dispute_closed_event(
+            "evt_#{unquote(status)}",
+            "ch_#{unquote(status)}",
+            unquote(status),
+            5000
+          )
+
+        assert :ok = ChargeDisputeClosed.handle(event)
+
+        reloaded = Repo.reload!(bp)
+        assert reloaded.status == :paid
+        assert reloaded.refunded_amount_cents == 0
+        assert reloaded.last_event_id == "evt_#{unquote(status)}"
+      end
+
+      test "#{status} keeps a prior partial refund as partially_refunded" do
+        bp =
+          insert(:booking_payment,
+            stripe_account_id: @account,
+            status: :disputed,
+            amount_cents: 5000,
+            refunded_amount_cents: 1500,
+            stripe_charge_id: "ch_PART_#{unquote(status)}"
+          )
+
+        event =
+          dispute_closed_event(
+            "evt_PART_#{unquote(status)}",
+            "ch_PART_#{unquote(status)}",
+            unquote(status),
+            5000
+          )
+
+        assert :ok = ChargeDisputeClosed.handle(event)
+
+        reloaded = Repo.reload!(bp)
+        assert reloaded.status == :partially_refunded
+        assert reloaded.refunded_amount_cents == 1500
+      end
     end
   end
 
@@ -57,7 +114,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           stripe_charge_id: "ch_LOST"
@@ -68,7 +125,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert :ok = ChargeDisputeClosed.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "refunded"
+      assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
     end
 
@@ -76,7 +133,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           stripe_charge_id: "ch_LOST_PART"
@@ -87,7 +144,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert :ok = ChargeDisputeClosed.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "partially_refunded"
+      assert reloaded.status == :partially_refunded
       assert reloaded.refunded_amount_cents == 2000
     end
   end
@@ -97,7 +154,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           stripe_charge_id: "ch_REPLAY",
@@ -110,24 +167,25 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
 
       reloaded = Repo.reload!(bp)
       # Untouched (last_event_id matched)
-      assert reloaded.status == "paid"
+      assert reloaded.status == :paid
     end
 
-    test "ignores warning_closed and other terminal-but-not-decisive statuses" do
+    test "leaves a live dispute status disputed" do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
-          stripe_charge_id: "ch_WARNING"
+          stripe_charge_id: "ch_LIVE"
         )
 
-      event = dispute_closed_event("evt_WARNING", "ch_WARNING", "warning_closed", 5000)
+      event = dispute_closed_event("evt_LIVE", "ch_LIVE", "warning_under_review", 5000)
 
       assert :ok = ChargeDisputeClosed.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
+      assert reloaded.last_event_id == nil
     end
 
     test "returns :ok when no booking_payment matches the charge id" do
@@ -136,12 +194,75 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
     end
   end
 
+  describe "handle/1 — recording the closed dispute" do
+    test "a final outcome records the dispute as closed" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          stripe_charge_id: "ch_RECORD",
+          stripe_dispute_id: "dp_evt_RECORD"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_RECORD", "ch_RECORD", "won", 5000)
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.stripe_dispute_id == "dp_evt_RECORD"
+      assert %DateTime{} = reloaded.dispute_closed_at
+    end
+
+    # A closed that overtakes its created must still record its outcome:
+    # a lost dispute's refunded amount would otherwise never be written.
+    test "a closed delivered before its created is applied to a paid payment" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :paid,
+          amount_cents: 5000,
+          stripe_charge_id: "ch_EARLY_LOST"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_EARLY_LOST", "ch_EARLY_LOST", "lost", 5000)
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :refunded
+      assert reloaded.refunded_amount_cents == 5000
+      assert reloaded.stripe_dispute_id == "dp_evt_EARLY_LOST"
+      assert %DateTime{} = reloaded.dispute_closed_at
+    end
+
+    test "a live dispute status records nothing" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          stripe_charge_id: "ch_LIVE_REC",
+          stripe_dispute_id: "dp_evt_LIVE_REC"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_LIVE_REC", "ch_LIVE_REC", "needs_response", 5000)
+               )
+
+      assert Repo.reload!(bp).dispute_closed_at == nil
+    end
+  end
+
   describe "handle/1 with an event from another connected account" do
     test "leaves the disputed booking payment untouched" do
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
-          status: "disputed",
+          status: :disputed,
           amount_cents: 5000,
           stripe_charge_id: "ch_FOREIGN_CLOSED"
         )
@@ -154,7 +275,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert :ok = ChargeDisputeClosed.handle(event)
 
       reloaded = Repo.reload!(bp)
-      assert reloaded.status == "disputed"
+      assert reloaded.status == :disputed
       assert reloaded.refunded_amount_cents == 0
       assert reloaded.last_event_id == nil
     end

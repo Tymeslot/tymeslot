@@ -9,7 +9,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "allows cancellation for future meetings" do
       future_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         # 1 hour from now
         start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
         # 2 hours from now
@@ -22,7 +22,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks cancellation for meetings that have started" do
       current_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         # 30 minutes ago
         start_time: DateTime.add(DateTime.utc_now(), -1800, :second),
         # 30 minutes from now
@@ -36,7 +36,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks cancellation for past meetings" do
       past_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         # 2 hours ago
         start_time: DateTime.add(DateTime.utc_now(), -7200, :second),
         # 1 hour ago
@@ -50,7 +50,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks cancellation for already cancelled meetings" do
       cancelled_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "cancelled",
+        status: :cancelled,
         start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
         end_time: DateTime.add(DateTime.utc_now(), 7200, :second)
       }
@@ -62,7 +62,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks cancellation for completed meetings" do
       completed_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "completed",
+        status: :completed,
         start_time: DateTime.add(DateTime.utc_now(), -7200, :second),
         end_time: DateTime.add(DateTime.utc_now(), -3600, :second)
       }
@@ -75,7 +75,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
       # Meeting starts in exactly 1 minute - should still be allowed
       almost_starting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         # 1 minute from now
         start_time: DateTime.add(DateTime.utc_now(), 60, :second),
         # 61 minutes from now
@@ -92,7 +92,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
       # contradicting round of emails.
       expired_request = %MeetingSchema{
         uid: "test-uid",
-        status: "expired",
+        status: :expired,
         start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
         end_time: DateTime.add(DateTime.utc_now(), 7200, :second)
       }
@@ -106,7 +106,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "allows rescheduling for future meetings" do
       future_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
         end_time: DateTime.add(DateTime.utc_now(), 7200, :second)
       }
@@ -117,7 +117,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks rescheduling for meetings that have started" do
       current_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         start_time: DateTime.add(DateTime.utc_now(), -1800, :second),
         end_time: DateTime.add(DateTime.utc_now(), 1800, :second)
       }
@@ -129,7 +129,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks rescheduling for past meetings" do
       past_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         start_time: DateTime.add(DateTime.utc_now(), -7200, :second),
         end_time: DateTime.add(DateTime.utc_now(), -3600, :second)
       }
@@ -141,7 +141,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks rescheduling for cancelled meetings" do
       cancelled_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "cancelled",
+        status: :cancelled,
         start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
         end_time: DateTime.add(DateTime.utc_now(), 7200, :second)
       }
@@ -153,7 +153,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "blocks rescheduling for completed meetings" do
       completed_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "completed",
+        status: :completed,
         start_time: DateTime.add(DateTime.utc_now(), -7200, :second),
         end_time: DateTime.add(DateTime.utc_now(), -3600, :second)
       }
@@ -167,7 +167,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
       # the attendee a time nothing reserves.
       expired_meeting = %MeetingSchema{
         uid: "test-uid",
-        status: "expired",
+        status: :expired,
         start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
         end_time: DateTime.add(DateTime.utc_now(), 7200, :second)
       }
@@ -180,7 +180,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
       # Meeting starts in exactly 1 minute - should still be allowed
       almost_starting = %MeetingSchema{
         uid: "test-uid",
-        status: "confirmed",
+        status: :confirmed,
         start_time: DateTime.add(DateTime.utc_now(), 60, :second),
         end_time: DateTime.add(DateTime.utc_now(), 3660, :second)
       }
@@ -204,7 +204,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     test "refuses a meeting its host manages, whatever its state" do
       future = DateTime.add(DateTime.utc_now(), 7200, :second)
 
-      for status <- ["confirmed", "awaiting_approval"] do
+      for status <- [:confirmed, :awaiting_approval] do
         meeting = %{
           status: status,
           managed_by_host: true,
@@ -218,7 +218,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
 
     test "still refuses a held request for a meeting with a booker" do
       assert Policy.can_request_reschedule?(%{
-               status: "awaiting_approval",
+               status: :awaiting_approval,
                managed_by_host: false
              }) ==
                {:error, {:not_reschedulable, :awaiting_approval}}
@@ -232,7 +232,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     end
 
     test "lets the host move an upcoming meeting they manage", times do
-      meeting = Map.merge(times, %{status: "confirmed", managed_by_host: true})
+      meeting = Map.merge(times, %{status: :confirmed, managed_by_host: true})
 
       assert Policy.can_host_change_time?(meeting) == :ok
     end
@@ -241,7 +241,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
       ended = DateTime.add(DateTime.utc_now(), -3600, :second)
 
       meeting = %{
-        status: "confirmed",
+        status: :confirmed,
         managed_by_host: true,
         start_time: DateTime.add(ended, -1800, :second),
         end_time: ended
@@ -251,7 +251,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
     end
 
     test "asks the attendee of a booked meeting, refusing a fixed date", times do
-      booked = Map.merge(times, %{status: "confirmed", managed_by_host: false})
+      booked = Map.merge(times, %{status: :confirmed, managed_by_host: false})
 
       assert Policy.can_host_change_time?(booked) == :ok
 

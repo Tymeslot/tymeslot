@@ -93,7 +93,7 @@ defmodule Tymeslot.Availability.Offer do
   def slots_for_date(%{profile: %{user_id: user_id} = profile} = request, date_string, duration) do
     with {:ok, date} <- Date.from_iso8601(date_string) do
       cond do
-        FixedDates.enabled?(request[:meeting_type]) ->
+        FixedDates.sessions?(request[:meeting_type]) ->
           {:ok, SessionSlots.day_slots(request.meeting_type, date, request.user_timezone)}
 
         Request.demo?(request) ->
@@ -191,7 +191,7 @@ defmodule Tymeslot.Availability.Offer do
         duration_minutes
       ) do
     cond do
-      FixedDates.enabled?(request[:meeting_type]) ->
+      FixedDates.sessions?(request[:meeting_type]) ->
         {:ok,
          SessionSlots.days(request.meeting_type, start_date, end_date, request.user_timezone)}
 

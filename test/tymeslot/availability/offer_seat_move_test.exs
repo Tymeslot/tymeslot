@@ -133,7 +133,7 @@ defmodule Tymeslot.Availability.OfferSeatMoveTest do
 
     assert {:ok, %{meeting: moved_to}} = move_to(ctx, "2:30 PM")
     assert DateTime.diff(moved_to.start_time, ctx.meeting.start_time, :minute) == 30
-    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == "cancelled"
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == :cancelled
   end
 
   test "with another seat on the meeting the overlap is neither offered nor bookable", ctx do
@@ -146,7 +146,7 @@ defmodule Tymeslot.Availability.OfferSeatMoveTest do
     assert "4:00 PM" in offered_times(ctx, ctx.mover.management_token)
 
     assert {:error, :slot_taken} = move_to(ctx, "2:30 PM")
-    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == "confirmed"
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == :confirmed
     assert length(ParticipantQueries.list_live_for_meeting(ctx.meeting.id)) == 2
   end
 

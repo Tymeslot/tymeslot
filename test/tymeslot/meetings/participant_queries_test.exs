@@ -234,7 +234,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
         insert(:meeting,
           organizer_user: user,
           meeting_type_id: meeting_type.id,
-          status: "cancelled",
+          status: :cancelled,
           start_time: start_time,
           end_time: DateTime.add(start_time, 30, :minute)
         )

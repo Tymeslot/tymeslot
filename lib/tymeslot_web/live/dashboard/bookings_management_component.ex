@@ -5,8 +5,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.RateLimiter
@@ -19,12 +19,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias TymeslotWeb.Dashboard.BookingsManagement.CalendarMove
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.GuestActions
-  alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
   alias TymeslotWeb.Dashboard.BookingsManagement.Modals
-
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.RateLimit
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -32,6 +31,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      socket
      |> LiveView.stream(:meetings, [])
      |> assign(:filter, "upcoming")
+     |> assign(:booking_pages, [])
+     |> assign(:page_filter, nil)
      |> assign(:focus, nil)
      |> assign(:_last_focus_param, nil)
      |> assign(:loading, true)
@@ -105,6 +106,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       |> assign(:_last_user_id, new_user_id)
       |> assign(:_last_per_page, new_per_page)
 
+    socket = if initialized?, do: socket, else: assign_booking_pages(socket)
     socket = if should_load, do: load_meetings(socket), else: socket
 
     {:ok, socket}
@@ -114,84 +116,61 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("filter_meetings", %{"filter" => filter}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:meeting_filter, user_id) do
-      :ok ->
-        case validate_filter(filter) do
-          {:ok, validated_filter} ->
-            :telemetry.execute(
-              [:tymeslot, :dashboard, :meetings, :filter],
-              %{},
-              %{user_id: user_id, filter: validated_filter}
-            )
+    RateLimit.with_rate_limit(RateLimiter.check(:meeting_filter, user_id), socket, fn ->
+      case validate_filter(filter) do
+        {:ok, validated_filter} ->
+          :telemetry.execute(
+            [:tymeslot, :dashboard, :meetings, :filter],
+            %{},
+            %{user_id: user_id, filter: validated_filter}
+          )
 
-            {:noreply,
-             socket
-             |> assign(:filter, validated_filter)
-             |> assign(:focus, nil)
-             |> assign(:next_cursor, nil)
-             |> assign(:has_more, false)
-             |> assign(:loading, true)
-             |> load_meetings()}
+          {:noreply,
+           socket
+           |> assign(:filter, validated_filter)
+           |> assign(:focus, nil)
+           |> assign(:next_cursor, nil)
+           |> assign(:has_more, false)
+           |> assign(:loading, true)
+           |> load_meetings()}
 
-          {:error, _errors} ->
-            {:noreply, socket}
-        end
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-    end
+        {:error, _errors} ->
+          {:noreply, socket}
+      end
+    end)
   end
 
-  def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket) do
-    case ModalMeeting.fetch(socket.assigns.current_user.id, params, &Policy.can_cancel_meeting?/1) do
-      {:ok, meeting} ->
-        user_id = socket.assigns.current_user.id
-        Cancellation.emit_open(user_id, meeting.id)
-
-        # Scoped to the signed-in host: only a payment they took offers
-        # refund options.
-        booking_payment = MeetingPayments.payment_for_meeting(meeting.id, user_id)
-
+  def handle_event("filter_booking_page", %{"page" => page}, socket) do
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_filter, socket.assigns.current_user.id),
+      socket,
+      fn ->
         {:noreply,
          socket
-         |> assign(:cancel_booking_payment, booking_payment)
-         |> ModalHook.show_modal(:cancel_meeting, meeting)}
-
-      {:error, :validation_failed, reason} ->
-        Cancellation.emit_error(socket.assigns.current_user.id, reason, :validation_failed)
-        {:noreply, socket}
-
-      {:error, :policy_blocked, reason} ->
-        Cancellation.emit_error(socket.assigns.current_user.id, reason, :blocked)
-        Flash.error(ModalMeeting.refusal_message(reason))
-        {:noreply, socket}
-
-      {:error, :not_found, _reason} ->
-        {:noreply, socket}
-    end
+         |> assign(:page_filter, parse_page_filter(page, socket.assigns.booking_pages))
+         |> assign(:focus, nil)
+         |> assign(:next_cursor, nil)
+         |> assign(:has_more, false)
+         |> assign(:loading, true)
+         |> load_meetings()}
+      end
+    )
   end
 
-  def handle_event("hide_cancel_modal", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:cancel_booking_payment, nil)
-     |> ModalHook.hide_modal(:cancel_meeting)}
-  end
+  def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket),
+    do: {:noreply, Cancellation.show(socket, params, &Policy.can_cancel_meeting?/1)}
+
+  def handle_event("hide_cancel_modal", _params, socket),
+    do: {:noreply, Cancellation.hide(socket)}
 
   def handle_event("confirm_cancel_meeting", params, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:dashboard_cancel, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      :ok ->
-        ModalHook.with_modal_data(socket, :cancel_meeting, fn meeting ->
-          do_cancel_meeting(socket, meeting, params)
-        end)
-    end
+    RateLimit.with_rate_limit(RateLimiter.check(:dashboard_cancel, user_id), socket, fn ->
+      ModalHook.with_modal_data(socket, :cancel_meeting, fn meeting ->
+        {:noreply, Cancellation.confirm(socket, meeting, params, &load_meetings/1)}
+      end)
+    end)
   end
 
   def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket),
@@ -204,16 +183,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("confirm_reschedule_request", _params, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check(:dashboard_reschedule, user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-
-      :ok ->
-        ModalHook.with_modal_data(socket, :reschedule_request, fn meeting ->
-          {:noreply, RescheduleRequest.send(socket, meeting, &load_meetings/1)}
-        end)
-    end
+    RateLimit.with_rate_limit(RateLimiter.check(:dashboard_reschedule, user_id), socket, fn ->
+      ModalHook.with_modal_data(socket, :reschedule_request, fn meeting ->
+        {:noreply, RescheduleRequest.send(socket, meeting, &load_meetings/1)}
+      end)
+    end)
   end
 
   def handle_event("dismiss_calendar_sync_banner", %{"id" => meeting_id}, socket) do
@@ -255,7 +229,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
     case Meetings.list_user_meetings_by_filter(current_user.id, filter,
            per_page: per_page,
-           after: after_cursor
+           after: after_cursor,
+           booking_page: socket.assigns.page_filter
          ) do
       {:ok, page} ->
         socket =
@@ -300,19 +275,18 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   # Gated on the same per-answer limiter the emailed link uses, so this is
   # not the one write handler in the module a click loop can drive unbounded.
   def handle_event("approve_request", %{"id" => _id} = params, socket) do
-    case RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)) do
-      :ok ->
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      socket,
+      fn ->
         RequestActions.answer(socket, params, &Approval.approve/1,
           success:
             dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
           failure: dgettext("dashboard_bookings", "That request could not be approved."),
           reload: &load_meetings/1
         )
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-    end
+      end
+    )
   end
 
   def handle_event("show_decline_modal", %{"id" => _id} = params, socket) do
@@ -357,8 +331,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("confirm_decline_request", params, socket) do
-    case RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)) do
-      :ok ->
+    RateLimit.with_rate_limit(
+      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      socket,
+      fn ->
         reason = RequestActions.decline_reason(Map.get(params, "reason"))
 
         ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
@@ -370,11 +346,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
             reload: &load_meetings/1
           )
         end)
-
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
-    end
+      end
+    )
   end
 
   # The other half of `RequestActions.answer/4`'s `start_async/3` call: the
@@ -390,11 +363,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     ~H"""
     <div id="bookings-management">
       <.dashboard_page icon="hero-clock" title={dgettext("dashboard_common", "Meetings")}>
-        <div class="mb-10">
+        <div class="mb-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <%!-- No tab is current while the list shows one linked booking. --%>
           <MeetingListComponents.filter_tabs
             active={if @focus, do: nil, else: @filter}
             awaiting_approval_count={@awaiting_approval_count}
+            target={@myself}
+          />
+          <MeetingListComponents.page_filter
+            :if={@booking_pages != []}
+            pages={@booking_pages}
+            selected={@page_filter}
             target={@myself}
           />
         </div>
@@ -465,39 +444,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   # Private functions
 
-  defp do_cancel_meeting(socket, meeting, params) do
-    {outcome, type, message} =
-      Cancellation.cancel(
-        socket.assigns.current_user.id,
-        meeting,
-        socket.assigns.cancel_booking_payment,
-        params
-      )
-
-    {:noreply, socket |> Flash.put_flash(type, message) |> after_cancel(outcome)}
-  end
-
-  # Cancelled: close and reload, because the cancellation did happen even if
-  # the refund did not. Refused (the meeting started or ended meanwhile):
-  # close, nothing changed. Otherwise the dialog stays for another try.
-  defp after_cancel(socket, :closed), do: close_cancel_modal(socket)
-
-  defp after_cancel(socket, :refused),
-    do:
-      socket
-      |> assign(cancelling_meeting: nil, cancel_booking_payment: nil)
-      |> ModalHook.hide_modal(:cancel_meeting)
-
-  defp after_cancel(socket, _kept_open), do: assign(socket, :cancelling_meeting, nil)
-
-  defp close_cancel_modal(socket) do
-    socket
-    |> assign(:cancelling_meeting, nil)
-    |> assign(:cancel_booking_payment, nil)
-    |> load_meetings()
-    |> ModalHook.hide_modal(:cancel_meeting)
-  end
-
   defp assign_awaiting_approval_count(socket) do
     assign(
       socket,
@@ -517,7 +463,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       %{user_id: current_user.id, filter: filter}
     )
 
-    case fetch_page(socket.assigns.focus, current_user.id, filter, per_page) do
+    case fetch_page(socket.assigns.focus, current_user.id, filter,
+           per_page: per_page,
+           booking_page: socket.assigns.page_filter
+         ) do
       {:ok, page} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :load, :stop],
@@ -555,11 +504,27 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   defp focus_param(param) when is_binary(param) and param != "", do: param
   defp focus_param(_none), do: nil
 
-  defp fetch_page(nil, user_id, filter, per_page),
-    do: Meetings.list_user_meetings_by_filter(user_id, filter, per_page: per_page)
+  defp fetch_page(nil, user_id, filter, opts),
+    do: Meetings.list_user_meetings_by_filter(user_id, filter, opts)
 
-  defp fetch_page(focus, user_id, _filter, _per_page),
+  defp fetch_page(focus, user_id, _filter, _opts),
     do: Meetings.list_user_meeting(user_id, focus)
+
+  # The host's booking pages, for the page filter; none without a profile.
+  defp assign_booking_pages(%{assigns: %{profile: %{id: profile_id}}} = socket),
+    do: assign(socket, :booking_pages, BookingPages.list(profile_id))
+
+  defp assign_booking_pages(socket), do: socket
+
+  # "main" is the host's own page; an id must be one of their pages, so a
+  # crafted value narrows to nothing it should not. Anything else is all pages.
+  defp parse_page_filter("main", _pages), do: :main
+
+  defp parse_page_filter(page, pages) when is_binary(page) do
+    Enum.find_value(pages, fn %{id: id} -> if Integer.to_string(id) == page, do: id end)
+  end
+
+  defp parse_page_filter(_page, _pages), do: nil
 
   @valid_filters ["upcoming", "past", "cancelled", "awaiting_approval"]
 

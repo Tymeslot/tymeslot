@@ -98,7 +98,7 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
                })
 
       assert meeting_type.name == "Video Consultation"
-      assert [%{kind: "video", label: "Zoom"}] = meeting_type.locations
+      assert [%{kind: :video, label: "Zoom"}] = meeting_type.locations
       # `allow_video` / `video_integration_id` are projected from the list.
       assert meeting_type.allow_video == true
       assert meeting_type.video_integration_id == video_integration.id

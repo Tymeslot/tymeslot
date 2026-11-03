@@ -137,6 +137,33 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
   end
 
+  describe "weekday_name/1" do
+    test "names the ISO weekday in the booking language" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      assert LocalizationHelpers.weekday_name(4) == "Thursday"
+      assert LocalizationHelpers.weekday_name(7) == "Sunday"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.weekday_name(4) == "Donnerstag"
+    after
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+    end
+  end
+
+  describe "mid_sentence_weekday/1" do
+    test "keeps the capital where the language does, and lower-cases it elsewhere" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.mid_sentence_weekday(4) == "Donnerstag"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "fr")
+
+      assert LocalizationHelpers.mid_sentence_weekday(4) ==
+               String.downcase(LocalizationHelpers.weekday_name(4))
+    after
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+    end
+  end
+
   describe "format_full_date_label/1" do
     test "builds a weekday + date label from an ISO date string" do
       # 2026-06-15 is a Monday.
@@ -352,7 +379,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
           {"cs", "Září 2026", "Září – říjen 2026", "Prosinec 2025 – leden 2026"},
           {"pl", "Wrzesień 2026", "Wrzesień – październik 2026", "Grudzień 2025 – styczeń 2026"},
           {"pt", "Setembro de 2026", "Setembro – outubro de 2026",
-           "Dezembro de 2025 – janeiro de 2026"}
+           "Dezembro de 2025 – janeiro de 2026"},
+          {"es", "Septiembre de 2026", "Septiembre – octubre de 2026",
+           "Diciembre de 2025 – enero de 2026"}
         ] do
       test "#{locale}: capitalises only the start of the heading, in the nominative" do
         Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))
@@ -375,6 +404,26 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "fr")
 
       assert LocalizationHelpers.get_month_year_display(2026, 9) == "Septembre 2026"
+    end
+  end
+
+  describe "format_zone_label/3" do
+    test "reads the offset on the chosen slot's day, not today" do
+      assert LocalizationHelpers.format_zone_label("2026-01-15", "10:00", "Europe/Berlin") ==
+               "Berlin time (UTC+1)"
+
+      assert LocalizationHelpers.format_zone_label("2026-07-15", "10:00", "Europe/Berlin") ==
+               "Berlin time (UTC+2)"
+
+      assert LocalizationHelpers.format_zone_label(~D[2026-07-15], "10:00", "Europe/Berlin") ==
+               "Berlin time (UTC+2)"
+    end
+
+    test "falls back to today's offset when no single slot is chosen" do
+      assert LocalizationHelpers.format_zone_label(nil, nil, "Asia/Tokyo") == "Tokyo time (UTC+9)"
+
+      assert LocalizationHelpers.format_zone_label("not-a-date", "10:00", "Asia/Tokyo") ==
+               "Tokyo time (UTC+9)"
     end
   end
 

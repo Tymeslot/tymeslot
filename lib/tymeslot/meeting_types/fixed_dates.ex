@@ -1,16 +1,21 @@
 defmodule Tymeslot.MeetingTypes.FixedDates do
   @moduledoc """
-  Fixed dates: a group meeting type that offers the sessions its host
-  planned, rather than the slots its availability schedule produces.
+  Fixed dates: a meeting type that offers dates its host chose, rather than
+  the slots its availability schedule produces. One setting, two shapes,
+  decided by whether the type is a group type:
 
-  A webinar, a training or a class that takes place on given dates fills
-  each date up to the type's participant limit and is over once the last
-  date has passed. The sessions themselves are the type's planned group
-  meetings (`Tymeslot.Meetings.PlannedSessions`); this module holds the
-  rules about the type.
+    * a group type offers **sessions** (`sessions?/1`): a webinar, a
+      training or a class that takes place on given dates fills each date
+      up to the type's participant limit and is over once the last date has
+      passed. The sessions are the type's planned group meetings
+      (`Tymeslot.Meetings.PlannedSessions`), on the host's calendar from the
+      moment they are planned.
+    * a one-to-one type offers **offered times** (`offered_times?/1`): the
+      exact starts the host listed (`Tymeslot.MeetingTypes.OfferedTimes`).
+      They are not meetings; they replace the weekly schedule as the source
+      of the type's starts, and every other booking rule still applies.
 
-  Only a group type can use fixed dates: a session is one meeting shared by
-  everyone who signs up for it, which is what a group slot already is.
+  This module holds the rules about the type.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -18,55 +23,71 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
 
   alias Tymeslot.Availability.SessionSlots
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.MeetingTypes.OfferedTimes
 
-  @doc "Whether `meeting_type` offers planned sessions instead of its schedule's slots."
-  @spec enabled?(map() | nil) :: boolean()
-  def enabled?(%{fixed_dates: true, max_participants: max}) when is_integer(max) and max > 1,
+  @doc "Whether `meeting_type` offers planned sessions: a group type with fixed dates."
+  @spec sessions?(map() | nil) :: boolean()
+  def sessions?(%{fixed_dates: true, max_participants: max}) when is_integer(max) and max > 1,
     do: true
 
-  def enabled?(_meeting_type), do: false
+  def sessions?(_meeting_type), do: false
 
   @doc """
-  `meeting_types` without the fixed-date ones nobody can sign up for any
-  more: their sessions have all passed, closed registration or filled up.
-  Such a type is left off the public booking page, as an inactive one is;
-  its direct link still says why it cannot be booked.
+  Whether `meeting_type` offers the exact times its host listed: a
+  one-to-one type with fixed dates.
+  """
+  @spec offered_times?(map() | nil) :: boolean()
+  def offered_times?(%{fixed_dates: true} = meeting_type),
+    do: Map.get(meeting_type, :max_participants) in [nil, 1]
+
+  def offered_times?(_meeting_type), do: false
+
+  @doc """
+  `meeting_types` without the fixed-date ones nobody can book any more: a
+  group type whose sessions have all passed, closed registration or filled
+  up, and a one-to-one type with no offered time a booker can pick now
+  (`Tymeslot.MeetingTypes.OfferedTimes.next_by_type/2`). Such a type is
+  left off the public booking page, as an inactive one is. A group type's
+  direct link still says why it cannot be booked; a one-to-one type's leads
+  to the booking page, saying it has no times open (`open_for_booking?/1`).
   """
   @spec reject_unbookable([map()]) :: [map()]
   def reject_unbookable(meeting_types) do
-    open_ids = meeting_types |> Enum.filter(&enabled?/1) |> SessionSlots.open_type_ids()
-    Enum.reject(meeting_types, &(enabled?(&1) and not MapSet.member?(open_ids, &1.id)))
+    open_ids =
+      meeting_types
+      |> Enum.filter(&sessions?/1)
+      |> SessionSlots.open_type_ids()
+
+    offering_ids =
+      meeting_types
+      |> Enum.filter(&offered_times?/1)
+      |> OfferedTimes.next_by_type()
+      |> Enum.flat_map(fn {id, next} -> if next, do: [id], else: [] end)
+      |> MapSet.new()
+
+    Enum.reject(meeting_types, fn type ->
+      (sessions?(type) and not MapSet.member?(open_ids, type.id)) or
+        (offered_times?(type) and not MapSet.member?(offering_ids, type.id))
+    end)
   end
 
   @doc """
-  Refuses fixed dates on a type that is not a group type. The message is a
-  msgid of the `errors` domain on `:fixed_dates`, translated where the form
-  shows it, like the schema's other rules.
+  Whether `meeting_type` has something left to book, as `reject_unbookable/1`
+  judges it: false only for a fixed-date type with no session open for
+  sign-up, or no offered time a booker can pick now.
   """
-  @spec validate_changeset(Ecto.Changeset.t()) :: Ecto.Changeset.t()
-  def validate_changeset(changeset) do
-    max = get_field(changeset, :max_participants)
-
-    if get_field(changeset, :fixed_dates) == true and not (is_integer(max) and max > 1) do
-      add_error(
-        changeset,
-        :fixed_dates,
-        dgettext_noop("errors", "fixed dates need group bookings")
-      )
-    else
-      changeset
-    end
-  end
+  @spec open_for_booking?(map()) :: boolean()
+  def open_for_booking?(meeting_type), do: reject_unbookable([meeting_type]) != []
 
   @doc """
-  Refuses an update that would stop `meeting_type` offering fixed dates
-  (fixed dates or group bookings turned off) while it still has upcoming
-  planned dates: they would stay on the calendar and in people's diaries
+  Refuses an update that would stop `meeting_type` offering its planned
+  sessions (fixed dates or group bookings turned off) while it still has
+  upcoming ones: they would stay on the calendar and in people's diaries
   with nothing left to manage them from. The host cancels the dates first.
   """
   @spec check_sessions_kept(map(), Ecto.Changeset.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def check_sessions_kept(meeting_type, changeset) do
-    if enabled?(meeting_type) and not enabled?(apply_changes(changeset)) and
+    if sessions?(meeting_type) and not sessions?(apply_changes(changeset)) and
          PlannedSessions.upcoming(meeting_type) != [] do
       {:error,
        add_error(
@@ -78,4 +99,34 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
       :ok
     end
   end
+
+  @doc """
+  Refuses an update that would make a one-to-one type with upcoming offered
+  times a group type: its times would silently turn into nothing, since a
+  group type with fixed dates offers sessions instead. The host removes the
+  times first. That holds with fixed dates off too, or turning them off,
+  then group bookings on, then fixed dates on again would bury the times
+  under sessions. Turning fixed dates off on its own is allowed: the times
+  are simply unused until it is turned on again.
+  """
+  @spec check_offered_times_kept(map(), Ecto.Changeset.t()) ::
+          :ok | {:error, Ecto.Changeset.t()}
+  def check_offered_times_kept(meeting_type, changeset) do
+    updated = apply_changes(changeset)
+
+    if not group?(meeting_type) and group?(updated) and
+         OfferedTimes.upcoming(meeting_type) != [] do
+      {:error,
+       add_error(
+         changeset,
+         :max_participants,
+         dgettext_noop("errors", "remove the offered times before turning group bookings on")
+       )}
+    else
+      :ok
+    end
+  end
+
+  defp group?(%{max_participants: max}) when is_integer(max) and max > 1, do: true
+  defp group?(_meeting_type), do: false
 end

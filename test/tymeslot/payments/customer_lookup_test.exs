@@ -101,7 +101,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_fallback",
         stripe_id: "sess_fallback"
       })
@@ -117,7 +117,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_customer_fallback",
         stripe_customer_id: "cus_customer_fallback"
       })
@@ -133,7 +133,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "pending",
+        status: :pending,
         subscription_id: "sub_pending",
         stripe_id: "sess_pending",
         stripe_customer_id: "cus_pending"
@@ -151,7 +151,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: subscription_owner.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_priority",
         stripe_id: "sess_priority_sub",
         stripe_customer_id: "cus_priority"
@@ -159,7 +159,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: customer_owner.id,
-        status: "completed",
+        status: :completed,
         stripe_id: "sess_priority_cus",
         stripe_customer_id: "cus_priority"
       })
@@ -176,7 +176,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: transaction_owner.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_metadata_priority",
         stripe_id: "sess_metadata_priority",
         stripe_customer_id: "cus_metadata_priority"
@@ -194,7 +194,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_metadata_fallback",
         stripe_id: "sess_metadata_fallback"
       })
@@ -211,7 +211,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: user.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_metadata_absent",
         stripe_id: "sess_metadata_absent"
       })
@@ -228,7 +228,7 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
 
       PaymentTestHelpers.create_test_transaction(%{
         user_id: transaction_owner.id,
-        status: "completed",
+        status: :completed,
         subscription_id: "sub_managed",
         stripe_id: "sess_managed"
       })

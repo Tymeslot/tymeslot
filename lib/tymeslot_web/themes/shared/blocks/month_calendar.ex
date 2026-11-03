@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
   previous and next month controls, the weekday headers (starting on
   `first_day`, the flow's `:week_start`, as the availability window is laid
   out) and one button per day of the window
-  (`CalendarHelpers.get_calendar_days/7`, trailing weeks wholly in the next
+  (`CalendarDays.get_calendar_days/7`, trailing weeks wholly in the next
   month trimmed).
 
   It is the behaviour of Quill's month grid without its look. A day is a
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
-  alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation}
+  alias TymeslotWeb.Live.Scheduling.{CalendarDays, CalendarNavigation}
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :current_year, :integer, required: true
@@ -142,10 +142,10 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.MonthCalendar do
     """
   end
 
-  @doc "The flow's days for the month shown, as `CalendarHelpers.get_calendar_days/7` builds them."
+  @doc "The flow's days for the month shown, as `CalendarDays.get_calendar_days/7` builds them."
   @spec days(map()) :: [map()]
   def days(assigns) do
-    CalendarHelpers.get_calendar_days(
+    CalendarDays.get_calendar_days(
       assigns.user_timezone,
       assigns.current_year,
       assigns.current_month,

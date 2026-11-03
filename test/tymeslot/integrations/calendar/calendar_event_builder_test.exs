@@ -33,7 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
     end
 
     test "any other booking is written as confirmed" do
-      for status <- ["confirmed", "pending", nil] do
+      for status <- [:confirmed, :pending, nil] do
         event =
           CalendarEventBuilder.build_event_data(Map.put(@base_meeting, :status, status))
 
@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
     end
   end
 
-  defp held_meeting, do: Map.put(@base_meeting, :status, "awaiting_approval")
+  defp held_meeting, do: Map.put(@base_meeting, :status, :awaiting_approval)
 
   describe "build_event_data/1 event identity" do
     # The meeting's uid authorises cancelling and rescheduling the booking, so

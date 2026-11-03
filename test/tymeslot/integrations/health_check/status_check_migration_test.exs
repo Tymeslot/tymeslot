@@ -2,9 +2,8 @@ defmodule Tymeslot.Integrations.HealthCheck.StatusCheckMigrationTest do
   @moduledoc """
   Verifies `20260830065420_add_status_check_to_integration_health_states`
   backfills any out-of-vocabulary `status` value to `degraded` and then
-  closes the column with a CHECK constraint, so a raw write can no longer
-  poison the row the way `IntegrationHealthStateQueries.update_fields/3` can
-  today.
+  closes the column with a CHECK constraint, so a write made outside Ecto can
+  no longer poison the row.
 
   The migration module is loaded from `priv` and run through `Ecto.Migrator`;
   see `Tymeslot.Test.MigrationRunner`.
@@ -32,23 +31,21 @@ defmodule Tymeslot.Integrations.HealthCheck.StatusCheckMigrationTest do
     # exists precisely to reject) can poison the row the way a pre-migration
     # database could.
     MigrationRunner.down!(@version)
-
-    {1, _nil} =
-      IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-        status: "some_future_status"
-      )
+    set_raw_status!(record.id, "some_future_status")
 
     MigrationRunner.up!(@version)
 
     reloaded = Repo.reload!(record)
-    assert reloaded.status == "degraded"
+    assert reloaded.status == :degraded
 
     # The constraint is back: a raw write outside the vocabulary is now
     # rejected at the database rather than silently accepted.
     assert_raise Postgrex.Error, ~r/status_must_be_known/, fn ->
-      IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-        status: "still_not_a_real_status"
-      )
+      set_raw_status!(record.id, "still_not_a_real_status")
     end
+  end
+
+  defp set_raw_status!(id, status) do
+    Repo.query!("UPDATE integration_health_states SET status = $1 WHERE id = $2", [status, id])
   end
 end

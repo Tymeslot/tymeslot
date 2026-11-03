@@ -109,6 +109,17 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | **block this time** / **Blocked** | **заблокувати цей час** / **Заблоковано** |
 | **Request** (pill on a calendar block) / **booking request** | **Запит** / **запит на бронювання**; the *Expired* pill → **Протерміновано** |
 
+### Booking pages (a host's extra pages)
+
+A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
+
+| English | uk |
+|---|---|
+| booking page (any public page guests book through, extra or main) | **сторінка бронювання** (plural **сторінки бронювання**) |
+| main page (the host's own page at `/<username>`, as opposed to their extra booking pages) | **головна сторінка** (always with the qualifier; never the bare word for *home page*) |
+| draft (a booking page not public yet because it lists no meeting type) | **чернетка** (same word as the poll draft) |
+| address (the URL path of a page, `/<username>/<page>`) | **адреса** Ніколи `URL` чи `шлях`; адреса електронної пошти й адреса місця проведення є іншими поняттями зі своїм перекладом |
+
 ### Sessions, lessons, no-shows, deposits and other marketing terms
 
 These recur across the `/for` profession pages and the marketing catalogues. They were drifting
@@ -161,7 +172,7 @@ Tymeslot`.
 (`хостинг у ЄС`, `хостингом у ЄС`, `у Німеччині, у ЄС`), `в ЄС` after a vowel (`дані
 зберігаються в ЄС`, `розміщено в ЄС`).
 
-**Profession names mid-sentence.** `profession_in_text` in `priv/professions/uk/*.exs` is the
+**Profession names mid-sentence.** `profession_in_text` in `priv/professions/*/uk.exs` is the
 nominative plural (`психологи`, `інструктори з йоги`, `ІТ-консультанти`). Ukrainian cannot put a
 nominative after `для`, so every msgstr that interpolates it is built so the profession is the
 grammatical subject: `Усе, без чого не обходяться %{profession_in_text}.`, `Стартове
@@ -175,7 +186,7 @@ sample (see §5).
 Every figure on a Ukrainian page is in **гривнях**, written `1 200 грн` (non-breaking or plain
 space as the thousands separator, `грн` postfix, no full stop). Never `£`, `фунтів стерлінгів`,
 or a Ukrainian page quoting a UK price. The `/for` pages' prose figures must agree with that
-page's own calculator defaults (`calculator: %{hourly_rate: …}` in `priv/professions/uk/*.exs`,
+page's own calculator defaults (`calculator: %{hourly_rate: …}` in `priv/professions/*/uk.exs`,
 which is already in hryvnia), and every derived total must be arithmetic the reader could redo.
 Product prices (`29 $`, `9 €`) stay in the currency Tymeslot actually charges.
 

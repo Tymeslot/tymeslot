@@ -18,6 +18,9 @@
 
 .tz-picker__trigger {
   width: 100%;
+  /* A <button> centres its text by default: a short secondary line (Quill's
+     local time) then sits off the start edge, while a long one fills the row. */
+  text-align: start;
   background: linear-gradient(135deg, var(--surface-medium) 0%, var(--surface-subtle) 100%);
   border: var(--border-width-thin) solid var(--border-medium);
   color: var(--theme-text);

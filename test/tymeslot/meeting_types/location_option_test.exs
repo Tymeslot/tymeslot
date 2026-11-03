@@ -105,7 +105,7 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
     test "demoting a video location drops the integration it pointed at" do
       video = %LocationOption{
         id: "loc-1",
-        kind: "video",
+        kind: :video,
         label: "Zoom",
         video_integration_ids: [7]
       }
@@ -119,7 +119,7 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
     test "leaving the phone kind drops the ask-the-booker flag" do
       phone = %LocationOption{
         id: "loc-1",
-        kind: "phone",
+        kind: :phone,
         label: "Phone call",
         collect_from_guest: true
       }
@@ -133,7 +133,7 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
     test "details survive a change between the kinds that use them" do
       custom = %LocationOption{
         id: "loc-1",
-        kind: "custom",
+        kind: :custom,
         label: "Front desk",
         details: "+44 20 7946 0000"
       }
@@ -146,7 +146,7 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
     test "an edit that does not change the kind keeps its config" do
       video = %LocationOption{
         id: "loc-1",
-        kind: "video",
+        kind: :video,
         label: "Zoom",
         video_integration_ids: [7]
       }
@@ -181,7 +181,7 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
     test "leaving the in-person kind drops the venues" do
       in_person = %LocationOption{
         id: "loc-1",
-        kind: "in_person",
+        kind: :in_person,
         label: "Our office",
         venue_ids: [7]
       }
@@ -207,7 +207,7 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
     test "becoming in-person drops the details the old kind had" do
       custom = %LocationOption{
         id: "loc-1",
-        kind: "custom",
+        kind: :custom,
         label: "Somewhere",
         details: "By the river"
       }
@@ -228,6 +228,19 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
       option = %LocationOption{label: "Our office", details: "12 High Street"}
 
       assert LocationOption.display(option) == "Our office (12 High Street)"
+    end
+  end
+
+  describe "parse_kind/1" do
+    test "reads a kind from its posted string or its atom" do
+      assert LocationOption.parse_kind("in_person") == {:ok, :in_person}
+      assert LocationOption.parse_kind(:video) == {:ok, :video}
+    end
+
+    test "refuses anything else" do
+      assert LocationOption.parse_kind("carrier_pigeon") == :error
+      assert LocationOption.parse_kind(:carrier_pigeon) == :error
+      assert LocationOption.parse_kind(nil) == :error
     end
   end
 end

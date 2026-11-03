@@ -271,23 +271,6 @@
 .animation-delay-700 { animation-delay: var(--duration-700); }
 .animation-delay-1000 { animation-delay: var(--duration-1000); }
 
-/* Transition Utilities */
-.transition-all { transition: var(--transition-all); }
-.transition-colors { transition: var(--transition-colors); }
-.transition-opacity { transition: var(--transition-opacity); }
-.transition-shadow { transition: var(--transition-shadow); }
-.transition-transform { transition: var(--transition-transform); }
-
-/* Transform Utilities */
-.scale-95 { transform: scale(0.95); }
-.scale-100 { transform: scale(1); }
-.scale-105 { transform: scale(1.05); }
-.scale-110 { transform: scale(1.1); }
-.rotate-0 { transform: rotate(0deg); }
-.rotate-45 { transform: rotate(45deg); }
-.rotate-90 { transform: rotate(90deg); }
-.rotate-180 { transform: rotate(180deg); }
-
 /* Hover Animations */
 .hover-lift:hover {
   transform: translateY(-2px);

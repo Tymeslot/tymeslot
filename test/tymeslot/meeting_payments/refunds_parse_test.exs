@@ -10,7 +10,7 @@ defmodule Tymeslot.MeetingPayments.RefundsParseTest do
       amount_cents: 5000,
       currency: "eur",
       refunded_amount_cents: 0,
-      status: "paid",
+      status: :paid,
       paid_at: DateTime.utc_now(:second)
     }
 

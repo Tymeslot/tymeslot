@@ -109,11 +109,11 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
                Orchestrator.submit_booking(params)
 
       assert url =~ "checkout.stripe.com"
-      assert meeting.status == "awaiting_payment"
+      assert meeting.status == :awaiting_payment
       assert meeting.attendee_email == "attendee@example.com"
 
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert payment.status == "pending"
+      assert payment.status == :pending
       assert payment.amount_cents == 5000
       assert payment.application_fee_cents == 25
       assert payment.currency == "eur"

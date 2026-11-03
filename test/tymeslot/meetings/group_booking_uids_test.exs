@@ -76,7 +76,7 @@ defmodule Tymeslot.Meetings.GroupBookingUidsTest do
     from: from,
     to: to
   } do
-    meeting = meeting_for(user, capacity: 2, status: "cancelled")
+    meeting = meeting_for(user, capacity: 2, status: :cancelled)
     insert(:participant, meeting: meeting)
 
     refute locked?(user, meeting, from, to)

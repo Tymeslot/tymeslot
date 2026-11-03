@@ -89,7 +89,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
   end
 
   defp assert_released(%{meeting: meeting, profile: profile, date: date}) do
-    assert {:ok, %{status: "expired"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     assert_receive :expired, 1_000
     assert bookable?(profile, date)
   end
@@ -99,7 +99,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
 
     meeting =
       insert(:meeting,
-        status: "awaiting_payment",
+        status: :awaiting_payment,
         organizer_user_id: host.id,
         organizer_email: host.email,
         start_time: start_time,

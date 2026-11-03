@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
 
   alias Tymeslot.ThemeCustomizations.Options.Accent
   alias Tymeslot.ThemeCustomizations.Options.Background
+  alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Density
   alias Tymeslot.ThemeCustomizations.Options.Font
@@ -98,27 +99,21 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     refute label_class =~ "text-tymeslot-400"
   end
 
-  test "a scheme's dots sit on its own background, a tone's on the neutral backing" do
+  test "a scheme's dots sit on its own background" do
     html =
       render_panel(%{key: :palette, module: Palette, schemes: ~w(ocean neutral)})
 
-    tone_html =
-      render_panel(%{key: :palette, module: Palette, schemes: ~w(neutral), follow_os: true})
-
-    backing = fn html, scheme ->
+    backing = fn scheme ->
       html
       |> Floki.parse_fragment!()
       |> Floki.find("button[phx-value-choice='#{scheme}'] [data-testid='scheme-swatches']")
       |> Floki.attribute("style")
     end
 
-    assert backing.(html, "ocean") ==
-             ["background-color: #{ColourSchemes.all()["ocean"].colors.background}"]
-
-    assert backing.(html, "neutral") ==
-             ["background-color: #{ColourSchemes.all()["neutral"].colors.background}"]
-
-    assert backing.(tone_html, "neutral") == []
+    for scheme <- ~w(ocean neutral) do
+      assert backing.(scheme) ==
+               ["background-color: #{ColourSchemes.all()[scheme].colors.background}"]
+    end
   end
 
   test "the current-palette indicator derives a seed the way the group does" do
@@ -139,35 +134,43 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     refute html =~ "background: #{dark.secondary}"
   end
 
-  test "the tone schemes of a follow_os group draw different swatches" do
+  test "a follow_os group draws each scheme as a page in its light set beside its dark set" do
     html =
       render_panel(%{
         key: :palette,
         module: Palette,
-        schemes: ~w(neutral cool warm),
+        schemes: ~w(paper_forest paper_rose),
         follow_os: true
       })
 
-    swatches =
-      for scheme <- ~w(neutral cool warm) do
+    for id <- ~w(paper_forest paper_rose) do
+      scheme = ColourSchemes.all()[id]
+
+      styles =
         html
         |> Floki.parse_fragment!()
-        |> Floki.find("button[phx-value-choice='#{scheme}'] div[style]")
+        |> Floki.find("button[phx-value-choice='#{id}'] [data-testid='tone-preview'] [style]")
         |> Floki.attribute("style")
-      end
 
-    assert Enum.all?(swatches, &(length(&1) == 3))
-    assert length(Enum.uniq(swatches)) == 3
-    assert swatches |> Enum.concat() |> Enum.uniq() |> length() == 9
+      expected =
+        for colours <- [scheme.colors, scheme.dark_colors],
+            key <- [:background, :surface, :text, :text_secondary, :primary],
+            do: "background-color: #{colours[key]}"
 
-    [neutral | _others] = swatches
-    tone = ColourSchemes.all()["neutral"]
+      assert styles == expected
 
-    assert neutral == [
-             "background-color: #{tone.colors.background}",
-             "background-color: #{tone.colors.text_secondary}",
-             "background-color: #{tone.dark_colors.background}"
-           ]
+      refute html
+             |> Floki.parse_fragment!()
+             |> Floki.find("button[phx-value-choice='#{id}'] [data-testid='scheme-swatches']")
+             |> Enum.any?()
+    end
+  end
+
+  test "a follow_os group still offers a custom colour" do
+    html =
+      render_panel(%{key: :palette, module: Palette, schemes: ~w(paper_forest), follow_os: true})
+
+    assert html =~ ~s(phx-click="theme:toggle_palette_picker")
   end
 
   test "the schemes of a group without follow_os keep their primary, secondary and accent" do
@@ -239,14 +242,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     end
   end
 
-  test "the palette panel names a scheme in the viewer's language where the catalogue has it" do
+  test "the palette panel names each scheme in the viewer's language" do
     html =
       Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
         render_panel(%{key: :palette, module: Palette, schemes: ["cool", "ocean"]})
       end)
 
     assert html =~ "Kühl"
-    assert html =~ "Ocean Breeze"
+    assert html =~ "Meeresbrise"
   end
 
   test "the colour-mode panel offers the three modes, named in the viewer's language" do
@@ -289,5 +292,53 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     assert choices(density_html, "density") == ~w(comfortable compact)
     assert density_html =~ "Abstände"
     assert density_html =~ "Kompakt"
+  end
+
+  describe "the calendar view panel" do
+    @calendar_view %{key: :calendar_view, module: CalendarView, default: "month"}
+
+    defp pressed(html) do
+      html
+      |> Floki.parse_fragment!()
+      |> Floki.find("button[phx-value-field='calendar_view'][aria-pressed='true']")
+      |> Floki.attribute("phx-value-choice")
+    end
+
+    test "offers a month and a week, in that order, each sending the change" do
+      html = render_panel(@calendar_view)
+
+      assert choices(html, "calendar_view") == ~w(month week)
+      assert html =~ ~s(data-testid="calendar-view-panel")
+      assert html =~ "Calendar View"
+
+      buttons =
+        html |> Floki.parse_fragment!() |> Floki.find("button[phx-value-field='calendar_view']")
+
+      assert Enum.map(buttons, &(&1 |> Floki.attribute("phx-click") |> hd())) ==
+               ["theme:set_option", "theme:set_option"]
+
+      assert Enum.map(buttons, &(&1 |> Floki.attribute("phx-value-option") |> hd())) ==
+               ["calendar_view", "calendar_view"]
+    end
+
+    test "marks the group's default as pressed when nothing is stored" do
+      assert pressed(render_panel(@calendar_view)) == ["month"]
+      assert pressed(render_panel(%{@calendar_view | default: "week"})) == ["week"]
+    end
+
+    test "marks the stored choice as pressed, over the default" do
+      stored = %ThemeCustomizationSchema{settings: %{"calendar_view" => "week"}}
+
+      assert pressed(render_panel(@calendar_view, customization: stored)) == ["week"]
+    end
+
+    test "names its choices in the viewer's language" do
+      html =
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn -> render_panel(@calendar_view) end)
+
+      assert html =~ "Monat"
+      assert html =~ "Woche"
+      refute html =~ "Calendar View"
+    end
   end
 end

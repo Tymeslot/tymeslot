@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   The select is `appearance-none`, so its arrow is the chevron icon
   `<.input>` draws over it; `shared/components/custom-questions.css`
   restyles that icon for the booking page through the
-  `custom-question-select` wrapper.
+  `custom-question-select` wrapper. Its empty choice is the
+  `:select_prompt` voice line, worded by the theme `theme_key` names.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -18,12 +19,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   use TymeslotWeb.Components.CoreComponents
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard
+  alias TymeslotWeb.Themes.Shared.Voice
 
   @radio_threshold 5
 
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
+  attr :theme_key, :atom, default: nil, doc: "the rendering theme's catalogue key"
 
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(%{definition: %{"options" => options}} = assigns)
@@ -35,6 +38,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
         :for={opt <- @definition["options"]}
         indicator={:radio}
         input_type="radio"
+        name={"cq-#{@definition["id"]}"}
         value={opt["key"]}
         selected?={@value == opt["key"]}
         event="answer"
@@ -57,6 +61,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
       data-fact="answer"
       data-question={@definition["id"]}
     >
+      <input type="hidden" name="question" value={@definition["id"]} />
       <div class="custom-question-select">
         <.input
           id={"cq-input-#{@definition["id"]}"}
@@ -64,11 +69,15 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
           name="value"
           value={@value}
           options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}
-          prompt={dgettext("booking", "Select…")}
+          prompt={select_prompt(@theme_key)}
           aria-label={@definition["label"]}
         />
       </div>
     </form>
     """
+  end
+
+  defp select_prompt(theme_key) do
+    Voice.line(Voice.of(theme_key), :select_prompt, %{}, fn -> dgettext("booking", "Select…") end)
   end
 end

@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementGroupMeetingsTest do
           organizer_email: user.email,
           meeting_type_ref: meeting_type,
           capacity: 3,
-          status: "cancelled",
+          status: :cancelled,
           cancelled_at: cancelled_at
         )
 

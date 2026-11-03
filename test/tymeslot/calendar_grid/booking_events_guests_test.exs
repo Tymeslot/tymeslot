@@ -31,7 +31,7 @@ defmodule Tymeslot.CalendarGrid.BookingEventsGuestsTest do
     {:ok, [_grace, alan]} =
       Guests.create_for_meeting(meeting.id, ["grace@example.com", "alan@example.com"], :organizer)
 
-    {:ok, _alan} = Meetings.record_guest_rsvp(alan.rsvp_token, "declined")
+    {:ok, _alan} = Meetings.record_guest_rsvp(alan.rsvp_token, :declined)
 
     [booking] =
       CalendarGrid.list_booking_events_for_range(

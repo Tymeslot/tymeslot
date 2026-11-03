@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
     assert opts[:connect_account] == "acct_LEGACY"
 
     meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
-    assert meeting.status == "awaiting_payment"
+    assert meeting.status == :awaiting_payment
     assert BookingPaymentQueries.by_meeting_id(meeting.id).currency == "ron"
   end
 

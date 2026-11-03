@@ -306,7 +306,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
       assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
 
-      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+      assert {:ok, %{calendar_sync_status: :externally_modified}} =
                MeetingQueries.get_meeting(meeting.id)
     end
   end
@@ -382,7 +382,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
     test "clears an earlier flag once the booking is back in step with its event",
          %{integration: integration} do
       start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
-      meeting = booking(integration, start_time, calendar_sync_status: "externally_modified")
+      meeting = booking(integration, start_time, calendar_sync_status: :externally_modified)
 
       expect_snapshot([outlook_event(start_time)])
       assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)

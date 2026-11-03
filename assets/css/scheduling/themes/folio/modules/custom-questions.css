@@ -1,0 +1,54 @@
+/* Folio's part of the questions step: the progress row and the question
+   area. The yes/no tiles and option cards are
+   shared/components/custom-questions.css, coloured by the --option-*
+   tokens in variables.css; the text inputs take booking-form.css's input
+   style. The answer's error sits inside the question block, under the
+   field. */
+
+.folio-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.folio-progress__track {
+  display: block;
+  height: var(--border-width-thick);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-medium);
+}
+
+.folio-progress__bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--theme-primary);
+  transition: width var(--transition-normal);
+}
+
+.folio-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.folio-question .custom-question-note-body {
+  margin: 0;
+  color: var(--theme-text);
+  line-height: var(--folio-line-height-body);
+}
+
+/* The question block's gap spaces the input and its error, and the card
+   body's gap the block and the actions row: the shared tiles' and cards'
+   own margins would add to both. */
+.folio-question .custom-question-yes-no,
+.folio-question .custom-question-option-cards {
+  margin: 0;
+}
+
+.folio-question .custom-question-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}

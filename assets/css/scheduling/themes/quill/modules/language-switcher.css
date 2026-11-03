@@ -22,6 +22,15 @@
 
 /* ===== Responsive ===== */
 
+/* From 641px, while the language switcher floats in the corner (the
+   overview), a demo page's theme switcher starts below it, so a wide
+   switcher on a tablet never runs under the button. */
+@media (min-width: 641px) {
+  .main-gradient.theme-grid .content-area > .language-switcher-wrapper.visible ~ .demo-theme-switcher {
+    margin-top: var(--quill-language-clearance);
+  }
+}
+
 /* From 641px the switcher floats in the page's top-right corner (the
    wrapper's absolute top-6 right-6), level with the step navigation, and
    scrolls away with the page. At 640px and below the step navigation is
@@ -36,6 +45,11 @@
     right: auto;
     align-self: flex-end;
     margin: var(--space-lg) var(--space-lg) 0;
+  }
+
+  /* A demo page's theme switcher follows the language row. */
+  .main-gradient.theme-grid .content-area > .language-switcher-wrapper.visible ~ .demo-theme-switcher {
+    margin-top: var(--space-sm);
   }
 
   .lang-switcher__panel {

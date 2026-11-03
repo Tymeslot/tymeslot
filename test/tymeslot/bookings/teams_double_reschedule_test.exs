@@ -109,14 +109,14 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
         locations: [
           %LocationOption{
             id: "loc-teams",
-            kind: "video",
+            kind: :video,
             label: "Teams",
             video_integration_ids: [teams.id],
             position: 0
           },
           %LocationOption{
             id: "loc-office",
-            kind: "in_person",
+            kind: :in_person,
             label: "Our office",
             details: "12 High Street",
             position: 1
@@ -333,7 +333,7 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
       insert_meeting_for_user(user, %{
         meeting_type_id: type.id,
         location: join_url(@first_event),
-        location_kind: "video",
+        location_kind: :video,
         location_option_id: "loc-teams",
         video_integration_id: teams.id,
         video_provider: "teams",
@@ -356,7 +356,7 @@ defmodule Tymeslot.Bookings.TeamsDoubleRescheduleTest do
       insert_meeting_for_user(user, %{
         meeting_type_id: type.id,
         location: "Our office: 12 High Street",
-        location_kind: "in_person",
+        location_kind: :in_person,
         location_option_id: "loc-office",
         calendar_integration_id: calendar.id,
         calendar_path: @calendar_id,

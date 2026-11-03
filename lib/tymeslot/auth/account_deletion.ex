@@ -10,12 +10,13 @@ defmodule Tymeslot.Auth.AccountDeletion do
 
   require Logger
 
-  alias Tymeslot.Auth.AccountDeletion.Hook
+  alias Tymeslot.Auth.AccountDeletion.{ExternalCleanup, Hook}
   alias Tymeslot.Auth.{Session, UserQueries, UserSchema}
   alias Tymeslot.FinancialRetention
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Jobs
+  alias Tymeslot.Meetings
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Workers.AccountFilesPurgeWorker
@@ -58,18 +59,27 @@ defmodule Tymeslot.Auth.AccountDeletion do
       it is pending and due (`deletion_scheduled_at` set and not in the
       future); otherwise `{:error, :not_pending}`. The grace period ends at
       `deletion_scheduled_at`, so a due account is past restoring.
+    * `only_if_purgeable: cutoff`: the purge of abandoned sign-ups. The
+      account must still be one `UserQueries.stale_unverified_user?/2`
+      accepts for `cutoff` (unverified, not an admin, no meeting still to
+      come); otherwise `{:error, :not_purgeable}`. Checked before the hook
+      runs, so an account already ineligible keeps its subscription, and
+      again under the row lock, so one verified, promoted or booked in the
+      meantime is not deleted.
     * `meeting_ids: ids`: inside the same transaction, every job still
       waiting that names the user or one of these meetings is deleted, so a
       committed deletion never leaves such a job behind (and a rolled-back one
       never loses them).
 
-  A user already gone yields `{:error, :not_found}` under `only_if_pending: true`.
+  A user already gone yields `{:error, :not_found}` under `only_if_pending: true`
+  or `only_if_purgeable:`.
   """
   @spec delete_account(UserSchema.t(), keyword()) ::
           {:ok, UserSchema.t()}
-          | {:error, :not_pending | :not_found | Ecto.Changeset.t() | term()}
+          | {:error, :not_pending | :not_purgeable | :not_found | Ecto.Changeset.t() | term()}
   def delete_account(%UserSchema{} = user, opts \\ []) do
-    with :ok <- Hook.deleted(user.id) do
+    with :ok <- confirm_purgeable(user.id, Keyword.get(opts, :only_if_purgeable)),
+         :ok <- Hook.deleted(user.id) do
       # Resolved before the delete: the cascade removes the row that knows it.
       profile = Profiles.get_profile(user.id)
 
@@ -91,6 +101,7 @@ defmodule Tymeslot.Auth.AccountDeletion do
       Calendar.lock_calendar_caches(user.id)
 
       with :ok <- confirm_due_for_deletion(user.id, Keyword.get(opts, :only_if_pending, false)),
+           :ok <- confirm_still_purgeable(user.id, Keyword.get(opts, :only_if_purgeable)),
            session_hashes = Session.delete_session_rows(user.id),
            :ok <- FinancialRetention.anonymise_host(user.id),
            {:ok, deleted} <- UserQueries.delete_user_row(user) do
@@ -131,6 +142,28 @@ defmodule Tymeslot.Auth.AccountDeletion do
     end
   end
 
+  # Unlocked: run before anything leaves the database (grants revoked, the
+  # hook cancelling a subscription), so an account the purge no longer
+  # applies to loses nothing. The locked check below closes the window
+  # between this read and the delete.
+  defp confirm_purgeable(_user_id, nil), do: :ok
+
+  defp confirm_purgeable(user_id, %DateTime{} = cutoff) do
+    if UserQueries.stale_unverified_user?(user_id, cutoff),
+      do: :ok,
+      else: {:error, :not_purgeable}
+  end
+
+  # Verifying an account updates this row, so it either commits before the
+  # lock (and the check below sees it) or waits until the row is gone.
+  defp confirm_still_purgeable(_user_id, nil), do: :ok
+
+  defp confirm_still_purgeable(user_id, cutoff) do
+    with {:ok, _user} <- UserQueries.get_user_for_update(user_id) do
+      confirm_purgeable(user_id, cutoff)
+    end
+  end
+
   # Only after the commit: a rolled-back deletion must leave its sessions
   # connected.
   defp disconnect_sessions({:ok, {deleted, session_hashes}}) do
@@ -143,6 +176,16 @@ defmodule Tymeslot.Auth.AccountDeletion do
   defp log_transaction_failure({:error, :not_pending} = error, user_id) do
     Logger.warning(
       "Account restored or rescheduled while its deletion was running; " <>
+        "the deletion hook had already run",
+      user_id: user_id
+    )
+
+    error
+  end
+
+  defp log_transaction_failure({:error, :not_purgeable} = error, user_id) do
+    Logger.warning(
+      "Unverified account stopped being purgeable while its purge was running; " <>
         "the deletion hook had already run",
       user_id: user_id
     )
@@ -196,21 +239,51 @@ defmodule Tymeslot.Auth.AccountDeletion do
     end
   end
 
+  @doc """
+  Erases a user for good: cleans up what the account left with third parties
+  (`ExternalCleanup`), reads the ids of the meetings it organised before the
+  cascade removes them, then runs `delete_account/2` with `opts` plus those ids
+  as `:meeting_ids`, so no pending job naming the user or one of their
+  meetings outlives the account.
+
+  Both routes that delete an account without its owner present go through
+  here: the deletion job once the grace period ends, and the purge of
+  abandoned sign-ups. Under `only_if_purgeable:` the account is checked
+  before the cleanup, so one that is no longer purgeable keeps its grants;
+  the deletion job checks the account is due before it calls this.
+  """
+  @spec erase_account(UserSchema.t(), keyword()) ::
+          {:ok, UserSchema.t()}
+          | {:error, :not_pending | :not_purgeable | :not_found | Ecto.Changeset.t() | term()}
+  def erase_account(%UserSchema{} = user, opts \\ []) do
+    with :ok <- confirm_purgeable(user.id, Keyword.get(opts, :only_if_purgeable)) do
+      ExternalCleanup.run(user)
+      meeting_ids = Meetings.list_meeting_ids_for_organizer(user.id)
+
+      delete_account(user, Keyword.put(opts, :meeting_ids, meeting_ids))
+    end
+  end
+
   # A daily run deletes at most this many, so a sign-up flood cannot turn one
   # run into an unbounded loop of deletions; the rest go on the following days.
   @purge_batch_size 500
 
   @doc """
   Deletes accounts still unverified `days` after sign-up, through
-  `delete_account/1`, so each goes exactly as an erasure request would.
+  `erase_account/2`, so each goes exactly as an erasure request would.
 
-  An unverified password account cannot sign in, so after a month one that
-  never had a session is an abandoned sign-up, or one made with somebody
-  else's address, holding an email address and the IP it was registered
-  from. Anything evidently in use is spared: see
-  `Tymeslot.Auth.UserQueries.list_stale_unverified_users/2`. So is an account
-  sent a fresh verification link within the window. At most
-  #{@purge_batch_size} are deleted per call, and none for a `days` below one.
+  An unverified account cannot sign in, so after a month it is an abandoned
+  sign-up, or one made with somebody else's address, holding an email
+  address and the IP it was registered from. Admins are spared, and so is an
+  account sent a fresh verification link within the window: see
+  `Tymeslot.Auth.UserQueries.list_stale_unverified_users/3`. So is every
+  account the deployment's deletion hook protects
+  (`c:Tymeslot.Auth.Behaviours.AccountDeletionHook.purge_protected_user_ids/0`,
+  a paying subscriber, say); if the hook cannot say which
+  those are, nothing is deleted. Each account is re-checked before anything
+  of it is touched and again under its row lock (`only_if_purgeable:`). At
+  most #{@purge_batch_size} are deleted per call, and none for a `days`
+  below one.
 
   Returns `{deleted_count, nil}`, the shape `Tymeslot.Workers.DataRetentionWorker`
   expects of a prune function.
@@ -219,12 +292,24 @@ defmodule Tymeslot.Auth.AccountDeletion do
   def purge_unverified_accounts(days) when is_integer(days) and days > 0 do
     cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
 
-    deleted =
-      cutoff
-      |> UserQueries.list_stale_unverified_users(@purge_batch_size)
-      |> Enum.count(&purged?/1)
+    case Hook.purge_protected_user_ids() do
+      {:ok, protected_ids} ->
+        deleted =
+          cutoff
+          |> UserQueries.list_stale_unverified_users(@purge_batch_size, protected_ids)
+          |> Enum.count(&purged?(&1, cutoff))
 
-    {deleted, nil}
+        {deleted, nil}
+
+      {:error, reason} ->
+        Logger.error(
+          "Skipped the purge of unverified accounts: the deletion hook could not name " <>
+            "the accounts it protects",
+          reason: LogFormat.reason(reason)
+        )
+
+        {0, nil}
+    end
   end
 
   # A zero or negative window would select every unverified account, however
@@ -232,10 +317,19 @@ defmodule Tymeslot.Auth.AccountDeletion do
   # they must delete nothing.
   def purge_unverified_accounts(_days), do: {0, nil}
 
-  defp purged?(user) do
-    case delete_account(user) do
+  defp purged?(user, cutoff) do
+    case erase_account(user, only_if_purgeable: cutoff) do
       {:ok, _deleted} ->
+        Logger.info("Purged an unverified account", user_id: user.id)
         true
+
+      {:error, reason} when reason in [:not_purgeable, :not_found] ->
+        Logger.info("Unverified account not purged: no longer eligible, or already deleted",
+          user_id: user.id,
+          reason: reason
+        )
+
+        false
 
       {:error, reason} ->
         Logger.error("Could not purge an unverified account",

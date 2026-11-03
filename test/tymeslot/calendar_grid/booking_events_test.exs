@@ -33,7 +33,7 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
       organizer_user: user,
       start_time: start_time,
       end_time: DateTime.add(start_time, 1800, :second),
-      status: "confirmed"
+      status: :confirmed
     }
 
     insert(:meeting, Map.merge(defaults, attrs))
@@ -70,7 +70,7 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
 
   test "excludes cancelled bookings and slots voided by a reschedule request" do
     user = insert(:user)
-    insert_meeting(user, %{status: "cancelled"})
+    insert_meeting(user, %{status: :cancelled})
     insert_meeting(user, %{reschedule_requested_at: DateTime.utc_now()})
 
     {start_dt, end_dt} = window()

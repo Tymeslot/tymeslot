@@ -17,7 +17,7 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
       tx =
         insert(:payment_transaction,
           user: user,
-          status: "completed",
+          status: :completed,
           subscription_id: subscription_id,
           stripe_id: "cs_fail_base_1",
           metadata: %{"original" => "preserved"}
@@ -35,7 +35,7 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
                DatabaseOperations.process_subscription_failure(subscription_id, invoice)
 
       reloaded = Repo.reload(tx)
-      assert reloaded.status == "pending_reconciliation"
+      assert reloaded.status == :pending_reconciliation
       assert reloaded.metadata["original"] == "preserved"
       assert reloaded.metadata["failed_invoice_id"] == "in_failed_1"
       assert reloaded.metadata["failure_reason"] == "subscription_cycle"
@@ -58,7 +58,7 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
 
       insert(:payment_transaction,
         user: user,
-        status: "pending",
+        status: :pending,
         stripe_id: checkout_session_id,
         metadata: %{"checkout_session" => checkout_session_id}
       )
@@ -67,12 +67,12 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
                DatabaseOperations.update_transaction_for_subscription(
                  checkout_session_id,
                  subscription_id,
-                 "completed",
+                 :completed,
                  %{"plan" => "pro"}
                )
 
       assert updated.subscription_id == subscription_id
-      assert updated.status == "completed"
+      assert updated.status == :completed
       assert updated.metadata["plan"] == "pro"
       assert updated.metadata["checkout_session"] == checkout_session_id
     end
@@ -82,7 +82,7 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
                DatabaseOperations.update_transaction_for_subscription(
                  "cs_missing",
                  "sub_x",
-                 "completed",
+                 :completed,
                  %{}
                )
     end
@@ -95,7 +95,7 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
       tx =
         insert(:payment_transaction,
           user: user,
-          status: "pending",
+          status: :pending,
           stripe_id: "cs_to_fail"
         )
 
@@ -103,7 +103,7 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
 
       assert PaymentQueries.get_transaction_by_stripe_id(tx.stripe_id)
              |> elem(1)
-             |> Map.fetch!(:status) == "failed"
+             |> Map.fetch!(:status) == :failed
     end
 
     test "is a no-op for unknown stripe_id" do

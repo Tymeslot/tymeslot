@@ -17,17 +17,25 @@ defmodule TymeslotWeb.Components.Shared.TokenPage do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Themes.Shared.Components.LegalLinks
+
   @doc """
   The centred-card page chrome every token page sits inside.
+
+  `:legal_links` is the meeting organiser's legal notice and privacy policy
+  (`Tymeslot.Profiles.public_legal_links/1`), shown below the card; nil or
+  both links unset renders nothing. Styled by `components/token-page.css`.
   """
+  attr :legal_links, :map, default: nil
   slot :inner_block, required: true
   @spec shell(map()) :: Phoenix.LiveView.Rendered.t()
   def shell(assigns) do
     ~H"""
-    <main class="flex min-h-screen items-center justify-center bg-linear-to-br from-turquoise-50 via-white to-cyan-50 p-4">
+    <main class="token-page flex min-h-screen flex-col items-center justify-center gap-4 bg-linear-to-br from-turquoise-50 via-white to-cyan-50 p-4">
       <div class="w-full max-w-md rounded-token-2xl bg-white p-8 text-center shadow-glass-lg">
         {render_slot(@inner_block)}
       </div>
+      <LegalLinks.footer links={@legal_links} />
     </main>
     """
   end
@@ -38,10 +46,11 @@ defmodule TymeslotWeb.Components.Shared.TokenPage do
   `:body` is the flow's own wording for what the spent link was.
   """
   attr :body, :string, required: true
+  attr :legal_links, :map, default: nil
   @spec invalid(map()) :: Phoenix.LiveView.Rendered.t()
   def invalid(assigns) do
     ~H"""
-    <.shell>
+    <.shell legal_links={@legal_links}>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
         <.icon name="hero-link-slash" class="h-9 w-9" />
       </div>
@@ -56,10 +65,11 @@ defmodule TymeslotWeb.Components.Shared.TokenPage do
   @doc """
   Shown when the visitor has made too many requests in a short window.
   """
+  attr :legal_links, :map, default: nil
   @spec too_many_requests(map()) :: Phoenix.LiveView.Rendered.t()
   def too_many_requests(assigns) do
     ~H"""
-    <.shell>
+    <.shell legal_links={@legal_links}>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-amber-100 text-amber-600">
         <.icon name="hero-clock" class="h-9 w-9" />
       </div>

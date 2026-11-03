@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Availability
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.BookingPages
 
   alias Tymeslot.Bookings.{
     Activation,
@@ -165,7 +166,8 @@ defmodule Tymeslot.Bookings.Create do
         utm_term: Map.get(meeting_params, :utm_term),
         referrer_host: Map.get(meeting_params, :referrer_host),
         tracking_params: Map.get(meeting_params, :tracking_params, %{}),
-        visitor_hash: Map.get(meeting_params, :visitor_hash)
+        visitor_hash: Map.get(meeting_params, :visitor_hash),
+        booking_page_id: BookingPages.existing_id(Map.get(meeting_params, :booking_page_id))
       }
 
       # Read once, here, so the booking-limit pre-check and the calendar
@@ -229,7 +231,7 @@ defmodule Tymeslot.Bookings.Create do
   # registration close again under the row lock, so a booking validated just
   # before the close that commits after it is still refused.
   defp validate_time(booking_data, user_id) do
-    if FixedDates.enabled?(Map.get(booking_data, :meeting_type)),
+    if FixedDates.sessions?(Map.get(booking_data, :meeting_type)),
       do: validate_session(booking_data),
       else: validate_schedule_time(booking_data, user_id)
   end

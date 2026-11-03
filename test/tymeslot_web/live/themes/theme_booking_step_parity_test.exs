@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
   @moduledoc """
-  Behaviour every theme's steps share, whatever they look like: choosing the
-  meeting type already chosen keeps it chosen, and the booking form marks the
+  Behaviour every theme's steps share, whatever they look like: choosing a
+  meeting type goes straight to its schedule, and the booking form marks the
   name and the email as required while leaving empty fields to its own
   messages, and it carries the honeypot and the reCAPTCHA hook, token and
   notice.
@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
   import Tymeslot.BookingTestHelpers
 
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
   setup :verify_on_exit!
@@ -34,22 +36,40 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
     :ok
   end
 
-  @duration_option "button[data-testid='duration-option']"
+  @duration_option "[data-fact='meeting_type']"
 
   for theme <- ThemeTestMatrix.all() do
     @tag :capture_log
-    test "theme #{theme.slug}: choosing the chosen meeting type again keeps it chosen",
+    test "theme #{theme.slug}: choosing a meeting type goes straight to its schedule",
          %{conn: conn} do
       %{profile: profile} =
         seed_booking_account(unquote(theme.id), "reselect-#{unquote(theme.slug)}", "Etc/UTC")
 
       {:ok, view, _html} = live(conn, "/#{profile.username}")
 
-      view |> element(@duration_option) |> render_click()
+      # The moment offering the meeting types (the classic overview, Folio's
+      # ways to work) is the page's current one and offers no way on of its
+      # own: the meeting type is it.
+      offer = "##{moment_for(view, :meeting_type)}-step"
+      assert has_element?(view, "#{offer}[data-moment-state='current'] #{@duration_option}")
+      refute has_element?(view, "#{offer} [data-intent='continue']")
+
       view |> element(@duration_option) |> render_click()
 
-      assert has_element?(view, "button[data-testid='next-step']")
-      refute has_element?(view, "button[data-testid='next-step'][disabled]")
+      # Paged, the overview leaves the page; on a continuous page it stays
+      # above the calendar, done.
+      if paged?(view) do
+        refute has_element?(view, offer)
+      else
+        assert has_element?(view, "#{offer}[data-moment-state='done']")
+      end
+
+      slot = moment_for(view, :slot)
+
+      assert has_element?(
+               view,
+               "##{slot}-step[data-moment='#{slot}'][data-moment-state='current']"
+             )
     end
 
     @tag :capture_log
@@ -104,5 +124,16 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingStepParityTest do
       assert has_element?(view, "form#booking-form input[name='booking[g-recaptcha-response]']")
       assert has_element?(view, ".recaptcha-notice")
     end
+  end
+
+  # The moment that collects `fact`, whatever the journey calls it.
+  defp moment_for(view, fact) do
+    Progress.moment_for(:sys.get_state(view.pid).socket.assigns.journey, fact)
+  end
+
+  # Whether the page shows one moment at a time: a paged journey drops the
+  # moment left behind, a continuous or transcript one keeps it, done.
+  defp paged?(view) do
+    :sys.get_state(view.pid).socket.assigns.journey.navigator == Paged
   end
 end

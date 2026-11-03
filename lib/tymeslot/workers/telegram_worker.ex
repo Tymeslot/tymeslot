@@ -40,6 +40,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.MeetingNotificationJob
+  alias Tymeslot.Workers.RetryHelpers
   alias Tymeslot.Workers.SnoozePolicy
 
   @behaviour ExpectedJobOutcome
@@ -242,7 +243,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   # it would silently disable Telegram for the whole deployment, one
   # integration at a time, requiring a manual per-user re-enable. Surface it
   # to the operator instead and leave the integration active.
-  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "own"} = integration) do
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: :own} = integration) do
     auto_disable(integration, "invalid_token")
     {:discard, @unauthorized}
   end
@@ -252,7 +253,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   # `AdminAlerts` already deduplicates repeat alerts for 24h. A job that spent
   # its first attempt on an unrelated transient failure and only reaches the
   # shared token on attempt 2+ must not lose its alert.
-  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "shared"} = integration) do
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: :shared} = integration) do
     Logger.warning("Shared Telegram bot token rejected (401 Unauthorized)",
       integration_id: integration.id
     )
@@ -335,7 +336,14 @@ defmodule Tymeslot.Workers.TelegramWorker do
   end
 
   defp handle_rate_limit(integration, %Oban.Job{} = job, body) do
-    retry_after = body |> extract_retry_after() |> clamp_retry_after()
+    retry_after =
+      body
+      |> extract_retry_after()
+      |> RetryHelpers.clamp_retry_after(
+        min: @min_retry_after_seconds,
+        max: @max_retry_after_seconds,
+        default: 30
+      )
 
     case SnoozePolicy.snooze_or_exhaust(SnoozePolicy.executions(job),
            max_snoozes: @max_rate_limit_snoozes,
@@ -353,17 +361,9 @@ defmodule Tymeslot.Workers.TelegramWorker do
   defp extract_retry_after(body) do
     case Jason.decode(body) do
       {:ok, %{"parameters" => %{"retry_after" => seconds}}} -> seconds
-      _other -> 30
+      _other -> nil
     end
   end
-
-  defp clamp_retry_after(seconds) when is_integer(seconds) do
-    seconds
-    |> max(@min_retry_after_seconds)
-    |> min(@max_retry_after_seconds)
-  end
-
-  defp clamp_retry_after(_other), do: 30
 
   defp extract_error_description(body) when is_binary(body) do
     case Jason.decode(body) do

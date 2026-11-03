@@ -285,7 +285,7 @@ defmodule CredoChecks.WebLayerBoundaryTest do
         alias Tymeslot.DatabaseSchemas.MeetingSchema
         alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
-        def pending?(%MeetingSchema{status: "pending"}), do: true
+        def pending?(%MeetingSchema{status: :pending}), do: true
         def pending?(%Meeting{}), do: false
       end
       """

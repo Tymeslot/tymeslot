@@ -12,12 +12,13 @@ defmodule Tymeslot.Bookings.Policy do
   """
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Meetings.MeetingState
 
   require Logger
 
   @typedoc "A meeting record with the fields required by the policy checks."
   @type meeting_record :: %{
-          required(:status) => String.t(),
+          required(:status) => MeetingState.status(),
           required(:start_time) => DateTime.t(),
           required(:end_time) => DateTime.t(),
           optional(atom()) => term()
@@ -51,23 +52,23 @@ defmodule Tymeslot.Bookings.Policy do
   @spec can_cancel_meeting?(meeting_record()) :: :ok | {:error, cancel_refusal()}
   def can_cancel_meeting?(meeting) do
     cond do
-      meeting.status == "cancelled" ->
+      meeting.status == :cancelled ->
         {:error, :already_cancelled}
 
-      meeting.status == "completed" ->
+      meeting.status == :completed ->
         {:error, {:not_cancellable, :completed}}
 
       # An expired meeting (a lapsed approval request or an abandoned paid
       # checkout) has already been released: its slot was freed, the attendee
       # was told the request lapsed, and `Meetings.Approval` has already
       # refunded whatever was paid for it. Cancelling would overwrite that
-      # outcome with `"cancelled"` and run the whole cancellation pipeline
+      # outcome with `:cancelled` and run the whole cancellation pipeline
       # over it — a second pair of emails contradicting the expiry notice, a
       # `meeting.cancelled` webhook for a meeting that never happened, and a
       # calendar delete for an event already removed. The request-received
       # email's withdraw link stays live in the invitee's inbox after the
       # deadline, so this is a reachable click, not a theoretical one.
-      meeting.status == "expired" ->
+      meeting.status == :expired ->
         {:error, {:not_cancellable, :expired}}
 
       meeting_is_current?(meeting) ->
@@ -96,18 +97,18 @@ defmodule Tymeslot.Bookings.Policy do
   @spec can_reschedule_meeting?(meeting_record()) :: :ok | {:error, reschedule_refusal()}
   def can_reschedule_meeting?(meeting) do
     cond do
-      meeting.status == "cancelled" ->
+      meeting.status == :cancelled ->
         {:error, {:not_reschedulable, :cancelled}}
 
-      meeting.status == "completed" ->
+      meeting.status == :completed ->
         {:error, {:not_reschedulable, :completed}}
 
       # An expired meeting (a lapsed approval request or an abandoned paid
       # checkout) has already released its slot: `MeetingState`'s
-      # `@occupying_statuses` excludes "expired", so conflict detection ignores
+      # `@occupying_statuses` excludes :expired, so conflict detection ignores
       # it. Rescheduling would move it to a new time it does not reserve, and
       # the attendee would be told about a booking anyone else can still take.
-      meeting.status == "expired" ->
+      meeting.status == :expired ->
         {:error, {:not_reschedulable, :expired}}
 
       meeting_is_current?(meeting) ->
@@ -148,7 +149,7 @@ defmodule Tymeslot.Bookings.Policy do
   """
   @spec can_request_reschedule?(meeting_record()) ::
           :ok | {:error, reschedule_refusal() | booker_move_refusal()}
-  def can_request_reschedule?(%{status: "awaiting_approval"} = meeting) do
+  def can_request_reschedule?(%{status: :awaiting_approval} = meeting) do
     with :ok <- can_booker_move_meeting?(meeting) do
       {:error, {:not_reschedulable, :awaiting_approval}}
     end

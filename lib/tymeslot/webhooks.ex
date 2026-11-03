@@ -23,6 +23,7 @@ defmodule Tymeslot.Webhooks do
 
   alias Tymeslot.Webhooks.{
     HttpDelivery,
+    MeetingSnapshot,
     PayloadBuilder,
     SsrfValidator,
     WebhookDeliverySchema,
@@ -339,7 +340,7 @@ defmodule Tymeslot.Webhooks do
         webhook.id,
         event_type,
         meeting.id,
-        WebhookWorker.snapshot(meeting),
+        MeetingSnapshot.snapshot(meeting),
         SeatView.participant_id(meeting)
       )
     else

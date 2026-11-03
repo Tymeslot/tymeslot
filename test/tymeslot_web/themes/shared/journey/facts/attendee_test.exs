@@ -5,7 +5,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.AttendeeTest do
   @moduletag :themes
 
   alias Phoenix.LiveView.Socket
+  alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Attendee
+  alias TymeslotWeb.Themes.Shared.Journey.Moment
 
   defp socket(assigns), do: %Socket{assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns)}
 
@@ -37,6 +39,21 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.AttendeeTest do
 
     assert Attendee.requires(%{meeting_type: %{custom_fields: [question("company")]}}) ==
              [:slot, :answers]
+  end
+
+  test "needs only the slot when its own moment asks the questions, since the submit sends both" do
+    journey = %Journey{
+      navigator: nil,
+      outcomes: %{},
+      moments: [
+        %Moment{key: :offer, collects: [:meeting_type], component: nil, defaults: []},
+        %Moment{key: :pick, collects: [:slot, :answers, :attendee], component: nil, defaults: []}
+      ]
+    }
+
+    assigns = %{journey: journey, meeting_type: %{custom_fields: [question("company")]}}
+
+    assert Attendee.requires(assigns) == [:slot]
   end
 
   test "is known once a booking was made for them" do

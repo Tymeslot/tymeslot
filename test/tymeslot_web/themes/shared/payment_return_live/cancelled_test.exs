@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
   end
 
   test "renders the cancellation copy", %{conn: conn, user: user} do
-    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+    meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
     {:ok, _view, html} =
       live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
       insert(:meeting,
         organizer_user_id: user.id,
         meeting_type_id: meeting_type.id,
-        status: "awaiting_payment"
+        status: :awaiting_payment
       )
 
     {:ok, _view, html} =
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
       insert(:meeting,
         organizer_user_id: user.id,
         meeting_type_id: meeting_type.id,
-        status: "awaiting_payment"
+        status: :awaiting_payment
       )
 
     {:ok, _view, html} =
@@ -88,14 +88,14 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
     {:ok, _profile} = Profiles.update_booking_theme(profile, "2")
 
-    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+    meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
     assert {:error, {:redirect, %{to: "/"}}} =
              live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
   end
 
   test "dead render does not load page data", %{conn: conn, user: user} do
-    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+    meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
     ref = make_ref()
     parent = self()

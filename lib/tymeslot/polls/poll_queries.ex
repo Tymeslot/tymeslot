@@ -13,12 +13,16 @@ defmodule Tymeslot.Polls.PollQueries do
   # show the scheduled time once a poll has been confirmed.
   @voting_preloads [time_slots: [], participants: [:votes], confirmed_meeting: []]
 
+  @doc """
+  Fetches a poll by its public token, or nil. A draft has no link yet, so its
+  token answers as if the poll did not exist.
+  """
   @spec get_by_token(String.t()) :: PollSchema.t() | nil
   def get_by_token(token) when is_binary(token) do
     token_hash = Token.hash_token(token)
 
     PollSchema
-    |> where([p], p.token_hash == ^token_hash)
+    |> where([p], p.token_hash == ^token_hash and p.status != :draft)
     |> owner_not_pending_deletion()
     |> preload(^@voting_preloads)
     |> Repo.one()
@@ -102,7 +106,8 @@ defmodule Tymeslot.Polls.PollQueries do
   Participants reach a poll by a link built from the host's username, so this
   is the count of invitations that a username change would strand. Confirmed
   and cancelled polls are excluded: nobody is being asked to open their link
-  any more.
+  any more. So are drafts, whose link does not resolve until they are
+  published.
   """
   @spec count_open_for_user(pos_integer()) :: non_neg_integer()
   def count_open_for_user(user_id) do

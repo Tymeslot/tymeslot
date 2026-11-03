@@ -23,21 +23,11 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   payloads. Call sites pass the data they already have.
   """
 
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
+
   @stripe_event [:tymeslot, :meeting_payments, :stripe, :api]
   @webhook_event [:tymeslot, :meeting_payments, :webhook, :received]
   @status_changed_event [:tymeslot, :meeting_payments, :booking_payment, :status_changed]
-
-  # Mirror of `BookingPaymentSchema.valid_statuses()` materialised at
-  # compile time so `to_atom/1` can rely on `String.to_existing_atom/1`
-  # without depending on call-order to seed the atom table.
-  @status_atoms %{
-    "pending" => :pending,
-    "paid" => :paid,
-    "failed" => :failed,
-    "refunded" => :refunded,
-    "partially_refunded" => :partially_refunded,
-    "disputed" => :disputed
-  }
 
   @typedoc "Reason for a booking_payment status transition."
   @type status_change_reason ::
@@ -108,25 +98,25 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   event when, and only when, `from` and `to` differ. `from` may be `nil`
   for newly inserted rows; `nil → some_status` is treated as a transition.
   """
-  @spec emit_status_changed(String.t() | nil, String.t() | nil, status_change_reason()) :: :ok
+  @spec emit_status_changed(
+          BookingPaymentSchema.status() | nil,
+          BookingPaymentSchema.status() | nil,
+          status_change_reason()
+        ) :: :ok
   def emit_status_changed(from, to, reason)
-      when (is_binary(from) or is_nil(from)) and (is_binary(to) or is_nil(to)) and
-             is_atom(reason) do
+      when is_atom(from) and is_atom(to) and is_atom(reason) do
     if from == to do
       :ok
     else
       :telemetry.execute(
         @status_changed_event,
         %{count: 1},
-        %{from: to_atom(from), to: to_atom(to), reason: reason}
+        %{from: from, to: to, reason: reason}
       )
 
       :ok
     end
   end
-
-  defp to_atom(nil), do: nil
-  defp to_atom(value) when is_binary(value), do: Map.get(@status_atoms, value, :unknown)
 
   defp status_for({:ok, _value}), do: :ok
   defp status_for({:error, _reason}), do: :error

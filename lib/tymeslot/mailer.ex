@@ -29,7 +29,7 @@ defmodule Tymeslot.Mailer do
   """
   @spec put_tracking(Swoosh.Email.t(), Providers.tracking()) :: Swoosh.Email.t()
   def put_tracking(%Swoosh.Email{} = email, category)
-      when category in [:transactional, :lifecycle, :marketing] do
+      when category in [:transactional, :lifecycle, :marketing, :broadcast] do
     put_private(email, @tracking_key, category)
   end
 

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown
@@ -302,11 +303,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
 
   # The organiser's own clock, 12- or 24-hour, as on every other dashboard page.
   defp format_refreshed_at(%DateTime{} = dt, time_zone, time_format) do
-    local =
-      case DateTime.shift_zone(dt, time_zone || "Etc/UTC") do
-        {:ok, local} -> local
-        {:error, _reason} -> dt
-      end
+    {local, _label} = DateTimeUtils.shift_or_utc(dt, time_zone)
 
     TimeFormat.format(
       local,

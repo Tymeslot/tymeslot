@@ -1,0 +1,114 @@
+/* Schedule step: the meeting's details and the picker (calendar, times,
+   timezone), in the two-pane frame base.css shares with the overview,
+   laid out by the card's own width:
+     below 40rem  one column: details, timezone, calendar, times
+     from 40rem   the details beside the picker, a rule between them
+                  (the frame)
+     from 52rem   details, calendar and times side by side, the timezone
+                  picker above the calendar and the times, the times scrolling inside */
+
+/* --- Details --- */
+
+.paper-details__organiser {
+  margin: var(--space-2xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.paper-details__title {
+  margin: 0;
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.paper-details .paper-facts {
+  margin-top: var(--space-2xs);
+}
+
+.paper-details__description {
+  margin: var(--space-xs) 0 0;
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-sm);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* --- Picker --- */
+
+.paper-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "timezone"
+    "calendar"
+    "slots";
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.paper-calendar {
+  grid-area: calendar;
+  min-width: 0;
+}
+
+.paper-slots {
+  grid-area: slots;
+  min-width: 0;
+}
+
+.paper-timezone {
+  grid-area: timezone;
+}
+
+/* Three columns: details, calendar, times. */
+@container scheduling (min-width: 52rem) {
+  .paper-picker {
+    grid-template-columns: minmax(0, 1fr) var(--paper-slots-width);
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "timezone timezone"
+      "calendar slots";
+    align-items: start;
+    column-gap: var(--space-lg);
+  }
+
+  /* The times end where the calendar ends: size containment keeps the list
+     out of the row's height, the row is the calendar's, and the list
+     stretches to it and scrolls inside. */
+  .paper-slots {
+    align-self: stretch;
+    contain: size;
+  }
+
+  .paper-slots .slot-list {
+    height: 100%;
+  }
+
+  /* The list's height is the calendar's, so it rarely ends on a whole time.
+     Its last edge fades out, so a time cut off there reads as more to
+     scroll, not as clipped; the space under the last time is as tall as
+     the fade, so once scrolled to the end every time is whole and clear. */
+  .paper-slots .slot-list__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: var(--space-2xl);
+    mask-image: linear-gradient(to bottom, black calc(100% - var(--space-2xl)), transparent);
+  }
+
+  /* The capped list clips what lies outside it, so a time's focus ring sits
+     inside the button; on the chosen (filled) time it takes the on-primary
+     colour to stay visible. */
+  .paper-slots .slot-list__slot:focus-visible {
+    outline-offset: calc(-1 * (var(--border-width-thick) + var(--border-width-medium)));
+  }
+
+  .paper-slots .slot-list__slot.slot-list__slot--selected:focus-visible {
+    outline-color: var(--theme-on-primary);
+  }
+}

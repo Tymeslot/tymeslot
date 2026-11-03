@@ -74,14 +74,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal do
   @doc """
   Moves on from the current moment: each fact it collects that the booking
   requires runs `continue/1`; an error is a flash, a `:stay` keeps the moment
-  (the next question of the questions wizard), all `:done` settle and move
-  the focus to the moment now current.
+  (the next question of the questions wizard), all `:done` settle. The
+  runtime moves the focus to the moment then current, as for every
+  navigator.
   """
   @spec continue(Journey.t(), Socket.t()) :: {:noreply, Socket.t()}
   def continue(journey, socket) do
     case Journey.moment(journey, socket.assigns[:current_state]) do
       nil -> {:noreply, socket}
-      current -> current |> run_continue(socket) |> after_continue(journey, socket)
+      current -> current |> run_continue(socket) |> after_continue(journey)
     end
   end
 
@@ -103,14 +104,6 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal do
           {:leave, socket} -> on_leave.(socket)
         end
     end
-  end
-
-  @doc "Sets `:journey_focus` to the moment now current when it differs from `before`'s."
-  @spec focus_on_change(Socket.t(), Socket.t()) :: Socket.t()
-  def focus_on_change(socket, before) do
-    if socket.assigns[:current_state] == before.assigns[:current_state],
-      do: socket,
-      else: assign(socket, :journey_focus, socket.assigns[:current_state])
   end
 
   defp reveal(journey, socket, budget) do
@@ -156,14 +149,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal do
     end)
   end
 
-  defp after_continue({:done, socket}, journey, before),
-    do: {:noreply, journey |> settle(socket) |> focus_on_change(before)}
+  defp after_continue({:done, socket}, journey), do: {:noreply, settle(journey, socket)}
 
-  defp after_continue({:stay, socket}, _journey, _before), do: {:noreply, socket}
+  defp after_continue({:stay, socket}, _journey), do: {:noreply, socket}
 
   # `reason` is a semantic atom from the facts; rendering it to copy is this
   # layer's job, and the booking page is multi-locale.
-  defp after_continue({:error, reason, socket}, _journey, _before),
+  defp after_continue({:error, reason, socket}, _journey),
     do: {:noreply, put_flash(socket, :error, BookingErrorMessage.message(reason))}
 
   defp run_back(moment, socket) do

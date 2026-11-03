@@ -55,8 +55,6 @@ defmodule Tymeslot.Meetings.CalendarMove do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Workers.CalendarEventWorker
 
-  @externally_modified "externally_modified"
-
   @type offer :: %{start_time: DateTime.t(), end_time: DateTime.t()}
   @type refusal ::
           :not_flagged
@@ -128,11 +126,11 @@ defmodule Tymeslot.Meetings.CalendarMove do
   end
 
   # The checks that need only the struct, cheapest first.
-  defp check_meeting(%MeetingSchema{calendar_sync_status: @externally_modified} = meeting) do
+  defp check_meeting(%MeetingSchema{calendar_sync_status: :externally_modified} = meeting) do
     cond do
       meeting.calendar_sync_status_dismissed_at != nil -> {:error, :not_flagged}
       MeetingSchema.group?(meeting) -> {:error, :group_meeting}
-      meeting.status != "confirmed" -> {:error, :not_confirmed}
+      meeting.status != :confirmed -> {:error, :not_confirmed}
       not MeetingState.expects_calendar_event?(meeting) -> {:error, :awaiting_new_time}
       true -> :ok
     end

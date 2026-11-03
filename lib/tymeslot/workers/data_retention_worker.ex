@@ -12,9 +12,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   6. Hourly calendar availability refusal counters (30 days retention)
   7. Abandoned Telegram setup stubs (own minute-scale TTL, not a day count)
   8. Analytics visitor-hash salts (each kept only for its own UTC day)
-  9. Abandoned sign-ups: password accounts still unverified 30 days after
-     sign-up that never had a session, never finished onboarding and are not
-     admins, with the email address and sign-up IP they hold
+  9. Abandoned sign-ups: accounts still unverified 30 days after sign-up
+     that are not admins, with the email address and sign-up IP they hold
   10. Financial records past their statutory retention period (years, counted
       from the end of the financial year; see
       `Tymeslot.FinancialRetention`)
@@ -23,6 +22,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   12. Slack OAuth installs never finished by picking a channel, a day after
       they were started, with the workspace bot token they hold
   13. What invitees gave on meetings and polls that ended two years ago,
+      and the invitees of draft polls last saved before then,
       anonymised rather than deleted (see `Tymeslot.InviteeData`)
   14. Requests for a poll voting link never confirmed within the link's
       lifetime (48 hours, not a day count), with the name and email they hold
@@ -49,6 +49,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.InviteeData
+  alias Tymeslot.MeetingTypes.OfferedTimes
   alias Tymeslot.Payments.Webhooks.StripeEventQueries
   alias Tymeslot.Polls
   alias Tymeslot.Slack
@@ -133,6 +134,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     prune_past_extra_availability()
 
+    prune_past_offered_times()
+
     prune_orphaned_slack_stubs()
 
     prune_expired_analytics_salts()
@@ -208,6 +211,13 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   defp prune_past_extra_availability do
     {count, _rows} = ExtraAvailability.prune_past(Date.add(Clock.utc_today(), -1))
     Logger.info("Pruned past extra available times", deleted_count: count)
+  end
+
+  # Not a `@retention_jobs` entry either: an offered time is an instant, so
+  # one that has started can no longer be booked and goes at once.
+  defp prune_past_offered_times do
+    {count, _rows} = OfferedTimes.prune_past(Clock.utc_now())
+    Logger.info("Pruned past offered times", deleted_count: count)
   end
 
   # Not a `@retention_jobs` entry: an unfinished install has a fixed one-day

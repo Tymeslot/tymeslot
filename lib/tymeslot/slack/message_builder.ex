@@ -15,6 +15,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
 
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Notifications.EventTypes
+  alias Tymeslot.Utils.DateTimeUtils
 
   @max_reason_length 500
 
@@ -258,33 +259,26 @@ defmodule Tymeslot.Slack.MessageBuilder do
   end
 
   defp format_time(meeting, timezone) do
-    start_time = shift_zone(meeting.start_time, timezone)
-    end_time = shift_zone(meeting.end_time, timezone)
+    {start_time, zone} = DateTimeUtils.shift_or_utc(meeting.start_time, timezone)
+    {end_time, _zone} = DateTimeUtils.shift_or_utc(meeting.end_time, timezone)
 
     date = Calendar.strftime(start_time, "%a %d %b %Y")
     start_str = Calendar.strftime(start_time, "%H:%M")
 
     if DateTime.to_date(end_time) == DateTime.to_date(start_time) do
-      "#{date}, #{start_str}–#{Calendar.strftime(end_time, "%H:%M")} (#{timezone})"
+      "#{date}, #{start_str}–#{Calendar.strftime(end_time, "%H:%M")} (#{zone})"
     else
-      "#{date}, #{start_str} – #{Calendar.strftime(end_time, "%a %d %b %H:%M")} (#{timezone})"
+      "#{date}, #{start_str} – #{Calendar.strftime(end_time, "%a %d %b %H:%M")} (#{zone})"
     end
   end
 
   defp format_single_time(datetime, timezone) do
-    shifted = shift_zone(datetime, timezone)
+    {shifted, zone} = DateTimeUtils.shift_or_utc(datetime, timezone)
 
     date = Calendar.strftime(shifted, "%a %d %b %Y")
     time = Calendar.strftime(shifted, "%H:%M")
 
-    "#{date}, #{time} (#{timezone})"
-  end
-
-  defp shift_zone(datetime, timezone) do
-    case DateTime.shift_zone(datetime, timezone) do
-      {:ok, shifted} -> shifted
-      _error -> datetime
-    end
+    "#{date}, #{time} (#{zone})"
   end
 
   defp duration_minutes(%{start_time: s, end_time: e}) do

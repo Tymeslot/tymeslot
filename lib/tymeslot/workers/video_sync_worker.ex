@@ -65,6 +65,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   alias Tymeslot.Integrations.Video.IntegrationResolver
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
   alias Tymeslot.Workers.VideoSync.Discards
@@ -213,15 +214,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defdelegate expected_outcome?(reason), to: Discards, as: :expected?
 
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt}) do
-    # Progressive backoff: 30s, 60s, 120s, 180s, then 180s.
-    case attempt do
-      1 -> 30
-      2 -> 60
-      3 -> 120
-      _later -> 180
-    end
-  end
+  def backoff(%Oban.Job{attempt: attempt}), do: Backoff.ladder(attempt, [30, 60, 120, 180])
 
   @impl Oban.Worker
   # Matched first: a release job also carries the `meeting_id` it came from.

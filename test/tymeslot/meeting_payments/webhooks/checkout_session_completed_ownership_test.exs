@@ -22,13 +22,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedOwnershipTes
 
   describe "handle/1 refuses a session that is not this booking's payment" do
     setup do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           amount_cents: 5000,
           currency: "eur",
           stripe_checkout_session_id: nil
@@ -118,13 +118,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedOwnershipTes
     # must not depend on it: the same currency in a different case is the
     # same price.
     test "confirms a session whose currency differs only in case" do
-      meeting = insert(:meeting, status: "awaiting_payment")
+      meeting = insert(:meeting, status: :awaiting_payment)
 
       bp =
         insert(:booking_payment,
           stripe_account_id: @account,
           meeting: meeting,
-          status: "pending",
+          status: :pending,
           amount_cents: 5000,
           currency: "eur",
           stripe_checkout_session_id: "cs_UPPER"
@@ -139,16 +139,16 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedOwnershipTes
 
       assert :ok = CheckoutSessionCompleted.handle(event)
 
-      assert %{status: "paid", last_event_id: "evt_UPPER"} = Repo.reload!(bp)
-      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
+      assert %{status: :paid, last_event_id: "evt_UPPER"} = Repo.reload!(bp)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
     end
   end
 
   defp assert_untouched(meeting, bp) do
     reloaded = Repo.reload!(bp)
-    assert reloaded.status == "pending"
+    assert reloaded.status == :pending
     assert reloaded.last_event_id == nil
-    assert {:ok, %{status: "awaiting_payment"}} = MeetingQueries.get_meeting(meeting.id)
+    assert {:ok, %{status: :awaiting_payment}} = MeetingQueries.get_meeting(meeting.id)
     refute_enqueued(worker: EmailWorker)
   end
 

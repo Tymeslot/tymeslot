@@ -29,7 +29,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationRefundNoticeTest do
     defp paid_payment(overrides \\ %{}) do
       Map.merge(
         %{
-          status: "paid",
+          status: :paid,
           amount_cents: 5000,
           refunded_amount_cents: 0,
           currency: "eur",
@@ -54,7 +54,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationRefundNoticeTest do
 
     test "names only the balance left after a partial refund" do
       payment =
-        paid_payment(%{status: "partially_refunded", refunded_amount_cents: 2000})
+        paid_payment(%{status: :partially_refunded, refunded_amount_cents: 2000})
 
       email = organizer_email(details_with_payment(payment))
 
@@ -71,7 +71,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationRefundNoticeTest do
     end
 
     test "says nothing when the booking was refunded in full" do
-      payment = paid_payment(%{status: "refunded", refunded_amount_cents: 5000})
+      payment = paid_payment(%{status: :refunded, refunded_amount_cents: 5000})
 
       email = organizer_email(details_with_payment(payment))
 
@@ -80,7 +80,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationRefundNoticeTest do
     end
 
     test "says nothing when the charge is disputed, as Stripe owns that" do
-      email = organizer_email(details_with_payment(paid_payment(%{status: "disputed"})))
+      email = organizer_email(details_with_payment(paid_payment(%{status: :disputed})))
 
       refute email.html_body =~ "Refund outstanding"
     end

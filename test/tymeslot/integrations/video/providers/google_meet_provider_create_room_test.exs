@@ -48,8 +48,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         {:ok, %Req.Response{status: 200, body: "not valid json{{"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
-      assert message =~ "Invalid JSON"
+      assert {:error, :malformed_response} = GoogleMeetProvider.create_meeting_room(config)
     end
 
     test "returns error when the space response has no meeting URL" do
@@ -82,13 +81,19 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
       config = valid_token_config()
 
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: ~s({"error":{"status":"SERVICE_DISABLED"}})}}
+        {:ok,
+         %Req.Response{
+           status: 403,
+           body:
+             ~s({"error":{"status":"PERMISSION_DENIED","message":"Google Meet REST API has not been used in project 42 before or it is disabled."}})
+         }}
       end)
 
       assert {:error, {:http_error, 403, message}} =
                GoogleMeetProvider.create_meeting_room(config)
 
-      assert message =~ "HTTP 403"
+      assert message =~ "Google Meet API error (403)"
+      assert message =~ "it is disabled"
     end
 
     test "ignores :event_details — no calendar event payload is sent" do
@@ -357,7 +362,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
       assert {:error, {:http_error, 500, message}} =
                GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
 
-      assert message =~ "HTTP 500"
+      assert message =~ "Google Meet API error (500)"
     end
   end
 

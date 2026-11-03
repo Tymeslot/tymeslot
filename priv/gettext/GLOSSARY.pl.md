@@ -192,6 +192,17 @@ fragment: read how the code uses it.
 | accept (a booking request) | zatwierdź; "Accepting…" = "Zatwierdzanie…" |
 | hatched (times) | zakreskowane |
 
+### Booking pages (a host's extra pages)
+
+A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
+
+| English | pl |
+|---|---|
+| booking page (any public page guests book through, extra or main) | **strona rezerwacji** (plural **strony rezerwacji**) |
+| main page (the host's own page at `/<username>`, as opposed to their extra booking pages) | **strona główna** (always with the qualifier; never the bare word for *home page*) |
+| draft (a booking page not public yet because it lists no meeting type) | **wersja robocza** (same word as the poll draft) |
+| address (the URL path of a page, `/<username>/<page>`) | **adres** Nigdy *URL* ani *ścieżka*; adres e-mail i adres miejsca to osobne pojęcia z własnym tłumaczeniem |
+
 ## Notes
 
 - "Cancel" a meeting or booking is "odwołaj" everywhere, the payments screens included;
@@ -243,7 +254,7 @@ The /for profession pages price in złoty at Polish market rates (written "300 P
 savings calculator's `hourly_rate` for `pl` is a złoty figure. Tymeslot's own plan prices stay as
 the placeholders give them.
 
-`profession_in_text` in `priv/professions/pl/*.exs` is the lowercase nominative plural
+`profession_in_text` in `priv/professions/*/pl.exs` is the lowercase nominative plural
 ("fizjoterapeuci", "konsultanci IT", "instruktorzy pilatesu"). Polish cannot put it after "dla",
 so the /for msgstrs that use it make the profession the subject: "Wszystko, czego potrzebują
 %{profession_in_text}.", "Konfiguracja, od której mogą zacząć %{profession_in_text}".

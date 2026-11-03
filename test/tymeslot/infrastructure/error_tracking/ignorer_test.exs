@@ -81,6 +81,34 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.IgnorerTest do
       refute Ignorer.ignore?(error, @live_view)
     end
 
+    test "ignores a request whose client closed the connection mid-response" do
+      for reason <- [
+            "Unrecoverable error: closed",
+            "Unrecoverable error: econnreset",
+            "Client reset stream normally"
+          ] do
+        error = %Error{kind: "Elixir.Bandit.TransportError", reason: reason}
+
+        assert Ignorer.ignore?(error, @request), "expected #{inspect(reason)} ignored"
+      end
+    end
+
+    test "tracks any other transport error raised serving a request" do
+      error = %Error{
+        kind: "Elixir.Bandit.TransportError",
+        reason: "Received RST_STREAM from client: protocol_error (1)"
+      }
+
+      refute Ignorer.ignore?(error, @request)
+    end
+
+    test "tracks a closed connection reported outside a request" do
+      error = %Error{kind: "Elixir.Bandit.TransportError", reason: "Unrecoverable error: closed"}
+
+      refute Ignorer.ignore?(error, @job)
+      refute Ignorer.ignore?(error, %{})
+    end
+
     test "tracks the error and logs a warning when the ignorer itself fails" do
       log =
         capture_log(fn ->

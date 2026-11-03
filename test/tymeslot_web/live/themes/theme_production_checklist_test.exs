@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
         assert body1 =~ user1.name,
                "Theme #{unquote(theme_id)} must still name the owner with no meeting types"
 
-        refute html1 =~ "data-testid=\"duration-option\"",
+        refute html1 =~ "data-fact=\"meeting_type\"",
                "Theme #{unquote(theme_id)} must not render duration options with no meeting types"
 
         # Very long meeting name
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
         assert html2 =~ long_name,
                "Theme #{unquote(theme_id)} must render the full long meeting type name"
 
-        assert html2 =~ "data-testid=\"duration-option\"",
+        assert html2 =~ "data-fact=\"meeting_type\"",
                "Theme #{unquote(theme_id)} must offer the long meeting type as a duration option"
       end
 
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
         assert html =~ ~s(<meta name="viewport" content="width=device-width, initial-scale=1")
 
         # Basic functional check for the core booking UI
-        assert html =~ "data-testid=\"duration-option\""
+        assert html =~ "data-fact=\"meeting_type\""
       end
     end
   end

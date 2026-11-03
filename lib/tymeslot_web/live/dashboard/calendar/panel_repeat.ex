@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
   alias TymeslotWeb.Components.Calendar.RecurrenceEditor
-  alias TymeslotWeb.Components.Calendar.RecurrenceSummary
+  alias Tymeslot.Integrations.Calendar.Recurrence.Summary, as: RecurrenceSummary
   alias TymeslotWeb.Components.Calendar.RepeatForm
   alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Helpers.LocaleFormat

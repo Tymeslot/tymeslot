@@ -141,7 +141,7 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
       integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           channel_id: nil,
           bot_token_encrypted: nil,
           webhook_url_encrypted: Encryption.encrypt("https://hooks.slack.com/services/T/B/abc")
@@ -168,7 +168,7 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
       integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           channel_id: nil,
           bot_token_encrypted: nil,
           webhook_url_encrypted: Encryption.encrypt("https://hooks.slack.com/services/T/B/abc")
@@ -318,7 +318,7 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
       integration =
         insert(:slack_integration,
           user: user,
-          app_mode: "webhook_url",
+          app_mode: :webhook_url,
           channel_id: nil,
           bot_token_encrypted: nil,
           webhook_url_encrypted: Encryption.encrypt("https://hooks.slack.com/services/T/B/abc")

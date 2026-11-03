@@ -146,7 +146,7 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorkerTest do
       calendar_integration_id: integration.id,
       start_time: DateTime.truncate(DateTime.add(DateTime.utc_now(), -24 * 3_600), :second),
       end_time: DateTime.truncate(DateTime.add(DateTime.utc_now(), -23 * 3_600), :second),
-      status: "confirmed"
+      status: :confirmed
     )
   end
 

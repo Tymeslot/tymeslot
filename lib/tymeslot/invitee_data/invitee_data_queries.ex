@@ -1,8 +1,9 @@
 defmodule Tymeslot.InviteeData.InviteeDataQueries do
   @moduledoc """
   Finds and scrubs the personal data invitees give a host, across every table
-  that holds it: meetings, group seats, guests, poll participants, booking
-  payments and the outgoing delivery logs.
+  that holds it: meetings, group seats, guests, poll participants, the
+  invitees a draft poll holds, booking payments and the outgoing delivery
+  logs.
 
   Pure data access. Which rows are scrubbed, and when, is decided by
   `Tymeslot.InviteeData`.
@@ -308,6 +309,52 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
     telegram = delete_rows(from(d in TelegramDeliverySchema, where: d.meeting_id in ^meeting_ids))
 
     webhooks + slack + telegram
+  end
+
+  @doc """
+  Removes `email` from the invitees held on draft polls, which are not yet
+  participants, so nothing else holds them. Keeps to `scope`'s drafts.
+  """
+  @spec remove_draft_invitee(String.t(), scope()) :: {non_neg_integer(), nil}
+  def remove_draft_invitee(email, scope) do
+    from(p in Poll,
+      as: :poll,
+      where: p.status == :draft,
+      where:
+        fragment(
+          "EXISTS (SELECT 1 FROM unnest(?) AS e WHERE lower(e->>'email') = ?)",
+          p.draft_invitees,
+          ^email
+        ),
+      update: [
+        set: [
+          draft_invitees:
+            fragment(
+              "ARRAY(SELECT e FROM unnest(?) AS e WHERE lower(e->>'email') <> ?)",
+              p.draft_invitees,
+              ^email
+            )
+        ]
+      ]
+    )
+    |> scope_joined_poll(scope)
+    |> Repo.update_all([])
+  end
+
+  @doc """
+  Clears the invitees held on draft polls last saved before `cutoff`: a
+  draft left that long is abandoned, and its list was never sent.
+  """
+  @spec clear_draft_invitees_saved_before(DateTime.t()) :: {non_neg_integer(), nil}
+  def clear_draft_invitees_saved_before(%DateTime{} = cutoff) do
+    query =
+      from(p in Poll,
+        where: p.status == :draft and p.updated_at < ^cutoff,
+        where: fragment("cardinality(?) > 0", p.draft_invitees),
+        update: [set: [draft_invitees: ^[]]]
+      )
+
+    Repo.update_all(query, [])
   end
 
   # The guard is what tells Dialyzer the count is an integer: the Repo's own

@@ -23,7 +23,6 @@
 
 <p align="center">
   <a href="#self-host"><b>Self-host in one command</b></a> ·
-  <a href="https://tymeslot.app/demo-theme-1?utm_source=github&utm_medium=readme&utm_campaign=core"><b>Live demo</b></a> ·
   <a href="https://tymeslot.app?utm_source=github&utm_medium=readme&utm_campaign=core"><b>Try the cloud free</b></a>
 </p>
 
@@ -42,24 +41,24 @@
 <p align="center"><b>Syncs both ways with</b></p>
 <p align="center">
   <img src="./priv/static/icons/providers/calendar/medium/google.webp" alt="Google Calendar" title="Google Calendar" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/outlook.webp" alt="Outlook" title="Outlook" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/calendar/apple.svg" alt="Apple iCloud" title="Apple iCloud" height="32" />&nbsp;
+  <img src="./priv/static/icons/providers/calendar/outlook.svg" alt="Outlook" title="Outlook" height="32" />&nbsp;
+  <picture><source media="(prefers-color-scheme: dark)" srcset="./priv/static/images/readme/apple-dark.svg" /><img src="./priv/static/icons/providers/calendar/apple.svg" alt="Apple iCloud" title="Apple iCloud" height="32" /></picture>&nbsp;
   <img src="./priv/static/icons/providers/calendar/medium/nextcloud.webp" alt="Nextcloud" title="Nextcloud" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/caldav.webp" alt="CalDAV" title="CalDAV" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/radicale.webp" alt="Radicale" title="Radicale" height="32" />&nbsp;
+  <img src="./priv/static/icons/providers/calendar/caldav.svg" alt="CalDAV" title="CalDAV" height="32" />&nbsp;
+  <img src="./priv/static/icons/providers/calendar/radicale.svg" alt="Radicale" title="Radicale" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/calendar/medium/zimbra.webp" alt="Zimbra" title="Zimbra" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/baikal.webp" alt="Baikal" title="Baikal" height="32" />&nbsp;
+  <img src="./priv/static/icons/providers/calendar/baikal.svg" alt="Baikal" title="Baikal" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/calendar/medium/mailbox_org.webp" alt="mailbox.org" title="mailbox.org" height="32" />
 </p>
 
 <p align="center"><b>Creates video rooms on</b></p>
 <p align="center">
   <img src="./priv/static/icons/providers/video/medium/google_meet.webp" alt="Google Meet" title="Google Meet" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/video/medium/teams.webp" alt="Microsoft Teams" title="Microsoft Teams" height="32" />&nbsp;
+  <img src="./priv/static/icons/providers/video/teams.svg" alt="Microsoft Teams" title="Microsoft Teams" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/video/medium/zoom.webp" alt="Zoom" title="Zoom" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/video/medium/jitsi.webp" alt="Jitsi Meet" title="Jitsi Meet" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/video/medium/mirotalk.webp" alt="MiroTalk P2P" title="MiroTalk P2P" height="32" />&nbsp;
-  <img src="./priv/static/icons/providers/video/medium/kmeet.webp" alt="kMeet" title="kMeet" height="32" />&nbsp;
+  <img src="./priv/static/icons/providers/video/kmeet.svg" alt="kMeet" title="kMeet" height="32" />&nbsp;
   <img src="./priv/static/icons/providers/video/generic.svg" alt="Nextcloud Talk" title="Nextcloud Talk" height="32" />
 </p>
 
@@ -73,6 +72,24 @@ https://github.com/user-attachments/assets/f7fdf4cc-5e47-4de5-9312-e3da01e9ce5f
 
 <p align="center"><sub><a href="https://www.youtube.com/watch?v=XjDvnbdJH1Q">Watch in HD on YouTube →</a></sub></p>
 
+## Booking themes
+
+Every booking theme starts from a person and the way they like to be booked, and follows their story: its journey, its look and its voice. Each has a persona sheet saying who it is for and why it looks and behaves as it does.
+
+<p align="center">
+<a href="./docs/themes/quill.md"><img src="./priv/static/images/ui/theme-previews/quill-theme-preview.webp" alt="The Quill booking page" width="200" /></a>
+<a href="./docs/themes/rhythm.md"><img src="./priv/static/images/ui/theme-previews/rhythm-theme-preview.webp" alt="The Rhythm booking page" width="200" /></a>
+<a href="./docs/themes/paper.md"><img src="./priv/static/images/ui/theme-previews/paper-theme-preview.webp" alt="The Paper booking page" width="200" /></a>
+<a href="./docs/themes/folio.md"><img src="./priv/static/images/ui/theme-previews/folio-theme-preview.webp" alt="The Folio booking page" width="200" /></a>
+</p>
+
+- **[Quill](docs/themes/quill.md)**: for consultants and professional services whose clients should feel they are booking someone established.
+- **[Rhythm](docs/themes/rhythm.md)**: for creatives whose visitors should feel the atmosphere first: motion, mood, then a time.
+- **[Paper](docs/themes/paper.md)**: for organisers who want no personality on the page, just clear, fast and in their colour, so people book and get on with their day.
+- **[Folio](docs/themes/folio.md)**: for coaches, therapists and freelancers whose visitors should know who they are, what they do and whether they're a fit before they pick a date.
+
+A new theme starts the same way, from its persona sheet: see [Start from a story](docs/THEME_DEVELOPMENT_GUIDE.md#start-from-a-story).
+
 <a id="features"></a>
 
 ## ✨ Features
@@ -85,7 +102,7 @@ https://github.com/user-attachments/assets/f7fdf4cc-5e47-4de5-9312-e3da01e9ce5f
     </td>
     <td width="50%" valign="top">
       <img src="./priv/static/images/readme/themes.gif" alt="Switching booking-page colour palettes" width="100%" />
-      <b>Your look.</b> Two themes, custom colours and backgrounds, white-label.
+      <b>Your look.</b> Four themes, custom colours and backgrounds, white-label.
     </td>
   </tr>
   <tr>
@@ -108,7 +125,7 @@ No add-ons and no per-feature upsells: self-hosted gets all of it.
 
 | | What you get |
 |---|---|
-| **Booking pages** | Two themes (Quill, Rhythm), custom colours and backgrounds, white-label. Guests need no account and see their own language and time zone. |
+| **Booking pages** | Four themes (Quill, Rhythm, Paper, Folio), custom colours and backgrounds, white-label. Guests need no account and see their own language and time zone. |
 | **Meeting types** | Durations, custom questions, booking limits, approval before confirming, several locations per type for the guest to pick from. |
 | **Availability** | Named schedules with hours, breaks and date overrides; buffers, minimum notice and booking window per type. |
 | **Calendars** | Two-way sync with Google, Outlook, iCloud and any CalDAV server (Nextcloud, Radicale, Zimbra, Baikal, mailbox.org). A conflict anywhere blocks the slot everywhere. Full in-app calendar. |
@@ -119,7 +136,7 @@ No add-ons and no per-feature upsells: self-hosted gets all of it.
 | **Payments** | Optional paid bookings through Stripe Connect, off by default and fee-free for self-hosters. [Setup →](https://tymeslot.app/docs/stripe-self-hosting?utm_source=github&utm_medium=readme&utm_campaign=core) |
 | **Sign-in & admin** | Email and password, Google, GitHub, generic OAuth/OIDC (Keycloak, Authentik, Okta, Azure AD). Toggle registration and password sign-in from `/admin` without a redeploy. |
 | **Privacy & security** | No third-party trackers or pixels, credentials encrypted at rest, rate-limited public endpoints, CSRF protection and signed tokens. |
-| **Languages** | English, German, French, Italian, Czech, Polish, Ukrainian and Brazilian Portuguese, across the dashboard, booking pages and every email. |
+| **Languages** | English, German, French, Italian, Czech, Polish, Ukrainian, Brazilian Portuguese and Spanish, across the dashboard, booking pages and every email. |
 | **Under the hood** | Elixir/OTP, Phoenix LiveView, PostgreSQL 14+, Oban. Supervised processes restart a failing sync instead of taking your booking page down. |
 
 <a id="self-host"></a>

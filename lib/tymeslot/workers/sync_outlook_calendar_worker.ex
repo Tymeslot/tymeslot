@@ -161,7 +161,10 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
           calendar_integration_id: integration.id
         )
 
-        {:snooze, min(RetryHelpers.parse_retry_after_from_message(message) || 120, 600)}
+        {:snooze,
+         message
+         |> RetryHelpers.parse_retry_after_from_message()
+         |> RetryHelpers.clamp_retry_after(max: 600, default: 120)}
 
       {:error, reason} ->
         Logger.error("Outlook Calendar sync failed",

@@ -34,7 +34,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
     user = insert(:user)
 
     defaults = %{
-      status: "awaiting_approval",
+      status: :awaiting_approval,
       organizer_user: user,
       organizer_user_id: user.id,
       approval_requested_at: DateTime.utc_now(:second),
@@ -238,7 +238,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
 
       assert :ok = perform_job(ApprovalExpiryWorker, %{"meeting_id" => meeting.id})
 
-      assert reload(meeting).status == "expired"
+      assert reload(meeting).status == :expired
     end
 
     test "leaves a request the host already approved alone" do
@@ -248,7 +248,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
       assert {:discard, reason} =
                perform_job(ApprovalExpiryWorker, %{"meeting_id" => meeting.id})
 
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
       # The host answering first is the normal race, not a fault.
       assert ApprovalExpiryWorker.expected_outcome?(reason)
     end
@@ -280,7 +280,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
       assert {:discard, "Request not due yet: " <> _deadline = reason} =
                perform_job(ApprovalExpiryWorker, %{"meeting_id" => meeting.id})
 
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
       # A stale job means a replacement's delete was lost, which the operator
       # should hear about: recorded, as one error group.
       refute ApprovalExpiryWorker.expected_outcome?(reason)
@@ -297,7 +297,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
 
       assert {:ok, %{expired: 1}} = perform_job(ApprovalSweepWorker, %{})
 
-      assert reload(overdue).status == "expired"
+      assert reload(overdue).status == :expired
     end
 
     test "does not touch a request still inside its window" do
@@ -305,7 +305,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
 
       assert {:ok, %{expired: 0, skipped: 0}} = perform_job(ApprovalSweepWorker, %{})
 
-      assert reload(inside).status == "awaiting_approval"
+      assert reload(inside).status == :awaiting_approval
     end
 
     test "works through a backlog rather than stopping at the first" do
@@ -313,7 +313,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
 
       assert {:ok, %{expired: 3}} = perform_job(ApprovalSweepWorker, %{})
 
-      assert Enum.map(overdue, &reload(&1).status) == ["expired", "expired", "expired"]
+      assert Enum.map(overdue, &reload(&1).status) == [:expired, :expired, :expired]
     end
 
     # Answered by declining rather than approving: the sweep only ever sees
@@ -326,7 +326,7 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
 
       assert {:ok, %{expired: 0, skipped: 0}} = perform_job(ApprovalSweepWorker, %{})
 
-      assert reload(answered).status == "cancelled"
+      assert reload(answered).status == :cancelled
     end
   end
 end

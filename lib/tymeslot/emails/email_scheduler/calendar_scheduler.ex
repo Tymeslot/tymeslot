@@ -13,9 +13,15 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   `event_end_date` instead of the two instants, which it does not have.
 
   `method: :cancel` makes it a cancellation instead, and `series: true` a
-  cancellation of every occurrence of a recurring event. The job carries all
-  it says, so it does not depend on the event still being cached when it
-  runs.
+  cancellation of every occurrence of a recurring event, and `removed: true`
+  the recipient's removal from an event that still takes place.
+  `event_recurrence_rule` is the RRULE value of a series invited as a whole.
+  `ical_uid` (the attachment's UID, when not `event_uid`) and
+  `other_entries` (further entries it changes, as
+  `SeriesIdentity.to_arg/1` writes them) say which entries in the guest's
+  calendar it changes (`Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity`).
+  The job carries all it says, so it does not depend on the event still
+  being cached when it runs.
   """
   @spec schedule_calendar_invitation(map()) :: :ok | {:error, term()}
   def schedule_calendar_invitation(params) do
@@ -28,16 +34,21 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
       "attendee_email" => params.attendee_email,
       "event_title" => params.event_title,
       "event_uid" => params.event_uid,
+      "ical_uid" => params[:ical_uid],
+      "other_entries" => params[:other_entries] || [],
       "event_start_at" => params.event_start_at,
       "event_end_at" => params.event_end_at,
       "event_all_day" => Map.get(params, :all_day, false),
       "event_start_date" => params[:event_start_date],
       "event_end_date" => params[:event_end_date],
       "event_location" => params[:event_location],
+      "event_video_link" => params[:event_video_link],
       "event_description" => params[:event_description],
+      "event_recurrence_rule" => params[:event_recurrence_rule],
       "method" => Atom.to_string(method),
       "sequence" => sequence,
-      "event_series" => Map.get(params, :series, false)
+      "event_series" => Map.get(params, :series, false),
+      "event_removed" => Map.get(params, :removed, false)
     }
     |> EmailWorker.new(
       queue: :emails,
@@ -64,7 +75,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   first.
 
   `before_start_date`/`before_end_date` are the ISO 8601 dates of an all-day
-  baseline. `first_notification: true` marks an event that was never
+  baseline. `before_video_link` is the join link the attendees were last
+  sent (`nil` for none). `first_notification: true` marks an event that was never
   notified before, whose `before_*` values are therefore unknown rather than
   empty; the handler states the current details instead of diffing.
 
@@ -73,7 +85,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   describes that instead of reading the cached event, which a write to a
   whole series drops. Such a job is sent at once and never coalesced, since
   the organiser confirmed that one change; `series` (`:following` or `:all`)
-  says how much of the series it changed.
+  says how much of the series it changed. `ical_uid` and `other_entries`
+  are as on `schedule_calendar_invitation/1`.
   """
   @spec schedule_event_update_notification(map()) :: :ok | {:error, term()}
   def schedule_event_update_notification(params) do
@@ -84,11 +97,14 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
       "action" => "send_event_update_notification",
       "user_id" => params.user_id,
       "event_uid" => params.event_uid,
+      "ical_uid" => params[:ical_uid],
+      "other_entries" => params[:other_entries] || [],
       "integration_id" => params.integration_id,
       "attendee_emails" => params.attendee_emails,
       "before_title" => params.before_title,
       "before_location" => params.before_location,
       "before_description" => params.before_description,
+      "before_video_link" => params[:before_video_link],
       "before_start_at" => params.before_start_at && DateTime.to_iso8601(params.before_start_at),
       "before_end_at" => params.before_end_at && DateTime.to_iso8601(params.before_end_at),
       "before_start_date" => params[:before_start_date],

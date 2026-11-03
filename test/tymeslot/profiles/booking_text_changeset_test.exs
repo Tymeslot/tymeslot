@@ -13,6 +13,7 @@ defmodule Tymeslot.Profiles.BookingTextChangesetTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Validation.Constraints
 
   describe "when the customisation is switched on" do
@@ -23,19 +24,32 @@ defmodule Tymeslot.Profiles.BookingTextChangesetTest do
       assert get_change(changeset, :booking_heading) == "Let's build something"
     end
 
-    test "refuses to publish with any of the three lines blank" do
-      for field <- [:booking_heading, :booking_greeting, :booking_instruction] do
-        attrs =
-          complete_text()
-          |> Map.put(:booking_text_enabled, true)
-          |> Map.put(field, "")
+    test "refuses to publish with the heading blank" do
+      changeset =
+        complete_text()
+        |> Map.merge(%{booking_text_enabled: true, booking_heading: ""})
+        |> change_text()
 
-        changeset = change_text(attrs)
+      refute changeset.valid?
+      assert errors_on(changeset)[:booking_heading] == ["can't be blank"]
+    end
 
-        refute changeset.valid?,
-               "expected a blank #{field} to be refused while the text is live"
+    # A voice may leave either line unsaid (Paper greets nobody, Folio gives
+    # no instruction), so the organiser may too; the page drops a blank line.
+    test "accepts a blank greeting or instruction and stores it as blank" do
+      for field <- [:booking_greeting, :booking_instruction] do
+        profile =
+          insert(:profile,
+            booking_text_enabled: true,
+            booking_heading: "Let's build something",
+            booking_greeting: "Hi! I'm Sam.",
+            booking_instruction: "Pick a slot."
+          )
 
-        assert errors_on(changeset)[field] == ["can't be blank"]
+        changeset = ProfileSchema.booking_text_changeset(profile, %{field => "  "})
+
+        assert changeset.valid?, "expected a blank #{field} to be accepted while the text is live"
+        assert Map.fetch!(Repo.update!(changeset), field) == nil
       end
     end
 

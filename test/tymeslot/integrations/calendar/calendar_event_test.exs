@@ -331,6 +331,20 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventTest do
       refute CalendarEvent.blocking?(event)
     end
 
+    # The CalDAV family's fresh read passes the parsed event through, carrying
+    # the property's own value.
+    test "plain map with the iCalendar STATUS:CANCELLED value does not block" do
+      event = %{
+        uid: "x",
+        status: "CANCELLED",
+        transparency: nil,
+        start_time: ~U[2026-04-13 09:00:00Z],
+        end_time: ~U[2026-04-13 10:00:00Z]
+      }
+
+      refute CalendarEvent.blocking?(event)
+    end
+
     test "plain map with declined status does not block" do
       event = %{
         uid: "x",

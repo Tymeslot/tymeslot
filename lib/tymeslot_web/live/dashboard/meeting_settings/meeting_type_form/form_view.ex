@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
+  alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     ApprovalSection,
@@ -39,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     LocationsSection,
     PaymentsSection,
     QuestionEditorComponent,
+    SchedulingRulesSection,
     SessionHandlers,
     ShowAsFreeSection,
     SlotIntervalField,
@@ -55,6 +57,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import GuestsSection, only: [guests_section: 1]
   import LengthsField, only: [lengths_field: 1]
   import LimitsSection, only: [limits_section: 1]
+  import SchedulingRulesSection, only: [scheduling_rules_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import PaymentsSection, only: [payments_section: 1]
   import VisibilitySection, only: [visibility_section: 1]
@@ -317,7 +320,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 payments_charges_enabled: @payments_charges_enabled,
                 requires_approval: @requires_approval,
                 extra_lengths: Map.get(@form_data, "extra_lengths", []),
-                locations: @locations
+                locations: @locations,
+                fixed_dates: @fixed_dates,
+                offered_time_rows: @offered_time_rows
               })
             }
             allowed={@group_bookings_allowed}
@@ -334,10 +339,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           />
 
           <.fixed_dates_section
-            :if={@group_bookings_enabled}
             fixed_dates={@fixed_dates}
+            group={@group_bookings_enabled}
             is_edit={@is_edit}
             sessions={@session_rows}
+            offered_times={@offered_time_rows}
+            new_offered_time={@new_offered_time}
+            offered_time_error={@offered_time_error}
             timezone={@host_timezone}
             new_session={@new_session}
             session_error={@session_error}
@@ -374,13 +382,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             myself={@myself}
           />
 
+          <.scheduling_rules_section
+            scheduling_rules={@scheduling_rules}
+            schedules={@schedules}
+            selected_availability_schedule_id={@selected_availability_schedule_id}
+            form_errors={@form_errors}
+            myself={@myself}
+          />
+
           <.limits_section
             booking_limits={@booking_limits}
             week_start={@week_start}
             myself={@myself}
           />
 
-          <.visibility_section type={@type} parent={@parent_myself} />
+          <.visibility_section
+            type={@type}
+            parent={@parent_myself}
+            pages={PageVisibility.rows(@username, @booking_pages, @page_memberships, @type)}
+          />
         </.card>
 
         <%!-- Questions --%>

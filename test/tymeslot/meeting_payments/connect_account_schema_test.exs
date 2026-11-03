@@ -16,11 +16,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchemaTest do
       |> ConnectAccountSchema.changeset(%{user_id: user.id, country: "ch"})
       |> Repo.insert()
 
-    assert account.status == "creating"
+    assert account.status == :creating
 
     # Reload from DB to confirm the column default (not just the in-memory struct).
     reloaded = Repo.get!(ConnectAccountSchema, account.id)
-    assert reloaded.status == "creating"
+    assert reloaded.status == :creating
   end
 
   test "creating placeholder is valid" do
@@ -28,14 +28,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchemaTest do
       ConnectAccountSchema.changeset(%ConnectAccountSchema{}, %{
         user_id: 1,
         country: "ch",
-        status: "creating"
+        status: :creating
       })
 
     assert cs.valid?
   end
 
   test "accepts an allowlisted currency and rejects any other" do
-    attrs = %{user_id: 1, country: "ch", status: "active"}
+    attrs = %{user_id: 1, country: "ch", status: :active}
 
     assert ConnectAccountSchema.changeset(
              %ConnectAccountSchema{},
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchemaTest do
         user_id: user_a.id,
         stripe_account_id: "acct_123",
         country: "ch",
-        status: "active"
+        status: :active
       })
       |> Repo.insert()
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchemaTest do
         user_id: user_b.id,
         stripe_account_id: "acct_123",
         country: "ch",
-        status: "active"
+        status: :active
       })
       |> Repo.insert()
 

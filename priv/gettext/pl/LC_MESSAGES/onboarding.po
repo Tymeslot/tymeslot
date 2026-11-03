@@ -166,6 +166,16 @@ msgstr "Zamień dowolny typ spotkania w sesję grupową. Ustal, ile osób może 
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Two new booking page themes: Folio and Paper"
+msgstr "Dwa nowe motywy strony rezerwacji: Folio i Paper"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Folio introduces you before anyone picks a time: a cover image, your portrait, headline and bio, in serif type on one continuous page. Paper does the opposite: one calm card in the colour palette you choose, light or dark, and the time and details on a single screen. Open the Theme page to preview either on your own booking page before you switch."
+msgstr "Folio przedstawia cię, zanim ktokolwiek wybierze godzinę: zdjęcie tytułowe, twój portret, nagłówek i biogram, wszystko krojem szeryfowym na jednej ciągłej stronie. Paper działa odwrotnie: jedna spokojna karta w wybranej przez ciebie palecie kolorów, jasna lub ciemna, a godzina i szczegóły mieszczą się na jednym ekranie. Otwórz stronę Motyw, aby przed zmianą podejrzeć każdy z nich na własnej stronie rezerwacji."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "Polls that invite, confirm and keep you posted"
 msgstr "Ankiety, które zapraszają, potwierdzają i informują na bieżąco"
 
@@ -173,3 +183,13 @@ msgstr "Ankiety, które zapraszają, potwierdzają i informują na bieżąco"
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
 msgstr "Ankieta może być otwarta, wtedy każdy, kto ma link, prosi e-mailem o link do głosowania, albo tylko dla zaproszonych. Możesz dostawać e-mail przy każdym nowym głosie. Po wysłaniu możesz zmienić koniec głosowania, dodać terminy, ponownie wysłać zaproszenie i usunąć osoby; przypomnienia trafiają do zaproszonych, którzy jeszcze nie zagłosowali. Spotkanie, które potwierdza ankieta, należy do ciebie: wszyscy uczestnicy są gośćmi, a przesunąć lub odwołać je możesz tylko ty."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot now speaks Spanish"
+msgstr "Tymeslot mówi teraz po hiszpańsku"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Your dashboard, booking pages and every email are now available in Spanish. Tymeslot follows your browser's language, or you can choose one yourself in Account Settings. People who book you see booking pages and confirmations in their own language too."
+msgstr "Twój panel, strony rezerwacji i wszystkie e-maile są teraz dostępne po hiszpańsku. Tymeslot korzysta z języka Twojej przeglądarki, ale możesz też wybrać język samodzielnie w Ustawieniach konta. Osoby, które u Ciebie rezerwują, również widzą strony rezerwacji i potwierdzenia we własnym języku."

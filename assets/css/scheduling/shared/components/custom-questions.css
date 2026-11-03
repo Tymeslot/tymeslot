@@ -21,6 +21,7 @@
 
 .custom-question-note-body {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   margin-bottom: var(--space-sm);
 }
 
@@ -103,6 +104,8 @@
 
 /* ===== Option cards: single-select, multi-select and the note ack ===== */
 
+/* min-inline-size: a fieldset is otherwise as wide as its widest word, so a
+   long unbroken option label would widen the whole page. */
 .custom-question-option-cards {
   display: flex;
   flex-direction: column;
@@ -110,6 +113,7 @@
   margin: var(--space-sm) 0 var(--space-md);
   padding: 0;
   border: 0;
+  min-inline-size: 0;
 }
 
 .custom-question-option-card {
@@ -196,7 +200,11 @@
   transform: scale(1);
 }
 
+/* An organiser's label may be one long word: it wraps inside the card
+   rather than pushing the card past its column. */
 .custom-question-option-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--theme-font-size-base);
   line-height: 1.35;
 }

@@ -155,4 +155,47 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperRecurrenceTest do
       refute Map.has_key?(result, "recurrence")
     end
   end
+
+  # Google refuses a recurring timed event whose start names no zone
+  # ("Missing time zone definition for start time").
+  describe "format_event_data/1 — a series written without a zone" do
+    test "is written in UTC, at the same instants" do
+      result =
+        EventMapper.format_event_data(%{
+          summary: "Standup",
+          start_time: ~U[2026-04-18 10:00:00Z],
+          end_time: ~U[2026-04-18 10:15:00Z],
+          timezone: nil,
+          recurrence_rule: "FREQ=DAILY;COUNT=5"
+        })
+
+      assert result["start"] == %{"dateTime" => "2026-04-18T10:00:00", "timeZone" => "Etc/UTC"}
+      assert result["end"] == %{"dateTime" => "2026-04-18T10:15:00", "timeZone" => "Etc/UTC"}
+    end
+
+    test "keeps the zone a series names" do
+      result =
+        EventMapper.format_event_data(%{
+          summary: "Standup",
+          start_time: ~U[2026-04-18 08:00:00Z],
+          end_time: ~U[2026-04-18 08:15:00Z],
+          timezone: "Europe/Berlin",
+          recurrence_rule: "FREQ=DAILY;COUNT=5"
+        })
+
+      assert result["start"]["timeZone"] == "Europe/Berlin"
+    end
+
+    test "leaves a single event without a zone as it was" do
+      result =
+        EventMapper.format_event_data(%{
+          summary: "One-off",
+          start_time: ~U[2026-04-18 10:00:00Z],
+          end_time: ~U[2026-04-18 10:15:00Z],
+          timezone: nil
+        })
+
+      refute Map.has_key?(result["start"], "timeZone")
+    end
+  end
 end

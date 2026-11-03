@@ -247,4 +247,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilderTest do
                "https://cloud.example.com/remote.php/dav/personal/x.ics"
     end
   end
+
+  describe "href_path/1" do
+    test "reduces an event URL to its path" do
+      assert UrlBuilder.href_path(
+               "https://dav.example.com/remote.php/dav/calendars/a/personal/x.ics"
+             ) ==
+               "/remote.php/dav/calendars/a/personal/x.ics"
+    end
+
+    test "returns a URL with no path whole" do
+      assert UrlBuilder.href_path("https://dav.example.com") == "https://dav.example.com"
+    end
+  end
+
+  describe "event_url/4" do
+    test "resolves against the client's base URL" do
+      client = %{base_url: "https://dav.example.com/remote.php/dav"}
+
+      assert UrlBuilder.event_url(client, "/cal/", nil, "/remote.php/dav/cal/x.ics") ==
+               {:ok, "https://dav.example.com/remote.php/dav/cal/x.ics"}
+
+      assert UrlBuilder.event_url(client, "/cal/", nil, nil) == {:error, :unaddressable}
+    end
+  end
 end

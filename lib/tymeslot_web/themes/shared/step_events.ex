@@ -13,8 +13,9 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   The custom-questions step has its own module,
   `Shared.CustomQuestions.Events`.
 
-  The canonical events: `select_duration`, `next_step` (overview);
-  `select_length`, `next_step`, `back_step` (length);
+  The canonical events: `choose_duration` (the type, then the way on,
+  relayed as `select_duration` and `next_step`), `select_duration`,
+  `next_step` (overview); `select_length`, `next_step`, `back_step` (length);
   `select_date`, `select_time`, `toggle_hour`, `change_timezone`,
   `search_timezone`, `toggle_timezone_dropdown`, `close_timezone_dropdown`,
   `prev_month`, `next_month`, `prev_week`, `next_week`, `load_week`, `select_slot`, `first_available_week`, `back_step`,
@@ -53,6 +54,16 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
     socket
     |> assign(:submitting, BookingLocation.complete?(socket.assigns))
     |> relay(:submit, booking_params)
+  end
+
+  # A meeting type chosen where the choice itself is the way on (every
+  # shipped overview): the type, then Next, relayed in that order, so the
+  # LiveView holds the type before the navigator is asked to move on. A
+  # type it refuses (a locked link, an unknown slug) leaves Next to fail as
+  # the overview's Next always did.
+  def handle_event("choose_duration", %{"duration" => duration}, socket) do
+    {:noreply, socket} = relay(socket, :select_duration, duration)
+    relay(socket, :next_step, nil)
   end
 
   # A theme's own event: relayed with its name and params untouched, for

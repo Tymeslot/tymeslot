@@ -436,7 +436,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: href,
-          status: "confirmed",
+          status: :confirmed,
           start_time: ~U[2099-12-15 10:00:00Z],
           end_time: ~U[2099-12-15 11:00:00Z]
         )
@@ -464,7 +464,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
                })
 
       reloaded = Repo.get!(Tymeslot.Meetings.MeetingSchema, meeting.id)
-      assert reloaded.status == "confirmed"
+      assert reloaded.status == :confirmed
       assert is_nil(reloaded.calendar_sync_status)
 
       # The full fetch the worker fell back to is what actually refreshed the

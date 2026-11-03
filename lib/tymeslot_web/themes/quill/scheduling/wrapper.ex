@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   use Phoenix.Component
 
   alias Tymeslot.Themes.Catalog
-  alias TymeslotWeb.Themes.Shared.Components.ThemeShell
+  alias TymeslotWeb.Themes.Shared.Components.{LegalLinks, ThemeShell}
   alias TymeslotWeb.Themes.Shared.ThemeStyle
 
   import TymeslotWeb.Components.BackgroundMotionToggle,
@@ -27,6 +27,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   attr :owner_preview, :boolean, default: false
   attr :refused_calendars, :list, default: []
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
+
+  attr :legal_links, :map,
+    required: true,
+    doc: "the organiser's legal links (`Profiles.public_legal_links/1`), or nil for none"
 
   attr :show_extensions, :boolean,
     default: true,
@@ -85,6 +89,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
           should_show_branding={@should_show_branding}
           {Map.take(assigns, [:demo_mode])}
         />
+        <LegalLinks.footer links={@legal_links} />
       </div>
     </ThemeShell.theme_shell>
     """

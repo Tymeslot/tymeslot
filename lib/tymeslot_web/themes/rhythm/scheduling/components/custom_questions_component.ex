@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
+  alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -25,9 +26,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
     assigns = Events.assign_render_state(assigns)
 
     ~H"""
-    <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
+    <div
+      class="scheduling-box booker-card"
+      data-locale={@locale}
+      data-testid="booker-card"
+      id={assigns[:moment] && "#{assigns[:moment]}-step"}
+      data-moment={assigns[:moment]}
+      data-moment-state={assigns[:moment_state]}
+    >
       <div class="slide-container">
-        <div class="slide active">
+        <div class="slide slide--enter active">
           <div class="slide-content">
             <%= if @total > 1 do %>
               <div
@@ -51,7 +59,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
               </div>
             <% end %>
 
-            <h2 class="slide-title">{@definition["label"]}</h2>
+            <JourneyComponents.moment_heading
+              moment={assigns[:moment]}
+              moment_state={assigns[:moment_state]}
+              focus={assigns[:journey_focus]}
+              class="slide-title"
+            >
+              {@definition["label"]}
+            </JourneyComponents.moment_heading>
 
             <%= if @definition["help_text"] do %>
               <p class="rhythm-questions-help">{@definition["help_text"]}</p>

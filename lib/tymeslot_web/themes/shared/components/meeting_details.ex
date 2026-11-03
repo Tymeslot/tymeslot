@@ -1,7 +1,9 @@
 defmodule TymeslotWeb.Themes.Shared.Components.MeetingDetails do
   @moduledoc """
   Shared meeting detail rows used by cancel/reschedule pages across themes.
-  Renders date, time, and organizer rows with icons. Themes wrap this in
+  Renders the meeting type, date, time, and organizer rows with icons; the
+  meeting type is the name stored on the booking, so a guest with several
+  bookings of the same length can tell which one they are changing. Themes wrap this in
   their own visual container (glassmorphism card, ticket, etc.) and provide
   CSS for the meeting-detail-* classes to match their visual style.
   """
@@ -19,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingDetails do
   attr :organizer_profile, :map, default: nil, doc: "fallback zone when the attendee's is unknown"
   attr :locale, :string, required: true
   attr :organizer_name, :string, default: nil
+  attr :meeting_type, :string, default: nil, doc: "the booked meeting type's name"
   attr :class, :string, default: nil
 
   @spec meeting_detail_rows(map()) :: Phoenix.LiveView.Rendered.t()
@@ -27,6 +30,19 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingDetails do
 
     ~H"""
     <div class={["meeting-detail-rows", @class]}>
+      <div
+        :if={@meeting_type not in [nil, ""]}
+        class="meeting-detail-row meeting-detail-row--meeting-type"
+        data-testid="chosen-meeting-type"
+      >
+        <div class="meeting-detail-icon-wrapper">
+          <.icon name="hero-tag" class="meeting-detail-icon" />
+        </div>
+        <div class="meeting-detail-info">
+          <span class="meeting-detail-value">{@meeting_type}</span>
+          <span class="meeting-detail-label">{dgettext("booking_manage", "Meeting")}</span>
+        </div>
+      </div>
       <div class="meeting-detail-row">
         <div class="meeting-detail-icon-wrapper">
           <.icon name="hero-calendar" class="meeting-detail-icon" />

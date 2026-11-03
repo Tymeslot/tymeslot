@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatUpdatesTest do
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -158,10 +160,36 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatUpdatesTest do
     profile: profile,
     meeting_type: meeting_type
   } do
-    # Watcher selects the first slot and moves on to the booking form.
+    watcher = fill_watchers_slot(conn, profile, meeting_type)
+
+    assigns = :sys.get_state(watcher.pid).socket.assigns
+    assert assigns.current_state == :schedule
+    assert assigns.selected_time == nil
+    assert render(watcher) =~ "This time slot is no longer available"
+  end
+
+  @tag :capture_log
+  test "the slot-taken flash is in the theme's voice where it has one", %{
+    conn: conn,
+    profile: profile,
+    meeting_type: meeting_type
+  } do
+    # The fixture theme ("99") words a taken time as "That time just went."
+    profile |> Changeset.change(booking_theme: "99") |> Repo.update!()
+
+    watcher = fill_watchers_slot(conn, profile, meeting_type)
+
+    assert :sys.get_state(watcher.pid).socket.assigns.current_state == :schedule
+    assert render(watcher) =~ "That time just went."
+    refute render(watcher) =~ "This time slot is no longer available"
+  end
+
+  # The watcher selects the first slot and moves on to the booking form, a
+  # rival fills the slot (capacity 2, booker plus one guest), and the domain
+  # layer's seat update is delivered deterministically.
+  defp fill_watchers_slot(conn, profile, meeting_type) do
     watcher = navigate_to_booking_form(conn, profile, nil)
 
-    # A rival booking fills the slot completely: capacity 2, booker plus one guest.
     rival = navigate_to_booking_form(build_conn(), profile, nil)
     send(rival.pid, {:step_event, :booking, :toggle_guests, nil})
     send(rival.pid, {:step_event, :booking, :add_guest, "companion@example.com"})
@@ -174,13 +202,8 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatUpdatesTest do
 
     wait_until(fn -> render(rival) =~ "rival@example.com" end)
 
-    # The domain layer broadcast this on booking; deliver it deterministically.
     send(watcher.pid, {:seat_update, meeting_type.id})
     _drain = :sys.get_state(watcher.pid)
-
-    assigns = :sys.get_state(watcher.pid).socket.assigns
-    assert assigns.current_state == :schedule
-    assert assigns.selected_time == nil
-    assert render(watcher) =~ "This time slot is no longer available"
+    watcher
   end
 end

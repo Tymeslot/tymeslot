@@ -27,7 +27,7 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpenedTest do
       meeting_type_name: "Discovery Call",
       amount_cents: 5000,
       currency: "eur",
-      status: "disputed",
+      status: :disputed,
       stripe_charge_id: "ch_DISPUTED",
       stripe_account_id: "acct_TEST",
       paid_at: DateTime.utc_now(:second)

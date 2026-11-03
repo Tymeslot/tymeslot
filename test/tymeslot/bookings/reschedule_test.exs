@@ -70,7 +70,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
       meeting
       |> Changeset.change(
-        calendar_sync_status: "externally_modified",
+        calendar_sync_status: :externally_modified,
         calendar_sync_status_dismissed_at: DateTime.utc_now(:second)
       )
       |> Repo.update!()
@@ -101,17 +101,17 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert {:ok, updated_meeting} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
-      assert updated_meeting.status == "confirmed"
+      assert updated_meeting.status == :confirmed
     end
 
     test "clears reschedule_requested_at without altering status when settling a request" do
       %{user: user} = create_always_bookable_profile()
-      meeting = insert_meeting_for_user(user, %{status: "confirmed"})
+      meeting = insert_meeting_for_user(user, %{status: :confirmed})
 
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
 
       {:ok, requested} = MeetingQueries.get_meeting(meeting.id)
-      assert requested.status == "confirmed"
+      assert requested.status == :confirmed
       assert %DateTime{} = requested.reschedule_requested_at
 
       new_params = %{
@@ -124,17 +124,17 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert {:ok, updated_meeting} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
-      assert updated_meeting.status == "confirmed"
+      assert updated_meeting.status == :confirmed
       assert updated_meeting.reschedule_requested_at == nil
 
       {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
-      assert reloaded.status == "confirmed"
+      assert reloaded.status == :confirmed
       assert reloaded.reschedule_requested_at == nil
     end
 
     test "a second request after the attendee rebooked is a new email, and only it is sent" do
       %{user: user} = create_always_bookable_profile()
-      meeting = insert_meeting_for_user(user, %{status: "confirmed"})
+      meeting = insert_meeting_for_user(user, %{status: :confirmed})
       first_at = DateTime.utc_now(:second)
 
       freeze_clock(first_at)
@@ -177,7 +177,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
     test "pending meeting: reschedule request then rebook does not silently confirm it" do
       %{user: user} = create_always_bookable_profile()
-      meeting = insert_meeting_for_user(user, %{status: "pending"})
+      meeting = insert_meeting_for_user(user, %{status: :pending})
 
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
 
@@ -191,13 +191,13 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert {:ok, updated_meeting} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
-      assert updated_meeting.status == "pending"
+      assert updated_meeting.status == :pending
       assert updated_meeting.reschedule_requested_at == nil
     end
 
     test "awaiting_payment meeting: reschedule request then rebook does not silently confirm an unpaid meeting" do
       %{user: user} = create_always_bookable_profile()
-      meeting = insert_meeting_for_user(user, %{status: "awaiting_payment"})
+      meeting = insert_meeting_for_user(user, %{status: :awaiting_payment})
 
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
 
@@ -211,7 +211,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert {:ok, updated_meeting} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
-      assert updated_meeting.status == "awaiting_payment"
+      assert updated_meeting.status == :awaiting_payment
       assert updated_meeting.reschedule_requested_at == nil
     end
 
@@ -350,7 +350,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       insert(:meeting,
         organizer_user_id: user.id,
         organizer_email: user.email,
-        status: "confirmed",
+        status: :confirmed,
         start_time: start_time,
         end_time: end_time
       )
@@ -412,7 +412,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
 
       # Update meeting to cancelled status
-      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: :cancelled})
 
       assert {:error, {:not_reschedulable, :cancelled}} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
@@ -424,7 +424,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       # A lapsed approval request or an abandoned paid checkout leaves the
       # meeting "expired", which releases its slot; rescheduling it would move
       # a booking that reserves nothing.
-      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "expired"})
+      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: :expired})
 
       assert {:error, {:not_reschedulable, :expired}} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
@@ -435,7 +435,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
       meeting =
         insert_meeting_for_user(user, %{
-          status: "completed",
+          status: :completed,
           start_offset: -7_200,
           duration: 3_600
         })

@@ -45,7 +45,7 @@ defmodule Tymeslot.Slack.SlackQueries do
   def delete_pending_stubs(user_id) do
     SlackIntegrationSchema
     |> where([i], i.user_id == ^user_id)
-    |> where([i], i.app_mode == "oauth")
+    |> where([i], i.app_mode == :oauth)
     |> where([i], is_nil(i.channel_id))
     |> Repo.delete_all()
   end
@@ -61,7 +61,7 @@ defmodule Tymeslot.Slack.SlackQueries do
   @spec delete_stale_pending_stubs(DateTime.t()) :: {non_neg_integer(), nil | [term()]}
   def delete_stale_pending_stubs(cutoff) do
     SlackIntegrationSchema
-    |> where([i], i.app_mode == "oauth")
+    |> where([i], i.app_mode == :oauth)
     |> where([i], is_nil(i.channel_id))
     |> where([i], i.updated_at == i.inserted_at)
     |> where([i], i.inserted_at < ^cutoff)

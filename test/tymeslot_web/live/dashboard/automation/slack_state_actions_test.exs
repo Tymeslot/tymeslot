@@ -19,8 +19,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
 
+  alias Plug.HTML
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Onboarding.OnboardingQueries
+  alias Tymeslot.RateLimiterTestHelpers
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
 
@@ -56,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   defp webhook_integration(user, attrs \\ %{}) do
     defaults = %{
       user: user,
-      app_mode: "webhook_url",
+      app_mode: :webhook_url,
       webhook_url_encrypted:
         Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
       bot_token_encrypted: nil,
@@ -72,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   defp oauth_integration(user, attrs \\ %{}) do
     defaults = %{
       user: user,
-      app_mode: "oauth",
+      app_mode: :oauth,
       bot_token_encrypted: Encryption.encrypt("xoxb-test-token"),
       channel_id: "C123",
       channel_name: "#bookings",
@@ -86,6 +88,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   # Test connection
   # ---------------------------------------------------------------------------
 
+  # The rendered page escapes apostrophes in the limiter's message.
   describe "Test connection (webhook URL)" do
     test "POSTs to the webhook URL and shows a success flash", %{conn: conn, user: user} do
       _integration = webhook_integration(user)
@@ -116,6 +119,25 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       view |> element("button", "Test") |> render_click()
 
       refute render(view) =~ "Test message sent"
+    end
+
+    @tag :capture_log
+    test "flashes the refusal and sends nothing once the test limit is exhausted", %{
+      conn: conn,
+      user: user
+    } do
+      _integration = webhook_integration(user)
+      message = RateLimiterTestHelpers.exhaust_limit!(:webhook_test, user.id)
+
+      # No `post` expectation: Mox fails the test if the handler tries to deliver.
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_slack_tab(view)
+
+      view |> element("button", "Test") |> render_click()
+
+      html = render(view)
+      assert html =~ HTML.html_escape(message)
+      refute html =~ "Test message sent"
     end
   end
 

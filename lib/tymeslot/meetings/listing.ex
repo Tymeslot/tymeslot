@@ -68,6 +68,10 @@ defmodule Tymeslot.Meetings.Listing do
 
   @doc """
   High-level function to list meetings for a user based on a filter string.
+
+  Takes `:per_page`, `:after` (a cursor) and `:booking_page`, which narrows
+  the list to the bookings made through one of the user's booking pages (its
+  id) or through their own page (`:main`).
   """
   @spec list_user_meetings_by_filter(integer(), String.t(), keyword()) ::
           {:ok, CursorPage.t()} | {:error, :invalid_cursor}
@@ -89,26 +93,30 @@ defmodule Tymeslot.Meetings.Listing do
         "upcoming" ->
           [
             time_filter: :upcoming,
-            exclude_status: ["cancelled", "awaiting_approval", "expired"],
+            exclude_status: [:cancelled, :awaiting_approval, :expired],
             # Soonest first, the order a host works through them; every
             # other list stays newest first.
             order: :asc
           ]
 
         "past" ->
-          [time_filter: :past, exclude_status: "cancelled"]
+          [time_filter: :past, exclude_status: :cancelled]
 
         "cancelled" ->
-          [status: "cancelled"]
+          [status: :cancelled]
 
         "awaiting_approval" ->
-          [status: "awaiting_approval"]
+          [status: :awaiting_approval]
 
         _other ->
           []
       end
 
-    query_opts = Keyword.merge(query_opts, per_page: per_page)
+    query_opts =
+      Keyword.merge(query_opts,
+        per_page: per_page,
+        booking_page: Keyword.get(opts, :booking_page)
+      )
 
     query_opts =
       if after_cursor, do: Keyword.put(query_opts, :after, after_cursor), else: query_opts
@@ -149,7 +157,8 @@ defmodule Tymeslot.Meetings.Listing do
       time_filter: time_filter,
       after_start: after_start,
       after_id: after_id,
-      order: order
+      order: order,
+      booking_page: Keyword.get(opts, :booking_page)
     )
   end
 

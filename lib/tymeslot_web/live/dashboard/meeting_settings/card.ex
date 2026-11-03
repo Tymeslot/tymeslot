@@ -41,6 +41,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   attr :timezone, :string, default: "Etc/UTC"
   attr :time_format, :string, default: "24h"
 
+  attr :unlisted, :boolean,
+    default: nil,
+    doc: "on no page at all; nil falls back to the type's own `is_private`"
+
+  attr :link_path, :string,
+    default: nil,
+    doc: "the type's one booking address (`BookingPages.meeting_type_path/2`), shown when set"
+
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
     ~H"""
@@ -65,12 +73,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               {@type.name}
             </h2>
             <Feedback.pill
-              :if={@type.is_private}
+              :if={if(is_nil(@unlisted), do: @type.is_private, else: @unlisted)}
               icon="hero-eye-slash-mini"
               title={
                 dgettext(
                   "dashboard_meeting_types",
-                  "Hidden from your public booking page; reachable only by its direct link"
+                  "On no booking page; reachable only by its direct link"
                 )
               }
             >
@@ -80,12 +88,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               :if={is_nil(@next_date)}
               tone={:warning}
               icon="hero-calendar-mini"
-              title={
-                dgettext(
-                  "dashboard_meeting_types",
-                  "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
-                )
-              }
+              title={no_open_dates_reason(@type)}
               data-testid="no-open-dates"
             >
               {dgettext("dashboard_meeting_types", "No open dates")}
@@ -105,6 +108,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               data-testid="paid-type-unsellable"
             >
               {dgettext("dashboard_meeting_types", "Not offered")}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={@link_path}
+              size={:sm}
+              icon="hero-link-mini"
+              title={dgettext("dashboard_meeting_types", "Booking link")}
+              data-testid="meeting-type-link"
+            >
+              {@link_path}
             </Feedback.pill>
           </div>
           <p
@@ -215,6 +227,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           />
 
           <Buttons.icon_button
+            icon="hero-document-duplicate"
+            size={:sm}
+            label={dgettext("dashboard_meeting_types", "Duplicate %{name}", name: @type.name)}
+            tooltip={dgettext("dashboard_meeting_types", "Duplicate")}
+            phx-click="duplicate_type"
+            phx-value-id={@type.id}
+            phx-target={@myself}
+          />
+
+          <Buttons.icon_button
             icon="hero-trash"
             variant={:danger}
             size={:sm}
@@ -293,6 +315,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     end
   end
 
+  # A group type waits for a session open for registration; a one-to-one
+  # type for an offered time a booker can pick now.
+  defp no_open_dates_reason(%{max_participants: max}) when is_integer(max) and max > 1 do
+    dgettext(
+      "dashboard_meeting_types",
+      "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+    )
+  end
+
+  defp no_open_dates_reason(_type) do
+    dgettext(
+      "dashboard_meeting_types",
+      "Not on your booking page until it offers a time a booker can pick: one past the minimum notice and within the booking window. Add a time to offer."
+    )
+  end
+
   defp next_date_label(datetime, timezone, time_format) do
     date = datetime |> DashboardFormat.local_date(timezone) |> DashboardFormat.short_date()
     "#{date}, #{DashboardFormat.clock(datetime, timezone, time_format)}"
@@ -367,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   # venue by name, or how many the booker picks between. Venue ids no longer
   # in the library are ignored, so a deleted venue never shows; with none left
   # the location's own label stands.
-  defp single_label(%LocationOption{kind: "in_person", venue_ids: ids} = location, venues) do
+  defp single_label(%LocationOption{kind: :in_person, venue_ids: ids} = location, venues) do
     case Enum.filter(venues, &(&1.id in ids)) do
       [] ->
         location.label
@@ -390,12 +428,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   # The provider whose mark a video location shows, or nil for a location
   # that is not a video call (or whose integration has since been deleted,
   # leaving nothing to name).
-  defp video_provider(%{kind: "video"}, %{video_integration: %{provider: provider}}), do: provider
+  defp video_provider(%{kind: :video}, %{video_integration: %{provider: provider}}), do: provider
   defp video_provider(_location, _type), do: nil
 
-  defp kind_icon("video"), do: "hero-video-camera-mini"
-  defp kind_icon("phone"), do: "hero-phone-mini"
-  defp kind_icon("in_person"), do: "hero-building-office-mini"
+  defp kind_icon(:video), do: "hero-video-camera-mini"
+  defp kind_icon(:phone), do: "hero-phone-mini"
+  defp kind_icon(:in_person), do: "hero-building-office-mini"
   defp kind_icon(_kind), do: "hero-map-pin-mini"
 
   defp custom_question_count(%{custom_fields: fields}) when is_list(fields), do: length(fields)

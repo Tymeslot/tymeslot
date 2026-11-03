@@ -32,7 +32,7 @@ defmodule Tymeslot.Emails.Templates.HostManagedOrganizerEmailsTest do
         title: "Board meeting",
         attendee_name: "Ada Lovelace",
         attendee_email: "ada@example.com",
-        status: "confirmed",
+        status: :confirmed,
         managed_by_host: true,
         meeting_type_id: nil
       )

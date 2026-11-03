@@ -29,7 +29,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
 
   attr :question, :string,
     required: true,
-    doc: "the question's id, the markup contract's `data-question`"
+    doc:
+      "the question's id, the markup contract's `data-question`, sent with the answer as `question`"
 
   slot :inner_block, required: true
 
@@ -48,6 +49,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
         class="sr-only"
         phx-click={@event}
         phx-value-value={@value}
+        phx-value-question={@question}
         phx-target={@myself}
         data-fact="answer"
         data-question={@question}

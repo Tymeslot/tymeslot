@@ -7,16 +7,18 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
   another calendar (`Tymeslot.CalendarGrid.SeriesTransfer`). A series just
   created from the grid is carried the same way into its first sync.
 
-  Two things about a series live in Tymeslot alone:
+  Three things about a series live in Tymeslot alone:
 
     * its video, the `video_link` and `video_integration_id` of its rows. No
       sync writes them: `ProviderCalendarEventQueries.replace_fields/0` leaves
       them out, so that a row the sync updates keeps them, but a row the sync
       inserts has none;
     * the organiser's colour overrides (`Calendar.set_event_colour/3`), each
-      keyed by the uid one occurrence is cached under.
+      keyed by the uid one occurrence is cached under;
+    * the notices of guests an update email could not reach
+      (`Tymeslot.CalendarGrid.UndeliveredUpdates`), keyed the same way.
 
-  `plan/3` reads both from the series' rows, and so runs before they are
+  `plan/3` reads them from the series' rows, and so runs before they are
   deleted; `carry/1` writes them once they are. A write that has reached the
   calendar cannot be undone, so neither step may fail it: each is rescued
   and logged, and a plan that could not be read carries nothing.
@@ -43,9 +45,10 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
   event it was made for: an Outlook series moved to another calendar is a
   copy without it (see `SeriesTransfer`), so its link is not carried there.
 
-  ## Colour overrides
+  ## Colour overrides and undelivered update notices
 
-  An override is moved to the uid its occurrence will be cached under,
+  Both are keyed by an occurrence's uid and move together; what follows
+  says it of an override. An override is moved to the uid its occurrence will be cached under,
   which is derived from the uid it had, how far the series moved, and the
   uid of the series it now belongs to, never from a later read of the cache,
   which does not hold the new rows yet. Google and the CalDAV family cache an
@@ -78,6 +81,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
+  alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
@@ -131,7 +135,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
   @typedoc "What `carry/1` writes."
   @opaque plan :: %{
             user_id: pos_integer(),
-            colour_moves: [{{pos_integer(), String.t()}, {pos_integer(), String.t()} | nil}],
+            uid_moves: [{{pos_integer(), String.t()}, {pos_integer(), String.t()} | nil}],
             video: {pos_integer(), String.t()} | nil,
             video_to: [series()]
           }
@@ -168,21 +172,26 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
 
     %{
       user_id: user_id,
-      colour_moves: colour_moves(source, parts, stamps(stored)),
+      uid_moves: uid_moves(source, parts, stamps(stored)),
       video: carried_video(user_id, stored, source, rows, write),
       video_to: for({part_rows, series, _shift} <- parts, part_rows != [], do: series)
     }
   end
 
   @doc """
-  Writes what `plan` carries: moves the colour overrides, and hands the
+  Writes what `plan` carries: moves the colour overrides and the
+  undelivered update notices, and hands the
   series' video to `Tymeslot.Workers.SeriesVideoWorker` for each series it
   goes to. Always `:ok`; a failure is logged.
   """
   @spec carry(plan()) :: :ok
   def carry(%{user_id: user_id} = plan) do
     step("move the series' colour overrides", user_id, fn ->
-      ColourOverrideQueries.move_external(user_id, plan.colour_moves)
+      ColourOverrideQueries.move_external(user_id, plan.uid_moves)
+    end)
+
+    step("move the series' undelivered update notices", user_id, fn ->
+      UndeliveredUpdates.series_rewritten(user_id, plan.uid_moves)
     end)
 
     step("hand over the series' video", user_id, fn ->
@@ -258,7 +267,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
     end
   end
 
-  defp nothing(user_id), do: %{user_id: user_id, colour_moves: [], video: nil, video_to: []}
+  defp nothing(user_id), do: %{user_id: user_id, uid_moves: [], video: nil, video_to: []}
 
   # The rows each series the write left takes, with that series and how far
   # the write moved their slots (`:unknown` when it could not be read).
@@ -287,7 +296,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
 
   defp retarget({kind, _id}, id), do: {kind, id}
 
-  defp colour_moves(source, parts, stamps) do
+  defp uid_moves(source, parts, stamps) do
     Enum.flat_map(parts, fn {rows, series, shift} ->
       rows
       |> Enum.map(

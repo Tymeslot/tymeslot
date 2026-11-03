@@ -28,6 +28,16 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp with_id(query, nil), do: query
   defp with_id(query, id), do: from(m in query, where: m.id == ^id)
 
+  # `:main` is the profile's own page (and any booking through no page, or
+  # through one deleted since); an id is one of its booking pages.
+  defp through_booking_page(query, nil), do: query
+
+  defp through_booking_page(query, :main),
+    do: from(m in query, where: is_nil(m.booking_page_id))
+
+  defp through_booking_page(query, page_id) when is_integer(page_id),
+    do: from(m in query, where: m.booking_page_id == ^page_id)
+
   defp with_status(query, nil), do: query
   defp with_status(query, status), do: from(m in query, where: m.status == ^status)
 
@@ -190,7 +200,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   one deleted. Ended meetings are left to the clean-up jobs.
   """
   @spec list_upcoming_video_rooms_for_integration(pos_integer(), DateTime.t(), pos_integer()) ::
-          [%{id: String.t(), status: String.t()}]
+          [%{id: String.t(), status: MeetingState.status()}]
   def list_upcoming_video_rooms_for_integration(integration_id, %DateTime{} = now, limit) do
     Meeting
     |> where([m], m.video_integration_id == ^integration_id)
@@ -214,7 +224,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   @spec list_cancelled_with_video_room(DateTime.t(), pos_integer()) :: [Meeting.t()]
   def list_cancelled_with_video_room(cancelled_before, limit \\ 200) do
     Meeting
-    |> where([m], m.status == "cancelled")
+    |> where([m], m.status == :cancelled)
     |> where([m], not is_nil(m.video_room_id))
     |> where([m], m.cancelled_at < ^cancelled_before)
     |> order_by([m], asc: m.cancelled_at)
@@ -244,7 +254,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> join(:left, [m], vi in assoc(m, :video_integration))
     |> where([m], m.video_provider in ^providers)
     |> where([m], not is_nil(m.video_room_id))
-    |> where([m], m.status != "cancelled")
+    |> where([m], m.status != :cancelled)
     |> where(
       [m, vi],
       is_nil(m.video_integration_id) or (not vi.needs_reauth and is_nil(vi.deleted_at))
@@ -432,7 +442,9 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   @doc """
   Cursor-based pagination for the organiser's meetings using keyset on start_time and id.
   Accepts opts: :after_start (DateTime), :after_id (binary_id), :per_page, :status, :time_filter (:upcoming | :past),
-  :id (one meeting only), :order (:desc, the default, newest first; or :asc, soonest first).
+  :id (one meeting only), :order (:desc, the default, newest first; or :asc, soonest first),
+  :booking_page (`:main` for bookings through no page, or a booking page id).
+  Each meeting comes with the booking page it was booked through.
   Returns a list limited to per_page.
   """
   @spec list_meetings_for_organizer_paginated_cursor(pos_integer(), Keyword.t()) :: [Meeting.t()]
@@ -454,14 +466,16 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> with_id(Keyword.get(opts, :id))
     |> with_status(status)
     |> without_status(exclude_status)
+    |> through_booking_page(Keyword.get(opts, :booking_page))
     |> apply_time_filter(time_filter, now)
     |> order_by_start_and_id(order)
     |> cursor_after(after_start, after_id, order)
     |> apply_limit(limit)
-    |> preload(
+    |> preload([
+      :booking_page,
       guests: ^live_guests_preload(),
       participants: ^card_participants_preload()
-    )
+    ])
     |> Repo.all()
   end
 
@@ -487,7 +501,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     from(p in ParticipantSchema,
       join: m in Meeting,
       on: m.id == p.meeting_id,
-      where: is_nil(p.cancelled_at) or m.status == "cancelled",
+      where: is_nil(p.cancelled_at) or m.status == :cancelled,
       order_by: [asc: p.inserted_at, asc: p.id]
     )
   end

@@ -1,0 +1,175 @@
+/* The schedule screen's details part (Paper.Scheduling.Details,
+   section.paper-book): once a time is picked, a heading, the chosen day and
+   time, every question one under another, then the form and its submit. It
+   follows the picker under a hairline rule, in a reading width of its own;
+   once the card shows the details column beside the picker, the part lines
+   up under the picker, so the column stays a sidebar.
+     below 40rem (month) / 59rem (week)  full width
+     from there                           under the picker
+     from 52rem (month)                   in the picker's place, once a time
+                                          is picked (paper-card--booking) */
+
+.paper-book {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: var(--paper-book-width);
+  /* In the one-column schedule the grid's gap is the space above the rule,
+     matching the space under it, as under the details' own rule. */
+  padding-top: var(--space-lg);
+  border-top: var(--border-width-thin) solid var(--line-1);
+}
+
+/* The keyed wrapper that remounts the heading on every pick adds no box. */
+.paper-book__head {
+  display: contents;
+}
+
+/* Brought to the top of the view once a time is picked
+   (reveal_into_view.js), with a little room above it. */
+.paper-book__title {
+  margin: 0;
+  scroll-margin-top: var(--space-lg);
+}
+
+/* The heading takes the focus when the part appears, to bring it into view;
+   a ring there would read as a control. A keyboard user tabbing back to it
+   still sees one. */
+.paper-book__title:focus {
+  outline: none;
+}
+
+.paper-book__title:focus-visible {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--space-3xs);
+}
+
+.paper-book__when {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2xs);
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The icon centres on the date's first line, whatever the date wraps to. */
+.paper-book__when-icon {
+  flex-shrink: 0;
+  width: var(--paper-icon-sm);
+  height: var(--paper-icon-sm);
+  margin-top: calc((1lh - var(--paper-icon-sm)) / 2);
+  color: var(--ink-2);
+}
+
+/* "Change time": a quiet text button after the chosen time, which takes
+   the focus back to that time in the picker. It stays on the date's first
+   line; a date too long for the row wraps inside its own text instead. */
+.paper-book__change {
+  flex-shrink: 0;
+  margin-inline-start: var(--space-2xs);
+  padding: 0;
+  white-space: nowrap;
+  border: 0;
+  background: none;
+  color: var(--theme-primary);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: var(--space-3xs);
+  cursor: pointer;
+}
+
+.paper-book__change:focus-visible {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--space-3xs);
+}
+
+/* A paid type's price (J5X2), right above the submit, at its end. */
+.paper-book .paper-book__price {
+  align-self: flex-end;
+}
+
+/* The day after, for a meeting that ends past midnight in the visitor's
+   timezone: under the chosen time, quieter. */
+.paper-book__when--end {
+  color: var(--ink-2);
+  font-weight: var(--font-weight-normal);
+}
+
+/* Every question at once, one under another, with more room between
+   questions than inside one; the last one sits a rule's width above the
+   form. */
+.paper-book__questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.paper-question__label {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  overflow-wrap: anywhere;
+}
+
+/* The required marker, in the danger ink Name and Email's markers take
+   (controls.css), contrast-checked against Paper's surfaces. */
+.paper-question__required {
+  margin-inline-start: var(--space-hairline);
+  color: var(--theme-danger);
+}
+
+/* The part starts with its own rule, so its action rows draw none, and it
+   is not the bar the week view keeps in sight. */
+.paper-book .paper-actions {
+  position: static;
+  margin-top: var(--space-xs);
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Inside the schedule's grid, the part takes the picker's column; that
+   grid has no gap, so the part keeps its own space above the rule. */
+@container scheduling (min-width: 40rem) {
+  .paper-schedule:not(.paper-schedule--week) > .paper-book {
+    grid-column: 2;
+    margin-top: var(--space-xl);
+    margin-inline-start: var(--space-lg);
+  }
+}
+
+@container scheduling (min-width: 59rem) {
+  .paper-schedule--week > .paper-book {
+    grid-column: 2;
+    margin-top: var(--space-xl);
+    margin-inline-start: var(--space-lg);
+  }
+}
+
+/* On a wide card, once a time is picked, the part takes the picker's
+   place beside the details; "Change time" brings the picker back. */
+@container scheduling (min-width: 52rem) {
+  .paper-card--booking .paper-schedule:not(.paper-schedule--week):has(> .paper-book) > .paper-picker {
+    display: none;
+  }
+
+  .paper-card--booking .paper-schedule:not(.paper-schedule--week) > .paper-book {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+}

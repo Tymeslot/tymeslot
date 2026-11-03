@@ -1,0 +1,62 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "All events"
+msgstr "Todos los eventos"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This and following events"
+msgstr "Este evento y los siguientes"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event"
+msgstr "Este evento"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change a repeating event"
+msgstr "Cambiar un evento periódico"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete a repeating event"
+msgstr "Eliminar un evento periódico"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Only “This event” can be undone."
+msgstr "Solo se puede deshacer «Este evento»."
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Should the new pattern apply to this and the following events, or to all of them?"
+msgstr "«%{title}» se repite. ¿El nuevo patrón debe aplicarse a este evento y los siguientes, o a todos?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should be deleted?"
+msgstr "«%{title}» se repite. ¿Qué eventos se deben eliminar?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should change?"
+msgstr "«%{title}» se repite. ¿Qué eventos se deben cambiar?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should your changes apply to? Your answer holds until you close the details."
+msgstr "«%{title}» se repite. ¿A qué eventos deben aplicarse tus cambios? Tu respuesta se mantiene hasta que cierres los detalles."

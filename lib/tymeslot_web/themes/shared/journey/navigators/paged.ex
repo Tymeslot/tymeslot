@@ -20,7 +20,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
 
   A moment none of whose facts this booking needs is skipped: the questions
   of a meeting type that has none. Moments are shown through
-  `Journey.Runtime.transition_to/3`.
+  `Journey.Runtime.transition_to/3`. A move by Next, Back or the step
+  indicator sends the focus to the moment shown (the runtime's
+  `:journey_focus`), so each moment's screen opens with its heading through
+  `Journey.Components.moment_heading/1`; the moment a page loads on never
+  takes it.
   """
 
   import Phoenix.LiveView, only: [put_flash: 3]

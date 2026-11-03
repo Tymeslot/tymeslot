@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.HttpLogging do
   other, and the copy that missed it is the one that leaks.
   """
 
+  alias Tymeslot.Infrastructure.Logging.Redactor
+
   # Enough of an unmodelled error body to carry the server's explanation (they
   # answer 4xx with a short XML or plain-text sentence) without pouring a whole
   # response into the logs.
@@ -44,7 +46,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.HttpLogging do
 
   @doc """
   The first #{@body_excerpt_chars} characters of a response body, whitespace
-  collapsed, for the log line of a status the caller does not model.
+  collapsed and credentials redacted, for the log line of a status the caller
+  does not model. Redaction runs before the cut, so a secret straddling the
+  limit cannot leave its first half behind.
 
   A body that is not valid text is reported as such rather than rendered: a
   binary attachment or a truncated multi-byte sequence would otherwise reach
@@ -54,6 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.HttpLogging do
   def body_excerpt(body) when is_binary(body) do
     if String.valid?(body) do
       body
+      |> Redactor.redact()
       |> String.slice(0, @body_excerpt_chars)
       |> String.replace(~r/\s+/, " ")
       |> String.trim()

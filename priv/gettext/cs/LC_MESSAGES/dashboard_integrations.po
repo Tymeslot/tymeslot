@@ -471,3 +471,23 @@ msgstr "Služba %{service} je právě přetížená. Zkuste to prosím znovu za 
 #, elixir-autogen, elixir-format
 msgid "Authorisation was denied. Please try again."
 msgstr "Autorizace byla zamítnuta. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not duplicate this meeting type. Check its settings, then try again."
+msgstr "Tento typ schůzky se nepodařilo duplikovat. Zkontrolujte jeho nastavení a zkuste to znovu."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Add its dates, then switch it on."
+msgstr "Typ schůzky byl duplikován a vypnut. Přidejte termíny a pak ho zapněte."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type duplicated and switched off. Switch it on when it is ready."
+msgstr "Typ schůzky byl duplikován a vypnut. Zapněte ho, až bude připravený."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
+msgstr "Tento typ schůzky využívá funkci, kterou váš aktuální tarif nezahrnuje, a proto ho nelze duplikovat."

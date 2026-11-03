@@ -42,13 +42,19 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRules do
 
   @typedoc """
   Reads one master, given its id and the calendar an occurrence of it is in
-  (nil when not known): its rule (nil when it is not a series) and first start,
-  `:gone` when the provider no longer has it, or `{:stop, reason}` when no
-  further master should be read this run (throttled, refused, unreachable).
+  (nil when not known): its rule (nil when it is not a series), first start
+  and, where the provider gives one, iCalendar UID; `:gone` when the provider
+  no longer has it, or `{:stop, reason}` when no further master should be
+  read this run (throttled, refused, unreachable).
   """
   @type read ::
           (String.t(), String.t() | nil ->
-             {:ok, %{rule: String.t() | nil, master_start: DateTime.t() | nil}}
+             {:ok,
+              %{
+                optional(:ical_uid) => String.t() | nil,
+                rule: String.t() | nil,
+                master_start: DateTime.t() | nil
+              }}
              | :gone
              | {:stop, term()})
 
@@ -68,25 +74,47 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRules do
   makes, and across concurrent syncs, failed reads included. Never fails: a
   read that cannot be made, or the spent budget, stops the rest for this
   run, and the occurrences are cached as they would be without it.
+
+  `already_read:` takes what reads made earlier in the same run found, each
+  made through `charged_read/2` (a map from master id to its answer, as
+  `read` gives it): those are stored as they are, neither read nor charged
+  again. A `{:stop, reason}` among them means those reads were stopped, and
+  so are this call's.
   """
   @spec refresh(integer(), [map()], read(), keyword()) :: :ok
   def refresh(integration_id, calendar_events, read, opts \\ []) do
+    {stopped, already_read} =
+      opts
+      |> Keyword.get(:already_read, %{})
+      |> Map.split_with(&match?({_master_id, {:stop, _reason}}, &1))
+
+    Enum.each(already_read, fn {master_id, result} ->
+      stored(integration_id, master_id, result)
+    end)
+
+    if stopped == %{},
+      do: read_due(integration_id, calendar_events, read, already_read, opts),
+      else: :ok
+  end
+
+  defp read_due(integration_id, calendar_events, read, already_read, opts) do
     now = DateTime.truncate(Clock.utc_now(), :second)
     stale_before = DateTime.add(now, -@fresh_for_seconds, :second)
 
-    named = named_masters(calendar_events)
+    named = Enum.reject(named_masters(calendar_events), &is_map_key(already_read, elem(&1, 0)))
     due = due_named(integration_id, named, stale_before, Keyword.get(opts, :changed, false))
-    due_ids = Enum.map(due, &elem(&1, 0))
+    skip_ids = Enum.map(due, &elem(&1, 0)) ++ Map.keys(already_read)
     room = max(@max_reads_per_window - length(due), 0)
 
-    (due ++ SeriesRuleQueries.masters_to_refresh(integration_id, stale_before, due_ids, room))
+    (due ++ SeriesRuleQueries.masters_to_refresh(integration_id, stale_before, skip_ids, room))
     |> Enum.take(@max_reads_per_window)
     |> Enum.reduce_while(:ok, fn {master_id, calendar_id}, :ok ->
-      with :ok <- charge(integration_id),
-           result = read.(master_id, calendar_id),
-           :ok <- stored(integration_id, master_id, result) do
-        {:cont, :ok}
-      else
+      result = charged_read(integration_id, fn -> read.(master_id, calendar_id) end)
+
+      case stored(integration_id, master_id, result) do
+        :ok ->
+          {:cont, :ok}
+
         {:stop, reason} ->
           Logger.warning("Stopped reading series rules for this sync run",
             calendar_integration_id: integration_id,
@@ -98,21 +126,29 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRules do
     end)
   end
 
-  # Every read is charged before it is made, whatever it then answers, so
-  # failures spend the budget as successes do.
-  defp charge(integration_id) do
+  @doc """
+  Makes one read of a series' master for the integration, `read`, once it
+  is charged to the integration's `:series_rule_read` limit: before it is
+  made, whatever it then answers, so failures spend the budget as successes
+  do. `{:stop, :read_budget_spent}`, unread, once the budget is spent.
+
+  Every read of a master the sync makes goes through here, whatever it
+  reads the master for, so they share the one budget.
+  """
+  @spec charged_read(integer(), (-> result)) :: result | {:stop, term()} when result: var
+  def charged_read(integration_id, read) do
     case RateLimiter.check(:series_rule_read, integration_id) do
-      :ok -> :ok
+      :ok -> read.()
       {:error, _limited, _message} -> {:stop, :read_budget_spent}
       {:error, reason} -> {:stop, reason}
     end
   end
 
   defp stored(integration_id, master_id, {:ok, found}),
-    do: store(integration_id, master_id, found)
+    do: store(integration_id, master_id, Map.put_new(found, :ical_uid, nil))
 
   defp stored(integration_id, master_id, :gone),
-    do: store(integration_id, master_id, %{rule: nil, master_start: nil})
+    do: store(integration_id, master_id, %{rule: nil, master_start: nil, ical_uid: nil})
 
   defp stored(_integration_id, _master_id, {:stop, _reason} = stop), do: stop
 
@@ -175,6 +211,18 @@ defmodule Tymeslot.Integrations.Calendar.SeriesRules do
     )
 
     :ok
+  end
+
+  @doc """
+  The iCalendar UID of the series whose master is `master_id`, as last read
+  from the master, or nil when it was never read or the provider gave none.
+  """
+  @spec ical_uid(integer(), String.t()) :: String.t() | nil
+  def ical_uid(integration_id, master_id) do
+    case SeriesRuleQueries.list_by_master(integration_id, [master_id]) do
+      %{^master_id => %{ical_uid: uid}} -> uid
+      _unread -> nil
+    end
   end
 
   @doc """

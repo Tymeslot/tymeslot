@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
       |> assign(assigns)
       |> assign(:mode, mode)
       |> assign(:integration, integration)
-      |> assign(:shared_bot_mode, Telegram.form_bot_mode(mode, integration) == "shared")
+      |> assign(:shared_bot_mode, Telegram.form_bot_mode(mode, integration) == :shared)
       |> assign(:form_values, form_values)
       |> assign(:form_errors, assigns[:form_errors] || %{})
 

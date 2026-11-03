@@ -49,14 +49,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         group?: Helpers.group_meeting?(assigns.meeting),
         managed?: HostManaged.managed?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
-        answered_fields: answered_fields(assigns.meeting)
+        answered_fields: answered_fields(assigns.meeting),
+        booking_page: booking_page(assigns.meeting)
       )
 
     ~H"""
     <Containers.card>
       <.calendar_sync_banner
         :if={
-          @meeting.calendar_sync_status in ["externally_deleted", "externally_modified"] and
+          @meeting.calendar_sync_status in [:externally_deleted, :externally_modified] and
             is_nil(@meeting.calendar_sync_status_dismissed_at)
         }
         meeting={@meeting}
@@ -78,6 +79,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.attendee_company}
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
+            <%!-- The booking page it came through; nothing for the host's
+                 own page, or for a page deleted since. --%>
+            <Feedback.pill
+              :if={@booking_page}
+              tone={:neutral}
+              size={:sm}
+              icon="hero-window"
+              data-testid="booking-page-tag"
+            >
+              {dgettext("dashboard_bookings", "via %{page}", page: @booking_page.name)}
+            </Feedback.pill>
             <Feedback.pill
               :if={@managed?}
               tone={:brand}
@@ -298,19 +310,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     ~H"""
     <div class={[
       "flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 rounded-token-2xl px-5 py-4 mb-6 border-2",
-      if(@meeting.calendar_sync_status == "externally_deleted",
+      if(@meeting.calendar_sync_status == :externally_deleted,
         do: "bg-red-50 border-red-200 text-red-800",
         else: "bg-amber-50 border-amber-200 text-amber-800"
       )
     ]}>
       <p class="font-medium text-token-sm">
-        <span :if={@meeting.calendar_sync_status == "externally_deleted"}>
+        <span :if={@meeting.calendar_sync_status == :externally_deleted}>
           {dgettext(
             "dashboard_bookings",
             "This meeting's event was deleted from your external calendar."
           )}
         </span>
-        <span :if={@meeting.calendar_sync_status != "externally_deleted"}>
+        <span :if={@meeting.calendar_sync_status != :externally_deleted}>
           {dgettext(
             "dashboard_bookings",
             "This meeting's event was rescheduled in your external calendar."
@@ -360,7 +372,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # booked when it was called off: the participants whose own seat was never
   # released (the host cancelled the slot, or its calendar event was deleted).
   # A slot cancelled because its last seat was released had nobody left.
-  defp seats_label(%{status: "cancelled"} = meeting, _guests) do
+  defp seats_label(%{status: :cancelled} = meeting, _guests) do
     case Enum.count(Helpers.participants(meeting), &is_nil(&1.cancelled_at)) do
       0 ->
         dgettext("dashboard_bookings", "Every spot was released")
@@ -389,7 +401,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # A planned session (`PlannedSessions`) that has not started yet but takes
   # no more sign-ups. Once it has started, the card's status says enough.
   defp registration_closed?(%{planned: true, status: status} = session)
-       when status != "cancelled" do
+       when status != :cancelled do
     now = Clock.utc_now()
     DateTime.compare(session.start_time, now) == :gt and not PlannedSessions.open?(session, now)
   end
@@ -429,4 +441,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       total: summary.total
     )
   end
+
+  # Read only when loaded: a meeting refreshed on its own (a dismissed sync
+  # banner) arrives without it, and shows no tag rather than crashing.
+  defp booking_page(%{booking_page: %{name: _name} = page}), do: page
+  defp booking_page(_meeting), do: nil
 end

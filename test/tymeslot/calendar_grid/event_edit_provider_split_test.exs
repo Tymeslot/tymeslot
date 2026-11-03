@@ -302,7 +302,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
 
       sent = requests()
       assert methods(sent) == [:get, :get, :post, :patch, :delete]
-      assert {:delete, @events_url <> "/tail1", _body} = List.last(sent)
+      assert {:delete, @events_url <> "/tail1?sendUpdates=none", _body} = List.last(sent)
 
       assert {:ok, %{summary: "Weekly sync", sync_state: "synced"}} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
