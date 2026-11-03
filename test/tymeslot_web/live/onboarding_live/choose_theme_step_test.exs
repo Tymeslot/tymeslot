@@ -138,6 +138,27 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       assert all =~ "Choose by description instead"
     end
 
+    test "offer no separate preview: the stage shows the page" do
+      for picker <- [:stories, :all] do
+        html = render_step(@choices, %{}, picker)
+
+        refute html =~ ~s(phx-click="preview_booking_page")
+        refute html =~ "Preview booking page"
+      end
+    end
+
+    test "sit in the swipeable row a phone shows under the stage" do
+      html = render_step(nil)
+
+      assert [group] =
+               html |> Floki.parse_fragment!() |> Floki.find("[data-role='theme-stories']")
+
+      assert Floki.attribute(group, "class") == ["onboarding-theme-stories"]
+
+      assert group |> Floki.find("[data-testid='theme-story'].onboarding-theme-story") |> length() ==
+               2
+    end
+
     test "leave the colour row below them" do
       html = render_step(@choices)
 

@@ -75,9 +75,12 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   @spec live_preview(map()) :: Phoenix.LiveView.Rendered.t()
   def live_preview(assigns) do
+    tokens = ThemeCustomizations.tokens(assigns.booking_theme, assigns.theme_customization)
+
     assigns =
       assigns
-      |> assign(:colors, preview_colors(assigns.booking_theme, assigns.theme_customization))
+      |> assign(:colors, PreviewParts.colors(tokens))
+      |> assign(:background, tokens.media[:background])
       |> assign(:theme_module, theme_module(assigns.booking_theme))
       |> assign(:display_name, display_name(assigns.name))
       |> assign(:link_host, assigns.booking_host <> "/")
@@ -90,6 +93,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
         theme_module={@theme_module}
         variant={:card}
         colors={@colors}
+        background={@background}
         week={@week}
         today={@today}
         locale={@locale}

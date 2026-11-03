@@ -1,11 +1,11 @@
 defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   @moduledoc """
-  Theme, onboarding-choice and booking-page-preview handlers for the onboarding flow.
+  Theme and onboarding-choice handlers for the onboarding flow.
 
   Owns the "choose your theme" feature end to end: switching between the theme
   stories and every theme's look, selecting a booking theme or
-  one of its onboarding choices, seeding a random video background once a calendar is connected,
-  and opening/closing the real full-page preview of the user's own booking page.
+  one of its onboarding choices, and seeding a random video background once a
+  calendar is connected. The stage shows each choice as it is made.
   It also exposes the theme-state helpers the mount pipeline needs, so every
   theme concern lives in one place rather than leaking into the LiveView.
   """
@@ -19,8 +19,6 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Spec
   alias Tymeslot.Themes.Catalog
-  alias TymeslotWeb.Hooks.ModalHook
-  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
@@ -92,42 +90,6 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   end
 
   @doc """
-  Opens the full-page preview of the user's own booking page, lazily assigning
-  a default username first if the user left theirs blank.
-  """
-  @spec handle_preview_booking_page(LiveView.Socket.t()) :: {:noreply, LiveView.Socket.t()}
-  def handle_preview_booking_page(socket) do
-    case ensure_preview_username(socket) do
-      {:ok, socket, username} ->
-        # Standalone, not `embed=1`: `preview=true` pins CSP
-        # `frame-ancestors 'self'` so it frames same-origin, and standalone
-        # keeps the video background and fills the frame to full height, so
-        # the modal shows the page exactly as invitees see it rather than a
-        # chrome-stripped, video-less card.
-        url = PreviewMode.owner_url(username, socket.assigns.profile.user_id)
-        {:noreply, ModalHook.show_modal(socket, :theme_preview, url)}
-
-      {:error, socket} ->
-        {:noreply,
-         LiveView.put_flash(
-           socket,
-           :error,
-           dgettext("onboarding_wizard", "Could not open the preview. Please try again.")
-         )}
-    end
-  end
-
-  @doc """
-  Closes the preview and drops the URL so the iframe is torn down. Reopening
-  then loads a fresh frame reflecting the latest persisted theme/colour, and
-  stops the embedded page running in the background while hidden.
-  """
-  @spec handle_close_theme_preview(LiveView.Socket.t()) :: {:noreply, LiveView.Socket.t()}
-  def handle_close_theme_preview(socket) do
-    {:noreply, ModalHook.hide_modal(socket, :theme_preview)}
-  end
-
-  @doc """
   Resolves the initial `{customization, onboarding_choices}` for a profile
   (or the default theme's, with no customisation, before a profile exists)
   for the mount pipeline.
@@ -168,15 +130,5 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   # Booking-theme ids offered in onboarding, derived from the theme registry.
   defp theme_ids do
     Enum.map(ThemeInfo.theme_options(), fn {_name, id} -> id end)
-  end
-
-  # The preview needs a resolvable username. Most users set one on the profile
-  # step; for anyone who left it blank we lazily assign the system default
-  # (same one onboarding completion would assign) so the page resolves.
-  defp ensure_preview_username(socket) do
-    case Profiles.ensure_default_username(socket.assigns.profile) do
-      {:ok, profile} -> {:ok, Component.assign(socket, :profile, profile), profile.username}
-      {:error, _reason} -> {:error, socket}
-    end
   end
 end

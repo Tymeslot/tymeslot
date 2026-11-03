@@ -8,16 +8,15 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   picker of every theme's look, and "Choose by description instead" swaps
   back; both send the same `select_theme` event. Below either sits whatever
   the chosen theme's customisation spec offers for onboarding (a colour
-  scheme, for a theme with a palette), and a button opening the organiser's
-  *real* booking page full-screen. This step only appears once a calendar is
-  connected: at that point the public page is ready, so the preview reflects
-  the live page rather than a mock.
+  scheme, for a theme with a palette).
+
+  There is no separate preview: the stage beside the step (above it on a
+  phone) redraws the host's page in the chosen theme and colours as they
+  pick, and the last step shows the real page.
   """
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
-
-  use TymeslotWeb.Components.CoreComponents, only: [action_button: 1]
 
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
@@ -25,8 +24,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
-  Renders the theme picker (the stories, or every theme's look), the spec's
-  onboarding choices and a live full-page preview button.
+  Renders the theme picker (the stories, or every theme's look) and the
+  spec's onboarding choices.
 
   ## Attributes
 
@@ -71,7 +70,15 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         <p id="theme-story-question" class="onboarding-form-helper">
           {dgettext("onboarding_wizard", "Which of these sounds like you?")}
         </p>
-        <div role="group" aria-labelledby="theme-story-question" class="flex flex-col gap-3">
+        <%!-- A column from lg; below it a row the host swipes through
+             right under the stage card (`onboarding.css`). A swipe never
+             chooses: only a tap on a card does. --%>
+        <div
+          role="group"
+          aria-labelledby="theme-story-question"
+          class="onboarding-theme-stories"
+          data-role="theme-stories"
+        >
           <button
             :for={story <- @stories}
             type="button"
@@ -80,7 +87,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
             aria-pressed={to_string(theme_selected?(@profile, story.id))}
             data-testid="theme-story"
             class={[
-              "p-4 rounded-token-xl border-2 flex flex-col gap-2 text-left transition-colors",
+              "onboarding-theme-story p-4 rounded-token-xl border-2 flex flex-col justify-between gap-2 text-left transition-colors",
               if(theme_selected?(@profile, story.id),
                 do: "border-turquoise-500 bg-turquoise-50",
                 else: "border-tymeslot-200 bg-white hover:border-tymeslot-300"
@@ -160,7 +167,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         </p>
         <%!-- `choice`, not `value`: LiveView's client reads a button's native
         `value` property and would overwrite `phx-value-value` with "". --%>
-        <div class="flex flex-wrap gap-3">
+        <%!-- Tighter on a phone, so the colours fit one row under the stories --%>
+        <div class="flex flex-wrap gap-2 lg:gap-3">
           <button
             :for={choice <- @choices.choices}
             type="button"
@@ -178,23 +186,6 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
             style={"background: #{choice.swatch};"}
           />
         </div>
-      </div>
-
-      <%!-- Real full-page preview --%>
-      <div class="onboarding-form-group">
-        <.action_button
-          variant={:secondary}
-          icon="hero-eye-mini"
-          phx-click="preview_booking_page"
-        >
-          {dgettext("onboarding_wizard", "Preview booking page")}
-        </.action_button>
-        <p class="onboarding-form-helper mt-2">
-          {dgettext(
-            "onboarding_wizard",
-            "Opens your real booking page exactly as invitees will see it."
-          )}
-        </p>
       </div>
     </div>
     """

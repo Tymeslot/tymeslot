@@ -51,11 +51,6 @@ msgstr "Rezervační odkaz byl zkopírován do schránky."
 msgid "Booking link copied!"
 msgstr "Rezervační odkaz byl zkopírován."
 
-#: lib/tymeslot_web/live/onboarding_live/theme_preview_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Booking page preview"
-msgstr "Náhled rezervační stránky"
-
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV Calendar"
@@ -116,11 +111,6 @@ msgstr "Kopírovat odkaz"
 #, elixir-autogen, elixir-format
 msgid "Could not create calendar integration. Please try again."
 msgstr "Integraci kalendáře se nepodařilo vytvořit. Zkuste to prosím znovu."
-
-#: lib/tymeslot_web/live/onboarding_live/theme_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Could not open the preview. Please try again."
-msgstr "Náhled se nepodařilo otevřít. Zkuste to prosím znovu."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
@@ -212,11 +202,6 @@ msgstr "Označit položku „%{title}“ jako nesplněnou"
 msgid "Nextcloud, Radicale, or any CalDAV server"
 msgstr "Nextcloud, Radicale nebo libovolný server CalDAV"
 
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Opens your real booking page exactly as invitees will see it."
-msgstr "Otevře vaši skutečnou rezervační stránku přesně tak, jak ji uvidí pozvaní."
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "Outlook Calendar"
@@ -246,11 +231,6 @@ msgstr "Zkontrolujte prosím zadané údaje a zkuste to znovu."
 #, elixir-autogen, elixir-format
 msgid "Please check your timezone selection and try again."
 msgstr "Zkontrolujte prosím vybrané časové pásmo a zkuste to znovu."
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Preview booking page"
-msgstr "Zobrazit náhled stránky"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -389,7 +369,6 @@ msgid "Your booking link"
 msgstr "Váš rezervační odkaz"
 
 #: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
-#: lib/tymeslot_web/live/onboarding_live/theme_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page"
 msgstr "Vaše rezervační stránka"
@@ -434,11 +413,6 @@ msgstr "Několik doporučených kroků – ty, které nepotřebujete, jednoduše
 #, elixir-autogen, elixir-format
 msgid "One click - connect %{email}"
 msgstr "Jedno kliknutí – připojit %{email}"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Pick the look and feel of your booking page - then preview the real thing."
-msgstr "Vyberte vzhled své rezervační stránky a hned si ji prohlédněte naživo."
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
@@ -695,3 +669,8 @@ msgstr "Čteme jen to, kdy jste zaneprázdněni, nikdy ne, o čem vaše událost
 #, elixir-autogen, elixir-format
 msgid "iCloud, on your iPhone or Mac"
 msgstr "iCloud, na vašem iPhonu nebo Macu"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a look and watch your page change."
+msgstr "Vyberte si vzhled a sledujte, jak se vaše stránka mění."
