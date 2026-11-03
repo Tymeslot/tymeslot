@@ -47,8 +47,9 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       click_continue(view)
       assert has_element?(view, ".onboarding-step-title", "You're live")
 
-      # Live -> complete onboarding
-      click_continue(view)
+      # Live: keeping the link completes onboarding; finishing goes to the dashboard
+      view |> element("#onboarding-keep-copy") |> render_click()
+      view |> element("#onboarding-finish") |> render_click()
       assert_redirect(view, ~p"/dashboard")
 
       user = Repo.reload!(user)
@@ -79,8 +80,10 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       })
       |> render_change()
 
-      # link -> calendar -> meeting -> look -> live -> complete
-      Enum.each(1..5, fn _step -> click_continue(view) end)
+      # link -> calendar -> meeting -> look -> live, keep the link, finish
+      Enum.each(1..4, fn _step -> click_continue(view) end)
+      view |> element("#onboarding-keep-copy") |> render_click()
+      view |> element("#onboarding-finish") |> render_click()
       assert_redirect(view, ~p"/dashboard")
 
       profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
@@ -219,33 +222,15 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       html = render(view)
       assert has_element?(view, ".onboarding-step-title", "You're live")
 
-      # The button is wired to the clipboard hook and carries the booking URL.
+      # The button is wired to the clipboard hook and, since the copy itself
+      # never leaves the browser, reports itself to the server as a keep.
       assert has_element?(
                view,
-               "button#onboarding-copy-booking-url[phx-hook='CopyOnClick'][data-copy-text]"
+               "button#onboarding-keep-copy[phx-hook='CopyOnClick'][phx-click='keep_link'][phx-value-method='copy']",
+               "Copy link"
              )
 
-      # Copying is the step's primary action, labelled in text, and reports
-      # itself to the server since the copy itself never leaves the browser.
-      assert has_element?(
-               view,
-               "button#onboarding-copy-booking-url.action-button--primary",
-               "Copy booking link"
-             )
-
-      assert has_element?(
-               view,
-               "button#onboarding-copy-booking-url[phx-click='share_booking_link'][phx-value-channel='copy']"
-             )
-
-      # Finishing stays available but gives way to the share actions.
-      assert has_element?(
-               view,
-               "button.action-button--secondary[phx-click='next_step']",
-               "Go to dashboard"
-             )
-
-      button_html = view |> element("#onboarding-copy-booking-url") |> render()
+      button_html = view |> element("#onboarding-keep-copy") |> render()
       assert button_html =~ ~s(data-copy-text=")
       assert button_html =~ "/copyuser123"
 

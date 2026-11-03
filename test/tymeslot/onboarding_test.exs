@@ -47,6 +47,48 @@ defmodule Tymeslot.OnboardingTest do
     end
   end
 
+  describe "keep_booking_link/3" do
+    test "completes onboarding and stamps the first share" do
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user, booking_link_first_shared_at: nil)
+
+      assert {:ok, %{onboarding_completed_at: %DateTime{}}} =
+               Onboarding.keep_booking_link(user, profile, "copy")
+
+      assert %DateTime{} = Repo.reload!(profile).booking_link_first_shared_at
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "email_me queues the email first" do
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user)
+
+      assert {:ok, _user} = Onboarding.keep_booking_link(user, profile, "email_me")
+      assert_enqueued(worker: EmailWorker, args: %{"user_id" => user.id})
+    end
+
+    test "refuses a method outside the keep list, changing nothing" do
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user, booking_link_first_shared_at: nil)
+
+      assert {:error, :unknown_method} = Onboarding.keep_booking_link(user, profile, "fax")
+      assert Repo.reload!(user).onboarding_completed_at == nil
+      assert Repo.reload!(profile).booking_link_first_shared_at == nil
+    end
+  end
+
+  describe "subscribe/1 and broadcast_preview_opened/1" do
+    test "a subscriber hears its own user's opening, and no one else's" do
+      :ok = Onboarding.subscribe(42)
+
+      assert :ok = Onboarding.broadcast_preview_opened(43)
+      refute_receive {:onboarding, :preview_opened}, 50
+
+      assert :ok = Onboarding.broadcast_preview_opened(42)
+      assert_receive {:onboarding, :preview_opened}
+    end
+  end
+
   describe "complete_onboarding/1" do
     test "marks user onboarding as complete" do
       user = insert(:user, onboarding_completed_at: nil)

@@ -20,6 +20,9 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
     * `reveal_empty` - `calendar`, and the same week ready with no busy blocks
     * `reveal_slow` - `calendar`, and the week is taking too long to read
     * `reveal_failed` - `calendar`, and the week could not be read
+    * `kept` - on the live step, the link has been kept (copied), so the
+      confirmation shows and "Go to dashboard" is unlocked. Nothing is
+      written: the account's onboarding is left as it is.
 
   A week fixture stands in for the read: it cancels any read in flight and
   bumps `reveal_key`, so a real answer already on its way is dropped
@@ -53,6 +56,7 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
   def apply(socket, "reveal_empty"), do: with_week(socket, :ready, busy: false)
   def apply(socket, "reveal_slow"), do: with_week(socket, :slow)
   def apply(socket, "reveal_failed"), do: with_week(socket, :failed)
+  def apply(socket, "kept"), do: Component.assign(socket, :kept_method, "copy")
 
   def apply(socket, _name), do: socket
 

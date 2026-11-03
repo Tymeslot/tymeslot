@@ -4,6 +4,7 @@ defmodule TymeslotWeb.OnboardingLive do
 
   alias Tymeslot.Availability
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.QrCode
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
@@ -82,9 +83,16 @@ defmodule TymeslotWeb.OnboardingLive do
         {:noreply, push_patch(socket, to: step_path(socket, resume_step(socket), uri))}
 
       true ->
-        {:noreply, assign(socket, :current_step, requested)}
+        {:noreply, socket |> assign(:current_step, requested) |> maybe_enter_share_state()}
     end
   end
+
+  # A host who lands on the live step by its address (a reload) gets the
+  # share state too, without counting another view of the step.
+  defp maybe_enter_share_state(%{assigns: %{current_step: :ready}} = socket),
+    do: NavigationHandlers.assign_share_state(socket)
+
+  defp maybe_enter_share_state(socket), do: socket
 
   @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -97,13 +105,15 @@ defmodule TymeslotWeb.OnboardingLive do
       booking_page_live={@booking_page_live}
       next_disabled={next_disabled?(assigns)}
       focus_heading={@focus_heading}
-      stage_announcement={@stage_caption || ""}
+      stage_announcement={stage_announcement(assigns)}
       stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
       stage_live={@current_step == :ready and @booking_page_live == true}
       stage_canvas={LivePreview.canvas(stage_theme(@profile), @theme_customization)}
       stage_theme={stage_theme(@profile)}
       stage_caption={@stage_caption}
       stage_compact={@current_step == :connect_calendar and @booking_page_live != true}
+      stage_iframe={stage_iframe(assigns)}
+      show_nav={@current_step != :ready}
     >
       <:stage>
         <.stage_preview
@@ -158,13 +168,23 @@ defmodule TymeslotWeb.OnboardingLive do
             video_integration={@video_integration}
           />
         <% :ready -> %>
-          <ReadyStep.ready_step booking_url={@booking_url} page_live={@booking_page_live} />
+          <ReadyStep.ready_step
+            booking_url={@booking_url}
+            page_live={@booking_page_live}
+            kept_method={@kept_method}
+            first_person_name={@first_person_name}
+            email={@current_user.email}
+            handoff_qr={@handoff_qr}
+            handoff_ready={is_binary(@handoff_url)}
+            finish_locked={NavigationHandlers.finish_locked?(assigns)}
+          />
       <% end %>
     </OnboardingLayout.onboarding_layout>
 
     <StagePreviewModal.stage_preview_modal
       show={@show_stage_preview_modal}
       canvas={LivePreview.canvas(stage_theme(@profile), @theme_customization)}
+      iframe_src={stage_iframe(assigns)}
     >
       <.stage_preview
         profile={@profile}
@@ -230,13 +250,37 @@ defmodule TymeslotWeb.OnboardingLive do
     NavigationHandlers.handle_return_to_calendar_step(socket)
   end
 
-  def handle_event("share_booking_link", params, socket) do
-    NavigationHandlers.handle_share_booking_link(socket, params["channel"])
-  end
-
   def handle_event("previous_step", _params, socket) do
     NavigationHandlers.handle_previous_step(socket)
   end
+
+  # ------------------------------------------------------------------
+  # Event handlers — Keeping the link (the live step)
+  # ------------------------------------------------------------------
+
+  def handle_event("keep_link", params, socket) do
+    NavigationHandlers.handle_keep_link(socket, params["method"])
+  end
+
+  def handle_event("finish_locked", _params, socket) do
+    NavigationHandlers.handle_finish_locked(socket)
+  end
+
+  def handle_event("first_person_name", params, socket) do
+    name =
+      (params["name"] || "")
+      |> String.replace("\x00", "")
+      |> String.slice(0, ReadyStep.name_max_length())
+
+    {:noreply, assign(socket, :first_person_name, name)}
+  end
+
+  def handle_event("show_handoff_qr", _params, %{assigns: %{handoff_url: url}} = socket)
+      when is_binary(url) do
+    {:noreply, assign(socket, :handoff_qr, QrCode.svg_data_uri(url))}
+  end
+
+  def handle_event("show_handoff_qr", _params, socket), do: {:noreply, socket}
 
   # ------------------------------------------------------------------
   # Event handlers — Meeting and weekly hours
@@ -404,6 +448,11 @@ defmodule TymeslotWeb.OnboardingLive do
     {:noreply, WeekReveal.handle_slow(key, socket)}
   end
 
+  # The host opened the handoff link (the QR code) on another device.
+  def handle_info({:onboarding, :preview_opened}, socket) do
+    NavigationHandlers.handle_keep_link(socket, "phone")
+  end
+
   # ------------------------------------------------------------------
   # Private helpers
   # ------------------------------------------------------------------
@@ -415,6 +464,19 @@ defmodule TymeslotWeb.OnboardingLive do
 
   defp next_disabled?(%{current_step: :meeting} = assigns), do: MeetingHandlers.invalid?(assigns)
   defp next_disabled?(_assigns), do: false
+
+  # On the live step the stage shows the real page once the socket is
+  # connected and the page takes visitors.
+  defp stage_iframe(%{current_step: :ready, booking_page_live: true} = assigns),
+    do: assigns.owner_preview_url
+
+  defp stage_iframe(_assigns), do: nil
+
+  # A keep action's confirmation is what the live step announces.
+  defp stage_announcement(%{current_step: :ready, kept_method: method}) when is_binary(method),
+    do: ReadyStep.kept_label(method)
+
+  defp stage_announcement(assigns), do: assigns.stage_caption || ""
 
   defp debug?(socket), do: socket.assigns.live_action in [:debug_welcome, :debug_step]
 

@@ -48,7 +48,12 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   the two dashboard entry points used to link `?theme=<id>` with no token, so
   the owner's own test booking hit the fail-closed branch and vanished.
 
-  Pass `:theme` to preview a theme other than the stored one.
+  Pass `:theme` to preview a theme other than the stored one, and
+  `handoff: true` for the link the onboarding's last step shows as a QR code:
+  a page opened from it tells the host's onboarding session so
+  (`Tymeslot.Onboarding.broadcast_preview_opened/1`). The stage's own iframe
+  never carries it, or every host would "open it on their phone" the moment
+  the step renders.
   """
   @spec owner_path(String.t(), integer(), keyword()) :: String.t()
   def owner_path(username, user_id, opts \\ [])
@@ -56,6 +61,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
     query =
       %{"preview" => "true", "preview_token" => PreviewToken.sign(user_id)}
       |> put_theme(Keyword.get(opts, :theme))
+      |> put_handoff(Keyword.get(opts, :handoff, false))
       |> URI.encode_query()
 
     "/#{username}?#{query}"
@@ -70,6 +76,9 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   def owner_url(username, user_id, opts \\ []) do
     UrlBuilder.base_url() <> owner_path(username, user_id, opts)
   end
+
+  defp put_handoff(query, true), do: Map.put(query, "handoff", "1")
+  defp put_handoff(query, _handoff), do: query
 
   defp put_theme(query, theme) when theme in [nil, ""], do: query
   defp put_theme(query, theme), do: Map.put(query, "theme", to_string(theme))

@@ -659,18 +659,205 @@
   }
 }
 
-/* Ready step: URL display */
-.onboarding-url-display {
+/* --------------------------------------------------------------------------
+   The live step: the host's real page, and keeping the link
+   -------------------------------------------------------------------------- */
+
+/* The address in the browser bar: on a narrow frame the host gives way,
+   never the name (as the strip under the phone card does). */
+.stage-address-text {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4) var(--spacing-5);
-  background-color: var(--color-neutral-50);
-  border: 2px solid var(--color-neutral-100);
-  border-radius: var(--radius-token-xl);
-  font-size: var(--font-size-lg);
+  min-width: 0;
+}
+
+.stage-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+  /* Switched on once loaded (the StageIframe hook): from grey into colour. */
+  opacity: 0;
+  filter: saturate(0);
+  transition:
+    opacity 300ms ease-out,
+    filter 300ms ease-out;
+}
+
+.stage-iframe[data-loaded] {
+  opacity: 1;
+  filter: none;
+}
+
+/* From lg the page fills the frame at the frame's own width, and the frame
+   fills the stage's height, so it reads, and is used, as the page. */
+@media (min-width: 1024px) {
+  .stage-frame-wrap[data-mode="iframe"] {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .stage-frame-wrap[data-mode="iframe"] .stage-frame {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+/* Below lg the card is a short glimpse of the page that never takes the
+   touch: scrolling inside it would trap the page around it. Expand is
+   where a phone tries booking. The card stays short, so the keep actions
+   are near the top of the screen. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage .stage-iframe {
+    pointer-events: none;
+  }
+
+  .onboarding-stage[data-step="ready"] .stage-frame {
+    height: 30svh;
+  }
+
+  /* The caption under the strip spells the whole link out ("You're all
+     set - host/name is live"), so the strip keeps only the Live badge and
+     Expand rather than a cut-off copy of the address. */
+  .onboarding-stage[data-step="ready"] .stage-strip-url {
+    visibility: hidden;
+  }
+}
+
+/* The moment the page goes live: the frame glows once and the Live badge
+   lights up as the real page switches on. */
+.stage-frame:has(.stage-iframe[data-loaded]) {
+  animation: stage-switch-on 900ms ease-out;
+}
+
+.stage-frame-wrap:has(.stage-iframe[data-loaded]) [data-role="stage-live-badge"] {
+  animation: stage-live-on 700ms ease-out both;
+}
+
+@keyframes stage-switch-on {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary-500) 45%, transparent);
+  }
+
+  40% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary-500) 25%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 16px transparent;
+  }
+}
+
+@keyframes stage-live-on {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* The expanded page on a phone: interactive, filling the dialog. */
+.stage-preview-canvas--page .stage-iframe {
+  height: calc(100svh - var(--spacing-32));
+}
+
+.onboarding-text-link {
   font-weight: 600;
   color: var(--color-primary-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.onboarding-text-link:hover {
+  color: var(--color-primary-800);
+}
+
+.onboarding-try-booking {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-1) var(--spacing-2);
+}
+
+/* One column: the question column is never wider than 480px, too narrow
+   for two of these labels side by side. */
+.onboarding-keep-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-2);
+}
+
+.onboarding-keep-actions .action-button {
+  justify-content: flex-start;
+}
+
+/* A phone is already the phone: the QR code is for a desktop. */
+.onboarding-keep-actions .onboarding-keep-phone,
+.onboarding-handoff-qr {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .onboarding-keep-actions .onboarding-keep-phone {
+    display: inline-flex;
+  }
+
+  .onboarding-handoff-qr {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+  }
+}
+
+.onboarding-handoff-qr img {
+  flex: none;
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-primary);
+}
+
+/* The finish ends the column, clear of the screen's bottom edge. */
+.onboarding-finish {
+  padding-bottom: max(var(--spacing-8), env(safe-area-inset-bottom));
+}
+
+/* Pressing the locked finish pulses the first-person card once. */
+.onboarding-keep-pulse {
+  animation: onboarding-keep-pulse 600ms ease-out;
+}
+
+@keyframes onboarding-keep-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary-500) 50%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-iframe {
+    opacity: 1;
+    filter: none;
+    transition: none;
+  }
+
+  .stage-frame:has(.stage-iframe[data-loaded]),
+  .stage-frame-wrap:has(.stage-iframe[data-loaded]) [data-role="stage-live-badge"],
+  .onboarding-keep-pulse {
+    animation: none;
+  }
 }
 
 /* The look step's stories: a column from lg; below it a row of cards the

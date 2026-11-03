@@ -104,6 +104,14 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # Unknown until the connected render checks the calendars.
       booking_page_live: nil,
       returning_to_share: false,
+      # The live step: the latest keep action, the first person's name, the
+      # owner-preview and handoff addresses (set on the connected render,
+      # `NavigationHandlers.assign_share_state/1`) and the QR code once shown.
+      kept_method: nil,
+      first_person_name: "",
+      owner_preview_url: nil,
+      handoff_url: nil,
+      handoff_qr: nil,
       # The booking page's coming week, drawn on the stage once a calendar
       # is connected (`WeekReveal`).
       stage_week: WeekReveal.initial_week(false),

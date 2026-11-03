@@ -51,7 +51,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
 
       click_continue(view)
       assert step_title(view) == "You're live"
-      assert has_element?(view, "button[phx-click='next_step']", "Go to dashboard")
+      assert has_element?(view, "#onboarding-finish", "Go to dashboard")
     end
 
     test "Continue reads the same on every step before the last", %{conn: conn} do

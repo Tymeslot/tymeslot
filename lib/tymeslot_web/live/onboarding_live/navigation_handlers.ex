@@ -17,27 +17,99 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.MeetingHandlers
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
-  alias TymeslotWeb.OnboardingLive.ReadyStep
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   @doc """
-  Records that the host shared their booking link from the final step.
-
-  The channel comes from the client, so anything outside the step's own
-  channels is dropped rather than reported.
+  Records that the host kept their booking link on the last step, by one of
+  `Onboarding.keep_methods/0`: the first keep completes onboarding and stamps
+  the profile's first share (`Onboarding.keep_booking_link/3`), so closing
+  the tab afterwards loses nothing. The method comes from the client, so
+  anything else is ignored. Keeping it again is harmless; the confirmation
+  shows the latest.
   """
-  @spec handle_share_booking_link(Phoenix.LiveView.Socket.t(), term()) ::
+  @spec handle_keep_link(Phoenix.LiveView.Socket.t(), term()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_share_booking_link(socket, channel) do
-    if channel in ReadyStep.share_channels() do
-      {:noreply, Analytics.push(socket, "booking_link_shared", %{channel: channel})}
-    else
-      {:noreply, socket}
+  def handle_keep_link(socket, method) do
+    if method in Onboarding.keep_methods() and socket.assigns.current_step == :ready,
+      do: {:noreply, keep_link(socket, method)},
+      else: {:noreply, socket}
+  end
+
+  defp keep_link(socket, method) do
+    %{current_user: user, profile: profile} = socket.assigns
+
+    case Onboarding.keep_booking_link(user, profile, method) do
+      {:ok, completed} ->
+        socket
+        |> Component.assign(current_user: completed, kept_method: method)
+        |> LiveView.clear_flash()
+        # C1 registers `booking_link_kept`; until then the share event carries the method.
+        |> Analytics.push("booking_link_shared", %{channel: method})
+
+      {:error, {:email, _reason}} ->
+        LiveView.put_flash(
+          socket,
+          :error,
+          dgettext("onboarding_wizard", "We couldn't send the email. Try another option.")
+        )
+
+      {:error, _reason} ->
+        LiveView.put_flash(
+          socket,
+          :error,
+          dgettext("onboarding_wizard", "Something went wrong. Please try again.")
+        )
     end
   end
+
+  @doc """
+  The host pressed "Go to dashboard" before keeping their link: the focus
+  moves to the first-person button, whose card pulses once (`ShareLink`).
+  """
+  @spec handle_finish_locked(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_finish_locked(socket),
+    do: {:noreply, LiveView.push_event(socket, "share_link:focus", %{})}
+
+  @doc """
+  Whether "Go to dashboard" still waits for a keep action. A page that is
+  not live offers nothing to keep, so finishing stays open there.
+  """
+  @spec finish_locked?(map()) :: boolean()
+  def finish_locked?(%{kept_method: nil, booking_page_live: live}), do: live != false
+  def finish_locked?(_assigns), do: false
+
+  @doc """
+  The share step's own state: the owner-preview address the stage shows,
+  the handoff address the QR code carries, and the subscription that hears
+  the handoff being opened. Set once per session on the connected render
+  only, so a patch never re-signs the token and reloads the page, and the
+  static render shows the miniature the live page then switches on over.
+  """
+  @spec assign_share_state(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_share_state(%{assigns: %{owner_preview_url: url}} = socket) when is_binary(url),
+    do: socket
+
+  def assign_share_state(%{assigns: %{profile: %{username: username}}} = socket)
+      when is_binary(username) do
+    if LiveView.connected?(socket) do
+      user_id = socket.assigns.current_user.id
+      :ok = Onboarding.subscribe(user_id)
+
+      Component.assign(socket,
+        owner_preview_url: PreviewMode.owner_url(username, user_id),
+        handoff_url: PreviewMode.owner_url(username, user_id, handoff: true)
+      )
+    else
+      socket
+    end
+  end
+
+  def assign_share_state(socket), do: socket
 
   @doc """
   Handles the next step navigation event.
@@ -58,11 +130,29 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         handle_meeting_continue(socket)
 
       :ready ->
-        {:noreply, complete_onboarding(socket, ~p"/dashboard")}
+        handle_finish(socket)
 
       step ->
         {:noreply, advance_step(socket, step)}
     end
+  end
+
+  # A kept link has already completed onboarding, so finishing only
+  # navigates (on a debug route, back to where it started). A page that is
+  # not live has nothing to keep and finishes as before.
+  defp handle_finish(%{assigns: %{kept_method: method}} = socket) when is_binary(method) do
+    {:noreply, LiveView.redirect(socket, to: finish_path(socket))}
+  end
+
+  defp handle_finish(%{assigns: %{booking_page_live: false}} = socket),
+    do: {:noreply, complete_onboarding(socket, ~p"/dashboard")}
+
+  defp handle_finish(socket), do: handle_finish_locked(socket)
+
+  defp finish_path(socket) do
+    if socket.assigns.live_action in [:debug_welcome, :debug_step],
+      do: socket.assigns.base_path,
+      else: ~p"/dashboard"
   end
 
   # A calendar is required: Continue leaves the calendar step only once the
@@ -111,6 +201,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     socket =
       socket
       |> assign_booking_page_live()
+      |> assign_share_state()
       |> Component.assign(:returning_to_share, false)
 
     Analytics.push(socket, "share_step_viewed", %{
