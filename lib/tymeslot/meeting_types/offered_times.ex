@@ -23,6 +23,7 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
   alias Tymeslot.Availability
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Clock
+  alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes.{FixedDates, OfferedTimeQueries, OfferedTimeSchema}
 
   # Plenty for a few times a week for months ahead, and a bound on what
@@ -87,10 +88,16 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
   end
 
   @doc """
-  For each of `meeting_types`, its next offered time a booker can pick now
-  (`:bookable`, `t:status/0`), or nil, keyed by type id. A type whose only
-  upcoming times lie inside the minimum notice or beyond the booking window
-  has nothing to book, so it gets nil, as one with no time at all does.
+  For each of `meeting_types`, its next offered time a booker can pick now,
+  or nil, keyed by type id: one that is `:bookable` (`t:status/0`) and not
+  taken by one of the host's live bookings, buffers included. A type whose
+  upcoming times are all inside the minimum notice, beyond the booking
+  window or booked has nothing to book, so it gets nil, as one with no time
+  at all does.
+
+  The host's calendar, time off and booking limits are not consulted: they
+  need the provider read the booking page makes, so a type whose every time
+  they block still counts as open, and its page says there is no time free.
   """
   @spec next_by_type([map()], DateTime.t()) :: %{integer() => DateTime.t() | nil}
   def next_by_type(meeting_types, now \\ Clock.utc_now()) do
@@ -103,6 +110,7 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
       |> Enum.filter(
         &(status(&1.starts_at, Map.fetch!(reaches, &1.meeting_type_id)) == :bookable)
       )
+      |> reject_booked(reaches)
       |> Enum.group_by(& &1.meeting_type_id)
       |> Map.new(fn {id, [first | _later]} -> {id, first.starts_at} end)
 
@@ -165,18 +173,49 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
   @spec prune_past(DateTime.t()) :: {non_neg_integer(), nil}
   def prune_past(%DateTime{} = cutoff), do: OfferedTimeQueries.delete_before(cutoff)
 
-  # The span of starts the type's schedule lets a booker pick at `now`: past
-  # the minimum notice, and within the booking window (`@window_slack_hours`).
+  # The span of starts the type's rules let a booker pick at `now`: past the
+  # minimum notice, and within the booking window (`@window_slack_hours`),
+  # each the type's own where it overrides its schedule's, as the slot engine
+  # reads them (`Schedules.config/2`). Also what a booking of one of its
+  # times holds, for `reject_booked/2`.
   defp reach(meeting_type, now) do
     schedule = Schedules.resolve_for_meeting_type(meeting_type)
-    window_hours = Schedules.policy(schedule, :advance_booking_days) * 24 + @window_slack_hours
+    rule = &Schedules.effective_policy(schedule, meeting_type, &1)
+    window_hours = rule.(:advance_booking_days) * 24 + @window_slack_hours
 
     %{
       now: now,
-      earliest: DateTime.add(now, Schedules.policy(schedule, :min_advance_hours), :hour),
-      latest: DateTime.add(now, window_hours, :hour)
+      earliest: DateTime.add(now, rule.(:min_advance_hours), :hour),
+      latest: DateTime.add(now, window_hours, :hour),
+      user_id: meeting_type.user_id,
+      before_minutes: rule.(:buffer_before_minutes),
+      after_minutes: rule.(:buffer_after_minutes) + meeting_type.duration_minutes
     }
   end
+
+  # Drops the times a live booking of their host overlaps, buffers included,
+  # with one bookings read per host.
+  defp reject_booked(offered_times, reaches) do
+    offered_times
+    |> Enum.group_by(&Map.fetch!(reaches, &1.meeting_type_id).user_id)
+    |> Enum.flat_map(fn {user_id, times} ->
+      spans = Enum.map(times, &{&1, held_span(&1, reaches)})
+      from = spans |> Enum.map(fn {_time, {from, _to}} -> from end) |> Enum.min(DateTime)
+      to = spans |> Enum.map(fn {_time, {_from, to}} -> to end) |> Enum.max(DateTime)
+      bookings = Meetings.list_meetings_in_range_for_organizer(user_id, from, to)
+
+      for {time, span} <- spans, not Enum.any?(bookings, &overlaps?(&1, span)), do: time
+    end)
+    |> Enum.sort_by(& &1.starts_at, DateTime)
+  end
+
+  defp held_span(%{starts_at: starts_at, meeting_type_id: type_id}, reaches) do
+    %{before_minutes: before, after_minutes: after_start} = Map.fetch!(reaches, type_id)
+    {DateTime.add(starts_at, -before, :minute), DateTime.add(starts_at, after_start, :minute)}
+  end
+
+  defp overlaps?(%{start_time: start_time, end_time: end_time}, {from, to}),
+    do: DateTime.compare(start_time, to) == :lt and DateTime.compare(end_time, from) == :gt
 
   defp status(starts_at, %{now: now, earliest: earliest, latest: latest}) do
     cond do
