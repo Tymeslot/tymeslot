@@ -418,8 +418,10 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   defp email_sent_label(_email), do: kept_label("email_me")
 
   # The link as the address and the name, split before the last `/`.
+  # Shown without the scheme, as the stage's address bar shows it, so the
+  # browser never breaks the line after "https://". Copy keeps the full URL.
   defp link_parts(url) do
-    case String.split(url, ~r{(?=/[^/]*$)}, parts: 2) do
+    case url |> String.replace(~r{^https?://}, "") |> String.split(~r{(?=/[^/]*$)}, parts: 2) do
       [address, name] -> {address, name}
       [whole] -> {whole, ""}
     end

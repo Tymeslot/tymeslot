@@ -223,13 +223,19 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       # Above the first-person card, right under the heading.
       [hero] = Floki.find(doc, "#onboarding-link-hero")
       link = hero |> Floki.find("#onboarding-booking-link") |> Floki.text() |> String.trim()
-      assert link =~ ~r{^https?://.+/#{username}$}
+      # Shown without the scheme; Copy carries the full URL.
+      refute link =~ "://"
+      assert link =~ ~r{/#{username}$}
 
-      assert [_copy] =
+      assert [copy] =
                Floki.find(
                  hero,
-                 ~s(button#onboarding-keep-copy[phx-hook="CopyOnClick"][phx-value-method="copy"][data-copy-text="#{link}"])
+                 ~s(button#onboarding-keep-copy[phx-hook="CopyOnClick"][phx-value-method="copy"])
                )
+
+      assert [url] = Floki.attribute(copy, "data-copy-text")
+      assert url =~ ~r{^https?://}
+      assert String.ends_with?(url, link)
 
       ids =
         doc
