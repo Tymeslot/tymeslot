@@ -76,14 +76,17 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   # Shortens the refresh wait and traces the LiveView, so a test can wait
   # for each refresh timer to reach it (`await_refreshes/2`) instead of
   # sleeping.
-  defp watch_refreshes(view) do
-    Application.put_env(:tymeslot, :onboarding_week_refresh_after_ms, 20)
+  # The coalescing window defaults to 20ms so most tests wait little; the
+  # coalescing test widens it so a loaded machine cannot let the timer fire
+  # between two clicks.
+  defp watch_refreshes(view, window_ms \\ 20) do
+    Application.put_env(:tymeslot, :onboarding_week_refresh_after_ms, window_ms)
     :erlang.trace(view.pid, true, [:receive])
   end
 
   defp await_refreshes(view, count) do
     for _n <- 1..count do
-      assert_receive {:trace, _pid, :receive, {:week_preview_refresh, _token}}, 2_000
+      assert_receive {:trace, _pid, :receive, {:week_preview_refresh, _token}}, 5_000
     end
 
     render_async(view)
@@ -251,7 +254,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   test "changes close together rebuild the preview once", %{conn: conn} do
     %{user: user} = new_host()
     view = open_step(conn, user)
-    watch_refreshes(view)
+    watch_refreshes(view, 1_500)
 
     for day <- [6, 7, 6, 7, 1], do: view |> element("#meeting-day-#{day}") |> render_click()
     await_refreshes(view, 5)
