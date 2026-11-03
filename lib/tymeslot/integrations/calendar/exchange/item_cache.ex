@@ -31,7 +31,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   row carries.
 
   Either is answered by asking the worker for a full read, the way a refused
-  token is (below), but with the folders' new tokens stored first. A master
+  token is (below), but handing over the folders' new tokens, which the read
+  stores only once it has succeeded (`bootstrap_sync_states/2`). A master
   among the changed items sends the folder there before anything is written;
   a deletion that matched no cached row does too, after the rest of the
   folder's changes are applied, since it may have been a master. An item
@@ -57,7 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   The one exception is a token the server refuses outright
   (`ItemSync.invalid_sync_state?/1`). That folder's token is dropped and the
   worker is *asked* for a full read through `{:error, :full_sync_required,
-  integration}`; the read itself still belongs to the worker. Without it the
+  integration, pending}`; the read itself still belongs to the worker. Without it the
   folder is stuck for good: the refusal repeats every cycle, the sweep
   re-enqueues it because `last_external_sync_at` never advances, and the
   availability half is re-read in full each time for a grid half that can
@@ -118,13 +119,18 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   changes the feed reports here are discarded: the read has covered them. A
   folder that already has a token is left alone, and a folder whose bootstrap
   fails simply gets another full read next cycle.
+
+  `pending` holds the tokens an incremental read handed over unstored when
+  it asked for this read (`incremental_refresh/3`), keyed by folder. They
+  replace those folders' stored tokens: only now has a read covered the
+  changes they acknowledge.
   """
-  @spec bootstrap_sync_states(CalendarIntegrationSchema.t()) :: :ok
-  def bootstrap_sync_states(integration) do
+  @spec bootstrap_sync_states(CalendarIntegrationSchema.t(), %{String.t() => String.t()}) :: :ok
+  def bootstrap_sync_states(integration, pending \\ %{}) do
     integration
     |> item_clients()
     |> Enum.reject(&stored_sync_state(integration, &1))
-    |> Enum.reduce(%{}, fn client, acc ->
+    |> Enum.reduce(pending, fn client, acc ->
       case ItemSync.fetch_changes(client, folder_of(client), nil) do
         {:ok, %{sync_state: state}} when is_binary(state) ->
           Map.put(acc, folder_key(client), state)
@@ -148,20 +154,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
 
   A folder whose token the server refuses is the one failure this recovers
   from rather than reports. Its token is dropped and the answer is
-  `{:error, :full_sync_required, integration}`, carrying the integration with
-  that token already gone: the caller's full read then re-bootstraps it, where
+  `{:error, :full_sync_required, integration, %{}}`, carrying the integration
+  with that token already gone: the caller's full read then re-bootstraps it, where
   reporting the refusal would have every later cycle replay the same spent
   token.
 
-  A feed reporting a change it cannot apply asks for the same full read, with
-  every folder's new token stored first (see "A recurring series needs the
-  windowed read" in the moduledoc). The full read covers the changes those
-  tokens acknowledge, and a token left behind would replay the same change,
-  and the same full read, every cycle.
+  A feed reporting a change it cannot apply asks for the same full read,
+  handing over every folder's new token, not yet stored, as the last element
+  (see "A recurring series needs the windowed read" in the
+  moduledoc). The full read stores them once it has covered the changes they
+  acknowledge; if it fails, the stored tokens still stand before the change,
+  so the next cycle meets it again and asks again, where tokens stored up
+  front would have the next cycle go incremental past a change no read
+  applied.
   """
   @spec incremental_refresh(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
           {:ok, [String.t()]}
-          | {:error, :full_sync_required, CalendarIntegrationSchema.t()}
+          | {:error, :full_sync_required, CalendarIntegrationSchema.t(),
+             %{String.t() => String.t()}}
           | {:error, term()}
   def incremental_refresh(integration, from, to) do
     integration
@@ -192,28 +202,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
     {:ok, uids}
   end
 
-  # The tokens are stored before the full read is asked for, so that read's
-  # bootstrap leaves them alone and the next cycle goes incremental from past
-  # the change that forced it.
+  # The tokens travel unstored to the full read, whose bootstrap stores them
+  # once the read has succeeded.
   defp finish_incremental({:ok, _uids, states, true}, integration) do
     Logger.info("Exchange change feed reported a series change; forcing a full item read",
       calendar_integration_id: integration.id
     )
 
-    {:error, :full_sync_required,
-     states |> merged_states(integration) |> write_sync_states(integration)}
+    {:error, :full_sync_required, integration, states}
   end
 
   defp finish_incremental({:error, reason, folder_key}, integration) do
     if ItemSync.invalid_sync_state?(reason) do
-      {:error, :full_sync_required, discard_sync_state(integration, folder_key, reason)}
+      {:error, :full_sync_required, discard_sync_state(integration, folder_key, reason), %{}}
     else
       {:error, reason}
     end
   end
 
   # Dropped rather than left in place, and dropped before the full read runs,
-  # because `bootstrap_sync_states/1` skips any folder that still has one:
+  # because `bootstrap_sync_states/2` skips any folder that still has one:
   # keeping it would have the recovering full read leave the spent token
   # exactly where it was and the next cycle fail on it again.
   defp discard_sync_state(integration, folder_key, reason) do
@@ -387,7 +395,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   # is not fatal — the tokens are an optimisation, and losing them costs the
   # next cycle a full read rather than correctness — but the struct handed back
   # still has to state the intent, because this cycle's caller reads it back to
-  # decide what `bootstrap_sync_states/1` must re-establish.
+  # decide what `bootstrap_sync_states/2` must re-establish.
   defp write_sync_states(states, integration) do
     case CalendarIntegrationQueries.update_sync_state(integration, %{
            exchange_sync_states: states
