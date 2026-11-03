@@ -3,8 +3,8 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
   The setup wizard's funnel, as analytics sees it: every step entry pushes
   `onboarding_step_viewed`, every step left forward `onboarding_step_completed`,
   the calendar reveal reports how its read went (`calendar_reveal_loaded`),
-  each keep action on the live step pushes `booking_link_kept` with its
-  method, and "Try booking yourself" pushes `guest_preview_opened`. No
+  each keep action on the live step is counted from the server's
+  `[:tymeslot, :onboarding, :link_kept]` telemetry (never a client push), and "Try booking yourself" pushes `guest_preview_opened`. No
   payload carries anything that identifies the host, nor the name they type
   for the first person they send their link to.
   """
@@ -216,32 +216,37 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
           {"#onboarding-keep-email", "email_me"},
           {"#onboarding-copy-message", "first_person"}
         ] do
-      test "a keep by #{method} pushes booking_link_kept with the method", %{view: view} do
+      test "a keep by #{method} emits link_kept telemetry and no client push", %{view: view} do
+        :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
+
         view |> element(unquote(selector)) |> render_click()
 
-        assert_push_event view, "ts:analytics", %{
-          name: "booking_link_kept",
-          props: %{method: unquote(method)}
-        }
+        assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{},
+                         %{method: unquote(method)}}
 
-        # A keep is not a share from the dashboard.
-        refute Enum.any?(analytics_pushed(view), &(&1.name == "booking_link_shared"))
+        refute Enum.any?(
+                 analytics_pushed(view),
+                 &(&1.name in ~w(booking_link_kept booking_link_shared))
+               )
       end
     end
 
-    test "a keep by the phone handoff pushes booking_link_kept phone", %{view: view} do
-      send(view.pid, {:onboarding, :preview_opened})
+    test "a keep by the phone handoff emits link_kept telemetry phone", %{view: view} do
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
 
-      assert_push_event view, "ts:analytics", %{
-        name: "booking_link_kept",
-        props: %{method: "phone"}
-      }
+      send(view.pid, {:onboarding, :preview_opened})
+      render(view)
+
+      assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{}, %{method: "phone"}}
+      refute Enum.any?(analytics_pushed(view), &(&1.name == "booking_link_kept"))
     end
 
-    test "a method the step does not offer is dropped", %{view: view} do
+    test "a method the step does not offer emits no telemetry", %{view: view} do
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
+
       render_hook(view, "keep_link", %{"method" => "user@example.com"})
 
-      refute_push_event view, "ts:analytics", %{name: "booking_link_kept"}
+      refute_received {[:tymeslot, :onboarding, :link_kept], _ref, _, _}
     end
 
     test "trying the page on a desktop pushes guest_preview_opened", %{view: view} do
@@ -261,14 +266,21 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       assert has_element?(view, "#onboarding-stage-preview-iframe")
     end
 
-    test "props carry no PII", %{view: view, user: user} do
+    test "props and link_kept metadata carry no PII", %{view: view, user: user} do
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
+
       name = "Ada Lovelace"
       render_hook(view, "first_person_name", %{"name" => name})
       view |> element("#onboarding-copy-message") |> render_click()
       view |> element("#onboarding-try-booking") |> render_click()
 
+      assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{}, meta}
+      # The SaaS forward whitelists `method`; nothing else of this reaches analytics.
+      assert meta == %{user_id: user.id, method: "first_person"}
+
       pushed = analytics_pushed(view)
-      assert Enum.any?(pushed, &(&1.name == "booking_link_kept"))
+      refute Enum.any?(pushed, &(&1.name == "booking_link_kept"))
+      assert pushed != []
 
       user = Repo.reload!(user)
       identifying = [name, "Ada", "Lovelace", user.email, to_string(user.id)]
@@ -280,7 +292,14 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
             Enum.any?(identifying, &String.contains?(text, &1)),
             do: {event, key}
 
+      meta_leaks =
+        for {key, value} <- Map.delete(meta, :user_id),
+            text = to_string(value),
+            Enum.any?(identifying, &String.contains?(text, &1)),
+            do: key
+
       assert leaks == []
+      assert meta_leaks == []
     end
   end
 

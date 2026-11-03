@@ -58,6 +58,7 @@ defmodule Tymeslot.Onboarding do
          {:ok, _outcome} <- Profiles.mark_booking_link_shared(profile),
          {:ok, _profile} <- Profiles.ensure_default_username(profile),
          {:ok, completed} <- complete_onboarding(user) do
+      # The only analytics path for kept links; Core never client-pushes it.
       :telemetry.execute([:tymeslot, :onboarding, :link_kept], %{}, %{
         user_id: user.id,
         method: method

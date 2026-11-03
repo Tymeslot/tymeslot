@@ -165,10 +165,7 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
         assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{},
                          %{user_id: ^user_id, method: unquote(method)}}
 
-        assert_push_event view, "ts:analytics", %{
-          name: "booking_link_kept",
-          props: %{method: unquote(method)}
-        }
+        refute_push_event view, "ts:analytics", %{name: "booking_link_kept"}
       end
     end
 

@@ -7,7 +7,6 @@ defmodule Tymeslot.Analytics.ContractTest do
   import ExUnit.CaptureLog
 
   alias Tymeslot.Analytics.Contract
-  alias Tymeslot.Onboarding
   alias Tymeslot.Test.LogCapture
 
   test "event names are snake_case and prop keys are atoms" do
@@ -46,9 +45,6 @@ defmodule Tymeslot.Analytics.ContractTest do
       for result <- ~w(ok slow failed),
           do: assert(:ok = Contract.validate!("calendar_reveal_loaded", %{result: result}))
 
-      for method <- Onboarding.keep_methods(),
-          do: assert(:ok = Contract.validate!("booking_link_kept", %{method: method}))
-
       for channel <- Contract.share_channels(),
           do: assert(:ok = Contract.validate!("booking_link_shared", %{channel: channel}))
     end
@@ -59,13 +55,15 @@ defmodule Tymeslot.Analytics.ContractTest do
       end
     end
 
+    test "booking_link_kept is not a client event: kept links come from server telemetry" do
+      assert_raise ArgumentError, ~r/unknown analytics event/, fn ->
+        Contract.validate!("booking_link_kept", %{method: "copy"})
+      end
+    end
+
     test "a value outside an event's declared set raises" do
       assert_raise ArgumentError, ~r/value outside its declared set/, fn ->
         Contract.validate!("calendar_reveal_loaded", %{result: "timeout"})
-      end
-
-      assert_raise ArgumentError, ~r/value outside its declared set/, fn ->
-        Contract.validate!("booking_link_kept", %{method: "carrier_pigeon"})
       end
 
       # The onboarding keeps are not dashboard share channels.

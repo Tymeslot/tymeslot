@@ -10,17 +10,14 @@ defmodule Tymeslot.Analytics.Contract do
 
   A prop whose values form a closed set also declares that set
   (`allowed_values/2`), and a value outside it is a violation like an
-  undeclared key: `booking_link_shared`'s channels (`share_channels/0`),
-  `calendar_reveal_loaded`'s results and `booking_link_kept`'s methods
-  (`Tymeslot.Onboarding.keep_methods/0`).
+  undeclared key: `booking_link_shared`'s channels (`share_channels/0`)
+  and `calendar_reveal_loaded`'s results.
 
   Validation raises in strict mode (dev/test) so a malformed or PII-carrying
   event is caught at the source. In prod, strict mode is off: callers receive
   `{:error, reason}` on a violation, log a warning, and drop the event rather
   than crashing a live user flow.
   """
-
-  alias Tymeslot.Onboarding
 
   require Logger
 
@@ -32,7 +29,6 @@ defmodule Tymeslot.Analytics.Contract do
     "onboarding_step_viewed" => [:step],
     "onboarding_step_completed" => [:step],
     "calendar_reveal_loaded" => [:result],
-    "booking_link_kept" => [:method],
     "booking_link_shared" => [:channel],
     "share_step_viewed" => [:page_live, :returned],
     "guest_preview_opened" => []
@@ -59,7 +55,6 @@ defmodule Tymeslot.Analytics.Contract do
   @spec allowed_values(String.t(), atom()) :: [String.t()] | nil
   def allowed_values("booking_link_shared", :channel), do: @share_channels
   def allowed_values("calendar_reveal_loaded", :result), do: @reveal_results
-  def allowed_values("booking_link_kept", :method), do: Onboarding.keep_methods()
   def allowed_values(_name, _key), do: nil
 
   @doc "Prop keys that must never be declared on any event."

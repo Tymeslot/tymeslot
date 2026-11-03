@@ -79,7 +79,6 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         socket
         |> Component.assign(current_user: completed, kept_method: confirmation)
         |> LiveView.clear_flash()
-        |> Analytics.push("booking_link_kept", %{method: method})
 
       {:error, {:email, _reason}} ->
         LiveView.put_flash(
