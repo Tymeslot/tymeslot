@@ -572,24 +572,20 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_event("tour:" <> action, params, socket),
     do: TourEventHandlers.handle_event(action, params, socket)
 
-  def handle_event("onboarding:toggle", %{"id" => key}, socket) do
-    case Onboarding.toggle_dashboard_setup_item(socket.assigns.current_user, key) do
-      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
-      {:error, _reason} -> {:noreply, socket}
-    end
-  end
+  def handle_event("onboarding:toggle", %{"id" => key}, socket),
+    do:
+      keep_user(Onboarding.toggle_dashboard_setup_item(socket.assigns.current_user, key), socket)
 
   def handle_event("booking_link_copied", params, socket),
     do: BookingLinkShare.handle_copied(socket, params["channel"])
 
-  def handle_event("onboarding:dismiss", _params, socket) do
-    case Onboarding.dismiss_dashboard_setup(socket.assigns.current_user) do
-      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
-      {:error, _changeset} -> {:noreply, socket}
-    end
-  end
+  def handle_event("onboarding:dismiss", _params, socket),
+    do: keep_user(Onboarding.dismiss_dashboard_setup(socket.assigns.current_user), socket)
 
   # Private functions
+
+  defp keep_user({:ok, user}, socket), do: {:noreply, assign(socket, :current_user, user)}
+  defp keep_user({:error, _reason}, socket), do: {:noreply, socket}
 
   @spec handle_saving_animation(Phoenix.LiveView.Socket.t(), non_neg_integer()) ::
           Phoenix.LiveView.Socket.t()
