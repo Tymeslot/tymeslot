@@ -161,7 +161,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     do:
       dgettext(
         "onboarding_wizard",
-        "Your page is live. Send the link to one person who might book with you now."
+        "Your page is ready for bookings. Try it yourself, then send it to someone."
       )
 
   @doc """

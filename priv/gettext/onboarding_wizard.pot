@@ -46,11 +46,6 @@ msgstr ""
 msgid "Booking link copied to clipboard!"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Booking link copied!"
-msgstr ""
-
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV Calendar"
@@ -97,12 +92,8 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Copy booking link"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Copy link"
 msgstr ""
@@ -172,6 +163,7 @@ msgstr ""
 msgid "Finish setting up"
 msgstr ""
 
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Go to dashboard"
@@ -368,6 +360,7 @@ msgstr ""
 msgid "Your booking link"
 msgstr ""
 
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
 #: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page"
@@ -437,26 +430,6 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Book a time with me"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Email"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Or send it straight away"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "You can book a time with me here: %{url}"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Your page is live. Send the link to one person who might book with you now."
 msgstr ""
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
@@ -870,4 +843,149 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Saved. The preview couldn't update just now; your page shows your latest hours."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Add to email signature"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple Mail: Settings, then Signatures."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Book a time with me: %{url}"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Copied"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Copy message"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Email me my link"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Emailed to you"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Gmail: Settings, See all settings, then Signature."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, you can pick a time with me here: %{url}"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Message copied"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Open on your phone"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Opened on your phone"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Or keep it for later"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Outlook: Settings, Mail, then Compose and reply."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "QR code for your booking page"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Scan with your phone camera."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Send or keep your link first"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Send them your link"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Sent"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Sent to %{email}"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Signature copied"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Test bookings don't create meetings or send emails."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Their name (optional)"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Try booking yourself"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't send the email. Try another option."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Who should book you first?"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "You can pick a time with me here: %{url}"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your page is ready for bookings. Try it yourself, then send it to someone."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Your link is saved"
 msgstr ""

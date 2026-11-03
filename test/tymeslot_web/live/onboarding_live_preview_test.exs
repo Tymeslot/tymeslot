@@ -43,7 +43,13 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
 
       # Preview-specific markup: the name and the joined link chip.
       assert html =~ "Ada Lovelace"
-      assert html =~ "#{host()}/ada"
+
+      assert view
+             |> element(~s([data-role="stage-address"]))
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.text() =~
+               "#{host()}/ada"
     end
   end
 

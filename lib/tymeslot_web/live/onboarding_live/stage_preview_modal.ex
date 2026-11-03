@@ -22,6 +22,11 @@ defmodule TymeslotWeb.OnboardingLive.StagePreviewModal do
   """
   attr :show, :boolean, required: true
   attr :canvas, :string, default: nil, doc: "the theme's canvas colour, behind the page"
+
+  attr :iframe_src, :string,
+    default: nil,
+    doc: "on the live step, the host's real page, to try at full size"
+
   slot :inner_block, required: true
 
   @spec stage_preview_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -35,7 +40,14 @@ defmodule TymeslotWeb.OnboardingLive.StagePreviewModal do
     >
       <:header>{dgettext("onboarding_wizard", "Your booking page")}</:header>
       <div
-        :if={@show}
+        :if={@show && @iframe_src}
+        class="stage-preview-canvas stage-preview-canvas--page"
+        style={@canvas && "--stage-canvas: #{@canvas};"}
+      >
+        <StageFrame.page_iframe id="onboarding-stage-preview-iframe" src={@iframe_src} />
+      </div>
+      <div
+        :if={@show && !@iframe_src}
         class="stage-preview-canvas"
         style={@canvas && "--stage-canvas: #{@canvas};"}
         aria-hidden="true"

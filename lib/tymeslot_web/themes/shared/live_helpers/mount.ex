@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   import Phoenix.LiveView, only: [connected?: 1, push_navigate: 2]
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Onboarding
 
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
@@ -74,6 +75,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       socket
       |> assign_owner_preview(params)
       |> assign_refused_calendars()
+      |> announce_handoff(params)
 
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
@@ -233,6 +235,22 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     |> assign(:owner_preview, socket.assigns[:owner_preview] || verified_token != nil)
     |> assign(:preview_token, socket.assigns[:preview_token] || verified_token)
   end
+
+  # The onboarding's last step shows the host a QR code of their own page
+  # with `handoff=1`; opening it on a phone counts as keeping the link
+  # (`Tymeslot.Onboarding.broadcast_preview_opened/1`). Only a verified,
+  # owner-bound token may announce it, and only the connected mount, so the
+  # static render and a forged link never do. The step's own iframe carries
+  # a valid token but never `handoff`.
+  defp announce_handoff(socket, %{"handoff" => "1"} = params) do
+    if connected?(socket) and verified_preview_token(socket, params) do
+      Onboarding.broadcast_preview_opened(socket.assigns.organizer_user_id)
+    end
+
+    socket
+  end
+
+  defp announce_handoff(socket, _params), do: socket
 
   # The calendars whose credentials were refused, by name, for the page's own
   # organiser alone: they read every slot fetch as failing until they

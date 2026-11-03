@@ -51,7 +51,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
 
       click_continue(view)
       assert step_title(view) == "You're live"
-      assert has_element?(view, "button[phx-click='next_step']", "Go to dashboard")
+      assert has_element?(view, "#onboarding-finish", "Go to dashboard")
     end
 
     test "Continue reads the same on every step before the last", %{conn: conn} do
@@ -203,6 +203,22 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
   end
 
   describe "debug routes" do
+    test "after a keep, finishing on a debug route goes back to where it started" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_step: :ready,
+          kept_method: "copy",
+          live_action: :debug_step,
+          base_path: "/dev/onboarding"
+        }
+      }
+
+      assert {:noreply, %{redirected: {:redirect, %{to: "/dev/onboarding"}}}} =
+               NavigationHandlers.handle_next_step(socket)
+    end
+
     test "debug finish returns to the dev route" do
       assert NavigationHandlers.base_path("http://localhost:4000/dev/onboarding/ready") ==
                "/dev/onboarding"

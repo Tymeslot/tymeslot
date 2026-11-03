@@ -52,9 +52,13 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
   end
 
   test "an unknown or not yet built fixture leaves the socket unchanged" do
-    for name <- [nil, "nonsense", "kept"] do
+    for name <- [nil, "nonsense"] do
       assert DebugFixtures.apply(socket(), name) == socket()
     end
+  end
+
+  test "kept marks the link as kept by copying" do
+    assert DebugFixtures.apply(socket(), "kept").assigns.kept_method == "copy"
   end
 
   test "reveal_ready returns the fixed week" do

@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.BookingLinkShare do
 
   @doc """
   Stamps the profile's first share and pushes `booking_link_shared` with the
-  given channel (one of `ReadyStep.share_channels/0`, fixed by the caller).
+  given channel (`checklist` or `sidebar`, fixed by the caller).
   """
   @spec record(Phoenix.LiveView.Socket.t(), ProfileSchema.t() | nil, String.t()) ::
           Phoenix.LiveView.Socket.t()

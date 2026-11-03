@@ -25,8 +25,10 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
       it shows that a host should hear about goes in the one polite live
       region in the question column: pass the sentence as
       `stage_announcement`. The LiveView passes the stage's caption, so the
-      region and the caption under the stage always agree; `""` says
-      nothing.
+      region and the caption under the stage agree; `""` says nothing. On
+      the live step a keep action's confirmation ("Copied", "Opened on your
+      phone") takes the region's place instead, since the caption no longer
+      changes there.
   """
 
   use Phoenix.Component
@@ -66,6 +68,14 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :stage_canvas, :string, required: true, doc: "the theme's canvas colour"
   attr :stage_theme, :string, default: nil, doc: "the id of the theme the stage draws"
   attr :stage_caption, :string, default: nil, doc: "a line under the stage frame"
+
+  attr :stage_iframe, :string,
+    default: nil,
+    doc: "the host's real page, which the stage shows instead of the miniature"
+
+  attr :show_nav, :boolean,
+    default: true,
+    doc: "whether the Back and Continue row shows; the live step has its own finish"
 
   attr :stage_compact, :boolean,
     default: false,
@@ -126,6 +136,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
           </div>
 
           <div
+            :if={@show_nav}
             id="onboarding-nav"
             class="onboarding-nav"
             data-role="onboarding-nav"
@@ -167,7 +178,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         data-stage-fit
         style={"--stage-canvas: #{@stage_canvas};"}
       >
-        <StageFrame.frame url={@stage_url} live={@stage_live}>
+        <StageFrame.frame url={@stage_url} live={@stage_live} iframe_src={@stage_iframe}>
           <StageFrame.scaled id="onboarding-stage-scale">
             {render_slot(@stage)}
           </StageFrame.scaled>

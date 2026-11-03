@@ -46,11 +46,6 @@ msgstr "Agendar"
 msgid "Booking link copied to clipboard!"
 msgstr "Link de agendamento copiado para a área de transferência!"
 
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Booking link copied!"
-msgstr "Link de agendamento copiado!"
-
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV Calendar"
@@ -97,12 +92,8 @@ msgstr "Conectar pela Microsoft"
 msgid "Continue"
 msgstr "Continuar"
 
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Copy booking link"
-msgstr "Copiar o link de agendamento"
-
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Copy link"
 msgstr "Copiar link"
@@ -172,6 +163,7 @@ msgstr "Concluído"
 msgid "Finish setting up"
 msgstr "Terminar a configuração"
 
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Go to dashboard"
@@ -368,6 +360,7 @@ msgstr "Boas-vindas ao Tymeslot! Sua conta está pronta."
 msgid "Your booking link"
 msgstr "Seu link de agendamento"
 
+#: lib/tymeslot_web/live/onboarding_live/stage_frame.ex
 #: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page"
@@ -438,26 +431,6 @@ msgstr "Qual destas descrições combina com você?"
 #, elixir-autogen, elixir-format
 msgid "Book a time with me"
 msgstr "Agende um horário comigo"
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Email"
-msgstr "E-mail"
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "Or send it straight away"
-msgstr "Ou envie direto"
-
-#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
-#, elixir-autogen, elixir-format
-msgid "You can book a time with me here: %{url}"
-msgstr "Você pode agendar um horário comigo aqui: %{url}"
-
-#: lib/tymeslot_web/live/onboarding_live/step_config.ex
-#, elixir-autogen, elixir-format
-msgid "Your page is live. Send the link to one person who might book with you now."
-msgstr "Sua página está no ar. Envie o link agora para uma pessoa que possa agendar com você."
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
@@ -871,3 +844,148 @@ msgstr "Escolha um visual e veja sua página mudar."
 #, elixir-autogen, elixir-format
 msgid "Saved. The preview couldn't update just now; your page shows your latest hours."
 msgstr "Salvo. Não foi possível atualizar a prévia agora; sua página mostra seu horário mais recente."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Add to email signature"
+msgstr "Adicionar à assinatura de e-mail"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Apple Mail: Settings, then Signatures."
+msgstr "Apple Mail: Ajustes e depois Assinaturas."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Book a time with me: %{url}"
+msgstr "Agende um horário comigo: %{url}"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Copied"
+msgstr "Copiado"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Copy message"
+msgstr "Copiar mensagem"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Email me my link"
+msgstr "Enviar meu link por e-mail"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Emailed to you"
+msgstr "Enviado para o seu e-mail"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Gmail: Settings, See all settings, then Signature."
+msgstr "Gmail: Configurações, Ver todas as configurações e depois Assinatura."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, you can pick a time with me here: %{url}"
+msgstr "Oi, %{name}! Você pode escolher um horário comigo aqui: %{url}"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Message copied"
+msgstr "Mensagem copiada"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Open on your phone"
+msgstr "Abrir no celular"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Opened on your phone"
+msgstr "Aberto no celular"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Or keep it for later"
+msgstr "Ou guarde para depois"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Outlook: Settings, Mail, then Compose and reply."
+msgstr "Outlook: Configurações, Email e depois Redigir e responder."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "QR code for your booking page"
+msgstr "QR code da sua página de agendamento"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Scan with your phone camera."
+msgstr "Escaneie com a câmera do celular."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Send or keep your link first"
+msgstr "Primeiro envie ou guarde seu link"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Send them your link"
+msgstr "Envie seu link"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Sent"
+msgstr "Enviado"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Sent to %{email}"
+msgstr "Enviado para %{email}"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Signature copied"
+msgstr "Assinatura copiada"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Test bookings don't create meetings or send emails."
+msgstr "Agendamentos de teste não criam reuniões nem enviam e-mails."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Their name (optional)"
+msgstr "Nome da pessoa (opcional)"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Try booking yourself"
+msgstr "Teste um agendamento você mesmo"
+
+#: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't send the email. Try another option."
+msgstr "Não conseguimos enviar o e-mail. Tente outra opção."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Who should book you first?"
+msgstr "Quem deve agendar com você primeiro?"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "You can pick a time with me here: %{url}"
+msgstr "Você pode escolher um horário comigo aqui: %{url}"
+
+#: lib/tymeslot_web/live/onboarding_live/step_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your page is ready for bookings. Try it yourself, then send it to someone."
+msgstr "Sua página está pronta para receber agendamentos. Teste você mesmo e depois envie para alguém."
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Your link is saved"
+msgstr "Seu link está salvo"
