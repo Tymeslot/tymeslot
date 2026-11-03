@@ -287,9 +287,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     Logger.info("Replacing calendar event", meeting_id: meeting.id)
 
     event_data =
-      CalendarEventBuilder.build_event_data(meeting,
+      meeting
+      |> CalendarEventBuilder.build_event_data(
         attendees: Meetings.attendees_for_calendar(meeting)
       )
+      |> with_creation_key(meeting)
 
     with {:ok, created} <- CalendarEvents.create_event(event_data, meeting) do
       case record_replacement(meeting, event_id, created) do
@@ -369,6 +371,16 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
+  # Names this create of the meeting's event, so that a provider which can
+  # replay a create (Outlook's `transactionId`) answers a retry with the event
+  # an earlier attempt wrote but never heard back about, rather than writing a
+  # second. It carries the event the new one supersedes (the meeting's own UID
+  # on its first create), so a deliberate re-create, after the event was
+  # deleted or while it moves calendars, is a new create and not a replay.
+  defp with_creation_key(event_data, meeting) do
+    Map.put(event_data, :creation_key, "#{meeting.id}:#{calendar_event_identifier(meeting)}")
+  end
+
   defp update_or_create_calendar_event(meeting, event_data, attempt) do
     case update_existing_event(meeting, event_data) do
       {:error, :not_found} -> handle_missing_event(meeting.id, event_data, meeting, attempt)
@@ -400,7 +412,10 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     Logger.info("Calendar event not found, creating new one", meeting_id: meeting_id)
 
     # Use the organizer_user_id to create in the correct calendar
-    case CalendarEvents.create_event(event_data, meeting.organizer_user_id) do
+    case CalendarEvents.create_event(
+           with_creation_key(event_data, meeting),
+           meeting.organizer_user_id
+         ) do
       {:ok, created} ->
         CalendarEventMapping.persist_or_compensate(meeting, created)
 
@@ -472,6 +487,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         attendees: Meetings.attendees_for_calendar(meeting)
       )
       |> with_online_meeting(MeetingProvisioning.booking_online_meeting(meeting))
+      |> with_creation_key(meeting)
 
     # Use the meeting context to create in the correct calendar
     case CalendarEvents.create_event(event_data, meeting) do

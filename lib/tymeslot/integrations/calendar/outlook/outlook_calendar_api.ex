@@ -97,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec create_event(CalendarIntegrationSchema.t(), map()) ::
           {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def create_event(%CalendarIntegrationSchema{} = integration, event_data) do
-    with {:ok, body} <- event_body(event_data) do
+    with {:ok, body} <- create_body(integration, nil, event_data) do
       Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
         with {:ok, response} <-
                make_request_with_body(:post, "/me/events", token, body,
@@ -116,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec create_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def create_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_data) do
-    with {:ok, body} <- event_body(event_data) do
+    with {:ok, body} <- create_body(integration, calendar_id, event_data) do
       Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
         with {:ok, response} <-
                make_request_with_body(:post, calendar_path(calendar_id, "/events"), token, body,
@@ -551,5 +551,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp event_body(event_data) do
     with {:ok, body} <- EventMapper.format_event_data(event_data),
          do: {:ok, EventMapper.put_provenance(body, event_data)}
+  end
+
+  # A create's body also carries its `transactionId`, so a retried POST of the
+  # same create answers with the event Graph already wrote.
+  defp create_body(integration, calendar_id, event_data) do
+    with {:ok, body} <- event_body(event_data),
+         do:
+           {:ok, EventMapper.put_transaction_id(body, {integration.id, calendar_id}, event_data)}
   end
 end
