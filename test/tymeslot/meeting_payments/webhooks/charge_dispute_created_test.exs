@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SendChargeDisputeOpened
@@ -200,6 +201,70 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     end
   end
 
+  # Stripe can deliver `created` after the `closed` that settled the same
+  # dispute (out of order, or retrying a failed delivery). The late payload
+  # still carries the open status it was created with.
+  describe "handle/1 with a dispute the payment already records as closed" do
+    test "a created delivered after its closed leaves the payment paid and emails no one" do
+      bp = paid_payment("ch_CLOSED_FIRST")
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 closed_event("evt_CF_CLOSED", "ch_CLOSED_FIRST", "dp_CLOSED_FIRST", "won")
+               )
+
+      assert :ok =
+               ChargeDisputeCreated.handle(
+                 dispute_event("evt_CF_CREATED", "ch_CLOSED_FIRST", dispute_id: "dp_CLOSED_FIRST")
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :paid
+      assert reloaded.last_event_id == "evt_CF_CLOSED"
+      refute_enqueued(worker: SendChargeDisputeOpened)
+    end
+
+    test "a retried created after created and closed leaves the payment paid and emails once" do
+      bp = paid_payment("ch_RETRIED")
+
+      created = dispute_event("evt_RT_CREATED", "ch_RETRIED", dispute_id: "dp_RETRIED")
+      assert :ok = ChargeDisputeCreated.handle(created)
+      assert Repo.reload!(bp).status == :disputed
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 closed_event("evt_RT_CLOSED", "ch_RETRIED", "dp_RETRIED", "won")
+               )
+
+      # Stripe retries the first delivery under the same event id; the
+      # closed event has since replaced it as `last_event_id`.
+      assert :ok = ChargeDisputeCreated.handle(created)
+
+      assert Repo.reload!(bp).status == :paid
+      assert [_one] = all_enqueued(worker: SendChargeDisputeOpened)
+    end
+
+    test "a new dispute after a closed one is still marked disputed" do
+      bp = paid_payment("ch_SECOND")
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 closed_event("evt_SD_CLOSED", "ch_SECOND", "dp_FIRST", "warning_closed")
+               )
+
+      assert :ok =
+               ChargeDisputeCreated.handle(
+                 dispute_event("evt_SD_CREATED", "ch_SECOND", dispute_id: "dp_SECOND")
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :disputed
+      assert reloaded.stripe_dispute_id == "dp_SECOND"
+      assert reloaded.dispute_closed_at == nil
+      assert_enqueued(worker: SendChargeDisputeOpened, args: %{booking_payment_id: bp.id})
+    end
+  end
+
   describe "handle/1 with an event from another connected account" do
     test "neither marks the booking disputed nor emails the host" do
       bp =
@@ -232,12 +297,39 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       "created" => System.os_time(:second),
       "data" => %{
         "object" => %{
-          "id" => "dp_#{event_id}",
+          "id" => Keyword.get(opts, :dispute_id, "dp_#{event_id}"),
           "charge" => charge_id,
           "object" => "dispute",
           "amount" => 5000,
           "reason" => "fraudulent",
           "status" => Keyword.get(opts, :status, "needs_response")
+        }
+      }
+    }
+  end
+
+  defp paid_payment(charge_id) do
+    insert(:booking_payment,
+      stripe_account_id: @account,
+      status: :paid,
+      amount_cents: 5000,
+      stripe_charge_id: charge_id
+    )
+  end
+
+  defp closed_event(event_id, charge_id, dispute_id, status) do
+    %{
+      "id" => event_id,
+      "account" => @account,
+      "type" => "charge.dispute.closed",
+      "created" => System.os_time(:second),
+      "data" => %{
+        "object" => %{
+          "id" => dispute_id,
+          "object" => "dispute",
+          "charge" => charge_id,
+          "amount" => 5000,
+          "status" => status
         }
       }
     }

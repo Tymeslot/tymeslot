@@ -330,6 +330,28 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
              ]
     end
 
+    test "is refunded after a won dispute whose created Stripe delivers late" do
+      bp =
+        disputed_expired_payment(refunded_amount_cents: 0, stripe_dispute_id: "dp_LATE_DISPUTED")
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_event("evt_DISPUTE_WON", "charge.dispute.closed", %{"status" => "won"})
+               )
+
+      # The retried created carries the status it was created with.
+      assert :ok =
+               ChargeDisputeCreated.handle(
+                 dispute_event("evt_DISPUTE_OPENED", "charge.dispute.created", %{
+                   "status" => "needs_response",
+                   "reason" => "fraudulent"
+                 })
+               )
+
+      assert Repo.reload!(bp).status == :paid
+      assert_remainder_refunded(bp, 5000)
+    end
+
     # Whatever the dispute decided, what is left with the host for a booking
     # that never happened goes back to the attendee.
     test "refunds what is left after a won dispute on a partly refunded payment" do
