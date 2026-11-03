@@ -231,11 +231,12 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Highlight regions
   # -------------------------------------------------------------------
 
-  # The regions of the theme's card ringed for a step (`PreviewParts.ring/2`).
-  # Choosing a theme changes the whole page, and the last step shows it
-  # finished, so neither rings anything.
+  # The regions of the theme's card ringed for a step (`PreviewParts.ring/2`),
+  # which the stage also brings into view on a phone. Choosing a theme
+  # changes the whole page, and the last step shows it finished, so neither
+  # rings anything.
   defp highlight(:connect_calendar), do: [:calendar]
-  defp highlight(:meeting), do: [:meeting, :slots]
+  defp highlight(:meeting), do: [:slots]
   defp highlight(_step), do: []
 
   # The header's own regions, which only the profile step rings.

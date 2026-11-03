@@ -355,6 +355,9 @@
   justify-content: center;
   width: 100%;
   overflow: hidden;
+  /* On a phone, the hook shifts the page up inside the card to bring the
+     step's highlighted region into view. */
+  transform: translateY(calc(-1 * var(--stage-shift, 0px)));
 }
 
 .stage-scale-inner {

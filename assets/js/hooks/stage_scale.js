@@ -13,7 +13,11 @@
  * nearest `[data-stage-fit]` ancestor: its content height, less whatever it
  * holds besides the page (the browser bar, the caption, the gaps between).
  * Below `lg` the page fits the width, never past its own size, and the card
- * cuts it off at the bottom.
+ * cuts it off at the bottom. On a step that highlights part of the page
+ * (an element marked `data-stage-focus`, such as the calendar area), the
+ * page is shifted up inside the card (`--stage-shift`) so that part is in
+ * view; with no such mark the card shows the top of the page. The shift is
+ * a jump inside the card, never a scroll of the page around it.
  *
  * It refits when the frame, the stage or the miniature changes size, when
  * the viewport crosses `lg`, and after every LiveView update (a new step
@@ -50,6 +54,23 @@ export function stageScale({ width, wide, availableHeight = Infinity, innerHeigh
  * @param {number} pageHeight the page wrapper's current height
  * @returns {number}
  */
+/**
+ * How far to shift the page up inside a card `viewport` pixels tall so the
+ * focused region (from `top` to `bottom`, in the scaled page) is in view:
+ * enough to show its bottom, never so much that its top is cut, never past
+ * the end of the page, and none when it is already in view.
+ *
+ * @param {{viewport: number, top: number, bottom: number, pageHeight: number, margin?: number}} focus
+ * @returns {number}
+ */
+export function focusShift({ viewport, top, bottom, pageHeight, margin = 12 }) {
+  if (!(viewport > 0)) return 0
+
+  const wanted = Math.min(top - margin, bottom + margin - viewport)
+  const furthest = Math.max(0, pageHeight - viewport)
+  return Math.round(Math.min(furthest, Math.max(0, wanted)))
+}
+
 export function heightForPage(contentHeight, children, pageHeight) {
   if (children.length === 0) return Infinity
 
@@ -146,5 +167,29 @@ export const StageScale = {
       this.el.style.setProperty("--stage-scale", String(scale))
     }
     if (this.el.style.height !== height) this.el.style.height = height
+
+    const shift = `${this.shift(innerHeight * scale)}px`
+    if (this.el.style.getPropertyValue("--stage-shift") !== shift) {
+      this.el.style.setProperty("--stage-shift", shift)
+    }
+  },
+
+  // Below lg, inside the stage card only (not the expanded preview): the
+  // shift that brings the focused region into view, measured on the page
+  // as now scaled.
+  shift(pageHeight) {
+    const card = this.el.closest(".stage-frame-body")
+    const focus = this.inner.querySelector("[data-stage-focus]")
+    if (this.media.matches || !card || !focus) return 0
+
+    const pageTop = this.inner.getBoundingClientRect().top
+    const box = focus.getBoundingClientRect()
+
+    return focusShift({
+      viewport: card.clientHeight,
+      top: box.top - pageTop,
+      bottom: box.bottom - pageTop,
+      pageHeight
+    })
   }
 }

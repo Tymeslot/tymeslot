@@ -16,6 +16,7 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Utils.UrlBuilder
+  alias TymeslotWeb.OnboardingLive.DebugFixtures
 
   setup tags do
     {:ok, conn: setup_onboarding_session(tags.conn)}
@@ -189,6 +190,39 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
       |> render_click()
 
       refute has_element?(view, ~s(#onboarding-stage-preview [data-role="stage-miniature"]))
+    end
+  end
+
+  describe "the week on the stage" do
+    # The week arrives on the calendar step (B5 fetches it); until then the
+    # debug fixture is the one way in, and the debug routes are not mounted
+    # in tests, so it is applied to the running wizard's socket directly.
+    defp put_week_fixture(view, name) do
+      :sys.replace_state(view.pid, fn state ->
+        %{state | socket: DebugFixtures.apply(state.socket, name)}
+      end)
+
+      # Any event re-renders with the new assigns.
+      render_hook(view, "close_stage_preview", %{})
+    end
+
+    test "the caption reaches the live region and shows under the stage", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      navigate_to_calendar_step(view)
+
+      html = put_week_fixture(view, "reveal_ready")
+      doc = Floki.parse_document!(html)
+
+      assert [region] = Floki.find(doc, ~s([data-role="stage-announcement"]))
+      assert Floki.attribute(region, "aria-live") == ["polite"]
+      announced = region |> Floki.text() |> String.trim()
+      assert announced =~ ~r/^Your \w+ .+ is already blocked\. 23 open slots this week\.$/
+
+      assert [caption] = Floki.find(doc, ".onboarding-stage-caption")
+      assert String.trim(Floki.text(caption)) == announced
+
+      # The times are on the page, and they reveal on this render.
+      assert Floki.find(doc, ~s([data-preview-part="times"][data-reveal])) != []
     end
   end
 end

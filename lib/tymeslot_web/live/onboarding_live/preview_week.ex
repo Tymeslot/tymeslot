@@ -277,6 +277,32 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     """
   end
 
+  attr :colors, :map, required: true
+  attr :highlight, :list, default: [], doc: "the regions ringed for the step"
+  attr :class, :string, default: "flex flex-col gap-3"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  @doc """
+  The theme's calendar area: its days and its times. Ringed, and marked as
+  what the stage brings into view on a phone (`data-stage-focus`), on the
+  step that highlights it.
+  """
+  @spec calendar_area(map()) :: Phoenix.LiveView.Rendered.t()
+  def calendar_area(assigns) do
+    ~H"""
+    <div
+      class={["w-full rounded-token-lg", @class]}
+      style={PreviewParts.ring(:calendar in @highlight, @colors)}
+      data-preview-region="calendar"
+      data-stage-focus={:calendar in @highlight}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
   attr :view, :map, required: true
   attr :colors, :map, required: true
   attr :layout, :atom, values: [:chips, :rows], required: true
@@ -284,6 +310,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   attr :class, :string, default: nil, doc: "the list's own layout (columns, gaps)"
   attr :item_class, :string, default: "rounded-token-md"
   attr :reveal, :boolean, default: false
+  attr :highlight, :list, default: [], doc: "the regions ringed for the step"
 
   @doc """
   The chosen day's times, or the week's line where there are none to show.
@@ -291,51 +318,73 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   `:chips` lists the free times alone, as a month-grid theme shows them
   under its calendar; `:rows` lists the day in time order with its busy
   blocks hatched between the free times, as a day view does.
+
+  It always draws `limit` cells, so it is the same height in every state
+  and nothing below it moves when the week arrives: a day with fewer
+  entries is padded with blank cells, and before the week is ready the
+  cells are faint (shimmering while the calendar is read) under the week's
+  line.
   """
   @spec times(map()) :: Phoenix.LiveView.Rendered.t()
-  def times(%{view: %{ready?: true}} = assigns) do
-    assigns = assign(assigns, :entries, entries(assigns))
-
-    ~H"""
-    <div class={["w-full", @class]} data-preview-part="times" data-reveal={@reveal}>
-      <span
-        :for={{entry, index} <- Enum.with_index(@entries)}
-        class={[
-          "text-token-xs font-medium inline-flex items-center",
-          @layout == :chips && "justify-center px-2 py-1.5",
-          @layout == :rows && "w-full gap-1.5 px-3 py-2",
-          entry.kind == :busy && "onboarding-preview-busy",
-          @item_class
-        ]}
-        style={entry_style(@colors, entry.kind, index)}
-        data-reveal-item={entry.kind == :slot}
-        data-entry={entry.kind}
-      >
-        {entry.label}
-      </span>
-    </div>
-    """
-  end
-
   def times(assigns) do
+    assigns =
+      assign(assigns,
+        cells: cells(assigns),
+        highlighted: :slots in assigns.highlight,
+        muted: PreviewParts.color(assigns.colors, :text_secondary, "#475569")
+      )
+
     ~H"""
-    <div class="w-full flex flex-col items-center gap-2" data-preview-part="times">
-      <div :if={@view.state == :loading} class="w-full grid grid-cols-3 gap-1.5" aria-hidden="true">
+    <div
+      class="relative w-full rounded-token-lg"
+      style={PreviewParts.ring(@highlighted, @colors)}
+      data-preview-part="times"
+      data-preview-region="slots"
+      data-stage-focus={@highlighted}
+      data-reveal={@reveal and @view.ready?}
+    >
+      <div class={["w-full", @class]}>
         <span
-          :for={_n <- 1..3}
-          class={["h-6 onboarding-preview-shimmer", @item_class]}
-          style={"color: #{PreviewParts.color(@colors, :text_secondary, "#475569")};"}
-        />
+          :for={{cell, index} <- Enum.with_index(@cells)}
+          class={[
+            "text-token-xs font-medium inline-flex items-center",
+            @layout == :chips && "justify-center px-2 py-1.5",
+            @layout == :rows && "w-full gap-1.5 px-3 py-2",
+            cell.kind == :busy && "onboarding-preview-busy",
+            cell.kind == :loading && "onboarding-preview-shimmer",
+            cell.kind == :filler && "invisible",
+            @item_class
+          ]}
+          style={cell_style(@colors, cell.kind, index)}
+          data-reveal-item={cell.kind == :slot}
+          data-entry={cell.kind in [:slot, :busy] && cell.kind}
+        >
+          {cell.label}
+        </span>
       </div>
       <p
-        class="text-token-xs text-center leading-snug"
-        style={"color: #{PreviewParts.color(@colors, :text_secondary, "#475569")};"}
+        :if={@view.message}
+        class="absolute inset-0 flex items-center justify-center px-3 text-token-xs text-center leading-snug"
+        style={"color: #{@muted};"}
         data-role="week-message"
       >
         {@view.message}
       </p>
     </div>
     """
+  end
+
+  # Exactly `limit` cells: the entries, then blanks; before the week is
+  # ready, faint cells (shimmering while it loads). A blank keeps a line's
+  # height with a no-break space.
+  defp cells(%{view: %{ready?: true}} = assigns) do
+    entries = entries(assigns)
+    entries ++ List.duplicate(%{kind: :filler, label: "\u00a0"}, assigns.limit - length(entries))
+  end
+
+  defp cells(%{view: view, limit: limit}) do
+    kind = if view.state == :loading, do: :loading, else: :ghost
+    List.duplicate(%{kind: kind, label: "\u00a0"}, limit)
   end
 
   defp entries(%{layout: :chips, view: view, limit: limit}) do
@@ -376,15 +425,25 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
     "color: #{PreviewParts.color(colors, :text_secondary, "#475569")};opacity: 0.3;"
   end
 
-  defp entry_style(colors, :slot, index) do
+  defp cell_style(colors, :slot, index) do
     primary = PreviewParts.color(colors, :primary, "#14b8a6")
 
     "background: #{primary}1f;color: #{PreviewParts.color(colors, :text, "#0f172a")};" <>
       "--reveal-index: #{index};"
   end
 
-  defp entry_style(colors, :busy, _index) do
+  defp cell_style(colors, :busy, _index) do
     muted = PreviewParts.color(colors, :text_secondary, "#475569")
     "color: #{muted};background-color: #{muted}0f;"
   end
+
+  defp cell_style(colors, :ghost, _index) do
+    "background-color: #{PreviewParts.color(colors, :text_secondary, "#475569")}0a;"
+  end
+
+  defp cell_style(colors, :loading, _index) do
+    "color: #{PreviewParts.color(colors, :text_secondary, "#475569")};"
+  end
+
+  defp cell_style(_colors, :filler, _index), do: nil
 end

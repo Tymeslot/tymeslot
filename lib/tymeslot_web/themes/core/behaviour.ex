@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Themes.Core.Behaviour do
       host's coming week as `TymeslotWeb.OnboardingLive.PreviewWeek.view/3`
       resolves it, laid out with that module's components), `reveal`
       (whether the times reveal on this render), `highlight` (the regions
-      to ring: `:calendar`, `:slots`, `:meeting`) and a `header` slot
+      to ring: `:calendar`, `:slots`) and a `header` slot
       holding the shared identity header the card is drawn around.
 
   Optional: `use TymeslotWeb.Themes.Core.Theme` supplies the generic mock

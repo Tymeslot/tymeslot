@@ -21,8 +21,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
   # Tuesday 3 November 2026.
   @today ~D[2026-11-03]
 
-  # A week from Tuesday whose Tuesday has two times and a busy hour, and
-  # whose Wednesday is fully booked.
+  # A week from Tuesday whose Tuesday has two times and a busy hour, whose
+  # Wednesday is fully booked, and whose other days are open at 10:30.
   defp ready_week do
     days =
       for offset <- 0..6 do
@@ -31,7 +31,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
         case offset do
           0 -> %{date: date, slots: ["09:00", "09:30"], busy: [{~T[14:00:00], ~T[15:00:00]}]}
           1 -> %{date: date, slots: [], busy: [{~T[09:00:00], ~T[17:00:00]}]}
-          _other -> %{date: date, slots: ["11:00"], busy: []}
+          _other -> %{date: date, slots: ["10:30"], busy: []}
         end
       end
 
@@ -45,8 +45,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
     }
   end
 
-  defp card(module, week) do
-    assigns = %{module: module, week: week, today: @today}
+  defp card(module, week, highlight \\ []) do
+    assigns = %{module: module, week: week, today: @today, highlight: highlight}
 
     rendered_to_string(~H"""
     <PreviewParts.theme_preview
@@ -55,6 +55,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
       colors={%{}}
       week={@week}
       today={@today}
+      highlight={@highlight}
     >
       <:header>
         <p id="shared-header">Ada Lovelace</p>
@@ -102,7 +103,6 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
         assert times_text(html) =~ "09:00"
         assert times_text(html) =~ "09:30"
         refute html =~ "10:30"
-        refute times_text(html) =~ "11:00"
         assert html =~ "data-reveal-item"
       end
 
@@ -129,6 +129,46 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
         assert html =~ "onboarding-preview-shimmer"
       end
 
+      test "#{name} keeps its times the same size in every state" do
+        counts =
+          for week <- [
+                ready_week(),
+                %{state: :placeholder, preview: nil},
+                %{state: :loading, preview: nil},
+                %{state: :slow, preview: nil},
+                %{state: :failed, preview: nil}
+              ] do
+            @module
+            |> card(week)
+            |> doc()
+            |> Floki.find("[data-preview-part='times'] > div > span")
+            |> length()
+          end
+
+        assert [count | _rest] = counts
+        assert count > 0
+        assert Enum.uniq(counts) == [count]
+      end
+
+      test "#{name} rings and focuses the region its step highlights" do
+        for {region, highlight} <- [{"calendar", [:calendar]}, {"slots", [:slots]}] do
+          ringed =
+            @module
+            |> card(ready_week(), highlight)
+            |> doc()
+            |> Floki.find("[data-stage-focus]")
+
+          assert [element] = ringed
+          assert Floki.attribute(element, "data-preview-region") == [region]
+          assert [style] = Floki.attribute(element, "style")
+          assert style =~ "outline: 2px solid"
+        end
+
+        html = card(@module, ready_week(), [])
+        assert Floki.find(doc(html), "[data-stage-focus]") == []
+        refute html =~ "outline:"
+      end
+
       test "#{name} sends a slow or failed week to the page" do
         for state <- [:slow, :failed] do
           html = card(@module, %{state: state, preview: nil})
@@ -140,7 +180,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
     end
 
     test "a theme with a day view hatches the busy hour between the times" do
-      for module <- [TymeslotWeb.Themes.Rhythm.Theme, TymeslotWeb.Themes.Paper.Theme] do
+      for module <- [TymeslotWeb.Themes.Rhythm.Theme, TymeslotWeb.Themes.Paper.Theme, Bare] do
         entries =
           module
           |> card(ready_week())

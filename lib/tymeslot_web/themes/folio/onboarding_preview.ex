@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
   alias TymeslotWeb.OnboardingLive.PreviewWeek
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
-    only: [book_button: 1, card_style: 1, color: 3, ring: 2]
+    only: [book_button: 1, card_style: 1, color: 3]
 
   @doc "Draws the `:thumbnail` or `:card` variant; see `Behaviour.onboarding_preview/1`."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -71,22 +71,17 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
         <div class="-mt-8 w-full flex flex-col items-center gap-3">
           {render_slot(@header)}
         </div>
-        <div
-          class="w-full flex flex-col gap-3 rounded-token-lg"
-          style={ring(:calendar in @highlight, @colors)}
-          data-preview-region="calendar"
-        >
+        <PreviewWeek.calendar_area colors={@colors} highlight={@highlight}>
           <PreviewWeek.month_grid view={@view} colors={@colors} cell_class="rounded-token-full" />
-          <div class="rounded-token-lg" style={ring(:slots in @highlight, @colors)}>
-            <PreviewWeek.times
-              view={@view}
-              colors={@colors}
-              layout={:chips}
-              class="grid grid-cols-3 gap-1.5"
-              reveal={@reveal}
-            />
-          </div>
-        </div>
+          <PreviewWeek.times
+            view={@view}
+            colors={@colors}
+            layout={:chips}
+            class="grid grid-cols-3 gap-1.5"
+            reveal={@reveal}
+            highlight={@highlight}
+          />
+        </PreviewWeek.calendar_area>
         <.book_button
           class="w-full py-2 rounded-token-lg font-semibold text-token-sm mt-1"
           style={"background: #{@primary}; color: #{@ink};"}

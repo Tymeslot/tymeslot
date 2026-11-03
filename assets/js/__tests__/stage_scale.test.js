@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test, afterEach, vi } from 'vitest';
-import { StageScale, stageScale, heightForPage } from '../hooks/stage_scale';
+import { StageScale, stageScale, heightForPage, focusShift } from '../hooks/stage_scale';
 
 describe('stageScale', () => {
   test('fills a narrow frame below lg', () => {
@@ -45,6 +45,24 @@ describe('heightForPage', () => {
 
   test('leaves the height unbounded with nothing to measure', () => {
     expect(heightForPage(704, [], 556)).toBe(Infinity);
+  });
+});
+
+describe('focusShift', () => {
+  test('leaves a region already in view where it is', () => {
+    expect(focusShift({ viewport: 300, top: 100, bottom: 250, pageHeight: 600 })).toBe(0);
+  });
+
+  test('shifts just enough to show the bottom of a region below the card', () => {
+    expect(focusShift({ viewport: 300, top: 250, bottom: 450, pageHeight: 600 })).toBe(162);
+  });
+
+  test('never cuts the top of a region taller than the card', () => {
+    expect(focusShift({ viewport: 300, top: 250, bottom: 700, pageHeight: 800 })).toBe(238);
+  });
+
+  test('never shifts past the end of the page', () => {
+    expect(focusShift({ viewport: 300, top: 500, bottom: 590, pageHeight: 600 })).toBe(300);
   });
 });
 
@@ -93,5 +111,47 @@ describe('StageScale hook', () => {
     hook.updated();
 
     expect(el.style.height).toBe('600px');
+  });
+
+  // A phone card 300px tall holding a 600px page whose focused region runs
+  // from 350 to 450.
+  function buildCard({ focus }) {
+    const card = document.createElement('div');
+    card.className = 'stage-frame-body';
+    const { el, inner } = build({ width: 400, innerHeight: 600 });
+    card.appendChild(el);
+    document.body.appendChild(card);
+    Object.defineProperty(card, 'clientHeight', { value: 300, configurable: true });
+    inner.getBoundingClientRect = () => ({ top: 0, bottom: 600, height: 600 });
+
+    if (focus) {
+      const region = document.createElement('div');
+      region.setAttribute('data-stage-focus', '');
+      region.getBoundingClientRect = () => ({ top: 350, bottom: 450, height: 100 });
+      inner.appendChild(region);
+    }
+
+    return el;
+  }
+
+  test('below lg, shifts the page to bring the focused region into the card', () => {
+    const el = buildCard({ focus: true });
+    mount(el, { wide: false });
+
+    expect(el.style.getPropertyValue('--stage-shift')).toBe('162px');
+  });
+
+  test('keeps the top of the page with nothing focused', () => {
+    const el = buildCard({ focus: false });
+    mount(el, { wide: false });
+
+    expect(el.style.getPropertyValue('--stage-shift')).toBe('0px');
+  });
+
+  test('never shifts from lg, where the whole page shows', () => {
+    const el = buildCard({ focus: true });
+    mount(el, { wide: true });
+
+    expect(el.style.getPropertyValue('--stage-shift')).toBe('0px');
   });
 });

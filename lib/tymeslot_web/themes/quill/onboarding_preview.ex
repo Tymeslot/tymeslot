@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
       card_style: 1,
       color: 3,
       divider_style: 1,
-      ring: 2,
       step_dot_style: 2
     ]
 
@@ -80,23 +79,18 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
           </span>
         </div>
 
-        <div
-          class="w-full flex flex-col gap-3 rounded-token-lg"
-          style={ring(:calendar in @highlight, @colors)}
-          data-preview-region="calendar"
-        >
+        <PreviewWeek.calendar_area colors={@colors} highlight={@highlight}>
           <PreviewWeek.month_grid view={@view} colors={@colors} cell_class="rounded-token-md" />
-          <div class="rounded-token-lg" style={ring(:slots in @highlight, @colors)}>
-            <PreviewWeek.times
-              view={@view}
-              colors={@colors}
-              layout={:chips}
-              class="grid grid-cols-3 gap-1.5"
-              item_class="rounded-token-lg"
-              reveal={@reveal}
-            />
-          </div>
-        </div>
+          <PreviewWeek.times
+            view={@view}
+            colors={@colors}
+            layout={:chips}
+            class="grid grid-cols-3 gap-1.5"
+            item_class="rounded-token-lg"
+            reveal={@reveal}
+            highlight={@highlight}
+          />
+        </PreviewWeek.calendar_area>
       </div>
       <.book_button
         class="w-full py-2 rounded-token-xl font-semibold text-white text-token-sm mt-1"

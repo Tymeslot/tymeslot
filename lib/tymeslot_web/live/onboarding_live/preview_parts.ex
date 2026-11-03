@@ -37,7 +37,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
 
   attr :highlight, :list,
     default: [],
-    doc: "`:card`: the regions ringed for the current step: `:calendar`, `:slots`, `:meeting`"
+    doc: "`:card`: the regions ringed for the current step: `:calendar`, `:slots`"
 
   slot :header, doc: "`:card`: the shared identity header the theme draws its card around"
 
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
 
   defp with_view(assigns), do: assigns
 
-  @doc "The generic mock: a plain card with a week strip, the times and a solid Book button."
+  @doc "The generic mock: a plain card with a week strip, the chosen day and a solid Book button."
   @spec generic(map()) :: Phoenix.LiveView.Rendered.t()
   def generic(%{variant: :thumbnail} = assigns) do
     ~H"""
@@ -87,20 +87,18 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
       style={card_style(@colors)}
     >
       {render_slot(@header)}
-      <div
-        class="w-full flex flex-col gap-2 rounded-token-lg"
-        style={ring(:calendar in @highlight, @colors)}
-        data-preview-region="calendar"
-      >
+      <PreviewWeek.calendar_area colors={@colors} highlight={@highlight} class="flex flex-col gap-2">
         <PreviewWeek.day_strip view={@view} colors={@colors} />
         <PreviewWeek.times
           view={@view}
           colors={@colors}
-          layout={:chips}
-          class="grid grid-cols-3 gap-1.5 rounded-token-lg"
+          layout={:rows}
+          limit={5}
+          class="flex flex-col gap-1.5"
           reveal={@reveal}
+          highlight={@highlight}
         />
-      </div>
+      </PreviewWeek.calendar_area>
       <.book_button
         class="w-full py-2 rounded-token-lg font-semibold text-white text-token-sm mt-1"
         style={"background: #{color(@colors, :primary, "#14b8a6")};"}

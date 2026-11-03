@@ -115,4 +115,30 @@ defmodule TymeslotWeb.OnboardingLive.LivePreviewTest do
       assert Floki.attribute(name, "class") == ["shrink-0"]
     end
   end
+
+  describe "the step highlight" do
+    defp ringed(step) do
+      render_component(&LivePreview.live_preview/1,
+        current_step: step,
+        booking_theme: "1",
+        booking_host: "tymeslot.test",
+        week: @busy_week,
+        today: ~D[2026-11-03]
+      )
+      |> Floki.parse_fragment!()
+      |> Floki.find("[data-stage-focus]")
+      |> Enum.flat_map(&Floki.attribute(&1, "data-preview-region"))
+    end
+
+    test "the calendar step rings the calendar area and the meeting step the times" do
+      assert ringed(:connect_calendar) == ["calendar"]
+      assert ringed(:meeting) == ["slots"]
+    end
+
+    test "choosing a theme and the last step ring nothing on the page" do
+      assert ringed(:choose_theme) == []
+      assert ringed(:ready) == []
+      assert ringed(:profile) == []
+    end
+  end
 end

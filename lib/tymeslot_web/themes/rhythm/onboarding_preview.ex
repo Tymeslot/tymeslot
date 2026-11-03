@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
   use Phoenix.Component
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
-    only: [book_button: 1, card_style: 1, color: 3, ring: 2]
+    only: [book_button: 1, card_style: 1, color: 3]
 
   alias TymeslotWeb.OnboardingLive.PreviewWeek
 
@@ -41,26 +41,21 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
     ~H"""
     <div class="rounded-token-2xl p-5 flex flex-col items-center gap-3" style={card_style(@colors)}>
       {render_slot(@header)}
-      <div
-        class="w-full flex flex-col gap-2 rounded-token-lg"
-        style={ring(:calendar in @highlight, @colors)}
-        data-preview-region="calendar"
-      >
+      <PreviewWeek.calendar_area colors={@colors} highlight={@highlight} class="flex flex-col gap-2">
         <%!-- Single week strip --%>
         <PreviewWeek.day_strip view={@view} colors={@colors} />
 
         <%!-- The chosen day, its busy blocks between the times --%>
-        <div class="rounded-token-lg" style={ring(:slots in @highlight, @colors)}>
-          <PreviewWeek.times
-            view={@view}
-            colors={@colors}
-            layout={:rows}
-            limit={5}
-            class="flex flex-col gap-1.5"
-            reveal={@reveal}
-          />
-        </div>
-      </div>
+        <PreviewWeek.times
+          view={@view}
+          colors={@colors}
+          layout={:rows}
+          limit={5}
+          class="flex flex-col gap-1.5"
+          reveal={@reveal}
+          highlight={@highlight}
+        />
+      </PreviewWeek.calendar_area>
       <.book_button
         class="w-full py-2 rounded-token-lg font-semibold text-white text-token-sm mt-1"
         style={"background: #{color(@colors, :primary, "#14b8a6")};"}

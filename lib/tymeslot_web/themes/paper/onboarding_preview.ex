@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
   use Phoenix.Component
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
-    only: [book_button: 1, card_style: 1, color: 3, ring: 2]
+    only: [book_button: 1, card_style: 1, color: 3]
 
   alias TymeslotWeb.OnboardingLive.PreviewWeek
 
@@ -82,42 +82,41 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
       >
         {render_slot(@header)}
       </div>
-      <div
-        class="min-w-0 pl-3 flex flex-col gap-2 rounded-token-md"
-        style={ring(:calendar in @highlight, @colors)}
+      <PreviewWeek.calendar_area
+        colors={@colors}
+        highlight={@highlight}
+        class="min-w-0 pl-3 flex flex-col gap-2"
         data-preview-part="types"
-        data-preview-region="calendar"
       >
         <%!-- The chosen day, marked as Paper marks a chosen choice --%>
         <div
           class="flex flex-col gap-0.5 px-2 py-1.5 rounded-token-md border text-left"
-          style={"border-color: #{@edge};border-left: 2px solid #{@primary};background: #{@primary}0f;" <> ring(:meeting in @highlight, @colors)}
+          style={"border-color: #{@edge};border-left: 2px solid #{@primary};background: #{@primary}0f;"}
           data-preview-part="day"
         >
           <span class="text-token-xs font-semibold">{@view.heading}</span>
+          <%!-- Kept in every state, so the times below never move --%>
           <span
-            :if={@view.day_note}
-            class="text-token-2xs"
+            class="block h-4 text-token-2xs"
             style={"color: #{color(@colors, :text_secondary, "#475569")};"}
           >
             {@view.day_note}
           </span>
         </div>
-        <div class="rounded-token-md" style={ring(:slots in @highlight, @colors)}>
-          <PreviewWeek.times
-            view={@view}
-            colors={@colors}
-            layout={:rows}
-            limit={5}
-            class="flex flex-col gap-1.5"
-            reveal={@reveal}
-          />
-        </div>
+        <PreviewWeek.times
+          view={@view}
+          colors={@colors}
+          layout={:rows}
+          limit={5}
+          class="flex flex-col gap-1.5"
+          reveal={@reveal}
+          highlight={@highlight}
+        />
         <.book_button
           class="w-full py-2 rounded-token-lg font-semibold text-white text-token-sm"
           style={"background: #{@primary};"}
         />
-      </div>
+      </PreviewWeek.calendar_area>
     </div>
     """
   end
