@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBrandingTest do
   @moduledoc """
   The page's owner previewing it (a verified preview token) is told the
   branding extension must stay away; a visitor's page leaves the decision to
-  the extension.
+  the extension. Every theme also tells the extensions whether the page is
+  the owner's preview, so a page-view count can leave it out.
   """
 
   # The extensions are global application config.
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBrandingTest do
 
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Live.Scheduling.PreviewMode
+  alias TymeslotWeb.ThemeTestMatrix
 
   defmodule BrandingProbe do
     @moduledoc false
@@ -24,7 +26,11 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBrandingTest do
     @spec banner(map()) :: Phoenix.LiveView.Rendered.t()
     def banner(assigns) do
       ~H"""
-      <div id="branding-probe" data-show={inspect(@should_show_branding)} />
+      <div
+        id="branding-probe"
+        data-show={inspect(@should_show_branding)}
+        data-owner-preview={inspect(@owner_preview)}
+      />
       """
     end
   end
@@ -43,14 +49,28 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBrandingTest do
     %{user: user}
   end
 
-  defp probe(view) do
-    [show] =
+  defp probe(view, attribute \\ "data-show") do
+    [value] =
       view
       |> render()
       |> Floki.parse_document!()
-      |> Floki.attribute("#branding-probe", "data-show")
+      |> Floki.attribute("#branding-probe", attribute)
 
-    show
+    value
+  end
+
+  for theme <- ThemeTestMatrix.all() do
+    test "#{theme.slug}: the extensions are told an owner preview from a visitor's view",
+         %{conn: conn} do
+      username = "ownerpreview#{unquote(theme.slug)}"
+      %{user: user} = seed_booking_account(unquote(theme.id), username, "Europe/London")
+
+      {:ok, preview, _html} = live(conn, PreviewMode.owner_path(username, user.id))
+      assert probe(preview, "data-owner-preview") == "true"
+
+      {:ok, visit, _html} = live(conn, "/" <> username)
+      assert probe(visit, "data-owner-preview") == "false"
+    end
   end
 
   test "an owner preview tells the extension not to brand the page", %{conn: conn, user: user} do

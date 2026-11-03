@@ -9,15 +9,15 @@ defmodule TymeslotWeb.Dashboard.BookingLinkShare do
   booking page (poll links, webhook secrets) must not use it.
   """
 
+  alias Tymeslot.Analytics.Contract
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Analytics
 
-  @event_channels ~w(checklist sidebar)
-
   @doc """
   Stamps the profile's first share and pushes `booking_link_shared` with the
-  given channel (`checklist` or `sidebar`, fixed by the caller).
+  given channel, one of `Tymeslot.Analytics.Contract.share_channels/0`, fixed
+  by the caller.
   """
   @spec record(Phoenix.LiveView.Socket.t(), ProfileSchema.t() | nil, String.t()) ::
           Phoenix.LiveView.Socket.t()
@@ -31,13 +31,14 @@ defmodule TymeslotWeb.Dashboard.BookingLinkShare do
   @doc """
   The `booking_link_copied` event for LiveViews that render the dashboard layout.
 
-  The channel comes from the client, so anything outside the channels those
-  buttons use is ignored rather than reported.
+  The channel comes from the client, so anything outside the contract's
+  share channels is ignored rather than reported.
   """
   @spec handle_copied(Phoenix.LiveView.Socket.t(), term()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_copied(socket, channel) when channel in @event_channels,
-    do: {:noreply, record(socket, socket.assigns[:profile], channel)}
-
-  def handle_copied(socket, _channel), do: {:noreply, socket}
+  def handle_copied(socket, channel) do
+    if channel in Contract.share_channels(),
+      do: {:noreply, record(socket, socket.assigns[:profile], channel)},
+      else: {:noreply, socket}
+  end
 end

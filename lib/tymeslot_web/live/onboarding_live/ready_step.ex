@@ -180,7 +180,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           id="onboarding-try-booking"
           type="button"
           class="onboarding-text-link hidden lg:inline"
-          phx-click={JS.focus(to: "#onboarding-stage-iframe")}
+          phx-click={JS.push("try_booking") |> JS.focus(to: "#onboarding-stage-iframe")}
           aria-describedby="onboarding-try-booking-note"
         >
           {dgettext("onboarding_wizard", "Try booking yourself")}
@@ -189,7 +189,8 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           id="onboarding-try-booking-phone"
           type="button"
           class="onboarding-text-link lg:hidden"
-          phx-click="expand_stage"
+          phx-click="try_booking"
+          phx-value-expand="true"
           aria-describedby="onboarding-try-booking-note"
         >
           {dgettext("onboarding_wizard", "Try booking yourself")}

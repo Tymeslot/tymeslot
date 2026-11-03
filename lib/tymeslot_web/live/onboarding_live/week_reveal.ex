@@ -23,6 +23,12 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   `pending_reveal_key` until it answers. Changes close together are read
   once (`handle_refresh/2`), and a refresh that fails keeps the week shown,
   marked `stale: true`, which the caption owns up to.
+
+  Each read `start/1` begins reports once how it went
+  (`calendar_reveal_loaded`): `ok` or `failed` when it answers while the
+  week is loading, `slow` when the timer fires first, after which the late
+  answer is not reported again. Refreshes report nothing: the week was
+  already revealed.
   """
 
   require Logger
@@ -33,6 +39,7 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   alias Tymeslot.Availability
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
+  alias TymeslotWeb.Analytics
 
   @slow_after_ms 4_000
   @refresh_after_ms 300
@@ -156,10 +163,10 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
       do: keep_stale(socket)
 
   def handle_result({:ok, {key, {:ok, preview}}}, %{assigns: %{reveal_key: key}} = socket),
-    do: put_week(socket, :ready, preview)
+    do: socket |> report_reveal("ok") |> put_week(:ready, preview)
 
   def handle_result({:ok, {key, {:error, _reason}}}, %{assigns: %{reveal_key: key}} = socket),
-    do: put_week(socket, :failed, nil)
+    do: socket |> report_reveal("failed") |> put_week(:failed, nil)
 
   def handle_result({:ok, {_stale_key, _result}}, socket), do: socket
 
@@ -175,8 +182,15 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
 
     if socket.assigns[:pending_reveal_key],
       do: keep_stale(socket),
-      else: put_week(socket, :failed, nil)
+      else: socket |> report_reveal("failed") |> put_week(:failed, nil)
   end
+
+  # Only the first word on a read counts: a week no longer loading has
+  # already been reported, as `slow`.
+  defp report_reveal(%{assigns: %{stage_week: %{state: :loading}}} = socket, result),
+    do: Analytics.push(socket, "calendar_reveal_loaded", %{result: result})
+
+  defp report_reveal(socket, _result), do: socket
 
   defp keep_stale(socket) do
     socket
@@ -191,7 +205,7 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   """
   @spec handle_slow(integer(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def handle_slow(key, %{assigns: %{reveal_key: key, stage_week: %{state: :loading}}} = socket),
-    do: put_week(socket, :slow, nil)
+    do: socket |> report_reveal("slow") |> put_week(:slow, nil)
 
   def handle_slow(_key, socket), do: socket
 

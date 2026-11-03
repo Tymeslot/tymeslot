@@ -166,8 +166,8 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
                          %{user_id: ^user_id, method: unquote(method)}}
 
         assert_push_event view, "ts:analytics", %{
-          name: "booking_link_shared",
-          props: %{channel: unquote(method)}
+          name: "booking_link_kept",
+          props: %{method: unquote(method)}
         }
       end
     end

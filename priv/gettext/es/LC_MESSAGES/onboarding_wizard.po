@@ -389,7 +389,7 @@ msgstr "tu-usuario"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
-msgid "One click - connect %{email}"
+msgid "One click: connect %{email}"
 msgstr "Con un clic: conectar %{email}"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex

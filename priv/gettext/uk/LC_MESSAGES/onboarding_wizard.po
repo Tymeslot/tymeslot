@@ -389,8 +389,8 @@ msgstr "vashe-imya-korystuvacha"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
-msgid "One click - connect %{email}"
-msgstr "В один клік - підключити %{email}"
+msgid "One click: connect %{email}"
+msgstr "В один клік: підключити %{email}"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format

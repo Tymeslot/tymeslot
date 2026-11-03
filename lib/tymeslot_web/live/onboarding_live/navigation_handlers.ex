@@ -18,6 +18,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Utils.QrCode
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
+  alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.MeetingHandlers
@@ -78,8 +79,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         socket
         |> Component.assign(current_user: completed, kept_method: confirmation)
         |> LiveView.clear_flash()
-        # C1 registers `booking_link_kept`; until then the share event carries the method.
-        |> Analytics.push("booking_link_shared", %{channel: method})
+        |> Analytics.push("booking_link_kept", %{method: method})
 
       {:error, {:email, _reason}} ->
         LiveView.put_flash(
@@ -257,12 +257,12 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     next = if returning?, do: :ready, else: StepConfig.next_step(step) || step
 
     socket
-    |> Component.assign(:current_step, next)
     |> then(fn socket ->
       if returning?,
         do: socket,
         else: Analytics.push(socket, "onboarding_step_completed", %{step: to_string(step)})
     end)
+    |> enter_step(next)
     |> LiveView.clear_flash()
     |> then(&if(next == :ready, do: enter_share_step(&1), else: &1))
     |> then(&if(next == :meeting, do: MeetingHandlers.ensure_loaded(&1, true), else: &1))
@@ -288,6 +288,36 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   end
 
   @doc """
+  Shows `step` and records the view (`onboarding_step_viewed`). Every way
+  onto a step goes through here: forward, back, the share step's way back
+  to the calendar step, and landing on one by its address (a resume or a
+  reload), so the views of a step count everyone who saw it.
+  """
+  @spec enter_step(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  def enter_step(socket, step) do
+    socket
+    |> Component.assign(:current_step, step)
+    |> Analytics.push("onboarding_step_viewed", %{step: Atom.to_string(step)})
+  end
+
+  @doc """
+  "Try booking yourself" on the live step (`guest_preview_opened`). On a
+  desktop the button focuses the page beside the column itself; on a phone
+  it asks for the expanded page (`expand`), which opens here.
+  """
+  @spec handle_try_booking(Phoenix.LiveView.Socket.t(), map()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_try_booking(%{assigns: %{current_step: :ready}} = socket, params) do
+    socket = Analytics.push(socket, "guest_preview_opened", %{})
+
+    if params["expand"] == "true",
+      do: {:noreply, ModalHook.show_modal(socket, :stage_preview)},
+      else: {:noreply, socket}
+  end
+
+  def handle_try_booking(socket, _params), do: {:noreply, socket}
+
+  @doc """
   Checks whether the booking page is actually live, with the same rule the
   public page applies. Without a bookable calendar the page refuses visitors,
   so the share step greys out its actions instead of sending people to a dead
@@ -308,7 +338,8 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   def handle_return_to_calendar_step(socket) do
     {:noreply,
      socket
-     |> Component.assign(current_step: :connect_calendar, returning_to_share: true)
+     |> Component.assign(:returning_to_share, true)
+     |> enter_step(:connect_calendar)
      |> LiveView.clear_flash()}
   end
 
@@ -330,7 +361,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       prev ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, prev)
+         |> enter_step(prev)
          |> refresh_form_data(prev)
          |> LiveView.clear_flash()}
     end
@@ -429,8 +460,8 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           socket
           |> Component.assign(:profile, profile)
           |> Component.assign(:booking_url, booking_url)
-          |> Component.assign(:current_step, :connect_calendar)
           |> Analytics.push("onboarding_step_completed", %{step: "profile"})
+          |> enter_step(:connect_calendar)
           |> LiveView.clear_flash()
 
         {:noreply, socket}

@@ -95,7 +95,8 @@ defmodule TymeslotWeb.OnboardingLive do
         {:noreply, push_patch(socket, to: step_path(socket, resume_step(socket), uri))}
 
       true ->
-        {:noreply, socket |> assign(:current_step, requested) |> maybe_enter_share_state()}
+        {:noreply,
+         socket |> NavigationHandlers.enter_step(requested) |> maybe_enter_share_state()}
     end
   end
 
@@ -332,6 +333,10 @@ defmodule TymeslotWeb.OnboardingLive do
   # ------------------------------------------------------------------
   # Event handlers — Stage
   # ------------------------------------------------------------------
+
+  def handle_event("try_booking", params, socket) do
+    NavigationHandlers.handle_try_booking(socket, params)
+  end
 
   def handle_event("expand_stage", _params, socket) do
     {:noreply, ModalHook.show_modal(socket, :stage_preview)}

@@ -389,8 +389,8 @@ msgstr "il-tuo-nome-utente"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
-msgid "One click - connect %{email}"
-msgstr "Un clic - collega %{email}"
+msgid "One click: connect %{email}"
+msgstr "Un clic: collega %{email}"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
