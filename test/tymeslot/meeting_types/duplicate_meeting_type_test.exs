@@ -8,10 +8,23 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
 
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Duplication
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   setup do
     setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
     :ok
+  end
+
+  describe "the copied fields" do
+    test "account for every field of the schema, so a new one is copied or left out by choice" do
+      %{copied: copied, not_copied: not_copied} = Duplication.field_partition()
+
+      assert MapSet.disjoint?(MapSet.new(copied), MapSet.new(not_copied))
+
+      assert Enum.sort(copied ++ not_copied) ==
+               Enum.sort(MeetingTypeSchema.__schema__(:fields))
+    end
   end
 
   describe "duplicate_meeting_type/1" do
@@ -31,6 +44,10 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
           availability_schedule: schedule,
           reminder_config: [%{"value" => 1, "unit" => "hours"}],
           max_bookings_per_day: 3,
+          buffer_before_minutes: 25,
+          buffer_after_minutes: 5,
+          min_advance_hours: 12,
+          advance_booking_days: 30,
           requires_approval: true,
           approval_window_hours: 24,
           locations: [in_person_location([])],
@@ -51,6 +68,10 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
       assert copy.availability_schedule_id == schedule.id
       assert copy.reminder_config == [%{"value" => 1, "unit" => "hours"}]
       assert copy.max_bookings_per_day == 3
+      assert copy.buffer_before_minutes == 25
+      assert copy.buffer_after_minutes == 5
+      assert copy.min_advance_hours == 12
+      assert copy.advance_booking_days == 30
       assert copy.requires_approval == true
       assert copy.approval_window_hours == 24
       assert [%{kind: :in_person}] = copy.locations

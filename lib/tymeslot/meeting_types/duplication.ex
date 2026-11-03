@@ -26,9 +26,10 @@ defmodule Tymeslot.MeetingTypes.Duplication do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Validation.Constraints
 
-  # The settings a copy takes over unchanged. Absent on purpose: `slug` (see
-  # the moduledoc), and `allow_video` and `video_integration_id`, which the
-  # changeset derives from the copied locations.
+  # The settings a copy takes over unchanged. Every schema field is either
+  # here, in `@copied_embeds`, or in `@not_copied`; `field_partition/0` lets a
+  # test hold that, so a field added later cannot be left out of copies
+  # without anyone deciding so.
   @copied_fields [
     :description,
     :duration_minutes,
@@ -56,10 +57,34 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     :approval_window_hours,
     :max_bookings_per_day,
     :max_bookings_per_week,
-    :max_bookings_per_month
+    :max_bookings_per_month,
+    :buffer_before_minutes,
+    :buffer_after_minutes,
+    :min_advance_hours,
+    :advance_booking_days
   ]
 
   @copied_embeds [:custom_fields, :attachments, :locations]
+
+  # Left out on purpose: the identity and timestamps of the row, the name and
+  # state the copy is given (`copy_attrs/1`), the slug (see the moduledoc),
+  # and `allow_video` and `video_integration_id`, which the changeset derives
+  # from the copied locations.
+  @not_copied [
+    :id,
+    :name,
+    :slug,
+    :is_active,
+    :is_archived,
+    :allow_video,
+    :video_integration_id,
+    :inserted_at,
+    :updated_at
+  ]
+
+  @doc false
+  @spec field_partition() :: %{copied: [atom()], not_copied: [atom()]}
+  def field_partition, do: %{copied: @copied_fields ++ @copied_embeds, not_copied: @not_copied}
 
   @doc """
   The create attributes for a copy of `source`.
