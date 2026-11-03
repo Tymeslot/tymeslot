@@ -155,30 +155,18 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # -------------------------------------------------------------------
 
   @doc """
-  The line the stage shows under the page for the current step. Reads
-  `current_step`, `calendar_connected`, `booking_page_live`, `booking_host`
-  and `username`.
+  The line the stage shows under the page, or `nil` for none: only a page
+  that is live gets one, on the last step. Reads `current_step`,
+  `booking_page_live`, `booking_host` and `username`.
   """
-  @spec caption(map()) :: String.t()
-  def caption(%{current_step: :profile}),
-    do: dgettext("onboarding_wizard", "Your page, your brand")
-
-  def caption(%{current_step: :connect_calendar, calendar_connected: true}),
-    do: dgettext("onboarding_wizard", "Your calendar is synced - these slots are live")
-
-  def caption(%{current_step: :connect_calendar}),
-    do: dgettext("onboarding_wizard", "Connect your calendar to fill these slots")
-
-  def caption(%{current_step: :ready, booking_page_live: false}),
-    do: dgettext("onboarding_wizard", "Goes live once a calendar is connected")
-
-  def caption(%{current_step: :ready} = assigns) do
+  @spec caption(map()) :: String.t() | nil
+  def caption(%{current_step: :ready, booking_page_live: true} = assigns) do
     dgettext("onboarding_wizard", "You're all set - %{link} is live",
       link: link_text(assigns.booking_host, assigns.username)
     )
   end
 
-  def caption(_assigns), do: dgettext("onboarding_wizard", "This is your live booking page")
+  def caption(_assigns), do: nil
 
   # -------------------------------------------------------------------
   # Highlight regions

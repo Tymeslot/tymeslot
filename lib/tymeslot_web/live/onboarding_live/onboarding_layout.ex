@@ -148,9 +148,16 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         </div>
       </section>
 
+      <%!-- The disconnected render has no theme yet, so its stage has no
+           canvas colour. Keying the id on the colour makes the connected
+           render insert a new stage that starts in the theme's colour,
+           rather than fading the old one into it on every load; a theme
+           change later keeps the id and recolours with the transition. --%>
       <div
+        id={if @stage_canvas, do: "onboarding-stage", else: "onboarding-stage-pending"}
         class="onboarding-stage"
         data-role="onboarding-stage"
+        data-stage-fit
         style={@stage_canvas && "--stage-canvas: #{@stage_canvas};"}
       >
         <StageFrame.frame url={@stage_url} live={@stage_live}>

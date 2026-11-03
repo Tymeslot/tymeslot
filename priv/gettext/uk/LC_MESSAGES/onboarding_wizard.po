@@ -112,11 +112,6 @@ msgstr "Підключити через Google"
 msgid "Connect via Microsoft"
 msgstr "Підключити через Microsoft"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Connect your calendar to fill these slots"
-msgstr "Підключіть календар, щоб заповнити ці слоти"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Continue"
@@ -362,11 +357,6 @@ msgstr "Синхронізуйте, щоб уникнути накладок"
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Синхронізуйте календар, щоб уникнути накладок і тримати всі записи в одному місці."
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "This is your live booking page"
-msgstr "Це ваша активна сторінка бронювання"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This username is already taken"
@@ -435,11 +425,6 @@ msgstr "Тема сторінки бронювання"
 msgid "Your name"
 msgstr "Ваше ім'я"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Your page, your brand"
-msgstr "Ваша сторінка, ваш бренд"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Your photo"
@@ -490,11 +475,6 @@ msgstr "Виберіть оформлення сторінки бронюван�
 msgid "You're all set - %{link} is live"
 msgstr "Усе готово - посилання %{link} активне"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Your calendar is synced - these slots are live"
-msgstr "Ваш календар синхронізовано - ці слоти активні"
-
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
 msgid "Choose by description instead"
@@ -534,11 +514,6 @@ msgstr "Забронювати зустріч зі мною можна тут: %
 #, elixir-autogen, elixir-format
 msgid "Your page is live. Send the link to one person who might book with you now."
 msgstr "Ваша сторінка вже доступна. Надішліть посилання хоча б одній людині, яка могла б забронювати у вас час."
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Goes live once a calendar is connected"
-msgstr "Запрацює після підключення календаря"
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format

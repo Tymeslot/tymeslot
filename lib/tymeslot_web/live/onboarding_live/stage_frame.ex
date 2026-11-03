@@ -45,6 +45,8 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
 
   @spec frame(map()) :: Phoenix.LiveView.Rendered.t()
   def frame(assigns) do
+    assigns = assign(assigns, :address_parts, split_address(assigns.url))
+
     ~H"""
     <div class="stage-frame-wrap">
       <div class="stage-frame glass-card shadow-glass-lg rounded-token-2xl" aria-hidden="true">
@@ -61,7 +63,11 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
       </div>
 
       <div class="stage-strip">
-        <span class="stage-strip-url text-token-sm truncate">{@url}</span>
+        <%!-- On a narrow screen the host gives way, never the name. --%>
+        <span class="stage-strip-url text-token-sm">
+          <span class="truncate">{elem(@address_parts, 0)}</span>
+          <span class="shrink-0">{elem(@address_parts, 1)}</span>
+        </span>
         <.live_badge :if={@live} />
         <.action_button
           variant={:secondary}
@@ -103,6 +109,14 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
       </div>
     </div>
     """
+  end
+
+  # `host/` and the name after it.
+  defp split_address(url) do
+    case url |> String.split("/") |> Enum.split(-1) do
+      {[], [name]} -> {"", name}
+      {host, [name]} -> {Enum.join(host, "/") <> "/", name}
+    end
   end
 
   defp live_badge(assigns) do

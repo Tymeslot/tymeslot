@@ -5,27 +5,46 @@
  */
 
 import { describe, expect, test, afterEach, vi } from 'vitest';
-import { StageScale, stageScale } from '../hooks/stage_scale';
+import { StageScale, stageScale, heightForPage } from '../hooks/stage_scale';
 
 describe('stageScale', () => {
   test('fills a narrow frame below lg', () => {
-    expect(stageScale(300, false)).toBe(0.75);
+    expect(stageScale({ width: 300, wide: false })).toBe(0.75);
   });
 
   test('never grows past the design size below lg', () => {
-    expect(stageScale(700, false)).toBe(1);
+    expect(stageScale({ width: 700, wide: false })).toBe(1);
   });
 
   test('grows to fill the frame from lg', () => {
-    expect(stageScale(520, true)).toBe(1.3);
+    expect(stageScale({ width: 440, wide: true })).toBe(1.1);
   });
 
-  test('stops at 1.6 from lg', () => {
-    expect(stageScale(900, true)).toBe(1.6);
+  test('stops at 1.2 from lg', () => {
+    expect(stageScale({ width: 900, wide: true })).toBe(1.2);
+  });
+
+  test('shrinks so the whole page fits the height left for it', () => {
+    expect(stageScale({ width: 900, wide: true, availableHeight: 550, innerHeight: 550 })).toBe(1);
   });
 
   test('is 1 while the frame has no width', () => {
-    expect(stageScale(0, true)).toBe(1);
+    expect(stageScale({ width: 0, wide: true })).toBe(1);
+  });
+});
+
+describe('heightForPage', () => {
+  test('takes off what the box holds besides the page', () => {
+    // A frame from 48 to 648 holding a 556px page (so 44px of browser bar),
+    // then a 16px gap and a 40px caption: 100px of chrome.
+    const frame = { top: 48, bottom: 648 };
+    const caption = { top: 664, bottom: 704 };
+
+    expect(heightForPage(704, [frame, caption], 556)).toBe(604);
+  });
+
+  test('leaves the height unbounded with nothing to measure', () => {
+    expect(heightForPage(704, [], 556)).toBe(Infinity);
   });
 });
 
@@ -41,10 +60,9 @@ function build({ width, innerHeight }) {
 }
 
 function mount(el, { wide }) {
-  const listeners = [];
   window.matchMedia = vi.fn(() => ({
     matches: wide,
-    addEventListener: (_type, fn) => listeners.push(fn),
+    addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   }));
 
@@ -69,11 +87,11 @@ describe('StageScale hook', () => {
   test('refits after an update changes the page height', () => {
     const { el, inner } = build({ width: 800, innerHeight: 400 });
     const hook = mount(el, { wide: true });
-    expect(el.style.height).toBe('640px');
+    expect(el.style.height).toBe('480px');
 
     Object.defineProperty(inner, 'offsetHeight', { value: 500, configurable: true });
     hook.updated();
 
-    expect(el.style.height).toBe('800px');
+    expect(el.style.height).toBe('600px');
   });
 });

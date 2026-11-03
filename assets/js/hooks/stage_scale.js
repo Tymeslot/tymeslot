@@ -2,33 +2,60 @@
  * Stage scale: fits the onboarding stage's page miniature to its frame.
  *
  * The theme miniatures are designed at 400px wide. This hook sets
- * `--stage-scale` on its element so the miniature fills the frame's width,
- * up to 1.6x from `lg` (1024px) and never past its own size below, and sets
+ * `--stage-scale` on its element so the miniature fills the frame, and sets
  * the element's height to the scaled height of the miniature, because
  * `transform: scale` changes how big it looks but not the room it takes:
  * without that, what follows the stage on a phone would slide under it.
  *
- * It refits when the frame or the miniature changes size, when the viewport
- * crosses `lg`, and after every LiveView update (a new step draws a page of
- * a different height). The element is rendered with
+ * From `lg` (1024px) the whole page has to fit: the scale is the smallest of
+ * the 1.2 cap, the frame's width over 400px, and the height the stage has
+ * left for the page over the page's own height. That height is read off the
+ * nearest `[data-stage-fit]` ancestor: its content height, less whatever it
+ * holds besides the page (the browser bar, the caption, the gaps between).
+ * Below `lg` the page fits the width, never past its own size, and the card
+ * cuts it off at the bottom.
+ *
+ * It refits when the frame, the stage or the miniature changes size, when
+ * the viewport crosses `lg`, and after every LiveView update (a new step
+ * draws a page of a different height). The element is rendered with
  * `JS.ignore_attributes(["style"])`, so a patch never wipes what it sets.
  */
 
 const DESIGN_WIDTH = 400
+const WIDE_CAP = 1.2
 const WIDE_QUERY = "(min-width: 1024px)"
 
 /**
- * The scale that makes a 400px miniature fill `width`, within the cap for
- * the screen size; 1 while the frame has no width yet (a hidden modal).
+ * The scale for a 400px miniature: it fills `width`, within the cap for the
+ * screen size, and, given an `availableHeight`, keeps the whole page within
+ * it. 1 while the frame has no width yet (a hidden modal).
  *
- * @param {number} width the frame's inner width in pixels
- * @param {boolean} wide whether the viewport is `lg` or wider
+ * @param {{width: number, wide: boolean, availableHeight?: number, innerHeight?: number}} fit
  * @returns {number}
  */
-export function stageScale(width, wide) {
+export function stageScale({ width, wide, availableHeight = Infinity, innerHeight = 0 }) {
   if (!(width > 0)) return 1
-  const cap = wide ? 1.6 : 1
-  return Math.min(cap, width / DESIGN_WIDTH)
+
+  const cap = wide ? WIDE_CAP : 1
+  const byHeight = innerHeight > 0 && availableHeight > 0 ? availableHeight / innerHeight : Infinity
+  return Math.min(cap, width / DESIGN_WIDTH, byHeight)
+}
+
+/**
+ * The height left for the page in a fixed-height box: its content height
+ * less the extent of what it holds that is not the page.
+ *
+ * @param {number} contentHeight the box's height inside its padding
+ * @param {Array<{top: number, bottom: number}>} children the boxes of its shown children
+ * @param {number} pageHeight the page wrapper's current height
+ * @returns {number}
+ */
+export function heightForPage(contentHeight, children, pageHeight) {
+  if (children.length === 0) return Infinity
+
+  const top = Math.min(...children.map((box) => box.top))
+  const bottom = Math.max(...children.map((box) => box.bottom))
+  return contentHeight - (bottom - top - pageHeight)
 }
 
 export const StageScale = {
@@ -36,6 +63,7 @@ export const StageScale = {
     this.media = window.matchMedia(WIDE_QUERY)
     this.onMediaChange = () => this.fit()
     this.media.addEventListener("change", this.onMediaChange)
+    this.box = this.el.closest("[data-stage-fit]")
 
     if (typeof ResizeObserver !== "undefined") {
       // Fitting changes this element's height, which the observer reports
@@ -43,6 +71,7 @@ export const StageScale = {
       // keeps that from looping (browsers report a loop as a page error).
       this.resizeObserver = new ResizeObserver(() => this.scheduleFit())
       this.resizeObserver.observe(this.el)
+      if (this.box) this.resizeObserver.observe(this.box)
       this.observeInner()
     }
 
@@ -81,12 +110,35 @@ export const StageScale = {
     this.inner = inner
   },
 
+  availableHeight() {
+    if (!this.box || !this.media.matches) return Infinity
+
+    const style = getComputedStyle(this.box)
+    const contentHeight =
+      this.box.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
+
+    // A child that is not shown has an empty box at the origin, which
+    // would stretch the extent to the top of the page.
+    const shown = Array.from(this.box.children)
+      .map((child) => child.getBoundingClientRect())
+      .filter((box) => box.height > 0)
+
+    // A pixel short, so rounding never pushes the page past the frame.
+    return heightForPage(contentHeight, shown, this.el.getBoundingClientRect().height) - 1
+  },
+
   fit() {
     if (!this.inner) this.inner = this.el.firstElementChild
     if (!this.inner) return
 
-    const scale = stageScale(this.el.clientWidth, this.media.matches)
-    const height = `${this.inner.offsetHeight * scale}px`
+    const innerHeight = this.inner.offsetHeight
+    const scale = stageScale({
+      width: this.el.clientWidth,
+      wide: this.media.matches,
+      availableHeight: this.availableHeight(),
+      innerHeight
+    })
+    const height = `${innerHeight * scale}px`
 
     // Only writes what changed, so a refit that changes nothing does not
     // set the observer off again.

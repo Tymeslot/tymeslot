@@ -112,11 +112,6 @@ msgstr "Připojit přes Google"
 msgid "Connect via Microsoft"
 msgstr "Připojit přes Microsoft"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Connect your calendar to fill these slots"
-msgstr "Připojte kalendář a termíny se zaplní"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Continue"
@@ -362,11 +357,6 @@ msgstr "Synchronizace zabrání dvojím rezervacím"
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Synchronizujte kalendář, abyste se vyhnuli dvojím rezervacím a měli vše na jednom místě."
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "This is your live booking page"
-msgstr "Takto vypadá vaše rezervační stránka"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This username is already taken"
@@ -435,11 +425,6 @@ msgstr "Motiv rezervační stránky"
 msgid "Your name"
 msgstr "Vaše jméno"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Your page, your brand"
-msgstr "Vaše stránka, vaše značka"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Your photo"
@@ -490,11 +475,6 @@ msgstr "Vyberte vzhled své rezervační stránky a hned si ji prohlédněte na
 msgid "You're all set - %{link} is live"
 msgstr "Máte hotovo – %{link} je v provozu"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Your calendar is synced - these slots are live"
-msgstr "Kalendář je synchronizovaný – tyto termíny jsou skutečné"
-
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
 msgid "Choose by description instead"
@@ -534,11 +514,6 @@ msgstr "Termín se mnou si můžete zarezervovat tady: %{url}"
 #, elixir-autogen, elixir-format
 msgid "Your page is live. Send the link to one person who might book with you now."
 msgstr "Vaše stránka je zveřejněná. Pošlete teď odkaz aspoň jednomu člověku, který by si u vás mohl rezervovat termín."
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Goes live once a calendar is connected"
-msgstr "Zveřejní se po připojení kalendáře"
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format

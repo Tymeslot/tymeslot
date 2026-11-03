@@ -94,14 +94,12 @@ defmodule TymeslotWeb.OnboardingLive do
       stage_live={@current_step == :ready and @booking_page_live == true}
       stage_canvas={@profile && LivePreview.canvas(stage_theme(@profile), @theme_customization)}
       stage_caption={
-        @profile &&
-          LivePreview.caption(%{
-            current_step: @current_step,
-            calendar_connected: @connected_calendars != [] or @calendar_choice != nil,
-            booking_page_live: @booking_page_live,
-            booking_host: booking_host(),
-            username: Map.get(@form_data, "username", "")
-          })
+        LivePreview.caption(%{
+          current_step: @current_step,
+          booking_page_live: @booking_page_live,
+          booking_host: booking_host(),
+          username: Map.get(@form_data, "username", "")
+        })
       }
     >
       <:stage>

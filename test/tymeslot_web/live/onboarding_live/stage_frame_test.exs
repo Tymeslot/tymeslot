@@ -5,12 +5,15 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
   in a browser frame beside (or, on a phone, above) it.
   """
 
-  use TymeslotWeb.LiveCase, async: false
+  use TymeslotWeb.LiveCase, async: true
   @moduletag :onboarding
 
+  import Ecto.Query, only: [from: 2]
   import Phoenix.LiveViewTest
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Utils.UrlBuilder
 
@@ -94,6 +97,33 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
           do: step
 
     assert with_badge == [:ready]
+  end
+
+  test "a page that is not live gets no live badge or caption on ready", %{conn: conn} do
+    {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+    view = navigate_to_theme_step(view)
+
+    # The calendar stops being bookable before the last step, which checks
+    # again on the way in.
+    Repo.update_all(
+      from(i in CalendarIntegrationSchema, where: i.user_id == ^user.id),
+      set: [is_active: false]
+    )
+
+    html = view |> click_continue() |> render()
+
+    assert html |> find(".onboarding-step-title") |> Floki.text() =~ "You're live"
+    assert find(html, ~s([data-role="stage-live-badge"])) == []
+    assert find(html, ".onboarding-stage-caption") == []
+  end
+
+  test "the caption shows only once the page is live", %{conn: conn} do
+    captions =
+      for {step, html} <- walk_steps(conn),
+          find(html, ".onboarding-stage-caption") != [],
+          do: step
+
+    assert captions == [:ready]
   end
 
   test "the layout has one polite live region and the stage is aria-hidden", %{conn: conn} do

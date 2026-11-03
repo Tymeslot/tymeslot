@@ -27,8 +27,31 @@ describe('StickyNavClearance hook', () => {
     document.body.innerHTML = '';
   });
 
+  function setup({ sticky }) {
+    const nav = document.createElement('div');
+    nav.style.position = sticky ? 'sticky' : 'static';
+    const input = document.createElement('input');
+    document.body.append(input, nav);
+    nav.getBoundingClientRect = () => ({ top: 1000, bottom: 1080 });
+    input.getBoundingClientRect = () => ({ top: 1004, bottom: 1052 });
+    window.scrollBy = vi.fn();
+
+    const hook = Object.assign(Object.create(StickyNavClearance), { el: nav });
+    hook.mounted();
+    return { hook, input };
+  }
+
+  test('does nothing while the nav is not sticky', () => {
+    const { hook, input } = setup({ sticky: false });
+    input.focus();
+
+    expect(window.scrollBy).not.toHaveBeenCalled();
+    hook.destroyed();
+  });
+
   test('scrolls when a focused field sits under the nav', () => {
     const nav = document.createElement('div');
+    nav.style.position = 'sticky';
     const input = document.createElement('input');
     document.body.append(input, nav);
     nav.getBoundingClientRect = () => ({ top: 1000, bottom: 1080 });

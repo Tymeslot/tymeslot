@@ -42,8 +42,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
 
       html = fill_profile(view, "Ada Lovelace", "ada")
 
-      # Preview-specific markup: the profile caption and the joined link chip.
-      assert html =~ "Your page, your brand"
+      # Preview-specific markup: the name and the joined link chip.
       assert html =~ "Ada Lovelace"
       assert html =~ "#{host()}/ada"
     end

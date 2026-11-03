@@ -201,13 +201,23 @@
   flex: 1;
 }
 
+/* Below 640px the buttons shrink to fit; they stay 44px tall to tap. */
+.onboarding-nav .action-button {
+  min-height: 44px;
+}
+
 /* --------------------------------------------------------------------------
    Stage
    -------------------------------------------------------------------------- */
 
+/* Below lg the stage lines up with the question column under it: the same
+   480px measure and the same side padding. */
 .onboarding-stage {
   grid-area: stage;
+  width: 100%;
   min-width: 0;
+  max-width: 480px;
+  margin: 0 auto;
   padding: var(--spacing-4) var(--spacing-4) 0;
 }
 
@@ -229,9 +239,12 @@
     align-items: center;
     justify-content: center;
     gap: var(--spacing-4);
+    max-width: none;
     height: 100vh;
     height: 100dvh;
+    margin: 0;
     padding: var(--spacing-12);
+    overflow: hidden;
     background-color: var(--stage-canvas, var(--color-neutral-100));
     transition: background-color 400ms ease;
   }
@@ -242,15 +255,13 @@
   flex-direction: column;
   gap: var(--spacing-2);
   width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
   min-height: 0;
 }
 
 @media (min-width: 1024px) {
   .stage-frame-wrap {
     max-width: 760px;
-    flex: 0 1 auto;
+    flex: none;
   }
 }
 
@@ -280,16 +291,18 @@
   transition: background-color 400ms ease;
 }
 
-/* From lg: a browser window holding the page */
+/* From lg: a browser window holding the whole page. The StageScale hook
+   sizes the page so the window and the caption fit the stage's height. The
+   bar is opaque, so it reads as a clean browser bar on a dark canvas as
+   much as on a light one. */
 @media (min-width: 1024px) {
   .onboarding-stage .stage-frame {
     height: auto;
-    max-height: calc(100dvh - 2 * var(--spacing-12) - var(--spacing-12));
-    background: var(--color-glass-bg-card-enhanced);
+    background: var(--color-bg-primary);
   }
 
   .onboarding-stage .stage-frame:hover {
-    background: var(--color-glass-bg-card-enhanced);
+    background: var(--color-bg-primary);
   }
 
   .stage-frame-bar {
@@ -297,7 +310,8 @@
     align-items: center;
     justify-content: center;
     padding: var(--spacing-3) var(--spacing-4);
-    border-bottom: 1px solid var(--color-neutral-100);
+    background-color: var(--color-neutral-50);
+    border-bottom: 1px solid var(--color-neutral-200);
   }
 }
 
@@ -323,6 +337,7 @@
 }
 
 .stage-strip-url {
+  display: flex;
   flex: 1;
   min-width: 0;
 }
@@ -365,7 +380,8 @@
     max-width: 100%;
     padding: var(--spacing-2) var(--spacing-4);
     border-radius: var(--radius-full);
-    background: var(--color-glass-bg-card-enhanced);
+    flex: none;
+    background: var(--color-bg-primary);
     box-shadow: var(--shadow-glass-sm);
     color: var(--color-neutral-700);
     font-weight: 500;
@@ -374,7 +390,14 @@
 }
 
 /* The expanded preview (StagePreviewModal) */
+/* The page's canvas runs to the dialog's edges, so the page is drawn at
+   least as large as on the stage card. */
+#onboarding-stage-preview .modal-body {
+  padding: 0;
+}
+
 .stage-preview-canvas {
+  min-height: 100%;
   overflow: hidden;
   background-color: var(--stage-canvas, var(--color-neutral-100));
 }

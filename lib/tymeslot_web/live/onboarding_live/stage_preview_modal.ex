@@ -36,7 +36,7 @@ defmodule TymeslotWeb.OnboardingLive.StagePreviewModal do
       <:header>{dgettext("onboarding_wizard", "Your booking page")}</:header>
       <div
         :if={@show}
-        class="stage-preview-canvas rounded-token-xl"
+        class="stage-preview-canvas"
         style={@canvas && "--stage-canvas: #{@canvas};"}
         aria-hidden="true"
       >

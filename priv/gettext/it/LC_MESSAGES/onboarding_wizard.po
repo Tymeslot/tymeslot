@@ -112,11 +112,6 @@ msgstr "Collega tramite Google"
 msgid "Connect via Microsoft"
 msgstr "Collega tramite Microsoft"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Connect your calendar to fill these slots"
-msgstr "Collega il tuo calendario per riempire queste fasce orarie"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Continue"
@@ -362,11 +357,6 @@ msgstr "Sincronizza per evitare doppie prenotazioni"
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Sincronizza il tuo calendario per evitare doppie prenotazioni e tenere tutto in un unico posto."
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "This is your live booking page"
-msgstr "Questa è la tua pagina di prenotazione live"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This username is already taken"
@@ -435,11 +425,6 @@ msgstr "Il tema della tua pagina di prenotazione"
 msgid "Your name"
 msgstr "Il tuo nome"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Your page, your brand"
-msgstr "La tua pagina, il tuo brand"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Your photo"
@@ -490,11 +475,6 @@ msgstr "Scegli l'aspetto e lo stile della tua pagina di prenotazione, poi guarda
 msgid "You're all set - %{link} is live"
 msgstr "È tutto pronto - %{link} è online"
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Your calendar is synced - these slots are live"
-msgstr "Il tuo calendario è sincronizzato - queste fasce orarie sono attive"
-
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
 msgid "Choose by description instead"
@@ -534,11 +514,6 @@ msgstr "Puoi prenotare un appuntamento con me qui: %{url}"
 #, elixir-autogen, elixir-format
 msgid "Your page is live. Send the link to one person who might book with you now."
 msgstr "La tua pagina è online. Invia subito il link a una persona che potrebbe prenotare con te."
-
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
-#, elixir-autogen, elixir-format
-msgid "Goes live once a calendar is connected"
-msgstr "Online appena colleghi un calendario"
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format

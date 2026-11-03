@@ -39,6 +39,7 @@ export const StickyNavClearance = {
   clear(target) {
     if (!(target instanceof HTMLElement) || this.el.contains(target)) return
     if (!target.matches("input, select, textarea")) return
+    if (getComputedStyle(this.el).position !== "sticky") return
 
     const offset = clearanceOffset(
       target.getBoundingClientRect(),
