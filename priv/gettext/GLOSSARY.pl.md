@@ -183,6 +183,17 @@ fragment: read how the code uses it.
 | loading | wczytywanie |
 | failed | nie powiodło się |
 
+### Booking pages (a host's extra pages)
+
+A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
+
+| English | pl |
+|---|---|
+| booking page (any public page guests book through, extra or main) | **strona rezerwacji** (plural **strony rezerwacji**) |
+| main page (the host's own page at `/<username>`, as opposed to their extra booking pages) | **strona główna** (always with the qualifier; never the bare word for *home page*) |
+| draft (a booking page not public yet because it lists no meeting type) | **wersja robocza** (same word as the poll draft) |
+| address (the URL path of a page, `/<username>/<page>`) | **adres** Nigdy *URL* ani *ścieżka*; adres e-mail i adres miejsca to osobne pojęcia z własnym tłumaczeniem |
+
 ## Notes
 
 - "Cancel" a meeting or booking is "odwołaj" everywhere, the payments screens included;
