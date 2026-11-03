@@ -172,6 +172,33 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
     assert Polls.list_polls(user.id) == []
   end
 
+  test "a draft published from another tab is not deleted from this one", %{
+    conn: conn,
+    user: user,
+    date: date
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+    view |> open_new_form() |> submit(form_params(date, %{}), "draft")
+    view |> element("[data-testid='edit-draft']") |> render_click()
+    view |> element("[data-testid='delete-draft']") |> render_click()
+
+    [draft] = Polls.list_polls(user.id)
+    {:ok, start_time, 0} = DateTime.from_iso8601("#{date}T09:00:00Z")
+
+    {:ok, _poll} =
+      Polls.publish_draft(draft.id, user.id, %{
+        title: draft.title,
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        slots: [%{start_time: start_time}],
+        invitees: [%{email: "grace@example.com", name: "Grace Hopper"}]
+      })
+
+    view |> element("[data-testid='confirm-delete-poll']") |> render_click()
+
+    assert {:ok, %{status: :open}} = Polls.get_poll_for_host(draft.id, user.id)
+  end
+
   test "warns about a time that clashes with an event in the calendar", %{conn: conn, date: date} do
     {:ok, busy_day} = Date.from_iso8601(date)
 

@@ -27,6 +27,7 @@ defmodule Tymeslot.Polls do
     Voting
   }
 
+  alias Tymeslot.Repo
   alias Tymeslot.Security.EncryptedString
 
   @pubsub Tymeslot.PubSub
@@ -302,15 +303,32 @@ defmodule Tymeslot.Polls do
   @spec delete_poll(Ecto.UUID.t(), integer()) :: :ok | {:error, :not_found | :still_open}
   def delete_poll(id, user_id) do
     case get_poll_for_host(id, user_id) do
-      {:ok, %{status: :open}} ->
-        {:error, :still_open}
+      {:ok, %{status: :open}} -> {:error, :still_open}
+      {:ok, _poll} -> delete_locked(id, user_id)
+      {:error, :not_found} = error -> error
+    end
+  end
 
-      {:ok, poll} ->
-        {:ok, _deleted} = PollQueries.delete(poll)
-        broadcast_update(poll.id)
+  # Re-read under the row lock publishing takes, so a draft published from
+  # another tab since the read above is refused as open, not deleted with its
+  # invitations already sent. An open poll is refused before locking, so the
+  # host's refusal never waits on a vote being saved.
+  defp delete_locked(id, user_id) do
+    result =
+      Repo.transaction(fn ->
+        case PollQueries.lock_for_user(id, user_id) do
+          nil -> Repo.rollback(:not_found)
+          %{status: :open} -> Repo.rollback(:still_open)
+          poll -> {:ok, _deleted} = PollQueries.delete(poll)
+        end
+      end)
+
+    case result do
+      {:ok, _deleted} ->
+        broadcast_update(id)
         :ok
 
-      {:error, :not_found} = error ->
+      {:error, _reason} = error ->
         error
     end
   end
