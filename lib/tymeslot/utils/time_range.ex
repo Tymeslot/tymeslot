@@ -67,12 +67,16 @@ defmodule Tymeslot.Utils.TimeRange do
   end
 
   @doc """
-  Checks whether a candidate range clashes with any event once the candidate is
-  padded by `buffers`.
+  Checks whether a candidate range clashes with any event, honouring the
+  buffers on both sides.
 
-  The buffers belong to the range being checked, never to the events: the
-  candidate `[start, end]` is free only if `[start - before, end + after]`
-  overlaps no event. An event's own buffers are not applied.
+  `buffers` belong to the candidate: `[start - before, end + after]` must
+  overlap no event. An event may carry buffers of its own under `:buffers`
+  (a booking does, from its meeting type; a provider calendar event does
+  not), and the candidate must also stay out of that event's padded range.
+  Buffers are free time, so two of them may overlap each other: between two
+  meetings the gap has to be the larger of the earlier one's buffer after and
+  the later one's buffer before, never their sum.
 
   ## Examples
 
@@ -81,14 +85,35 @@ defmodule Tymeslot.Utils.TimeRange do
       true
       iex> TimeRange.has_conflict_with_events?(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 10:30:00Z], events, {0, 15})
       false
+      iex> booking = [%{start_time: ~U[2024-01-01 09:00:00Z], end_time: ~U[2024-01-01 10:00:00Z], buffers: {0, 30}}]
+      iex> TimeRange.has_conflict_with_events?(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 10:30:00Z], booking, {0, 0})
+      true
+      iex> TimeRange.has_conflict_with_events?(~U[2024-01-01 10:30:00Z], ~U[2024-01-01 11:00:00Z], booking, {15, 0})
+      false
   """
   @spec has_conflict_with_events?(DateTime.t(), DateTime.t(), [map()], buffers()) :: boolean()
   def has_conflict_with_events?(start_time, end_time, events, buffers \\ {0, 0}) do
     {buffer_before, buffer_after} = buffers
     {padded_start, padded_end} = add_buffer(start_time, end_time, buffer_before, buffer_after)
 
-    Enum.any?(events, &overlaps?(padded_start, padded_end, &1.start_time, &1.end_time))
+    Enum.any?(events, fn event ->
+      overlaps?(padded_start, padded_end, event.start_time, event.end_time) or
+        within_own_buffers?(start_time, end_time, event)
+    end)
   end
+
+  defp within_own_buffers?(
+         start_time,
+         end_time,
+         %{buffers: {buffer_before, buffer_after}} = event
+       ) do
+    {event_start, event_end} =
+      add_buffer(event.start_time, event.end_time, buffer_before, buffer_after)
+
+    overlaps?(start_time, end_time, event_start, event_end)
+  end
+
+  defp within_own_buffers?(_start_time, _end_time, _event), do: false
 
   @doc """
   Calculates the duration between two times in minutes.

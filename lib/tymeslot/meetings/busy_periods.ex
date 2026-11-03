@@ -29,6 +29,7 @@ defmodule Tymeslot.Meetings.BusyPeriods do
   is, because the identifier the two sides share differs by provider family.
   """
 
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Meetings.CalendarEventLink
   alias Tymeslot.Meetings.MeetingListQueries
 
@@ -58,18 +59,36 @@ defmodule Tymeslot.Meetings.BusyPeriods do
 
     calendar_events
     |> Enum.reject(&CalendarEventLink.linked?(&1, booked_identifiers))
-    |> Enum.concat(Enum.map(meetings, &to_busy_period/1))
+    |> Enum.concat(buffered(meetings, organizer_user_id))
+  end
+
+  @doc """
+  The organiser's `meetings` as busy periods, each carrying its meeting type's
+  `buffers`, resolved for all of them at once.
+  """
+  @spec buffered([map()], pos_integer()) :: [map()]
+  def buffered([], _organizer_user_id), do: []
+
+  def buffered(meetings, organizer_user_id) do
+    buffers =
+      Schedules.buffers_by_meeting_type(
+        organizer_user_id,
+        Enum.map(meetings, & &1.meeting_type_id)
+      )
+
+    Enum.map(meetings, &to_busy_period(&1, Map.fetch!(buffers, &1.meeting_type_id)))
   end
 
   # Shaped as a calendar event, so it carries the booking's calendar identity:
   # `calendar_uid` is what its mirror is keyed by, and the booking's own `uid`
   # has no business in a list of busy periods.
-  defp to_busy_period(meeting) do
+  defp to_busy_period(meeting, buffers) do
     %{
       uid: meeting.calendar_uid,
       provider_event_id: meeting.provider_event_id,
       start_time: meeting.start_time,
-      end_time: meeting.end_time
+      end_time: meeting.end_time,
+      buffers: buffers
     }
   end
 end

@@ -17,10 +17,12 @@ defmodule Tymeslot.Availability.Schedules do
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.Breaks
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.OfferedTimes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Utils.TimeRange
   alias Tymeslot.Validation.Constraints
 
   @default_schedule_name "Working hours"
@@ -327,6 +329,46 @@ defmodule Tymeslot.Availability.Schedules do
       starts -> Map.put(base, :offered_starts, starts)
     end
   end
+
+  @doc """
+  The `{before, after}` buffers each of an organiser's meeting types books
+  with, keyed by meeting type id, resolved as `booking_config/2` resolves
+  them: the type's own override, else its schedule's value, else the
+  organiser's default schedule's.
+
+  `nil` among the ids (a meeting with no type) and an id the organiser does
+  not own resolve the default schedule, like `booking_config/2` given a nil
+  meeting type. Answers any number of meeting types in at most three queries,
+  so a caller weighing many bookings does not resolve them one at a time.
+  """
+  @spec buffers_by_meeting_type(integer(), [integer() | nil]) ::
+          %{optional(integer() | nil) => TimeRange.buffers()}
+  def buffers_by_meeting_type(organizer_user_id, meeting_type_ids) do
+    meeting_type_ids = Enum.uniq(meeting_type_ids)
+
+    types =
+      organizer_user_id
+      |> MeetingTypeQueries.list_with_schedules(Enum.reject(meeting_type_ids, &is_nil/1))
+      |> Map.new(&{&1.id, &1})
+
+    # Read only when some id falls back to it.
+    default =
+      if Enum.any?(meeting_type_ids, &falls_back_to_default?(Map.get(types, &1))),
+        do: resolve_for_meeting_type(%{user_id: organizer_user_id})
+
+    Map.new(meeting_type_ids, fn id ->
+      type = Map.get(types, id)
+      schedule = (type && type.availability_schedule) || default
+
+      {id,
+       {effective_policy(schedule, type, :buffer_before_minutes),
+        effective_policy(schedule, type, :buffer_after_minutes)}}
+    end)
+  end
+
+  defp falls_back_to_default?(nil), do: true
+  defp falls_back_to_default?(%{availability_schedule: nil}), do: true
+  defp falls_back_to_default?(_type), do: false
 
   @doc """
   One scheduling rule as it applies to a meeting type: the meeting type's own

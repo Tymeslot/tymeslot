@@ -4,7 +4,8 @@ defmodule Tymeslot.Availability.MeetingTypeSchedulingRulesIntegrationTest do
   the schedule's buffers, minimum notice and booking window.
 
   The user-level guarantee: each type is offered, and accepted at submit, under
-  its own rules, and a type with no overrides keeps following its schedule. The
+  its own rules, an existing booking keeps its own type's buffers clear of every
+  other type, and a type with no overrides keeps following its schedule. The
   scenario is the one hosts asked for: a "personal conversation" that wants a
   buffer and half a day's notice, and "quick support" on the same hours with
   neither.
@@ -72,9 +73,9 @@ defmodule Tymeslot.Availability.MeetingTypeSchedulingRulesIntegrationTest do
     }
   end
 
-  # An existing booking at 12:00-12:30; 30-minute meetings on a 15-minute grid.
-  # Personal inherits the schedule's 10 minutes either side, quick support has
-  # none:
+  # An existing quick-support booking at 12:00-12:30, which keeps no buffers
+  # of its own; 30-minute meetings on a 15-minute grid. Personal inherits the
+  # schedule's 10 minutes either side, quick support has none:
   #
   #   11:30  [11:20, 12:10] personal: hidden   [11:30, 12:00] quick: offered
   #   12:30  [12:20, 13:10] personal: hidden   [12:30, 13:00] quick: offered
@@ -86,13 +87,7 @@ defmodule Tymeslot.Availability.MeetingTypeSchedulingRulesIntegrationTest do
     quick: quick,
     date: date
   } do
-    booked_start = DateTime.new!(date, ~T[12:00:00], "Etc/UTC")
-
-    insert(:meeting,
-      organizer_user_id: user.id,
-      start_time: booked_start,
-      end_time: DateTime.add(booked_start, 30, :minute)
-    )
+    insert_booking(user, quick, date, ~T[12:00:00])
 
     personal_offer = offered(profile, date, "30min", meeting_type: personal)
     quick_offer = offered(profile, date, "30min", meeting_type: quick)
@@ -109,6 +104,63 @@ defmodule Tymeslot.Availability.MeetingTypeSchedulingRulesIntegrationTest do
     assert {:error, :slot_taken} = book_at(user, personal, date, "12:30 PM")
     assert {:ok, %MeetingSchema{}} = book_at(user, quick, date, "12:30 PM")
     assert {:ok, %MeetingSchema{}} = book_at(user, quick, date, "11:30 AM")
+  end
+
+  # An existing personal booking at 12:00-12:30 keeps its own 10 minutes either
+  # side, [11:50, 12:40], clear of every meeting type, quick support included:
+  #
+  #   11:15  [11:15, 11:45] quick: offered
+  #   11:30  [11:30, 12:00] quick: hidden, runs into the buffer before
+  #   12:30  [12:30, 13:00] quick: hidden, starts inside the buffer after
+  #   12:45  [12:45, 13:15] quick: offered
+  #
+  # Buffers are free time and may overlap one another: a second personal
+  # booking at 12:45 leaves 15 minutes, enough for the 10 each side wants, so
+  # it is offered although the two buffers together come to 20.
+  test "a booking's buffers keep other meeting types' bookings away from it", %{
+    user: user,
+    profile: profile,
+    personal: personal,
+    quick: quick,
+    date: date
+  } do
+    insert_booking(user, personal, date, ~T[12:00:00])
+
+    quick_offer = offered(profile, date, "30min", meeting_type: quick)
+
+    assert "11:15 AM" in quick_offer
+    refute "11:30 AM" in quick_offer
+    refute "12:30 PM" in quick_offer
+    assert "12:45 PM" in quick_offer
+
+    assert "12:45 PM" in offered(profile, date, "30min", meeting_type: personal)
+
+    # The submit refuses what the page hid, and accepts what it offered.
+    assert {:error, :slot_taken} = book_at(user, quick, date, "12:30 PM")
+    assert {:error, :slot_taken} = book_at(user, quick, date, "11:30 AM")
+    assert {:ok, %MeetingSchema{}} = book_at(user, quick, date, "12:45 PM")
+    assert {:ok, %MeetingSchema{}} = book_at(user, quick, date, "11:15 AM")
+  end
+
+  test "a meeting without a meeting type keeps the default schedule's buffers", %{
+    user: user,
+    profile: profile,
+    quick: quick,
+    date: date
+  } do
+    booked_start = DateTime.new!(date, ~T[12:00:00], "Etc/UTC")
+
+    insert(:meeting,
+      organizer_user_id: user.id,
+      start_time: booked_start,
+      end_time: DateTime.add(booked_start, 30, :minute)
+    )
+
+    quick_offer = offered(profile, date, "30min", meeting_type: quick)
+
+    refute "12:30 PM" in quick_offer
+    assert "12:45 PM" in quick_offer
+    assert {:error, :slot_taken} = book_at(user, quick, date, "12:30 PM")
   end
 
   test "minimum notice applies per meeting type", %{user: user, personal: personal, quick: quick} do
@@ -162,6 +214,17 @@ defmodule Tymeslot.Availability.MeetingTypeSchedulingRulesIntegrationTest do
 
     assert quick_config.buffer_before_minutes == 0
     assert quick_config.min_advance_hours == 0
+  end
+
+  defp insert_booking(user, meeting_type, date, time) do
+    start_time = DateTime.new!(date, time, "Etc/UTC")
+
+    insert(:meeting,
+      organizer_user_id: user.id,
+      meeting_type_id: meeting_type.id,
+      start_time: start_time,
+      end_time: DateTime.add(start_time, 30, :minute)
+    )
   end
 
   defp book_at(user, meeting_type, date, time) do

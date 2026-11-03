@@ -83,6 +83,23 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  The user's meeting types among `ids`, with their availability schedule
+  preloaded. Ids the user does not own are left out.
+  """
+  @spec list_with_schedules(integer(), [integer()]) :: [MeetingTypeSchema.t()]
+  def list_with_schedules(_user_id, []), do: []
+
+  def list_with_schedules(user_id, ids) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.id in ^ids,
+        preload: [:availability_schedule]
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
   Tagged-tuple variant of get_meeting_type/2.
   Returns {:ok, meeting_type} or {:error, :not_found}.
   """

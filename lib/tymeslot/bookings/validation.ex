@@ -99,7 +99,9 @@ defmodule Tymeslot.Bookings.Validation do
   Checks if a time slot has conflicts with existing events.
 
   `buffers` is `{before, after}`: the minutes that must stay free before the
-  slot starts and after it ends. They pad the slot, never the events.
+  slot starts and after it ends. Provider calendar events carry no buffers of
+  their own; a booking's are weighed by the conflict-checked write
+  (`Tymeslot.Meetings.Scheduling`).
 
   Events are first filtered through `CalendarEvent.blocking?/1` so that
   cancelled, declined, and `TRANSP:TRANSPARENT` (free/busy = free) events
