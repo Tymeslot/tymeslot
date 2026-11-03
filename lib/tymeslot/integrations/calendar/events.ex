@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
 
@@ -94,7 +95,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     case organizer_profile(organizer_user_id, Keyword.get(opts, :organizer_profile)) do
       {:ok, profile} ->
         today = Clock.utc_today()
-        end_date = Date.add(today, booking_window_days(profile) + meeting_reach_days())
+
+        end_date =
+          Date.add(today, booking_window_days(profile, organizer_user_id) + meeting_reach_days())
+
         get_events_for_range_fresh(organizer_user_id, today, end_date)
 
       {:error, _reason} ->
@@ -577,14 +581,16 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   defp organizer_profile(user_id, nil), do: ProfileQueries.get_by_user_id(user_id)
 
   # The prefetch range must cover the furthest date any of the host's schedules
-  # can be booked into: a meeting type on a longer window than the default would
-  # otherwise offer slots for dates this range never fetched events for.
-  defp booking_window_days(%{id: profile_id}) when is_integer(profile_id) do
+  # or meeting types can be booked into: a meeting type on a longer window than
+  # the default would otherwise offer slots for dates this range never fetched
+  # events for.
+  defp booking_window_days(%{id: profile_id}, user_id) when is_integer(profile_id) do
     profile_id
     |> Schedules.list_for_profile()
     |> Enum.map(& &1.advance_booking_days)
+    |> Enum.concat(List.wrap(MeetingTypes.max_advance_booking_days_override(user_id)))
     |> Enum.max(fn -> 90 end)
   end
 
-  defp booking_window_days(_profile), do: 90
+  defp booking_window_days(_profile, _user_id), do: 90
 end
