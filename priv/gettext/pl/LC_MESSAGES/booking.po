@@ -1073,3 +1073,8 @@ msgstr "Rezerwujesz spotkanie %{meeting} (%{duration})"
 #, elixir-autogen, elixir-format
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Rezerwujesz spotkanie %{meeting} (%{duration}), organizator: %{name}"
+
+#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type has no times open for booking right now."
+msgstr "Ten typ spotkania nie ma teraz wolnych terminów do rezerwacji."

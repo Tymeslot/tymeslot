@@ -1069,3 +1069,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type has no times open for booking right now."
+msgstr ""

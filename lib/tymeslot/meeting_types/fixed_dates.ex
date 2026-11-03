@@ -47,8 +47,9 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
   group type whose sessions have all passed, closed registration or filled
   up, and a one-to-one type with no offered time a booker can pick now
   (`Tymeslot.MeetingTypes.OfferedTimes.next_by_type/2`). Such a type is
-  left off the public booking page, as an inactive one is; its direct link
-  still says why it cannot be booked.
+  left off the public booking page, as an inactive one is. A group type's
+  direct link still says why it cannot be booked; a one-to-one type's leads
+  to the booking page, saying it has no times open (`open_for_booking?/1`).
   """
   @spec reject_unbookable([map()]) :: [map()]
   def reject_unbookable(meeting_types) do
@@ -69,6 +70,14 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
         (offered_times?(type) and not MapSet.member?(offering_ids, type.id))
     end)
   end
+
+  @doc """
+  Whether `meeting_type` has something left to book, as `reject_unbookable/1`
+  judges it: false only for a fixed-date type with no session open for
+  sign-up, or no offered time a booker can pick now.
+  """
+  @spec open_for_booking?(map()) :: boolean()
+  def open_for_booking?(meeting_type), do: reject_unbookable([meeting_type]) != []
 
   @doc """
   Refuses an update that would stop `meeting_type` offering its planned
