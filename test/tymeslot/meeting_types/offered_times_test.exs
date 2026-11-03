@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.{FixedDates, OfferedTimes, OfferedTimeSchema}
   alias Tymeslot.Repo
@@ -215,6 +216,26 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesTest do
       assert OfferedTimes.next_by_type([type], now) == %{type.id => open.starts_at}
     end
 
+    test "reads the type's own notice and window over its schedule's", ctx do
+      now = DateTime.utc_now(:second)
+
+      type =
+        insert(:meeting_type,
+          user: ctx.user,
+          max_participants: 1,
+          fixed_dates: true,
+          availability_schedule_id: ctx.type.availability_schedule_id,
+          min_advance_hours: 0,
+          advance_booking_days: 30
+        )
+
+      {:ok, soon} = OfferedTimes.add(type, ctx.user.id, DateTime.add(now, 2, :hour))
+      {:ok, far} = OfferedTimes.add(type, ctx.user.id, DateTime.add(now, 20, :day))
+
+      assert OfferedTimes.list_with_status(type, now) == [{soon, :bookable}, {far, :bookable}]
+      assert OfferedTimes.next_by_type([type], now) == %{type.id => soon.starts_at}
+    end
+
     test "leaves a type whose times are all out of reach off the public listing",
          %{type: type} = ctx do
       ids = fn -> ctx.user.id |> MeetingTypes.get_public_meeting_types() |> Enum.map(& &1.id) end
@@ -229,6 +250,57 @@ defmodule Tymeslot.MeetingTypes.OfferedTimesTest do
   end
 
   describe "next_by_type/2 and prune_past/1" do
+    test "skip a time the host's live booking takes, buffers included", ctx do
+      type =
+        insert(:meeting_type,
+          user: ctx.user,
+          max_participants: 1,
+          fixed_dates: true,
+          duration_minutes: 30,
+          buffer_after_minutes: 15
+        )
+
+      {:ok, booked} = OfferedTimes.add(type, ctx.user.id, in_days(2))
+      {:ok, next} = OfferedTimes.add(type, ctx.user.id, in_days(3))
+
+      # Starts in the type's 15-minute buffer after the booked time's 30 minutes.
+      meeting =
+        insert(:meeting,
+          organizer_user_id: ctx.user.id,
+          start_time: DateTime.add(booked.starts_at, 40, :minute),
+          end_time: DateTime.add(booked.starts_at, 70, :minute)
+        )
+
+      assert OfferedTimes.next_by_type([type]) == %{type.id => next.starts_at}
+
+      insert(:meeting,
+        organizer_user_id: ctx.user.id,
+        start_time: next.starts_at,
+        end_time: DateTime.add(next.starts_at, 30, :minute)
+      )
+
+      assert OfferedTimes.next_by_type([type]) == %{type.id => nil}
+
+      meeting |> Changeset.change(status: :cancelled) |> Repo.update!()
+
+      assert OfferedTimes.next_by_type([type]) == %{type.id => booked.starts_at}
+    end
+
+    test "ignore another host's bookings", ctx do
+      {:ok, offered} = OfferedTimes.add(ctx.meeting_type, ctx.user.id, in_days(2))
+      stranger = insert(:user)
+
+      insert(:meeting,
+        organizer_user_id: stranger.id,
+        start_time: offered.starts_at,
+        end_time: DateTime.add(offered.starts_at, 30, :minute)
+      )
+
+      assert OfferedTimes.next_by_type([ctx.meeting_type]) == %{
+               ctx.meeting_type.id => offered.starts_at
+             }
+    end
+
     test "name each type's next time and drop the ones that have started", ctx do
       other = insert(:meeting_type, user: ctx.user, max_participants: 1, fixed_dates: true)
       {:ok, soon} = OfferedTimes.add(ctx.meeting_type, ctx.user.id, in_days(2))

@@ -1077,6 +1077,11 @@ msgstr "Ви бронюєте зустріч %{meeting} (%{duration})"
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Ви бронюєте зустріч %{meeting} (%{duration}) з %{name}"
 
+#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type has no times open for booking right now."
+msgstr "Для цього типу зустрічі зараз немає вільного часу для бронювання."
+
 #: lib/tymeslot/profiles/organizer_context.ex
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format

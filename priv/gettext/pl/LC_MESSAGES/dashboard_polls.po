@@ -902,6 +902,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "Wersja robocza „%{title}” zostanie usunięta. Nikt nie został do niej zaproszony, więc nikt nie zostanie o tym powiadomiony. Tej operacji nie można cofnąć."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Ta wersja robocza została już opublikowana lub usunięta."

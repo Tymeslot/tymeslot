@@ -892,6 +892,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "El borrador «%{title}» se eliminará. No se invitó a nadie, así que nadie recibirá ningún aviso. Esto no se puede deshacer."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Este borrador ya se publicó o se eliminó."

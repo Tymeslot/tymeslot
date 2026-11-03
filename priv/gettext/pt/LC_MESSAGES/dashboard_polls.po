@@ -892,6 +892,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "O rascunho “%{title}” será excluído. Ninguém foi convidado, então ninguém será avisado. Não é possível desfazer."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Este rascunho já foi publicado ou excluído."

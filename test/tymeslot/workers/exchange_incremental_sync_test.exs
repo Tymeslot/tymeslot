@@ -182,8 +182,8 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
       refute Enum.any?(rows, &(&1.provider_event_id == "master-1"))
       assert Enum.any?(sent_requests(), &(&1 =~ "<m:FindItem"))
 
-      # Stored before the full read, or the next cycle replays the same change
-      # into the same full read, forever.
+      # Stored once the full read has succeeded, or the next cycle replays the
+      # same change into the same full read, forever.
       assert %{exchange_sync_states: %{"calendar" => "sync-state-2"}} = Repo.reload!(integration)
     end
 
@@ -208,6 +208,40 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
       # removed nothing; without the full read the series stayed on the grid.
       assert [row] = grid_rows(integration)
       assert row.uid == "uid-1"
+      assert %{exchange_sync_states: %{"calendar" => "sync-state-2"}} = Repo.reload!(integration)
+    end
+
+    test "a forced full read that fails leaves the series change to the next cycle", %{
+      integration: integration
+    } do
+      stub_full_sync(series_responses("Weekly sync"))
+      assert :ok = run(integration)
+      assert %{exchange_sync_states: %{"calendar" => first_token}} = Repo.reload!(integration)
+
+      series_change =
+        ExchangeFixtures.sync_folder_items_response([{:update, "master-1"}],
+          sync_state: "sync-state-2"
+        )
+
+      stub_full_sync(
+        series_responses("Weekly sync, renamed",
+          sync_folder_items: series_change,
+          find_item: ExchangeFixtures.failed_response("FindItem", "ErrorInternalServerError")
+        )
+      )
+
+      assert {:error, _reason} = run(integration)
+
+      # Stored now, the token would have the next cycle go incremental past a
+      # change no read applied, and the series keep its old name.
+      assert %{exchange_sync_states: %{"calendar" => ^first_token}} = Repo.reload!(integration)
+
+      stub_full_sync(series_responses("Weekly sync, renamed", sync_folder_items: series_change))
+      assert :ok = run(integration)
+
+      assert Enum.map(grid_rows(integration), & &1.summary) ==
+               List.duplicate("Weekly sync, renamed", 3)
+
       assert %{exchange_sync_states: %{"calendar" => "sync-state-2"}} = Repo.reload!(integration)
     end
 

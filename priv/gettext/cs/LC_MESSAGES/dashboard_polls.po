@@ -906,6 +906,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "Koncept „%{title}“ bude odstraněn. Nikdo do něj nebyl pozván, takže se to nikdo nedozví. Tuto akci nelze vrátit."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Tento koncept už byl zveřejněn nebo smazán."

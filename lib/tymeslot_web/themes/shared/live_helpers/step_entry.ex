@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
@@ -126,9 +127,40 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   @spec handle_schedule_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_schedule_entry(socket, params) do
     case resolve_entry_meeting_type(socket, params, :schedule) do
-      {:unresolvable, socket} -> socket
-      {:ok, socket} -> do_handle_schedule_entry(socket, params)
+      {:unresolvable, socket} ->
+        socket
+
+      {:ok, socket} ->
+        if closed?(socket),
+          do: leave_closed(socket),
+          else: do_handle_schedule_entry(socket, params)
     end
+  end
+
+  # A one-to-one type offering fixed dates with no time left to book would
+  # open on a calendar with no day to pick and nothing saying why, so its
+  # link leads to the booking page instead, as an invalid one does, saying so.
+  # A group type's page says why itself (the event has ended, a session is
+  # full), and a reschedule is let through: the booking being moved holds a
+  # time the calendar offers it.
+  defp closed?(socket) do
+    case socket.assigns[:meeting_type] do
+      %{} = meeting_type ->
+        FixedDates.offered_times?(meeting_type) and not ReschedulePin.pinned?(socket) and
+          not FixedDates.open_for_booking?(meeting_type)
+
+      _none ->
+        false
+    end
+  end
+
+  defp leave_closed(socket) do
+    socket
+    |> put_flash(
+      :info,
+      dgettext("booking", "This meeting type has no times open for booking right now.")
+    )
+    |> redirect(to: invalid_meeting_type_redirect_path(socket))
   end
 
   # Every entry into the flow has to resolve `:meeting_type`, and a reschedule

@@ -1070,6 +1070,11 @@ msgstr "Vas a reservar: %{meeting} (%{duration})"
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Vas a reservar: %{meeting} (%{duration}) con %{name}"
 
+#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type has no times open for booking right now."
+msgstr "Este tipo de reunión no tiene horarios disponibles para reservar en este momento."
+
 #: lib/tymeslot/profiles/organizer_context.ex
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
