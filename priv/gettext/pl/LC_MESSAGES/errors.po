@@ -407,11 +407,6 @@ msgstr "Masz już typ spotkania o tej nazwie"
 msgid "group bookings cannot offer more than one duration"
 msgstr "rezerwacje grupowe mogą oferować tylko jeden czas trwania"
 
-#: lib/tymeslot/meeting_types/fixed_dates.ex
-#, elixir-autogen, elixir-format
-msgid "fixed dates need group bookings"
-msgstr "stałe terminy wymagają rezerwacji grupowych"
-
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -852,3 +847,8 @@ msgstr "przeniesień spotkań"
 #, elixir-autogen, elixir-format
 msgid "cancel the planned dates before turning fixed dates off"
 msgstr "odwołaj zaplanowane terminy przed wyłączeniem stałych terminów"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "remove the offered times before turning group bookings on"
+msgstr "usuń oferowane terminy przed włączeniem rezerwacji grupowych"

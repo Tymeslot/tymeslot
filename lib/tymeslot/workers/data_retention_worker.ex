@@ -48,6 +48,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.InviteeData
+  alias Tymeslot.MeetingTypes.OfferedTimes
   alias Tymeslot.Payments.Webhooks.StripeEventQueries
   alias Tymeslot.Polls
   alias Tymeslot.Slack
@@ -132,6 +133,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     prune_past_extra_availability()
 
+    prune_past_offered_times()
+
     prune_orphaned_slack_stubs()
 
     prune_expired_analytics_salts()
@@ -204,6 +207,13 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   # Not a `@retention_jobs` entry: an extra available time lasts until its
   # date has passed everywhere, so yesterday's UTC date is the cutoff and a
   # time still today in some timezone is never removed.
+  # Not a `@retention_jobs` entry either: an offered time is an instant, so
+  # one that has started can no longer be booked and goes at once.
+  defp prune_past_offered_times do
+    {count, _rows} = OfferedTimes.prune_past(Clock.utc_now())
+    Logger.info("Pruned past offered times", deleted_count: count)
+  end
+
   defp prune_past_extra_availability do
     {count, _rows} = ExtraAvailability.prune_past(Date.add(Clock.utc_today(), -1))
     Logger.info("Pruned past extra available times", deleted_count: count)

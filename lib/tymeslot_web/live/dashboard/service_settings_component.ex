@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.FixedDates
+  alias Tymeslot.MeetingTypes.{FixedDates, OfferedTimes}
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
@@ -84,13 +84,22 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   # For each fixed-date type, the start of its next session open for
-  # registration, or nil: the card says when that is, or that the type is
-  # off the booking page for want of one.
+  # registration, or of its next offered time for a one-to-one type, or nil:
+  # the card says when that is, or that the type is off the booking page for
+  # want of one.
   defp next_dates(meeting_types) do
-    meeting_types
-    |> Enum.filter(&FixedDates.enabled?/1)
-    |> PlannedSessions.next_open_by_type()
-    |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
+    sessions =
+      meeting_types
+      |> Enum.filter(&FixedDates.sessions?/1)
+      |> PlannedSessions.next_open_by_type()
+      |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
+
+    offered =
+      meeting_types
+      |> Enum.filter(&FixedDates.offered_times?/1)
+      |> OfferedTimes.next_by_type()
+
+    Map.merge(sessions, offered)
   end
 
   # The open editor is handed `editing_type` on every render, and it saves

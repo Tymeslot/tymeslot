@@ -9,7 +9,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
-  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
@@ -246,7 +245,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
     |> validate_group_rules()
-    |> FixedDates.validate_changeset()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")

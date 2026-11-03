@@ -34,7 +34,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.Flash
 
-  # The fixed dates' events, all handled by `SessionHandlers`.
+  # The fixed dates' events, all handled by `SessionHandlers` (which hands a
+  # one-to-one type's offered times on to `OfferedTimeHandlers`).
   @session_events SessionHandlers.events()
 
   # The group bookings section's events, all handled by `GroupHandlers`.

@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlowSchema
+  alias Tymeslot.MeetingTypes.OfferedTimeSchema
   alias Tymeslot.Payments.Webhooks.StripeEventSchema
   alias Tymeslot.Repo
   alias Tymeslot.Slack.SlackDeliverySchema
@@ -463,6 +464,23 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
                  order_by: o.date
                )
              ) == [~D[2031-03-09], today, ~D[2031-04-01]]
+    end
+  end
+
+  describe "perform/1 - offered times that have started" do
+    test "deletes them and keeps the ones still to come" do
+      freeze_clock(~U[2031-03-10 12:00:00Z])
+      meeting_type = insert(:meeting_type, max_participants: 1, fixed_dates: true)
+
+      for starts_at <- [~U[2031-03-10 11:00:00Z], ~U[2031-03-10 13:00:00Z]] do
+        Repo.insert!(%OfferedTimeSchema{meeting_type_id: meeting_type.id, starts_at: starts_at})
+      end
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.all(from(t in OfferedTimeSchema, select: t.starts_at)) == [
+               ~U[2031-03-10 13:00:00Z]
+             ]
     end
   end
 

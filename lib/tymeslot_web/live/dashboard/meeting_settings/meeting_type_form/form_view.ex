@@ -319,7 +319,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 payments_charges_enabled: @payments_charges_enabled,
                 requires_approval: @requires_approval,
                 extra_lengths: Map.get(@form_data, "extra_lengths", []),
-                locations: @locations
+                locations: @locations,
+                fixed_dates: @fixed_dates,
+                offered_time_rows: @offered_time_rows
               })
             }
             allowed={@group_bookings_allowed}
@@ -336,10 +338,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           />
 
           <.fixed_dates_section
-            :if={@group_bookings_enabled}
             fixed_dates={@fixed_dates}
+            group={@group_bookings_enabled}
             is_edit={@is_edit}
             sessions={@session_rows}
+            offered_times={@offered_time_rows}
+            new_offered_time={@new_offered_time}
+            offered_time_error={@offered_time_error}
             timezone={@host_timezone}
             new_session={@new_session}
             session_error={@session_error}
