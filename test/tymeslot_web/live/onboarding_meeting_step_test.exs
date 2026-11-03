@@ -23,6 +23,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.CalendarMock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -31,6 +32,12 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
 
   setup do
     test_pid = self()
+    AvailabilityCache.clear_all()
+
+    # A refresh waits for further changes before it reads the week; out of
+    # the way unless a test watches for it (`watch_refreshes/1`).
+    Application.put_env(:tymeslot, :onboarding_week_refresh_after_ms, 60_000)
+    on_exit(fn -> Application.delete_env(:tymeslot, :onboarding_week_refresh_after_ms) end)
 
     # Every read of the week reaches the calendar once; the test counts them.
     stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
@@ -65,6 +72,22 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   end
 
   defp meeting_types(user), do: MeetingTypes.get_all_meeting_types(user.id)
+
+  # Shortens the refresh wait and traces the LiveView, so a test can wait
+  # for each refresh timer to reach it (`await_refreshes/2`) instead of
+  # sleeping.
+  defp watch_refreshes(view) do
+    Application.put_env(:tymeslot, :onboarding_week_refresh_after_ms, 20)
+    :erlang.trace(view.pid, true, [:receive])
+  end
+
+  defp await_refreshes(view, count) do
+    for _n <- 1..count do
+      assert_receive {:trace, _pid, :receive, {:week_preview_refresh, _token}}, 2_000
+    end
+
+    render_async(view)
+  end
 
   defp week(profile) do
     schedule = Schedules.get_default(profile.id)
@@ -211,28 +234,132 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     assert [%{name: "Intro call"}] = meeting_types(user)
   end
 
-  test "changing hours re-runs the preview", %{conn: conn} do
+  test "changing hours rebuilds the preview without reading the calendar again", %{conn: conn} do
     %{user: user} = new_host()
     view = open_step(conn, user)
-    refute_received :week_read
+    watch_refreshes(view)
 
     view |> element("#meeting-hours-preset-afternoons") |> render_click()
-    render_async(view)
+    await_refreshes(view, 1)
 
-    assert_received :week_read
-    # The new week replaces the old one under a new key, so it reveals.
+    # The new week replaces the old one under a new key, so it reveals,
+    # folded over the calendar events already cached.
+    assert has_element?(view, "#stage-times-2 [data-reveal-item]")
+    refute_received :week_read
+  end
+
+  test "changes close together rebuild the preview once", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+    watch_refreshes(view)
+
+    for day <- [6, 7, 6, 7, 1], do: view |> element("#meeting-day-#{day}") |> render_click()
+    await_refreshes(view, 5)
+
+    assert has_element?(view, "#stage-times-2")
+    refute has_element?(view, "#stage-times-3")
+    refute_received :week_read
+  end
+
+  test "a duration save rebuilds the preview", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+    watch_refreshes(view)
+
+    view |> element("#meeting-duration-60") |> render_click()
+    await_refreshes(view, 1)
+
     assert has_element?(view, "#stage-times-2 [data-reveal-item]")
   end
 
-  test "renaming alone does not read the week again", %{conn: conn} do
+  test "a location save rebuilds the preview", %{conn: conn} do
     %{user: user} = new_host()
     view = open_step(conn, user)
+    watch_refreshes(view)
+
+    view |> element("#meeting-location-phone") |> render_click()
+    await_refreshes(view, 1)
+
+    assert has_element?(view, "#stage-times-2 [data-reveal-item]")
+  end
+
+  test "renaming alone does not rebuild the preview", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+    watch_refreshes(view)
 
     view |> element("#meeting-name-suggestions-3") |> render_click()
-    render_async(view)
 
     assert [%{name: "Coffee chat"}] = meeting_types(user)
-    refute_received :week_read
+    refute_receive {:trace, _pid, :receive, {:week_preview_refresh, _token}}, 200
+    assert has_element?(view, "#stage-times-1")
+  end
+
+  test "a rebuild that fails keeps the week shown and says so", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+    watch_refreshes(view)
+
+    # Nothing cached and a calendar that now fails: the rebuild has to read it.
+    AvailabilityCache.clear_all()
+
+    stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+      {:error, :timeout}
+    end)
+
+    view |> element("#meeting-hours-preset-afternoons") |> render_click()
+    await_refreshes(view, 1)
+
+    assert has_element?(view, "#stage-times-1 [data-reveal-item]")
+    assert has_element?(view, ".onboarding-stage-caption", "The preview couldn't update just now")
+  end
+
+  describe "an \"Other\" length" do
+    setup %{conn: conn} do
+      %{user: user} = new_host()
+      view = open_step(conn, user)
+      view |> element("#meeting-duration-other") |> render_click()
+      %{user: user, view: view}
+    end
+
+    defp other_length(view, value) do
+      render_change(view, "meeting_change", %{"meeting" => %{"duration_input" => value}})
+      render_blur(element(view, "#meeting-duration-minutes"))
+    end
+
+    test "in range is saved", %{user: user, view: view} do
+      other_length(view, "50")
+      assert [%{duration_minutes: 50}] = meeting_types(user)
+      refute continue_disabled?(view)
+    end
+
+    for value <- ["500", "52"] do
+      test "#{value} is refused", %{user: user, view: view} do
+        other_length(view, unquote(value))
+
+        assert has_element?(view, "#meeting-duration-error", "Choose a length from 5 to 480")
+        assert has_element?(view, "[aria-describedby='meeting-duration-error']")
+        assert continue_disabled?(view)
+        assert [%{duration_minutes: 30}] = meeting_types(user)
+      end
+    end
+  end
+
+  test "a week whose days differ shows Custom, and an off-grid time as it is", %{conn: conn} do
+    %{user: user, profile: profile} = new_host()
+    schedule = Schedules.get_default(profile.id)
+
+    {:ok, _day} =
+      WeeklySchedule.upsert_day_availability(schedule.id, 1, %{
+        is_available: true,
+        start_time: ~T[09:15:00],
+        end_time: ~T[17:00:00]
+      })
+
+    view = open_step(conn, user)
+
+    assert has_element?(view, "#meeting-hours-preset-custom[aria-pressed='true']")
+    assert has_element?(view, "#meeting-hours-start option[value='09:15'][selected]")
   end
 
   test "Continue saves a name still being typed and moves on", %{conn: conn} do

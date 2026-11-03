@@ -73,7 +73,10 @@ defmodule TymeslotWeb.OnboardingLive do
 
     cond do
       not connected?(socket) ->
-        {:noreply, assign(socket, :current_step, landing_step(socket, requested))}
+        step = landing_step(socket, requested)
+        socket = assign(socket, :current_step, step)
+        # The first paint of the meeting step draws its saved state.
+        {:noreply, if(step == :meeting, do: MeetingHandlers.load(socket, false), else: socket)}
 
       is_nil(requested) or not StepConfig.reachable?(requested, resume_step(socket)) ->
         {:noreply, push_patch(socket, to: step_path(socket, resume_step(socket), uri))}
@@ -391,6 +394,10 @@ defmodule TymeslotWeb.OnboardingLive do
   @impl Phoenix.LiveView
   def handle_info({:flash, {type, message}}, socket) do
     {:noreply, put_flash(socket, type, message)}
+  end
+
+  def handle_info({:week_preview_refresh, token}, socket) do
+    {:noreply, WeekReveal.handle_refresh(token, socket)}
   end
 
   def handle_info({:week_preview_slow, key}, socket) do

@@ -866,3 +866,8 @@ msgstr "Tu conexión de videollamada ya no está disponible. Elige otro lugar o 
 #, elixir-autogen, elixir-format
 msgid "Pick a look and watch your page change."
 msgstr "Elige un estilo y mira cómo cambia tu página."
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Saved. The preview couldn't update just now; your page shows your latest hours."
+msgstr "Guardado. La vista previa no se ha podido actualizar ahora; tu página muestra tu horario más reciente."

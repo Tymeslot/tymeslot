@@ -72,7 +72,12 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           </.segmented_control>
         </div>
 
-        <div class="onboarding-form-group" role="group" aria-labelledby="meeting-duration-label">
+        <div
+          class="onboarding-form-group"
+          role="group"
+          aria-labelledby="meeting-duration-label"
+          aria-describedby={@meeting_errors[:duration_minutes] && "meeting-duration-error"}
+        >
           <span id="meeting-duration-label" class="label">
             {dgettext("onboarding_wizard", "How long?")}
           </span>
@@ -94,7 +99,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           <div :if={@meeting_form.other} class="flex items-end gap-2 mt-2">
             <.input
               type="number"
-              id="meeting-duration-other"
+              id="meeting-duration-minutes"
               name="meeting[duration_input]"
               value={@meeting_form.duration_input}
               label={dgettext("onboarding_wizard", "Length in minutes")}
@@ -103,6 +108,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
               step={MeetingSetup.duration_step()}
               inputmode="numeric"
               class="w-40"
+              aria-describedby={@meeting_errors[:duration_minutes] && "meeting-duration-error"}
               phx-debounce="150"
               phx-blur="meeting_save"
             />
@@ -116,7 +122,12 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           </p>
         </div>
 
-        <div class="onboarding-form-group" role="group" aria-labelledby="meeting-location-label">
+        <div
+          class="onboarding-form-group"
+          role="group"
+          aria-labelledby="meeting-location-label"
+          aria-describedby={@meeting_errors[:location] && "meeting-location-error"}
+        >
           <span id="meeting-location-label" class="label">
             {dgettext("onboarding_wizard", "Where?")}
           </span>
@@ -143,7 +154,11 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           <p :if={@meeting_form.location} class="onboarding-form-helper" data-role="location-helper">
             {location_helper(@meeting_form.location, @video_integration)}
           </p>
-          <p :if={@meeting_errors[:location]} class="mt-1 text-token-sm text-red-600 font-bold">
+          <p
+            :if={@meeting_errors[:location]}
+            id="meeting-location-error"
+            class="mt-1 text-token-sm text-red-600 font-bold"
+          >
             {@meeting_errors[:location]}
           </p>
         </div>
@@ -172,6 +187,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           class="grid grid-cols-7 gap-1"
           role="group"
           aria-label={dgettext("onboarding_wizard", "Days you take bookings")}
+          aria-describedby={@meeting_errors[:hours] && "meeting-hours-error"}
         >
           <button
             :for={day <- 1..7}
@@ -200,8 +216,9 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             id="meeting-hours-start"
             name="hours[start]"
             value={@hours_form.start}
-            options={time_options(@locale)}
+            options={time_options(@locale, @hours_form.start)}
             label={dgettext("onboarding_wizard", "From")}
+            aria-describedby={@meeting_errors[:hours] && "meeting-hours-error"}
             phx-debounce="300"
           />
           <.input
@@ -209,8 +226,9 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             id="meeting-hours-end"
             name="hours[end]"
             value={@hours_form.end}
-            options={time_options(@locale)}
+            options={time_options(@locale, @hours_form.end)}
             label={dgettext("onboarding_wizard", "To")}
+            aria-describedby={@meeting_errors[:hours] && "meeting-hours-error"}
             phx-debounce="300"
           />
         </form>
@@ -255,11 +273,20 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
         "You'll arrange the address after booking. Add your places later in Settings."
       )
 
-  # Every half hour of the day, worded in the host's clock.
-  defp time_options(locale) do
-    for minutes <- 0..(24 * 60 - 30)//30 do
-      time = Time.new!(div(minutes, 60), rem(minutes, 60), 0)
-      {LocaleFormat.format_time(time, locale), Calendar.strftime(time, "%H:%M")}
-    end
+  # Every half hour of the day, worded in the host's clock, and the stored
+  # time among them when it is off that grid (a 09:15 start set elsewhere),
+  # so the select shows it rather than falling back to its first option.
+  defp time_options(locale, current) do
+    grid =
+      for minutes <- 0..(24 * 60 - 30)//30, do: Time.new!(div(minutes, 60), rem(minutes, 60), 0)
+
+    times =
+      case Time.from_iso8601((current || "") <> ":00") do
+        {:ok, time} -> Enum.sort(Enum.uniq([time | grid]), Time)
+        {:error, _reason} -> grid
+      end
+
+    for time <- times,
+        do: {LocaleFormat.format_time(time, locale), Calendar.strftime(time, "%H:%M")}
   end
 end

@@ -204,6 +204,14 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   shows it under the page and the live region announces it.
   """
   @spec week_caption(map() | nil) :: String.t() | nil
+  # A refresh that could not be read keeps the week shown and says so.
+  def week_caption(%{state: :ready, stale: true}),
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Saved. The preview couldn't update just now; your page shows your latest hours."
+      )
+
   def week_caption(%{state: :ready, preview: %WeekPreview{first_busy: nil} = preview}) do
     dngettext(
       "onboarding_wizard",

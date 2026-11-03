@@ -73,6 +73,7 @@
 @source "../../../../lib/tymeslot_web/hooks";
 @source "../../../../lib/tymeslot_web/live/meeting_request_live.ex";
 @source "../../../../lib/tymeslot_web/live/meeting_request_live";
+@source "../../../../lib/tymeslot_web/live/onboarding_live/preview_meeting.ex";
 @source "../../../../lib/tymeslot_web/live/onboarding_live/preview_parts.ex";
 @source "../../../../lib/tymeslot_web/live/onboarding_live/preview_week.ex";
 @source "../../../../lib/tymeslot_web/live/scheduling";

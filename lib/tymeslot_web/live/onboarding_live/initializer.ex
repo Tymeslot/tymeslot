@@ -74,7 +74,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       theme_customization: customization,
       onboarding_choices: onboarding_choices
     )
-    |> MeetingHandlers.assign_initial(user, profile, connected?(socket))
+    |> MeetingHandlers.assign_blank()
+    |> then(&if(connected?(&1), do: MeetingHandlers.load(&1, true), else: &1))
     |> assign_booking_page_live(profile)
     |> assign_initial_week()
     |> allow_avatar_upload()
@@ -112,6 +113,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # The key of a re-read of the week in flight (`WeekReveal.refresh/1`),
       # which becomes `reveal_key` when it answers.
       pending_reveal_key: nil,
+      # The latest coalesced refresh of the week (`WeekReveal.refresh/1`).
+      refresh_token: nil,
       # Set by the LiveView after the host's first action (see
       # `OnboardingLayout`), so the page load never moves the focus.
       focus_heading: false,

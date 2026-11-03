@@ -163,12 +163,16 @@ defmodule Tymeslot.MeetingTypes do
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | :not_found}
   def update_meeting_type(meeting_type, attrs, opts \\ []) do
     case Repo.transaction(fn -> do_update_meeting_type(meeting_type, attrs, opts) end) do
-      {:ok, updated} ->
+      {:ok, {updated, promotion}} ->
         Publication.maybe_publish(updated.user_id)
         maybe_broadcast_seat_change(meeting_type, updated)
         # Offered slots are cached per meeting type, and an edit can change which
         # availability schedule the type resolves to, so the cached answer must go.
-        invalidate_after_commit(updated.user_id)
+        invalidate_after_commit(
+          updated.user_id,
+          calendar_touched?(meeting_type, updated, promotion)
+        )
+
         {:ok, updated}
 
       {:error, reason} ->
@@ -180,10 +184,10 @@ defmodule Tymeslot.MeetingTypes do
     changeset = MeetingTypeSchema.changeset(meeting_type, attrs, opts)
 
     with :ok <- FixedDates.check_sessions_kept(meeting_type, changeset),
-         {:ok, _promotion} <- BookingCalendar.promote(changeset),
+         {:ok, promotion} <- BookingCalendar.promote(changeset),
          {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
       sync_group_capacity(meeting_type, updated)
-      updated
+      {updated, promotion}
     else
       {:error, reason} -> Repo.rollback(reason)
     end
@@ -400,10 +404,25 @@ defmodule Tymeslot.MeetingTypes do
 
   # Once the write commits, never inside a caller's transaction, where a read
   # in between would cache the old answer again.
-  defp invalidate_after_commit(user_id) do
-    unless MeetingTypeQueries.in_transaction?(),
-      do: Availability.changed(user_id)
+  #
+  # An edit that leaves the host's calendars alone (a name, a length, a
+  # place, a schedule) keeps the cached calendar events: their window is set
+  # by the host's calendars and schedules, never by a meeting type, so only
+  # the folded ranges go.
+  defp invalidate_after_commit(user_id, calendar_touched? \\ true)
+
+  defp invalidate_after_commit(user_id, calendar_touched?) do
+    cond do
+      MeetingTypeQueries.in_transaction?() -> :ok
+      calendar_touched? -> Availability.changed(user_id)
+      true -> Availability.offer_changed(user_id)
+    end
   end
+
+  defp calendar_touched?(_before, _after, :promoted), do: true
+
+  defp calendar_touched?(before, updated, _promotion),
+    do: before.calendar_integration_id != updated.calendar_integration_id
 
   @doc """
   Creates a meeting type from form parameters with validation.
@@ -465,4 +484,17 @@ defmodule Tymeslot.MeetingTypes do
   """
   @spec seed_default_meeting_types(integer(), Ecto.Repo.t()) :: :ok
   defdelegate seed_default_meeting_types(user_id, repo \\ Repo), to: Defaults
+
+  @doc """
+  Creates the default meeting type, through the changeset, for a host whose
+  types are all archived, so a first-run wizard has a type to edit without
+  bringing an archived one back. Its name is the default's, numbered past
+  any of the host's types already using it.
+  """
+  @spec create_default_meeting_type(integer()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | :not_found}
+  def create_default_meeting_type(user_id) when is_integer(user_id) do
+    taken = user_id |> get_all_meeting_types() |> MapSet.new(& &1.name)
+    user_id |> Defaults.default_attrs(taken) |> create_meeting_type()
+  end
 end

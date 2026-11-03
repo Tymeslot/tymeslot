@@ -866,3 +866,8 @@ msgstr "La tua connessione video non è più disponibile. Scegli un'altra sede o
 #, elixir-autogen, elixir-format
 msgid "Pick a look and watch your page change."
 msgstr "Scegli uno stile e guarda la tua pagina cambiare."
+
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Saved. The preview couldn't update just now; your page shows your latest hours."
+msgstr "Salvato. L'anteprima non si è potuta aggiornare ora; la tua pagina mostra i tuoi orari più recenti."

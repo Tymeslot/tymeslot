@@ -45,6 +45,27 @@ defmodule Tymeslot.Availability do
     do: profile_id |> ProfileQueries.user_id_for_profile() |> changed()
 
   @doc """
+  Records that what a host offers changed, but not their calendar: their
+  weekly hours, or a meeting type's name, length or place. Clears the
+  cached availability ranges and keeps the cached calendar events, whose
+  window depends only on the host's calendars and their schedules'
+  booking windows (`AvailabilityCache.invalidate_ranges_for_user/1`). Takes
+  what `changed/1` takes. Anything else, a booking, a calendar or a
+  schedule's booking policy, calls `changed/1`.
+  """
+  @spec offer_changed(integer() | ProfileSchema.t() | AvailabilityScheduleSchema.t() | nil) ::
+          :ok
+  def offer_changed(nil), do: :ok
+
+  def offer_changed(user_id) when is_integer(user_id),
+    do: AvailabilityCache.invalidate_ranges_for_user(user_id)
+
+  def offer_changed(%ProfileSchema{user_id: user_id}), do: offer_changed(user_id)
+
+  def offer_changed(%AvailabilityScheduleSchema{profile_id: profile_id}),
+    do: profile_id |> ProfileQueries.user_id_for_profile() |> offer_changed()
+
+  @doc """
   The host's next seven days as the booking page offers them, with the
   calendar's busy blocks; see `Tymeslot.Availability.WeekPreview`.
 
@@ -67,7 +88,7 @@ defmodule Tymeslot.Availability do
   start.
   """
   @spec validate_weekly_hours(map()) ::
-          :ok | {:error, :no_days | :end_before_start | :invalid_time}
+          :ok | {:error, :no_days | :invalid_day | :end_before_start | :invalid_time}
   defdelegate validate_weekly_hours(hours), to: WeeklyHours, as: :validate
 
   @doc """

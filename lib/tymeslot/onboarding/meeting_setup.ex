@@ -56,19 +56,16 @@ defmodule Tymeslot.Onboarding.MeetingSetup do
     do: user_id |> MeetingTypes.get_active_meeting_types() |> List.first()
 
   @doc """
-  The meeting type the wizard edits, made sure of: a host with no active
-  type gets the default seeded (when they have none at all) or their first
-  type turned back on.
+  The meeting type the wizard edits, made sure of: a host with no type at
+  all gets the default seeded, and one whose types are all archived gets a
+  fresh default rather than an archived type brought back.
   """
   @spec meeting_type(integer()) :: {:ok, Ecto.Schema.t()} | {:error, term()}
   def meeting_type(user_id) do
     with nil <- current_meeting_type(user_id),
          :ok <- MeetingTypes.seed_default_meeting_types(user_id),
          nil <- current_meeting_type(user_id) do
-      case MeetingTypes.get_all_meeting_types(user_id) do
-        [first | _rest] -> MeetingTypes.update_meeting_type(first, %{is_active: true})
-        [] -> {:error, :not_found}
-      end
+      MeetingTypes.create_default_meeting_type(user_id)
     else
       %{} = meeting_type -> {:ok, meeting_type}
     end

@@ -46,25 +46,49 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   # -------------------------------------------------------------------
 
   @doc """
-  Assigns the step's state from the host's meeting type and week. The
-  connected mount makes sure there is a meeting type to edit; the
-  disconnected render only reads.
+  The step's state before anything is read: no meeting type, the default
+  week. The disconnected render of any other step stays at this.
   """
-  @spec assign_initial(socket(), map(), map() | nil, boolean()) :: socket()
-  def assign_initial(socket, user, profile, connected?) do
+  @spec assign_blank(socket()) :: socket()
+  def assign_blank(socket) do
+    Component.assign(socket,
+      meeting_type: nil,
+      meeting_form: form_from(nil),
+      meeting_errors: %{},
+      hours_form: Map.put(@default_hours, :preset, :weekdays),
+      video_integration: nil,
+      meeting_loaded: false
+    )
+  end
+
+  @doc """
+  Reads the step's state from the host's meeting type, week and video
+  integrations. The connected mount does it for every step (the stage
+  names the meeting on all of them) and makes sure there is a meeting type
+  to edit; the disconnected render does it only for the meeting step, and
+  only reads.
+  """
+  @spec load(socket(), boolean()) :: socket()
+  def load(%{assigns: %{profile: nil}} = socket, _connected?), do: socket
+
+  def load(%{assigns: %{current_user: user, profile: profile}} = socket, connected?) do
     meeting_type = load_meeting_type(user.id, profile, connected?)
-    hours = (profile && Availability.weekly_hours(profile.id)) || @default_hours
+    hours = Availability.weekly_hours(profile.id) || @default_hours
 
     Component.assign(socket,
       meeting_type: meeting_type,
       meeting_form: form_from(meeting_type),
       meeting_errors: %{},
       hours_form: Map.put(hours, :preset, preset_for(hours)),
-      video_integration: profile && MeetingSetup.video_integration(user.id)
+      video_integration: MeetingSetup.video_integration(user.id),
+      meeting_loaded: true
     )
   end
 
-  defp load_meeting_type(_user_id, nil, _connected?), do: nil
+  @doc "Loads the step's state on entering it, unless it already is."
+  @spec ensure_loaded(socket(), boolean()) :: socket()
+  def ensure_loaded(%{assigns: %{meeting_loaded: true}} = socket, _connected?), do: socket
+  def ensure_loaded(socket, connected?), do: load(socket, connected?)
 
   defp load_meeting_type(user_id, _profile, true) do
     case MeetingSetup.meeting_type(user_id) do
@@ -97,6 +121,9 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   @doc "The hours presets' keys, in the order the chips show them."
   @spec hour_presets() :: [atom()]
   def hour_presets, do: Keyword.keys(@hour_presets)
+
+  # A week whose days differ is the host's own, whatever its first day says.
+  defp preset_for(%{uniform: false}), do: :custom
 
   defp preset_for(hours) do
     shape = Map.take(hours, [:days, :start, :end])
@@ -257,10 +284,20 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
           Map.new(errors, fn {field, error} -> {field, message(field, error)} end)
       end
 
-    # A save's own refusal and the hours' error stay until their next save.
-    kept = Map.take(socket.assigns.meeting_errors, [:location, :hours])
+    # A save's own refusal and the hours' error stay until their next save,
+    # but a place refused goes once the host is back on the stored one.
+    kept =
+      socket.assigns.meeting_errors
+      |> Map.take([:location, :hours])
+      |> then(&if(location_stored?(socket.assigns), do: Map.delete(&1, :location), else: &1))
+
     Component.assign(socket, :meeting_errors, Map.merge(kept, errors))
   end
+
+  defp location_stored?(%{meeting_type: nil}), do: false
+
+  defp location_stored?(%{meeting_type: meeting_type, meeting_form: form}),
+    do: form.location == MeetingSetup.choice(meeting_type)
 
   # Saves the form when it is valid and differs from what is stored. A
   # change of length or place reads the week again.

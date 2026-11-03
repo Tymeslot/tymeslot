@@ -46,6 +46,34 @@ defmodule Tymeslot.MeetingTypes.Defaults do
     :ok
   end
 
+  @doc """
+  The attributes of the default meeting type created through the changeset
+  (`Tymeslot.MeetingTypes.create_default_meeting_type/1`), for a host who
+  has types but none active. The name is the default's, numbered past any
+  of `taken_names`.
+  """
+  @spec default_attrs(integer(), MapSet.t(String.t())) :: map()
+  def default_attrs(user_id, taken_names) when is_integer(user_id) do
+    [template | _rest] = templates()
+
+    Map.merge(template, %{
+      user_id: user_id,
+      name: free_name(template.name, taken_names),
+      is_active: true,
+      locations: [%{kind: :in_person, label: "In person", position: 0}],
+      reminder_config: [%{value: 30, unit: "minutes"}]
+    })
+  end
+
+  defp free_name(name, taken) do
+    Stream.iterate(1, &(&1 + 1))
+    |> Stream.map(fn
+      1 -> name
+      n -> "#{name} #{n}"
+    end)
+    |> Enum.find(&(not MapSet.member?(taken, &1)))
+  end
+
   # A new account has no calendar yet, so the defaults carry no booking
   # calendar.
   defp default_meeting_type_templates(user_id, now) do

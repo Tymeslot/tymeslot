@@ -20,7 +20,9 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   week already shown stays in place while the new one is read, so the
   times never blink back to loading; the new week replaces it and reveals
   as any new week does. The read in flight carries its key in
-  `pending_reveal_key` until it answers.
+  `pending_reveal_key` until it answers. Changes close together are read
+  once (`handle_refresh/2`), and a refresh that fails keeps the week shown,
+  marked `stale: true`, which the caption owns up to.
   """
 
   require Logger
@@ -33,6 +35,7 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   alias Tymeslot.Infrastructure.Tasks
 
   @slow_after_ms 4_000
+  @refresh_after_ms 300
 
   @doc """
   The week a render shows before any read has answered: `:loading` for a
@@ -59,18 +62,39 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
   @doc """
   Reads the week again after the host changed what it offers. A ready week
   stays on the stage until the new one arrives; any other state starts
-  over as `maybe_start/1` does. A read already in flight is cancelled, so
-  the latest change always wins.
+  over as `maybe_start/1` does.
+
+  Changes close together are read once: each call re-arms one short timer
+  (`handle_refresh/2`) under a new token, and only the latest token's timer
+  reads, so five day toggles in a row cost one read. A read already in
+  flight when it fires is cancelled, so the latest change always wins.
   """
   @spec refresh(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def refresh(
         %{assigns: %{booking_page_live: true, profile: %{}, stage_week: %{state: :ready}}} =
           socket
       ) do
-    if LiveView.connected?(socket), do: start_refresh(socket), else: socket
+    if LiveView.connected?(socket) do
+      token = make_ref()
+      Process.send_after(self(), {:week_preview_refresh, token}, refresh_after_ms())
+      Component.assign(socket, :refresh_token, token)
+    else
+      socket
+    end
   end
 
   def refresh(socket), do: maybe_start(socket)
+
+  @doc """
+  Reads the week for the latest `refresh/1`, when `token` is still the
+  latest one; an earlier timer leaves the socket as it is. Dispatched from
+  `OnboardingLive.handle_info/2`.
+  """
+  @spec handle_refresh(reference(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def handle_refresh(token, %{assigns: %{refresh_token: token}} = socket),
+    do: socket |> Component.assign(:refresh_token, nil) |> start_refresh()
+
+  def handle_refresh(_token, socket), do: socket
 
   defp start_refresh(socket) do
     profile = socket.assigns.profile
@@ -116,11 +140,20 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
           Phoenix.LiveView.Socket.t()
   # A refresh's answer takes the key it was read under, so its times are a
   # new list that reveals.
-  def handle_result({:ok, {key, result}}, %{assigns: %{pending_reveal_key: key}} = socket) do
+  #
+  # A refresh that fails keeps the week already shown, marked `stale`, so
+  # the stage says it could not catch up rather than dropping the times.
+  def handle_result({:ok, {key, {:ok, preview}}}, %{assigns: %{pending_reveal_key: key}} = socket) do
     socket
     |> Component.assign(reveal_key: key, pending_reveal_key: nil)
-    |> then(&handle_result({:ok, {key, result}}, &1))
+    |> put_week(:ready, preview)
   end
+
+  def handle_result(
+        {:ok, {key, {:error, _reason}}},
+        %{assigns: %{pending_reveal_key: key}} = socket
+      ),
+      do: keep_stale(socket)
 
   def handle_result({:ok, {key, {:ok, preview}}}, %{assigns: %{reveal_key: key}} = socket),
     do: put_week(socket, :ready, preview)
@@ -140,7 +173,15 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
       reason: LogFormat.reason(reason)
     )
 
-    put_week(socket, :failed, nil)
+    if socket.assigns[:pending_reveal_key],
+      do: keep_stale(socket),
+      else: put_week(socket, :failed, nil)
+  end
+
+  defp keep_stale(socket) do
+    socket
+    |> Component.assign(:pending_reveal_key, nil)
+    |> Component.update(:stage_week, &Map.put(&1, :stale, true))
   end
 
   @doc """
@@ -156,6 +197,11 @@ defmodule TymeslotWeb.OnboardingLive.WeekReveal do
 
   defp put_week(socket, state, preview),
     do: Component.assign(socket, :stage_week, %{state: state, preview: preview})
+
+  # How long a refresh waits for the next change before it reads; a test
+  # sets it to nothing.
+  defp refresh_after_ms,
+    do: Application.get_env(:tymeslot, :onboarding_week_refresh_after_ms, @refresh_after_ms)
 
   # Configurable so a test can watch the slow state without waiting for it.
   defp slow_after_ms,

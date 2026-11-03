@@ -98,6 +98,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     end)
     |> LiveView.clear_flash()
     |> then(&if(next == :ready, do: enter_share_step(&1), else: &1))
+    |> then(&if(next == :meeting, do: MeetingHandlers.ensure_loaded(&1, true), else: &1))
   end
 
   # Records which variant of the share step the host sees. Reloading
@@ -169,6 +170,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   defp refresh_form_data(socket, :profile), do: BasicSettingsShared.assign_form_data(socket)
 
+  defp refresh_form_data(socket, :meeting), do: MeetingHandlers.ensure_loaded(socket, true)
   defp refresh_form_data(socket, _step), do: socket
 
   @doc """
