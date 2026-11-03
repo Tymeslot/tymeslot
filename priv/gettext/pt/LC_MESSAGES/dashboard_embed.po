@@ -452,3 +452,8 @@ msgstr "Por segurança, %{emphasis} só a domínios específicos em que você co
 #, elixir-autogen, elixir-format
 msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options."
 msgstr "Precisa de ajuda? Veja o %{guide} para instruções passo a passo, dicas por plataforma e opções de personalização."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page"
+msgstr "Página de agendamento"

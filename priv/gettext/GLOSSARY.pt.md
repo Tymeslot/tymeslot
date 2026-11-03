@@ -171,6 +171,17 @@ with whatever `%{name}` turns out to be.
 `meeting_form`, which collides with the calendar's **Agenda** view. Leave both as they
 are until the two are decided together.
 
+### Booking pages (a host's extra pages)
+
+A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
+
+| English | pt |
+|---|---|
+| booking page (any public page guests book through, extra or main) | **página de agendamento** (plural **páginas de agendamento**) |
+| main page (the host's own page at `/<username>`, as opposed to their extra booking pages) | **página principal** (always with the qualifier; never the bare word for *home page*) |
+| draft (a booking page not public yet because it lists no meeting type) | **rascunho** (same word as the poll draft) |
+| address (the URL path of a page, `/<username>/<page>`) | **endereço** Nunca `URL` nem `caminho`; o endereço de e-mail e o endereço de um local são outras coisas, com tradução própria |
+
 ### Third-party UI labels: never guess
 
 When a setup instruction tells the reader to click something inside another company's

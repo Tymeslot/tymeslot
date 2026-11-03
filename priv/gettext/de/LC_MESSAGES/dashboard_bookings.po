@@ -871,3 +871,23 @@ msgstr "Feste Termine verlegen Sie im Termintyp."
 #, elixir-autogen, elixir-format
 msgid "The meeting is already at that time."
 msgstr "Der Termin liegt bereits zu dieser Zeit."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "All pages"
+msgstr "Alle Seiten"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through"
+msgstr "Gebucht über"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Main page"
+msgstr "Hauptseite"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "via %{page}"
+msgstr "über %{page}"

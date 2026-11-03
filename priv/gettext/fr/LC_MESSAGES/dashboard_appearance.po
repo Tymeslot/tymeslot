@@ -783,3 +783,19 @@ msgstr "Ce type de fichier n’est pas pris en charge. Veuillez téléverser une
 #, elixir-autogen, elixir-format
 msgid "You are customising %{theme}, but your booking page uses %{current}. These changes appear on your booking page once you choose %{theme} as your style."
 msgstr "Vous personnalisez %{theme}, mais votre page de réservation utilise %{current}. Ces modifications apparaîtront sur votre page de réservation dès que vous aurez choisi %{theme} comme style."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page no longer exists."
+msgstr "Cette page de réservation n’existe plus."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "You are editing %{address}"
+msgstr "Vous modifiez %{address}"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Theme for %{page} updated to %{theme_name}"
+msgstr "Le thème de %{page} est maintenant %{theme_name}"

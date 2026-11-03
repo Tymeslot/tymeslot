@@ -855,3 +855,18 @@ msgstr "před vypnutím pevných termínů zrušte naplánované termíny"
 #, elixir-autogen, elixir-format
 msgid "remove the offered times before turning group bookings on"
 msgstr "před zapnutím skupinových rezervací odeberte nabízené časy"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Použijte 3 až 30 malých písmen, číslic, pomlček nebo podtržítek; na začátku písmeno nebo číslice"
+
+#: lib/tymeslot/meeting_types/slugs.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your booking pages"
+msgstr "je již adresou jedné z vašich rezervačních stránek"
+
+#: lib/tymeslot/booking_pages.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your meeting types"
+msgstr "je již adresou jednoho z vašich typů schůzek"

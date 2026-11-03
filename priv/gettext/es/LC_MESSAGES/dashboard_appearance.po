@@ -783,3 +783,19 @@ msgstr "Este tipo de archivo no es compatible. Sube un video MP4 o WebM."
 #, elixir-autogen, elixir-format
 msgid "You are customising %{theme}, but your booking page uses %{current}. These changes appear on your booking page once you choose %{theme} as your style."
 msgstr "Estás personalizando %{theme}, pero tu página de reservas usa %{current}. Estos cambios aparecerán en tu página de reservas cuando elijas %{theme} como estilo."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking page no longer exists."
+msgstr "Esta página de reservas ya no existe."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "You are editing %{address}"
+msgstr "Estás editando %{address}"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Theme for %{page} updated to %{theme_name}"
+msgstr "Tema de %{page} actualizado a %{theme_name}"

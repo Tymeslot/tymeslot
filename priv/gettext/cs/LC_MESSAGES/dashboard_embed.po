@@ -452,3 +452,8 @@ msgstr "Z bezpečnostních důvodů %{emphasis} pouze na konkrétní domény, k
 #, elixir-autogen, elixir-format
 msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customisation options."
 msgstr "Potřebujete pomoct? Podrobný postup, tipy pro jednotlivé platformy a možnosti přizpůsobení najdete zde: %{guide}."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page"
+msgstr "Rezervační stránka"

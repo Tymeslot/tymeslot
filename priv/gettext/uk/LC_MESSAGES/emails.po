@@ -605,3 +605,8 @@ msgstr "Вилучено з події"
 #, elixir-autogen, elixir-format
 msgid "Video call:"
 msgstr "Відеодзвінок:"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your %{page} page"
+msgstr "Заброньовано через вашу сторінку «%{page}»"

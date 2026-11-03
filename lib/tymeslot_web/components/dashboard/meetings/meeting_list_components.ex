@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingCard
 
@@ -55,6 +56,49 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     </Navigation.segmented_control>
     """
   end
+
+  @doc """
+  Narrows the list to the bookings made through one booking page, or through
+  the host's own page. Shown only to a host with booking pages.
+  """
+  attr :pages, :list, required: true
+  attr :selected, :any, required: true, doc: "nil (every page), `:main` or a page id"
+  attr :target, :any, required: true
+
+  @spec page_filter(map()) :: Phoenix.LiveView.Rendered.t()
+  def page_filter(assigns) do
+    ~H"""
+    <.form
+      for={%{}}
+      as={:page_filter}
+      id="meetings-page-filter"
+      phx-change="filter_booking_page"
+      phx-target={@target}
+      class="lg:w-64"
+    >
+      <Forms.input
+        type="select"
+        id="meetings-page-filter-select"
+        name="page"
+        label={dgettext("dashboard_bookings", "Booked through")}
+        value={page_filter_value(@selected)}
+        options={page_filter_options(@pages)}
+      />
+    </.form>
+    """
+  end
+
+  defp page_filter_options(pages) do
+    [
+      {dgettext("dashboard_bookings", "All pages"), "all"},
+      {dgettext("dashboard_bookings", "Main page"), "main"}
+      | Enum.map(pages, &{&1.name, Integer.to_string(&1.id)})
+    ]
+  end
+
+  defp page_filter_value(nil), do: "all"
+  defp page_filter_value(:main), do: "main"
+  defp page_filter_value(id) when is_integer(id), do: Integer.to_string(id)
 
   @doc """
   The notice above a list narrowed to one booking (`?meeting=<id>`, where a

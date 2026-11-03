@@ -596,3 +596,8 @@ msgstr "Retiré de l’événement"
 #, elixir-autogen, elixir-format
 msgid "Video call:"
 msgstr "Appel vidéo :"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your %{page} page"
+msgstr "Réservé via votre page « %{page} »"

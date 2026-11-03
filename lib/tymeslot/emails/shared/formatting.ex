@@ -441,6 +441,20 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   def location_note(_details), do: nil
 
   @doc """
+  The line naming the booking page a booking came through, for the host's
+  emails only: `details` from `TemplateHelper.organizer_meeting_details/1`
+  carry `:booking_page_name`, an invitee's never do. nil for a booking
+  through the host's own page.
+
+  Must be called within a `Gettext.with_locale` block.
+  """
+  @spec booked_through(map()) :: String.t() | nil
+  def booked_through(%{booking_page_name: name}) when is_binary(name) and name != "",
+    do: dgettext("emails", "Booked through your %{page} page", page: name)
+
+  def booked_through(_details), do: nil
+
+  @doc """
   `details` without the arranged-after-booking note: an in-person meeting
   whose address was still to be arranged reads as a plain in-person one.
 

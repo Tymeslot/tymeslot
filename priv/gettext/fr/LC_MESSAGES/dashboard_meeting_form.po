@@ -323,11 +323,6 @@ msgstr "Règles de réservation"
 msgid "Details"
 msgstr "Détails"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "Hide from public booking page"
-msgstr "Masquer de la page de réservation publique"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Location & Calendar"
@@ -342,11 +337,6 @@ msgstr "Questions"
 #, elixir-autogen, elixir-format
 msgid "Visibility"
 msgstr "Visibilité"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "When on, this meeting type is reachable only through its direct link."
-msgstr "Lorsque cette option est activée, ce type de réunion n’est accessible que via son lien direct."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
 #, elixir-autogen, elixir-format
@@ -883,3 +873,13 @@ msgstr "Retirez les créneaux proposés pour activer les réservations de groupe
 #, elixir-autogen, elixir-format
 msgid "This type still has offered times. Turn on fixed dates and remove them to enable group bookings."
 msgstr "Ce type de réunion propose encore des créneaux. Activez les dates fixes et retirez-les pour activer les réservations de groupe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page: bookable only through its direct link."
+msgstr "Sur aucune page de réservation : réservable uniquement via son lien direct."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Show on %{address}"
+msgstr "Afficher sur %{address}"

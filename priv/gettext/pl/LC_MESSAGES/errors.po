@@ -852,3 +852,18 @@ msgstr "odwołaj zaplanowane terminy przed wyłączeniem stałych terminów"
 #, elixir-autogen, elixir-format
 msgid "remove the offered times before turning group bookings on"
 msgstr "usuń oferowane terminy przed włączeniem rezerwacji grupowych"
+
+#: lib/tymeslot/booking_pages/booking_page_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Use 3 to 30 lowercase letters, numbers, hyphens or underscores, starting with a letter or number"
+msgstr "Użyj od 3 do 30 małych liter, cyfr, łączników lub podkreśleń, zaczynając od litery lub cyfry"
+
+#: lib/tymeslot/meeting_types/slugs.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your booking pages"
+msgstr "jest już adresem jednej z twoich stron rezerwacji"
+
+#: lib/tymeslot/booking_pages.ex
+#, elixir-autogen, elixir-format
+msgid "is already the address of one of your meeting types"
+msgstr "jest już adresem jednego z twoich typów spotkań"

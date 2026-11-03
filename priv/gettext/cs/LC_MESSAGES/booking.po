@@ -1081,3 +1081,9 @@ msgstr "Rezervujete si schůzku %{meeting} (%{duration}) s hostitelem %{name}"
 #, elixir-autogen, elixir-format
 msgid "This meeting type has no times open for booking right now."
 msgstr "Tento typ schůzky teď nemá žádné volné termíny k rezervaci."
+
+#: lib/tymeslot/profiles/organizer_context.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{page} with %{name}"
+msgstr "%{page} s %{name}"

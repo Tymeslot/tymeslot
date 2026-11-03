@@ -41,6 +41,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   attr :timezone, :string, default: "Etc/UTC"
   attr :time_format, :string, default: "24h"
 
+  attr :unlisted, :boolean,
+    default: nil,
+    doc: "on no page at all; nil falls back to the type's own `is_private`"
+
+  attr :link_path, :string,
+    default: nil,
+    doc: "the type's one booking address (`BookingPages.meeting_type_path/2`), shown when set"
+
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
     ~H"""
@@ -65,12 +73,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               {@type.name}
             </h2>
             <Feedback.pill
-              :if={@type.is_private}
+              :if={if(is_nil(@unlisted), do: @type.is_private, else: @unlisted)}
               icon="hero-eye-slash-mini"
               title={
                 dgettext(
                   "dashboard_meeting_types",
-                  "Hidden from your public booking page; reachable only by its direct link"
+                  "On no booking page; reachable only by its direct link"
                 )
               }
             >
@@ -100,6 +108,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               data-testid="paid-type-unsellable"
             >
               {dgettext("dashboard_meeting_types", "Not offered")}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={@link_path}
+              size={:sm}
+              icon="hero-link-mini"
+              title={dgettext("dashboard_meeting_types", "Booking link")}
+              data-testid="meeting-type-link"
+            >
+              {@link_path}
             </Feedback.pill>
           </div>
           <p

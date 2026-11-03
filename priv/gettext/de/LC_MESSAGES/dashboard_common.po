@@ -141,6 +141,7 @@ msgid "View Page"
 msgstr "Seite ansehen"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling link copied to clipboard!"
 msgstr "Terminplanungslink in die Zwischenablage kopiert!"

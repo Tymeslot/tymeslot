@@ -881,3 +881,23 @@ msgstr "Pevný termín přesunete v jeho typu schůzky."
 #, elixir-autogen, elixir-format
 msgid "The meeting is already at that time."
 msgstr "Schůzka už je na tento čas naplánovaná."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "All pages"
+msgstr "Všechny stránky"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through"
+msgstr "Rezervováno přes"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Main page"
+msgstr "Hlavní stránka"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "via %{page}"
+msgstr "přes %{page}"
