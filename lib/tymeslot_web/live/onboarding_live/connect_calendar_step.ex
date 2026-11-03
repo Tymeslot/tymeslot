@@ -302,6 +302,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       <.input
         id={"#{@provider}_username"}
         name="username"
+        autocomplete="username"
         type={if @apple?, do: "email", else: "text"}
         value={@value.("username")}
         label={
@@ -321,6 +322,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         id={"#{@provider}_password"}
         name="password"
         type="password"
+        autocomplete="current-password"
         value={@value.("password")}
         label={
           if @apple?,

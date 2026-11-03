@@ -318,6 +318,14 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
 
       assert has_element?(view, "#apple-form")
       refute has_element?(view, "#apple-form input[name='url']")
+      # Password managers can fill the Apple ID and the saved app password.
+      assert has_element?(view, "#apple-form input[name='username'][autocomplete='username']")
+
+      assert has_element?(
+               view,
+               "#apple-form input[name='password'][autocomplete='current-password']"
+             )
+
       assert has_element?(view, "#apple-form a[href='https://appleid.apple.com']")
 
       view
