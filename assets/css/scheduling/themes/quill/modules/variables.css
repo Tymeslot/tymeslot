@@ -70,7 +70,7 @@
   --theme-error-light: #fca5a5;
 
   /* Theme Colors - Base Colors */
-  --theme-background-color: #0f172a;
+  --theme-background-color: #000000;
   /* The palette's page colour. The server overrides it per organiser; it is
      what shows behind an image or video background (--theme-background falls
      back to it). */

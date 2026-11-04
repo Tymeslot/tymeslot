@@ -28,7 +28,7 @@ defmodule Tymeslot.CustomFields.Validator do
     case type do
       "short_text" -> chain(FieldValidators.TextValidator, value, opts)
       "number" -> chain(FieldValidators.NumberValidator, value, opts_with_min_max(definition))
-      "phone" -> chain(FieldValidators.PhoneValidator, value, opts)
+      "phone" -> validate_portuguese_phone(value, opts)
       "url" -> chain(FieldValidators.UrlValidator, value, opts)
       "date" -> chain(FieldValidators.DateValidator, value, opts_with_min_max(definition))
       "time" -> chain(FieldValidators.TimeValidator, value, opts_with_min_max(definition))
@@ -39,6 +39,18 @@ defmodule Tymeslot.CustomFields.Validator do
       _other -> {:error, dgettext("errors", "Unknown field type")}
     end
   end
+
+  defp validate_portuguese_phone(value, opts) when value in [nil, ""],
+    do: chain(FieldValidators.PhoneValidator, value, opts)
+
+  defp validate_portuguese_phone(value, _opts) when is_binary(value) do
+    if Regex.match?(~r/^\d{9}$/, String.trim(value)),
+      do: bound_text(value),
+      else: {:error, "O número de telefone tem de ter exatamente 9 dígitos."}
+  end
+
+  defp validate_portuguese_phone(_value, _opts),
+    do: {:error, "O número de telefone tem de ter exatamente 9 dígitos."}
 
   defp chain(mod, value, opts) do
     case mod.validate(value, opts) do

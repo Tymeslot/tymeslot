@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
+  attr :maxlength, :any, default: nil
   attr :rest, :global, include: ~w(autocomplete)
 
   @spec text_like(map()) :: Phoenix.LiveView.Rendered.t()
@@ -51,6 +52,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
         aria-label={@definition["label"]}
         aria-required={to_string(@definition["required"] == true)}
         autofocus
+        maxlength={@maxlength}
         {@rest}
       />
     </form>

@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Phone do
     ~H"""
     <TextInput.text_like
       input_type="tel"
+      maxlength="9"
+      inputmode="numeric"
       definition={@definition}
       value={@value}
       myself={@myself}
