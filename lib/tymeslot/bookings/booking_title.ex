@@ -18,12 +18,7 @@ defmodule Tymeslot.Bookings.BookingTitle do
 
   @doc "The booking title, rendered in the current Gettext locale."
   @spec render(String.t() | nil, String.t() | nil) :: String.t()
-  def render(meeting_type, attendee_name) do
-    dgettext("emails", "%{meeting_type} with %{name}",
-      meeting_type: meeting_type,
-      name: attendee_name
-    )
-  end
+  def render(meeting_type, _attendee_name), do: meeting_type
 
   @doc """
   The meeting's title in the current Gettext locale when this template built

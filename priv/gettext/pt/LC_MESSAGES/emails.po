@@ -39,7 +39,7 @@ msgstr "Duração"
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Email:"
-msgstr "E-mail:"
+msgstr "Email:"
 
 #: lib/tymeslot/emails/shared/greeting.ex
 #, elixir-autogen, elixir-format
@@ -49,7 +49,7 @@ msgstr "Olá %{name},"
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "I'll send you a reminder %{label} before our appointment."
-msgstr "Vou mandar um lembrete %{label} antes do nosso compromisso."
+msgstr "Vou enviar um lembrete %{label} antes da nossa reunião."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -105,17 +105,17 @@ msgstr "Nome:"
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "No reminder emails are scheduled for this appointment."
-msgstr "Nenhum e-mail de lembrete está agendado para este compromisso."
+msgstr "Nenhum email de lembrete está marcado para esta reunião."
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder %{label} before the appointment."
-msgstr "Lembrete %{label} antes do compromisso."
+msgstr "Lembrete %{label} antes da reunião."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule:"
-msgstr "Remarcar:"
+msgstr "Reagendar:"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #: lib/tymeslot/emails/shared/meeting/hero.ex
@@ -175,7 +175,7 @@ msgstr[1] "minutos"
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "reply to this email"
-msgstr "responda a este e-mail"
+msgstr "responda a este email"
 
 #: lib/tymeslot/emails/shared/text.ex
 #, elixir-autogen, elixir-format
@@ -197,7 +197,7 @@ msgstr "Ligação telefônica"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has invited you to an event."
-msgstr "%{name} convidou você para um evento."
+msgstr "%{name} convidou-o(a) para um evento."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -207,7 +207,7 @@ msgstr "Convite de calendário - %{title} em %{date}"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "You're Invited"
-msgstr "Um convite para você"
+msgstr "Um convite para si"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -237,7 +237,7 @@ msgstr "Empresa"
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
-msgstr "E-mail"
+msgstr "Email"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -318,7 +318,7 @@ msgstr "Enviado com carinho por"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "scheduling that respects your time"
-msgstr "agendamento que respeita seu tempo"
+msgstr "marcação que respeita o seu tempo"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -349,8 +349,8 @@ msgstr "Entrar na chamada de vídeo"
 #, elixir-autogen, elixir-format
 msgid "You'll receive %{count} reminder before the appointment."
 msgid_plural "You'll receive %{count} reminders before the appointment."
-msgstr[0] "Você vai receber %{count} lembrete antes do compromisso."
-msgstr[1] "Você vai receber %{count} lembretes antes do compromisso."
+msgstr[0] "Vai receber %{count} lembrete antes da reunião."
+msgstr[1] "Vai receber %{count} lembretes antes da reunião."
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -441,12 +441,12 @@ msgstr "login único"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has cancelled a recurring event you were invited to. Every occurrence is cancelled."
-msgstr "%{name} cancelou um evento recorrente para o qual tinha convidado você. Todas as ocorrências foram canceladas."
+msgstr "%{name} cancelou um evento recorrente para o qual o(a) tinha convidado. Todas as ocorrências foram canceladas."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has cancelled an event you were invited to."
-msgstr "%{name} cancelou um evento para o qual tinha convidado você."
+msgstr "%{name} cancelou um evento para o qual o(a) tinha convidado."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -491,17 +491,17 @@ msgstr "Reunião com %{name}"
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "The address is to be arranged with the booker."
-msgstr "O endereço vai ser combinado com quem agendou."
+msgstr "O endereço vai ser combinado com quem marcou."
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged after booking."
-msgstr "O endereço vai ser combinado depois do agendamento."
+msgstr "O endereço vai ser combinado depois da marcação."
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "The address will be arranged with you after booking."
-msgstr "O endereço vai ser combinado com você depois do agendamento."
+msgstr "O endereço vai ser combinado consigo depois da marcação."
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
@@ -524,8 +524,8 @@ msgstr "Abrir no painel:"
 #, elixir-autogen, elixir-format
 msgid "Group session: you have one of %{count} spot."
 msgid_plural "Group session: you have one of %{count} spots."
-msgstr[0] "Sessão em grupo: você tem uma de %{count} vaga."
-msgstr[1] "Sessão em grupo: você tem uma das %{count} vagas."
+msgstr[0] "Sessão em grupo: tem uma de %{count} vaga."
+msgstr[1] "Sessão em grupo: tem uma das %{count} vagas."
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -540,4 +540,4 @@ msgstr "Duração:"
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduled with %{brand}: %{url}"
-msgstr "Agendado com %{brand}: %{url}"
+msgstr "Marcado com %{brand}: %{url}"

@@ -93,11 +93,21 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
     %{
       name: meeting.attendee_name,
       email: meeting.attendee_email,
-      phone: meeting.attendee_phone,
-      company: meeting.attendee_company,
+      phone: meeting.attendee_phone || custom_answer(meeting, "Telefone"),
+      company: meeting.attendee_company || custom_answer(meeting, "Empresa"),
       timezone: meeting.attendee_timezone,
       message: meeting.attendee_message
     }
+  end
+
+  defp custom_answer(meeting, label) do
+    snapshot = Map.get(meeting, :custom_fields_snapshot) || []
+    answers = Map.get(meeting, :custom_field_answers) || %{}
+
+    case Enum.find(snapshot, &(&1["label"] == label)) do
+      %{"id" => id} -> answers[id]
+      _other -> nil
+    end
   end
 
   # Guests are read from the loaded association rather than fetched here, so
