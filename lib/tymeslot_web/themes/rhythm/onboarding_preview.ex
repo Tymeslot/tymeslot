@@ -5,7 +5,8 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
   a pause control in the corner says it moves. The card carries the week as
   a strip of outlined day tiles with uppercase names, the chosen day's times
   as compact rows (busy blocks hatched between them), and Rhythm's Back and
-  Book pair.
+  Book pair. On a phone the compact identity row leaves room for two more
+  of the day's rows.
 
   The background is a still: a video background shows its poster, never the
   video, so the stage costs no data or battery on a phone. A background
@@ -71,13 +72,13 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
       <%!-- The background bleeds past the miniature to the stage's edges,
            which clip it (`.stage-scale`'s overflow). The insets are coupled
            to the stage: `-inset-y-6` undoes `LivePreview`'s `p-6` around
-           the page, and `-inset-x-80` (320px a side, 992px in all) covers
+           the page (`p-3` on a phone), and `-inset-x-80` (320px a side, 992px in all) covers
            the 760px frame (`.stage-frame-wrap` in `onboarding.css`) down to
            a scale of about 0.77 from the StageScale hook. Below that, on a
            short desktop window, thin strips of the canvas colour show at
            the sides, which is the colour the page shows behind a video. --%>
       <div
-        class="absolute -inset-y-6 -inset-x-80 pointer-events-none bg-cover bg-center"
+        class="absolute -inset-y-6 max-sm:-inset-y-3 -inset-x-80 pointer-events-none bg-cover bg-center"
         style={backdrop_style(@colors, @still)}
         data-preview-part="backdrop"
       />
@@ -107,6 +108,7 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
             colors={@colors}
             layout={:rows}
             limit={4}
+            phone_limit={6}
             class="flex flex-col gap-1.5"
             item_class="rounded-token-md border border-white/10"
             highlight={@highlight}

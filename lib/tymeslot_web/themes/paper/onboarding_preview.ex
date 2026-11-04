@@ -5,7 +5,10 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
   header, left-aligned) and a rule, then on the right the chosen day marked
   in the palette's primary colour as Paper marks a choice, that day's times
   with its busy blocks between them, and one solid Book button in the
-  palette's primary colour.
+  palette's primary colour. On a phone the panes stack, as Paper's page
+  does on a narrow card: the introduction above its rule, the day and its
+  times across the full width below, the times in columns as Paper's own
+  slot grid lays them out.
   """
   use Phoenix.Component
 
@@ -70,12 +73,12 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
 
     ~H"""
     <div
-      class="rounded-token-xl p-4 border grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+      class="rounded-token-xl p-4 border grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] max-sm:grid-cols-1"
       style={card_style(@colors) <> "border-color: #{@edge};"}
       data-preview="paper"
     >
       <div
-        class="min-w-0 pr-3 border-r flex flex-col items-start gap-2 text-left [&_p]:text-left"
+        class="min-w-0 pr-3 border-r max-sm:pr-0 max-sm:border-r-0 flex flex-col items-start gap-2 text-left [&_p]:text-left"
         style={"border-color: #{@edge};"}
         data-preview-part="intro"
       >
@@ -84,7 +87,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
       <PreviewWeek.calendar_area
         colors={@colors}
         highlight={@highlight}
-        class="min-w-0 pl-3 flex flex-col gap-2"
+        class="min-w-0 pl-3 max-sm:pl-0 max-sm:pt-1 flex flex-col gap-2"
         data-preview-part="types"
       >
         <%!-- The chosen day, marked as Paper marks a chosen choice --%>
@@ -107,7 +110,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
           colors={@colors}
           layout={:rows}
           limit={5}
-          class="flex flex-col gap-1.5"
+          phone_limit={8}
+          class="flex flex-col gap-1.5 max-sm:grid max-sm:grid-cols-2"
           highlight={@highlight}
           meeting_variant={:plain}
         />

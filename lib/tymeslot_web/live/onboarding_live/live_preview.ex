@@ -26,6 +26,15 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   onboarding stage scales it to fit (`StageFrame.scaled/1`); the stage takes
   the same canvas colour (`canvas/2`) around it.
 
+  On a phone-width viewport (below `sm`) it is drawn as a guest sees the page
+  on a phone: a tighter canvas, the identity as one compact row on top, and
+  each theme's days and times across the card's full width, with more times
+  in the same height (`PreviewWeek.times/1`'s `phone_limit`). The switch is
+  CSS alone, a media query through Tailwind's `max-sm:` and `sm:` variants,
+  so the server renders one page for every screen and nothing measures the
+  stage: the stage is narrow at every phone width, so a query on its own
+  width would always match.
+
   Per-user colours come from the theme's resolved customisation tokens and
   are applied via inline `style`; structural layout is Tailwind utilities.
   The component is pure: its only lookup is that resolution, which reads no
@@ -110,7 +119,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
-    <div class="w-[400px] p-6" style={backdrop_style(@colors)}>
+    <div class="w-[400px] p-6 max-sm:p-3" style={backdrop_style(@colors)}>
       <PreviewParts.theme_preview
         theme_module={@theme_module}
         variant={:card}
@@ -125,58 +134,76 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
         meeting={@meeting}
       >
         <:header>
-          <%!-- Avatar + identity: the photo, or until there is one the
-               host's initials as they type their name, on the theme's own
-               colour. --%>
+          <%!-- On a phone the identity is one compact row (the photo, then
+               the name, headline and address beside it) above the full-width
+               times, as the themes lay out their own pages at that width.
+               From `sm` both wrappers are `contents`, so each theme lays
+               the parts out as before. --%>
           <div
-            :if={@avatar_url}
-            class="w-16 h-16 rounded-full overflow-hidden bg-white/10"
-            style={avatar_style(@colors, highlight?(@current_step, :avatar))}
+            class="contents max-sm:flex max-sm:w-full max-sm:items-center max-sm:gap-3"
+            data-role="preview-identity"
           >
-            <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
+            <%!-- Avatar + identity: the photo, or until there is one the
+                 host's initials as they type their name, on the theme's own
+                 colour. --%>
+            <div
+              :if={@avatar_url}
+              class="w-16 h-16 max-sm:w-11 max-sm:h-11 shrink-0 rounded-full overflow-hidden bg-white/10"
+              style={avatar_style(@colors, highlight?(@current_step, :avatar))}
+              data-preview-avatar
+            >
+              <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
+            </div>
+            <div
+              :if={!@avatar_url}
+              class="w-16 h-16 max-sm:w-11 max-sm:h-11 shrink-0 rounded-full flex items-center justify-center font-bold text-token-xl max-sm:text-token-sm"
+              style={initials_style(@colors, highlight?(@current_step, :avatar))}
+              data-role="preview-initials"
+              data-preview-avatar
+              aria-hidden="true"
+            >
+              <%= if initials = initials(@name) do %>
+                {initials}
+              <% else %>
+                <.icon name="hero-user" class="w-7 h-7 max-sm:w-5 max-sm:h-5" />
+              <% end %>
+            </div>
+            <div class="contents max-sm:flex max-sm:min-w-0 max-sm:flex-1 max-sm:flex-col max-sm:items-start max-sm:gap-1">
+              <p
+                class="font-bold text-token-base max-sm:text-token-sm text-center max-sm:text-left break-words"
+                style={text_style(@colors)}
+              >
+                {@display_name}
+              </p>
+              <%!-- The masthead's headline: italic, in the secondary ink. A
+                   theme may set its face (Folio's serif). --%>
+              <p
+                :if={@headline}
+                class="-mt-2 max-sm:-mt-1 text-token-sm max-sm:text-token-xs italic text-center max-sm:text-left leading-snug break-words"
+                style={muted_style(@colors)}
+                data-role="preview-headline"
+              >
+                {@headline}
+              </p>
+              <%!-- On a narrow card (Paper's and Folio's side column) the
+                   name moves onto a line of its own under the host rather
+                   than either being cut. Only a host or a name wider than
+                   the card on its own gives way: the host truncates, a very
+                   long name breaks. --%>
+              <span
+                class="max-w-full min-w-0 inline-flex flex-wrap justify-center max-sm:justify-start text-token-xs max-sm:text-token-2xs px-3 py-1 max-sm:px-2 max-sm:py-0.5 rounded-token-full font-medium"
+                style={link_style(@colors, highlight?(@current_step, :link))}
+                data-role="preview-address"
+              >
+                <span class="max-w-full truncate" data-role="preview-address-host">{@link_host}</span>
+                <span class="min-w-0 [overflow-wrap:anywhere]" data-role="preview-address-name">
+                  {@link_name}
+                </span>
+              </span>
+            </div>
           </div>
-          <div
-            :if={!@avatar_url}
-            class="w-16 h-16 rounded-full flex items-center justify-center font-bold text-token-xl"
-            style={initials_style(@colors, highlight?(@current_step, :avatar))}
-            data-role="preview-initials"
-            aria-hidden="true"
-          >
-            <%= if initials = initials(@name) do %>
-              {initials}
-            <% else %>
-              <.icon name="hero-user" class="w-7 h-7" />
-            <% end %>
-          </div>
-          <p class="font-bold text-token-base text-center break-words" style={text_style(@colors)}>
-            {@display_name}
-          </p>
-          <%!-- The masthead's headline: italic, in the secondary ink. A
-               theme may set its face (Folio's serif). --%>
-          <p
-            :if={@headline}
-            class="-mt-2 text-token-sm italic text-center leading-snug break-words"
-            style={muted_style(@colors)}
-            data-role="preview-headline"
-          >
-            {@headline}
-          </p>
-          <%!-- On a narrow card (Paper's and Folio's side column) the name
-               moves onto a line of its own under the host rather than either
-               being cut. Only a host or a name wider than the card on its own
-               gives way: the host truncates, a very long name breaks. --%>
-          <span
-            class="max-w-full min-w-0 inline-flex flex-wrap justify-center text-token-xs px-3 py-1 rounded-token-full font-medium"
-            style={link_style(@colors, highlight?(@current_step, :link))}
-            data-role="preview-address"
-          >
-            <span class="max-w-full truncate" data-role="preview-address-host">{@link_host}</span>
-            <span class="min-w-0 [overflow-wrap:anywhere]" data-role="preview-address-name">
-              {@link_name}
-            </span>
-          </span>
 
-          <div class="w-full h-px my-1" style={divider_style(@colors)} />
+          <div class="w-full h-px my-1 max-sm:my-0" style={divider_style(@colors)} />
         </:header>
       </PreviewParts.theme_preview>
     </div>

@@ -114,13 +114,14 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
 
   @doc "The selected day's entries, at most `limit`, keeping the first busy block in view."
   @spec agenda_window([entry()], pos_integer()) :: [entry()]
-  def agenda_window(agenda, limit) do
-    case Enum.find_index(agenda, &(&1.kind == :busy)) do
-      index when is_integer(index) and index >= limit ->
-        Enum.slice(agenda, index - limit + 2, limit)
+  def agenda_window(agenda, limit), do: Enum.slice(agenda, window_start(agenda, limit), limit)
 
-      _none_or_in_view ->
-        Enum.take(agenda, limit)
+  # Where a window of `limit` entries starts: at the top, unless the first
+  # busy block would fall outside it, when it ends just after that block.
+  defp window_start(agenda, limit) do
+    case Enum.find_index(agenda, &(&1.kind == :busy)) do
+      index when is_integer(index) and index >= limit -> index - limit + 2
+      _none_or_in_view -> 0
     end
   end
 
@@ -331,6 +332,12 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   attr :colors, :map, required: true
   attr :layout, :atom, values: [:chips, :rows], required: true
   attr :limit, :integer, default: 6
+
+  attr :phone_limit, :integer,
+    default: nil,
+    doc:
+      "how many cells to draw below `sm`, where the identity is compact and there is room for more; `nil` for `limit`"
+
   attr :class, :string, default: nil, doc: "the list's own layout (columns, gaps)"
   attr :item_class, :string, default: "rounded-token-md"
   attr :highlight, :list, default: [], doc: "the regions ringed for the step"
@@ -350,6 +357,11 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   `:chips` lists the free times alone, as a month-grid theme shows them
   under its calendar; `:rows` lists the day in time order with its busy
   blocks hatched between the free times, as a day view does.
+
+  Below `sm` it draws `phone_limit` cells instead: the same first `limit`,
+  then the entries that follow them, hidden from `sm` up, so the desktop and
+  tablet card is unchanged and a phone shows more of the day in the same
+  height.
 
   It always draws `limit` cells, so it is the same height in every state
   and nothing below it moves when the week arrives: a day with fewer
@@ -388,6 +400,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
             :for={{cell, index} <- Enum.with_index(@cells)}
             class={[
               "text-token-xs font-medium inline-flex items-center",
+              index >= @limit && "sm:hidden",
               @layout == :chips && "justify-center px-2 py-1.5",
               @layout == :rows && "w-full gap-1.5 px-3 py-2",
               cell.kind == :busy && "onboarding-preview-busy",
@@ -420,21 +433,30 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   # faint cells, shimmering while it loads. A blank keeps a line's height
   # with a no-break space.
   defp cells(%{view: %{selected: %{}}} = assigns) do
-    entries = entries(assigns)
-    entries ++ List.duplicate(%{kind: :filler, label: "\u00a0"}, assigns.limit - length(entries))
+    count = count(assigns)
+    entries = entries(assigns, count)
+    entries ++ List.duplicate(%{kind: :filler, label: "\u00a0"}, count - length(entries))
   end
 
-  defp cells(%{view: view, limit: limit}) do
+  defp cells(%{view: view} = assigns) do
     kind = if view.state == :loading, do: :loading, else: :ghost
-    List.duplicate(%{kind: kind, label: "\u00a0"}, limit)
+    List.duplicate(%{kind: kind, label: "\u00a0"}, count(assigns))
   end
 
-  defp entries(%{layout: :chips, view: view, limit: limit}) do
-    view.agenda |> Enum.filter(&(&1.kind == :slot)) |> Enum.take(limit)
+  # The cells drawn: `limit`, or `phone_limit` when a phone has room for more.
+  defp count(%{limit: limit, phone_limit: phone_limit}) when is_integer(phone_limit),
+    do: max(limit, phone_limit)
+
+  defp count(%{limit: limit}), do: limit
+
+  defp entries(%{layout: :chips, view: view}, count) do
+    view.agenda |> Enum.filter(&(&1.kind == :slot)) |> Enum.take(count)
   end
 
-  defp entries(%{layout: :rows, view: view, limit: limit}),
-    do: agenda_window(view.agenda, limit)
+  # The window the card shows, carried on past its end: the first `limit`
+  # are `agenda_window/2`'s, whatever a phone adds after them.
+  defp entries(%{layout: :rows, view: view, limit: limit}, count),
+    do: Enum.slice(view.agenda, window_start(view.agenda, limit), count)
 
   defp strip_kind(_day, %{ready?: false}), do: :idle
   defp strip_kind(%{date: date}, %{selected: %{date: date}}), do: :selected

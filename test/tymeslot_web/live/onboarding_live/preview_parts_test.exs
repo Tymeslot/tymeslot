@@ -378,6 +378,88 @@ defmodule TymeslotWeb.OnboardingLive.PreviewPartsTest do
     end
   end
 
+  describe "on a phone" do
+    # A ready day with eight morning times, a busy hour, then three more.
+    defp long_day_view do
+      week = %{
+        state: :ready,
+        preview: %WeekPreview{
+          days: [
+            %{
+              date: @today,
+              slots: ~w(09:00 09:30 10:00 10:30 11:00 11:30 12:00 12:30 13:30 14:00 14:30),
+              busy: [{~T[13:00:00], ~T[13:30:00]}]
+            }
+          ],
+          slot_count: 11,
+          first_busy: %{date: @today, start: ~T[13:00:00]}
+        }
+      }
+
+      PreviewWeek.view(week, @today, "en")
+    end
+
+    defp times_cells(layout, limit, phone_limit) do
+      assigns = %{view: long_day_view(), layout: layout, limit: limit, phone_limit: phone_limit}
+
+      ~H"""
+      <PreviewWeek.times
+        view={@view}
+        colors={%{}}
+        layout={@layout}
+        limit={@limit}
+        phone_limit={@phone_limit}
+      />
+      """
+      |> rendered_to_string()
+      |> doc()
+      |> Floki.find("[data-role='times-list'] > span")
+      |> Enum.map(fn cell ->
+        {String.trim(Floki.text(cell)), cell |> Floki.attribute("class") |> hd() =~ "sm:hidden"}
+      end)
+    end
+
+    test "the times list draws more cells, hidden from sm up, after the card's own" do
+      cells = times_cells(:chips, 3, 6)
+
+      assert cells == [
+               {"09:00 AM", false},
+               {"09:30 AM", false},
+               {"10:00 AM", false},
+               {"10:30 AM", true},
+               {"11:00 AM", true},
+               {"11:30 AM", true}
+             ]
+    end
+
+    test "a day view carries its window on, so the card's own cells are unchanged" do
+      # The busy hour is past a window of four, so the card's window moves
+      # to keep it in view; the phone's extra cells follow that window.
+      desktop = times_cells(:rows, 4, nil)
+      phone = times_cells(:rows, 4, 6)
+
+      assert desktop == [
+               {"12:00 PM", false},
+               {"12:30 PM", false},
+               {"01:00 PM – 01:30 PM", false},
+               {"01:30 PM", false}
+             ]
+
+      assert phone == desktop ++ [{"02:00 PM", true}, {"02:30 PM", true}]
+    end
+
+    test "without a phone limit nothing is hidden" do
+      assert Enum.all?(times_cells(:chips, 6, nil), fn {_label, hidden} -> not hidden end)
+    end
+
+    test "Quill draws its week strip for a phone and keeps the month calendar from sm" do
+      html = card(TymeslotWeb.Themes.Quill.Theme, ready_week())
+
+      assert html =~ ~r/<div class="contents max-sm:hidden">\s*<div[^>]*data-preview-part="month"/
+      assert html =~ ~r/<div class="hidden max-sm:contents">\s*<div[^>]*data-preview-part="days"/
+    end
+  end
+
   describe "colors/1" do
     test "reads the previews' colours from resolved tokens, leaving out what the theme lacks" do
       tokens = %Tokens{

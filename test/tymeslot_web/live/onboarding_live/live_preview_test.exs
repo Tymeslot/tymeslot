@@ -248,4 +248,22 @@ defmodule TymeslotWeb.OnboardingLive.LivePreviewTest do
       assert ringed(:profile) == []
     end
   end
+
+  describe "the identity on a phone" do
+    test "is one compact row below sm, and leaves each theme's layout alone from sm" do
+      identity =
+        render_preview(%{})
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-role='preview-identity']")
+
+      assert [row] = identity
+      assert [class] = Floki.attribute(row, "class")
+      # `contents` from sm: the theme lays out the avatar, name and address
+      # as before; below sm one flex row.
+      assert class =~ "contents"
+      assert class =~ "max-sm:flex"
+      assert Floki.find(row, "[data-preview-avatar]") != []
+      assert Floki.find(row, "[data-role='preview-address']") != []
+    end
+  end
 end

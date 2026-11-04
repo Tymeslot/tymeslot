@@ -6,7 +6,9 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
   of the host's coming week and the chosen day's times, the editorial shape
   of the real page. The Book button's ink
   is white where it reads on the primary, otherwise the scheme's dark
-  colour (the gold primaries of the dark schemes).
+  colour (the gold primaries of the dark schemes). On a phone it takes the
+  slim masthead of Folio's narrow page, a smaller portrait half over a
+  shorter band with the name beside it, and shorter day cells.
   """
   use Phoenix.Component
 
@@ -63,20 +65,28 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
     ~H"""
     <div class="rounded-token-2xl overflow-hidden flex flex-col" style={card_style(@colors)}>
       <span
-        class="h-14 w-full"
+        class="h-14 max-sm:h-8 w-full"
         data-folio-cover
         style={"background: linear-gradient(135deg, #{@primary}, #{@accent});"}
       />
       <div class="px-5 pb-5 flex flex-col items-center gap-3">
-        <div class="-mt-8 w-full flex flex-col items-center gap-3 [&_[data-role=preview-headline]]:font-serif">
+        <%!-- On a phone, the slim masthead of Folio's own narrow page: a
+             smaller portrait half over a shorter band, the name beside it. --%>
+        <div class="-mt-8 max-sm:mt-0 w-full flex flex-col items-center gap-3 [&_[data-role=preview-headline]]:font-serif max-sm:[&_[data-role=preview-identity]]:items-start max-sm:[&_[data-preview-avatar]]:-mt-5">
           {render_slot(@header)}
         </div>
         <PreviewWeek.calendar_area colors={@colors} highlight={@highlight}>
-          <PreviewWeek.month_grid view={@view} colors={@colors} cell_class="rounded-token-full" />
+          <%!-- Shorter day cells on a phone leave room for the times. --%>
+          <PreviewWeek.month_grid
+            view={@view}
+            colors={@colors}
+            cell_class="rounded-token-full max-sm:aspect-auto max-sm:py-1.5"
+          />
           <PreviewWeek.times
             view={@view}
             colors={@colors}
             layout={:chips}
+            phone_limit={9}
             class="grid grid-cols-3 gap-1.5"
             highlight={@highlight}
             meeting_variant={:rule}

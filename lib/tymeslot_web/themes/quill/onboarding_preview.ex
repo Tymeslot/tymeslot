@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
   Quill in the onboarding wizard: the signature numbered step band over a
   month calendar of the host's coming week and the chosen day's times as a
   grid of chips, generous corners, and a primary-to-accent gradient on the
-  Book button.
+  Book button. On a phone the month gives way to a strip of the week, as
+  Quill's own page does on a narrow card, which leaves room for more times.
   """
   use Phoenix.Component
 
@@ -79,11 +80,19 @@ defmodule TymeslotWeb.Themes.Quill.OnboardingPreview do
         </div>
 
         <PreviewWeek.calendar_area colors={@colors} highlight={@highlight}>
-          <PreviewWeek.month_grid view={@view} colors={@colors} cell_class="rounded-token-md" />
+          <%!-- Quill's own page swaps its month for a week strip on a
+               narrow card, so a phone sees the strip and more times. --%>
+          <div class="contents max-sm:hidden">
+            <PreviewWeek.month_grid view={@view} colors={@colors} cell_class="rounded-token-md" />
+          </div>
+          <div class="hidden max-sm:contents">
+            <PreviewWeek.day_strip view={@view} colors={@colors} cell_class="rounded-token-md" />
+          </div>
           <PreviewWeek.times
             view={@view}
             colors={@colors}
             layout={:chips}
+            phone_limit={9}
             class="grid grid-cols-3 gap-1.5"
             item_class="rounded-token-lg"
             highlight={@highlight}
