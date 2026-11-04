@@ -7,7 +7,7 @@ defmodule Tymeslot.Timezones.Cities.Europe do
       # Western Europe
       {"Europe/London", "London", "United Kingdom", "GB"},
       {"Europe/Dublin", "Dublin", "Ireland", "IE"},
-      {"Europe/Lisbon", "Lisbon", "Portugal", "PT"},
+      {"Europe/Lisbon", "Lisboa", "Portugal", "PT"},
       {"Europe/Madrid", "Madrid", "Spain", "ES"},
       {"Europe/Paris", "Paris", "France", "FR"},
       {"Europe/Amsterdam", "Amsterdam", "Netherlands", "NL"},

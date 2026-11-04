@@ -30,8 +30,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   defp time_period(slot_time) do
     case DateTimeUtils.parse_time_string(slot_time) do
       {:ok, %Time{hour: hour}} when hour < 5 -> :early_morning
-      {:ok, %Time{hour: hour}} when hour < 12 -> :morning
-      {:ok, %Time{hour: hour}} when hour < 17 -> :afternoon
+      {:ok, %Time{hour: hour}} when hour < 14 -> :morning
+      {:ok, %Time{hour: hour}} when hour < 20 -> :afternoon
       {:ok, %Time{hour: hour}} when hour < 21 -> :evening
       {:ok, %Time{}} -> :late_night
       {:error, _parse_error} -> :unknown

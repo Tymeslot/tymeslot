@@ -242,7 +242,9 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
       appointment_details = AppointmentBuilder.from_meeting(meeting)
 
       need_organizer? = !meeting.organizer_email_sent
-      need_attendee? = !meeting.attendee_email_sent
+      need_attendee? =
+        !meeting.attendee_email_sent and
+          System.get_env("DISABLE_ATTENDEE_CONFIRMATION") != "true"
 
       # The join link itself is a credential for link-based providers, so only
       # whether there is one is logged; `has_meeting_url` is what the branch
