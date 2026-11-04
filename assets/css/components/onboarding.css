@@ -219,6 +219,25 @@
   flex: 1;
 }
 
+/* An open provider form's own Cancel and Connect stand in for the nav, so
+   they keep its distance from the bottom of the screen. */
+.onboarding-form-actions {
+  padding-bottom: max(var(--spacing-4), env(safe-area-inset-bottom));
+}
+
+/* Why Continue is disabled, on a line of its own above the buttons: on a
+   phone the field it names can be off screen. */
+.onboarding-nav {
+  flex-wrap: wrap;
+}
+
+.onboarding-nav-hint {
+  display: flex;
+  flex-basis: 100%;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
 /* Below 640px the buttons shrink to fit; they stay 44px tall to tap. */
 .onboarding-nav .action-button {
   min-height: 44px;
@@ -433,6 +452,14 @@
   margin-top: var(--spacing-2);
   font-weight: 500;
   color: var(--color-neutral-700);
+}
+
+/* On a phone the live step's link leads the column, just under the
+   stage, so the caption naming it again is left to the live region. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-step="ready"] .onboarding-stage-caption {
+    display: none;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -851,10 +878,13 @@
   user-select: all;
 }
 
-/* The first-person card's confirmation line: its room is kept while it is
-   empty, so the confirmation never moves the card. */
+/* The first-person card's confirmation line, under its buttons: one line
+   of room (the 20px icon's height) is kept while it is empty, so the
+   confirmation never moves the card. */
 .onboarding-kept-line {
-  min-height: 1.5rem;
+  flex-basis: 100%;
+  min-height: 1.25rem;
+  line-height: 1.25rem;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-primary-700);

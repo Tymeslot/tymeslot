@@ -51,6 +51,10 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :current_step, :atom, required: true
   attr :next_disabled, :boolean, default: false
 
+  attr :next_hint, :string,
+    default: nil,
+    doc: "why Continue is disabled, shown beside it; the field it names can be off screen"
+
   attr :booking_page_live, :boolean,
     default: true,
     doc: "whether the booking page accepts visitors, which changes how the final step reads"
@@ -75,7 +79,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
 
   attr :show_nav, :boolean,
     default: true,
-    doc: "whether the Back and Continue row shows; the live step has its own finish"
+    doc: "whether Back and Continue show; the live step and provider forms have their own"
 
   attr :stage_compact, :boolean,
     default: false,
@@ -142,6 +146,16 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
             data-role="onboarding-nav"
             phx-hook="StickyNavClearance"
           >
+            <p
+              :if={@next_hint}
+              id="onboarding-nav-hint"
+              class="onboarding-nav-hint text-token-sm font-semibold text-red-600"
+              data-role="onboarding-nav-hint"
+            >
+              <.icon name="hero-exclamation-circle-mini" class="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{@next_hint}</span>
+            </p>
+
             <.action_button
               :if={StepConfig.show_back_button?(@current_step)}
               variant={:ghost}
@@ -157,6 +171,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
               variant={StepConfig.next_button_variant(@current_step)}
               phx-click="next_step"
               disabled={@next_disabled}
+              aria-describedby={@next_hint && "onboarding-nav-hint"}
             >
               {StepConfig.next_button_text(@current_step)}
               <.icon name="hero-arrow-right-mini" class="w-5 h-5 shrink-0" />

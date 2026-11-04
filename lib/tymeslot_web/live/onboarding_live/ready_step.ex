@@ -245,20 +245,20 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           >
             {dgettext("onboarding_wizard", "Copy message")}
           </button>
-        </div>
 
-        <%!-- Reserved whether or not there is anything to confirm, so the
-             confirmation appearing never moves the card. --%>
-        <p class="onboarding-kept-line" data-role="first-person-kept">
-          <span
-            :if={card_confirmation?(@kept_method)}
-            id="onboarding-kept"
-            class="inline-flex items-center gap-2"
-          >
-            <.icon name="hero-check-circle-mini" class="w-5 h-5 shrink-0" />
-            {kept_label(@kept_method)}
-          </span>
-        </p>
+          <%!-- One line reserved whether or not there is anything to
+               confirm, so the confirmation appearing never moves the card. --%>
+          <p class="onboarding-kept-line" data-role="first-person-kept">
+            <span
+              :if={card_confirmation?(@kept_method)}
+              id="onboarding-kept"
+              class="inline-flex items-center gap-2"
+            >
+              <.icon name="hero-check-circle-mini" class="w-5 h-5 shrink-0" />
+              {kept_label(@kept_method)}
+            </span>
+          </p>
+        </div>
       </.glass_morphism_card>
 
       <div class="space-y-3">

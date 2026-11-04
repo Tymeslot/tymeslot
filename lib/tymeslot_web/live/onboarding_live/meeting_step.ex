@@ -24,6 +24,11 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
 
   attr :meeting_form, :map, required: true
   attr :meeting_errors, :map, required: true
+
+  attr :taken_names, :any,
+    default: MapSet.new(),
+    doc: "the names the host's other meeting types use, which no chip offers"
+
   attr :hours_form, :map, required: true
   attr :video_integration, :any, default: nil, doc: "the integration a video place binds to"
 
@@ -32,7 +37,11 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
   """
   @spec meeting_step(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_step(assigns) do
-    assigns = assign(assigns, :locale, Gettext.get_locale(TymeslotWeb.Gettext))
+    assigns =
+      assign(assigns,
+        locale: Gettext.get_locale(TymeslotWeb.Gettext),
+        suggestions: MeetingHandlers.offered_suggestions(assigns.taken_names)
+      )
 
     ~H"""
     <div id="onboarding-meeting-step" class="onboarding-form">
@@ -58,6 +67,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             phx-blur="meeting_save"
           />
           <.segmented_control
+            :if={@suggestions != []}
             id="meeting-name-suggestions"
             value={MeetingHandlers.suggestion_index(@meeting_form.name) || ""}
             on_change="meeting_suggestion"
@@ -68,7 +78,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             class="mt-1"
           >
             <:option
-              :for={{name, index} <- Enum.with_index(MeetingHandlers.name_suggestions())}
+              :for={{name, index} <- @suggestions}
               value={index}
               label={name}
             />

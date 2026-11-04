@@ -117,6 +117,7 @@ defmodule TymeslotWeb.OnboardingLive do
       current_step={@current_step}
       booking_page_live={@booking_page_live}
       next_disabled={next_disabled?(assigns)}
+      next_hint={next_hint(assigns)}
       focus_heading={@focus_heading}
       stage_announcement={stage_announcement(assigns)}
       stage_url={StageFrame.address(booking_host(), Map.get(@form_data, "username"))}
@@ -126,7 +127,7 @@ defmodule TymeslotWeb.OnboardingLive do
       stage_caption={@stage_caption}
       stage_compact={@current_step == :connect_calendar and @booking_page_live != true}
       stage_iframe={stage_iframe(assigns)}
-      show_nav={@current_step != :ready}
+      show_nav={show_nav?(assigns)}
     >
       <:stage>
         <.stage_preview
@@ -178,6 +179,7 @@ defmodule TymeslotWeb.OnboardingLive do
           <MeetingStep.meeting_step
             meeting_form={@meeting_form}
             meeting_errors={@meeting_errors}
+            taken_names={@taken_names}
             hours_form={@hours_form}
             video_integration={@video_integration}
           />
@@ -484,6 +486,20 @@ defmodule TymeslotWeb.OnboardingLive do
 
   defp next_disabled?(%{current_step: :meeting} = assigns), do: MeetingHandlers.invalid?(assigns)
   defp next_disabled?(_assigns), do: false
+
+  # On a phone the field in error can be off screen, so the nav names it.
+  defp next_hint(%{current_step: :meeting} = assigns), do: MeetingHandlers.blocking_error(assigns)
+  defp next_hint(_assigns), do: nil
+
+  # The live step has its own finish, and an open Apple or CalDAV form its
+  # own Cancel and Connect: one set of actions on screen at a time.
+  defp show_nav?(%{current_step: :ready}), do: false
+
+  defp show_nav?(%{current_step: :connect_calendar, calendar_state: state})
+       when state in [:connecting_apple, :connecting_caldav],
+       do: false
+
+  defp show_nav?(_assigns), do: true
 
   # On the live step the stage shows the real page once the socket is
   # connected and the page takes visitors.

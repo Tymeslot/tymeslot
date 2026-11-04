@@ -166,6 +166,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
     ~H"""
     <button
       type="button"
+      id={"calendar-provider-#{@option}"}
       phx-click="select_calendar_option"
       phx-value-option={@option}
       class="onboarding-provider-card"
@@ -336,7 +337,9 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
 
       <Forms.field_error id="calendar-form-error" errors={@errors.(:discovery)} />
 
-      <div class="flex gap-3">
+      <%!-- The wizard's Back and Continue step aside while the form is open
+           (`show_nav?/1`), so these are the step's only actions. --%>
+      <div class="onboarding-form-actions flex gap-3">
         <.action_button
           variant={:secondary}
           phx-click="cancel_caldav"
@@ -346,7 +349,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         </.action_button>
         <.loading_button
           type="submit"
-          class="flex-1"
+          class="flex-1 min-w-0 whitespace-normal"
           loading={@caldav_discovering}
           loading_text={dgettext("onboarding_wizard", "Discovering…")}
         >

@@ -365,6 +365,56 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     assert has_element?(view, "#meeting-hours-start option[value='09:15'][selected]")
   end
 
+  describe "the name suggestions" do
+    test "leave out a name another meeting type already uses", %{conn: conn} do
+      %{user: user} = new_host()
+      [seeded] = meeting_types(user)
+      seeded |> Changeset.change(name: "Discovery") |> Repo.update!()
+      insert(:meeting_type, user: user, name: "Intro call", sort_order: 10)
+      view = open_step(conn, user)
+
+      refute has_element?(view, "#meeting-name-suggestions button", "Intro call")
+      assert has_element?(view, "#meeting-name-suggestions-1", "Consultation")
+
+      # Sent anyway (a stale page), it is ignored rather than saved and refused.
+      render_click(view, "meeting_suggestion", %{"index" => "0"})
+      assert %{name: "Discovery"} = MeetingTypes.get_meeting_type(seeded.id, user.id)
+      refute continue_disabled?(view)
+    end
+
+    test "keep the edited type's own name, and count an archived type's", %{conn: conn} do
+      %{user: user} = new_host()
+      insert(:meeting_type, user: user, name: "Consultation", sort_order: 10, is_active: false)
+      view = open_step(conn, user)
+
+      assert has_element?(view, "#meeting-name-suggestions-0[aria-pressed='true']", "Intro call")
+      refute has_element?(view, "#meeting-name-suggestions button", "Consultation")
+    end
+  end
+
+  test "a name refused by the save is named beside the disabled Continue", %{conn: conn} do
+    %{user: user} = new_host()
+    insert(:meeting_type, user: user, name: "Strategy session", sort_order: 10)
+    view = open_step(conn, user)
+    refute has_element?(view, "#onboarding-nav-hint")
+
+    render_change(view, "meeting_change", %{"meeting" => %{"name" => "Strategy session"}})
+    render_blur(element(view, "#meeting-name"))
+
+    assert continue_disabled?(view)
+
+    assert has_element?(
+             view,
+             "#onboarding-nav #onboarding-nav-hint",
+             "You already have a meeting type with this name"
+           )
+
+    assert has_element?(
+             view,
+             "button[phx-click='next_step'][aria-describedby='onboarding-nav-hint']"
+           )
+  end
+
   test "Continue saves a name still being typed and moves on", %{conn: conn} do
     %{user: user} = new_host()
     view = open_step(conn, user)

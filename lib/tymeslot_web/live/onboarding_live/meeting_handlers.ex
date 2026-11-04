@@ -55,6 +55,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
       meeting_type: nil,
       meeting_form: form_from(nil),
       meeting_errors: %{},
+      taken_names: MapSet.new(),
       hours_form: Map.put(@default_hours, :preset, :weekdays),
       video_integration: nil,
       meeting_loaded: false
@@ -79,6 +80,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
       meeting_type: meeting_type,
       meeting_form: form_from(meeting_type),
       meeting_errors: %{},
+      taken_names: MeetingSetup.taken_names(meeting_type),
       hours_form: Map.put(hours, :preset, preset_for(hours)),
       video_integration: MeetingSetup.video_integration(user.id),
       meeting_loaded: true
@@ -169,6 +171,17 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   def invalid?(%{meeting_errors: errors}), do: errors != %{}
   def invalid?(_assigns), do: false
 
+  @doc """
+  Why Continue is disabled: the first field error in the step's order, or
+  `nil` for none. The nav shows it beside the button, since on a phone the
+  field itself can be off screen.
+  """
+  @spec blocking_error(map()) :: String.t() | nil
+  def blocking_error(%{meeting_errors: errors}),
+    do: Enum.find_value([:name, :duration_minutes, :location, :hours], &errors[&1])
+
+  def blocking_error(_assigns), do: nil
+
   # -------------------------------------------------------------------
   # Meeting events
   # -------------------------------------------------------------------
@@ -198,16 +211,30 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
 
   @doc """
   A suggestion chip, sent as its position in `name_suggestions/0`, fills the
-  name and saves it.
+  name and saves it. A name another meeting type uses is never offered
+  (`offered_suggestions/1`), and is ignored if sent anyway.
   """
   @spec handle_suggestion(String.t(), socket()) :: {:noreply, socket()}
   def handle_suggestion(index, socket) do
     with {position, ""} <- Integer.parse(index),
-         name when is_binary(name) <- Enum.at(name_suggestions(), position) do
+         name when is_binary(name) <- Enum.at(name_suggestions(), position),
+         false <- MapSet.member?(socket.assigns.taken_names, name) do
       {:noreply, socket |> update_form(:name, name) |> save_meeting()}
     else
-      _unknown -> {:noreply, socket}
+      _unknown_or_taken -> {:noreply, socket}
     end
+  end
+
+  @doc """
+  The suggestion chips to offer, each with its position in
+  `name_suggestions/0`: every name but those the host's other meeting types
+  already use, which a save would refuse.
+  """
+  @spec offered_suggestions(MapSet.t(String.t())) :: [{String.t(), non_neg_integer()}]
+  def offered_suggestions(taken_names) do
+    name_suggestions()
+    |> Enum.with_index()
+    |> Enum.reject(fn {name, _index} -> MapSet.member?(taken_names, name) end)
   end
 
   @doc "The chip that matches the name, by position, or `nil`."

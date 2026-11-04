@@ -72,6 +72,22 @@ defmodule Tymeslot.Onboarding.MeetingSetup do
   end
 
   @doc """
+  The names the host's other meeting types already use, which this one
+  cannot take: a name is unique per host (archived types included, as the
+  database index is), so a suggestion among these would only be refused.
+  The meeting type's own name is not among them.
+  """
+  @spec taken_names(Ecto.Schema.t() | nil) :: MapSet.t(String.t())
+  def taken_names(nil), do: MapSet.new()
+
+  def taken_names(%{id: id, user_id: user_id}) do
+    for %{id: other_id, name: name} <- MeetingTypes.get_all_meeting_types(user_id),
+        other_id != id,
+        into: MapSet.new(),
+        do: name
+  end
+
+  @doc """
   Checks the name and duration: a name of 1 to #{@name_max_length}
   characters once trimmed, and a duration in #{inspect(@duration_range)}
   minutes in steps of #{@duration_step}. Returns the cleaned values, or each

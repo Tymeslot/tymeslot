@@ -125,14 +125,20 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   end
 
   # A reconnect starts from what is known of the calendar, bar its password.
+  # The control that opened the form is gone with the tiles, so the focus
+  # moves to the form's first field.
   defp open_form(socket, state, calendar \\ nil) do
+    first_field = if state == :connecting_apple, do: "apple_username", else: "caldav_url"
+
     {:noreply,
-     Component.assign(socket,
+     socket
+     |> Component.assign(
        calendar_state: state,
        reconnecting_calendar: calendar && calendar.id,
        caldav_form_data: known_fields(calendar),
        caldav_form_errors: %{}
-     )}
+     )
+     |> LiveView.push_event("focus", %{id: first_field})}
   end
 
   defp known_fields(nil), do: %{}
@@ -141,18 +147,24 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     do: %{"url" => calendar.base_url || "", "username" => Map.get(calendar, :username) || ""}
 
   @doc """
-  Cancels the Apple Calendar or CalDAV form and returns to the tiles.
+  Cancels the Apple Calendar or CalDAV form and returns to the tiles, with
+  the focus back on the tile that opened it.
   """
   @spec handle_cancel_caldav(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_cancel_caldav(socket) do
+    tile = "calendar-provider-#{form_provider(socket)}"
+
     {:noreply,
      socket
-     |> Component.assign(:calendar_state, :selecting)
-     |> Component.assign(:reconnecting_calendar, nil)
-     |> Component.assign(:caldav_form_data, %{})
-     |> Component.assign(:caldav_form_errors, %{})
-     |> Component.assign(:caldav_discovering, false)}
+     |> Component.assign(
+       calendar_state: :selecting,
+       reconnecting_calendar: nil,
+       caldav_form_data: %{},
+       caldav_form_errors: %{},
+       caldav_discovering: false
+     )
+     |> LiveView.push_event("focus", %{id: tile})}
   end
 
   @doc """

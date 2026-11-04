@@ -46,6 +46,22 @@ defmodule Tymeslot.Onboarding.MeetingSetupTest do
     end
   end
 
+  describe "taken_names/1" do
+    test "names the host's other types, archived ones included, but not the type's own" do
+      user = insert(:user)
+      edited = insert(:meeting_type, user: user, name: "Intro call")
+      insert(:meeting_type, user: user, name: "Consultation")
+      insert(:meeting_type, user: user, name: "Coffee chat", is_active: false)
+      insert(:meeting_type, name: "Coaching session")
+
+      assert MeetingSetup.taken_names(edited) == MapSet.new(["Consultation", "Coffee chat"])
+    end
+
+    test "no meeting type takes nothing" do
+      assert MeetingSetup.taken_names(nil) == MapSet.new()
+    end
+  end
+
   describe "saving" do
     setup do
       user = insert(:user)

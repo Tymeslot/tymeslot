@@ -42,6 +42,27 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       assert html =~ "Outlook Calendar"
       refute html =~ "Discover calendars"
     end
+
+    test "an open provider form hides the wizard's Back and Continue until it is cancelled",
+         %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+      assert has_element?(view, "#onboarding-nav button[phx-click='next_step']")
+
+      open_apple_form(view)
+
+      # The form's own Cancel and Connect are the only actions on screen,
+      # and the focus moves into the form, since the tile that held it is gone.
+      assert has_element?(view, "#apple-form")
+      refute has_element?(view, "#onboarding-nav")
+      assert_push_event(view, "focus", %{id: "apple_username"})
+
+      view |> element("button[phx-click='cancel_caldav']") |> render_click()
+
+      assert has_element?(view, "#onboarding-nav button[phx-click='next_step']")
+      assert has_element?(view, "#calendar-provider-apple")
+      assert_push_event(view, "focus", %{id: "calendar-provider-apple"})
+    end
   end
 
   describe "validate_caldav" do
