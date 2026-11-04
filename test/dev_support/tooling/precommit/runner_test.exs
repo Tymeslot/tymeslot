@@ -510,6 +510,57 @@ defmodule Tymeslot.Precommit.RunnerTest do
       assert Task.await(runner) == :ok
       assert_receive {:io, "precommit: ok credo\n"}
     end
+
+    test "the suite's output follows as soon as it finishes, in one write with its header" do
+      test_pid = self()
+      device = spawn_link(fn -> forward_io(test_pid) end)
+
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"test", ["test"], :test},
+        {"credo", ["credo"], :dev}
+      ]
+
+      capture_fun = fn
+        ["test"], :test, [] ->
+          {"1 test, 1 failure\n", 2}
+
+        ["credo"], :dev, [] ->
+          send(test_pid, {:credo_started, self()})
+
+          receive do
+            :release -> {"credo output\n", 0}
+          end
+      end
+
+      runner =
+        Task.async(fn ->
+          Process.group_leader(self(), device)
+
+          catch_exit(
+            Runner.run(steps, false, cmd: stub(%{["compile"] => 0}), capture: capture_fun)
+          )
+        end)
+
+      assert_receive {:credo_started, credo_pid}, 1_000
+      assert_receive {:io, "precommit: failed test (2)\n"}, 1_000
+
+      # One write carrying both the header and the output is what keeps a
+      # concurrent step's block from landing between them.
+      block = receive_write_containing("1 test, 1 failure")
+      assert String.replace(block, @ansi, "") =~ ~r/\A\n==> test\b.*\n1 test, 1 failure\n\z/s
+
+      send(credo_pid, :release)
+      assert Task.await(runner) == {:shutdown, 1}
+    end
+  end
+
+  defp receive_write_containing(text) do
+    receive do
+      {:io, chars} -> if chars =~ text, do: chars, else: receive_write_containing(text)
+    after
+      1_000 -> flunk("no write containing #{inspect(text)} arrived")
+    end
   end
 
   # A minimal IO device that hands every write to the test process as it
