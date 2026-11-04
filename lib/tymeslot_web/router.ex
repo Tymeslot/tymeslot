@@ -378,8 +378,8 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/video-integration", DashboardLive, :video_integration
       live "/dashboard/integrations", DashboardLive, :integrations
       live "/dashboard/automation", DashboardLive, :automation
-      live "/dashboard/theme", DashboardLive, :theme
-      live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization
+      live "/dashboard/pages", DashboardLive, :theme
+      live "/dashboard/pages/customize/:theme_id", DashboardLive, :theme_customization
       live "/dashboard/meetings", DashboardLive, :meetings
       live "/dashboard/polls", DashboardLive, :polls
       live "/dashboard/embed", DashboardLive, :embed
@@ -388,6 +388,11 @@ defmodule TymeslotWeb.Router do
     end
 
     post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
+
+    # The booking pages screen was the Theme screen; its old addresses live on
+    # in bookmarks and sent emails.
+    get "/dashboard/theme", Dashboard.PagesRedirectController, :pages
+    get "/dashboard/theme/customize/:theme_id", Dashboard.PagesRedirectController, :customize
   end
 
   # =============================================================================

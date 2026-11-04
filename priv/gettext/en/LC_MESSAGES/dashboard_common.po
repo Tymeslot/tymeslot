@@ -123,8 +123,6 @@ msgstr ""
 msgid "Scheduling"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -381,4 +379,11 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Save changes"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
 msgstr ""

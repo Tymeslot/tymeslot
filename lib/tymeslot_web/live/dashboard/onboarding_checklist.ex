@@ -351,7 +351,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         title: dgettext("onboarding_wizard", "Customise your theme"),
         description: dgettext("onboarding_wizard", "Make your booking page yours"),
         cta: dgettext("onboarding_wizard", "Customise"),
-        path: ~p"/dashboard/theme"
+        path: ~p"/dashboard/pages"
       },
       %{
         key: "meeting_types",

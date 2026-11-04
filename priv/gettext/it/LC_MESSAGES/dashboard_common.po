@@ -123,8 +123,6 @@ msgstr "Profilo"
 msgid "Scheduling"
 msgstr "Pianificazione"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -382,3 +380,10 @@ msgstr "Ricollega %{names}: fino ad allora la tua pagina di prenotazione potrebb
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Salva modifiche"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Pagine di prenotazione"

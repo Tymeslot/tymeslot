@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   end
 
   test "creates a page from the dialog and opens its tab", %{conn: conn, profile: profile} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -31,12 +31,12 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
     [page] = BookingPages.list(profile.id)
     assert page.slug == "einfachiso"
-    assert_patch(view, ~p"/dashboard/theme?#{[page: page.id]}")
+    assert_patch(view, ~p"/dashboard/pages?#{[page: page.id]}")
   end
 
   test "the dialog refuses a slug that is one of the host's meeting types", ctx do
     insert(:meeting_type, user: ctx.user, name: "Coaching")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   # blocking the new page.
   test "a main page colour row the current rules reject does not block a new page", ctx do
     insert(:theme_customization, profile: ctx.profile, theme_id: "1", color_scheme: "no-such")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     |> render_submit()
 
     assert [page] = BookingPages.list(ctx.profile.id)
-    assert_patch(view, ~p"/dashboard/theme?#{[page: page.id]}")
+    assert_patch(view, ~p"/dashboard/pages?#{[page: page.id]}")
 
     # The page gets the row as the main page shows it: the rejected scheme
     # at its default.
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   # The form mounts with the dialog, so its name field takes the focus on
   # every opening, and the address previews the whole link as it is typed.
   test "the dialog focuses the name and previews the link being typed", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     refute has_element?(view, "#new-booking-page-form")
 
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     conn: conn,
     profile: profile
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   # LiveView sends an `_unused_` mark for each field not yet touched, so
   # typing an address leaves the empty name unflagged until a submit.
   test "the dialog flags only the fields the host has used", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   # The address follows the name, keystroke by keystroke, until the host
   # types an address of their own.
   test "the dialog suggests the address from the name as it is typed", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   end
 
   test "the suggested address spells out umlauts and drops other accents", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -190,14 +190,14 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     for n <- 1..BookingPages.max_pages(),
         do: insert(:booking_page, profile: profile, slug: "cap-#{n}")
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     assert has_element?(view, "[data-testid='new-booking-page'][disabled]")
   end
 
   test "a tab switches to its page", %{conn: conn, profile: profile} do
     page = insert(:booking_page, profile: profile, slug: "einfachiso", name: "Einfach ISO")
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     assert has_element?(view, "#booking-page-tabs-tab-profile", "Main page")
     assert has_element?(view, "#booking-page-tabs-tab-#{page.id}", "Einfach ISO")
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
     view |> element("#booking-page-tabs-tab-#{page.id}") |> render_click()
 
-    assert_patch(view, ~p"/dashboard/theme?#{[page: page.id]}")
+    assert_patch(view, ~p"/dashboard/pages?#{[page: page.id]}")
     assert has_element?(view, "#booking-page-tabs-tab-#{page.id}[aria-current='page']")
   end
 
@@ -219,10 +219,10 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     page = insert(:booking_page, profile: profile, slug: "einfachiso")
     feedback = "[data-copy-feedback='Scheduling link copied to clipboard!']"
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
     assert has_element?(view, "#page-settings-copy" <> feedback)
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages?#{[page: page.id]}")
     assert has_element?(view, "#page-settings-#{page.id}-copy" <> feedback)
   end
 
@@ -232,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     foreign = insert(:booking_page, profile: insert(:profile), slug: "elsewhere")
 
     for page_param <- ["abc", to_string(foreign.id)] do
-      {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page_param]}")
+      {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page_param]}")
 
       assert has_element?(view, "#booking-page-tabs-tab-profile[aria-current='page']")
       refute has_element?(view, "#booking-page-tabs-tab-#{foreign.id}")
@@ -250,9 +250,9 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
     {:ok, _deleted} = BookingPages.delete(page)
 
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme/customize/1?#{[page: page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages/customize/1?#{[page: page.id]}")
 
-    assert_patch(view, ~p"/dashboard/theme")
+    assert_patch(view, ~p"/dashboard/pages")
     assert has_element?(view, "#app-flash-group-error", "This booking page no longer exists.")
   end
 
@@ -261,7 +261,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     # A public page shows its meeting types only once a calendar is connected.
     insert(:calendar_integration, user: ctx.user, is_active: true)
     type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page.id]}")
 
     switch = "#page-settings-#{page.id}-type-#{type.id}"
 
@@ -278,7 +278,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     # A public page shows its meeting types only once a calendar is connected.
     insert(:calendar_integration, user: ctx.user, is_active: true)
     type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -291,7 +291,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     # A draft until it lists a type: its address names nothing yet.
     assert {:error, {:redirect, %{to: "/joern"}}} = live(ctx.conn, ~p"/joern/einfachiso")
 
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page.id]}")
     view |> element("#page-settings-#{page.id}-type-#{type.id}") |> render_click()
 
     {:ok, _view, after_html} = live(ctx.conn, ~p"/joern/einfachiso")
@@ -300,7 +300,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
   test "on the username's tab the checklist works the unlisted flag", ctx do
     type = insert(:meeting_type, user: ctx.user, name: "Automation call", is_private: false)
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     assert has_element?(view, "#page-settings-type-#{type.id}[aria-checked='true']")
 
@@ -316,7 +316,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     insert(:calendar_integration, user: ctx.user, is_active: true)
     type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
     foreign_type = insert(:meeting_type, name: "Someone else's")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page.id]}")
 
     view
     |> element("#page-settings-#{page.id}-type-#{type.id}")
@@ -336,7 +336,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     # A public page shows its meeting types only once a calendar is connected.
     insert(:calendar_integration, user: ctx.user, is_active: true)
     type = insert(:meeting_type, user: ctx.user, name: "ISO audit")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page.id]}")
 
     message = exhaust_write_limit(ctx.user)
     view |> element("#page-settings-#{page.id}-type-#{type.id}") |> render_click()
@@ -349,7 +349,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   test "renames a page and moves its address", %{conn: conn, profile: profile} do
     # The slug it leaves keeps leading to it (`BookingPages.locate/2`).
     page = insert(:booking_page, profile: profile, slug: "einfachiso", name: "Old")
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages?#{[page: page.id]}")
 
     view
     |> form("#page-settings-#{page.id}-details", page: %{name: "einfachISO", slug: "iso"})
@@ -364,7 +364,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
   test "emptying the page name says it can't be blank instead of crashing", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso", name: "Old")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page.id]}")
     details = "#page-settings-#{page.id}-details"
 
     view |> form(details, page: %{name: "", slug: "einfachiso"}) |> render_change()
@@ -377,7 +377,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
   test "saving a page deleted in another tab says so and shows the profile's tab", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso", name: "Old")
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page.id]}")
 
     # Gone without the notice that would move the tab off it at once, as when
     # the save races the delete.
@@ -388,20 +388,20 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     |> render_submit()
 
     assert has_element?(view, "#app-flash-group-error", "This booking page no longer exists.")
-    assert_patch(view, ~p"/dashboard/theme")
+    assert_patch(view, ~p"/dashboard/pages")
     refute has_element?(view, "#page-settings-#{page.id}")
     assert has_element?(view, "#page-settings")
   end
 
   test "deletes a page after confirming", %{conn: conn, profile: profile} do
     page = insert(:booking_page, profile: profile, slug: "einfachiso")
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme?#{[page: page.id]}")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages?#{[page: page.id]}")
 
     view |> element("[phx-click='show_delete']") |> render_click()
     view |> element("#page-settings-#{page.id}-delete button", "Delete page") |> render_click()
 
     assert BookingPages.list(profile.id) == []
-    assert_patch(view, ~p"/dashboard/theme")
+    assert_patch(view, ~p"/dashboard/pages")
   end
 
   # Spends the rest of the user's meeting type write allowance and returns the

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsFlashTest do
   setup :setup_dashboard_user_with_theme
 
   test "flashes an error when the theme component rejects an unknown id", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
     # Click an existing theme button but override the value with an id that
     # fails `Theme.valid_theme_id?/1`, so the component falls into the

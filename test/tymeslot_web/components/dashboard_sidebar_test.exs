@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert html =~ "Availability"
     assert html =~ "Meeting Types"
     assert html =~ "Integrations"
-    assert html =~ "Theme"
+    assert html =~ "Booking pages"
     assert html =~ "Meetings"
 
     # Check exactly one active link, and it's the overview link
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
       calendar_integration: "/dashboard/integrations",
       video_integration: "/dashboard/integrations",
       payments: "/dashboard/integrations",
-      theme: "/dashboard/theme",
+      theme: "/dashboard/pages",
       meetings: "/dashboard/meetings"
     }
 

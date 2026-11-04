@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
 
       assert html =~ "1/5"
       # Ticked item no longer links to the theme page (it greys out)...
-      refute html =~ ~s(href="/dashboard/theme")
+      refute html =~ ~s(href="/dashboard/pages")
       # ...while an untouched item still does.
       assert html =~ ~s(href="/dashboard/meeting-settings")
     end
