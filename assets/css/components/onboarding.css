@@ -167,8 +167,22 @@
 }
 
 /* The question column changes with the step; the stage never slides. */
+/* Enters from the left: a step entering from the right would widen the page
+   for the length of the animation, and phones briefly scroll sideways. */
 .onboarding-slide-in-left {
-  animation: slideInRight 0.25s ease-out;
+  animation: onboarding-step-in 0.25s ease-out;
+}
+
+@keyframes onboarding-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Navigation: in the flow from lg, stuck to the bottom of the screen below */
