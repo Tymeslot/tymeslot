@@ -41,7 +41,9 @@
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, ...): a day's label and padding never widen its column, so
+     the week fits a 320px phone instead of pushing Sunday out of view. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--calendar-gap);
   width: 100%;
 }
