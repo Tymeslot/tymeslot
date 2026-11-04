@@ -10,6 +10,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   this module owns, so the picker feels like a real choice rather than a
   label swap.
 
+  A theme that introduces the host (`Catalog.shows_intro?/1`) also draws
+  their headline under their name, as its masthead does, updating as it is
+  typed on the look step; for any other theme the header has none, as its
+  page has none.
+
   Above the times it names the meeting the page offers, its length and
   where it is held, from the meeting step's form as the host edits it.
 
@@ -58,6 +63,10 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     default: nil,
     doc: "the host's photo; `nil` draws their initials instead"
 
+  attr :headline, :string,
+    default: nil,
+    doc: "the host's headline, drawn under their name by a theme that introduces them"
+
   attr :theme_customization, :any,
     default: nil,
     doc: "the chosen theme's customisation; `nil` draws the theme's defaults"
@@ -95,6 +104,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       |> assign(:background, tokens.media[:background])
       |> assign(:theme_module, theme_module(assigns.booking_theme))
       |> assign(:display_name, display_name(assigns.name))
+      |> assign(:headline, headline(assigns.booking_theme, assigns.headline))
       |> assign(:link_host, assigns.booking_host <> "/")
       |> assign(:link_name, link_name(assigns.booking_host, assigns.username))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
@@ -140,6 +150,16 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
           </div>
           <p class="font-bold text-token-base text-center break-words" style={text_style(@colors)}>
             {@display_name}
+          </p>
+          <%!-- The masthead's headline: italic, in the secondary ink. A
+               theme may set its face (Folio's serif). --%>
+          <p
+            :if={@headline}
+            class="-mt-2 text-token-sm italic text-center leading-snug break-words"
+            style={muted_style(@colors)}
+            data-role="preview-headline"
+          >
+            {@headline}
           </p>
           <%!-- On a narrow card (Paper's and Folio's side column) the name
                moves onto a line of its own under the host rather than either
@@ -282,6 +302,16 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Value helpers
   # -------------------------------------------------------------------
 
+  # Only a theme whose page shows the host's introduction shows the line.
+  defp headline(theme_id, headline) do
+    with true <- Catalog.shows_intro?(theme_id),
+         trimmed when trimmed != "" <- String.trim(headline || "") do
+      trimmed
+    else
+      _no_line -> nil
+    end
+  end
+
   defp display_name(name) do
     case String.trim(name || "") do
       "" -> dgettext("onboarding_wizard", "Your name")
@@ -350,6 +380,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   end
 
   defp text_style(colors), do: "color: #{color(colors, :text, "#0f172a")};"
+
+  defp muted_style(colors), do: "color: #{color(colors, :text_secondary, "#475569")};"
 
   defp link_style(colors, highlighted?) do
     "background: #{color(colors, :primary, "#14b8a6")}1a;color: #{color(colors, :text_secondary, "#475569")};" <>

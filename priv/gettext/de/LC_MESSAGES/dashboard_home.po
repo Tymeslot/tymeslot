@@ -160,3 +160,108 @@ msgid "%{count} participant"
 msgid_plural "%{count} participants"
 msgstr[0] "%{count} teilnehmende Person"
 msgstr[1] "%{count} Teilnehmende"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "A few recommended steps. Tick off the ones you don't need."
+msgstr "Ein paar empfohlene Schritte. Haken Sie ab, was Sie nicht benötigen."
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a headline and a short bio"
+msgstr "Fügen Sie eine Überschrift und eine kurze Vorstellung hinzu"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a video provider"
+msgstr "Videoanbieter hinzufügen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add it to your website"
+msgstr "Auf Ihrer Website einbinden"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add photo"
+msgstr "Foto hinzufügen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add your photo"
+msgstr "Foto hinzufügen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Auto-add links to online meetings"
+msgstr "Links zu Online-Meetings automatisch hinzufügen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Connect"
+msgstr "Verbinden"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Kalender verbinden"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss setup checklist"
+msgstr "Einrichtungs-Checkliste ausblenden"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Done"
+msgstr "Erledigt"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Finish setting up"
+msgstr "Einrichtung abschließen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Introduce yourself"
+msgstr "Stellen Sie sich vor"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let guests see who they're meeting"
+msgstr "Damit Gäste sehen, wen sie treffen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let visitors book without leaving your site"
+msgstr "Besucher buchen, ohne Ihre Website zu verlassen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Mark %{title} as done"
+msgstr "%{title} als erledigt markieren"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Mark %{title} as not done"
+msgstr "%{title} als nicht erledigt markieren"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Set up"
+msgstr "Einrichten"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Setup checklist"
+msgstr "Einrichtungs-Checkliste"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Sync to avoid double-bookings"
+msgstr "Synchronisieren, um Doppelbuchungen zu vermeiden"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Write"
+msgstr "Schreiben"

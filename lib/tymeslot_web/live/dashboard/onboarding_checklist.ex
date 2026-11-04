@@ -85,11 +85,11 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       <details class="group min-w-0 flex-1 [&>summary::-webkit-details-marker]:hidden">
         <summary
           class="flex cursor-pointer list-none items-center gap-2 text-token-sm"
-          aria-label={dgettext("onboarding_wizard", "Setup checklist")}
+          aria-label={dgettext("dashboard_home", "Setup checklist")}
         >
           <.pill tone={:brand}>{@done_count}/{@total}</.pill>
           <span class="font-bold text-tymeslot-800">
-            {dgettext("onboarding_wizard", "Finish setting up")}
+            {dgettext("dashboard_home", "Finish setting up")}
           </span>
           <span :if={@next_item} class="hidden truncate text-tymeslot-500 sm:inline">
             · {@next_item.title}
@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
       <.icon_button
         icon="hero-x-mark"
-        label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+        label={dgettext("dashboard_home", "Dismiss setup checklist")}
         size={:sm}
         phx-click="onboarding:dismiss"
       />
@@ -124,12 +124,12 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       class="onboarding-checklist"
       data-testid="onboarding-checklist"
       data-tour="quick-actions"
-      aria-label={dgettext("onboarding_wizard", "Setup checklist")}
+      aria-label={dgettext("dashboard_home", "Setup checklist")}
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
-      title={dgettext("onboarding_wizard", "Finish setting up")}
+      title={dgettext("dashboard_home", "Finish setting up")}
       description={
         dgettext(
-          "onboarding_wizard",
+          "dashboard_home",
           "A few recommended steps. Tick off the ones you don't need."
         )
       }
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         <.pill tone={:brand} size={:sm}>{@done_count}/{@total}</.pill>
         <.icon_button
           icon="hero-x-mark"
-          label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+          label={dgettext("dashboard_home", "Dismiss setup checklist")}
           size={:sm}
           phx-click="onboarding:dismiss"
         />
@@ -187,8 +187,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         phx_value_id={@item.key}
         label={
           if @item.done,
-            do: dgettext("onboarding_wizard", "Mark %{title} as not done", title: @item.title),
-            else: dgettext("onboarding_wizard", "Mark %{title} as done", title: @item.title)
+            do: dgettext("dashboard_home", "Mark %{title} as not done", title: @item.title),
+            else: dgettext("dashboard_home", "Mark %{title} as done", title: @item.title)
         }
       />
       <span :if={not @item.manual} class="shrink-0 w-6" aria-hidden="true"></span>
@@ -244,7 +244,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   defp item_cta(%{item: %{done: true}} = assigns) do
     ~H"""
     <span class="shrink-0 w-full sm:w-32 text-center text-token-xs font-black uppercase tracking-wider text-green-600">
-      {dgettext("onboarding_wizard", "Done")}
+      {dgettext("dashboard_home", "Done")}
     </span>
     """
   end
@@ -303,45 +303,45 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         key: "calendar",
         auto: :calendar_ready,
         icon: "hero-calendar-days",
-        title: dgettext("onboarding_wizard", "Connect a calendar"),
-        description: dgettext("onboarding_wizard", "Sync to avoid double-bookings"),
-        cta: dgettext("onboarding_wizard", "Connect"),
+        title: dgettext("dashboard_home", "Connect a calendar"),
+        description: dgettext("dashboard_home", "Sync to avoid double-bookings"),
+        cta: dgettext("dashboard_home", "Connect"),
         path: ~p"/dashboard/integrations?tab=calendars"
       },
       %{
         key: "video",
         auto: :has_video,
         icon: "hero-video-camera",
-        title: dgettext("onboarding_wizard", "Add a video provider"),
-        description: dgettext("onboarding_wizard", "Auto-add links to online meetings"),
-        cta: dgettext("onboarding_wizard", "Connect"),
+        title: dgettext("dashboard_home", "Add a video provider"),
+        description: dgettext("dashboard_home", "Auto-add links to online meetings"),
+        cta: dgettext("dashboard_home", "Connect"),
         path: ~p"/dashboard/integrations?tab=video"
       },
       %{
         key: "avatar",
         auto: nil,
         icon: "hero-camera",
-        title: dgettext("onboarding_wizard", "Add your photo"),
-        description: dgettext("onboarding_wizard", "Let guests see who they're meeting"),
-        cta: dgettext("onboarding_wizard", "Add photo"),
+        title: dgettext("dashboard_home", "Add your photo"),
+        description: dgettext("dashboard_home", "Let guests see who they're meeting"),
+        cta: dgettext("dashboard_home", "Add photo"),
         path: ~p"/dashboard/settings"
       },
       %{
         key: "intro",
         auto: nil,
         icon: "hero-chat-bubble-bottom-center-text",
-        title: dgettext("onboarding_wizard", "Introduce yourself"),
-        description: dgettext("onboarding_wizard", "Add a headline and a short bio"),
-        cta: dgettext("onboarding_wizard", "Write"),
+        title: dgettext("dashboard_home", "Introduce yourself"),
+        description: dgettext("dashboard_home", "Add a headline and a short bio"),
+        cta: dgettext("dashboard_home", "Write"),
         path: ~p"/dashboard/settings"
       },
       %{
         key: "embed",
         auto: nil,
         icon: "hero-code-bracket",
-        title: dgettext("onboarding_wizard", "Add it to your website"),
-        description: dgettext("onboarding_wizard", "Let visitors book without leaving your site"),
-        cta: dgettext("onboarding_wizard", "Set up"),
+        title: dgettext("dashboard_home", "Add it to your website"),
+        description: dgettext("dashboard_home", "Let visitors book without leaving your site"),
+        cta: dgettext("dashboard_home", "Set up"),
         path: ~p"/dashboard/embed"
       }
     ]

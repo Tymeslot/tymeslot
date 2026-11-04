@@ -163,6 +163,7 @@ defmodule TymeslotWeb.OnboardingLive do
             theme_customization={@theme_customization}
             choices={@onboarding_choices}
             picker={@theme_picker}
+            headline_form={@headline_form}
           />
         <% :connect_calendar -> %>
           <ConnectCalendarStep.connect_calendar_step
@@ -243,6 +244,7 @@ defmodule TymeslotWeb.OnboardingLive do
       name={Map.get(@form_data, "full_name", "")}
       username={Map.get(@form_data, "username", "")}
       avatar_url={@profile.avatar && Profiles.avatar_url(@profile, :thumb)}
+      headline={@profile.headline}
       theme_customization={@theme_customization}
       week={@week}
       reveal_key={@reveal_key}
@@ -378,6 +380,10 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("select_onboarding_choice", %{"choice" => value}, socket) do
     ThemeHandlers.handle_select_choice(value, socket)
+  end
+
+  def handle_event("headline_change", params, socket) do
+    ThemeHandlers.handle_headline_change(params, socket)
   end
 
   def handle_event("show_all_themes", _params, socket) do

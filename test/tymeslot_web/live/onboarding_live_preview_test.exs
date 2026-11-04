@@ -19,6 +19,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.Themes.Catalog
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -148,6 +149,99 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       refute has_element?(view, "[phx-click='preview_booking_page']")
       refute html =~ "Preview booking page"
       refute has_element?(view, "#onboarding-theme-preview")
+    end
+  end
+
+  describe "a headline for a theme that introduces the host" do
+    # The offered themes split by the catalogue fact the field follows.
+    defp intro_theme_id do
+      Enum.find_value(ThemeInfo.theme_options(), fn {_name, id} ->
+        Catalog.shows_intro?(id) && id
+      end)
+    end
+
+    defp plain_theme_id do
+      Enum.find_value(ThemeInfo.theme_options(), fn {_name, id} ->
+        !Catalog.shows_intro?(id) && id
+      end)
+    end
+
+    test "choosing the theme offers the line; typing saves it and puts it under the name",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      view = navigate_to_theme_step(view)
+      refute has_element?(view, "#onboarding-headline-form")
+
+      view
+      |> element("[data-testid='theme-story'][phx-value-theme='#{intro_theme_id()}']")
+      |> render_click()
+
+      assert has_element?(view, "#onboarding-headline-form input#onboarding-headline")
+
+      view
+      |> form("#onboarding-headline-form",
+        profile_intro: %{headline: "  Career coach for first-time managers "}
+      )
+      |> render_change()
+
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.headline == "Career coach for first-time managers"
+
+      assert view
+             |> element("#onboarding-stage [data-role='preview-headline']")
+             |> render() =~ "Career coach for first-time managers"
+
+      # Clearing the line clears the headline, and Continue still moves on.
+      view
+      |> form("#onboarding-headline-form", profile_intro: %{headline: ""})
+      |> render_change()
+
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.headline == nil
+      refute has_element?(view, "#onboarding-stage [data-role='preview-headline']")
+
+      click_continue(view)
+      assert has_element?(view, "#onboarding-stage[data-step='ready']")
+    end
+
+    test "a line past the cap is refused under the field and leaves the saved one",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      view = navigate_to_theme_step(view)
+
+      view
+      |> element("[data-testid='theme-story'][phx-value-theme='#{intro_theme_id()}']")
+      |> render_click()
+
+      view
+      |> form("#onboarding-headline-form", profile_intro: %{headline: "Coach"})
+      |> render_change()
+
+      html =
+        view
+        |> form("#onboarding-headline-form",
+          profile_intro: %{headline: String.duplicate("a", 121)}
+        )
+        |> render_change()
+
+      assert html =~ ~s(aria-invalid="true")
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.headline == "Coach"
+    end
+
+    test "a theme that does not introduce the host has no field and no line on the stage",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      {:ok, _profile} = Profiles.update_intro(profile, %{"headline" => "Career coach"})
+      view = navigate_to_theme_step(view)
+
+      view
+      |> element("[data-testid='theme-story'][phx-value-theme='#{plain_theme_id()}']")
+      |> render_click()
+
+      refute has_element?(view, "#onboarding-headline-form")
+      refute has_element?(view, "#onboarding-stage [data-role='preview-headline']")
     end
   end
 

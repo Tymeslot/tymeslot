@@ -12,20 +12,10 @@ msgstr ""
 msgid "%{provider} · Connected"
 msgstr "%{provider} · Podłączono"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Add a video provider"
-msgstr "Dodaj dostawcę wideo"
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "App password or token"
 msgstr "Hasło aplikacji lub token"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Auto-add links to online meetings"
-msgstr "Automatycznie dodawaj linki do spotkań online"
 
 #: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex
 #, elixir-autogen, elixir-format
@@ -57,12 +47,6 @@ msgstr "Zmień zdjęcie"
 msgid "Colour scheme"
 msgstr "Kolorystyka"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Connect"
-msgstr "Podłącz"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
@@ -128,21 +112,6 @@ msgstr "Wyszukaj kalendarze"
 msgid "Discovering…"
 msgstr "Wyszukiwanie…"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Dismiss setup checklist"
-msgstr "Ukryj listę konfiguracji"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Done"
-msgstr "Gotowe"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Finish setting up"
-msgstr "Dokończ konfigurację"
-
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -153,16 +122,6 @@ msgstr "Przejdź do panelu"
 #, elixir-autogen, elixir-format
 msgid "Google Calendar"
 msgstr "Google Calendar"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Mark %{title} as done"
-msgstr "Oznacz „%{title}” jako wykonane"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Mark %{title} as not done"
-msgstr "Oznacz „%{title}” jako niewykonane"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -229,11 +188,6 @@ msgstr "Adres URL serwera jest wymagany"
 msgid "Set the accent colour that ties your page together."
 msgstr "Ustaw kolor akcentu, który spina stronę w całość."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Setup checklist"
-msgstr "Lista konfiguracji"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Shown on your booking page and in confirmations sent to clients."
@@ -253,11 +207,6 @@ msgstr "Coś poszło nie tak. Spróbuj ponownie."
 #, elixir-autogen, elixir-format
 msgid "Step %{current} of %{total}"
 msgstr "Krok %{current} z %{total}"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Sync to avoid double-bookings"
-msgstr "Synchronizuj, żeby uniknąć podwójnych rezerwacji"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -908,11 +857,6 @@ msgstr "Strona jest gotowa na rezerwacje. Przetestuj ją, a potem wyślij komuś
 msgid "Your link is saved"
 msgstr "Link zapisany"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "A few recommended steps. Tick off the ones you don't need."
-msgstr "Kilka zalecanych kroków. Odhacz te, których nie potrzebujesz."
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Almost live"
@@ -968,47 +912,17 @@ msgstr "Sprawdzamy, w jakich godzinach masz zajęte, i dodajemy spotkania, któr
 msgid "Your link needs %{min} to %{max} characters."
 msgstr "Link musi mieć od %{min} do %{max} znaków."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
-msgid "Add a headline and a short bio"
-msgstr "Dodaj nagłówek i krótkie bio"
+msgid "For example: Career coach for first-time managers"
+msgstr "Na przykład: coach kariery dla początkujących menedżerów"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
-msgid "Add it to your website"
-msgstr "Dodaj ją do swojej strony"
+msgid "Guests see it under your name. You can add a longer bio later in your dashboard."
+msgstr "Goście zobaczą je pod twoim imieniem. Dłuższe bio możesz dodać później w panelu."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
-msgid "Add photo"
-msgstr "Dodaj zdjęcie"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Add your photo"
-msgstr "Dodaj swoje zdjęcie"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Introduce yourself"
-msgstr "Przedstaw się"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Let guests see who they're meeting"
-msgstr "Niech goście widzą, z kim się spotkają"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Let visitors book without leaving your site"
-msgstr "Odwiedzający rezerwują bez opuszczania Twojej strony"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Set up"
-msgstr "Skonfiguruj"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Write"
-msgstr "Napisz"
+msgid "One line about you (optional)"
+msgstr "Jedno zdanie o sobie (opcjonalnie)"

@@ -72,7 +72,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       google_signup_email: Auth.google_signup_login_hint(user),
       booking_url: build_booking_url(profile),
       theme_customization: customization,
-      onboarding_choices: onboarding_choices
+      onboarding_choices: onboarding_choices,
+      headline_form: ThemeHandlers.headline_form(profile)
     )
     |> MeetingHandlers.assign_blank()
     |> then(&if(connected?(&1), do: MeetingHandlers.load(&1, true), else: &1))

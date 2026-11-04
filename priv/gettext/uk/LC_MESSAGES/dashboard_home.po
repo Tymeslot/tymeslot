@@ -162,3 +162,108 @@ msgid_plural "%{count} participants"
 msgstr[0] "%{count} учасник"
 msgstr[1] "%{count} учасники"
 msgstr[2] "%{count} учасників"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "A few recommended steps. Tick off the ones you don't need."
+msgstr "Кілька рекомендованих кроків. Позначте ті, які вам не потрібні."
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a headline and a short bio"
+msgstr "Додайте заголовок і коротку біографію"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a video provider"
+msgstr "Додати відеосервіс"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add it to your website"
+msgstr "Додати на свій вебсайт"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add photo"
+msgstr "Додати фото"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add your photo"
+msgstr "Додати своє фото"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Auto-add links to online meetings"
+msgstr "Автоматично додавайте посилання на онлайн-зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Connect"
+msgstr "Підключити"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Підключити календар"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss setup checklist"
+msgstr "Сховати контрольний список налаштування"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Done"
+msgstr "Готово"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Finish setting up"
+msgstr "Завершити налаштування"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Introduce yourself"
+msgstr "Розкажіть про себе"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let guests see who they're meeting"
+msgstr "Щоб гості бачили, з ким зустрічаються"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let visitors book without leaving your site"
+msgstr "Відвідувачі бронюють, не залишаючи ваш сайт"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Mark %{title} as done"
+msgstr "Позначити «%{title}» як виконане"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Mark %{title} as not done"
+msgstr "Позначити «%{title}» як невиконане"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Set up"
+msgstr "Налаштувати"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Setup checklist"
+msgstr "Контрольний список налаштування"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Sync to avoid double-bookings"
+msgstr "Синхронізуйте, щоб уникнути накладок у розкладі"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Write"
+msgstr "Написати"

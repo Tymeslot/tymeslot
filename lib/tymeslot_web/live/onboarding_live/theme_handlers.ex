@@ -4,21 +4,26 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
 
   Owns the "choose your theme" feature end to end: switching between the theme
   stories and every theme's look, selecting a booking theme or
-  one of its onboarding choices, and seeding a random video background once a
-  calendar is connected. The stage shows each choice as it is made.
+  one of its onboarding choices, saving the headline a theme that introduces
+  the host asks for, and seeding a random video background once a calendar is
+  connected. The stage shows each choice as it is made.
   It also exposes the theme-state helpers the mount pipeline needs, so every
   theme concern lives in one place rather than leaking into the LiveView.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.Changeset
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.InputValidation
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Spec
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
@@ -88,6 +93,60 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
        dgettext("onboarding_wizard", "Could not update the colour scheme. Please try again.")
      )}
   end
+
+  @doc """
+  Saves the headline typed on the look step, the line a theme that introduces
+  the host (`Catalog.shows_intro?/1`) shows under their name, as each change
+  arrives (the field is debounced). It goes through the same sanitiser and
+  `Profiles.update_intro/2` as the dashboard's intro form, so the cap and the
+  normalisation are the profile's own; the bio is left as it is. An empty
+  line clears the headline. A refused value keeps the saved one and shows
+  why under the field.
+  """
+  @spec handle_headline_change(map(), LiveView.Socket.t()) :: {:noreply, LiveView.Socket.t()}
+  def handle_headline_change(%{"profile_intro" => %{"headline" => headline}}, socket)
+      when is_binary(headline) do
+    params = %{"headline" => headline}
+
+    with %ProfileSchema{} = profile <- socket.assigns[:profile],
+         {:ok, sanitized} <-
+           InputValidation.validate_intro(params,
+             metadata: DashboardHelpers.get_security_metadata(socket)
+           ),
+         {:ok, updated} <- Profiles.update_intro(profile, sanitized) do
+      {:noreply,
+       Component.assign(socket, profile: updated, headline_form: headline_form(updated))}
+    else
+      nil ->
+        {:noreply, socket}
+
+      {:error, %Changeset{} = changeset} ->
+        {:noreply, Component.assign(socket, :headline_form, refused_form(changeset))}
+
+      {:error, %{headline: message}} ->
+        changeset =
+          socket.assigns.profile
+          |> ProfileSchema.intro_changeset(%{})
+          |> Changeset.add_error(:headline, message)
+
+        {:noreply, Component.assign(socket, :headline_form, refused_form(changeset))}
+    end
+  end
+
+  def handle_headline_change(_params, socket), do: {:noreply, socket}
+
+  @doc """
+  The look step's headline form for a profile (or an empty one before a
+  profile exists), named as the dashboard's intro form is.
+  """
+  @spec headline_form(ProfileSchema.t() | nil) :: Phoenix.HTML.Form.t()
+  def headline_form(%ProfileSchema{} = profile),
+    do: Component.to_form(ProfileSchema.intro_changeset(profile, %{}), as: :profile_intro)
+
+  def headline_form(nil), do: Component.to_form(%{"headline" => ""}, as: :profile_intro)
+
+  defp refused_form(changeset),
+    do: Component.to_form(Map.put(changeset, :action, :update), as: :profile_intro)
 
   @doc """
   Resolves the initial `{customization, onboarding_choices}` for a profile

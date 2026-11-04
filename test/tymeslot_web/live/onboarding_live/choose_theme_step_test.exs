@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
   alias Phoenix.HTML
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias TymeslotWeb.OnboardingLive.ChooseThemeStep
+  alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.Themes.Quill.Theme, as: Quill
   alias TymeslotWeb.Themes.Rhythm.Theme, as: Rhythm
 
@@ -28,7 +29,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       theme_options: [{"Quill", "1"}, {"Rhythm", "2"}],
       theme_customization: %ThemeCustomizationSchema{theme_id: "1", settings: settings},
       choices: choices,
-      picker: picker
+      picker: picker,
+      headline_form: ThemeHandlers.headline_form(nil)
     )
   end
 

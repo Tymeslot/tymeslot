@@ -16,20 +16,10 @@ msgstr ""
 msgid "%{provider} · Connected"
 msgstr "%{provider} · Verbunden"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Add a video provider"
-msgstr "Videoanbieter hinzufügen"
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "App password or token"
 msgstr "App-Passwort oder Token"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Auto-add links to online meetings"
-msgstr "Links zu Online-Meetings automatisch hinzufügen"
 
 #: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex
 #, elixir-autogen, elixir-format
@@ -61,12 +51,6 @@ msgstr "Foto ändern"
 msgid "Colour scheme"
 msgstr "Farbschema"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Connect"
-msgstr "Verbinden"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
@@ -132,21 +116,6 @@ msgstr "Kalender suchen"
 msgid "Discovering…"
 msgstr "Wird gesucht…"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Dismiss setup checklist"
-msgstr "Einrichtungs-Checkliste ausblenden"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Done"
-msgstr "Erledigt"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Finish setting up"
-msgstr "Einrichtung abschließen"
-
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -157,16 +126,6 @@ msgstr "Zum Dashboard"
 #, elixir-autogen, elixir-format
 msgid "Google Calendar"
 msgstr "Google Calendar"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Mark %{title} as done"
-msgstr "%{title} als erledigt markieren"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Mark %{title} as not done"
-msgstr "%{title} als nicht erledigt markieren"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -233,11 +192,6 @@ msgstr "Server-URL ist erforderlich"
 msgid "Set the accent colour that ties your page together."
 msgstr "Legen Sie die Akzentfarbe fest, die Ihrer Seite ein einheitliches Bild gibt."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Setup checklist"
-msgstr "Einrichtungs-Checkliste"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Shown on your booking page and in confirmations sent to clients."
@@ -257,11 +211,6 @@ msgstr "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
 #, elixir-autogen, elixir-format
 msgid "Step %{current} of %{total}"
 msgstr "Schritt %{current} von %{total}"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Sync to avoid double-bookings"
-msgstr "Synchronisieren, um Doppelbuchungen zu vermeiden"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -909,11 +858,6 @@ msgstr "Ihre Seite ist bereit für Buchungen. Probieren Sie sie selbst aus und s
 msgid "Your link is saved"
 msgstr "Ihr Link ist gespeichert"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "A few recommended steps. Tick off the ones you don't need."
-msgstr "Ein paar empfohlene Schritte. Haken Sie ab, was Sie nicht benötigen."
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Almost live"
@@ -969,47 +913,17 @@ msgstr "Wir prüfen, wann Sie belegt sind, und tragen gebuchte Termine ein. Besu
 msgid "Your link needs %{min} to %{max} characters."
 msgstr "Ihr Link muss %{min} bis %{max} Zeichen lang sein."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
-msgid "Add a headline and a short bio"
-msgstr "Fügen Sie eine Überschrift und eine kurze Vorstellung hinzu"
+msgid "For example: Career coach for first-time managers"
+msgstr "Zum Beispiel: Karriere-Coach für neue Führungskräfte"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
-msgid "Add it to your website"
-msgstr "Auf Ihrer Website einbinden"
+msgid "Guests see it under your name. You can add a longer bio later in your dashboard."
+msgstr "Gäste sehen ihn unter Ihrem Namen. Eine ausführlichere Vorstellung können Sie später im Dashboard ergänzen."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
-msgid "Add photo"
-msgstr "Foto hinzufügen"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Add your photo"
-msgstr "Foto hinzufügen"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Introduce yourself"
-msgstr "Stellen Sie sich vor"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Let guests see who they're meeting"
-msgstr "Damit Gäste sehen, wen sie treffen"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Let visitors book without leaving your site"
-msgstr "Besucher buchen, ohne Ihre Website zu verlassen"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Set up"
-msgstr "Einrichten"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Write"
-msgstr "Schreiben"
+msgid "One line about you (optional)"
+msgstr "Ein Satz über Sie (optional)"

@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
   @moduledoc """
   Folio in the onboarding wizard: a light page with a cover strip, the
-  portrait overlapping it above the organiser's name, then a month calendar
+  portrait overlapping it above the organiser's name and, once they have
+  written one, their headline in a serif italic, then a month calendar
   of the host's coming week and the chosen day's times, the editorial shape
   of the real page. The Book button's ink
   is white where it reads on the primary, otherwise the scheme's dark
@@ -67,7 +68,7 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
         style={"background: linear-gradient(135deg, #{@primary}, #{@accent});"}
       />
       <div class="px-5 pb-5 flex flex-col items-center gap-3">
-        <div class="-mt-8 w-full flex flex-col items-center gap-3">
+        <div class="-mt-8 w-full flex flex-col items-center gap-3 [&_[data-role=preview-headline]]:font-serif">
           {render_slot(@header)}
         </div>
         <PreviewWeek.calendar_area colors={@colors} highlight={@highlight}>
