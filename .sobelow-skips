@@ -16,3 +16,5 @@ Traversal.SendFile: Directory Traversal in `send_file`,lib/tymeslot_web/endpoint
 Traversal.FileModule: Directory Traversal in `File.mkdir_p`,lib/tymeslot_web/helpers/file_operations.ex:137,6EB5C87
 Traversal.FileModule: Directory Traversal in `File.read`,lib/tymeslot/profiles/avatars.ex:111,72DE541
 Traversal.FileModule: Directory Traversal in `File.read!`,lib/tymeslot/mailer/smtp_config.ex:200,C2DD8A
+Config.CSRF: Missing CSRF Protections,lib/tymeslot_web/router.ex:243,47F9838
+Config.CSP: Missing Content-Security-Policy,lib/tymeslot_web/router.ex:247,29AB932
