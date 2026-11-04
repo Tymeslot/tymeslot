@@ -122,7 +122,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
             phx-click={JS.focus(to: "#username")}
           >
             <span
-              class="shrink-0 max-w-[60%] truncate text-tymeslot-400"
+              class="shrink-0 max-w-[60%] truncate text-tymeslot-500"
               data-role="link-prefix"
             >
               {@link_host}/
