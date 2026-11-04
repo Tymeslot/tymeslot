@@ -41,11 +41,6 @@ msgstr "Atrás"
 msgid "Book"
 msgstr "Reservar"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Booking link copied to clipboard!"
-msgstr "Enlace de reservas copiado al portapapeles"
-
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV Calendar"
@@ -92,7 +87,6 @@ msgstr "Conectar con Microsoft"
 msgid "Continue"
 msgstr "Continuar"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Copy link"
@@ -122,16 +116,6 @@ msgstr "No se pudo actualizar el tema. Inténtalo de nuevo."
 #, elixir-autogen, elixir-format
 msgid "Could not update your photo. Please try a different image."
 msgstr "No se pudo actualizar tu foto. Prueba con otra imagen."
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Customise"
-msgstr "Personalizar"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Customise your theme"
-msgstr "Personalizar tu tema"
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
@@ -173,11 +157,6 @@ msgstr "Ir al panel"
 #, elixir-autogen, elixir-format
 msgid "Google Calendar"
 msgstr "Google Calendar"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Make your booking page yours"
-msgstr "Dale tu estilo a tu página de reservas"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -239,21 +218,6 @@ msgstr "No se encontró el perfil. Inténtalo de nuevo."
 msgid "Recommended"
 msgstr "Recomendado"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Review"
-msgstr "Revisar"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Review your meeting types"
-msgstr "Revisar tus tipos de reunión"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Send guests your booking link"
-msgstr "Envía tu enlace de reservas a los invitados"
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "Server URL"
@@ -273,11 +237,6 @@ msgstr "Elige el color de acento que da unidad a tu página."
 #, elixir-autogen, elixir-format
 msgid "Setup checklist"
 msgstr "Pasos de configuración"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Share your booking page"
-msgstr "Compartir tu página de reservas"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -308,11 +267,6 @@ msgstr "Sincroniza para evitar dos reservas a la misma hora"
 #, elixir-autogen, elixir-format
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Sincroniza tu calendario para evitar dos reservas a la misma hora y tener todo en un solo lugar."
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Tune durations and questions"
-msgstr "Ajusta duraciones y preguntas"
 
 #: lib/tymeslot_web/live/onboarding_live/avatar_handlers.ex
 #, elixir-autogen, elixir-format
@@ -1014,3 +968,48 @@ msgstr "Consultamos tu disponibilidad y agregamos las reuniones que te reservan.
 #, elixir-autogen, elixir-format
 msgid "Your link needs %{min} to %{max} characters."
 msgstr "Tu enlace debe tener entre %{min} y %{max} caracteres."
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a headline and a short bio"
+msgstr "Agrega un titular y una breve biografía"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add it to your website"
+msgstr "Agregarla a tu sitio web"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add photo"
+msgstr "Agregar foto"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add your photo"
+msgstr "Agregar tu foto"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Introduce yourself"
+msgstr "Preséntate"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let guests see who they're meeting"
+msgstr "Para que tus invitados sepan con quién se reúnen"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let visitors book without leaving your site"
+msgstr "Tus visitantes reservan sin salir de tu sitio"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Set up"
+msgstr "Configurar"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Write"
+msgstr "Escribir"

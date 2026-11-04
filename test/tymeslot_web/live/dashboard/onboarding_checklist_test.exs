@@ -9,6 +9,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
   alias Tymeslot.Onboarding
   alias TymeslotWeb.Dashboard.OnboardingChecklist
 
+  @quill "1"
+  @folio "4"
+
   @no_integrations %{
     has_meeting_types: true,
     has_calendar: false,
@@ -26,190 +29,202 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
     Map.merge(%{dashboard_setup_done_items: [], dashboard_setup_dismissed_at: nil}, attrs)
   end
 
+  # A host straight out of the setup wizard: no photo, no intro, embedding
+  # left at its default, on the default theme.
   defp profile(attrs \\ %{}) do
-    Map.merge(%{username: "alice", user_id: 1}, attrs)
+    Map.merge(
+      %{
+        username: "alice",
+        user_id: 1,
+        avatar: nil,
+        headline: nil,
+        bio: nil,
+        booking_theme: @quill,
+        allowed_embed_domains: ["none"]
+      },
+      attrs
+    )
   end
 
-  describe "visible?/2" do
+  defp render_checklist(opts) do
+    render_component(&OnboardingChecklist.onboarding_checklist/1,
+      integration_status: Keyword.get(opts, :integration_status, @no_integrations),
+      current_user: Keyword.get(opts, :user, user()),
+      profile: Keyword.get(opts, :profile, profile())
+    )
+  end
+
+  defp rows(html) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("[data-setup-item]")
+    |> LazyHTML.attribute("data-setup-item")
+  end
+
+  defp has?(html, selector) do
+    html |> LazyHTML.from_fragment() |> LazyHTML.query(selector) |> Enum.count() > 0
+  end
+
+  defp toggle_ids(html) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query(~s(button[phx-click="onboarding:toggle"]))
+    |> LazyHTML.attribute("phx-value-id")
+  end
+
+  describe "visible?/3" do
     test "is visible while a setup item is outstanding and the widget is open" do
-      assert OnboardingChecklist.visible?(user(), @no_integrations)
+      assert OnboardingChecklist.visible?(user(), @all_integrations, profile())
     end
 
     test "is hidden once the host has dismissed the widget" do
       refute OnboardingChecklist.visible?(
                user(%{dashboard_setup_dismissed_at: DateTime.utc_now(:second)}),
-               @no_integrations
+               @no_integrations,
+               profile()
              )
     end
 
-    test "is hidden once every item is done (auto-completed or ticked by hand)" do
-      done = user(%{dashboard_setup_done_items: ~w(theme meeting_types share)})
-      refute OnboardingChecklist.visible?(done, @all_integrations)
+    test "is hidden once every item is done from real state" do
+      done =
+        profile(%{avatar: "alice.webp", allowed_embed_domains: ["alice.example"]})
+
+      refute OnboardingChecklist.visible?(user(), @all_integrations, done)
+    end
+
+    test "is hidden once the profile items are ticked off by hand" do
+      ticked = user(%{dashboard_setup_done_items: ~w(avatar embed)})
+      refute OnboardingChecklist.visible?(ticked, @all_integrations, profile())
+    end
+
+    test "counts the intro only where the theme shows it" do
+      ticked = user(%{dashboard_setup_done_items: ~w(avatar embed)})
+
+      assert OnboardingChecklist.visible?(
+               ticked,
+               @all_integrations,
+               profile(%{booking_theme: @folio})
+             )
+    end
+
+    # A host whose stored ticks predate the current catalogue: those keys
+    # must neither finish the checklist nor crash it.
+    test "ignores ticks stored for items the checklist no longer has" do
+      old = user(%{dashboard_setup_done_items: ~w(theme meeting_types share)})
+      assert OnboardingChecklist.visible?(old, @all_integrations, profile())
     end
   end
 
-  describe "hand-tickable items" do
-    test "render a checkbox for exactly the items the context accepts, and none for providers" do
-      html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          integration_status: @no_integrations,
-          current_user: user(),
-          profile: profile()
-        )
+  describe "the catalogue" do
+    test "offers the calendar, video, photo and website items on a theme without an intro" do
+      html = render_checklist([])
 
-      toggle_ids =
-        html
-        |> LazyHTML.from_fragment()
-        |> LazyHTML.query(~s(button[phx-click="onboarding:toggle"]))
-        |> LazyHTML.attribute("phx-value-id")
+      assert rows(html) == ~w(calendar video avatar embed)
+      assert html =~ "0/4"
+      refute html =~ "Introduce yourself"
+    end
+
+    test "adds the intro item where the theme shows the headline and bio" do
+      html = render_checklist(profile: profile(%{booking_theme: @folio}))
+
+      assert rows(html) == ~w(calendar video avatar intro embed)
+      assert html =~ "0/5"
+      assert html =~ "Introduce yourself"
+    end
+
+    test "links each outstanding item to where it is done" do
+      html = render_checklist(profile: profile(%{booking_theme: @folio}))
+
+      assert has?(
+               html,
+               ~s([data-setup-item=calendar] a[href="/dashboard/integrations?tab=calendars"])
+             )
+
+      assert has?(html, ~s([data-setup-item=video] a[href="/dashboard/integrations?tab=video"]))
+      assert has?(html, ~s([data-setup-item=avatar] a[href="/dashboard/settings"]))
+      assert has?(html, ~s([data-setup-item=intro] a[href="/dashboard/settings"]))
+      assert has?(html, ~s([data-setup-item=embed] a[href="/dashboard/embed"]))
+    end
+
+    test "renders a checkbox for exactly the items the context accepts, and none for providers" do
+      html = render_checklist(profile: profile(%{booking_theme: @folio}))
 
       # The widget and the context would otherwise drift apart silently: a
       # checkbox the context refuses does nothing when clicked.
-      assert Enum.sort(toggle_ids) == Enum.sort(Onboarding.manual_dashboard_setup_items())
-      refute "calendar" in toggle_ids
-      refute "video" in toggle_ids
+      assert Enum.sort(toggle_ids(html)) == Enum.sort(Onboarding.manual_dashboard_setup_items())
+      assert html =~ ~s(phx-click="onboarding:dismiss")
+    end
+
+    test "no longer copies the booking link" do
+      html = render_checklist(integration_status: @all_integrations)
+
+      refute html =~ "CopyOnClick"
+      refute html =~ "booking_link_copied"
     end
   end
 
-  describe "onboarding_checklist/1" do
-    test "renders every item with a uniform, fixed-width call-to-action and controls" do
+  describe "done states" do
+    test "a connected calendar completes its item and drops its link" do
       html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          integration_status: @no_integrations,
-          current_user: user(),
-          profile: profile()
+        render_checklist(
+          integration_status: %{@no_integrations | has_calendar: true, calendar_ready: true}
         )
 
-      assert html =~ "Finish setting up"
-      assert html =~ "0/5"
-
-      # Every item present.
-      assert html =~ "Connect a calendar"
-      assert html =~ "Add a video provider"
-      assert html =~ "Customise your theme"
-      assert html =~ "Review your meeting types"
-      assert html =~ "Share your booking page"
-
-      # CTAs share one fixed width so they line up.
-      assert html =~ "w-32"
-
-      # Manual recommendations get a checkbox tick; the global dismiss is present.
-      assert html =~ ~s(phx-click="onboarding:toggle")
-      assert html =~ ~s(role="checkbox")
-      assert html =~ ~s(phx-value-id="theme")
-      assert html =~ ~s(phx-click="onboarding:dismiss")
-
-      # Deterministic provider items are NOT hand-tickable.
-      refute html =~ ~s(phx-value-id="calendar")
-      refute html =~ ~s(phx-value-id="video")
+      assert html =~ "1/4"
+      refute has?(html, "[data-setup-item=calendar] a")
+      assert has?(html, "[data-setup-item=video] a")
     end
 
-    test "auto-completes an item backed by real state and drops its call-to-action" do
-      html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          integration_status: %{@no_integrations | has_calendar: true, calendar_ready: true},
-          current_user: user(),
-          profile: profile()
-        )
+    test "a profile photo completes the photo item, with no tick to undo" do
+      html = render_checklist(profile: profile(%{avatar: "alice.webp"}))
 
-      assert html =~ "1/5"
-      # The connected-calendar item shows as done and no longer links out.
-      refute html =~ ~s(href="/dashboard/integrations?tab=calendars")
-      # A manual item is still actionable.
-      assert html =~ ~s(href="/dashboard/integrations?tab=video")
+      assert html =~ "1/4"
+      refute has?(html, "[data-setup-item=avatar] a")
+      refute "avatar" in toggle_ids(html)
     end
 
-    test "greys out an item the host ticked off by hand" do
-      html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          integration_status: @no_integrations,
-          current_user: user(%{dashboard_setup_done_items: ["theme"]}),
-          profile: profile()
-        )
+    for {field, value} <- [headline: "Career coach", bio: "I help people change jobs."] do
+      test "a #{field} alone completes the intro item" do
+        html =
+          render_checklist(
+            profile: profile(%{:booking_theme => @folio, unquote(field) => unquote(value)})
+          )
 
-      assert html =~ "1/5"
-      # Ticked item no longer links to the theme page (it greys out)...
-      refute html =~ ~s(href="/dashboard/theme")
-      # ...while an untouched item still does.
-      assert html =~ ~s(href="/dashboard/meeting-settings")
+        assert html =~ "1/5"
+        refute has?(html, "[data-setup-item=intro] a")
+        refute "intro" in toggle_ids(html)
+      end
     end
 
-    # The setup wizard has the host pick a look, set up a meeting and keep
-    # the link: none of that is left to do once it is finished.
-    test "a host who just finished setup has the wizard's items done" do
-      html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          integration_status: Map.put(@no_integrations, :link_shared, true),
-          current_user: user(%{onboarding_completed_at: DateTime.utc_now(:second)}),
-          profile: profile()
-        )
+    test "an allowed embedding site completes the website item" do
+      html = render_checklist(profile: profile(%{allowed_embed_domains: ["alice.example"]}))
 
-      # Theme, meeting types and sharing; the calendar and video stay open.
-      assert html =~ "3/5"
-      refute html =~ ~s(href="/dashboard/theme")
-      refute html =~ ~s(href="/dashboard/meeting-settings")
-      assert html =~ ~s(href="/dashboard/integrations?tab=calendars")
-      assert html =~ ~s(href="/dashboard/integrations?tab=video")
-
-      # Done from real state, so there is no tick to undo.
-      refute html =~ ~s(phx-value-id="theme")
-      refute html =~ ~s(phx-value-id="meeting_types")
-      refute html =~ ~s(phx-value-id="share")
+      assert html =~ "1/4"
+      refute has?(html, "[data-setup-item=embed] a")
+      refute "embed" in toggle_ids(html)
     end
 
-    test "a link kept or shared anywhere completes the share item on its own" do
-      html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          integration_status: Map.put(@no_integrations, :link_shared, true),
-          current_user: user(),
-          profile: profile()
-        )
+    test "embedding switched off again leaves the website item open" do
+      html = render_checklist(profile: profile(%{allowed_embed_domains: []}))
 
-      assert html =~ "1/5"
-      refute html =~ ~s(phx-value-id="share")
-      assert html =~ ~s(phx-value-id="theme")
+      assert html =~ "0/4"
+      assert has?(html, ~s([data-setup-item=embed] a[href="/dashboard/embed"]))
     end
 
-    test "share item copies the public booking link when the page is live" do
-      html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          # username set + a connected calendar → booking page is shareable.
-          integration_status: @all_integrations,
-          current_user: user(),
-          profile: profile(%{username: "alice"})
-        )
+    test "an item the host ticked off by hand is greyed out and can be unticked" do
+      html = render_checklist(user: user(%{dashboard_setup_done_items: ["embed"]}))
 
-      assert html =~ ~s(phx-hook="CopyOnClick")
-      assert html =~ ~s(data-copy-text=)
-      assert html =~ "/alice"
-      assert html =~ "Copy link"
-      # It copies rather than routing to the embed page.
-      refute html =~ ~s(href="/dashboard/embed")
+      assert html =~ "1/4"
+      refute has?(html, "[data-setup-item=embed] a")
+      assert has?(html, ~s(button[phx-value-id="embed"][aria-checked="true"]))
     end
 
-    test "share item is greyed out with the sidebar's tooltip when prerequisites are unmet" do
-      html =
-        render_component(&OnboardingChecklist.onboarding_checklist/1,
-          # No connected calendar → same gate the dashboard sidebar uses.
-          integration_status: @no_integrations,
-          current_user: user(),
-          profile: profile(%{username: "alice"})
-        )
+    test "ticks stored for removed items neither show nor count" do
+      old = user(%{dashboard_setup_done_items: ~w(theme meeting_types share)})
+      html = render_checklist(user: old)
 
-      refute html =~ ~s(phx-hook="CopyOnClick")
-
-      # Inert but focusable: named for the action, the tooltip says why.
-      [button] =
-        html
-        |> Floki.parse_fragment!()
-        |> Floki.find(~s(button[aria-disabled="true"]))
-
-      assert Floki.text(button) =~ "Copy link"
-      assert Floki.attribute(button, "disabled") == []
-
-      assert Floki.attribute(button, "title") == [
-               "Connect a calendar in Calendar settings to enable this feature"
-             ]
+      assert rows(html) == ~w(calendar video avatar embed)
+      assert html =~ "0/4"
     end
   end
 end

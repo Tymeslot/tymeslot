@@ -41,11 +41,6 @@ msgstr "Zpět"
 msgid "Book"
 msgstr "Zarezervovat"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Booking link copied to clipboard!"
-msgstr "Rezervační odkaz byl zkopírován do schránky."
-
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV Calendar"
@@ -92,7 +87,6 @@ msgstr "Připojit přes Microsoft"
 msgid "Continue"
 msgstr "Pokračovat"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Copy link"
@@ -122,16 +116,6 @@ msgstr "Motiv se nepodařilo změnit. Zkuste to prosím znovu."
 #, elixir-autogen, elixir-format
 msgid "Could not update your photo. Please try a different image."
 msgstr "Fotku se nepodařilo změnit. Zkuste prosím jiný obrázek."
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Customise"
-msgstr "Přizpůsobit"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Customise your theme"
-msgstr "Přizpůsobit motiv"
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
@@ -173,11 +157,6 @@ msgstr "Přejít na nástěnku"
 #, elixir-autogen, elixir-format
 msgid "Google Calendar"
 msgstr "Google Calendar"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Make your booking page yours"
-msgstr "Dejte rezervační stránce vlastní vzhled"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -239,21 +218,6 @@ msgstr "Profil nebyl nalezen. Zkuste to prosím znovu."
 msgid "Recommended"
 msgstr "Doporučeno"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Review"
-msgstr "Zkontrolovat"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Review your meeting types"
-msgstr "Zkontrolovat typy schůzek"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Send guests your booking link"
-msgstr "Pošlete hostům svůj rezervační odkaz"
-
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
 msgid "Server URL"
@@ -273,11 +237,6 @@ msgstr "Nastavte barvu zvýraznění, která vaši stránku sjednotí."
 #, elixir-autogen, elixir-format
 msgid "Setup checklist"
 msgstr "Kontrolní seznam nastavení"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Share your booking page"
-msgstr "Sdílet rezervační stránku"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
@@ -308,11 +267,6 @@ msgstr "Synchronizace zabrání dvojím rezervacím"
 #, elixir-autogen, elixir-format
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr "Synchronizujte kalendář: zabráníte dvojím rezervacím a budete mít vše na jednom místě."
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Tune durations and questions"
-msgstr "Dolaďte délky a otázky"
 
 #: lib/tymeslot_web/live/onboarding_live/avatar_handlers.ex
 #, elixir-autogen, elixir-format
@@ -1017,3 +971,48 @@ msgstr "Zjišťujeme, kdy máte obsazeno, a přidáváme schůzky, které si u�
 #, elixir-autogen, elixir-format
 msgid "Your link needs %{min} to %{max} characters."
 msgstr "Odkaz musí mít %{min} až %{max} znaků."
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a headline and a short bio"
+msgstr "Přidejte titulek a krátký životopis"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add it to your website"
+msgstr "Vložit na váš web"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add photo"
+msgstr "Přidat fotku"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add your photo"
+msgstr "Přidat svou fotku"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Introduce yourself"
+msgstr "Představte se"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let guests see who they're meeting"
+msgstr "Ať hosté vidí, s kým se setkají"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let visitors book without leaving your site"
+msgstr "Návštěvníci si rezervují, aniž by opustili váš web"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Set up"
+msgstr "Nastavit"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Write"
+msgstr "Napsat"

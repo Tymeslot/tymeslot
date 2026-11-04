@@ -30,21 +30,6 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
 
   defp shared_at(profile), do: Repo.reload!(profile).booking_link_first_shared_at
 
-  test "the setup checklist's copy button stamps the profile", %{conn: conn, profile: profile} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
-    assert is_nil(shared_at(profile))
-
-    assert has_element?(view, ~s{button[id^=setup-copy-][phx-hook="CopyOnClick"]})
-    view |> element("button[id^=setup-copy-]") |> render_click()
-
-    assert %DateTime{} = shared_at(profile)
-
-    assert_push_event view, "ts:analytics", %{
-      name: "booking_link_shared",
-      props: %{channel: "checklist"}
-    }
-  end
-
   test "the meeting type editor's copy button stamps the profile", %{
     conn: conn,
     user: user,
@@ -144,6 +129,8 @@ defmodule TymeslotWeb.Dashboard.BookingLinkCopyTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     render_click(view, "booking_link_copied", %{"channel" => "user@example.com"})
+    # The setup checklist no longer copies the link.
+    render_click(view, "booking_link_copied", %{"channel" => "checklist"})
     render_click(view, "booking_link_copied", %{})
 
     assert is_nil(shared_at(profile))

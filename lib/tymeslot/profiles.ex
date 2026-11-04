@@ -572,6 +572,16 @@ defmodule Tymeslot.Profiles do
   def update_allowed_embed_domains(%ProfileSchema{} = profile, domains),
     do: ProfileQueries.update_embed_domains(profile, EmbedDomains.normalize(domains))
 
+  @doc """
+  Whether the host has allowed at least one site to embed their booking page.
+  The default, `["none"]`, and an empty list both block embedding everywhere.
+  """
+  @spec embedding_enabled?(%{allowed_embed_domains: [String.t()] | nil}) :: boolean()
+  def embedding_enabled?(%{allowed_embed_domains: domains}) when domains in [nil, [], ["none"]],
+    do: false
+
+  def embedding_enabled?(%{allowed_embed_domains: _domains}), do: true
+
   # --- Organizer Context ---
 
   @doc """

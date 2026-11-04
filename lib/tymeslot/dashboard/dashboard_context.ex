@@ -11,7 +11,6 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Profiles
   alias Tymeslot.Venues
 
   @typep integration_status :: %{
@@ -19,8 +18,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
            calendar_ready: boolean(),
            refused_calendars: [String.t()],
            has_video: boolean(),
-           has_meeting_types: boolean(),
-           link_shared: boolean()
+           has_meeting_types: boolean()
          }
 
   @doc """
@@ -34,16 +32,13 @@ defmodule Tymeslot.Dashboard.DashboardContext do
       calendar_ready: false,
       refused_calendars: [],
       has_video: false,
-      has_meeting_types: false,
-      link_shared: false
+      has_meeting_types: false
     }
 
   @doc """
   Whether the user has set up each part the dashboard nudges them towards: a
-  calendar a booking can be written to, a video integration, an active
-  meeting type, a booking link kept or shared at least once (`link_shared`,
-  the profile's first share, stamped by the setup's last step and by the
-  dashboard's copy buttons).
+  calendar a booking can be written to, a video integration and an active
+  meeting type.
 
   `has_calendar` says only that such a calendar is connected (polls gate on
   it). `calendar_ready` says the booking page can actually offer times, which
@@ -61,8 +56,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
       calendar_status(Calendar.booking_page_health(user_id), user_id),
       %{
         has_video: Video.has_active_integration?(user_id),
-        has_meeting_types: MeetingTypes.has_active_meeting_types?(user_id),
-        link_shared: link_shared?(Profiles.get_profile(user_id))
+        has_meeting_types: MeetingTypes.has_active_meeting_types?(user_id)
       }
     )
   rescue
@@ -80,9 +74,6 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   @spec get_integration_status(nil | any()) :: integration_status()
   def get_integration_status(_user_id), do: default_integration_status()
-
-  defp link_shared?(%{booking_link_first_shared_at: %DateTime{}}), do: true
-  defp link_shared?(_profile), do: false
 
   defp calendar_status(:taking_bookings, _user_id),
     do: %{has_calendar: true, calendar_ready: true, refused_calendars: []}

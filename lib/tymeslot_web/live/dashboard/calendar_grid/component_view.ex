@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
               first step, so the banner only appears once the checklist is gone. --%>
         <EmptyState.connect_calendar_banner :if={
           @integrations == [] and
-            not OnboardingChecklist.visible?(@current_user, @integration_status)
+            not OnboardingChecklist.visible?(@current_user, @integration_status, @profile)
         } />
         <Header.toolbar
           view={@view}

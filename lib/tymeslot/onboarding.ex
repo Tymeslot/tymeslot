@@ -11,7 +11,7 @@ defmodule Tymeslot.Onboarding do
 
   require Logger
 
-  @manual_dashboard_setup_items ~w(theme meeting_types share)
+  @manual_dashboard_setup_items ~w(avatar intro embed)
 
   # How a host can keep their booking link on the last setup step, any one of
   # which finishes onboarding.
@@ -185,9 +185,13 @@ defmodule Tymeslot.Onboarding do
   def dashboard_tour_seen?(_user), do: true
 
   @doc """
-  The dashboard setup items a host ticks off by hand. The provider items
-  (calendar, video) are deliberately absent: they complete only from a real
-  connection.
+  The dashboard setup items a host ticks off by hand, to skip them. The
+  provider items (calendar, video) are deliberately absent: they complete only
+  from a real connection.
+
+  A key stored by an earlier version of the checklist may linger in
+  `dashboard_setup_done_items`; nothing reads it, and it can no longer be
+  toggled.
   """
   @spec manual_dashboard_setup_items() :: [String.t()]
   def manual_dashboard_setup_items, do: @manual_dashboard_setup_items

@@ -261,7 +261,7 @@ defmodule TymeslotWeb.DashboardLive do
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>
           <div
-            :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+            :if={OnboardingChecklist.visible?(@current_user, @integration_status, @profile)}
             class="shrink-0 px-3 pt-2 md:px-4"
           >
             <OnboardingChecklist.onboarding_checklist

@@ -15,12 +15,37 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
   alias Tymeslot.Repo
 
   defp log_in_fresh_host(conn) do
-    # No integrations, nothing ticked and the link never shared: every item
-    # but the two the setup wizard covers (theme, meeting types) is
-    # outstanding.
+    # No integrations and nothing ticked: every item is outstanding.
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
     _profile = insert(:profile, user: user)
     {log_in_user(conn, user), user}
+  end
+
+  # What the setup wizard leaves behind: a calendar connected, a theme chosen,
+  # a meeting type set up and the link kept, and nothing else.
+  defp log_in_host_from_wizard(conn, theme_id) do
+    now = DateTime.utc_now(:second)
+    user = insert(:user, onboarding_completed_at: now)
+
+    insert(:profile,
+      user: user,
+      username: "fresh-host",
+      booking_theme: theme_id,
+      booking_link_first_shared_at: now
+    )
+
+    insert(:calendar_integration, user: user)
+    insert(:meeting_type, user: user)
+    {log_in_user(conn, user), user}
+  end
+
+  defp checklist_rows(view) do
+    view
+    |> element("[data-testid=onboarding-checklist]")
+    |> render()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("[data-setup-item]")
+    |> LazyHTML.attribute("data-setup-item")
   end
 
   test "shows the setup widget to a host with setup still outstanding", %{conn: conn} do
@@ -74,42 +99,80 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
     end
   end
 
-  test "a host who finished setup sees the wizard's own items done", %{conn: conn} do
-    {conn, _user} = log_in_fresh_host(conn)
-    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+  describe "a host who just finished the setup wizard" do
+    test "sees only what the wizard left open, with the calendar done", %{conn: conn} do
+      {conn, _user} = log_in_host_from_wizard(conn, "1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
-    checklist = view |> element("[data-testid=onboarding-checklist]") |> render()
-    assert checklist =~ "2/5"
-    refute has_element?(view, "button[phx-value-id='theme']")
-    refute has_element?(view, "button[phx-value-id='meeting_types']")
+      assert checklist_rows(view) == ~w(calendar video avatar embed)
+      assert view |> element("[data-testid=onboarding-checklist]") |> render() =~ "1/4"
+
+      # The calendar is done; the rest link to where they are done.
+      refute has_element?(view, "[data-setup-item=calendar] a")
+
+      assert has_element?(
+               view,
+               "[data-setup-item=video] a[href='/dashboard/integrations?tab=video']"
+             )
+
+      assert has_element?(view, "[data-setup-item=avatar] a[href='/dashboard/settings']")
+      assert has_element?(view, "[data-setup-item=embed] a[href='/dashboard/embed']")
+
+      # Nothing the wizard already did is offered again.
+      for old <- ~w(theme meeting_types share),
+          do: refute(has_element?(view, "[data-setup-item=#{old}]"))
+    end
+
+    test "is asked to introduce themselves on a theme that shows it", %{conn: conn} do
+      {conn, _user} = log_in_host_from_wizard(conn, "4")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+
+      assert checklist_rows(view) == ~w(calendar video avatar intro embed)
+      assert has_element?(view, "[data-setup-item=intro] a[href='/dashboard/settings']")
+    end
+
+    test "no longer sees the widget once the rest is done", %{conn: conn} do
+      {conn, user} = log_in_host_from_wizard(conn, "1")
+      insert(:video_integration, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+      assert checklist_rows(view) == ~w(calendar video avatar embed)
+
+      # Skips the photo and the website by hand; the widget goes.
+      view |> element("button[phx-value-id='avatar']") |> render_click()
+      assert has_element?(view, "[data-testid=onboarding-checklist]")
+      view |> element("button[phx-value-id='embed']") |> render_click()
+
+      refute has_element?(view, "[data-testid=onboarding-checklist]")
+    end
   end
 
   test "ticking an item greys it out immediately and persists", %{conn: conn} do
     {conn, user} = log_in_fresh_host(conn)
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
-    refute has_element?(view, "button[phx-value-id='share'][aria-checked='true']")
+    refute has_element?(view, "button[phx-value-id='avatar'][aria-checked='true']")
 
     view
-    |> element("button[phx-value-id='share']")
+    |> element("button[phx-value-id='avatar']")
     |> render_click()
 
     # Greyed immediately in the live view...
-    assert has_element?(view, "button[phx-value-id='share'][aria-checked='true']")
+    assert has_element?(view, "button[phx-value-id='avatar'][aria-checked='true']")
     # ...and persisted on the user.
-    assert "share" in (Repo.get!(UserSchema, user.id).dashboard_setup_done_items || [])
+    assert "avatar" in (Repo.get!(UserSchema, user.id).dashboard_setup_done_items || [])
   end
 
   test "unticking an item restores it and persists", %{conn: conn} do
     {conn, user} = log_in_fresh_host(conn)
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
-    view |> element("button[phx-value-id='share']") |> render_click()
-    assert "share" in Repo.get!(UserSchema, user.id).dashboard_setup_done_items
+    view |> element("button[phx-value-id='avatar']") |> render_click()
+    assert "avatar" in Repo.get!(UserSchema, user.id).dashboard_setup_done_items
 
-    view |> element("button[phx-value-id='share']") |> render_click()
+    view |> element("button[phx-value-id='avatar']") |> render_click()
 
-    assert has_element?(view, "button[phx-value-id='share'][aria-checked='false']")
+    assert has_element?(view, "button[phx-value-id='avatar'][aria-checked='false']")
     assert Repo.get!(UserSchema, user.id).dashboard_setup_done_items == []
   end
 

@@ -10,7 +10,6 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
@@ -57,8 +56,7 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
                calendar_ready: false,
                refused_calendars: [],
                has_video: false,
-               has_meeting_types: false,
-               link_shared: false
+               has_meeting_types: false
              }
     end
 
@@ -169,16 +167,6 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
 
       {:ok, _deleted} = MeetingTypes.delete_meeting_type(meeting_type)
       refute DashboardContext.get_integration_status(user.id).has_meeting_types
-    end
-
-    test "follows the booking link being shared for the first time", %{user: user} do
-      refute DashboardContext.get_integration_status(user.id).link_shared
-
-      profile = insert(:profile, user: user)
-      refute DashboardContext.get_integration_status(user.id).link_shared
-
-      {:ok, :shared} = Profiles.mark_booking_link_shared(profile)
-      assert DashboardContext.get_integration_status(user.id).link_shared
     end
 
     test "counts only active meeting types", %{user: user} do

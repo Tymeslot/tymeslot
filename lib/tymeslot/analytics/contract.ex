@@ -35,7 +35,7 @@ defmodule Tymeslot.Analytics.Contract do
   }
 
   # The dashboard's copy points for the host's own booking link.
-  @share_channels ~w(checklist sidebar settings embed)
+  @share_channels ~w(sidebar settings embed)
   @reveal_results ~w(ok slow failed)
 
   @pii_denylist ~w(user_id email username name token ip ip_address phone customer_id)a
