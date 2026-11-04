@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Endpoint
 
   setup :setup_dashboard_user_with_theme
 
@@ -68,6 +69,75 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     # at its default.
     assert %{settings: %{"color_scheme" => "default"}} =
              ThemeCustomizations.get_by_profile_and_theme({ctx.profile.id, page.id}, "1")
+  end
+
+  # The form mounts with the dialog, so its name field takes the focus on
+  # every opening, and the address previews the whole link as it is typed.
+  test "the dialog focuses the name and previews the link being typed", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+    refute has_element?(view, "#new-booking-page-form")
+
+    view |> element("[data-testid='new-booking-page']") |> render_click()
+
+    assert has_element?(
+             view,
+             "#new-booking-page-form input[name='page[name]'][phx-hook='AutoFocus']"
+           )
+
+    view
+    |> form("#new-booking-page-form", page: %{name: "einfachISO"})
+    |> render_change(%{_target: ["page", "name"]})
+
+    preview =
+      view |> element("#new-booking-page-address-preview") |> render()
+
+    host = URI.parse(Endpoint.url()).host
+    assert preview =~ ~r"#{host}(:\d+)?/joern/<span[^>]*>einfachiso</span>"
+    refute preview =~ "://#{host}"
+  end
+
+  # Typing a name and pressing Enter at once submits before the change that
+  # fills the address in has been answered.
+  test "the dialog derives the address on a submit that outran it", %{
+    conn: conn,
+    profile: profile
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+    view |> element("[data-testid='new-booking-page']") |> render_click()
+
+    view
+    |> form("#new-booking-page-form", page: %{name: "einfachISO", slug: ""})
+    |> render_submit()
+
+    assert [%{slug: "einfachiso"}] = BookingPages.list(profile.id)
+  end
+
+  # LiveView sends an `_unused_` mark for each field not yet touched, so
+  # typing an address leaves the empty name unflagged until a submit.
+  test "the dialog flags only the fields the host has used", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+    view |> element("[data-testid='new-booking-page']") |> render_click()
+
+    html =
+      view
+      |> element("#new-booking-page-form")
+      |> render_change(%{
+        "_target" => ["page", "slug"],
+        "page" => %{"name" => "", "_unused_name" => "", "slug" => "x"}
+      })
+
+    assert html =~ "Use 3 to 30 lowercase letters"
+    refute html =~ "can&#39;t be blank"
+
+    html =
+      view
+      |> form("#new-booking-page-form", page: %{name: "", slug: "x"})
+      |> render_submit()
+
+    assert html =~ "can&#39;t be blank"
   end
 
   # The address follows the name, keystroke by keystroke, until the host

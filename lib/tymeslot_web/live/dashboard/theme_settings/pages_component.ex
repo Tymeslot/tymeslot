@@ -130,6 +130,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
         show={@show_new_page}
         form={@form}
         target={@myself}
+        username={@profile.username}
         on_cancel={JS.push("hide_new_page", target: @myself)}
       />
     </div>
@@ -165,10 +166,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
   def handle_event("validate_new_page", %{"page" => params} = event, socket) do
     touched? = socket.assigns.slug_touched? or event["_target"] == ["page", "slug"]
 
-    params =
-      if touched?,
-        do: params,
-        else: Map.put(params, "slug", BookingPages.suggest_slug(params["name"]))
+    params = follow_name(params, touched?)
 
     {:noreply,
      socket
@@ -176,7 +174,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
      |> assign(:form, new_form(socket.assigns.profile, params, :validate))}
   end
 
+  # A submit sent before the last change's reply, as typing a name and
+  # pressing Enter at once does, carries no address yet: derive it here too.
   def handle_event("create_page", %{"page" => params}, socket) do
+    params = follow_name(params, socket.assigns.slug_touched?)
+
     case BookingPages.create(socket.assigns.profile, params) do
       {:ok, page} ->
         Flash.info(dgettext("dashboard_booking_pages", "Booking page created"))
@@ -216,6 +218,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
         {:noreply, socket}
     end
   end
+
+  defp follow_name(params, true = _slug_touched?), do: params
+
+  defp follow_name(params, false = _slug_touched?),
+    do: Map.put(params, "slug", BookingPages.suggest_slug(params["name"]))
 
   defp new_form(profile, params, action) do
     profile

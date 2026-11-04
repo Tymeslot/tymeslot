@@ -197,3 +197,9 @@ msgstr "Sie können die Adresse jederzeit ändern: Die alte führt weiterhin zu 
 #, elixir-autogen, elixir-format
 msgid "Your main page is included in every plan. Extra booking pages need an upgraded plan."
 msgstr "Ihre Hauptseite ist in jedem Tarif enthalten. Weitere Buchungsseiten erfordern einen höheren Tarif."
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "For you only: it labels the page in your dashboard."
+msgstr "Nur für Sie: So heißt die Seite in Ihrem Dashboard."
