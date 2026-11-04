@@ -58,8 +58,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
             such as "15–120 min" would otherwise run into. --%>
       <div class="flex items-center justify-between gap-4">
         <div class="text-left flex-1 min-w-0">
-          <div class="flex items-start justify-between gap-2 mb-1">
-            <h3 class="duration-card-title font-bold flex-1">
+          <%!-- The title grows from its own width, so a name too long to
+                share the line drops the badge below it instead of being
+                squeezed into a narrow column that breaks inside words. --%>
+          <div class="flex flex-wrap items-start justify-between gap-x-2 gap-y-1 mb-1">
+            <h3 class="duration-card-title font-bold grow">
               {@title}
               <ApprovalNotice.pill :if={@requires_approval} />
             </h3>
