@@ -375,3 +375,8 @@ msgstr "Načítání"
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged"
 msgstr "✓ Potvrzeno"
+
+#: lib/tymeslot_web/plugs/forgery_protection.ex
+#, elixir-autogen, elixir-format
+msgid "Your session has changed since this page was opened. Please try again."
+msgstr "Vaše relace se od otevření této stránky změnila. Zkuste to prosím znovu."

@@ -371,3 +371,8 @@ msgstr "Ładowanie"
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged"
 msgstr "✓ Potwierdzono"
+
+#: lib/tymeslot_web/plugs/forgery_protection.ex
+#, elixir-autogen, elixir-format
+msgid "Your session has changed since this page was opened. Please try again."
+msgstr "Twoja sesja zmieniła się od otwarcia tej strony. Spróbuj ponownie."

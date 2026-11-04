@@ -37,8 +37,12 @@ defmodule TymeslotWeb do
 
       # Import common connection and controller functions to use in pipelines
       import Plug.Conn
-      import Phoenix.Controller
+      # `plug :protect_from_forgery` resolves to ForgeryProtection's version:
+      # the same CSRF check, but a stale token sends the visitor back to try
+      # again instead of raising a 403.
+      import Phoenix.Controller, except: [protect_from_forgery: 1, protect_from_forgery: 2]
       import Phoenix.LiveView.Router
+      import TymeslotWeb.Plugs.ForgeryProtection, only: [protect_from_forgery: 2]
 
       # =============================================================================
       # Shared Pipelines
