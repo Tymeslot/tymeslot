@@ -71,7 +71,12 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # A patch resets the live action to the route's, so a booking page's own
     # URL is read again as `mount/3` read it.
     {params, action} =
-      PageAddress.follow(params, socket.assigns[:live_action], socket.assigns[:organizer_profile])
+      PageAddress.follow(
+        params,
+        socket.assigns[:live_action],
+        socket.assigns[:organizer_profile],
+        url
+      )
 
     socket = assign(socket, :live_action, action)
 

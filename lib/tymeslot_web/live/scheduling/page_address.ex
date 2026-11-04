@@ -9,6 +9,9 @@ defmodule TymeslotWeb.Live.Scheduling.PageAddress do
   a meeting type (`:schedule`) and this module reads it once, for the
   dispatcher, on mount (`settle/2`) and again on every `handle_params`
   (`follow/3`, since a patch resets the live action to the route's).
+  `/<username>/<x>/book` is read the same way: the booking step of the type
+  `x`, or, where `x` is a page, that page's type whose slug is "book" (a
+  name-derived slug, which no reserved list can keep from "book").
 
   Settled, a page's URL has a `"page"` param and the live action of the step
   beneath it (`:overview` for its start page); everything else is unchanged.
@@ -60,14 +63,24 @@ defmodule TymeslotWeb.Live.Scheduling.PageAddress do
   @doc """
   `settle/2`'s reading of a page's own URL again, for `handle_params`, from
   the organiser the mount resolved: `/<username>/<x>` where `x` is that
-  page's slug is its start page. Any other URL is left as it is.
-  """
-  @spec follow(map(), atom(), map() | nil) :: {map(), atom()}
-  def follow(%{"slug" => slug} = params, :schedule, %{booking_page: %{slug: slug}})
-      when not is_map_key(params, "page"),
-      do: {params |> Map.delete("slug") |> Map.put("page", slug), :overview}
+  page's slug is its start page, and `/<username>/<x>/book` its type slugged
+  "book". Any other URL is left as it is.
 
-  def follow(params, action, _organizer_profile), do: {params, action}
+  The route is read from `url`, not from `action`: after a patch the action
+  is the route's, but on mount it is the one `settle/2` already chose, while
+  `params` are the route's either way.
+  """
+  @spec follow(map(), atom(), map() | nil, String.t()) :: {map(), atom()}
+  def follow(%{"slug" => slug} = params, action, %{booking_page: %{slug: slug}}, url)
+      when action in [:schedule, :booking] and not is_map_key(params, "page") do
+    case URI.parse(url).path |> to_string() |> String.split("/", trim: true) do
+      [_username, _slug] -> at_page(params, :schedule, slug)
+      [_username, _slug, "book"] -> at_page(params, :booking, slug)
+      _other -> {params, action}
+    end
+  end
+
+  def follow(params, action, _organizer_profile, _url), do: {params, action}
 
   @doc """
   The address the flow works under for settled `params`: the username, or
@@ -82,9 +95,13 @@ defmodule TymeslotWeb.Live.Scheduling.PageAddress do
   def address(_params), do: nil
 
   # The segment that may be a page: the page route's own, or the `x` of
-  # `/<username>/<x>`.
+  # `/<username>/<x>` and `/<username>/<x>/book`.
   defp candidate(%{"page" => page}, _action) when is_binary(page), do: page
-  defp candidate(%{"slug" => slug}, :schedule) when is_binary(slug), do: slug
+
+  defp candidate(%{"slug" => slug}, action)
+       when is_binary(slug) and action in [:schedule, :booking],
+       do: slug
+
   defp candidate(_params, _action), do: nil
 
   # No profile by that username: a page route leads nowhere; anything else
@@ -140,9 +157,13 @@ defmodule TymeslotWeb.Live.Scheduling.PageAddress do
 
   # `params` and `action` read as the URL beneath the page at `page_slug`, or
   # beneath the host's own page for nil. `/<username>/<x>` without a page
-  # route is that page's start page.
+  # route is that page's start page, and `/<username>/<x>/book` its type
+  # slugged "book".
   defp at_page(params, :schedule, page_slug) when not is_map_key(params, "page"),
     do: {params |> Map.delete("slug") |> put_page(page_slug), :overview}
+
+  defp at_page(params, :booking, page_slug) when not is_map_key(params, "page"),
+    do: {params |> Map.put("slug", "book") |> put_page(page_slug), :schedule}
 
   defp at_page(params, action, page_slug), do: {put_page(params, page_slug), action}
 

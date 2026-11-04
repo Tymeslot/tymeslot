@@ -559,8 +559,8 @@ defmodule TymeslotWeb.Router do
       # booking pages: `TymeslotWeb.Live.Scheduling.PageAddress` tells them
       # apart, since a page's slug and a type's never meet within a profile.
       live "/:username/:slug", Themes.Core.Dispatcher, :schedule
-      # Before `/:username/:page/:slug`, which would otherwise take it as a
-      # page's type slugged "book"; no type may take that slug.
+      # Before `/:username/:page/:slug`. Where `:slug` is a page's,
+      # `PageAddress` reads it as that page's type slugged "book".
       live "/:username/:slug/book", Themes.Core.Dispatcher, :booking
       # A booking page's flow, `/:username/:page` being its start page above.
       # "thank-you" is no type's or page's slug, so its route goes first.
