@@ -101,6 +101,28 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       assert body |> Floki.text(deep: false) |> String.trim() == ""
     end
 
+    # The page is usable from lg; below it the card is a glimpse whose hook
+    # makes the frame inert and hidden as a whole (`StageIframe`), never
+    # merely out of the tab order. The server leaves that state to the hook
+    # and keeps it across patches.
+    test "the server never hides the page, and keeps what the hook sets on a phone",
+         %{view: view} do
+      doc = view |> render() |> Floki.parse_document!()
+
+      assert [frame] = Floki.find(doc, ~s([data-role="onboarding-stage"] .stage-frame))
+      assert Floki.attribute(frame, "aria-hidden") == []
+
+      assert [iframe] = Floki.find(doc, "iframe#onboarding-stage-iframe")
+
+      for attribute <- ~w(aria-hidden inert tabindex),
+          do: assert(Floki.attribute(iframe, attribute) == [], "#{attribute} is the hook's")
+
+      [mounted] = Floki.attribute(iframe, "phx-mounted")
+
+      for attribute <- ~w(inert aria-hidden tabindex),
+          do: assert(mounted =~ ~s("#{attribute}"), "a patch would reset #{attribute}")
+    end
+
     test "a new username rebuilds the page the stage shows", %{view: view, user: user} do
       old = profile(user).username
       new = "renamed#{System.unique_integer([:positive])}"

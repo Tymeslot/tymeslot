@@ -24,11 +24,14 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
   (the `StageIframe` hook sets `data-loaded` once the framed page's
   LiveView has joined, not on the `load` event, which fires before that),
   then the page cross-fades in from grey over it, with the Live badge
-  lighting up, and swaps at once under reduced motion. From
-  `lg` it fills the frame at the frame's own width, so it reads as the page
-  and is used like one. Below `lg` the card is a glimpse that never takes
-  the touch (a page scrolling inside a short card is a trap); the Expand
-  modal is where a phone tries it.
+  lighting up, and swaps at once under reduced motion. The page takes the
+  box the miniature gave the frame, so the frame never changes size as it
+  switches on. From `lg` it fills the frame at the frame's own width, so it
+  reads as the page and is used like one. Below `lg` the card is a glimpse
+  that never takes the touch (a page scrolling inside a short card is a
+  trap), so it is decorative again: the frame is inert and hidden from
+  assistive technology, and the Expand modal is where a phone tries the
+  page.
   """
 
   use Phoenix.Component
@@ -109,7 +112,7 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
           size={:sm}
           icon="hero-arrows-pointing-out-mini"
           phx-click="expand_stage"
-          class="shrink-0"
+          class="shrink-0 min-h-10"
         >
           {dgettext("onboarding_wizard", "Expand")}
         </.action_button>
@@ -154,7 +157,9 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
   would replay the switch-on and lose whatever the host was trying, so the
   hook loads `data-src` only when `data-page` (the page without its token)
   changes, as it does after a username change. It also owns `tabindex`,
-  taking the stage card's glimpse out of the tab order below `lg`.
+  `inert` and `aria-hidden`: below `lg` the stage card's glimpse is
+  decorative (Expand opens the page to use), so it is inert and hidden from
+  assistive technology as a whole, not only out of the tab order.
   """
   attr :id, :string, required: true
   attr :src, :string, required: true
@@ -172,7 +177,7 @@ defmodule TymeslotWeb.OnboardingLive.StageFrame do
       title={dgettext("onboarding_wizard", "Your booking page")}
       class="stage-iframe"
       phx-hook="StageIframe"
-      phx-mounted={JS.ignore_attributes(["data-loaded", "src", "tabindex"])}
+      phx-mounted={JS.ignore_attributes(["data-loaded", "src", "tabindex", "inert", "aria-hidden"])}
     />
     """
   end

@@ -134,7 +134,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           variant={:secondary}
           size={:sm}
           icon={if @kept_method == "copy", do: "hero-check-circle-mini", else: "hero-link"}
-          class="shrink-0"
+          class="shrink-0 min-h-10"
           disabled={@actions_off}
           phx-hook="CopyOnClick"
           phx-click="keep_link"
@@ -188,7 +188,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
         <button
           id="onboarding-try-booking-phone"
           type="button"
-          class="onboarding-text-link lg:hidden"
+          class="onboarding-text-link inline-flex items-center min-h-10 -my-2.5 lg:hidden"
           phx-click="try_booking"
           phx-value-expand="true"
           aria-describedby="onboarding-try-booking-note"

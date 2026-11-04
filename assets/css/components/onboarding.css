@@ -30,10 +30,11 @@
 }
 
 /* The sticky nav below lg sits over the bottom of the page, so a field the
-   browser scrolls into view on focus has to clear it. */
+   browser scrolls into view on focus has to clear it: by the nav's own
+   height, which the StickyNavClearance hook publishes, and a little more. */
 @media (max-width: 1023.98px) {
   html:has(.onboarding-shell) {
-    scroll-padding-bottom: var(--spacing-24);
+    scroll-padding-bottom: calc(var(--onboarding-nav-height, var(--spacing-24)) + var(--spacing-4));
   }
 }
 
@@ -127,7 +128,8 @@
     text-overflow: ellipsis;
     font-size: var(--font-size-xs);
     font-weight: 500;
-    color: var(--color-neutral-400);
+    /* The 500 shade is the lightest that keeps 4.5:1 on white at this size. */
+    color: var(--color-neutral-500);
   }
 
   .onboarding-progress-segment[data-state="current"] .onboarding-progress-name {
@@ -562,6 +564,14 @@
    Step content
    -------------------------------------------------------------------------- */
 
+/* A chosen option (a meeting length, a suggested name, a day) is white on
+   turquoise. The shared control's 600 shade gives that 3.7:1, short of the
+   4.5:1 its 14px labels need, so the wizard's controls take the 700 shade. */
+.onboarding-shell button[aria-pressed="true"].bg-turquoise-600 {
+  border-color: var(--color-primary-700);
+  background-color: var(--color-primary-700);
+}
+
 /* Form styles */
 .onboarding-form {
   display: flex;
@@ -577,7 +587,8 @@
 
 .onboarding-form-helper {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-400);
+  /* The 500 shade is the lightest that keeps 4.5:1 on white at this size. */
+  color: var(--color-neutral-500);
   margin-top: 2px;
 }
 
@@ -732,17 +743,14 @@
 
 /* The miniature stays under the real page until it has painted, then the
    page cross-fades in over it, so the card is never an empty box while the
-   page loads. Both sit in the body's box; neither sizes it. */
+   page loads. The miniature keeps sizing the frame, as it did before the
+   page arrived, and the page takes its box: the frame never changes size
+   as the page switches on, so nothing around it moves. */
 .stage-frame-wrap[data-mode="iframe"] .stage-frame-body {
   position: relative;
 }
 
 .stage-frame-wrap[data-mode="iframe"] .stage-frame-miniature {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  overflow: hidden;
   transition: opacity 300ms ease-out;
 }
 
@@ -753,21 +761,6 @@
 
 .stage-frame-body:has(.stage-iframe[data-loaded]) .stage-frame-miniature {
   opacity: 0;
-}
-
-/* From lg the page fills the frame at the frame's own width, and the frame
-   fills the stage's height, so it reads, and is used, as the page. */
-@media (min-width: 1024px) {
-  .stage-frame-wrap[data-mode="iframe"] {
-    display: flex;
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-
-  .stage-frame-wrap[data-mode="iframe"] .stage-frame {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
 }
 
 /* Below lg the card is a short glimpse of the page that never takes the

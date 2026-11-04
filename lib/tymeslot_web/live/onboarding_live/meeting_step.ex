@@ -199,6 +199,9 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           <:option value="custom" label={dgettext("onboarding_wizard", "Custom")} />
         </.segmented_control>
 
+        <%!-- Each day is named by the short form it shows, so a voice
+             command that reads the button ("Mon") finds it; the full name
+             is its description. --%>
         <div
           class="grid grid-cols-7 gap-1"
           role="group"
@@ -212,12 +215,12 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             phx-click="hours_toggle_day"
             phx-value-day={day}
             aria-pressed={to_string(day in @hours_form.days)}
-            aria-label={LocaleFormat.format_weekday_name(day, @locale, :full)}
+            title={LocaleFormat.format_weekday_name(day, @locale, :full)}
             class={[
               "min-h-11 min-w-0 rounded-token-lg border text-token-sm font-semibold transition-colors",
               "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
               if(day in @hours_form.days,
-                do: "bg-turquoise-600 border-turquoise-600 text-white",
+                do: "bg-turquoise-700 border-turquoise-700 text-white",
                 else: "bg-white border-tymeslot-200 text-tymeslot-500 hover:bg-tymeslot-50"
               )
             ]}

@@ -121,7 +121,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         <button
           type="button"
           phx-click="show_all_themes"
-          class="mt-3 text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
+          class="self-start min-h-10 mt-1 text-left text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
         >
           {dgettext("onboarding_wizard", "Compare the looks side by side")}
         </button>
@@ -165,7 +165,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         <button
           type="button"
           phx-click="show_theme_stories"
-          class="mt-3 text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
+          class="self-start min-h-10 mt-1 text-left text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
         >
           {dgettext("onboarding_wizard", "Choose by description instead")}
         </button>
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         </p>
         <%!-- `choice`, not `value`: LiveView's client reads a button's native
         `value` property and would overwrite `phx-value-value` with "". --%>
-        <%!-- Tighter on a phone, so the colours fit one row under the stories --%>
+        <%!-- 40px to tap; on a narrow phone the row wraps. --%>
         <div class="flex flex-wrap gap-2 lg:gap-3">
           <button
             :for={choice <- @choices.choices}
@@ -189,7 +189,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
             title={choice_name(choice.name)}
             aria-label={choice_name(choice.name)}
             class={[
-              "w-9 h-9 rounded-full border-2 transition-transform hover:scale-110",
+              "w-10 h-10 rounded-full border-2 transition-transform hover:scale-110",
               if(@selected == choice.value,
                 do: "border-turquoise-500 ring-2 ring-turquoise-200 scale-110",
                 else: "border-white shadow-sm"

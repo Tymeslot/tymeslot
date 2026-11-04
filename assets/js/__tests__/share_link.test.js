@@ -227,9 +227,40 @@ describe('StageIframe hook', () => {
     expect(el.hasAttribute('data-loaded')).toBe(false);
   });
 
-  test('leaves the tab order below lg on the stage, not in the modal', () => {
-    expect(mount({ narrow: true }).el.getAttribute('tabindex')).toBe('-1');
-    expect(mount({ narrow: true, inStage: false }).el.hasAttribute('tabindex')).toBe(false);
-    expect(mount({ narrow: false }).el.hasAttribute('tabindex')).toBe(false);
+  test('below lg the stage glimpse is inert and hidden as a whole, not only out of the tab order', () => {
+    const { el } = mount({ narrow: true });
+
+    expect(el.hasAttribute('inert')).toBe(true);
+    expect(el.getAttribute('aria-hidden')).toBe('true');
+    expect(el.getAttribute('tabindex')).toBe('-1');
+  });
+
+  test('the modal frame, and the stage frame from lg, stay usable', () => {
+    for (const { el } of [mount({ narrow: true, inStage: false }), mount({ narrow: false })]) {
+      expect(el.hasAttribute('inert')).toBe(false);
+      expect(el.hasAttribute('aria-hidden')).toBe(false);
+      expect(el.hasAttribute('tabindex')).toBe(false);
+    }
+  });
+
+  test('a frame widened past lg comes back into use', () => {
+    let listener;
+    window.matchMedia = vi.fn(() => ({
+      matches: true,
+      addEventListener: (_type, fn) => { listener = fn; },
+      removeEventListener: () => {}
+    }));
+    document.body.innerHTML = `<div class="onboarding-stage">
+      <iframe id="f" src="/anna?t=1" data-src="/anna?t=1" data-page="/anna"></iframe></div>`;
+    const el = document.getElementById('f');
+    const hook = Object.assign(Object.create(StageIframe), { el });
+    hook.mounted();
+    expect(el.hasAttribute('inert')).toBe(true);
+
+    hook.media.matches = false;
+    listener();
+
+    expect(el.hasAttribute('inert')).toBe(false);
+    expect(el.hasAttribute('aria-hidden')).toBe(false);
   });
 });

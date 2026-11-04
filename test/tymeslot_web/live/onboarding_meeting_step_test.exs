@@ -192,6 +192,19 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     assert has_element?(view, "#meeting-hours-preset-custom[aria-pressed='true']")
   end
 
+  # A voice command that reads a day's button ("click Mon") must find it,
+  # so the name is the short form shown, and the full name its description.
+  test "each day is named by the text it shows", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+
+    [monday] = view |> render() |> Floki.parse_document!() |> Floki.find("#meeting-day-1")
+
+    assert Floki.attribute(monday, "aria-label") == []
+    assert monday |> Floki.text() |> String.trim() == "Mon"
+    assert Floki.attribute(monday, "title") == ["Monday"]
+  end
+
   test "custom hours with no days are refused", %{conn: conn} do
     %{user: user, profile: profile} = new_host()
     view = open_step(conn, user)

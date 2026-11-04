@@ -226,7 +226,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
             phx-click="edit_timezone"
             phx-mounted={@timezone_focus_change && JS.focus()}
             aria-label={dgettext("onboarding_wizard", "Change timezone")}
-            class="font-semibold text-turquoise-700 underline underline-offset-2 hover:text-turquoise-800 rounded-token-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-turquoise-500"
+            class="inline-flex items-center min-h-10 -my-2.5 font-semibold text-turquoise-700 underline underline-offset-2 hover:text-turquoise-800 rounded-token-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-turquoise-500"
           >
             {dgettext("onboarding_wizard", "Change")}
           </button>

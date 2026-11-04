@@ -17,8 +17,8 @@ describe('clearanceOffset', () => {
     expect(clearanceOffset({ top: 1004, bottom: 1052 }, nav)).toBe(68);
   });
 
-  test('is 0 for a field below the screen, which the browser scrolls itself', () => {
-    expect(clearanceOffset({ top: 1150, bottom: 1200 }, nav)).toBe(0);
+  test('brings a field below the screen up above the nav, before the browser parks it under it', () => {
+    expect(clearanceOffset({ top: 1150, bottom: 1200 }, nav)).toBe(216);
   });
 });
 
@@ -85,5 +85,25 @@ describe('StickyNavClearance hook', () => {
 
     expect(window.scrollBy).toHaveBeenCalledWith({ top: 216, behavior: 'instant' });
     hook.destroyed();
+  });
+});
+
+describe('StickyNavClearance nav height', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    document.documentElement.style.removeProperty('--onboarding-nav-height');
+  });
+
+  test('publishes the nav height for scroll-padding, and withdraws it once destroyed', () => {
+    const nav = document.createElement('div');
+    document.body.append(nav);
+    nav.getBoundingClientRect = () => ({ top: 900, bottom: 1000.4, height: 100.4 });
+
+    const hook = Object.assign(Object.create(StickyNavClearance), { el: nav });
+    hook.mounted();
+    expect(document.documentElement.style.getPropertyValue('--onboarding-nav-height')).toBe('101px');
+
+    hook.destroyed();
+    expect(document.documentElement.style.getPropertyValue('--onboarding-nav-height')).toBe('');
   });
 });

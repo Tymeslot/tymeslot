@@ -117,12 +117,17 @@ export const ShareLink = {
  *     reloading the page for it would replay the switch-on and throw away a
  *     test booking in progress, so it loads `data-src` only when `data-page`
  *     (the page without its token) changes, as after a username change.
- *   - Below `lg` the stage card is a glimpse that takes no touch, so the frame
- *     leaves the tab order there (`tabindex="-1"`); the Expand modal's frame
- *     stays reachable.
+ *   - Below `lg` the stage card is a glimpse that takes no touch, and the
+ *     Expand modal holds the page to use. There the card's frame is
+ *     decorative, and all of it is: `inert` (nothing inside takes focus or
+ *     reaches assistive technology), `aria-hidden` and out of the tab order.
+ *     A frame merely taken out of the tab order would leave its page's own
+ *     controls reachable by Tab and by a screen reader. The modal's frame,
+ *     and the stage's from `lg`, stay fully usable.
  *
  * The element is rendered with `JS.ignore_attributes` for `data-loaded`,
- * `src` and `tabindex`, so a patch keeps what this sets.
+ * `src`, `tabindex`, `inert` and `aria-hidden`, so a patch keeps what this
+ * sets.
  */
 const NARROW_QUERY = "(max-width: 1023.98px)"
 
@@ -153,9 +158,9 @@ export const StageIframe = {
     window.addEventListener("message", this.onMessage)
 
     this.media = window.matchMedia(NARROW_QUERY)
-    this.onMedia = () => this.syncTabindex()
+    this.onMedia = () => this.syncGlimpse()
     this.media.addEventListener("change", this.onMedia)
-    this.syncTabindex()
+    this.syncGlimpse()
   },
 
   updated() {
@@ -165,7 +170,7 @@ export const StageIframe = {
       this.el.removeAttribute("data-loaded")
       this.el.src = this.el.dataset.src
     }
-    this.syncTabindex()
+    this.syncGlimpse()
   },
 
   destroyed() {
@@ -185,9 +190,16 @@ export const StageIframe = {
     this.settle = null
   },
 
-  syncTabindex() {
+  syncGlimpse() {
     const glimpse = this.media.matches && this.el.closest(".onboarding-stage") !== null
-    if (glimpse) this.el.setAttribute("tabindex", "-1")
-    else this.el.removeAttribute("tabindex")
+    this.el.toggleAttribute("inert", glimpse)
+
+    if (glimpse) {
+      this.el.setAttribute("tabindex", "-1")
+      this.el.setAttribute("aria-hidden", "true")
+    } else {
+      this.el.removeAttribute("tabindex")
+      this.el.removeAttribute("aria-hidden")
+    }
   }
 }
