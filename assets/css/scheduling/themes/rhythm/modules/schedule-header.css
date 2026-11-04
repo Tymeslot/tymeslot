@@ -201,6 +201,15 @@
     align-self: flex-start;
     max-width: 100%;
   }
+
+  /* The trigger now starts at the card's left edge, so a panel aligned to its
+     right edge opens off-screen: align it left and keep it inside the card. */
+  .timezone-selector-container .tz-picker__panel {
+    right: auto;
+    left: 0;
+    min-width: 0;
+    width: min(var(--dropdown-width), 100cqi);
+  }
 }
 
 /* Tablet mid-range: stack header, keep trigger normal */
@@ -225,18 +234,6 @@
 html.rhythm-theme[data-embedded] .schedule-header {
   margin-bottom: var(--space-xs);
   padding-bottom: var(--space-xs);
-}
-
-/* Force absolute positioning for the dropdown in iframes.
-   responsive.css sets position:fixed at ≤767px for standalone mobile, but
-   inside an iframe "fixed" is relative to the iframe viewport and pushes the
-   dropdown below the navigation buttons instead of overlapping the calendar. */
-html.rhythm-theme[data-embedded] .tz-picker__panel {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: auto;
-  max-width: min(20rem, calc(100vw - var(--space-md) * 2));
 }
 
 /* ============================================================================
