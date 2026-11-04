@@ -261,7 +261,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         do: socket,
         else: Analytics.push(socket, "onboarding_step_completed", %{step: to_string(step)})
     end)
-    |> enter_step(next)
+    |> go_to_step(next)
     |> LiveView.clear_flash()
     |> then(&if(next == :ready, do: enter_share_step(&1), else: &1))
     |> then(&if(next == :meeting, do: MeetingHandlers.ensure_loaded(&1, true), else: &1))
@@ -338,7 +338,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     {:noreply,
      socket
      |> Component.assign(:returning_to_share, true)
-     |> enter_step(:connect_calendar)
+     |> go_to_step(:connect_calendar)
      |> LiveView.clear_flash()}
   end
 
@@ -360,10 +360,53 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       prev ->
         {:noreply,
          socket
-         |> enter_step(prev)
+         |> go_to_step(prev)
          |> refresh_form_data(prev)
          |> LiveView.clear_flash()}
     end
+  end
+
+  @doc """
+  Shows `step` when the address brought the host to it rather than one of
+  the wizard's controls: a reload, a resume, or the browser's Back and
+  Forward through the steps the wizard has patched into its history. The
+  step is drawn as the wizard's own Back draws it (`handle_previous_step/1`),
+  from what is saved. The flash stays: on a fresh mount it can be the
+  calendar provider's word on the connection just made.
+  """
+  @spec enter_by_address(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  def enter_by_address(socket, step), do: socket |> enter_step(step) |> refresh_form_data(step)
+
+  @doc """
+  Moves the host to `step` from one of the wizard's own controls: shows it
+  (`enter_step/2`) and patches the address to the step's own, so a reload
+  lands on the step on screen and the browser's Back returns to the one
+  before. The query string travels along (a debug fixture), bar the share
+  step's return flag, which goes only with the calendar step it applies to.
+  `OnboardingLive.handle_params/3` knows the patch as its own by
+  `patched_step` and draws nothing a second time.
+  """
+  @spec go_to_step(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  def go_to_step(socket, step) do
+    socket
+    |> enter_step(step)
+    |> Component.assign(:patched_step, step)
+    |> LiveView.push_patch(to: step_path(socket, step))
+  end
+
+  defp step_path(socket, step) do
+    query =
+      socket.assigns
+      |> Map.get(:step_query, %{})
+      |> Map.delete("return")
+      |> then(fn query ->
+        if step == :connect_calendar and socket.assigns.returning_to_share,
+          do: Map.put(query, "return", "share"),
+          else: query
+      end)
+
+    path = socket.assigns.base_path <> "/" <> Atom.to_string(step)
+    if query == %{}, do: path, else: path <> "?" <> URI.encode_query(query)
   end
 
   defp refresh_form_data(socket, :profile), do: BasicSettingsShared.assign_form_data(socket)
@@ -460,7 +503,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           |> Component.assign(:profile, profile)
           |> Component.assign(:booking_url, booking_url)
           |> Analytics.push("onboarding_step_completed", %{step: "profile"})
-          |> enter_step(:connect_calendar)
+          |> go_to_step(:connect_calendar)
           |> LiveView.clear_flash()
 
         {:noreply, socket}

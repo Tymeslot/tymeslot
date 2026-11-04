@@ -69,6 +69,11 @@ defmodule TymeslotWeb.OnboardingLive do
   # before what it depends on is done. The static render cannot patch, so it
   # draws the step the connected render will land on, and the patch that
   # follows changes only the address.
+  #
+  # The address follows the step: Continue, Back and the share step's way
+  # back to the calendar patch it to `/onboarding/<step>`, so a reload lands
+  # on the step on screen and the browser's Back and Forward walk the steps
+  # (within the same reach) as the wizard's own buttons do.
   @impl Phoenix.LiveView
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -78,6 +83,8 @@ defmodule TymeslotWeb.OnboardingLive do
     socket =
       assign(socket,
         base_path: NavigationHandlers.base_path(uri),
+        # Carried along when a control patches the address to another step.
+        step_query: Map.delete(params, "step"),
         # Set by the OAuth return path of a host sent back from the share step
         # to the calendar step, and honoured only there: anywhere else it
         # would let a crafted link skip the steps in between later on.
@@ -91,12 +98,17 @@ defmodule TymeslotWeb.OnboardingLive do
         # The first paint of the meeting step draws its saved state.
         {:noreply, if(step == :meeting, do: MeetingHandlers.load(socket, false), else: socket)}
 
+      # The address a control patched to (`NavigationHandlers.go_to_step/2`):
+      # the step is on screen already.
+      not is_nil(requested) and requested == socket.assigns.patched_step ->
+        {:noreply, assign(socket, :patched_step, nil)}
+
       is_nil(requested) or not StepConfig.reachable?(requested, resume_step(socket)) ->
         {:noreply, push_patch(socket, to: step_path(socket, resume_step(socket), uri))}
 
       true ->
         {:noreply,
-         socket |> NavigationHandlers.enter_step(requested) |> maybe_enter_share_state()}
+         socket |> NavigationHandlers.enter_by_address(requested) |> maybe_enter_share_state()}
     end
   end
 

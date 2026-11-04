@@ -54,6 +54,23 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
   end
 
   describe "step views" do
+    # Continue patches the address to the new step; the patch arriving back
+    # must not count the step a second time.
+    test "a step reached by Continue is one view, not one per address change", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      _landing = analytics_pushed(view)
+
+      navigate_to_calendar_step(view)
+      assert_patch(view, ~p"/onboarding/connect_calendar")
+
+      views =
+        for %{name: "onboarding_step_viewed", props: %{step: "connect_calendar"}} <-
+              analytics_pushed(view),
+            do: :viewed
+
+      assert views == [:viewed]
+    end
+
     test "viewing a step pushes onboarding_step_viewed", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 

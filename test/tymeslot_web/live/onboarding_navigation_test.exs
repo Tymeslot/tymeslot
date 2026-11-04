@@ -202,6 +202,82 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
     end
   end
 
+  # The address names the step on screen, so a reload lands where the host
+  # was and the browser's Back and Forward move through the steps.
+  describe "the address follows the step" do
+    test "Continue patches the address to each step in turn", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+
+      navigate_to_calendar_step(view)
+      assert_patch(view, ~p"/onboarding/connect_calendar")
+
+      for step <- ~w(meeting choose_theme ready) do
+        click_continue(view)
+        assert_patch(view, "/onboarding/#{step}")
+      end
+
+      assert step_title(view) == "You're live"
+    end
+
+    test "Back patches the address to the step before", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      navigate_to_meeting_step(view)
+      assert_patch(view, ~p"/onboarding/connect_calendar")
+      assert_patch(view, ~p"/onboarding/meeting")
+
+      view |> element("button[phx-click='previous_step']") |> render_click()
+
+      assert_patch(view, ~p"/onboarding/connect_calendar")
+      assert step_title(view) == "Your calendar"
+    end
+
+    test "reloading the address lands on the step that was on screen", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      navigate_to_theme_step(view)
+
+      for step <- ~w(connect_calendar meeting choose_theme),
+          do: assert_patch(view, "/onboarding/#{step}")
+
+      conn = log_in_user(setup_onboarding_session(build_conn()), user)
+      {:ok, reloaded, _html} = live(conn, ~p"/onboarding/choose_theme")
+
+      assert step_title(reloaded) == "Your look"
+    end
+
+    test "the browser's Back draws the earlier step from what is saved", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      fill_profile(view, "Saved Name", "savedhost#{System.unique_integer([:positive])}")
+      click_continue(view)
+      assert_patch(view, ~p"/onboarding/connect_calendar")
+
+      render_patch(view, ~p"/onboarding/profile")
+
+      assert has_element?(view, "#profile-form")
+      assert has_element?(view, "#full_name[value='Saved Name']")
+
+      # Forward again, to a step the account may reach.
+      render_patch(view, ~p"/onboarding/meeting")
+      assert step_title(view) == "Your meeting"
+      assert has_element?(view, "#onboarding-meeting-step")
+    end
+
+    test "the way back from the share step carries its return flag, and leads back to it",
+         %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      navigate_to_ready_step(view)
+
+      for step <- ~w(connect_calendar meeting choose_theme ready),
+          do: assert_patch(view, "/onboarding/#{step}")
+
+      render_click(view, "return_to_calendar_step", %{})
+      assert_patch(view, "/onboarding/connect_calendar?return=share")
+
+      click_continue(view)
+      assert_patch(view, ~p"/onboarding/ready")
+      assert step_title(view) == "You're live"
+    end
+  end
+
   describe "debug routes" do
     test "after a keep, finishing on a debug route goes back to where it started" do
       socket = %Phoenix.LiveView.Socket{

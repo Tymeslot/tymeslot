@@ -103,6 +103,9 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   defp initial_ui_state do
     [
       current_step: :profile,
+      # The step a control has just patched the address to, until
+      # `handle_params/3` sees the patch arrive.
+      patched_step: nil,
       # Unknown until the connected render checks the calendars.
       booking_page_live: nil,
       returning_to_share: false,
