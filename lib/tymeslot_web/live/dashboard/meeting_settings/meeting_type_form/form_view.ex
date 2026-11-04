@@ -196,6 +196,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             <div :if={slot_interval_custom?} class="mt-2">
               <.input
                 type="number"
+                id="meeting_type_slot_interval_custom"
                 name="meeting_type[slot_interval]"
                 label={dgettext("dashboard_meeting_form", "Custom interval (minutes)")}
                 value={slot_interval_value}
