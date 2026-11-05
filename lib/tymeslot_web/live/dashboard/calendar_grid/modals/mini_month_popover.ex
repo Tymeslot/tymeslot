@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
 
     cond do
       Date.compare(day, selected) == :eq ->
-        "#{base} bg-turquoise-600 text-white font-semibold"
+        "#{base} bg-turquoise-700 text-white font-semibold"
 
       Date.compare(day, today) == :eq ->
         "#{base} ring-1 ring-turquoise-400 text-turquoise-700 font-semibold hover:bg-turquoise-50"
