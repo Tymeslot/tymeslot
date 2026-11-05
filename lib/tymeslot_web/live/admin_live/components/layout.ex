@@ -116,7 +116,7 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
       class={[
         "px-4 py-2 rounded-token-xl text-sm font-bold transition-colors",
         if(@active,
-          do: "bg-turquoise-600 text-white shadow-md shadow-turquoise-200/40",
+          do: "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40",
           else: "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-tymeslot-900"
         )
       ]}

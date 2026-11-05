@@ -176,4 +176,43 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
              ]
     end
   end
+
+  describe "accessible names" do
+    test "the compact strip's toggle is named by the title and count it shows" do
+      # An aria-label hid the visible text from voice control users and the
+      # progress count from screen readers.
+      html =
+        render_component(&OnboardingChecklist.onboarding_checklist/1,
+          integration_status: @no_integrations,
+          current_user: user(),
+          profile: profile(),
+          variant: :compact
+        )
+
+      doc = Floki.parse_fragment!(html)
+
+      assert [summary] = Floki.find(doc, "summary")
+      assert Floki.attribute(summary, "aria-label") == []
+      assert Floki.text(summary) =~ "0/5"
+      assert Floki.text(summary) =~ "Finish setting up"
+    end
+
+    test "the full card is labelled by its visible heading" do
+      html =
+        render_component(&OnboardingChecklist.onboarding_checklist/1,
+          integration_status: @no_integrations,
+          current_user: user(),
+          profile: profile()
+        )
+
+      doc = Floki.parse_fragment!(html)
+
+      assert [section] = Floki.find(doc, "section[data-testid=onboarding-checklist]")
+      assert Floki.attribute(section, "aria-label") == []
+      assert Floki.attribute(section, "aria-labelledby") == ["onboarding-checklist-title"]
+
+      assert doc |> Floki.find("#onboarding-checklist-title") |> Floki.text() =~
+               "Finish setting up"
+    end
+  end
 end

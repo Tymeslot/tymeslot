@@ -51,8 +51,8 @@ defmodule TymeslotWeb.Components.CoreComponentsSegmentedControlTest do
 
     [chosen] = attr_of(doc, "#range-30d", "class")
     [other] = attr_of(doc, "#range-7d", "class")
-    assert chosen =~ "bg-turquoise-600"
-    refute other =~ "bg-turquoise-600"
+    assert chosen =~ "bg-turquoise-700"
+    refute other =~ "bg-turquoise-700"
   end
 
   test "matches the chosen value whether it is given as an atom or a string" do

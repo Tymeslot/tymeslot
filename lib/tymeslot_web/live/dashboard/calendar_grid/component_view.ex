@@ -49,9 +49,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
       <%!-- The `.ics` import's file input lives here rather than in its modal,
             so a file dropped anywhere on the calendar uploads with the modal
             closed; the upload then opens it. The modal's picker button opens
-            this input. --%>
+            this input, so the button is the one control keyboard and screen
+            reader users meet: the input is out of the tab order and the
+            accessibility tree. It must stay rendered (no `hidden`), or neither
+            the drop target nor the button's `click()` reaches it. --%>
       <form id="import-ics-upload" phx-change="validate_ics_import" phx-target={@myself}>
-        <.live_file_input upload={@uploads.ics_file} class="sr-only" />
+        <.live_file_input
+          upload={@uploads.ics_file}
+          class="sr-only"
+          tabindex="-1"
+          aria-hidden="true"
+        />
       </form>
       <div
         class="hidden phx-drop-target-active:flex absolute inset-0 z-40 flex-col items-center justify-center gap-2 bg-turquoise-50/90 border-2 border-dashed border-turquoise-400 rounded-token-lg pointer-events-none"

@@ -526,11 +526,6 @@ msgstr "Configura tu nombre, tu enlace de reservas y tu zona horaria para que tu
 msgid "Set up your profile"
 msgstr "Configura tu perfil"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Setup checklist"
-msgstr "Pasos de configuración"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Share this link so people can book time with you. Choose something short and memorable."
