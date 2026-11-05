@@ -43,6 +43,26 @@
   background: var(--summary-bar-surface);
 }
 
+/* The bar wraps onto three lines in a phone's column (about 109px) and two
+   in a middling one: the jump offset follows, so a section never stops
+   with its heading under the bar. */
+@container scheduling (width < 40rem) {
+  .journey--continuous > * {
+    --folio-summary-offset: 7.25rem;
+  }
+}
+
+@container scheduling (40rem <= width < 48rem) {
+  .journey--continuous > * {
+    --folio-summary-offset: 5.5rem;
+  }
+}
+
+/* A field scrolled into view as it takes the focus stops below the bar too. */
+.journey--continuous :is(input, select, textarea) {
+  scroll-margin-top: var(--folio-summary-offset);
+}
+
 .folio-summary-bar .summary-bar {
   position: static;
   padding: 0;
