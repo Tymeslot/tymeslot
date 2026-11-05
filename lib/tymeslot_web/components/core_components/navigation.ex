@@ -406,7 +406,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
           "disabled:cursor-not-allowed disabled:opacity-50",
           segment_size_class(@size),
           if(chosen?(option, @value),
-            do: "bg-turquoise-600 text-white shadow-sm",
+            do: "bg-turquoise-700 text-white shadow-sm",
             else: "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-tymeslot-900"
           )
         ]}
@@ -445,7 +445,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     <span class={[
       "inline-flex shrink-0 items-center justify-center min-w-5 h-5 px-1.5 rounded-token-full text-token-xs font-bold tabular-nums",
       cond do
-        @active -> "bg-white/25 text-white"
+        @active -> "bg-white text-turquoise-800"
         @attention -> "bg-amber-100 text-amber-700"
         true -> "bg-tymeslot-100 text-tymeslot-600"
       end

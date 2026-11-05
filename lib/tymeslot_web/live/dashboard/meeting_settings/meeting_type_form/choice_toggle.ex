@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ChoiceToggle do
             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all cursor-pointer",
             "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-turquoise-400 has-[:focus-visible]:ring-offset-1",
             if(selected?(option.value, @value, @multiple),
-              do: "bg-turquoise-600 text-white shadow-md shadow-turquoise-200/40",
+              do: "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40",
               else: "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900"
             )
           ]}

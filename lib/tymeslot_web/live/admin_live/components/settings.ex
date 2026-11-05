@@ -329,7 +329,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       class={[
         "px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all",
         cond do
-          @active -> "bg-turquoise-600 text-white shadow-md shadow-turquoise-200/40 cursor-default"
+          @active -> "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40 cursor-default"
           @locked -> "bg-tymeslot-50 text-tymeslot-300 cursor-not-allowed opacity-60"
           true -> "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900 cursor-pointer"
         end
