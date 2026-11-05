@@ -11,6 +11,13 @@ defmodule Tymeslot.TestAffected.Workspace do
 
   @compile {:no_warn_undefined, TagTaxonomy}
 
+  # Compiled code that may name a data file. Templates included, since a
+  # colocated `.heex` resolves to its module's tests like any source.
+  @module_globs ["lib/**/*.{ex,heex}", "dev_support/**/*.ex", "test/support/**/*.ex"]
+
+  @doc_heredoc ~r/@(?:moduledoc|doc|typedoc)\s+(?:~[sS])?"""[\s\S]*?"""/
+  @comment_line ~r/^\s*#.*$/m
+
   @taxonomy_paths ["test/support/tag_taxonomy.ex", "../tymeslot/test/support/tag_taxonomy.ex"]
 
   @doc """
@@ -50,23 +57,48 @@ defmodule Tymeslot.TestAffected.Workspace do
 
   defp unquote_path(path), do: path |> String.trim() |> String.trim(~s("))
 
-  @doc "Indexes the current repository's suite: its test files and their domain tags."
-  @spec index() :: Selection.index()
-  def index do
-    # The taxonomy is resolved first because `tags_in/2` filters what it finds
-    # against it, rather than the other way round.
+  @doc """
+  Indexes the suite of the repository at `dir`: its test files, their domain
+  tags, and the source of every test and compiled module, which is what
+  `Tymeslot.TestAffected.Selection` searches to find who names a file that is
+  not code. Paths are relative to `dir`.
+  """
+  @spec index(Path.t()) :: Selection.index()
+  def index(dir \\ ".") do
+    # The taxonomy is resolved first because `tags_in_source/2` filters what it
+    # finds against it, rather than the other way round.
     domain_tags = domain_tags()
-    test_files = "test" |> Path.join("**/*_test.exs") |> Path.wildcard() |> MapSet.new()
+    test_sources = read_all(dir, ["test/**/*_test.exs"])
+    test_files = test_sources |> Map.keys() |> MapSet.new()
 
     %{
       test_files: test_files,
-      tags: Map.new(test_files, &{&1, tags_in(&1, domain_tags)}),
-      domain_tags: domain_tags
+      tags:
+        Map.new(test_sources, fn {file, source} ->
+          {file, Selection.tags_in_source(source, domain_tags)}
+        end),
+      domain_tags: domain_tags,
+      sources: Map.merge(test_sources, read_all(dir, @module_globs))
     }
   end
 
-  defp tags_in(file, domain_tags),
-    do: Selection.tags_in_source(File.read!(file), domain_tags)
+  defp read_all(dir, globs) do
+    for glob <- globs,
+        absolute <- Path.wildcard(Path.join(dir, glob)),
+        not String.contains?(absolute, "/node_modules/"),
+        into: %{},
+        do: {absolute |> Path.expand() |> Path.relative_to(Path.expand(dir)), code_of(absolute)}
+  end
+
+  # Only code can read a file, so prose mentioning a path (a comment, a
+  # `@moduledoc`) is not counted as naming it. The `@moduletag` lines that
+  # `Selection.tags_in_source/2` reads are code, and survive.
+  defp code_of(file) do
+    file
+    |> File.read!()
+    |> String.replace(@doc_heredoc, "")
+    |> String.replace(@comment_line, "")
+  end
 
   # Core compiles the taxonomy into `:test` only, and the SaaS build never does,
   # because a path dependency is compiled without its owner's test paths. Load

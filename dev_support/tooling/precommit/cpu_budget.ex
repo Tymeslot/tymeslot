@@ -82,7 +82,7 @@ defmodule Tymeslot.Precommit.CpuBudget do
   test --partitions` deals files out one per partition in turn, and a
   partition dealt none exits 1.
   """
-  @spec planner(map() | :upstream | nil) :: (-> plan() | nil)
+  @spec planner(map() | nil) :: (-> plan() | nil)
   def planner(%{scope: :selection, files: files}) do
     fn ->
       case suite_plan() do

@@ -25,10 +25,71 @@ defmodule Tymeslot.TestAffected.SelectionTest do
     base = %{
       test_files: tags |> Map.keys() |> MapSet.new(),
       tags: tags,
-      domain_tags: MapSet.new([:auth, :payments, :analytics])
+      domain_tags: MapSet.new([:auth, :payments, :analytics]),
+      sources: %{}
     }
 
     Enum.into(overrides, base)
+  end
+
+  # A suite whose sources name files that are not code: a test reading the
+  # Credo config, a module and a test-support helper each reading data, and a
+  # module reading data with no test of its own. The zones test shares the
+  # payments domain so that sweeping the reader's domain would show.
+  defp named_index do
+    tags = %{
+      "test/tymeslot/auth/session_test.exs" => [:auth],
+      "test/tymeslot/payments/stripe_test.exs" => [:payments],
+      "test/tymeslot/payments/refund_test.exs" => [:payments],
+      "test/tymeslot/analytics/report_test.exs" => [:analytics],
+      "test/tymeslot/analytics/funnel_test.exs" => [:analytics],
+      "test/tymeslot/analytics/export_test.exs" => [:analytics],
+      "test/tymeslot/locale/de_test.exs" => [:i18n],
+      "test/tymeslot/timezones/zones_test.exs" => [:payments],
+      "test/tymeslot/credo_config_test.exs" => [:analytics]
+    }
+
+    sources = %{
+      "test/tymeslot/credo_config_test.exs" => ~s|File.read!(".credo.exs")|,
+      "test/tymeslot/analytics/funnel_test.exs" => "alias Tymeslot.Test.FixtureHelper",
+      "test/support/fixture_helper.ex" =>
+        ~s|defmodule Tymeslot.Test.FixtureHelper do\n  @path "priv/fixtures/sample.ics"\nend|,
+      "lib/tymeslot/timezones/zones.ex" => ~s|Application.app_dir(:tymeslot, "priv/tz")|,
+      "lib/tymeslot/orphan.ex" => ~s|File.read!("priv/orphan_data/rows")|
+    }
+
+    %{
+      test_files: tags |> Map.keys() |> MapSet.new(),
+      tags: Map.new(tags, fn {file, list} -> {file, MapSet.new(list)} end),
+      domain_tags: MapSet.new([:auth, :payments, :analytics, :i18n, :dev_support]),
+      sources: Map.merge(Map.new(tags, fn {file, _tags} -> {file, ""} end), sources)
+    }
+  end
+
+  # The consuming repository's suite, with its own cross-repository checks.
+  defp downstream_index do
+    tags = %{
+      "test/tymeslot_saas/billing_test.exs" => [:payments],
+      "test/tymeslot_saas/marketing_test.exs" => [:analytics],
+      "test/tymeslot_saas/pages_test.exs" => [:analytics],
+      "test/tymeslot_saas/blog_test.exs" => [:analytics],
+      "test/tymeslot_saas/login_test.exs" => [:auth],
+      "test/cross_repo/lock_test.exs" => [:dev_support]
+    }
+
+    %{
+      test_files: tags |> Map.keys() |> MapSet.new(),
+      tags: Map.new(tags, fn {file, list} -> {file, MapSet.new(list)} end),
+      domain_tags: MapSet.new([:auth, :payments, :analytics, :i18n, :dev_support]),
+      sources: %{}
+    }
+  end
+
+  defp downstream_plan(upstream) do
+    Selection.plan([], downstream_index(),
+      upstream: {upstream, named_index()},
+      upstream_tests: "test/cross_repo/"
+    )
   end
 
   describe "classify/1" do
@@ -50,9 +111,22 @@ defmodule Tymeslot.TestAffected.SelectionTest do
       assert Selection.classify("assets/css/app.css") == :ignore
     end
 
-    test "widens on anything it does not recognise, rather than ignoring it" do
-      assert {:widen, _path} = Selection.classify("priv/gettext/de/LC_MESSAGES/default.po")
-      assert {:widen, _path} = Selection.classify("some/new/toplevel/thing.exs")
+    test "sorts files that are not code by what happens when nothing names them" do
+      assert {:translations, _path} = Selection.classify("priv/gettext/de/LC_MESSAGES/default.po")
+      assert {:translations, _path} = Selection.classify("priv/gettext/default.pot")
+
+      for path <- ~w[.credo.exs .formatter.exs Dockerfile.docker Dockerfile.dockerignore
+                     .githooks/pre-commit scripts/check.sh dev_support/media/seed/demo.exs] do
+        assert Selection.classify(path) == {:tooling, path}
+      end
+
+      # Compiled code under dev_support/ is still code.
+      assert {:lib, _path} = Selection.classify("dev_support/email_testing/tester.ex")
+    end
+
+    test "treats anything it does not recognise as data, never ignoring it" do
+      assert {:data, _path} = Selection.classify("priv/tz/europe")
+      assert {:data, _path} = Selection.classify("some/new/toplevel/thing.exs")
     end
 
     test "a test file under test/support is support code, not a test to run" do
@@ -148,6 +222,109 @@ defmodule Tymeslot.TestAffected.SelectionTest do
     end
   end
 
+  describe "plan/3 files that are not code" do
+    test "a translation catalogue selects the i18n domain, not the whole suite" do
+      plan =
+        Selection.plan(
+          ["priv/gettext/de/LC_MESSAGES/booking.po", "priv/gettext/booking.pot"],
+          named_index()
+        )
+
+      assert plan.scope == :selection
+      assert plan.files == ["test/tymeslot/locale/de_test.exs"]
+      assert plan.tags == [:i18n]
+    end
+
+    test "a tooling file nothing names selects nothing" do
+      plan =
+        Selection.plan(
+          [".dialyzer_ignore.exs", "Dockerfile.docker", ".githooks/pre-commit"],
+          named_index()
+        )
+
+      assert plan.scope == :nothing
+    end
+
+    test "a tooling file runs the tests that name it" do
+      plan = Selection.plan([".credo.exs"], named_index())
+
+      assert plan.files == ["test/tymeslot/credo_config_test.exs"]
+    end
+
+    test "a data file a module names runs that module's test, without sweeping its domain" do
+      plan = Selection.plan(["priv/tz/europe"], named_index())
+
+      assert plan.files == ["test/tymeslot/timezones/zones_test.exs"]
+      refute "test/tymeslot/payments/stripe_test.exs" in plan.files
+    end
+
+    test "a data file a test-support module names runs the tests using that module" do
+      plan = Selection.plan(["priv/fixtures/sample.ics"], named_index())
+
+      assert plan.files == ["test/tymeslot/analytics/funnel_test.exs"]
+    end
+
+    test "a data file nothing names widens" do
+      plan = Selection.plan(["priv/unknown/thing.bin"], named_index())
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "not named by any test or module"))
+    end
+
+    test "a data file read only by a module with no test widens" do
+      plan = Selection.plan(["priv/orphan_data/rows"], named_index())
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "lib/tymeslot/orphan.ex"))
+    end
+  end
+
+  describe "plan/3 upstream" do
+    test "an upstream code change selects this suite's tests in its domains, and the cross-checks" do
+      plan = downstream_plan(["lib/tymeslot/payments/stripe.ex"])
+
+      assert plan.scope == :selection
+
+      assert plan.files == [
+               "test/cross_repo/lock_test.exs",
+               "test/tymeslot_saas/billing_test.exs"
+             ]
+    end
+
+    test "an upstream change that widens there widens here" do
+      plan = downstream_plan(["test/support/factory.ex"])
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "upstream test/support/factory.ex"))
+    end
+
+    test "an upstream test file reaches only the cross-checks" do
+      plan = downstream_plan(["test/tymeslot/payments/stripe_test.exs"])
+
+      assert plan.files == ["test/cross_repo/lock_test.exs"]
+    end
+
+    test "an upstream catalogue carries the i18n domain across" do
+      index =
+        Map.update!(
+          downstream_index(),
+          :tags,
+          &Map.put(&1, "test/tymeslot_saas/blog_test.exs", MapSet.new([:i18n]))
+        )
+
+      plan =
+        Selection.plan([], index,
+          upstream: {["priv/gettext/de/LC_MESSAGES/booking.po"], named_index()}
+        )
+
+      assert plan.files == ["test/tymeslot_saas/blog_test.exs"]
+    end
+
+    test "upstream changes that cannot reach the build leave nothing to run" do
+      assert downstream_plan(["README.md"]).scope == :nothing
+    end
+  end
+
   describe "tags_in_source/2" do
     @domain MapSet.new([:auth, :payments])
 
@@ -167,6 +344,29 @@ defmodule Tymeslot.TestAffected.SelectionTest do
       source = "@moduletag :auth\n@moduletag :unit\n@moduletag :not_a_real_tag\n"
 
       assert Selection.tags_in_source(source, @domain) == MapSet.new([:auth])
+    end
+
+    test "a tag inside a one-line string is data, not the module's own" do
+      source = """
+      @moduletag :payments
+      assert tags_in_source("@moduletag :auth\\n") == [:auth]
+      """
+
+      assert Selection.tags_in_source(source, @domain) == MapSet.new([:payments])
+    end
+
+    test "a tag inside a heredoc is data, not the module's own" do
+      source = ~S'''
+      @moduletag :payments
+
+      @fixture """
+      defmodule SomeTest do
+        @moduletag :auth
+      end
+      """
+      '''
+
+      assert Selection.tags_in_source(source, @domain) == MapSet.new([:payments])
     end
 
     test "an untagged module yields nothing rather than erroring" do

@@ -52,9 +52,23 @@ defmodule Tymeslot.Precommit.AffectedTest do
     %{
       test_files: tags |> Map.keys() |> MapSet.new(),
       tags: tags,
-      domain_tags: MapSet.new([:auth, :payments, :analytics])
+      domain_tags: MapSet.new([:auth, :payments, :analytics]),
+      sources: %{}
     }
   end
+
+  # The path dependency's suite, for its changes to resolve against.
+  defp upstream_index do
+    %{
+      test_files: MapSet.new(["test/tymeslot/payments/charge_test.exs"]),
+      tags: %{"test/tymeslot/payments/charge_test.exs" => MapSet.new([:payments])},
+      domain_tags: MapSet.new([:auth, :payments, :analytics]),
+      sources: %{}
+    }
+  end
+
+  defp select_upstream(upstream),
+    do: Affected.select(@steps, [], index(), upstream: upstream, upstream_index: upstream_index())
 
   defp names(%{steps: steps}), do: Enum.map(steps, fn {name, _args, _env} -> name end)
 
@@ -175,26 +189,24 @@ defmodule Tymeslot.Precommit.AffectedTest do
       assert test_args(narrowed) == ["test", "--include", "migrations"]
     end
 
-    test "an upstream code change runs the static steps and the full suite" do
-      narrowed =
-        Affected.select(@steps, [], index(), upstream: ["lib/tymeslot/bookings/reschedule.ex"])
+    test "an upstream code change runs the static steps and this suite's tests in its domains" do
+      narrowed = select_upstream(["lib/tymeslot/payments/charge.ex"])
 
-      assert narrowed.suite == :upstream
       assert names(narrowed) == @always_with_suite
-      assert test_args(narrowed) == ["test"]
+
+      assert test_args(narrowed) ==
+               ~w[test test/tymeslot/payments/refund_test.exs test/tymeslot/payments/stripe_test.exs]
     end
 
     test "an upstream docs change is ignored" do
-      narrowed = Affected.select(@steps, [], index(), upstream: ["CHANGELOG.md"])
-
-      assert narrowed.steps == []
+      assert select_upstream(["CHANGELOG.md"]).steps == []
     end
 
-    test "upstream changes never trigger this repository's conditional steps" do
-      narrowed = Affected.select(@steps, [], index(), upstream: ["mix.lock"])
+    test "an upstream change that widens takes the full suite, but not this repository's conditional steps" do
+      narrowed = select_upstream(["mix.lock"])
 
       refute "deps.unlock" in names(narrowed)
-      assert "test" in names(narrowed)
+      assert test_args(narrowed) == ["test"]
     end
   end
 end
