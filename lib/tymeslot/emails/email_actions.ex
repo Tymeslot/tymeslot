@@ -119,6 +119,8 @@ defmodule Tymeslot.Emails.EmailActions do
       {["user_id", "verification_url_encrypted"], {AuthEmails, :handle_email_verification}},
     "send_password_reset" =>
       {["user_id", "reset_url_encrypted"], {AuthEmails, :handle_password_reset}},
+    "send_account_invitation" =>
+      {["user_id", "invitation_url_encrypted"], {AuthEmails, :handle_account_invitation}},
     "send_no_password_to_reset" => {["user_id"], {AuthEmails, :handle_no_password_to_reset}},
     "send_signup_attempt_notice" => {["user_id"], {AuthEmails, :handle_signup_attempt_notice}},
     "send_social_signup_confirmation" =>

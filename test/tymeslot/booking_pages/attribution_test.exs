@@ -8,14 +8,23 @@ defmodule Tymeslot.BookingPages.AttributionTest do
   alias Tymeslot.BookingPages
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
-  test "existing_id/1 keeps a live page's id and drops a deleted one's" do
+  test "existing_id/2 keeps a live page's id and drops a deleted one's" do
     page = insert(:booking_page)
+    user_id = page.profile.user_id
 
-    assert BookingPages.existing_id(page.id) == page.id
-    assert BookingPages.existing_id(nil) == nil
+    assert BookingPages.existing_id(page.id, user_id) == page.id
+    assert BookingPages.existing_id(nil, user_id) == nil
 
     {:ok, _deleted} = BookingPages.delete(page)
-    assert BookingPages.existing_id(page.id) == nil
+    assert BookingPages.existing_id(page.id, user_id) == nil
+  end
+
+  test "existing_id/2 drops a page that is not the organiser's" do
+    page = insert(:booking_page)
+    other = insert(:profile)
+
+    assert BookingPages.existing_id(page.id, other.user_id) == nil
+    assert BookingPages.existing_id(page.id, nil) == nil
   end
 
   test "choosing a new time returns to the page the booking belongs to" do

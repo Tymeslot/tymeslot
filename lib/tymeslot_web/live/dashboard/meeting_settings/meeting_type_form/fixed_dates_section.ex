@@ -43,10 +43,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   attr :offered_times, :list, default: [], doc: "`OfferedTimeHandlers.rows/1`"
   attr :new_offered_time, :map, default: %{}
   attr :offered_time_error, :string, default: nil
+
+  attr :offered_time_notice, :string,
+    default: nil,
+    doc: "`SessionHandlers.clock_change_notice/2` for the time just added"
+
   attr :sessions, :list, default: [], doc: "`SessionHandlers.rows/1`"
   attr :timezone, :string, required: true
   attr :new_session, :map, default: %{}
   attr :session_error, :string, default: nil
+
+  attr :session_notice, :string,
+    default: nil,
+    doc: "`SessionHandlers.clock_change_notice/2` for the date just planned or moved"
+
   attr :confirming_session_id, :string, default: nil
 
   attr :editing_session, :map,
@@ -96,6 +106,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
         timezone={@timezone}
         new_offered_time={@new_offered_time}
         error={@offered_time_error}
+        notice={@offered_time_notice}
         form_id={@form_id}
         myself={@myself}
       />
@@ -210,6 +221,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
           </li>
         </ul>
 
+        <.clock_change_notice notice={@session_notice} testid="session-clock-change" />
+
         <div class="flex flex-wrap items-end gap-3" data-testid="new-session">
           <.input
             type="date"
@@ -259,6 +272,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   attr :timezone, :string, required: true
   attr :new_offered_time, :map, required: true
   attr :error, :string, default: nil
+  attr :notice, :string, default: nil
   attr :form_id, :string, required: true
   attr :myself, :any, required: true
 
@@ -318,6 +332,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
         </li>
       </ul>
 
+      <.clock_change_notice notice={@notice} testid="offered-time-clock-change" />
+
       <div class="flex flex-wrap items-end gap-3" data-testid="new-offered-time">
         <.input
           type="date"
@@ -348,6 +364,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
       </div>
       <p :if={@error} class="form-error" data-testid="offered-time-error">{@error}</p>
     </div>
+    """
+  end
+
+  attr :notice, :string, default: nil
+  attr :testid, :string, required: true
+
+  # A time just saved other than as typed, because a clock change skips or
+  # repeats it: saved anyway, and said so under the list showing it.
+  defp clock_change_notice(assigns) do
+    ~H"""
+    <p
+      :if={@notice}
+      class="flex items-start gap-1.5 text-token-sm font-medium text-amber-700"
+      role="status"
+      data-testid={@testid}
+    >
+      <.icon name="hero-information-circle" class="mt-0.5 h-4 w-4 shrink-0" />
+      <span>{@notice}</span>
+    </p>
     """
   end
 

@@ -262,7 +262,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
       </div>
 
       <:footer>
-        <div class="flex flex-wrap justify-end gap-3">
+        <div class="flex w-full flex-col-reverse gap-3 *:w-full sm:flex-row sm:flex-wrap sm:justify-end sm:*:w-auto">
           <Buttons.action_button variant={:secondary} disabled={@loading} phx-click={@on_cancel}>
             {@cancel_label || dgettext("common", "Cancel")}
           </Buttons.action_button>

@@ -42,6 +42,7 @@ defmodule Tymeslot.Mocks.Email do
     mock
     |> stub(:send_email_verification, fn _user, _url -> send_result end)
     |> stub(:send_password_reset, fn _user, _url -> send_result end)
+    |> stub(:send_account_invitation, fn _user, _url -> send_result end)
     |> stub(:send_no_password_to_reset, fn _user, _url -> send_result end)
     |> stub(:send_signup_attempt_notice, fn _user, _sign_in, _reset -> send_result end)
     |> stub(:send_account_deletion_notice, fn _recipient, _at, _url -> send_result end)

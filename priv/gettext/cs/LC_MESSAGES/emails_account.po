@@ -749,3 +749,48 @@ msgstr "Vaše rezervační stránka, připravená k odeslání komukoli."
 #, elixir-autogen, elixir-format
 msgid "Your page"
 msgstr "Vaše stránka"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation"
+msgstr "Přijmout pozvání"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation:"
+msgstr "Přijměte pozvání:"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "If you weren't expecting this invitation, you can ignore this email."
+msgstr "Pokud s tímto pozváním nepočítáte, můžete tento e-mail ignorovat."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation"
+msgstr "Pozvání"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "This link is valid for 7 days."
+msgstr "Platnost tohoto odkazu je 7 dní."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "You're invited to Tymeslot"
+msgstr "Pozvánka do aplikace Tymeslot"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is ready and waiting."
+msgstr "Váš účet je připraven a čeká na vás."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "An administrator has created a Tymeslot account for you. Accept the invitation to choose how you'll sign in and set up your booking page."
+msgstr "Správce pro vás vytvořil účet v aplikaci Tymeslot. Přijměte pozvání, zvolte si způsob přihlášení a nastavte si svou rezervační stránku."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account is ready. Accept the invitation to sign in."
+msgstr "Váš účet v aplikaci Tymeslot je připraven. Přijměte pozvání a přihlaste se."

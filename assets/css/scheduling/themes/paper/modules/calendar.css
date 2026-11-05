@@ -65,6 +65,14 @@
   cursor: not-allowed;
 }
 
+/* Under a finger the month arrows grow to a full touch target. */
+@media (pointer: coarse) {
+  .paper-calendar__nav-button {
+    width: var(--min-touch-target);
+    height: var(--min-touch-target);
+  }
+}
+
 .paper-calendar__nav-icon {
   width: var(--icon-sm);
   height: var(--icon-sm);

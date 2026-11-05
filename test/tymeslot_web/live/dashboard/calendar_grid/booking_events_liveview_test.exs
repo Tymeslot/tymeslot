@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
   @moduledoc """
   Covers Tymeslot bookings rendered natively on the calendar grid: read-only
   booking blocks with no integration connected, the booking detail modal, the
-  connect-a-calendar banner, and deduplication against a synced provider copy.
+  connect-a-calendar banner's deference to the public-page notice, and
+  deduplication against a synced provider copy.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -99,16 +100,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       assert Floki.text(long_block) =~ "Ada Lovelace"
     end
 
-    test "shows the connect-a-calendar banner instead of a blocking empty state",
+    test "asks for a calendar without a blocking empty state",
          %{conn: conn, user: user} do
-      # The banner defers to the setup checklist, which carries the same
-      # "Connect a calendar" step, so dismiss the checklist first.
+      # The grid's banner defers to the setup checklist and to the
+      # dashboard-wide public-page notice, which carry the same ask; with the
+      # checklist dismissed, the notice is what remains.
       {:ok, _user} = Onboarding.dismiss_dashboard_setup(user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
 
-      assert html =~ "data-testid=\"connect-calendar-banner\""
-      assert html =~ "Bring your calendar into Tymeslot"
+      assert html =~ "data-testid=\"public-page-notice\""
+      refute html =~ "data-testid=\"connect-calendar-banner\""
       refute html =~ "Nothing to see here"
     end
 

@@ -20,6 +20,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias TymeslotWeb.Live.Shared.RateLimit
   require Logger
 
+  # The two values a visibility switch sends as `listed`.
+  @listed_values ~w(true false)
+
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
@@ -83,6 +86,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:payments_accepted, payments_accepted?(data.meeting_types, user_id))
       |> assign(:booking_pages, BookingPages.list(socket.assigns.profile.id))
       |> assign(:page_memberships, BookingPages.memberships(socket.assigns.profile.id))
+      |> assign(:pages_editable, BookingPages.editable?(user_id))
 
     {:ok, socket}
   end
@@ -154,27 +158,31 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   def handle_event("edit_type", %{"id" => id}, socket) do
-    type = Enum.find(socket.assigns.meeting_types, &(&1.id == String.to_integer(id)))
+    with_type_id(id, socket, fn type_id ->
+      case Enum.find(socket.assigns.meeting_types, &(&1.id == type_id)) do
+        nil ->
+          Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
+          {:noreply, socket}
 
-    if is_nil(type) do
-      Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
-      {:noreply, socket}
-    else
-      {:noreply,
-       assign(socket,
-         editing_type: type,
-         show_add_form: false,
-         show_edit_overlay: true,
-         form_id: "meeting-type-form-edit-#{type.id}"
-       )}
-    end
+        type ->
+          {:noreply,
+           assign(socket,
+             editing_type: type,
+             show_add_form: false,
+             show_edit_overlay: true,
+             form_id: "meeting-type-form-edit-#{type.id}"
+           )}
+      end
+    end)
   end
 
   def handle_event("duplicate_type", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_duplicate_type(socket, String.to_integer(id), user_id)
+    with_type_id(id, socket, fn type_id ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+        do_duplicate_type(socket, type_id, user_id)
+      end)
     end)
   end
 
@@ -193,35 +201,53 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   def handle_event("toggle_type", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
-    type_id = String.to_integer(id)
 
-    if socket.assigns.toggling_type_id == type_id do
-      {:noreply, socket}
-    else
+    with_type_id(id, socket, fn
+      type_id when type_id == socket.assigns.toggling_type_id ->
+        {:noreply, socket}
+
+      type_id ->
+        RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+          socket
+          |> assign(:toggling_type_id, type_id)
+          |> do_toggle_type(type_id, user_id)
+        end)
+    end)
+  end
+
+  # Both visibility switches send the state they ask for (`listed`), as the
+  # host saw it, rather than flipping whatever is stored: another tab may
+  # have changed it since this one rendered. Sent by hand without a
+  # `listed` or a page it can read, either is ignored.
+  def handle_event("toggle_private", %{"id" => id, "listed" => listed}, socket)
+      when listed in @listed_values do
+    user_id = socket.assigns.current_user.id
+
+    with_type_id(id, socket, fn type_id ->
       RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-        socket
-        |> assign(:toggling_type_id, type_id)
-        |> do_toggle_type(type_id, user_id)
+        do_toggle_private(socket, type_id, listed == "true", user_id)
       end)
-    end
-  end
-
-  def handle_event("toggle_private", %{"id" => id}, socket) do
-    user_id = socket.assigns.current_user.id
-    type_id = String.to_integer(id)
-
-    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_toggle_private(socket, type_id, user_id)
     end)
   end
 
-  def handle_event("toggle_page_membership", %{"id" => id, "page" => page_id}, socket) do
+  def handle_event(
+        "toggle_page_membership",
+        %{"id" => id, "page" => page_id, "listed" => listed},
+        socket
+      )
+      when is_binary(page_id) and listed in @listed_values do
     user_id = socket.assigns.current_user.id
 
-    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_toggle_page_membership(socket, String.to_integer(id), page_id, user_id)
+    with_type_id(id, socket, fn type_id ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+        do_toggle_page_membership(socket, type_id, page_id, listed == "true", user_id)
+      end)
     end)
   end
+
+  def handle_event(event, _params, socket)
+      when event in ~w(toggle_private toggle_page_membership),
+      do: {:noreply, socket}
 
   def handle_event("open_slug_modal", _params, socket) do
     case socket.assigns.editing_type do
@@ -260,18 +286,19 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   def handle_event("show_delete_modal", %{"id" => id}, socket) do
-    type_id = String.to_integer(id)
-    type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
+    with_type_id(id, socket, fn type_id ->
+      case MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id) do
+        nil ->
+          Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
+          {:noreply, socket}
 
-    if type do
-      {:noreply,
-       socket
-       |> assign(:delete_sign_ups, MeetingTypes.upcoming_sign_ups(type))
-       |> ModalHook.show_modal(:delete_meeting_type, type)}
-    else
-      Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
-      {:noreply, socket}
-    end
+        type ->
+          {:noreply,
+           socket
+           |> assign(:delete_sign_ups, MeetingTypes.upcoming_sign_ups(type))
+           |> ModalHook.show_modal(:delete_meeting_type, type)}
+      end
+    end)
   end
 
   def handle_event("hide_delete_modal", _params, socket) do
@@ -335,6 +362,17 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   # Private functions
 
+  # Meeting type ids arrive as client strings; anything that is not one is a
+  # hand-sent event and is ignored rather than crashing the dashboard.
+  defp with_type_id(id, socket, fun) when is_binary(id) do
+    case Integer.parse(id) do
+      {type_id, ""} -> fun.(type_id)
+      _not_an_id -> {:noreply, socket}
+    end
+  end
+
+  defp with_type_id(_id, socket, _fun), do: {:noreply, socket}
+
   defp do_toggle_type(socket, type_id, user_id) do
     case MeetingTypes.get_meeting_type(type_id, user_id) do
       nil ->
@@ -363,14 +401,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
-  defp do_toggle_private(socket, type_id, user_id) do
+  defp do_toggle_private(socket, type_id, listed?, user_id) do
     case MeetingTypes.get_meeting_type(type_id, user_id) do
       nil ->
         Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
         {:noreply, socket}
 
       type ->
-        case MeetingTypes.set_private(type, !type.is_private) do
+        case MeetingTypes.set_private(type, not listed?) do
           {:ok, _updated} ->
             send(self(), {:meeting_type_changed})
             Flash.info(dgettext("dashboard_integrations", "Visibility updated"))
@@ -384,19 +422,27 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   # A booking page's listing. A type or page deleted meanwhile (in another
-  # tab) fails like a refused write: an error flash, nothing changed.
-  defp do_toggle_page_membership(socket, type_id, page_id, user_id) do
+  # tab) fails like a refused write: an error flash, nothing changed. A plan
+  # that no longer allows changing booking pages says so.
+  defp do_toggle_page_membership(socket, type_id, page_id, listed?, user_id) do
     profile_id = socket.assigns.profile.id
 
     with %{} = type <- MeetingTypes.get_meeting_type(type_id, user_id),
          {:ok, page} <- BookingPages.fetch(profile_id, page_id),
-         listed_on = Map.get(socket.assigns.page_memberships, type.id, MapSet.new()),
-         :ok <-
-           BookingPages.set_meeting_type(page, type.id, not MapSet.member?(listed_on, page.id)) do
+         :ok <- BookingPages.set_meeting_type(page, type.id, listed?) do
       send(self(), {:meeting_type_changed})
       Flash.info(dgettext("dashboard_integrations", "Visibility updated"))
       {:noreply, assign(socket, :page_memberships, BookingPages.memberships(profile_id))}
     else
+      {:error, :upgrade_required} ->
+        Flash.error(BookingPages.locked_message())
+
+        {:noreply,
+         assign(socket,
+           page_memberships: BookingPages.memberships(profile_id),
+           pages_editable: BookingPages.editable?(user_id)
+         )}
+
       _not_found_or_failed ->
         Flash.error(dgettext("dashboard_integrations", "Failed to update visibility"))
         {:noreply, socket}

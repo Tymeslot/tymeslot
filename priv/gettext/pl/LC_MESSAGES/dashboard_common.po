@@ -119,8 +119,6 @@ msgstr "Profil"
 msgid "Scheduling"
 msgstr "Umawianie"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -379,3 +377,40 @@ msgstr "Połącz ponownie %{names}: do tego czasu strona rezerwacji może nie pr
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Zapisz zmiany"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Strony rezerwacji"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Anyone who opens your link is told the page isn't available until you connect a calendar."
+msgstr "Każdy, kto otworzy twój link, zobaczy, że strona jest niedostępna, dopóki nie podłączysz kalendarza."
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Podłącz kalendarz"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Fix calendar connection"
+msgstr "Napraw połączenie z kalendarzem"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "None of your calendars can take a booking right now, so anyone who opens your link is told the page isn't available. Check your calendar connection to fix it."
+msgstr "Żaden z twoich kalendarzy nie może teraz przyjąć rezerwacji, więc każdy, kto otworzy twój link, zobaczy, że strona jest niedostępna. Sprawdź połączenie z kalendarzem, aby to naprawić."
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page has stopped taking bookings"
+msgstr "Twoja strona rezerwacji przestała przyjmować rezerwacje"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page isn't taking bookings yet"
+msgstr "Twoja strona rezerwacji nie przyjmuje jeszcze rezerwacji"

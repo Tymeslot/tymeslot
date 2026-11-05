@@ -253,15 +253,10 @@ msgstr "Configurar"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
-msgid "Setup checklist"
-msgstr "Lista de primeiros passos"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Sync to avoid double-bookings"
-msgstr "Sincronize para evitar agendamentos duplicados"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
 msgid "Write"
 msgstr "Escrever"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page can't take bookings without one"
+msgstr "Sem um calendário, sua página de agendamento não pode receber agendamentos"

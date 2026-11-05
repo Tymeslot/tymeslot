@@ -100,6 +100,23 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   end
 
   @doc """
+  The rule of `check_public_readiness/1`, judged from the dashboard's
+  `integration_status` (`Tymeslot.Dashboard.DashboardContext.get_integration_status/1`)
+  instead of a fresh read, so a dashboard that already holds the status can
+  tell its owner whether guests can open their page without querying again.
+
+  `has_calendar` there is the same test: an active integration whose provider
+  can take a booking.
+  """
+  @spec check_public_readiness(map() | nil, map() | nil) ::
+          {:ok, :ready} | {:error, public_reason}
+  def check_public_readiness(profile, integration_status) do
+    if Demo.demo_profile?(profile) or has_calendar?(integration_status),
+      do: {:ok, :ready},
+      else: {:error, :no_calendar}
+  end
+
+  @doc """
   Converts a policy reason to a user-friendly message for flash/errors on public pages.
   """
   @spec reason_to_message(public_reason | dashboard_reason) :: String.t()

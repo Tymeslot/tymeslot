@@ -41,6 +41,16 @@ html.paper-theme[data-embed-layout="column"] .paper-page .content-area > .paper-
   width: 100%;
 }
 
+/* Three columns: the times end where the calendar ends and scroll inside
+   (schedule.css), a cap the shared embed rules' release of .booker-scroll
+   would otherwise undo, leaving every later time overflowing the card,
+   faded out and out of reach. */
+@container scheduling (min-width: 52rem) {
+  html.paper-theme[data-embedded] .paper-slots .slot-list__body {
+    overflow-y: auto;
+  }
+}
+
 /* The timezone picker is the last control on the schedule card, and the
    iframe ends at the card's edge, so a panel opening downward would be cut
    off. Inside an embed it opens upward, over the calendar. */

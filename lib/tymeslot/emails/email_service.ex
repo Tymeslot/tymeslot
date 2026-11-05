@@ -192,6 +192,9 @@ defmodule Tymeslot.Emails.EmailService do
   defdelegate send_password_reset(user, reset_url), to: AuthEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_account_invitation(user, invitation_url), to: AuthEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_no_password_to_reset(user, sign_in_url), to: AuthEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour

@@ -160,10 +160,23 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   # is indistinguishable from "no day is free" — advancing the month on a
   # failed fetch would march the booker through months nobody has successfully
   # looked at.
+  #
+  # A landing on a day the loaded map does hold can still change month: the
+  # map spans the six-week grid, so its trailing row reaches into next month.
+  # Without a fetch for the month landed on, only those trailing days would be
+  # clickable. The landing is settled by then, so the second fetch does not
+  # land again.
   defp apply_auto_selection(socket, :loaded) do
+    shown_month = {socket.assigns[:current_year], socket.assigns[:current_month]}
+
     case NextAvailable.apply(socket) do
-      {socket, :done} -> socket
-      {socket, :refetch} -> AvailabilityHelpers.fetch_month_availability_async(socket)
+      {socket, :refetch} ->
+        AvailabilityHelpers.fetch_month_availability_async(socket)
+
+      {socket, :done} ->
+        if {socket.assigns[:current_year], socket.assigns[:current_month]} == shown_month,
+          do: socket,
+          else: AvailabilityHelpers.fetch_month_availability_async(socket)
     end
   end
 

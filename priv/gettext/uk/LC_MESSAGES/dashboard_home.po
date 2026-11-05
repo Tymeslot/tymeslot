@@ -255,15 +255,10 @@ msgstr "Налаштувати"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
-msgid "Setup checklist"
-msgstr "Контрольний список налаштування"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Sync to avoid double-bookings"
-msgstr "Синхронізуйте, щоб уникнути накладок у розкладі"
-
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
 msgid "Write"
 msgstr "Написати"
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page can't take bookings without one"
+msgstr "Без календаря ваша сторінка бронювання не може приймати бронювань"

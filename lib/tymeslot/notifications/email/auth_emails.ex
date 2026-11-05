@@ -1,7 +1,7 @@
 defmodule Tymeslot.Notifications.Email.AuthEmails do
   @moduledoc """
-  Handles authentication-related email actions: email verification, password reset, and
-  email change flows.
+  Handles authentication-related email actions: email verification, password reset, an
+  admin's invitation, and email change flows.
   """
 
   require Logger
@@ -17,6 +17,7 @@ defmodule Tymeslot.Notifications.Email.AuthEmails do
   # is recorded.
   @verification_superseded "Verification token superseded by a newer request"
   @reset_superseded "Reset token superseded by a newer request"
+  @invitation_superseded "Invitation superseded, accepted or revoked"
   @email_change_superseded "Email change token superseded or revoked"
   @user_gone "User not found"
 
@@ -31,6 +32,7 @@ defmodule Tymeslot.Notifications.Email.AuthEmails do
       reason in [
         @verification_superseded,
         @reset_superseded,
+        @invitation_superseded,
         @email_change_superseded,
         @user_gone
       ]
@@ -92,6 +94,36 @@ defmodule Tymeslot.Notifications.Email.AuthEmails do
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send password reset email")
+    end
+  end
+
+  @spec handle_account_invitation(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_account_invitation(%{"user_id" => user_id} = args) do
+    with {:ok, invitation_url} <- fetch_link(args, "invitation_url"),
+         {:ok, user} <- fetch_user(user_id, "account invitation email") do
+      if token_superseded?(args, user.invitation_token_hash) do
+        Logger.info("Skipping superseded account invitation job", user_id: user_id)
+        {:discard, @invitation_superseded}
+      else
+        deliver_account_invitation(user, invitation_url)
+      end
+    end
+  end
+
+  defp deliver_account_invitation(user, invitation_url) do
+    case Config.email_service_module().send_account_invitation(user, invitation_url) do
+      {:ok, _result} ->
+        Logger.info("Queued account invitation email sent", user_id: user.id)
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to send account invitation email",
+          user_id: user.id,
+          error: LogFormat.reason(reason)
+        )
+
+        DeliveryOutcome.from_error(reason, "Failed to send account invitation email")
     end
   end
 

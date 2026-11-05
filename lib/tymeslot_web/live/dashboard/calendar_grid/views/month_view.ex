@@ -263,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
   defp day_number_class(true = _is_today, _is_current_month),
     do:
-      "w-6 h-6 rounded-token-full bg-turquoise-600 text-white flex items-center justify-center text-center"
+      "w-6 h-6 rounded-token-full bg-turquoise-700 text-white flex items-center justify-center text-center"
 
   defp day_number_class(_is_today, false = _is_current_month), do: "text-tymeslot-400"
   defp day_number_class(_is_today, _is_current_month), do: "text-tymeslot-800"

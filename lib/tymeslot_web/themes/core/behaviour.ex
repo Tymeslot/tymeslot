@@ -95,5 +95,12 @@ defmodule TymeslotWeb.Themes.Core.Behaviour do
   """
   @callback voice() :: module() | nil
 
+  @doc """
+  The `Tymeslot.ThemeCustomizations.Presets.Fonts` id the theme's stylesheet
+  sets its text in, preloaded when the customisation chose none, or `nil`
+  (the `:font` option of `use TymeslotWeb.Themes.Core.Theme`).
+  """
+  @callback font() :: String.t() | nil
+
   @optional_callbacks onboarding_preview: 1
 end

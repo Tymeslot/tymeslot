@@ -330,6 +330,50 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
              ]
     end
 
+    # An inquiry escalates into a chargeback, and the inquiry's close
+    # arrives after the chargeback opened. The money is still held by the
+    # chargeback, so nothing is refunded until that one closes.
+    test "is not refunded by a late close of the inquiry its chargeback replaced" do
+      bp = disputed_expired_payment(refunded_amount_cents: 0, stripe_dispute_id: "dp_INQUIRY")
+
+      assert :ok =
+               ChargeDisputeCreated.handle(
+                 dispute_event("evt_CHARGEBACK_OPENED", "charge.dispute.created", %{
+                   "id" => "dp_CHARGEBACK",
+                   "status" => "needs_response",
+                   "reason" => "fraudulent"
+                 })
+               )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_event("evt_INQUIRY_CLOSED", "charge.dispute.closed", %{
+                   "id" => "dp_INQUIRY",
+                   "status" => "warning_closed"
+                 })
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :disputed
+      assert reloaded.stripe_dispute_id == "dp_CHARGEBACK"
+      refute_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_event("evt_CHARGEBACK_WON", "charge.dispute.closed", %{
+                   "id" => "dp_CHARGEBACK",
+                   "status" => "won"
+                 })
+               )
+
+      assert Repo.reload!(bp).status == :paid
+
+      assert_enqueued(
+        worker: RefundLatePayment,
+        args: %{booking_payment_id: bp.id, reason: "after_dispute"}
+      )
+    end
+
     test "is refunded after a won dispute whose created Stripe delivers late" do
       bp =
         disputed_expired_payment(refunded_amount_cents: 0, stripe_dispute_id: "dp_LATE_DISPUTED")

@@ -19,11 +19,14 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleAccents do
   `at/1` total should that cap ever rise.
   """
 
+  # Each `tab` shade is the lightest of its hue that keeps the white label at
+  # 4.5:1 or better, hence 700 for turquoise, amber and emerald but 600 for
+  # violet and blue.
   @accents [
     %{
       panel: "border-turquoise-300 bg-turquoise-50 shadow-turquoise-500/20",
       bar: "bg-turquoise-100 border-turquoise-300",
-      tab: "bg-turquoise-600 text-white shadow-lg shadow-turquoise-500/30",
+      tab: "bg-turquoise-700 text-white shadow-lg shadow-turquoise-500/30",
       dot: "bg-turquoise-500"
     },
     %{
@@ -35,13 +38,13 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleAccents do
     %{
       panel: "border-amber-300 bg-amber-50 shadow-amber-500/20",
       bar: "bg-amber-100 border-amber-300",
-      tab: "bg-amber-600 text-white shadow-lg shadow-amber-500/30",
+      tab: "bg-amber-700 text-white shadow-lg shadow-amber-500/30",
       dot: "bg-amber-500"
     },
     %{
       panel: "border-emerald-300 bg-emerald-50 shadow-emerald-500/20",
       bar: "bg-emerald-100 border-emerald-300",
-      tab: "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30",
+      tab: "bg-emerald-700 text-white shadow-lg shadow-emerald-500/30",
       dot: "bg-emerald-500"
     },
     %{

@@ -87,6 +87,79 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormOfferedTimesTest do
     refute has_element?(view, "[data-testid='offered-time-error']")
   end
 
+  # The last Sunday of `month` next year, when Europe/Berlin's clocks change.
+  defp clock_change_day(month) do
+    last = Date.new!(Date.utc_today().year + 1, month, 31)
+    last |> Date.add(-rem(Date.day_of_week(last), 7)) |> Date.to_iso8601()
+  end
+
+  describe "a time a clock change skips or repeats" do
+    setup %{profile: profile} do
+      {:ok, _profile} = Profiles.update_timezone(profile, "Europe/Berlin")
+      :ok
+    end
+
+    test "one in the spring gap is saved at the gap's end, and the host is told", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = solo_type(user)
+      view = edit(conn, meeting_type)
+      date = clock_change_day(3)
+
+      offer(view, date, "02:30")
+
+      # 03:00 CEST is 01:00 UTC.
+      assert [offered] = OfferedTimes.list(meeting_type)
+      assert offered.starts_at == DateTime.new!(Date.from_iso8601!(date), ~T[01:00:00])
+
+      assert has_element?(
+               view,
+               "[data-testid='offered-time-clock-change']",
+               "does not exist on"
+             )
+
+      assert has_element?(view, "[data-testid='offered-time-clock-change']", "saved as 03:00")
+
+      # Typing the next time clears it.
+      view
+      |> element("input[name='offered_time[date]']")
+      |> render_change(%{"offered_time" => %{"date" => future_date(10)}})
+
+      refute has_element?(view, "[data-testid='offered-time-clock-change']")
+    end
+
+    test "one the autumn change repeats is saved at its first occurrence, and the host is told",
+         %{conn: conn, user: user} do
+      meeting_type = solo_type(user)
+      view = edit(conn, meeting_type)
+      date = clock_change_day(10)
+
+      offer(view, date, "02:30")
+
+      # The first 02:30 is still summer time, CEST: 00:30 UTC.
+      assert [offered] = OfferedTimes.list(meeting_type)
+      assert offered.starts_at == DateTime.new!(Date.from_iso8601!(date), ~T[00:30:00])
+
+      assert has_element?(
+               view,
+               "[data-testid='offered-time-clock-change']",
+               "happens twice on"
+             )
+
+      assert has_element?(view, "[data-testid='offered-time-clock-change']", "(CEST)")
+    end
+
+    test "an ordinary time says nothing", %{conn: conn, user: user} do
+      view = edit(conn, solo_type(user))
+
+      offer(view, future_date(10), "09:30")
+
+      assert has_element?(view, "[data-testid='offered-time']")
+      refute has_element?(view, "[data-testid='offered-time-clock-change']")
+    end
+  end
+
   test "refuses a time in the past and says why", %{conn: conn, user: user} do
     meeting_type = solo_type(user)
     view = edit(conn, meeting_type)

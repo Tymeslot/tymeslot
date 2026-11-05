@@ -883,3 +883,8 @@ msgstr "Em nenhuma página de agendamento: só pode ser agendado pelo link diret
 #, elixir-autogen, elixir-format
 msgid "Show on %{address}"
 msgstr "Mostrar em %{address}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
+msgstr "Escolha primeiro um nome de usuário na página Perfil: os endereços das suas páginas de agendamento são formados a partir dele, então até lá este tipo de reunião não pode ser agendado."

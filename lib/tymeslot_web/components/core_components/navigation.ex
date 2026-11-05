@@ -117,11 +117,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   slot :tab_action,
     doc: """
-    A control rendered inside the active tab, sharing its pill: a menu whose
+    A control drawn inside the active tab, sharing its pill: a menu whose
     actions belong to that tab and nowhere else. Receives the tab map, and is
-    rendered only for the active one. It cannot be nested in the tab `<button>`
-    itself, so both sit in a wrapper marked `role="presentation"`, which keeps
-    the button the tablist's only meaningful child.
+    rendered only for the active one. ARIA lets a tablist own nothing but tabs,
+    so the control is rendered after the tablist, next in the tab order, and
+    pinned over the active tab's padding with CSS anchor positioning. A browser
+    without anchor positioning shows it beside the strip instead.
     """
 
   @spec tab_bar(map()) :: Phoenix.LiveView.Rendered.t()
@@ -129,14 +130,18 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     assigns =
       assign(assigns,
         links?: links?(assigns.tabs, assigns.id),
-        focus_id: focus_id(assigns.tabs, assigns.active_tab)
+        focus_id: focus_id(assigns.tabs, assigns.active_tab),
+        action_tab:
+          assigns.tab_action != [] && Enum.find(assigns.tabs, &(&1.id == assigns.active_tab)),
+        anchor: "--#{assigns.id}-active"
       )
 
     ~H"""
     <div class={[
       "p-1",
       shell_class(@variant),
-      @trailing != [] && "flex flex-wrap items-center gap-2",
+      (@trailing != [] || @action_tab) && "flex flex-wrap items-center gap-2",
+      @action_tab && "relative",
       @class
     ]}>
       <.dynamic_tag
@@ -148,7 +153,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         class={[
           "flex gap-1 sm:gap-2 p-1",
           strip_class(@overflow),
-          @trailing != [] && "grow min-w-0"
+          (@trailing != [] || @action_tab) && "grow min-w-0"
         ]}
       >
         <div
@@ -184,16 +189,21 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
             phx-click={@event}
             phx-value-tab={tab.id}
             phx-target={@target}
-            class={tab_class(@size, @tab_action != [] && tab.id == @active_tab)}
+            style={@action_tab && tab.id == @active_tab && "anchor-name: #{@anchor}"}
+            class={tab_class(@size, @action_tab && tab.id == @active_tab)}
           >
             <.tab_content tab={tab} active={tab.id == @active_tab} />
           </button>
-
-          <div :if={@tab_action != [] && tab.id == @active_tab} class="pr-2">
-            {render_slot(@tab_action, tab)}
-          </div>
         </div>
       </.dynamic_tag>
+
+      <div
+        :if={@action_tab}
+        style={"position-anchor: #{@anchor}; top: anchor(top); bottom: anchor(bottom); right: anchor(right)"}
+        class="flex items-center supports-[anchor-name:--a]:absolute supports-[anchor-name:--a]:pr-2"
+      >
+        {render_slot(@tab_action, @action_tab)}
+      </div>
 
       <div :if={@trailing != []} class="flex items-center gap-2 shrink-0">
         {render_slot(@trailing)}
@@ -293,7 +303,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       "flex min-w-0 items-center gap-2 whitespace-nowrap rounded-token-xl font-bold text-token-sm",
       "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 disabled:cursor-not-allowed",
       tab_padding(size),
-      with_action? && "pr-2 sm:pr-3"
+      # Room for the anchored action (`pr-2` plus its 32px trigger) to sit in.
+      with_action? && "supports-[anchor-name:--a]:pr-12 sm:supports-[anchor-name:--a]:pr-13"
     ]
   end
 
@@ -410,7 +421,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
           "disabled:cursor-not-allowed disabled:opacity-50",
           segment_size_class(@size),
           if(chosen?(option, @value),
-            do: "bg-turquoise-600 text-white shadow-sm",
+            do: "bg-turquoise-700 text-white shadow-sm",
             else: "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-tymeslot-900"
           )
         ]}
@@ -450,7 +461,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     <span class={[
       "inline-flex shrink-0 items-center justify-center min-w-5 h-5 px-1.5 rounded-token-full text-token-xs font-bold tabular-nums",
       cond do
-        @active -> "bg-white/25 text-white"
+        @active -> "bg-white text-turquoise-800"
         @attention -> "bg-amber-100 text-amber-700"
         true -> "bg-tymeslot-100 text-tymeslot-600"
       end

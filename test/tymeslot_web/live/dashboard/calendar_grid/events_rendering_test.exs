@@ -423,4 +423,69 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       assert html =~ "Solo Meeting"
     end
   end
+
+  describe "accessibility" do
+    test "an all-day cell is a disclosure only when it hides events", %{conn: conn, user: user} do
+      # An empty or fully shown day rendered as <details> was an unnamed
+      # toggle that opened nothing; only an overflowing day needs one.
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      today = Date.utc_today()
+      tomorrow = Date.add(today, 1)
+
+      for summary <- ["All Day One", "All Day Two", "All Day Three"] do
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
+          summary: summary,
+          start_date: today,
+          end_date: tomorrow,
+          start_at: DateTime.new!(today, ~T[00:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(tomorrow, ~T[00:00:00], "Etc/UTC"),
+          all_day: true
+        })
+      end
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "three_day"})
+
+      summaries =
+        lv |> render() |> Floki.parse_document!() |> Floki.find("#calendar-grid summary")
+
+      # Today overflows, so exactly one disclosure; tomorrow and the day after
+      # (empty) render none.
+      assert [summary] = summaries
+      assert Floki.text(summary) =~ "+1 more"
+    end
+
+    test "the scrolling grid is a named, focusable region", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(
+               lv,
+               ~s(#calendar-drag-zone[tabindex="0"][role="region"][aria-label="Calendar grid"])
+             )
+    end
+
+    test "the hidden .ics input is out of the tab order and the accessibility tree",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(
+               lv,
+               ~s(#import-ics-upload input[type="file"][tabindex="-1"][aria-hidden="true"])
+             )
+    end
+
+    test "the period picker is named by the period it shows", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      [trigger] =
+        lv
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find(~s(#mini-month-popover button[aria-haspopup="dialog"]))
+
+      assert Floki.attribute(trigger, "aria-label") == []
+      assert Floki.find(trigger, "#calendar-period-label") != []
+    end
+  end
 end

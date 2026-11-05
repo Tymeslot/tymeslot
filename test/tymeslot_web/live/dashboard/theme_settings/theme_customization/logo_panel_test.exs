@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
   end
 
   defp open(conn) do
-    {:ok, view, html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+    {:ok, view, html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
     {view, html}
   end
 

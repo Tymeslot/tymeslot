@@ -28,7 +28,7 @@ defmodule TymeslotWeb.E2E.ThemeCustomisationPanelTest do
     profile = Profiles.get_profile(user.id)
 
     session
-    |> visit("/dashboard/theme/customize/1")
+    |> visit("/dashboard/pages/customize/1")
     |> wait_for_live()
     |> click(
       css(

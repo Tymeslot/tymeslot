@@ -33,6 +33,15 @@ defmodule Tymeslot.ThemeCustomizations.Options.FontTest do
     end
   end
 
+  # The booking page preloads the files of the font named here.
+  describe "media/2" do
+    test "names the stored font, or the default for none or one the group does not list" do
+      assert Font.media(%{"font" => "plex"}, @group) == %{font: "plex"}
+      assert Font.media(%{}, @group) == %{font: "system"}
+      assert Font.media(%{"font" => "classic"}, @group) == %{font: "system"}
+    end
+  end
+
   describe "tokens/4" do
     test "points the body and heading fonts at the stored font's stacks" do
       %{vars: vars} = Font.tokens(%{"font" => "plex"}, %{}, @acc, @group)

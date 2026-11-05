@@ -96,6 +96,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
     to: AuthScheduler
 
   defdelegate schedule_password_reset(user_id, reset_url, token_hash), to: AuthScheduler
+
+  defdelegate schedule_account_invitation(user_id, invitation_url, token_hash),
+    to: AuthScheduler
+
   defdelegate schedule_no_password_to_reset(user_id), to: AuthScheduler
   defdelegate schedule_signup_attempt_notice(user_id), to: AuthScheduler
   defdelegate schedule_social_signup_confirmation(details), to: AuthScheduler

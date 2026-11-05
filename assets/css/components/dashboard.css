@@ -105,7 +105,7 @@
 }
 
 .dashboard-nav-section-title {
-  @apply px-4 text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-1 flex items-center;
+  @apply px-4 text-token-xs font-black text-tymeslot-500 uppercase tracking-widest mb-1 flex items-center;
 }
 
 .dashboard-nav-section-title::after {

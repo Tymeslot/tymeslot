@@ -83,10 +83,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
     >
       <details class="group min-w-0 flex-1 [&>summary::-webkit-details-marker]:hidden">
-        <summary
-          class="flex cursor-pointer list-none items-center gap-2 text-token-sm"
-          aria-label={dgettext("dashboard_home", "Setup checklist")}
-        >
+        <%!-- Named by its content, so the accessible name carries the visible
+              title and progress count that voice control users will say. --%>
+        <summary class="flex cursor-pointer list-none items-center gap-2 text-token-sm">
           <.pill tone={:brand}>{@done_count}/{@total}</.pill>
           <span class="font-bold text-tymeslot-800">
             {dgettext("dashboard_home", "Finish setting up")}
@@ -124,9 +123,10 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       class="onboarding-checklist"
       data-testid="onboarding-checklist"
       data-tour="quick-actions"
-      aria-label={dgettext("dashboard_home", "Setup checklist")}
+      aria-labelledby="onboarding-checklist-title"
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
       title={dgettext("dashboard_home", "Finish setting up")}
+      title_id="onboarding-checklist-title"
       description={
         dgettext(
           "dashboard_home",
@@ -296,6 +296,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   # Static definition of the setup items. `auto` names the `integration_status`
   # key that completes the item automatically, or `nil` for manual-only items.
+  #
+  # The calendar stays first: until one is connected the booking page turns
+  # every visitor away, so its description says that rather than selling sync.
   @spec catalog() :: [map()]
   defp catalog do
     [
@@ -304,7 +307,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         auto: :calendar_ready,
         icon: "hero-calendar-days",
         title: dgettext("dashboard_home", "Connect a calendar"),
-        description: dgettext("dashboard_home", "Sync to avoid double-bookings"),
+        description:
+          dgettext("dashboard_home", "Your booking page can't take bookings without one"),
         cta: dgettext("dashboard_home", "Connect"),
         path: ~p"/dashboard/integrations?tab=calendars"
       },

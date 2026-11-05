@@ -229,3 +229,13 @@ msgstr "mimo období pro rezervace"
 #, elixir-autogen, elixir-format
 msgid "inside the minimum notice"
 msgstr "kratší než minimální předstih"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}."
+msgstr "Čas %{time} dne %{date} neexistuje, protože se hodiny posouvají dopředu, a proto byl uložen čas %{saved}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr "Čas %{time} nastává dne %{date} dvakrát, protože se hodiny posouvají zpět, a proto byl uložen ten dřívější (%{zone})."

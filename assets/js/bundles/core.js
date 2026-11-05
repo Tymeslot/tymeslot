@@ -147,6 +147,17 @@ window.addEventListener("phx:focus", (e) => {
   if (el) el.focus();
 });
 
+// Bring the first error inside a container into view after a rejected
+// submit (`push_event(socket, "scroll-to-error", %{id: ...})`): a field error
+// or an alert box below the fold of a scrolling dialog body is otherwise
+// never seen on a phone. Scrolls only; focusing the field would open the
+// on-screen keyboard and shrink the view again.
+window.addEventListener("phx:scroll-to-error", (e) => {
+  const container = document.getElementById(e.detail.id);
+  const target = container && container.querySelector('[role="alert"], [aria-invalid="true"]');
+  if (target) target.scrollIntoView({ block: "center", inline: "nearest" });
+});
+
 // Inline "Saved" pulse for the admin settings autosave inputs. The flash
 // toast still fires top-right, but when the trigger is blur (the user has
 // already moved their focus away from the input), an adjacent visual

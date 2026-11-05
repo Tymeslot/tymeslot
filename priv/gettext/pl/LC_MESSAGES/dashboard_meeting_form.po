@@ -885,3 +885,8 @@ msgstr "Na żadnej stronie rezerwacji: dostępny tylko przez bezpośredni link."
 #, elixir-autogen, elixir-format
 msgid "Show on %{address}"
 msgstr "Pokazuj na stronie %{address}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
+msgstr "Najpierw wybierz nazwę użytkownika na stronie Profil: na jej podstawie powstają adresy twoich stron rezerwacji, więc do tego czasu tego typu spotkania nie można zarezerwować."

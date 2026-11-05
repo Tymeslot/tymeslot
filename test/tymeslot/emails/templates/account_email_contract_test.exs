@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.Templates.AccountEmailContractTest do
 
   alias Tymeslot.Emails.Templates.{
     AccountDeletionNotice,
+    AccountInvitation,
     EmailChangeConfirmed,
     EmailChangeNotification,
     EmailChangeVerification,
@@ -34,6 +35,8 @@ defmodule Tymeslot.Emails.Templates.AccountEmailContractTest do
        "Bestätigen Sie Ihre E-Mail-Adresse"},
       {&PasswordReset.render(&1, @url), "ada@example.com", "Reset your password",
        "Passwort zurücksetzen"},
+      {&AccountInvitation.render(&1, @url), "ada@example.com", "You're invited to Tymeslot",
+       "Sie sind zu Tymeslot eingeladen"},
       {&NoPasswordToReset.render(&1, @url), "ada@example.com",
        "Your Tymeslot account has no password", "Ihr Tymeslot-Konto hat kein Passwort"},
       {&SignupAttemptNotice.render(&1, @url, @url), "ada@example.com",

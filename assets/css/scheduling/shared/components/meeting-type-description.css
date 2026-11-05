@@ -50,6 +50,13 @@
   cursor: pointer;
 }
 
+/* Under a finger the toggle takes a full touch target's height. */
+@media (pointer: coarse) {
+  .meeting-type-description__toggle {
+    padding-block: calc((var(--min-touch-target) - 1lh) / 2);
+  }
+}
+
 .meeting-type-description__toggle:focus-visible {
   border-radius: var(--radius-sm);
   outline: none;

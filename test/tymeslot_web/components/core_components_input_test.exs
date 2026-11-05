@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
       render_component(
         fn assigns ->
           ~H"""
-          <Forms.input name="user[email]" label="Email" type="text" errors={@errors} />
+          <Forms.input name="user[email]" type="text" errors={@errors} />
           """
         end,
         %{errors: [{"is invalid", []}]}
@@ -51,6 +51,55 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
 
     assert html =~ ~s(aria-invalid="true")
     refute html =~ "aria-describedby"
+  end
+
+  describe "a labelled field given only a name" do
+    test "takes an id from the name that its label and error message point at" do
+      html =
+        render_component(
+          fn assigns ->
+            ~H"""
+            <Forms.input name="user[email]" label="Email" type="text" errors={@errors} />
+            """
+          end,
+          %{errors: [{"is invalid", []}]}
+        )
+
+      assert html =~ ~s(for="user_email")
+      assert html =~ ~s(id="user_email")
+      assert html =~ ~s(aria-describedby="user_email-error")
+      assert html =~ ~s(id="user_email-error")
+    end
+
+    test "keeps an explicit id" do
+      html =
+        render_component(
+          fn assigns ->
+            ~H"""
+            <Forms.input id="sign-in-email" name="email" label="Email" type="email" />
+            """
+          end,
+          %{}
+        )
+
+      assert html =~ ~s(for="sign-in-email")
+      assert html =~ ~s(id="sign-in-email")
+    end
+
+    test "leaves an unlabelled field without an id, so a repeated name cannot repeat one" do
+      html =
+        render_component(
+          fn assigns ->
+            ~H"""
+            <Forms.input name="events[]" type="checkbox" value="a" />
+            <Forms.input name="events[]" type="checkbox" value="b" />
+            """
+          end,
+          %{}
+        )
+
+      refute html =~ ~s( id=")
+    end
   end
 
   describe "required" do

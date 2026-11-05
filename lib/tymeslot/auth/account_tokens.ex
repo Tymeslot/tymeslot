@@ -1,7 +1,7 @@
 defmodule Tymeslot.Auth.AccountTokens do
   @moduledoc """
   Lifecycle of the single-use tokens mailed to account holders: password
-  reset, email verification and email change.
+  reset, email verification, email change and an admin's invitation.
 
   Each purpose declares its lifetime once, here. The raw token only ever
   exists in the emailed link; the database stores its hash, stamped with the
@@ -20,18 +20,20 @@ defmodule Tymeslot.Auth.AccountTokens do
   alias Tymeslot.Clock
   alias Tymeslot.Security.Token
 
-  @type purpose :: :reset | :verification | :email_change
+  @type purpose :: :reset | :verification | :email_change | :invitation
 
   @ttl_seconds %{
     reset: 2 * 3600,
     verification: 24 * 3600,
-    email_change: 24 * 3600
+    email_change: 24 * 3600,
+    invitation: 7 * 24 * 3600
   }
 
   @issued_at_field %{
     reset: :reset_sent_at,
     verification: :verification_sent_at,
-    email_change: :email_change_sent_at
+    email_change: :email_change_sent_at,
+    invitation: :invitation_sent_at
   }
 
   @doc """
@@ -68,6 +70,9 @@ defmodule Tymeslot.Auth.AccountTokens do
 
   defp persist(:email_change, user, token, %{new_email: new_email}),
     do: UserTokenQueries.request_email_change(user, new_email, token)
+
+  defp persist(:invitation, user, token, _attrs),
+    do: UserTokenQueries.set_invitation_token(user, token)
 
   @doc """
   Resolves a raw token to the user holding it.
@@ -133,9 +138,14 @@ defmodule Tymeslot.Auth.AccountTokens do
       `:password_confirmation`)
     * `:verification` marks the account verified
     * `:email_change` moves the pending email into place
+    * `:invitation` marks the account verified and gives it its first way
+      to sign in: the provider identity in `attrs` (`:provider` and the
+      provider's ID column) when it carries a `:provider`, else the password
+      from `attrs` (`:password`, `:password_confirmation`)
 
-  A reset and an email change both change the account's credentials, so both
-  also revoke every other outstanding credential token.
+  A reset, an email change and an accepted invitation all change the
+  account's credentials, so each also revokes every other outstanding
+  credential token.
   """
   @spec consume(purpose(), UserSchema.t(), map()) ::
           {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -149,4 +159,10 @@ defmodule Tymeslot.Auth.AccountTokens do
 
   def consume(:email_change, %UserSchema{} = user, _attrs),
     do: UserTokenQueries.confirm_email_change(user)
+
+  def consume(:invitation, %UserSchema{} = user, %{provider: _provider} = attrs),
+    do: UserTokenQueries.accept_invitation_with_identity(user, attrs)
+
+  def consume(:invitation, %UserSchema{} = user, attrs),
+    do: UserTokenQueries.accept_invitation(user, attrs)
 end
