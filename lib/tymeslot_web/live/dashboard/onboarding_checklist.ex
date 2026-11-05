@@ -323,6 +323,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   # Static definition of the setup items. `auto` names the `integration_status`
   # key that completes the item automatically, or `nil` for manual-only items.
+  #
+  # The calendar stays first: until one is connected the booking page turns
+  # every visitor away, so its description says that rather than selling sync.
   @spec catalog() :: [map()]
   defp catalog do
     [
@@ -331,7 +334,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         auto: :calendar_ready,
         icon: "hero-calendar-days",
         title: dgettext("onboarding_wizard", "Connect a calendar"),
-        description: dgettext("onboarding_wizard", "Sync to avoid double-bookings"),
+        description:
+          dgettext("onboarding_wizard", "Your booking page can't take bookings without one"),
         cta: dgettext("onboarding_wizard", "Connect"),
         path: ~p"/dashboard/integrations?tab=calendars"
       },

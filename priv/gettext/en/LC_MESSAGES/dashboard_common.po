@@ -387,3 +387,33 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Booking pages"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Anyone who opens your link is told the page isn't available until you connect a calendar."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Fix calendar connection"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "None of your calendars can take a booking right now, so anyone who opens your link is told the page isn't available. Check your calendar connection to fix it."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page has stopped taking bookings"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page isn't taking bookings yet"
+msgstr ""

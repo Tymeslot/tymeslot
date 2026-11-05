@@ -92,6 +92,15 @@ defmodule Tymeslot.Integrations.Calendar do
       )
 
   @doc """
+  Whether the user has any calendar integration, whether or not it is active
+  or can take bookings: the difference between a host who never connected a
+  calendar and one whose connection has stopped working.
+  """
+  @spec has_any_integration?(user_id()) :: boolean()
+  def has_any_integration?(user_id) when is_integer(user_id),
+    do: CalendarIntegrationQueries.exists_for_user?(user_id)
+
+  @doc """
   Whether the user's booking page can offer times, judged by their calendars:
 
     * `:taking_bookings`: a writable calendar is connected and none refused.

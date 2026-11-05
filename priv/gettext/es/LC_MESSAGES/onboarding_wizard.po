@@ -572,11 +572,6 @@ msgstr "Algo salió mal. Inténtalo de nuevo."
 msgid "Step %{current} of %{total}"
 msgstr "Paso %{current} de %{total}"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Sync to avoid double-bookings"
-msgstr "Sincronizar para evitar reservas a la misma hora"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
@@ -925,3 +920,8 @@ msgstr "Tu página de reservas todavía no está publicada"
 #, elixir-autogen, elixir-format
 msgid "Your link is ready, but the page only goes live once a calendar is connected."
 msgstr "Tu enlace está listo, pero la página solo se publica cuando conectes un calendario."
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page can't take bookings without one"
+msgstr "Sin un calendario, tu página de reservas no puede aceptar reservas"

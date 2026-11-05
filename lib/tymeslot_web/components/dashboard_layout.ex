@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Components.Dashboard.PublicPageNotice
   alias TymeslotWeb.Components.DashboardSidebar
   alias TymeslotWeb.Components.UserDropdownComponent
 
@@ -70,6 +71,13 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           <.refused_calendar_notice
             names={Map.get(@integration_status, :refused_calendars, [])}
             current_action={@current_action}
+          />
+          <%!-- Off the integrations page, which is where it sends the host:
+                its calendars tab shows the empty or paused state itself. --%>
+          <PublicPageNotice.notice
+            :if={@current_action != :integrations}
+            profile={@profile}
+            integration_status={@integration_status}
           />
           <%= if @full_width do %>
             <main class="flex-1 flex flex-col min-h-0">{render_slot(@inner_block)}</main>
