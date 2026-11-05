@@ -165,6 +165,7 @@ msgid "Enter a number between 0.0 and 1.0."
 msgstr "Bitte geben Sie eine Zahl zwischen 0,0 und 1,0 ein."
 
 #: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Bitte geben Sie eine gültige E-Mail-Adresse ein."
@@ -873,3 +874,93 @@ msgstr "Wenn eine Admin-Benachrichtigung eintrifft, teilen Sie sie als GitHub-Is
 #, elixir-autogen, elixir-format
 msgid "Version %{version}"
 msgstr "Version %{version}"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "A new invitation is on its way to %{email}."
+msgstr "Eine neue Einladung ist unterwegs an %{email}."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists."
+msgstr "Ein Konto mit dieser E-Mail-Adresse existiert bereits."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not send the invitation. Please try again."
+msgstr "Die Einladung konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Email address to invite"
+msgstr "E-Mail-Adresse der einzuladenden Person"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation expired"
+msgstr "Einladung abgelaufen"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{email}."
+msgstr "Einladung an %{email} gesendet."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
+msgstr "Einladungen setzen die Anmeldung per Passwort voraus, damit die eingeladene Person ein Passwort wählen kann. Aktivieren Sie die Passwort-Authentifizierung im Tab „Authentifizierung“, um Nutzer einzuladen."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need password sign-in. Enable password authentication first."
+msgstr "Einladungen setzen die Anmeldung per Passwort voraus. Aktivieren Sie zuerst die Passwort-Authentifizierung."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invite a user"
+msgstr "Nutzer einladen"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invited"
+msgstr "Eingeladen"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend invitation"
+msgstr "Einladung erneut senden"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend the invitation to %{email}"
+msgstr "Einladung erneut an %{email} senden"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitation"
+msgstr "Einladung senden"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Wird gesendet…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
+msgstr "Das Konto wurde erstellt, aber die Einladungs-E-Mail konnte nicht gesendet werden. Verwenden Sie „Einladung erneut senden“, um es noch einmal zu versuchen."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has already accepted their invitation."
+msgstr "Dieser Nutzer hat seine Einladung bereits angenommen."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose a password. Public registration can stay closed."
+msgstr "Wir erstellen das Konto und senden der Person eine E-Mail mit einem Link zur Passwortwahl. Die öffentliche Registrierung kann geschlossen bleiben."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com"
+msgstr "name@example.com"

@@ -1,0 +1,286 @@
+defmodule Tymeslot.Auth.Invitations do
+  @moduledoc """
+  Accounts an admin creates by inviting an email address, for installs that
+  keep public registration closed.
+
+  An invitation creates the account straight away, with its profile and
+  default meeting types, but with no password and an unverified address. The
+  invitee is emailed a single-use link (see `Tymeslot.Auth.AccountTokens`,
+  purpose `:invitation`); following it, they choose a password, which
+  verifies the address, since the link was delivered to it, and signs them in.
+
+  Invitations need password sign-in: with it switched off, an invitee would
+  have no way to sign in to the account. Whether public registration is open
+  makes no difference.
+
+  An invitation is pending while its token hash is stored. Accepting it, or
+  any other change to the account's credentials (a password reset requested
+  through "forgot password"), clears the hash.
+  """
+
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  require Logger
+
+  alias Tymeslot.Auth.{
+    AccountTokens,
+    AdminRoles,
+    RateLimit,
+    RegistrationAnnouncement,
+    UserQueries,
+    UserSchema,
+    Validation
+  }
+
+  alias Tymeslot.Auth.Helpers.AccountLogging
+  alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Profiles
+  alias Tymeslot.Repo
+  alias Tymeslot.Security.{RateLimiter, Token}
+  alias Tymeslot.Utils.UrlBuilder
+
+  @type invite_error ::
+          :admin_ui_disabled
+          | :forbidden
+          | :password_auth_disabled
+          | :invalid_email
+          | :email_taken
+          | :email_not_sent
+          | term()
+
+  @doc """
+  Whether invitations can be sent on this deployment: they need password
+  sign-in.
+  """
+  @spec available?() :: boolean()
+  def available?, do: Config.password_auth_enabled?()
+
+  @doc """
+  Whether `user` holds an invitation that has not been accepted yet.
+  """
+  @spec pending?(UserSchema.t()) :: boolean()
+  def pending?(%UserSchema{invitation_token_hash: nil}), do: false
+  def pending?(%UserSchema{}), do: true
+
+  @doc """
+  Whether `user`'s pending invitation link has expired, so the invitee needs
+  a fresh one.
+  """
+  @spec expired?(UserSchema.t()) :: boolean()
+  def expired?(%UserSchema{} = user),
+    do: pending?(user) and AccountTokens.expired?(:invitation, user)
+
+  @doc """
+  Creates an account for `email` on behalf of the admin `actor` and emails
+  the invitation.
+
+  Returns `{:ok, user}` once the account exists and the email is queued.
+  `{:error, :email_not_sent}` means the account was created but the email
+  could not be queued; `resend/2` retries it.
+  """
+  @spec invite(AdminRoles.actor(), String.t()) :: {:ok, UserSchema.t()} | {:error, invite_error()}
+  def invite(actor, email) do
+    with :ok <- AdminRoles.authorise(actor),
+         :ok <- ensure_password_auth(),
+         {:ok, email} <- validate_email(email),
+         {:ok, user, token} <- create_invited_account(email) do
+      AccountLogging.log_user_created(user, %{source: "invitation"})
+      RegistrationAnnouncement.announce(user)
+      log_invitation(:account_invitation_sent, actor, user)
+      deliver(user, token)
+    end
+  end
+
+  @doc """
+  Issues `user_id` a fresh invitation link on behalf of the admin `actor`,
+  replacing the earlier one, and emails it.
+  """
+  @spec resend(AdminRoles.actor(), pos_integer()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found | :not_invited | invite_error()}
+  def resend(actor, user_id) do
+    with :ok <- AdminRoles.authorise(actor),
+         :ok <- ensure_password_auth(),
+         {:ok, user} <- fetch_pending(user_id),
+         {:ok, user, token} <- AccountTokens.issue(:invitation, user) do
+      log_invitation(:account_invitation_resent, actor, user)
+      deliver(user, token)
+    end
+  end
+
+  @doc """
+  Resolves an invitation link's token to the invited account, without
+  spending it, for showing the form it leads to.
+  """
+  @spec fetch(String.t()) ::
+          {:ok, UserSchema.t()}
+          | {:error, :invalid_token | :token_expired | :password_auth_disabled}
+  def fetch(token) when is_binary(token) do
+    with :ok <- ensure_password_auth() do
+      case AccountTokens.fetch(:invitation, token) do
+        {:ok, user} -> {:ok, user}
+        {:error, :token_expired, _user} -> {:error, :token_expired}
+        {:error, :invalid_token} -> {:error, :invalid_token}
+      end
+    end
+  end
+
+  @doc """
+  Accepts an invitation: sets the invitee's first password and verifies the
+  account. The caller signs the returned user in.
+
+  `opts` carries the client (`:ip`, `:user_agent`), for the per-address limit
+  on attempts and the audit entry. A rejected password is
+  `{:error, :invalid_input, message}`, with the rule it broke.
+  """
+  @spec accept(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, UserSchema.t()}
+          | {:error, :invalid_token | :token_expired | :password_auth_disabled}
+          | {:error, :invalid_input | :rate_limited, String.t()}
+  def accept(token, password, password_confirmation, opts) do
+    with :ok <- ensure_password_auth() do
+      RateLimit.with_limit(
+        RateLimiter.check(:invitation_accept, opts[:ip]),
+        [event: "invitation_accept", ip: opts[:ip], user_agent: opts[:user_agent]],
+        fn -> consume(token, password, password_confirmation) end
+      )
+    end
+  end
+
+  defp consume(token, password, password_confirmation) do
+    result =
+      Repo.transaction(fn ->
+        with {:ok, user} <- fetch_locked(token),
+             :ok <- validate_password(password, password_confirmation),
+             {:ok, accepted} <-
+               AccountTokens.consume(:invitation, user, %{
+                 password: password,
+                 password_confirmation: password_confirmation
+               }) do
+          accepted
+        else
+          {:error, %Ecto.Changeset{}} -> Repo.rollback({:invalid_input, password_not_set()})
+          {:error, :invalid_input, message} -> Repo.rollback({:invalid_input, message})
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    case result do
+      {:ok, user} ->
+        AccountLogging.log_user_verified(user, "invitation")
+        {:ok, user}
+
+      {:error, {:invalid_input, message}} ->
+        {:error, :invalid_input, message}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp password_not_set,
+    do: dgettext("auth", "The password couldn't be set. Please try again with a different one.")
+
+  defp fetch_locked(token) do
+    case AccountTokens.fetch(:invitation, token, lock: true) do
+      {:ok, user} -> {:ok, user}
+      {:error, :token_expired, _user} -> {:error, :token_expired}
+      {:error, :invalid_token} -> {:error, :invalid_token}
+    end
+  end
+
+  defp validate_password(password, password_confirmation) do
+    params = %{"password" => password, "password_confirmation" => password_confirmation}
+
+    case Validation.validate_new_password_input(params) do
+      {:ok, _sanitised} -> :ok
+      {:error, errors} -> {:error, :invalid_input, Validation.password_error_message(errors)}
+    end
+  end
+
+  defp ensure_password_auth do
+    if available?(), do: :ok, else: {:error, :password_auth_disabled}
+  end
+
+  defp validate_email(email) do
+    case Validation.validate_email(email) do
+      {:ok, valid} -> {:ok, valid}
+      {:error, _message} -> {:error, :invalid_email}
+    end
+  end
+
+  defp fetch_pending(user_id) do
+    case UserQueries.get_user(user_id) do
+      {:ok, %UserSchema{} = user} ->
+        if pending?(user), do: {:ok, user}, else: {:error, :not_invited}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
+
+  # The account, its profile, the registration hook's job and the token
+  # commit together, so a failure leaves no half-made account holding the
+  # address.
+  defp create_invited_account(email) do
+    result =
+      Repo.transaction(fn ->
+        with {:ok, user} <- UserQueries.create_invited_user(%{email: email}),
+             {:ok, _profile} <- Profiles.create_profile(user.id),
+             :ok <- RegistrationAnnouncement.enqueue_hook(user.id, %{source: "invitation"}),
+             {:ok, user, token} <- AccountTokens.issue(:invitation, user) do
+          {user, token}
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    case result do
+      {:ok, {user, token}} -> {:ok, user, token}
+      {:error, %Ecto.Changeset{} = changeset} -> creation_failed(changeset)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp creation_failed(changeset) do
+    if email_taken?(changeset), do: {:error, :email_taken}, else: {:error, changeset}
+  end
+
+  defp email_taken?(changeset) do
+    Enum.any?(changeset.errors, fn
+      {:email, {_message, opts}} -> opts[:constraint] == :unique
+      _other -> false
+    end)
+  end
+
+  defp deliver(user, token) do
+    case EmailScheduler.schedule_account_invitation(
+           user.id,
+           UrlBuilder.invitation_url(token),
+           Token.hash_token(token)
+         ) do
+      {:ok, _status} ->
+        {:ok, user}
+
+      {:error, reason} ->
+        Logger.error("Could not schedule the account invitation email",
+          user_id: user.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        {:error, :email_not_sent}
+    end
+  end
+
+  defp log_invitation(event, actor, user) do
+    Logger.info("Account invitation issued",
+      user_id: user.id,
+      actor_id: actor_id(actor),
+      event: event
+    )
+  end
+
+  defp actor_id(:cli), do: "cli"
+  defp actor_id(%UserSchema{id: id}), do: id
+end

@@ -212,6 +212,7 @@ msgstr "Oder fortfahren mit"
 #: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #: lib/tymeslot_web/components/auth/session/login_component.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Passwort"
@@ -974,3 +975,54 @@ msgid "Welcome back. Your account has been restored, but %{names} needs reconnec
 msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
 msgstr[0] "Willkommen zurück. Ihr Konto wurde wiederhergestellt, aber die Integration %{names} muss erneut verbunden werden. Solange Sie sie nicht erneut verbinden, bietet Ihre Buchungsseite möglicherweise keine Zeiten an und nimmt keine Buchungen entgegen."
 msgstr[1] "Willkommen zurück. Ihr Konto wurde wiederhergestellt, aber die Integrationen %{names} müssen erneut verbunden werden. Solange Sie sie nicht erneut verbinden, bietet Ihre Buchungsseite möglicherweise keine Zeiten an und nimmt keine Buchungen entgegen."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Accept your invitation"
+msgstr "Einladung annehmen"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a password for %{email} to finish setting up your account."
+msgstr "Wählen Sie ein Passwort für %{email}, um die Einrichtung Ihres Kontos abzuschließen."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm password"
+msgstr "Passwort bestätigen"
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Password sign-in is turned off, so this invitation can't be accepted. Please contact your administrator."
+msgstr "Die Anmeldung per Passwort ist deaktiviert, daher kann diese Einladung nicht angenommen werden. Bitte wenden Sie sich an Ihren Administrator."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Set password and sign in"
+msgstr "Passwort festlegen und anmelden"
+
+#: lib/tymeslot/auth/invitations.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be set. Please try again with a different one."
+msgstr "Das Passwort konnte nicht festgelegt werden. Bitte versuchen Sie es mit einem anderen Passwort erneut."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation has expired. Ask your administrator to send you a new one."
+msgstr "Diese Einladung ist abgelaufen. Bitten Sie Ihren Administrator, Ihnen eine neue zu senden."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. It may have been used already, or replaced by a newer invitation."
+msgstr "Dieser Einladungslink ist nicht mehr gültig. Möglicherweise wurde er bereits verwendet oder durch eine neuere Einladung ersetzt."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! Your password is set."
+msgstr "Willkommen bei Tymeslot! Ihr Passwort ist festgelegt."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your password is set. Please log in to continue."
+msgstr "Ihr Passwort ist festgelegt. Bitte melden Sie sich an, um fortzufahren."

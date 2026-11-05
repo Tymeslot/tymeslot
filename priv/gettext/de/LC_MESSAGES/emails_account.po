@@ -699,3 +699,48 @@ msgstr "Ihr Tymeslot-Konto ist zur Löschung vorgemerkt"
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr "⚠️ Anfrage zur E-Mail-Änderung – Sicherheitswarnung"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation"
+msgstr "Einladung annehmen"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation:"
+msgstr "Einladung annehmen:"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "An administrator has created a Tymeslot account for you. Choose a password to sign in and set up your booking page."
+msgstr "Ein Administrator hat ein Tymeslot-Konto für Sie erstellt. Wählen Sie ein Passwort, um sich anzumelden und Ihre Buchungsseite einzurichten."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "If you weren't expecting this invitation, you can ignore this email."
+msgstr "Falls Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation"
+msgstr "Einladung"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "This link is valid for 7 days."
+msgstr "Dieser Link ist 7 Tage lang gültig."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "You're invited to Tymeslot"
+msgstr "Sie sind zu Tymeslot eingeladen"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account is ready. Choose a password to sign in."
+msgstr "Ihr Tymeslot-Konto ist bereit. Wählen Sie ein Passwort, um sich anzumelden."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is ready and waiting."
+msgstr "Ihr Konto ist eingerichtet und wartet auf Sie."

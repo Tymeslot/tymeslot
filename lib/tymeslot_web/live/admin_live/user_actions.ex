@@ -9,12 +9,102 @@ defmodule TymeslotWeb.AdminLive.UserActions do
   use TymeslotWeb, :verified_routes
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 3, to_form: 2]
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3, redirect: 2]
 
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.Invitations
 
   @type socket :: Phoenix.LiveView.Socket.t()
+
+  @doc """
+  The invite form, blank or holding `email` with an error to show against it.
+  """
+  @spec invite_form(String.t(), String.t() | nil) :: Phoenix.HTML.Form.t()
+  def invite_form(email \\ "", error \\ nil) do
+    errors = if error, do: [email: {error, []}], else: []
+    to_form(%{"email" => email}, as: :invite, errors: errors)
+  end
+
+  @spec invite(String.t(), socket()) :: {:noreply, socket()}
+  def invite(email, socket) do
+    case Invitations.invite(socket.assigns.current_user, email) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> assign(:invite_form, invite_form())
+         |> put_flash(
+           :info,
+           dgettext("dashboard_admin", "Invitation sent to %{email}.", email: user.email)
+         )
+         |> push_patch(to: ~p"/admin/users")}
+
+      {:error, :email_not_sent} ->
+        {:noreply,
+         socket
+         |> assign(:invite_form, invite_form())
+         |> put_flash(:error, invitation_not_sent_message())
+         |> push_patch(to: ~p"/admin/users")}
+
+      {:error, reason} when reason in [:invalid_email, :email_taken] ->
+        {:noreply, assign(socket, :invite_form, invite_form(email, invite_error_message(reason)))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, invite_error_message(reason))}
+    end
+  end
+
+  @spec resend_invitation(String.t(), socket()) :: {:noreply, socket()}
+  def resend_invitation(id, socket) do
+    with_user_id(id, socket, fn user_id ->
+      case Invitations.resend(socket.assigns.current_user, user_id) do
+        {:ok, user} ->
+          {:noreply,
+           socket
+           |> put_flash(
+             :info,
+             dgettext("dashboard_admin", "A new invitation is on its way to %{email}.",
+               email: user.email
+             )
+           )
+           |> push_patch(to: ~p"/admin/users")}
+
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, invite_error_message(reason))}
+      end
+    end)
+  end
+
+  defp invite_error_message(:invalid_email),
+    do: dgettext("dashboard_admin", "Enter a valid email address.")
+
+  defp invite_error_message(:email_taken),
+    do: dgettext("dashboard_admin", "An account with this email address already exists.")
+
+  defp invite_error_message(:password_auth_disabled),
+    do:
+      dgettext(
+        "dashboard_admin",
+        "Invitations need password sign-in. Enable password authentication first."
+      )
+
+  defp invite_error_message(:not_invited),
+    do: dgettext("dashboard_admin", "This user has already accepted their invitation.")
+
+  defp invite_error_message(:email_not_sent), do: invitation_not_sent_message()
+
+  defp invite_error_message(reason) when reason in [:not_found, :forbidden, :admin_ui_disabled],
+    do: role_change_error_message(:invite, reason)
+
+  defp invite_error_message(_other),
+    do: dgettext("dashboard_admin", "Could not send the invitation. Please try again.")
+
+  defp invitation_not_sent_message,
+    do:
+      dgettext(
+        "dashboard_admin",
+        "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
+      )
 
   @spec open_pending_action(atom(), map(), socket()) :: {:noreply, socket()}
   def open_pending_action(kind, %{"id" => id, "email" => email}, socket) do

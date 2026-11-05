@@ -165,6 +165,7 @@ msgid "Enter a number between 0.0 and 1.0."
 msgstr "Escribe un número entre 0,0 y 1,0."
 
 #: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Escribe un correo electrónico válido."
@@ -873,3 +874,93 @@ msgstr "Cuando llegue una alerta de administración, compártela como incidencia
 #, elixir-autogen, elixir-format
 msgid "Version %{version}"
 msgstr "Versión %{version}"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "A new invitation is on its way to %{email}."
+msgstr "Hay una nueva invitación en camino a %{email}."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists."
+msgstr "Ya existe una cuenta con esta dirección de correo electrónico."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not send the invitation. Please try again."
+msgstr "No se pudo enviar la invitación. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Email address to invite"
+msgstr "Correo electrónico de la persona a invitar"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation expired"
+msgstr "Invitación expirada"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{email}."
+msgstr "Invitación enviada a %{email}."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
+msgstr "Las invitaciones requieren el inicio de sesión con contraseña, para que la persona invitada pueda elegir una. Activa la autenticación con contraseña en la pestaña Autenticación para invitar a usuarios."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need password sign-in. Enable password authentication first."
+msgstr "Las invitaciones requieren el inicio de sesión con contraseña. Activa primero la autenticación con contraseña."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invite a user"
+msgstr "Invitar a un usuario"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invited"
+msgstr "Invitado"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend invitation"
+msgstr "Reenviar invitación"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend the invitation to %{email}"
+msgstr "Reenviar la invitación a %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitation"
+msgstr "Enviar invitación"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Enviando…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
+msgstr "La cuenta se creó, pero no se pudo enviar el correo de invitación. Usa Reenviar invitación para intentarlo de nuevo."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has already accepted their invitation."
+msgstr "Este usuario ya aceptó su invitación."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose a password. Public registration can stay closed."
+msgstr "Crearemos la cuenta y le enviaremos por correo un enlace para elegir una contraseña. El registro público puede seguir cerrado."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com"
+msgstr "name@example.com"

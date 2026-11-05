@@ -358,22 +358,8 @@ defmodule Tymeslot.Auth.PasswordReset do
           user_id: user.id
         })
 
-        {:error, :invalid_input, password_error_message(errors)}
+        {:error, :invalid_input, Validation.password_error_message(errors)}
     end
-  end
-
-  # The password validator's messages are already whole sentences naming their
-  # own field ("Password must contain at least one special character"), and the
-  # confirmation field is validated against the same rules, so it reports the
-  # same failure. Running that through the generic field-prefixing formatter
-  # produced "Password Password must contain… Password confirmation Password
-  # must contain…". The distinct messages, joined, are what a user can act on.
-  defp password_error_message(errors) do
-    errors
-    |> Map.values()
-    |> List.flatten()
-    |> Enum.uniq()
-    |> Enum.join(" ")
   end
 
   defp perform_password_update(user, new_password) do

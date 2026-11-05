@@ -699,3 +699,48 @@ msgstr "Se programó la eliminación de tu cuenta de Tymeslot"
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr "⚠️ Solicitud de cambio de correo – aviso de seguridad"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation"
+msgstr "Aceptar invitación"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation:"
+msgstr "Aceptar invitación:"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "An administrator has created a Tymeslot account for you. Choose a password to sign in and set up your booking page."
+msgstr "Un administrador ha creado una cuenta de Tymeslot para ti. Elige una contraseña para iniciar sesión y configurar tu página de reservas."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "If you weren't expecting this invitation, you can ignore this email."
+msgstr "Si no esperabas esta invitación, puedes ignorar este correo."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation"
+msgstr "Invitación"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "This link is valid for 7 days."
+msgstr "Este enlace es válido durante 7 días."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "You're invited to Tymeslot"
+msgstr "Te han invitado a Tymeslot"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account is ready. Choose a password to sign in."
+msgstr "Tu cuenta de Tymeslot está lista. Elige una contraseña para iniciar sesión."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is ready and waiting."
+msgstr "Tu cuenta está lista y te está esperando."

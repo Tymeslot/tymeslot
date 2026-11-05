@@ -212,6 +212,7 @@ msgstr ""
 #: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #: lib/tymeslot_web/components/auth/session/login_component.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
@@ -974,3 +975,54 @@ msgid "Welcome back. Your account has been restored, but %{names} needs reconnec
 msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Accept your invitation"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a password for %{email} to finish setting up your account."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm password"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Password sign-in is turned off, so this invitation can't be accepted. Please contact your administrator."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Set password and sign in"
+msgstr ""
+
+#: lib/tymeslot/auth/invitations.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be set. Please try again with a different one."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation has expired. Ask your administrator to send you a new one."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. It may have been used already, or replaced by a newer invitation."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! Your password is set."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your password is set. Please log in to continue."
+msgstr ""

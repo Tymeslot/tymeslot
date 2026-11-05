@@ -161,6 +161,7 @@ msgid "Enter a number between 0.0 and 1.0."
 msgstr "Podaj liczbę od 0.0 do 1.0."
 
 #: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Podaj prawidłowy adres e-mail."
@@ -869,3 +870,93 @@ msgstr "Gdy nadejdzie alert administracyjny, zgłoś go jako issue na GitHubie (
 #, elixir-autogen, elixir-format
 msgid "Version %{version}"
 msgstr "Wersja %{version}"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "A new invitation is on its way to %{email}."
+msgstr "Nowe zaproszenie jest w drodze na adres %{email}."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists."
+msgstr "Konto z tym adresem e-mail już istnieje."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not send the invitation. Please try again."
+msgstr "Nie udało się wysłać zaproszenia. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Email address to invite"
+msgstr "Adres e-mail osoby do zaproszenia"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation expired"
+msgstr "Zaproszenie wygasło"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{email}."
+msgstr "Zaproszenie zostało wysłane na adres %{email}."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
+msgstr "Zaproszenia wymagają logowania hasłem, aby zaproszona osoba mogła wybrać hasło. Aby zapraszać użytkowników, włącz uwierzytelnianie hasłem na karcie Uwierzytelnianie."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need password sign-in. Enable password authentication first."
+msgstr "Zaproszenia wymagają logowania hasłem. Najpierw włącz uwierzytelnianie hasłem."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invite a user"
+msgstr "Zaproś użytkownika"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invited"
+msgstr "Zaproszono"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend invitation"
+msgstr "Wyślij zaproszenie ponownie"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend the invitation to %{email}"
+msgstr "Wyślij zaproszenie ponownie na adres %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitation"
+msgstr "Wyślij zaproszenie"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Wysyłanie…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
+msgstr "Konto zostało utworzone, ale nie udało się wysłać e-maila z zaproszeniem. Użyj opcji Wyślij zaproszenie ponownie, aby spróbować jeszcze raz."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has already accepted their invitation."
+msgstr "Ten użytkownik przyjął już swoje zaproszenie."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose a password. Public registration can stay closed."
+msgstr "Utworzymy konto i wyślemy e-mailem link do wyboru hasła. Rejestracja publiczna może pozostać zamknięta."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com"
+msgstr "name@example.com"
