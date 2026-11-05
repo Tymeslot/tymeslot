@@ -28,11 +28,14 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
         on_close="close_language_dropdown"
         trigger_class="flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 lang-switcher__button"
         class="w-48 rounded-lg shadow-xl lang-switcher__panel"
-        aria-label={dgettext("common", "Change language")}
       >
         <:trigger>
+          <%!-- The button's name is its visible language plus a hidden
+                "Change language", never a label that leaves the visible
+                text out: a voice user says what they see. --%>
           <.locale_flag locale={@locale} class="w-5 h-4" />
           <span class="ml-2 hidden sm:inline">{current_locale_name(@locale, @locales)}</span>
+          <span class="sr-only">{dgettext("common", "Change language")}</span>
           <.icon name="hero-chevron-down-mini" class="w-4 h-4 ml-1" />
         </:trigger>
         <:panel>

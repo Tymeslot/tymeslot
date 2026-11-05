@@ -34,6 +34,16 @@ defmodule TymeslotWeb.Components.LanguageSwitcherTest do
     refute html =~ "rhythm"
   end
 
+  # A voice user names a control by what it shows (WCAG 2.5.3), so the
+  # button's name is its visible text plus a hidden hint, never an
+  # aria-label that replaces the language it shows.
+  test "names the button by the language it shows" do
+    [button] = Floki.find(render_switcher(), ".lang-switcher__button")
+
+    assert Floki.attribute([button], "aria-label") == []
+    assert Floki.text(button) =~ ~r/Deutsch\s*Change language/
+  end
+
   test "marks only the current locale active" do
     doc = render_switcher()
 

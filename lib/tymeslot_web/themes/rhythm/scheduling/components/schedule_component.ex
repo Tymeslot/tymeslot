@@ -157,12 +157,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       phx-value-date={day.date}
                       phx-target={@myself}
                       disabled={not day.available || day.loading}
-                      aria-label={LocalizationHelpers.format_full_date_label(day.date)}
                       aria-current={day.today && "date"}
                       aria-pressed={to_string(@selected_date == day.date)}
                     >
                       <div class="day-name" aria-hidden="true">{day.day_name}</div>
                       <div class="day-number" aria-hidden="true">{day.day_number}</div>
+                      <%!-- The full date is the button's name, as text rather than
+                            an aria-label the visible "MON 2" is not part of. --%>
+                      <span class="sr-only">
+                        {LocalizationHelpers.format_full_date_label(day.date)}
+                      </span>
                     </button>
                   <% end %>
                 </div>

@@ -319,8 +319,13 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
       html = render(view)
 
+      # The full date is the button's text for a screen reader, beside the
+      # visible day name and number.
       labels =
-        html |> Floki.parse_document!() |> Floki.attribute("button.calendar-day", "aria-label")
+        html
+        |> Floki.parse_document!()
+        |> Floki.find("button.calendar-day .sr-only")
+        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
 
       assert labels != []
 
