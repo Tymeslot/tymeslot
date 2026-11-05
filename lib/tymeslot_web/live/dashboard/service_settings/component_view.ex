@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
     ~H"""
-    <div>
+    <div id={@id}>
       <.dashboard_page
         icon="hero-squares-2x2"
         title={dgettext("dashboard_common", "Meeting Types")}

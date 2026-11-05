@@ -246,6 +246,21 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
   # Left on the deleted page's colour editor, the next edit would silently
   # change the main page's colours instead.
+  # The main page's tab renders none of the page controls; the same events
+  # sent by hand are ignored rather than crashing the dashboard.
+  test "page events sent by hand on the main page's tab leave the dashboard running", ctx do
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
+    target = with_target(view, "#page-settings")
+
+    render_click(target, "show_delete", %{})
+    render_click(target, "confirm_delete", %{})
+    render_change(target, "validate_details", %{"page" => %{"name" => "x"}})
+    render_submit(target, "save_details", %{"page" => %{"name" => "x"}})
+
+    assert has_element?(view, "#page-settings")
+    assert BookingPages.list(ctx.profile.id) == []
+  end
+
   test "a page deleted in another tab is announced and its tab left", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
     {:ok, _deleted} = BookingPages.delete(page)

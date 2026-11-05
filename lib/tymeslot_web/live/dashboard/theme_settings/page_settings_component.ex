@@ -35,6 +35,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   # a longer one would push the switches apart.
   @short_description 80
 
+  # Events that act on a named page. The main page's tab renders none of
+  # their controls, so there they can only arrive hand-sent.
+  @page_events ~w(validate_details save_details show_delete confirm_delete)
+
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
@@ -222,6 +226,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event(event, _params, %{assigns: %{page: nil}} = socket) when event in @page_events,
+    do: {:noreply, socket}
+
   def handle_event("toggle_type", %{"id" => id, "listed" => listed}, socket) do
     user_id = socket.assigns.profile.user_id
 

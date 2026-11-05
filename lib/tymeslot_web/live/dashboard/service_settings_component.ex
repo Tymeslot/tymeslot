@@ -151,27 +151,31 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   def handle_event("edit_type", %{"id" => id}, socket) do
-    type = Enum.find(socket.assigns.meeting_types, &(&1.id == String.to_integer(id)))
+    with_type_id(id, socket, fn type_id ->
+      case Enum.find(socket.assigns.meeting_types, &(&1.id == type_id)) do
+        nil ->
+          Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
+          {:noreply, socket}
 
-    if is_nil(type) do
-      Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
-      {:noreply, socket}
-    else
-      {:noreply,
-       assign(socket,
-         editing_type: type,
-         show_add_form: false,
-         show_edit_overlay: true,
-         form_id: "meeting-type-form-edit-#{type.id}"
-       )}
-    end
+        type ->
+          {:noreply,
+           assign(socket,
+             editing_type: type,
+             show_add_form: false,
+             show_edit_overlay: true,
+             form_id: "meeting-type-form-edit-#{type.id}"
+           )}
+      end
+    end)
   end
 
   def handle_event("duplicate_type", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_duplicate_type(socket, String.to_integer(id), user_id)
+    with_type_id(id, socket, fn type_id ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+        do_duplicate_type(socket, type_id, user_id)
+      end)
     end)
   end
 
@@ -190,17 +194,18 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   def handle_event("toggle_type", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
-    type_id = String.to_integer(id)
 
-    if socket.assigns.toggling_type_id == type_id do
-      {:noreply, socket}
-    else
-      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-        socket
-        |> assign(:toggling_type_id, type_id)
-        |> do_toggle_type(type_id, user_id)
-      end)
-    end
+    with_type_id(id, socket, fn
+      type_id when type_id == socket.assigns.toggling_type_id ->
+        {:noreply, socket}
+
+      type_id ->
+        RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+          socket
+          |> assign(:toggling_type_id, type_id)
+          |> do_toggle_type(type_id, user_id)
+        end)
+    end)
   end
 
   # Both visibility switches send the state they ask for (`listed`), as the
@@ -208,10 +213,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   # have changed it since this one rendered.
   def handle_event("toggle_private", %{"id" => id, "listed" => listed}, socket) do
     user_id = socket.assigns.current_user.id
-    type_id = String.to_integer(id)
 
-    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_toggle_private(socket, type_id, listed == "true", user_id)
+    with_type_id(id, socket, fn type_id ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+        do_toggle_private(socket, type_id, listed == "true", user_id)
+      end)
     end)
   end
 
@@ -222,8 +228,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       ) do
     user_id = socket.assigns.current_user.id
 
-    RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_toggle_page_membership(socket, String.to_integer(id), page_id, listed == "true", user_id)
+    with_type_id(id, socket, fn type_id ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+        do_toggle_page_membership(socket, type_id, page_id, listed == "true", user_id)
+      end)
     end)
   end
 
@@ -264,18 +272,19 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   def handle_event("show_delete_modal", %{"id" => id}, socket) do
-    type_id = String.to_integer(id)
-    type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
+    with_type_id(id, socket, fn type_id ->
+      case MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id) do
+        nil ->
+          Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
+          {:noreply, socket}
 
-    if type do
-      {:noreply,
-       socket
-       |> assign(:delete_sign_ups, MeetingTypes.upcoming_sign_ups(type))
-       |> ModalHook.show_modal(:delete_meeting_type, type)}
-    else
-      Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
-      {:noreply, socket}
-    end
+        type ->
+          {:noreply,
+           socket
+           |> assign(:delete_sign_ups, MeetingTypes.upcoming_sign_ups(type))
+           |> ModalHook.show_modal(:delete_meeting_type, type)}
+      end
+    end)
   end
 
   def handle_event("hide_delete_modal", _params, socket) do
@@ -338,6 +347,17 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   # Private functions
+
+  # Meeting type ids arrive as client strings; anything that is not one is a
+  # hand-sent event and is ignored rather than crashing the dashboard.
+  defp with_type_id(id, socket, fun) when is_binary(id) do
+    case Integer.parse(id) do
+      {type_id, ""} -> fun.(type_id)
+      _not_an_id -> {:noreply, socket}
+    end
+  end
+
+  defp with_type_id(_id, socket, _fun), do: {:noreply, socket}
 
   defp do_toggle_type(socket, type_id, user_id) do
     case MeetingTypes.get_meeting_type(type_id, user_id) do
