@@ -531,11 +531,6 @@ msgstr "Nastavte si jméno, rezervační odkaz a časové pásmo, aby klienti v
 msgid "Set up your profile"
 msgstr "Nastavte si profil"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Setup checklist"
-msgstr "Kontrolní seznam nastavení"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Share this link so people can book time with you. Choose something short and memorable."
