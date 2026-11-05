@@ -52,6 +52,14 @@
   box-shadow: var(--shadow-danger-md);
 }
 
+/* Under a finger the button stays a full touch target however short the
+   window makes its padding (a phone on its side, below). */
+@media (pointer: coarse) {
+  .action-button {
+    min-height: var(--min-touch-target);
+  }
+}
+
 .action-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
