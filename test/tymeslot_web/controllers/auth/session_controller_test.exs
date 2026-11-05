@@ -3,6 +3,7 @@ defmodule TymeslotWeb.SessionControllerTest do
   @moduletag :auth
 
   alias Phoenix.Flash
+  alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.AuthTestHelpers
   alias Tymeslot.Factory
@@ -319,6 +320,25 @@ defmodule TymeslotWeb.SessionControllerTest do
       assert redirected_to(conn) == "/"
       assert Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
       refute get_session(conn, :user_token)
+    end
+
+    # A Sign Out link left open while the session changed (signed out in
+    # another tab, cookie expired) carries a token the server no longer
+    # accepts. It must still sign out, not fail with a 403.
+    test "signs out even when the CSRF token is stale", %{conn: conn} do
+      user = Factory.insert(:user)
+      conn = AuthTestHelpers.log_in_user(conn, user)
+      token = get_session(conn, :user_token)
+
+      conn =
+        conn
+        |> put_private(:plug_skip_csrf_protection, false)
+        |> delete(~p"/auth/logout", %{"_csrf_token" => "stale-token"})
+
+      assert redirected_to(conn) == "/"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
+      refute get_session(conn, :user_token)
+      refute UserSessionQueries.get_user_by_session_token(token)
     end
   end
 

@@ -42,7 +42,6 @@ msgid "Back to Dashboard"
 msgstr "Zurück zum Dashboard"
 
 #: lib/tymeslot_web/live/account_live/components.ex
-#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Abbrechen"

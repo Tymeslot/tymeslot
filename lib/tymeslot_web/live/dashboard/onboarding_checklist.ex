@@ -74,10 +74,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
     >
       <details class="group min-w-0 flex-1 [&>summary::-webkit-details-marker]:hidden">
-        <summary
-          class="flex cursor-pointer list-none items-center gap-2 text-token-sm"
-          aria-label={dgettext("onboarding_wizard", "Setup checklist")}
-        >
+        <%!-- Named by its content, so the accessible name carries the visible
+              title and progress count that voice control users will say. --%>
+        <summary class="flex cursor-pointer list-none items-center gap-2 text-token-sm">
           <.pill tone={:brand}>{@done_count}/{@total}</.pill>
           <span class="font-bold text-tymeslot-800">
             {dgettext("onboarding_wizard", "Finish setting up")}
@@ -115,9 +114,10 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       class="onboarding-checklist"
       data-testid="onboarding-checklist"
       data-tour="quick-actions"
-      aria-label={dgettext("onboarding_wizard", "Setup checklist")}
+      aria-labelledby="onboarding-checklist-title"
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
       title={dgettext("onboarding_wizard", "Finish setting up")}
+      title_id="onboarding-checklist-title"
       description={
         dgettext(
           "onboarding_wizard",
@@ -323,6 +323,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   # Static definition of the setup items. `auto` names the `integration_status`
   # key that completes the item automatically, or `nil` for manual-only items.
+  #
+  # The calendar stays first: until one is connected the booking page turns
+  # every visitor away, so its description says that rather than selling sync.
   @spec catalog() :: [map()]
   defp catalog do
     [
@@ -331,7 +334,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         auto: :calendar_ready,
         icon: "hero-calendar-days",
         title: dgettext("onboarding_wizard", "Connect a calendar"),
-        description: dgettext("onboarding_wizard", "Sync to avoid double-bookings"),
+        description:
+          dgettext("onboarding_wizard", "Your booking page can't take bookings without one"),
         cta: dgettext("onboarding_wizard", "Connect"),
         path: ~p"/dashboard/integrations?tab=calendars"
       },
@@ -351,7 +355,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         title: dgettext("onboarding_wizard", "Customise your theme"),
         description: dgettext("onboarding_wizard", "Make your booking page yours"),
         cta: dgettext("onboarding_wizard", "Customise"),
-        path: ~p"/dashboard/theme"
+        path: ~p"/dashboard/pages"
       },
       %{
         key: "meeting_types",

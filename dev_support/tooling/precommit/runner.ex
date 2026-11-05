@@ -34,10 +34,11 @@ defmodule Tymeslot.Precommit.Runner do
       plus one tool, so the group finishes in about the time of its slowest
       member, credo or dialyzer, instead of their sum.
 
-  Output from a concurrent step is buffered and printed whole when that step
-  finishes, so two steps never interleave; the suite's arrives in one block at
-  the end. That is the cost of the arrangement: nothing scrolls live after the
-  compile steps.
+  Output from a concurrent step, the suite included, is buffered and printed
+  whole the moment that step finishes, header and output in a single write, so
+  two steps never interleave and a finished suite's failures are readable while
+  dialyzer is still running. That is the cost of the arrangement: nothing
+  scrolls live after the compile steps.
 
   ## Step results as they happen
 
@@ -163,8 +164,8 @@ defmodule Tymeslot.Precommit.Runner do
 
   # Each step's output is printed as it finishes rather than in declared order,
   # so a fast failure is on screen while credo and dialyzer are still running.
-  # Printing happens here, in the calling process, which is what keeps two
-  # steps' blocks from interleaving.
+  # The suite's task prints its own block at the same time, so each block goes
+  # out as one write (`print_block/2`) to keep the two from interleaving.
   defp run_concurrently([], _capture_fun), do: []
 
   defp run_concurrently(steps, capture_fun) do
@@ -185,15 +186,7 @@ defmodule Tymeslot.Precommit.Runner do
       timeout: :infinity
     )
     |> Enum.map(fn {:ok, {name, args, {output, code}}} ->
-      Mix.shell().info([
-        :bright,
-        "\n==> #{name}",
-        :reset,
-        :faint,
-        "  mix #{Enum.join(args, " ")}"
-      ])
-
-      IO.write(output)
+      print_block(block_header(name, "  mix #{Enum.join(args, " ")}"), output)
       name |> status(code) |> announce()
     end)
   end
@@ -219,14 +212,15 @@ defmodule Tymeslot.Precommit.Runner do
       "\n==> #{name}",
       :reset,
       :faint,
-      "  mix #{Enum.join(args, " ")}  (#{describe_plan(plan)}in the background; output follows at the end)"
+      "  mix #{Enum.join(args, " ")}  (#{describe_plan(plan)}in the background; output follows when it finishes)"
     ])
 
     task =
       Tasks.async(fn ->
-        {_output, code} = result = capture_suite(args, env, capture_fun, plan)
+        {output, code} = capture_suite(args, env, capture_fun, plan)
         announce(status(name, code))
-        result
+        print_block(block_header(name, "  (background output)"), output)
+        code
       end)
 
     {name, task}
@@ -270,14 +264,14 @@ defmodule Tymeslot.Precommit.Runner do
   # No timeout: the step takes as long as it takes, and a run that has already
   # spent minutes on the static checks should not throw away a nearly finished
   # suite over a deadline nobody could set correctly.
-  defp join({name, task}) do
-    {output, code} = Task.await(task, :infinity)
+  defp join({name, task}), do: status(name, Task.await(task, :infinity))
 
-    Mix.shell().info([:bright, "\n==> #{name}", :reset, :faint, "  (background output)"])
-    IO.write(output)
+  defp block_header(name, detail), do: [:bright, "\n==> #{name}", :reset, :faint, detail]
 
-    status(name, code)
-  end
+  # The IO server handles one request at a time, so a block sent as a single
+  # write cannot have another step's output land between its header and body.
+  # Formatted the way `Mix.shell().info/1` does, colour only on a terminal.
+  defp print_block(header, output), do: IO.write([IO.ANSI.format(header), "\n", output])
 
   defp status(name, 0), do: {name, :passed, 0}
   defp status(name, code), do: {name, :failed, code}

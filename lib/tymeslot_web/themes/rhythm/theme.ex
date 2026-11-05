@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
 
   use TymeslotWeb.Themes.Core.Theme,
     live_view: TymeslotWeb.Themes.Rhythm.Scheduling.Live,
+    font: "inter",
     preview_image: "/images/ui/theme-previews/rhythm-theme-preview.webp",
     description:
       dgettext_noop(

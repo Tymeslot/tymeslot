@@ -138,7 +138,12 @@ defmodule TymeslotWeb.AccountLive.Handlers do
         {:noreply, socket |> LiveView.put_flash(:error, message) |> assign(:delete_errors, %{})}
 
       {:error, errors} ->
-        {:noreply, assign(socket, :delete_errors, Map.new(errors, fn {k, v} -> {k, [v]} end))}
+        # The errors sit in the dialog's scrolling body, below the fold on a
+        # phone; scroll, never focus, so no on-screen keyboard covers them.
+        {:noreply,
+         socket
+         |> assign(:delete_errors, Map.new(errors, fn {k, v} -> {k, [v]} end))
+         |> LiveView.push_event("scroll-to-error", %{id: "delete-account-modal"})}
     end
   end
 

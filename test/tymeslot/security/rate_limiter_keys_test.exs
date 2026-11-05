@@ -50,6 +50,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
        ["password_reset:email:ada@example.com:1h", "password_reset:email:ada@example.com:1d"]},
     email_change_verify: {@ip, ["email_change_verify:203.0.113.9"]},
     password_reset_submit: {@ip, ["password_reset_submit:203.0.113.9"]},
+    invitation_accept: {@ip, ["invitation_accept:203.0.113.9"]},
     verification_link: {@ip, ["verification_link:203.0.113.9"]},
     oauth_initiation: {@ip, ["oauth_initiation:203.0.113.9"]},
     oauth_callback: {@ip, ["oauth_callback:203.0.113.9"]},

@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
 
   describe "theme:set_option" do
     test "a scheme card saves the palette", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       view |> element(option_button("palette", "scheme", "ocean")) |> render_click()
 
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
     end
 
     test "a gradient card saves the background", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       view |> element(option_button("background", "gradient", "gradient_4")) |> render_click()
 
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
     end
 
     test "the colour widget commits through the same event", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
       view |> element("button", "Solid Colour") |> render_click()
       view |> element("button[phx-click='theme:toggle_custom_picker']") |> render_click()
 
@@ -93,14 +93,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
 
       on_exit(fn -> :telemetry.detach(handler_id) end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
       view |> element(option_button("palette", "scheme", "ocean")) |> render_click()
 
       assert_receive {:telemetry, ^ref, %{scheme_id: "ocean", theme_id: "1"}}
     end
 
     test "an option the theme does not declare is ignored", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       set_option(view, %{"option" => "logo", "field" => "file", "choice" => "x.png"})
 
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
 
     test "a background kind the theme does not declare is refused with a message",
          %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       set_option(view, %{"option" => "background", "field" => "pattern", "choice" => "stripes"})
 
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
     end
 
     test "an invalid value is refused and nothing is saved", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       set_option(view, %{
         "option" => "background",
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
     end
 
     test "a malformed payload is ignored", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       set_option(view, %{"option" => "palette"})
 
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
     end
 
     test "a UI event goes to the panel of the option it names", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
       target = with_target(view, "#theme-customization-uploads")
 
       render_click(target, "theme:set_browsing_type", %{"option" => "palette", "type" => "video"})
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationSetOptionTest do
         groups = Enum.map(spec.option_groups(), & &1.module)
         kinds = Specs.background_kinds(spec)
 
-        {:ok, _view, html} = live(conn, "/dashboard/theme/customize/#{unquote(theme.id)}")
+        {:ok, _view, html} = live(conn, "/dashboard/pages/customize/#{unquote(theme.id)}")
 
         assert html =~ "Colour Palette" == Palette in groups
         assert html =~ "Background Design" == Background in groups

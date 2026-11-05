@@ -6,7 +6,15 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   require Logger
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Auth.OAuth.{Providers, TransactionalUserCreation}
-  alias Tymeslot.Auth.{RegistrationAnnouncement, UserQueries, UserSchema, UserTokenQueries}
+
+  alias Tymeslot.Auth.{
+    Invitations,
+    RegistrationAnnouncement,
+    UserQueries,
+    UserSchema,
+    UserTokenQueries
+  }
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
@@ -29,14 +37,17 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   created it. When no account carries this provider ID but the login's email
   is already registered, returns `{:error, :email_already_taken}` so the
   caller can point the user at their original sign-in method rather than
-  routing them into a registration that cannot succeed.
+  routing them into a registration that cannot succeed. When that account
+  is an admin's invitation not yet accepted, returns
+  `{:error, :invitation_pending}` instead: its owner sets up their sign-in
+  from the emailed invitation link, not here.
 
   All generic OAuth users share `provider = "oauth"` whichever identity
   provider issued them, so switching identity providers requires clearing the
   old provider's rows: a new `sub` colliding with an old one would match.
   """
   @spec find_existing_user(provider(), oauth_registration_data()) ::
-          {:ok, map()} | {:error, :not_found | :email_already_taken}
+          {:ok, map()} | {:error, :not_found | :email_already_taken | :invitation_pending}
   def find_existing_user(provider, %{provider_uid: uid} = identity) do
     case Providers.find_user(provider, uid, Repo) do
       {:ok, user} -> {:ok, user}
@@ -144,12 +155,16 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
 
   defp check_email_unregistered(email) when is_binary(email) and email != "" do
     case UserQueries.get_user_by_email(email) do
-      {:ok, _user} -> {:error, :email_already_taken}
+      {:ok, user} -> {:error, taken_reason(user)}
       {:error, :not_found} -> {:error, :not_found}
     end
   end
 
   defp check_email_unregistered(_email), do: {:error, :not_found}
+
+  defp taken_reason(user) do
+    if Invitations.pending?(user), do: :invitation_pending, else: :email_already_taken
+  end
 
   defp build_auth_params(provider, oauth_user) do
     uid_field = Atom.to_string(Providers.fetch!(provider).uid_field)

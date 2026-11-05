@@ -37,6 +37,7 @@
 
     <%!-- Theme-specific CSS --%>
     {render_theme_css(assigns[:theme_id])}
+    {render_font_preloads(assigns)}
 
     <%!-- Additional CSS from external layers (e.g., SaaS branding) --%>
     <%= for css_path <- Application.get_env(:tymeslot, :scheduling_additional_css, []) do %>

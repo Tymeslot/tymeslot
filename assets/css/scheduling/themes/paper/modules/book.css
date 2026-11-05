@@ -82,6 +82,15 @@
   cursor: pointer;
 }
 
+/* Under a finger it takes a full touch target's height, the negative margin
+   giving the extra back, so the line it sits on keeps its height. */
+@media (pointer: coarse) {
+  .paper-book__change {
+    min-height: var(--min-touch-target);
+    margin-block: calc((1lh - var(--min-touch-target)) / 2);
+  }
+}
+
 .paper-book__change:focus-visible {
   outline: var(--paper-focus-outline);
   outline-offset: var(--space-3xs);

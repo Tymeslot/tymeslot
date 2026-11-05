@@ -35,6 +35,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   `closed` that arrives before its `created` is applied as usual: the guard
   keys on the dispute, never on the row being `disputed`.
 
+  The same identity guards this handler: a `closed` for one dispute while
+  the payment records a different one as open (an inquiry's close
+  delivered after the chargeback it escalated into was created) is
+  ignored, so it cannot clear the live dispute or schedule a refund
+  while that dispute still holds the money.
+
   Idempotent on `last_event_id`.
   """
 
@@ -88,25 +94,27 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # Decided from the locked row (`LockedPayment`): a `charge.refunded`
   # committed since the row was resolved must be counted, not written over.
   defp apply_outcome(payment, event_id, outcome, object) do
+    dispute_id = object["id"]
+
     result =
       LockedPayment.run(payment, event_id, fn locked ->
-        attrs =
-          locked
-          |> outcome_attrs(outcome, object["amount"] || 0)
-          |> Map.merge(%{
-            last_event_id: event_id,
-            stripe_dispute_id: object["id"],
-            dispute_closed_at: DateTime.utc_now(:second)
-          })
-
-        with {:ok, updated} <- BookingPaymentQueries.update(locked, attrs),
-             {:ok, _job} <- maybe_schedule_refund(updated) do
-          {:ok, {locked.status, updated.status}}
+        if another_dispute_open?(locked, dispute_id) do
+          {:ok, :another_dispute_open}
+        else
+          close_dispute(locked, event_id, outcome, object)
         end
       end)
 
     case result do
       {:ok, :idempotent_replay} ->
+        :ok
+
+      {:ok, :another_dispute_open} ->
+        Logger.info("charge.dispute.closed: another dispute is open on the payment, ignored",
+          booking_payment_id: payment.id,
+          dispute_id: dispute_id
+        )
+
         :ok
 
       {:ok, {old_status, new_status}} ->
@@ -115,6 +123,36 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  # A row that records a different dispute as still open belongs to that
+  # dispute: a late or retried close for an earlier one (an inquiry closed
+  # after the chargeback it escalated into was opened) must not clear it.
+  # A row with no recorded dispute, open since before disputes were
+  # tracked, is closed by whichever dispute closes.
+  defp another_dispute_open?(
+         %BookingPaymentSchema{stripe_dispute_id: recorded, dispute_closed_at: nil},
+         dispute_id
+       )
+       when is_binary(recorded),
+       do: recorded != dispute_id
+
+  defp another_dispute_open?(_locked, _dispute_id), do: false
+
+  defp close_dispute(locked, event_id, outcome, object) do
+    attrs =
+      locked
+      |> outcome_attrs(outcome, object["amount"] || 0)
+      |> Map.merge(%{
+        last_event_id: event_id,
+        stripe_dispute_id: object["id"],
+        dispute_closed_at: DateTime.utc_now(:second)
+      })
+
+    with {:ok, updated} <- BookingPaymentQueries.update(locked, attrs),
+         {:ok, _job} <- maybe_schedule_refund(updated) do
+      {:ok, {locked.status, updated.status}}
     end
   end
 

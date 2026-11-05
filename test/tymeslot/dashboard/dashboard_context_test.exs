@@ -55,6 +55,7 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
                has_calendar: false,
                calendar_ready: false,
                refused_calendars: [],
+               has_calendar_connection: false,
                has_video: false,
                has_meeting_types: false
              }
@@ -111,6 +112,23 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
       insert(:calendar_integration, user: user, provider: "caldav")
 
       assert %{has_calendar: true} = DashboardContext.get_integration_status(user.id)
+    end
+
+    # Tells a host who never connected a calendar apart from one whose
+    # connection stopped working, so the dashboard can offer a repair.
+    test "reports has_calendar_connection: false when no calendar was ever connected" do
+      user = insert(:user)
+
+      assert %{has_calendar: false, has_calendar_connection: false} =
+               DashboardContext.get_integration_status(user.id)
+    end
+
+    test "reports has_calendar_connection: true for a switched-off calendar" do
+      user = insert(:user)
+      insert(:calendar_integration, user: user, provider: "caldav", is_active: false)
+
+      assert %{has_calendar: false, has_calendar_connection: true} =
+               DashboardContext.get_integration_status(user.id)
     end
 
     test "a connected calendar with nothing refused is ready to take bookings" do

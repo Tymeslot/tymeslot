@@ -2,7 +2,9 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   @moduledoc """
   The Theme screen for a host whose plan no longer includes booking pages:
   their pages are shown read-only with an explanation, a new page asks for
-  the upgrade instead of opening the dialog, and deleting stays open.
+  the upgrade instead of opening the dialog, and deleting stays open. The
+  meeting type editor's page switches are disabled likewise, and a refused
+  flip says why.
   """
   # The checker is configured globally.
   use TymeslotWeb.LiveCase, async: false
@@ -29,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "a page is shown read-only, its theme cannot be changed", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     assert has_element?(view, "[data-testid='booking-pages-locked']", "read-only")
     assert has_element?(view, "#page-settings-#{ctx.page.id} fieldset[disabled]")
@@ -38,7 +40,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "a forged rename is refused with the reason", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view
     |> element("#page-settings-#{ctx.page.id}-details")
@@ -49,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "the main page stays editable", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     refute has_element?(view, "[data-testid='booking-pages-locked']")
     view |> element("[phx-click='select_theme'][phx-value-theme='2']") |> render_click()
@@ -57,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "a new page asks for the upgrade instead of opening the dialog", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -65,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "the page can still be deleted", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view |> element("[phx-click='show_delete']") |> render_click()
 
@@ -74,5 +76,44 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
     |> render_click()
 
     assert BookingPages.list(ctx.profile.id) == []
+  end
+
+  describe "the meeting type editor" do
+    setup ctx do
+      type = insert(:meeting_type, user: ctx.user, name: "ISO audit", is_private: false)
+      {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meeting-settings")
+      view |> element("[phx-click='edit_type'][phx-value-id='#{type.id}']") |> render_click()
+      %{type: type, view: view}
+    end
+
+    test "disables the page switches, not the username's", ctx do
+      page_switch = "#meeting-type-page-toggle-#{ctx.type.id}-#{ctx.page.id}"
+
+      assert has_element?(ctx.view, page_switch <> "[disabled]")
+      assert has_element?(ctx.view, page_switch <> "-reason", "read-only")
+
+      ctx.view |> element("#meeting-type-private-toggle-#{ctx.type.id}") |> render_click()
+      assert Repo.reload!(ctx.type).is_private
+    end
+
+    test "a forged page flip is refused with the reason", ctx do
+      [_match, cid] =
+        Regex.run(
+          ~r/phx-target="(\d+)"/,
+          ctx.view |> element("#meeting-type-private-toggle-#{ctx.type.id}") |> render()
+        )
+
+      ctx.view
+      |> with_target("[data-phx-component='#{cid}']")
+      |> render_click("toggle_page_membership", %{
+        "id" => to_string(ctx.type.id),
+        "page" => to_string(ctx.page.id),
+        "listed" => "true"
+      })
+
+      assert BookingPages.memberships(ctx.profile.id) == %{}
+      assert has_element?(ctx.view, "#app-flash-group-error", "read-only on your current plan")
+      refute has_element?(ctx.view, "#app-flash-group-error", "Failed to update visibility")
+    end
   end
 end

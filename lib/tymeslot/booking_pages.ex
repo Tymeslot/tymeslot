@@ -117,22 +117,6 @@ defmodule Tymeslot.BookingPages do
   end
 
   @doc """
-  `profile` as its page at `slug` presents it, or `profile` unchanged when it
-  has no page there (`slug` nil, a meeting type's slug, or nothing at all).
-  For whatever needs only the look of `/<username>/<slug>`, such as the
-  stylesheet chosen before the page mounts.
-  """
-  @spec presented_at(ProfileSchema.t() | nil, String.t() | nil) :: ProfileSchema.t() | nil
-  def presented_at(%ProfileSchema{id: profile_id} = profile, slug) when is_binary(slug) do
-    case BookingPageQueries.get_by_slug(profile_id, slug) do
-      nil -> profile
-      page -> apply_to_profile(profile, page)
-    end
-  end
-
-  def presented_at(profile, _no_slug), do: profile
-
-  @doc """
   What `/<username>/<slug>` is for `profile`, ignoring case:
 
     * `{:ok, page}`: one of its pages, draft or not (`published?/1`), with
@@ -251,17 +235,19 @@ defmodule Tymeslot.BookingPages do
   def page_id(_profile), do: nil
 
   @doc """
-  `id` when that page still exists, otherwise nil: a booking keeps the page it
-  came through only while there is one, so a page deleted while its visitor
-  was on the booking form is dropped from the booking. This is a check before
-  the booking is written, not a guarantee: a page deleted between the check
-  and the insert still fails that booking on the foreign key.
+  `id` when that page still exists and belongs to the organiser
+  `organizer_user_id`, otherwise nil: a booking keeps the page it came through
+  only while there is one, so a page deleted while its visitor was on the
+  booking form is dropped from the booking, and another host's page is never
+  recorded on it. This is a check before the booking is written, not a
+  guarantee: a page deleted between the check and the insert still fails that
+  booking on the foreign key.
   """
-  @spec existing_id(integer() | nil) :: integer() | nil
-  def existing_id(id) when is_integer(id),
-    do: if(BookingPageQueries.exists?(id), do: id, else: nil)
+  @spec existing_id(integer() | nil, integer() | nil) :: integer() | nil
+  def existing_id(id, organizer_user_id) when is_integer(id) and is_integer(organizer_user_id),
+    do: if(BookingPageQueries.exists_for_user?(id, organizer_user_id), do: id, else: nil)
 
-  def existing_id(_none), do: nil
+  def existing_id(_id, _organizer_user_id), do: nil
 
   @doc "A profile's pages, oldest first."
   @spec list(integer()) :: [page()]

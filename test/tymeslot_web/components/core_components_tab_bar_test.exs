@@ -273,7 +273,7 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
       assert shell_class =~ "flex-wrap"
     end
 
-    test "render the tab action inside the active tab only, given that tab" do
+    test "render the tab action for the active tab only, outside the tablist" do
       assigns = %{}
 
       doc =
@@ -284,23 +284,26 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
           tabs={[%{id: "a", label: "A"}, %{id: "b", label: "B"}]}
           active_tab="b"
         >
-          <:tab_action :let={tab}><span class="tab-menu">menu for {tab.id}</span></:tab_action>
+          <:tab_action :let={tab}><button class="tab-menu">menu for {tab.id}</button></:tab_action>
         </Navigation.tab_bar>
         """
         |> rendered_to_string()
         |> Floki.parse_fragment!()
 
-      assert [menu] = Floki.find(doc, "#s .tab-menu")
+      assert [menu] = Floki.find(doc, ".tab-menu")
       assert Floki.text(menu) =~ "menu for b"
 
-      # It shares the selected tab's wrapper, beside (not inside) the button.
-      [wrapper] =
-        Enum.filter(Floki.find(doc, "#s [role='presentation']"), fn el ->
-          Floki.find(el, "#s-tab-b") != []
-        end)
+      # A tablist may own only tabs, so the menu must not sit inside it.
+      assert [tablist] = Floki.find(doc, "[role='tablist']")
+      assert Floki.find(tablist, ".tab-menu") == []
+      assert Floki.find(tablist, "button:not([role='tab'])") == []
 
-      assert [_menu] = Floki.find(wrapper, ".tab-menu")
-      assert Floki.find(doc, "#s-tab-b .tab-menu") == []
+      # It is drawn over the active tab by anchoring to it.
+      assert [anchor] = Floki.attribute(doc, "#s-tab-b", "style")
+      assert anchor =~ "anchor-name: --s-active"
+      refute doc |> Floki.attribute("#s-tab-a", "style") |> Enum.any?(&(&1 =~ "anchor-name"))
+      assert [positioned] = Floki.find(doc, "[style*='position-anchor: --s-active']")
+      assert [_menu] = Floki.find(positioned, ".tab-menu")
     end
 
     test "use a tab's accent when it is active and its dot while it is not" do

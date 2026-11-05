@@ -6,8 +6,8 @@ defmodule TymeslotWeb.AdminLive do
       the sections `TymeslotWeb.AdminLive.Tabs` assigns them. A saved value
       outranks the application config, but not a set environment variable:
       a setting that variable fixes is shown greyed out.
-    * `:users` — list users with counts at the top and
-      promote/demote admin actions.
+    * `:users` — list users with counts at the top, invite a user by email,
+      and promote/demote admin actions.
 
   Mounted under `/admin` with the `RequireAdminUiEnabled` + `RequireAdmin`
   plugs on the static path and the `EnsureAdminHook` on_mount on the live
@@ -23,6 +23,7 @@ defmodule TymeslotWeb.AdminLive do
 
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.Invitations
   alias Tymeslot.Emails.Branding
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Locales
@@ -48,6 +49,7 @@ defmodule TymeslotWeb.AdminLive do
      |> assign(:profile, nil)
      |> assign(:pending_action, nil)
      |> assign(:role_change_submitting, false)
+     |> assign(:invite_form, UserActions.invite_form())
      |> assign(:accent_draft, nil)
      |> assign(:max_logo_bytes, @logo_max_bytes)
      |> allow_upload(:email_logo,
@@ -189,6 +191,19 @@ defmodule TymeslotWeb.AdminLive do
     do: UserActions.open_pending_action(:delete, params, socket)
 
   def handle_event("delete_user", %{"id" => id}, socket), do: UserActions.delete(id, socket)
+
+  def handle_event("invite_user", %{"invite" => %{"email" => email}}, socket)
+      when is_binary(email),
+      do: UserActions.invite(email, socket)
+
+  def handle_event("resend_invitation", %{"id" => id}, socket),
+    do: UserActions.resend_invitation(id, socket)
+
+  def handle_event("request_cancel_invitation", params, socket),
+    do: UserActions.open_pending_action(:cancel_invitation, params, socket)
+
+  def handle_event("cancel_invitation", %{"id" => id}, socket),
+    do: UserActions.cancel_invitation(id, socket)
 
   # --- Email branding helpers ---
 
@@ -419,6 +434,7 @@ defmodule TymeslotWeb.AdminLive do
     |> assign(:user_count, Auth.count_users())
     |> assign(:admin_count, Auth.count_admins())
     |> assign(:self_demote_blocked?, not Auth.remaining_signin_capable_admins?(user))
+    |> assign(:invitations_available?, Invitations.available?())
   end
 
   # Config-level errors (`:too_many_files`) come from `upload_errors/1`; a
@@ -486,6 +502,8 @@ defmodule TymeslotWeb.AdminLive do
         self_demote_blocked?={@self_demote_blocked?}
         pending_action={@pending_action}
         role_change_submitting={@role_change_submitting}
+        invite_form={@invite_form}
+        invitations_available?={@invitations_available?}
       />
     </Layout.admin_layout>
     """

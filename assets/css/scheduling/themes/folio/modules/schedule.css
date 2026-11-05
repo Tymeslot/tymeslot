@@ -101,6 +101,16 @@
   transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
+/* Under a finger a day grows to a full touch target where its column has
+   the room, and keeps to the column where it does not. */
+@media (pointer: coarse) {
+  .calendar-day {
+    width: min(100%, max(var(--folio-day-size), var(--min-touch-target)));
+    height: auto;
+    aspect-ratio: 1;
+  }
+}
+
 .calendar-day--available {
   background: var(--folio-tint);
   color: var(--theme-text);

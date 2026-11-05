@@ -49,6 +49,27 @@ defmodule Tymeslot.ThemeCustomizations.PageScopeTest do
     assert ThemeCustomizations.get_by_profile_and_theme({other.id, ctx.page.id}, "1") == nil
   end
 
+  test "another profile's page is refused and takes no colour row", ctx do
+    other = insert(:profile)
+    foreign_scope = {other.id, ctx.page.id}
+
+    assert ThemeCustomizations.check_write(foreign_scope) == {:error, :not_found}
+
+    assert {:error, :not_found} =
+             ThemeCustomizations.upsert_theme_customization(foreign_scope, "1", %{
+               "color_scheme" => "rose"
+             })
+
+    refute Repo.exists?(
+             from(c in ThemeCustomizationSchema, where: c.booking_page_id == ^ctx.page.id)
+           )
+
+    assert {:ok, _owned} =
+             ThemeCustomizations.upsert_theme_customization({ctx.profile.id, ctx.page.id}, "1", %{
+               "color_scheme" => "rose"
+             })
+  end
+
   test "an upsert in page scope writes the page's row and leaves the profile's alone", ctx do
     insert(:theme_customization, profile: ctx.profile, theme_id: "1", color_scheme: "ocean")
 

@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Live.Themes.ShowcaseThemeTest do
     %{conn: conn, profile: profile}
   end
 
-  defp customise(conn), do: live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+  defp customise(conn), do: live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
 
   defp option_button(option, field, choice),
     do:

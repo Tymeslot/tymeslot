@@ -174,7 +174,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
       lv |> element("#calendar-preview-cancel") |> render_click()
 
       meeting
-      |> Changeset.change(status: "cancelled", cancelled_at: ~U[2026-10-14 07:59:00Z])
+      |> Changeset.change(status: :cancelled, cancelled_at: ~U[2026-10-14 07:59:00Z])
       |> Repo.update!()
 
       lv |> form("#cancel-meeting-form") |> render_submit()
@@ -215,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
     lv |> element("#calendar-preview-reschedule") |> render_click()
 
     meeting
-    |> Changeset.change(status: "cancelled", cancelled_at: ~U[2026-10-14 07:59:00Z])
+    |> Changeset.change(status: :cancelled, cancelled_at: ~U[2026-10-14 07:59:00Z])
     |> Repo.update!()
 
     lv |> element("#calendar-reschedule-booking button", "Send Request") |> render_click()
@@ -259,7 +259,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
     assert render(lv) =~ "Meeting cancelled and refund issued"
     assert reload(meeting).status == :cancelled
 
-    assert %{status: "refunded", refunded_amount_cents: 5000} =
+    assert %{status: :refunded, refunded_amount_cents: 5000} =
              BookingPaymentQueries.get(payment.id)
   end
 

@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
       phx-click={@close && JS.push("lv:clear-flash", value: %{key: @kind}) |> hide_flash(@id)}
       role="alert"
       class={[
-        "w-80 sm:w-96 rounded-token-2xl p-5 shadow-2xl relative overflow-hidden border-2",
+        "w-full sm:w-96 rounded-token-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden border-2",
         "transition-all duration-300 hover:scale-[1.02] cursor-pointer",
         flash_variant(@kind)
       ]}
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
           <p :if={@title} class="text-sm font-black uppercase tracking-wider mb-1">
             {@title}
           </p>
-          <p class="text-sm font-bold leading-relaxed">
+          <p class="text-sm font-bold leading-relaxed break-words">
             {msg}
           </p>
         </div>
@@ -121,6 +121,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
   @doc """
   Shows the flash group with standard titles and content.
 
+  The toasts sit at the top right from the `sm` breakpoint up. On a phone they
+  sit at the bottom instead, full width between the side gutters and clear of
+  the home indicator, because at the top they covered the dashboard header and
+  tabs and an open dialog's title and close button. The group stays above the
+  modal overlay so that the connection-lost toast is seen while a dialog is
+  open. The slots run from least to most severe, so on a phone, where only the
+  last two visible toasts are shown (`components/misc.css`), the most severe
+  survive. Booking pages keep the top on phones (see the scheduling
+  `components/flash.css`).
+
   ## Examples
 
       <.flash_group flash={@flash} />
@@ -131,33 +141,31 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
   @spec flash_group(map()) :: Phoenix.LiveView.Rendered.t()
   def flash_group(assigns) do
     ~H"""
-    <div id={@id} class="fixed top-4 right-4 z-[10050] flex flex-col gap-3 pointer-events-none">
-      <div class="pointer-events-auto">
-        <.flash kind={:info} flash={@flash} id={"#{@id}-info"} />
-      </div>
-      <div class="pointer-events-auto">
-        <.flash kind={:error} flash={@flash} id={"#{@id}-error"} />
-      </div>
-      <div class="pointer-events-auto">
-        <.flash kind={:warning} flash={@flash} id={"#{@id}-warning"} />
-      </div>
-
-      <div class="pointer-events-auto">
-        <.flash
-          id={"#{@id}-disconnected"}
-          kind={:error}
-          title={dgettext("common", "Connection Lost")}
-          close={false}
-          autoshow={false}
-          hook="ConnectionStatus"
-          phx-disconnected={JS.dispatch("tymeslot:lv-disconnected", to: "##{@id}-disconnected")}
-          phx-connected={JS.dispatch("tymeslot:lv-connected", to: "##{@id}-disconnected")}
-          style="display: none;"
-        >
-          {dgettext("common", "Attempting to reconnect")}
-          <Feedback.spinner class="ml-1 w-3 h-3 inline-block" />
-        </.flash>
-      </div>
+    <div
+      id={@id}
+      class={[
+        "flash-group fixed z-[10050] flex flex-col gap-3 pointer-events-none *:pointer-events-auto",
+        "left-4 right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))]",
+        "sm:left-auto sm:bottom-auto sm:top-4"
+      ]}
+    >
+      <.flash kind={:info} flash={@flash} id={"#{@id}-info"} />
+      <.flash kind={:warning} flash={@flash} id={"#{@id}-warning"} />
+      <.flash kind={:error} flash={@flash} id={"#{@id}-error"} />
+      <.flash
+        id={"#{@id}-disconnected"}
+        kind={:error}
+        title={dgettext("common", "Connection Lost")}
+        close={false}
+        autoshow={false}
+        hook="ConnectionStatus"
+        phx-disconnected={JS.dispatch("tymeslot:lv-disconnected", to: "##{@id}-disconnected")}
+        phx-connected={JS.dispatch("tymeslot:lv-connected", to: "##{@id}-disconnected")}
+        style="display: none;"
+      >
+        {dgettext("common", "Attempting to reconnect")}
+        <Feedback.spinner class="ml-1 w-3 h-3 inline-block" />
+      </.flash>
     </div>
     """
   end

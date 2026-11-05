@@ -226,3 +226,13 @@ msgstr "au-delà de la fenêtre de réservation"
 #, elixir-autogen, elixir-format
 msgid "inside the minimum notice"
 msgstr "en deçà du préavis minimum"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}."
+msgstr "%{time} n’existe pas le %{date}, car on avance l’heure ce jour-là ; l’heure a donc été enregistrée à %{saved}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr "%{time} survient deux fois le %{date}, car on recule l’heure ce jour-là ; c’est donc la première occurrence (%{zone}) qui a été enregistrée."

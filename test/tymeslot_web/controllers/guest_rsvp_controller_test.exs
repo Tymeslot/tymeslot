@@ -245,6 +245,39 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
       assert html =~ ~s(href="https://organiser.example/privacy")
     end
 
+    test "the fully-booked page shows the organiser's legal links, not the defaults", %{
+      conn: conn
+    } do
+      user = Factory.insert(:user)
+      profile = Factory.insert(:profile, user: user)
+
+      {:ok, _profile} =
+        Profiles.update_legal_links(profile, %{
+          legal_notice_url: "https://organiser.example/impressum",
+          privacy_policy_url: "https://organiser.example/privacy"
+        })
+
+      meeting = Factory.insert(:meeting, organizer_user_id: user.id, capacity: 2)
+      participant = Factory.insert(:participant, meeting: meeting)
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["g@example.com"])
+
+      {:ok, _declined} = Guests.record_rsvp(guest.rsvp_token, :declined)
+      Factory.insert(:participant, meeting: meeting)
+
+      confirm_page = conn |> get(~p"/guest/#{guest.rsvp_token}/accept") |> html_response(409)
+
+      submit_page =
+        build_conn() |> post(~p"/guest/#{guest.rsvp_token}/accept") |> html_response(409)
+
+      for html <- [confirm_page, submit_page] do
+        assert html =~ "fully booked"
+        assert html =~ ~s(href="https://organiser.example/impressum")
+        assert html =~ ~s(href="https://organiser.example/privacy")
+      end
+    end
+
     test "an unknown token shows the instance defaults only", %{conn: conn} do
       previous = Application.get_env(:tymeslot, :booking_privacy_policy_url)
 

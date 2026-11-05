@@ -99,7 +99,8 @@
 
 .onboarding-progress-label {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-400);
+  /* 500, not 400: small text needs 4.5:1 against the white card. */
+  color: var(--color-neutral-500);
   font-weight: 500;
 }
 

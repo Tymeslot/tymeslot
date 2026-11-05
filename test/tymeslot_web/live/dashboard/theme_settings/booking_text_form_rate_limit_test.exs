@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormRateLimitTest do
     } do
       exhaust_theme_customization_bucket(user)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       html = edit(view, %{"booking_heading" => "Book a slot that suits you"})
 
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormRateLimitTest do
     test "survives a retry that is refused as well", %{conn: conn, user: user, profile: profile} do
       exhaust_theme_customization_bucket(user)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       edit(view, %{"booking_heading" => "Book a slot that suits you"})
 
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormRateLimitTest do
     test "loses to whatever the host typed after it", %{conn: conn, user: user, profile: profile} do
       exhaust_theme_customization_bucket(user)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       edit(view, %{"booking_heading" => "First thought"})
       edit(view, %{"booking_heading" => "Second thought"})
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormRateLimitTest do
     } do
       exhaust_theme_customization_bucket(user)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       edit(view, %{"booking_heading" => "Throttled wording"})
 

@@ -273,6 +273,20 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
                &(&1 =~ ~r/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), .+ \d{4}$/)
              )
 
+      # The phone week strip names each day by its visible text first, then
+      # the full date, rather than an aria-label that hides "MON 2".
+      strip = html |> Floki.parse_document!() |> Floki.find("button.week-day-cell")
+      assert strip != []
+      assert Enum.flat_map(strip, &Floki.attribute(&1, "aria-label")) == []
+
+      assert Enum.all?(
+               strip,
+               &(&1
+                 |> Floki.text(sep: " ")
+                 |> String.split()
+                 |> Enum.join(" ") =~ ~r/^\S+ \d{1,2} , \S+, .+ \d{4}$/)
+             )
+
       # A polite live region announces the slot-loading state. The schedule
       # step now opens on the first bookable day, so the region carries slot
       # state rather than the "pick a date" prompt. The prompt is not dead: no
@@ -319,14 +333,20 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
       html = render(view)
 
-      labels =
-        html |> Floki.parse_document!() |> Floki.attribute("button.calendar-day", "aria-label")
+      days = html |> Floki.parse_document!() |> Floki.find("button.calendar-day")
+      assert days != []
 
-      assert labels != []
+      # No aria-label overrides the visible "Mon 2", so the accessible name is
+      # the button's text: what is on screen first (WCAG 2.5.3, so speech
+      # input can say it), then the full date for screen readers.
+      assert Enum.flat_map(days, &Floki.attribute(&1, "aria-label")) == []
 
-      assert Enum.any?(
-               labels,
-               &(&1 =~ ~r/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), .+ \d{4}$/)
+      names = Enum.map(days, &(&1 |> Floki.text(sep: " ") |> String.split() |> Enum.join(" ")))
+
+      assert Enum.all?(
+               names,
+               &(&1 =~
+                   ~r/^\S+ \d{1,2} , (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), .+ \d{4}$/)
              )
 
       assert html =~ ~s(role="status")

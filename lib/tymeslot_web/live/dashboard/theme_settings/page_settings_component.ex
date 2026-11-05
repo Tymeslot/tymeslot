@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   works the meeting types' existing "unlisted" flag; on a booking page it works
   the page's listings (`BookingPages.set_meeting_type/3`). Either way a flip is
   a meeting type write, under the same rate limit as the meeting type screen's
-  own switches.
+  own switches, and sends the state it asks for (`phx-value-listed`), so it
+  does what the host saw even when another tab changed the listing meanwhile.
 
   `read_only` is set for a booking page its owner may no longer change
   (`BookingPages.editable?/1`): its fields and switches are disabled, and
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.UrlBuilder
+  alias TymeslotWeb.Components.Dashboard.BookingPages.AddressPreview
   alias TymeslotWeb.Components.Dashboard.BookingPages.DeletePageModal
   alias TymeslotWeb.Dashboard.ThemeSettingsComponent
   alias TymeslotWeb.Live.Shared.Flash
@@ -32,6 +34,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   # A meeting type's description is shown beside its switch up to this long;
   # a longer one would push the switches apart.
   @short_description 80
+
+  # Events that act on a named page. The main page's tab renders none of
+  # their controls, so there they can only arrive hand-sent.
+  @page_events ~w(validate_details save_details show_delete confirm_delete)
+
+  # The two values a listing switch sends as `listed`.
+  @listed_values ~w(true false)
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -59,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
         </span>
       </.section_header>
 
-      <.card padding={:lg} class="space-y-8">
+      <.card padding={:lg} class="space-y-6">
         <p :if={@draft} class="text-token-sm text-tymeslot-600" data-testid="page-draft-note">
           {dgettext(
             "dashboard_booking_pages",
@@ -67,78 +76,83 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
           )}
         </p>
 
-        <div class="space-y-2">
-          <p class="label">{dgettext("dashboard_booking_pages", "Address")}</p>
-          <div class="flex flex-wrap items-center gap-3">
-            <code class="text-token-sm font-semibold text-tymeslot-700 break-all">
-              {page_url(@profile, @page)}
-            </code>
-            <.action_button
-              id={"#{@id}-copy"}
-              type="button"
-              variant={:secondary}
-              icon="hero-clipboard-document"
-              phx-hook="CopyOnClick"
-              data-copy-text={page_url(@profile, @page)}
-              data-copy-feedback={
-                dgettext("dashboard_common", "Scheduling link copied to clipboard!")
-              }
-            >
-              {dgettext("dashboard_booking_pages", "Copy link")}
-            </.action_button>
-            <.action_link
-              :if={not @draft}
-              href={page_url(@profile, @page)}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant={:secondary}
-              icon="hero-arrow-top-right-on-square"
-            >
-              {dgettext("dashboard_booking_pages", "Open")}
-            </.action_link>
-          </div>
-        </div>
-
-        <%!-- A disabled fieldset disables every control in it, the submit
-        button included, without a `disabled` on each. --%>
-        <fieldset disabled={@read_only} class="min-w-0 m-0 p-0 border-0 space-y-8">
-          <.form
-            :if={@page}
-            for={@details_form}
-            id={"#{@id}-details"}
-            phx-change="validate_details"
-            phx-submit="save_details"
-            phx-target={@myself}
-            class="space-y-4"
+        <%!-- A booking page's address is edited here, its whole link shown
+        under the field; the main page's is its username, set on the profile,
+        so it is only shown. --%>
+        <.form
+          :if={@page}
+          for={@details_form}
+          id={"#{@id}-details"}
+          phx-change="validate_details"
+          phx-submit="save_details"
+          phx-target={@myself}
+          class="space-y-4"
+        >
+          <%!-- A disabled fieldset disables every field in it without a
+          `disabled` on each. --%>
+          <fieldset
+            disabled={@read_only}
+            class="min-w-0 m-0 p-0 border-0 grid gap-4 md:grid-cols-2"
           >
             <.input
               field={@details_form[:name]}
               label={dgettext("dashboard_booking_pages", "Page name")}
               maxlength={BookingPageSchema.name_max_length()}
-            />
+            >
+              <:description>
+                {dgettext(
+                  "dashboard_booking_pages",
+                  "For you only: it labels the page in your dashboard."
+                )}
+              </:description>
+            </.input>
             <.input
               field={@details_form[:slug]}
               label={dgettext("dashboard_booking_pages", "Address")}
-            />
-            <p class="text-token-sm text-tymeslot-500">
-              {dgettext(
-                "dashboard_booking_pages",
-                "You can change the address at any time: the old one keeps leading to this page."
-              )}
-            </p>
-            <.action_button type="submit">
+            >
+              <:description>
+                <AddressPreview.address_preview
+                  id={"#{@id}-address-preview"}
+                  username={@profile.username}
+                  slug={@details_form[:slug].value}
+                />
+              </:description>
+            </.input>
+          </fieldset>
+          <p class="text-token-xs text-tymeslot-500">
+            {dgettext(
+              "dashboard_booking_pages",
+              "You can change the address at any time: the old one keeps leading to this page."
+            )}
+          </p>
+          <div class="flex flex-wrap items-center gap-3">
+            <.action_button type="submit" disabled={@read_only}>
               {dgettext("dashboard_booking_pages", "Save")}
             </.action_button>
-          </.form>
+            <.link_actions id={@id} url={page_url(@profile, @page)} draft={@draft} />
+          </div>
+        </.form>
 
-          <div class="space-y-3">
-            <p class="label">{dgettext("dashboard_booking_pages", "Meeting types on this page")}</p>
-            <p :if={@meeting_types == []} class="text-token-sm text-tymeslot-500">
-              {dgettext("dashboard_booking_pages", "No meeting types yet.")}
-            </p>
-            <%!-- Switches, as in the meeting type editor: each one writes at
-            once, and a refused write leaves a switch showing what is stored,
-            where a checkbox would stay ticked. --%>
+        <div :if={!@page} class="space-y-2">
+          <p class="label">{dgettext("dashboard_booking_pages", "Address")}</p>
+          <div class="flex flex-wrap items-center gap-3">
+            <code class="text-token-sm font-semibold text-tymeslot-700 break-all">
+              {page_url(@profile, @page)}
+            </code>
+            <.link_actions id={@id} url={page_url(@profile, @page)} draft={@draft} />
+          </div>
+        </div>
+
+        <fieldset disabled={@read_only} class="min-w-0 m-0 p-0 border-0 space-y-3">
+          <p class="label">{dgettext("dashboard_booking_pages", "Meeting types on this page")}</p>
+          <p :if={@meeting_types == []} class="text-token-sm text-tymeslot-500">
+            {dgettext("dashboard_booking_pages", "No meeting types yet.")}
+          </p>
+          <%!-- Switches, as in the meeting type editor: each one writes at
+          once, and a refused write leaves a switch showing what is stored,
+          where a checkbox would stay ticked. Two columns on a wide screen, so
+          a long list stays short. --%>
+          <div class="grid gap-3 lg:grid-cols-2">
             <.setting_row
               :for={type <- @meeting_types}
               id={"#{@id}-type-#{type.id}"}
@@ -150,6 +164,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
               on_change="toggle_type"
               target={@myself}
               phx-value-id={type.id}
+              phx-value-listed={to_string(not listed?(@page, @memberships, type))}
             />
           </div>
         </fieldset>
@@ -181,14 +196,53 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
     """
   end
 
+  attr :id, :string, required: true
+  attr :url, :string, required: true
+  attr :draft, :boolean, required: true
+
+  # Copying the link stays open on a draft, so it can be shared ahead of
+  # going live; opening it waits until it is live.
+  defp link_actions(assigns) do
+    ~H"""
+    <.action_button
+      id={"#{@id}-copy"}
+      type="button"
+      variant={:secondary}
+      icon="hero-clipboard-document"
+      phx-hook="CopyOnClick"
+      data-copy-text={@url}
+      data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
+    >
+      {dgettext("dashboard_booking_pages", "Copy link")}
+    </.action_button>
+    <.action_link
+      :if={not @draft}
+      href={@url}
+      target="_blank"
+      rel="noopener noreferrer"
+      variant={:secondary}
+      icon="hero-arrow-top-right-on-square"
+    >
+      {dgettext("dashboard_booking_pages", "Open")}
+    </.action_link>
+    """
+  end
+
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_type", %{"id" => id}, socket) do
+  def handle_event(event, _params, %{assigns: %{page: nil}} = socket) when event in @page_events,
+    do: {:noreply, socket}
+
+  def handle_event("toggle_type", %{"id" => id, "listed" => listed}, socket)
+      when is_binary(id) and listed in @listed_values do
     user_id = socket.assigns.profile.user_id
 
     with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_toggle_type(socket, id, user_id)
+      do_toggle_type(socket, id, listed == "true", user_id)
     end)
   end
+
+  # Sent by hand without an id or a `listed` it can read: ignored.
+  def handle_event("toggle_type", _params, socket), do: {:noreply, socket}
 
   def handle_event("validate_details", %{"page" => params}, socket) do
     changeset = BookingPages.change_details(socket.assigns.page, params)
@@ -251,10 +305,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
     end
   end
 
-  defp do_toggle_type(socket, id, user_id) do
+  defp do_toggle_type(socket, id, listed?, user_id) do
     with {type_id, ""} <- Integer.parse(id),
          %{} = type <- MeetingTypes.get_meeting_type(type_id, user_id),
-         :ok <- toggle(socket.assigns.page, socket.assigns.memberships, type) do
+         :ok <- set_listed(socket.assigns.page, type, listed?) do
       send(self(), {:meeting_type_changed})
       Flash.info(dgettext("dashboard_booking_pages", "Booking page saved"))
       {:noreply, load_listings(socket)}
@@ -306,15 +360,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   defp page_form(changeset, id), do: to_form(changeset, as: :page, id: "#{id}-details")
 
   # The profile's own page is the type's existing "unlisted" flag.
-  defp toggle(nil, _memberships, type) do
-    case MeetingTypes.set_private(type, !type.is_private) do
+  defp set_listed(nil, type, listed?) do
+    case MeetingTypes.set_private(type, not listed?) do
       {:ok, _type} -> :ok
       {:error, _reason} -> :error
     end
   end
 
-  defp toggle(page, memberships, type),
-    do: BookingPages.set_meeting_type(page, type.id, not listed?(page, memberships, type))
+  defp set_listed(page, type, listed?), do: BookingPages.set_meeting_type(page, type.id, listed?)
 
   defp listed?(nil, _memberships, type), do: not type.is_private
 

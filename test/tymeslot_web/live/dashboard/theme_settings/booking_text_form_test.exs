@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
 
   describe "the form" do
     test "offers the customisation, switched off, on the theme page", %{conn: conn} do
-      {:ok, view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, html} = live(conn, ~p"/dashboard/pages")
 
       assert html =~ "Booking Page Text"
       assert html =~ "Use my own wording"
@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     end
 
     test "shows the fields greyed out rather than hidden while switched off", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/pages")
 
       # Present but inert: the organiser can read what the switch controls
       # without turning it on, and a disabled input posts nothing.
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     end
 
     test "names the other themes' defaults, not only the current theme's", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/pages")
 
       # A single heading displaces a different sentence in each theme, so the
       # organiser has to be shown every one.
@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       conn: conn,
       profile: profile
     } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       toggle(view)
 
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     } do
       # The fixture theme's voice words all three of the form's fields.
       profile |> change(%{booking_theme: "99"}) |> Repo.update!()
-      {:ok, view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, html} = live(conn, ~p"/dashboard/pages")
 
       assert html =~ ~s(placeholder="Book a time")
       # The greeting and instruction placeholders are the shared wording; the
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       profile: profile
     } do
       profile |> change(%{booking_theme: "3"}) |> Repo.update!()
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       html = toggle(view)
 
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       profile: profile
     } do
       profile |> change(%{booking_theme: "4"}) |> Repo.update!()
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       toggle(view)
 
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       })
       |> Repo.update!()
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       html =
         edit(view, %{
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     } do
       profile = enable_with_wording(profile)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       toggle(view)
 
@@ -194,7 +194,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     end
 
     test "reports the save rather than leaving the switch unexplained", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       assert toggle(view) =~ "All changes saved"
     end
@@ -204,7 +204,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     test "persists a change without any submit", %{conn: conn, profile: profile} do
       profile = enable_with_wording(profile)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       html = edit(view, %{"booking_heading" => "Ready to grow your business?"})
 
@@ -215,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     test "refuses to publish a half-filled introduction", %{conn: conn, profile: profile} do
       profile = enable_with_wording(profile)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       edit(view, %{"booking_heading" => ""})
 
@@ -229,7 +229,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     } do
       profile = enable_with_wording(profile)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       # Autosave fires as soon as the debounce elapses, which is while the
       # organiser is still retyping. Painting the field red at that moment reads
@@ -247,7 +247,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     } do
       profile = enable_with_wording(profile)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       # A cap breach is not work in progress, so it must not be softened into
       # the same quiet "in progress" state as a blank field.
@@ -269,7 +269,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     } do
       profile = enable_with_wording(profile)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       edit(view, %{"booking_heading" => "Let's talk -- properly"})
 
@@ -279,7 +279,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
 
   describe "the preview" do
     test "frames the organiser's own booking page", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/pages")
 
       assert html =~ ~s(<iframe)
       assert html =~ "/text-owner?"
@@ -294,7 +294,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     } do
       profile |> change(%{username: nil}) |> Repo.update!()
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/pages")
 
       assert html =~ "No preview yet"
       refute html =~ ~s(<iframe)

@@ -39,9 +39,19 @@
   border-color: var(--theme-primary);
 }
 
+/* Under a finger the week arrows grow to a full touch target. */
+@media (pointer: coarse) {
+  .calendar-nav-button {
+    min-width: var(--min-touch-target);
+    min-height: var(--min-touch-target);
+  }
+}
+
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, ...): a day's label and padding never widen its column, so
+     the week fits a 320px phone instead of pushing Sunday out of view. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--calendar-gap);
   width: 100%;
 }
@@ -108,12 +118,14 @@
   padding: clamp(0.15rem, 0.8cqi, 0.75rem) clamp(0.1rem, 0.5cqi, 0.5rem);
 }
 
+/* The floors keep the labels legible where the container is narrow, a
+   360px sidebar embed among them: 11px names, 14px numbers. */
 .day-name {
-  font-size: clamp(0.6rem, 1.8cqi, 0.8rem);
+  font-size: clamp(0.6875rem, 1.8cqi, 0.8rem);
 }
 
 .day-number {
-  font-size: clamp(0.65rem, 2cqi, 1rem);
+  font-size: clamp(0.875rem, 2cqi, 1rem);
 }
 
 /* ===== Container Queries ===== */
@@ -143,6 +155,13 @@
     width: 100%;
     gap: var(--calendar-gap-mobile);
     box-sizing: border-box;
+  }
+
+  /* Under a finger the days trade their gutters for width. */
+  @media (pointer: coarse) {
+    .calendar-grid {
+      gap: var(--space-hairline);
+    }
   }
 
   .calendar-day {

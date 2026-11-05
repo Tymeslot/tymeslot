@@ -38,7 +38,7 @@ defmodule TymeslotWeb.AdminLiveTabsTest do
       end
 
       # The active pill is the one carrying the selected styling.
-      assert html =~ ~r/href="\/admin\/email"[^>]*class="[^"]*bg-turquoise-600/
+      assert html =~ ~r/href="\/admin\/email"[^>]*class="[^"]*bg-turquoise-700/
     end
 
     test "Back to Dashboard navigates rather than patches, as it leaves this LiveView", %{

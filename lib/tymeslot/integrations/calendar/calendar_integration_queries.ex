@@ -40,6 +40,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     |> Repo.exists?()
   end
 
+  @doc "Whether the user has any calendar integration at all, active or not."
+  @spec exists_for_user?(integer()) :: boolean()
+  def exists_for_user?(user_id) do
+    CalendarIntegrationSchema
+    |> where([c], c.user_id == ^user_id)
+    |> Repo.exists?()
+  end
+
   @doc "Names of the user's active integrations flagged `needs_reauth`, by name."
   @spec active_needing_reauth_names(integer()) :: [String.t()]
   def active_needing_reauth_names(user_id) do

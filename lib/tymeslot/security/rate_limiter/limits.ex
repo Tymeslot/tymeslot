@@ -169,6 +169,16 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               operation: "password reset submission",
               log: false
             ],
+            # Accepting an invitation sets a first password against a token, the
+            # same shape as a reset submission.
+            invitation_accept: [
+              prefix: "invitation_accept",
+              scope: :source,
+              limit: 30,
+              window_ms: @minute,
+              operation: "invitation acceptance",
+              log: false
+            ],
             verification_link: [
               prefix: "verification_link",
               scope: :source,

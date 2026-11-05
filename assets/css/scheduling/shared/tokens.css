@@ -46,7 +46,7 @@
    5. DEFAULTS, on :where(:root) below: tokens whose value does not depend
       on the theme (border widths, font weights, line heights, motion, the
       dropdown's layer and height, the flag height, the readiness card's
-      width), relations between
+      width, the touch target), relations between
       tokens (--line-1/2, --surface-1, --notice-warning, the solid pairs,
       the poll's "yes" ink --poll-yes-ink, the reCAPTCHA notice's inks
       --recaptcha-notice-ink and --recaptcha-notice-link-ink), the chrome
@@ -111,6 +111,9 @@
   --flag-height: 14px;
   --dropdown-max-height: clamp(200px, 50vh, 420px);
   --readiness-card-max-width: 32rem;
+  /* The least a control measures each way under a finger (pointer: coarse);
+     the shared components below and the themes' own controls take it. */
+  --min-touch-target: 44px;
 
   --line-1: var(--border-light);
   --line-2: var(--border-medium);

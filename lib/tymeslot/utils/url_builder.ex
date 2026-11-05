@@ -88,4 +88,12 @@ defmodule Tymeslot.Utils.UrlBuilder do
   def password_reset_url(token) when is_binary(token) do
     build_url("/auth/reset-password/#{token}")
   end
+
+  @doc """
+  Builds the URL an invited user follows to accept an invitation.
+  """
+  @spec invitation_url(String.t()) :: String.t()
+  def invitation_url(token) when is_binary(token) do
+    build_url("/auth/invitation/#{token}")
+  end
 end

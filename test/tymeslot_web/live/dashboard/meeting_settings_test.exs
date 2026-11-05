@@ -93,7 +93,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
   # ===========================================================================
 
   describe "Edit form tabs" do
-    setup %{conn: conn, user: user} do
+    setup %{conn: conn, user: user, profile: profile} do
+      Repo.update!(Changeset.change(profile, username: "tabhost"))
       meeting_type = insert(:meeting_type, user: user, name: "Tabbed Type", duration_minutes: 30)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")

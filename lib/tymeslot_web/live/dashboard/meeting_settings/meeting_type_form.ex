@@ -51,6 +51,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - username: the profile's own page address, for the Visibility switches
   # - booking_pages: the profile's booking pages, one Visibility switch each
   # - page_memberships: `BookingPages.memberships/1`, which pages list which type
+  # - pages_editable: `BookingPages.editable?/1`, whether the booking pages'
+  #   switches may be flipped
 
   # The further lengths' events, all handled by `LengthsHandlers`.
   @lengths_events LengthsHandlers.events()
@@ -112,6 +114,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        username: nil,
        booking_pages: [],
        page_memberships: %{},
+       pages_editable: true,
        __initialized__: false
      )}
   end

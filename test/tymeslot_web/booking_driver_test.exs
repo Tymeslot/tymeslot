@@ -171,7 +171,7 @@ defmodule TymeslotWeb.BookingDriverTest do
           if theme_id in @bounded do
             BookingDriver.pick_first_slot(view)
           else
-            day = Date.to_iso8601(past_first_period(9))
+            day = Date.to_iso8601(past_on_show(view, 9))
 
             # The picker must have to move to reach it, or the way there
             # goes untested.
@@ -455,6 +455,21 @@ defmodule TymeslotWeb.BookingDriverTest do
   defp past_first_period(days) do
     today = Date.utc_today()
     Enum.max([Date.add(today, days), today |> Date.end_of_month() |> Date.add(1)], Date)
+  end
+
+  # `past_first_period/1`, and past the period the picker is showing once its
+  # availability is in. On a month's last evening the page lands on next
+  # month's first free day by itself, so the period on show is not always the
+  # one today's date suggests.
+  defp past_on_show(view, days) do
+    BookingDriver.load(view)
+
+    view
+    |> days_on_show()
+    |> Enum.map(&Date.from_iso8601!/1)
+    |> Enum.max(Date, fn -> Date.utc_today() end)
+    |> Date.add(1)
+    |> then(&Enum.max([past_first_period(days), &1], Date))
   end
 
   # Opens the booking window to sixty days, so a day past the current month

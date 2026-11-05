@@ -1,15 +1,23 @@
 defmodule TymeslotWeb.AdminLive.Components.Users do
   @moduledoc """
-  Users tab: install user counts at the top, followed by the list of users
-  with promote, demote and delete actions and the confirmation modal that opens when
-  a row action is triggered.
+  Users tab: install user counts at the top, the form that invites a new user
+  by email, then the list of users with promote, demote, delete and resend
+  invitation actions and the confirmation modal that opens when a row action
+  is triggered.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Auth.Invitations
   alias Tymeslot.Profiles.ProfileSchema
-  alias TymeslotWeb.AdminLive.Components.{ConfirmDeleteUserModal, ConfirmRoleChangeModal, Shared}
+
+  alias TymeslotWeb.AdminLive.Components.{
+    ConfirmCancelInvitationModal,
+    ConfirmDeleteUserModal,
+    ConfirmRoleChangeModal,
+    Shared
+  }
 
   attr :users, :list, required: true
   attr :current_user, :map, required: true
@@ -22,6 +30,8 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
 
   attr :pending_action, :any, required: true
   attr :role_change_submitting, :boolean, required: true
+  attr :invite_form, Phoenix.HTML.Form, required: true
+  attr :invitations_available?, :boolean, required: true
 
   @spec users_tab(map()) :: Phoenix.LiveView.Rendered.t()
   def users_tab(assigns) do
@@ -30,6 +40,8 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       <.stat_card label={dgettext("dashboard_admin", "Total users")} value={@user_count} />
       <.stat_card label={dgettext("dashboard_admin", "Admins")} value={@admin_count} />
     </div>
+
+    <.invite_form form={@invite_form} available?={@invitations_available?} />
 
     <.card padding={:none} class="overflow-hidden">
       <table class="min-w-full divide-y divide-tymeslot-100">
@@ -72,6 +84,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
                 "dashboard_admin",
                 "User"
               )}</span>
+              <.invitation_badge user={user} />
               <span
                 :if={user.deletion_scheduled_at}
                 class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-amber-700"
@@ -106,6 +119,85 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       user={@pending_action}
       submitting={@role_change_submitting}
     />
+
+    <ConfirmCancelInvitationModal.confirm_cancel_invitation_modal
+      :if={@pending_action && @pending_action.kind == :cancel_invitation}
+      user={@pending_action}
+      submitting={@role_change_submitting}
+    />
+    """
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+  attr :available?, :boolean, required: true
+
+  defp invite_form(assigns) do
+    ~H"""
+    <.card class="mb-8" data-testid="invite-user-card">
+      <h2 class="text-token-lg font-black text-tymeslot-900">
+        {dgettext("dashboard_admin", "Invite a user")}
+      </h2>
+      <p class="mt-1 mb-4 text-token-sm text-tymeslot-600">
+        {dgettext(
+          "dashboard_admin",
+          "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+        )}
+      </p>
+
+      <.form
+        :if={@available?}
+        for={@form}
+        id="invite-user-form"
+        phx-submit="invite_user"
+        class="flex flex-col gap-3 sm:flex-row sm:items-start"
+      >
+        <div class="flex-1">
+          <.input
+            field={@form[:email]}
+            type="email"
+            placeholder={dgettext("dashboard_admin", "name@example.com")}
+            aria-label={dgettext("dashboard_admin", "Email address to invite")}
+            autocomplete="off"
+            required
+          />
+        </div>
+        <.action_button type="submit" phx-disable-with={dgettext("dashboard_admin", "Sending…")}>
+          {dgettext("dashboard_admin", "Send invitation")}
+        </.action_button>
+      </.form>
+
+      <p
+        :if={!@available?}
+        class="rounded-token-lg border-2 border-amber-200 bg-amber-50 p-4 text-token-sm font-medium text-amber-800"
+        data-testid="invitations-unavailable"
+      >
+        {dgettext(
+          "dashboard_admin",
+          "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+        )}
+      </p>
+    </.card>
+    """
+  end
+
+  attr :user, :map, required: true
+
+  defp invitation_badge(assigns) do
+    ~H"""
+    <span
+      :if={Invitations.pending?(@user) and not Invitations.expired?(@user)}
+      class="ml-2 inline-flex items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-cyan-700"
+      data-testid="invitation-pending-badge"
+    >
+      {dgettext("dashboard_admin", "Invited")}
+    </span>
+    <span
+      :if={Invitations.expired?(@user)}
+      class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-amber-700"
+      data-testid="invitation-expired-badge"
+    >
+      {dgettext("dashboard_admin", "Invitation expired")}
+    </span>
     """
   end
 
@@ -181,6 +273,35 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       aria-label={dgettext("dashboard_admin", "Promote %{email} to admin", email: @user.email)}
     >
       {dgettext("dashboard_admin", "Promote")}
+    </.action_button>
+
+    <.action_button
+      :if={Invitations.pending?(@user)}
+      variant={:secondary}
+      size={:sm}
+      class="ml-2"
+      phx-click="resend_invitation"
+      phx-value-id={@user.id}
+      aria-label={
+        dgettext("dashboard_admin", "Resend the invitation to %{email}", email: @user.email)
+      }
+    >
+      {dgettext("dashboard_admin", "Resend invitation")}
+    </.action_button>
+
+    <.action_button
+      :if={Invitations.pending?(@user)}
+      variant={:danger_soft}
+      size={:sm}
+      class="ml-2"
+      phx-click="request_cancel_invitation"
+      phx-value-id={@user.id}
+      phx-value-email={@user.email}
+      aria-label={
+        dgettext("dashboard_admin", "Cancel the invitation to %{email}", email: @user.email)
+      }
+    >
+      {dgettext("dashboard_admin", "Cancel invitation")}
     </.action_button>
 
     <%!-- Deleting oneself goes through account settings, with re-authentication. --%>

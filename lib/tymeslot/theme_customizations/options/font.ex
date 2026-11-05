@@ -12,6 +12,9 @@ defmodule Tymeslot.ThemeCustomizations.Options.Font do
   Only an id the group lists is written; anything else stored (unknown, or
   no longer in `presets:`) is the default. Fonts do
   not change with the colour mode, so the dark set is left alone.
+
+  `media/2` hands the same id to `Tokens.media` as `:font`, so the booking
+  page can preload the font's files (`TymeslotWeb.Themes.Shared.FontPreload`).
   """
 
   import Ecto.Changeset
@@ -62,6 +65,11 @@ defmodule Tymeslot.ThemeCustomizations.Options.Font do
       _unset -> default
     end
   end
+
+  @doc "The font's part of a spec's media (`OptionGroup.media/2`): the chosen id, as `:font`."
+  @impl OptionGroup
+  @spec media(Spec.settings(), group()) :: %{font: String.t()}
+  def media(settings, group), do: %{font: choice(settings, group)}
 
   @doc """
   The font's part of a spec's tokens (`OptionGroup.tokens/4`): the body and

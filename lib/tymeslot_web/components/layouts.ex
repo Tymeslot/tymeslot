@@ -24,6 +24,8 @@ defmodule TymeslotWeb.Layouts do
   alias TymeslotWeb.MeetingRequestLive
   alias TymeslotWeb.Themes.Core.Dispatcher
   alias TymeslotWeb.Themes.Core.Registry
+  alias TymeslotWeb.Themes.Core.ThemeInfo
+  alias TymeslotWeb.Themes.Shared.FontPreload
 
   embed_templates "layouts/*"
 
@@ -137,6 +139,26 @@ defmodule TymeslotWeb.Layouts do
     <link phx-track-static rel="stylesheet" href={@theme_css_path} />
     """
   end
+
+  # The page's web fonts, preloaded from the head so the download starts with
+  # the stylesheet's: the font the customisation chose (`Tokens.media[:font]`),
+  # else the one the theme's stylesheet sets its text in.
+  @spec render_font_preloads(map()) :: Phoenix.LiveView.Rendered.t()
+  defp render_font_preloads(assigns) do
+    {theme_id, _key} = resolve_theme(assigns[:theme_id])
+
+    assigns = %{
+      font: chosen_font(assigns[:theme_tokens]) || ThemeInfo.get_font(theme_id),
+      locale: assigns[:locale]
+    }
+
+    ~H"""
+    <FontPreload.links font={@font} locale={@locale} />
+    """
+  end
+
+  defp chosen_font(%{media: %{font: font}}) when is_binary(font), do: font
+  defp chosen_font(_tokens), do: nil
 
   @doc """
   Renders a full-screen noscript warning for browsers with JavaScript disabled.

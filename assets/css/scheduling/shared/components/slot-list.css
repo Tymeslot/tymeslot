@@ -30,6 +30,12 @@
   transform: translateY(-1px);
 }
 
+@media (pointer: coarse) {
+  .slot-list__slot {
+    min-height: var(--min-touch-target);
+  }
+}
+
 /* Seat availability (group bookings): a group time stacks itself above a
    spots badge (TymeslotWeb.Themes.Shared.Components.SeatBadge); a solo time
    (no --seats) keeps its single line. Each theme sets the --seat-* colours

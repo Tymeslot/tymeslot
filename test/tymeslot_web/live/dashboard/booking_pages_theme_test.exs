@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   end
 
   test "selecting a theme on a page's tab changes only the page", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view |> element("[phx-click='select_theme'][phx-value-theme='2']") |> render_click()
 
@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   end
 
   test "switching booking texts on for a page writes them to the page", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view |> element("#booking-text-form-#{ctx.page.id}-enabled") |> render_click()
 
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   # The page's write is what fails here; the form renders a profile changeset
   # and must still show why, once, rather than an error-free form.
   test "a page's text that breaks a rule shows why and writes nothing", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view |> element("#booking-text-form-#{ctx.page.id}-enabled") |> render_click()
     saved_heading = Repo.reload!(ctx.page).booking_heading
@@ -65,11 +65,11 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   # The dashboard hears of the delete at once (`BookingPages.subscribe/1`),
   # so the open tab leaves the page before its texts can be saved anywhere.
   test "a page deleted in another tab is left at once, with a notice", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     {:ok, _deleted} = BookingPages.delete(ctx.page)
 
-    assert_patch(view, ~p"/dashboard/theme")
+    assert_patch(view, ~p"/dashboard/pages")
     assert has_element?(view, "#app-flash-group-error", "This booking page no longer exists.")
     refute has_element?(view, "#booking-text-form-#{ctx.page.id}")
     refute Repo.reload!(ctx.profile).booking_text_enabled
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   # The click's own render is the one checked: the flash it sends makes the
   # dashboard re-read the page a moment later, which would hide a stale form.
   test "selecting a theme after saving a page's texts keeps them", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view |> element("#booking-text-form-#{ctx.page.id}-enabled") |> render_click()
 
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   end
 
   test "the colour editor on a page's tab edits the page's colours", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme/customize/1?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages/customize/1?#{[page: ctx.page.id]}")
 
     assert render(view) =~ "/joern/einfachiso"
 
@@ -118,15 +118,15 @@ defmodule TymeslotWeb.Dashboard.BookingPagesThemeTest do
   end
 
   test "closing the colour editor returns to the page's tab", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme/customize/1?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages/customize/1?#{[page: ctx.page.id]}")
 
     view |> element("[phx-click='close_customization']") |> render_click()
 
-    assert_patch(view, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    assert_patch(view, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
   end
 
   test "the username's tab still edits the profile", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     view |> element("[phx-click='select_theme'][phx-value-theme='2']") |> render_click()
 

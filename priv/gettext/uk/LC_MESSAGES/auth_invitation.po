@@ -1,0 +1,94 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Accept your invitation"
+msgstr "Прийміть запрошення"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Choose how you'll sign in as %{email} to finish setting up your account."
+msgstr "Виберіть спосіб входу для %{email}, щоб завершити налаштування облікового запису."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm password"
+msgstr "Підтвердьте пароль"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "No sign-in method is switched on, so this invitation can't be accepted. Please contact your administrator."
+msgstr "Не ввімкнено жодного способу входу, тому це запрошення неможливо прийняти. Зверніться до адміністратора."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Or sign in with"
+msgstr "Або увійдіть через"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Пароль"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password sign-in is turned off. Please choose another way to sign in."
+msgstr "Вхід за паролем вимкнено. Виберіть інший спосіб входу."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Set password and sign in"
+msgstr "Встановити пароль і увійти"
+
+#: lib/tymeslot/auth/invitations.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be set. Please try again with a different one."
+msgstr "Не вдалося встановити пароль. Спробуйте ще раз з іншим паролем."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation has expired. Ask your administrator to send you a new one."
+msgstr "Термін дії цього запрошення минув. Попросіть адміністратора надіслати вам нове."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. It may have been used already, or replaced by a newer invitation."
+msgstr "Це посилання із запрошенням більше не дійсне. Можливо, його вже використали або замінили новішим запрошенням."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This sign-in option is not available."
+msgstr "Цей спосіб входу недоступний."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many OAuth attempts. Please try again later."
+msgstr "Забагато спроб входу через OAuth. Спробуйте пізніше."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! Your password is set."
+msgstr "Ласкаво просимо до Tymeslot! Ваш пароль встановлено."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your password is set. Please log in to continue."
+msgstr "Ваш пароль встановлено. Увійдіть, щоб продовжити."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "You have been invited to Tymeslot with this email address. Open the invitation link we emailed you to choose how you will sign in. If the link has expired, ask your administrator to send a new one."
+msgstr "На цю адресу електронної пошти надіслано запрошення до Tymeslot. Відкрийте посилання із запрошенням, яке ми надіслали вам електронною поштою, і виберіть спосіб входу. Якщо термін дії посилання минув, попросіть адміністратора надіслати нове."

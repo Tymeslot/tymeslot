@@ -113,6 +113,18 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
     end
   end
 
+  @doc """
+  The font a theme's stylesheet sets its text in (its `font/0`), or `nil`
+  for a theme that names none and for an id no theme has.
+  """
+  @spec get_font(term()) :: String.t() | nil
+  def get_font(id) do
+    case get_theme_module(id) do
+      nil -> nil
+      module -> module.font()
+    end
+  end
+
   defp describe(theme) do
     theme
     |> Map.take([:id, :key, :name, :status])

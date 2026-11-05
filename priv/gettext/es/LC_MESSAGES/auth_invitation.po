@@ -1,0 +1,94 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Accept your invitation"
+msgstr "Acepta tu invitación"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Choose how you'll sign in as %{email} to finish setting up your account."
+msgstr "Elige cómo vas a iniciar sesión como %{email} para terminar de configurar tu cuenta."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm password"
+msgstr "Confirmar contraseña"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "No sign-in method is switched on, so this invitation can't be accepted. Please contact your administrator."
+msgstr "No hay ningún método de inicio de sesión activado, así que esta invitación no se puede aceptar. Ponte en contacto con tu administrador."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Or sign in with"
+msgstr "O inicia sesión con"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Contraseña"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password sign-in is turned off. Please choose another way to sign in."
+msgstr "El inicio de sesión con contraseña está desactivado. Elige otra forma de iniciar sesión."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Set password and sign in"
+msgstr "Establecer contraseña e iniciar sesión"
+
+#: lib/tymeslot/auth/invitations.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be set. Please try again with a different one."
+msgstr "No se pudo establecer la contraseña. Inténtalo de nuevo con otra."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation has expired. Ask your administrator to send you a new one."
+msgstr "Esta invitación expiró. Pide al administrador que te envíe una nueva."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. It may have been used already, or replaced by a newer invitation."
+msgstr "Este enlace de invitación ya no es válido. Puede que ya se haya usado o que lo haya reemplazado una invitación más reciente."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This sign-in option is not available."
+msgstr "Esta opción de inicio de sesión no está disponible."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many OAuth attempts. Please try again later."
+msgstr "Demasiados intentos de OAuth. Inténtalo más tarde."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! Your password is set."
+msgstr "¡Te damos la bienvenida a Tymeslot! Tu contraseña está establecida."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your password is set. Please log in to continue."
+msgstr "Tu contraseña está establecida. Inicia sesión para continuar."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "You have been invited to Tymeslot with this email address. Open the invitation link we emailed you to choose how you will sign in. If the link has expired, ask your administrator to send a new one."
+msgstr "Te invitaron a Tymeslot con esta dirección de correo electrónico. Abre el enlace de invitación que te enviamos por correo para elegir cómo vas a iniciar sesión. Si el enlace expiró, pide al administrador que te envíe uno nuevo."

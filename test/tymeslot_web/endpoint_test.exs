@@ -16,6 +16,8 @@ defmodule TymeslotWeb.EndpointTest do
             ["auth", "verify-complete", "secret-token"],
             ["auth", "reset-password", "secret-token"],
             ["auth", "oauth", "confirm", "secret-token"],
+            ["auth", "invitation", "secret-token"],
+            ["auth", "invitation", "secret-token", "github"],
             ["email-change", "secret-token"],
             ["guest", "secret-token", "accept"],
             ["seat", "secret-token", "cancel"],

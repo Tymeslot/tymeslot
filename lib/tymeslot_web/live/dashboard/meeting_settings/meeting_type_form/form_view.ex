@@ -196,6 +196,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             <div :if={slot_interval_custom?} class="mt-2">
               <.input
                 type="number"
+                id="meeting_type_slot_interval_custom"
                 name="meeting_type[slot_interval]"
                 label={dgettext("dashboard_meeting_form", "Custom interval (minutes)")}
                 value={slot_interval_value}
@@ -346,9 +347,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             offered_times={@offered_time_rows}
             new_offered_time={@new_offered_time}
             offered_time_error={@offered_time_error}
+            offered_time_notice={@offered_time_notice}
             timezone={@host_timezone}
             new_session={@new_session}
             session_error={@session_error}
+            session_notice={@session_notice}
             confirming_session_id={@confirming_session_id}
             editing_session={@editing_session}
             form_id={@id}
@@ -399,7 +402,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.visibility_section
             type={@type}
             parent={@parent_myself}
+            username={@username}
             pages={PageVisibility.rows(@username, @booking_pages, @page_memberships, @type)}
+            pages_editable={@pages_editable}
           />
         </.card>
 

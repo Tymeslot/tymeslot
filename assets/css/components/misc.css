@@ -24,3 +24,20 @@
 .spinner {
   @apply animate-spin;
 }
+
+/* Flash group on a phone: show at most the last two visible toasts. The group
+   (<.flash_group>) is bottom-anchored there and orders its toasts from least
+   to most severe, so the hidden ones are the older, milder messages, which
+   come back once a later toast is dismissed. A toast counts as visible unless
+   it carries LiveView's inline `display: none` (dismissed, or the
+   connection-lost toast while connected); the cap sets no inline style itself,
+   so hiding a toast never changes the count. `!important` outranks the inline
+   `display` that JS.show writes. Not loaded on booking pages, which place the
+   group themselves. */
+@media (width < 40rem) {
+  .flash-group > [role="alert"]:not([style*="display: none"]):has(
+      ~ [role="alert"]:not([style*="display: none"]) ~ [role="alert"]:not([style*="display: none"])
+    ) {
+    display: none !important;
+  }
+}

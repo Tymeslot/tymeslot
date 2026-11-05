@@ -165,6 +165,7 @@ msgid "Enter a number between 0.0 and 1.0."
 msgstr "Введіть число від 0,0 до 1,0."
 
 #: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Введіть дійсну адресу електронної пошти."
@@ -873,3 +874,134 @@ msgstr "Коли надійде адміністративне сповіщен�
 #, elixir-autogen, elixir-format
 msgid "Version %{version}"
 msgstr "Версія %{version}"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "A new invitation is on its way to %{email}."
+msgstr "Нове запрошення вже надсилається на адресу %{email}."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists."
+msgstr "Обліковий запис із цією адресою електронної пошти вже існує."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not send the invitation. Please try again."
+msgstr "Не вдалося надіслати запрошення. Спробуйте ще раз."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Email address to invite"
+msgstr "Адреса електронної пошти для запрошення"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation expired"
+msgstr "Термін дії запрошення минув"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{email}."
+msgstr "Запрошення надіслано на адресу %{email}."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invite a user"
+msgstr "Запросити користувача"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invited"
+msgstr "Запрошено"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend invitation"
+msgstr "Надіслати запрошення ще раз"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend the invitation to %{email}"
+msgstr "Надіслати запрошення на адресу %{email} ще раз"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitation"
+msgstr "Надіслати запрошення"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Надсилання…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
+msgstr "Обліковий запис створено, але лист із запрошенням не вдалося надіслати. Натисніть «Надіслати запрошення ще раз», щоб спробувати знову."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com"
+msgstr "name@example.com"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+msgstr "Запрошеному потрібен спосіб входу. Щоб запрошувати користувачів, увімкніть автентифікацію за паролем або провайдер входу через соціальні мережі на вкладці «Автентифікація»."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
+msgstr "Для запрошень потрібен спосіб входу. Спочатку ввімкніть автентифікацію за паролем або провайдер входу через соціальні мережі."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+msgstr "Ми створимо обліковий запис і надішлемо запрошеному лист із посиланням, за яким можна вибрати спосіб входу. Публічна реєстрація може залишатися закритою."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has no pending invitation."
+msgstr "У цього користувача немає запрошення, яке очікує на прийняття."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel invitation"
+msgstr "Скасувати запрошення"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the invitation to %{email}"
+msgstr "Скасувати запрошення на адресу %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the invitation to %{email}?"
+msgstr "Скасувати запрошення на адресу %{email}?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling..."
+msgstr "Скасування…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not cancel the invitation. Please try again."
+msgstr "Не вдалося скасувати запрошення. Спробуйте ще раз."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep invitation"
+msgstr "Залишити запрошення"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The invitation link stops working and the invited account is removed. You can invite this address again later."
+msgstr "Посилання із запрошення перестане працювати, а запрошений обліковий запис буде видалено. Пізніше ви зможете знову запросити цю адресу."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The invitation to %{email} is cancelled."
+msgstr "Запрошення на адресу %{email} скасовано."

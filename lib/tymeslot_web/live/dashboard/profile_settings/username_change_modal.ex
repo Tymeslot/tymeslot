@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameChangeModal do
       </div>
 
       <:footer>
-        <div class="flex gap-4">
+        <div class="flex w-full gap-4">
           <.action_button
             variant={:secondary}
             class="flex-1"

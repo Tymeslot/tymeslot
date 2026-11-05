@@ -1,0 +1,94 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Accept your invitation"
+msgstr "Přijměte pozvání"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Choose how you'll sign in as %{email} to finish setting up your account."
+msgstr "Zvolte, jak se budete přihlašovat jako %{email}, a dokončete nastavení svého účtu."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm password"
+msgstr "Potvrzení hesla"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "No sign-in method is switched on, so this invitation can't be accepted. Please contact your administrator."
+msgstr "Není zapnutý žádný způsob přihlášení, takže toto pozvání nelze přijmout. Obraťte se prosím na svého správce."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Or sign in with"
+msgstr "Nebo se přihlaste přes"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Heslo"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password sign-in is turned off. Please choose another way to sign in."
+msgstr "Přihlášení heslem je vypnuté. Zvolte prosím jiný způsob přihlášení."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Set password and sign in"
+msgstr "Nastavit heslo a přihlásit se"
+
+#: lib/tymeslot/auth/invitations.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be set. Please try again with a different one."
+msgstr "Heslo se nepodařilo nastavit. Zkuste to prosím znovu s jiným heslem."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation has expired. Ask your administrator to send you a new one."
+msgstr "Platnost tohoto pozvání vypršela. Požádejte svého správce o nové."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. It may have been used already, or replaced by a newer invitation."
+msgstr "Tento odkaz na pozvání již není platný. Možná byl už použit nebo nahrazen novějším pozváním."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This sign-in option is not available."
+msgstr "Tento způsob přihlášení není k dispozici."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many OAuth attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o přihlášení přes OAuth. Zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! Your password is set."
+msgstr "Vítejte v aplikaci Tymeslot! Vaše heslo je nastaveno."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your password is set. Please log in to continue."
+msgstr "Vaše heslo je nastaveno. Pro pokračování se přihlaste."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "You have been invited to Tymeslot with this email address. Open the invitation link we emailed you to choose how you will sign in. If the link has expired, ask your administrator to send a new one."
+msgstr "Na tuto e-mailovou adresu bylo odesláno pozvání do aplikace Tymeslot. Otevřete odkaz na pozvání, který jsme vám poslali e-mailem, a zvolte, jak se budete přihlašovat. Pokud platnost odkazu vypršela, požádejte svého správce o nový."

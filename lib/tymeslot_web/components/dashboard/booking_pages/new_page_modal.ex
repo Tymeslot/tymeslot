@@ -1,6 +1,13 @@
 defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
   @moduledoc """
   Modal for creating a booking page: its name and address.
+
+  The form mounts only while the modal is shown, so the name field takes the
+  focus each time it opens (through `AutoFocus`, which the modal's focus trap
+  defers to), and the address field's description is the whole link, completed
+  as the address is typed. A field shows
+  its errors once the host has used it, or on submit: typing an address does
+  not flag the name left empty.
   """
 
   use Phoenix.Component
@@ -10,6 +17,7 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.BookingPages.BookingPageSchema
   alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.Dashboard.BookingPages.AddressPreview
 
   @doc """
   Renders the new booking page modal.
@@ -19,6 +27,7 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
     * `show` - Boolean to show/hide the modal (required)
     * `form` - The new page's form (required)
     * `target` - The component that owns the form's events (required)
+    * `username` - The host's username, which the page's link starts with (required)
     * `on_cancel` - JS command to execute when cancelling (required)
 
   Its form sends `validate_new_page` and `create_page`, and its cancel
@@ -27,6 +36,7 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
   attr :show, :boolean, required: true
   attr :form, Phoenix.HTML.Form, required: true
   attr :target, :any, required: true
+  attr :username, :string, required: true
   attr :on_cancel, JS, required: true
 
   @spec new_page_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -36,6 +46,7 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
       <:header>{dgettext("dashboard_booking_pages", "New booking page")}</:header>
 
       <.form
+        :if={@show}
         for={@form}
         id="new-booking-page-form"
         phx-change="validate_new_page"
@@ -44,11 +55,32 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
         class="space-y-6"
       >
         <.input
-          field={@form[:name]}
+          field={used_errors(@form[:name])}
           label={dgettext("dashboard_booking_pages", "Page name")}
           maxlength={BookingPageSchema.name_max_length()}
-        />
-        <.input field={@form[:slug]} label={dgettext("dashboard_booking_pages", "Address")} />
+          phx-hook="AutoFocus"
+        >
+          <:description>
+            {dgettext(
+              "dashboard_booking_pages",
+              "For you only: it labels the page in your dashboard."
+            )}
+          </:description>
+        </.input>
+        <%!-- The description is the link itself, completed as the address is
+        typed, so the field explains itself in one line. --%>
+        <.input
+          field={used_errors(@form[:slug])}
+          label={dgettext("dashboard_booking_pages", "Address")}
+        >
+          <:description>
+            <AddressPreview.address_preview
+              id="new-booking-page-address-preview"
+              username={@username}
+              slug={@form[:slug].value}
+            />
+          </:description>
+        </.input>
         <p class="text-token-sm text-tymeslot-500">
           {dgettext(
             "dashboard_booking_pages",
@@ -72,4 +104,9 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
     </Modal.modal>
     """
   end
+
+  # LiveView marks a field the host has not touched yet as unused on every
+  # change, and sends no such marks on submit, so a submit shows every error.
+  defp used_errors(field),
+    do: if(used_input?(field), do: field, else: %{field | errors: []})
 end

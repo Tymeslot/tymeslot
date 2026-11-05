@@ -1193,6 +1193,7 @@ Choosing a meeting type is the way on; a theme that wants a separate Next sends 
 | `awaiting_payment_checkout_url` | awaiting payment | optional | the Stripe Checkout address an embedded paid booking opened in a new tab, set as the page enters the wait; a theme's own `awaiting_payment:` outcome hands it to `AwaitingPayment.awaiting_payment/1` |
 | `custom_field_answers` | confirmation | mount | the booker's answers |
 | `meeting_status` | confirmation | optional | the booked meeting's status, set once a booking is submitted |
+| `embedded` | every moment | optional | `true` when the page is served inside a signed embed (`EmbedAuthHook`), unset otherwise; a field there takes no `autofocus`, which the browser refuses inside a cross-origin frame with a console error |
 | `journey_focus` | every moment | optional | the moment that has just become current through the visitor's own action (a choice that opened it, Next, Back, the step indicator, an Edit), whose `Journey.Components.moment_heading/1` then takes the focus; unset on page load and after a reconnect |
 <!-- step-assigns:end -->
 

@@ -77,11 +77,26 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # duration, which is what the visitor actually chose.
   defp resolve_meeting_type(socket, duration_str) do
     ReschedulePin.meeting_type(socket) ||
-      ThemeFlow.resolve_meeting_type_for_duration(
-        socket.assigns[:organizer_user_id],
-        duration_str
-      )
+      socket.assigns[:organizer_user_id]
+      |> ThemeFlow.resolve_meeting_type_for_duration(duration_str)
+      |> offered_here(socket.assigns)
   end
+
+  # The lookup by duration spans every type the organiser has, so a
+  # `?duration=` or a crafted `select_duration` could otherwise book, under
+  # this address and recorded against its page, a type it does not offer, a
+  # private one included. Only a type the address lists, or the one already
+  # held (entered by its own address, which `at_own_address?/2` checked), is
+  # taken; any other is treated as an unknown duration.
+  defp offered_here(%{id: id} = meeting_type, assigns) do
+    held = assigns[:meeting_type]
+    listed = assigns[:meeting_types] || []
+
+    if (is_map(held) and held.id == id) or Enum.any?(listed, &(&1.id == id)),
+      do: meeting_type
+  end
+
+  defp offered_here(nil, _assigns), do: nil
 
   @doc """
   Assigns `value` under `key` when it is a string, and leaves the socket alone

@@ -148,6 +148,17 @@ describe('modal sizing', () => {
     expect(container.style.maxHeight).toContain('calc(100vh - 100px)')
   })
 
+  test('the overlay counts its padding inside the window, so the dialog stays centred within it', () => {
+    // A full-window overlay with content-box padding is 40px wider than the
+    // window: the column popup on an 810px tablet then ran past its right edge.
+    window.TymeslotBooking.open('alice', { layout: 'column' })
+
+    const modal = document.getElementById('tymeslot-modal')
+    expect(modal.style.width).toBe('100%')
+    expect(modal.style.padding).toBe('20px')
+    expect(modal.style.boxSizing).toBe('border-box')
+  })
+
   test('the iframe is a block, so the clipping frame has no line-box gap to scroll', () => {
     window.TymeslotBooking.open('alice')
 

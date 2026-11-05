@@ -140,7 +140,14 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
       <p :if={@definition["help_text"]} class="folio-muted">{@definition["help_text"]}</p>
 
       <div class="folio-question">
-        <InputRenderer.render definition={@definition} value={@value} myself={@myself} />
+        <%!-- Not in an embed: the browser refuses autofocus inside a
+              cross-origin frame and logs an error for the attempt. --%>
+        <InputRenderer.render
+          definition={@definition}
+          value={@value}
+          myself={@myself}
+          autofocus={!assigns[:embedded]}
+        />
         <p :if={@error} class="folio-error" role="alert">{@error}</p>
       </div>
 

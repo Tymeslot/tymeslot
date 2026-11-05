@@ -436,6 +436,10 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
+      /* The padding sits inside the full-window box: without this the
+         overlay is 40px wider and taller than the window, which shifts the
+         centred dialog right and down, past the window's edge on a tablet. */
+      box-sizing: border-box;
       opacity: 0;
       transition: opacity 0.3s ease;
     `;

@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
     @tag :capture_log
     test "selecting a theme is reflected when re-mounting the theme page",
          %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("[phx-click='select_theme'][phx-value-theme='2']")
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
       # Fresh mount — the view re-reads the profile, so a regression
       # in how the theme page derives "selected" from the DB would
       # surface as a missing "Current style" badge on the fresh mount.
-      {:ok, fresh_view, html} = live(conn, ~p"/dashboard/theme")
+      {:ok, fresh_view, html} = live(conn, ~p"/dashboard/pages")
       assert html =~ "Current style"
       assert has_element?(fresh_view, "[phx-value-theme='2']")
     end

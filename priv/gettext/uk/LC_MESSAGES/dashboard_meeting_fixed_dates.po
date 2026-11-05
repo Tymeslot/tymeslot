@@ -229,3 +229,13 @@ msgstr "за межами вікна завчасного бронювання"
 #, elixir-autogen, elixir-format
 msgid "inside the minimum notice"
 msgstr "раніше за мінімальний час до бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}."
+msgstr "Часу %{time} %{date} не існує, бо годинники переводять уперед, тож час збережено як %{saved}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr "Час %{time} %{date} настає двічі, бо годинники переводять назад, тож збережено перший із них (%{zone})."

@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Autosave, OfferedTimeHandlers}
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @doc "Assigns the type's planned dates, the host's time zone and the input row's state."
   @spec assign_sessions(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -37,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     |> Component.assign(:session_rows, rows(socket.assigns[:type]))
     |> Component.assign_new(:new_session, fn -> %{} end)
     |> Component.assign_new(:session_error, fn -> nil end)
+    |> Component.assign_new(:session_notice, fn -> nil end)
     |> Component.assign_new(:confirming_session_id, fn -> nil end)
     |> Component.assign_new(:editing_session, fn -> nil end)
   end
@@ -130,7 +132,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     Component.assign(socket,
       new_session:
         Map.merge(socket.assigns[:new_session] || %{}, Map.take(params, ~w(date time closes_at))),
-      session_error: nil
+      session_error: nil,
+      session_notice: nil
     )
   end
 
@@ -153,11 +156,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
          {:ok, _session} <-
            PlannedSessions.add(type, user_id, starts_at, registration_closes_at: closes_at) do
       socket
-      |> Component.assign(new_session: %{}, session_error: nil)
+      |> Component.assign(
+        new_session: %{},
+        session_error: nil,
+        session_notice: clock_change_notice(input, timezone)
+      )
       |> assign_sessions()
     else
-      {:error, reason} -> Component.assign(socket, :session_error, error_message(reason))
-      _no_type -> Component.assign(socket, :session_error, error_message(:not_fixed_dates))
+      {:error, reason} ->
+        Component.assign(socket, session_error: error_message(reason), session_notice: nil)
+
+      _no_type ->
+        Component.assign(socket,
+          session_error: error_message(:not_fixed_dates),
+          session_notice: nil
+        )
     end
   end
 
@@ -226,15 +239,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   # A new date or time moves the session, with everyone on it; otherwise
   # only its registration close changes.
   defp save_edit(%{assigns: %{editing_session: %{id: id, input: input} = editing}} = socket) do
-    %{current_user: %{id: user_id}, type: type, host_timezone: timezone} = socket.assigns
+    %{current_user: %{id: user_id}, host_timezone: timezone} = socket.assigns
 
     with {:ok, starts_at} <- parse_start(input, timezone),
          {:ok, closes_at} <- parse_close(input["closes_at"], timezone),
-         %{} = type <- type && MeetingTypes.get_meeting_type(type.id, user_id),
-         %{} = session <- Enum.find(PlannedSessions.list(type), &(&1.id == id)),
+         %{} = session <- owned_session(socket, id),
          {:ok, _session} <- apply_edit(session, user_id, starts_at, closes_at) do
       socket
-      |> Component.assign(:editing_session, nil)
+      |> Component.assign(
+        editing_session: nil,
+        session_notice: clock_change_notice(input, timezone)
+      )
       |> assign_sessions()
     else
       {:error, reason} ->
@@ -275,6 +290,49 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   end
 
   def parse_start(_input, _timezone), do: {:error, :invalid_start}
+
+  @doc """
+  What to tell the host when the `"date"` and `"time"` they entered in
+  `timezone` is not a plain local time, or nil when it is: a time a
+  spring-forward gap skips, which `parse_start/2` saved at the end of the
+  gap, or a time a fall-back overlap repeats, which it saved at the first
+  occurrence. The rule itself is `DateTimeUtils.resolve_local/3`'s; this only
+  reports it.
+  """
+  @spec clock_change_notice(map(), String.t()) :: String.t() | nil
+  def clock_change_notice(%{"date" => date, "time" => time}, timezone)
+      when is_binary(date) and is_binary(time) do
+    with {:ok, date} <- Date.from_iso8601(date),
+         {:ok, time} <- Time.from_iso8601(pad_seconds(time)) do
+      date |> DateTime.new(time, timezone) |> notice(date, time)
+    else
+      _invalid -> nil
+    end
+  end
+
+  def clock_change_notice(_input, _timezone), do: nil
+
+  defp notice({:gap, _just_before, just_after}, date, time),
+    do:
+      dgettext(
+        "dashboard_meeting_fixed_dates",
+        "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}.",
+        time: LocalizationHelpers.format_time_by_locale(time),
+        date: LocalizationHelpers.format_date(date),
+        saved: LocalizationHelpers.format_time_by_locale(just_after)
+      )
+
+  defp notice({:ambiguous, first, _second}, date, time),
+    do:
+      dgettext(
+        "dashboard_meeting_fixed_dates",
+        "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved.",
+        time: LocalizationHelpers.format_time_by_locale(time),
+        date: LocalizationHelpers.format_date(date),
+        zone: first.zone_abbr
+      )
+
+  defp notice(_plain_or_invalid, _date, _time), do: nil
 
   defp parse_close(value, _timezone) when value in [nil, ""], do: {:ok, nil}
 

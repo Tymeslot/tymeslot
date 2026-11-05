@@ -284,6 +284,32 @@ defmodule TymeslotWeb.BookingPagePublicTest do
     end
   end
 
+  # A name-derived slug can be "book", which `/:username/:slug/book` routes
+  # as the booking step of a type slugged like the page.
+  test "a page's type named Book is at its address under the page", %{
+    conn: conn,
+    user: user,
+    profile: profile,
+    page: page
+  } do
+    book = insert(:meeting_type, user: user, name: "Book", is_private: true)
+    :ok = BookingPages.set_meeting_type(page, book.id, true)
+
+    assert BookingPages.meeting_type_path(profile, book) == "/joern/einfachiso/book"
+
+    assert {:error, {:redirect, %{to: "/joern/einfachiso/book?timezone=America%2FNew_York"}}} =
+             live(conn, ~p"/joern/book?timezone=#{@timezone}")
+
+    {:ok, view, _html} = live(conn, ~p"/joern/einfachiso/book?timezone=#{@timezone}")
+    assert has_element?(view, "button[phx-click='next_month']")
+    assert :sys.get_state(view.pid).socket.assigns.meeting_type.id == book.id
+
+    # A patch resets the live action to the route's, `:booking` here.
+    render_patch(view, ~p"/joern/einfachiso/book?timezone=#{@timezone}&utm_source=x")
+    assert :sys.get_state(view.pid).socket.assigns.live_action == :schedule
+    assert has_element?(view, "button[phx-click='next_month']")
+  end
+
   # Hidden from every start page, and still bookable by its direct link under
   # any of the host's addresses.
   test "a type on no page is still bookable by its direct link", %{
@@ -337,6 +363,45 @@ defmodule TymeslotWeb.BookingPagePublicTest do
 
     {:ok, view, _html} = live(conn, ~p"/joern/coaching/coaching-session?timezone=#{@timezone}")
     assert :sys.get_state(view.pid).socket.assigns.meeting_type.id == session.id
+  end
+
+  # The lookup by duration spans every type the host has; booked here, the
+  # type would be recorded against a page that does not offer it. On a page
+  # the URL's `slug` (the page's) shadows `?duration=`, so there the way in
+  # is a pushed `select_duration`.
+  describe "a type the address does not offer, named by duration" do
+    test "is not taken from a crafted select_duration on a page", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/joern/einfachiso?timezone=#{@timezone}")
+      moment = :sys.get_state(view.pid).socket.assigns.current_state
+
+      send(view.pid, {:step_event, moment, :select_duration, "automation-call"})
+      _html = render(view)
+      assert is_nil(:sys.get_state(view.pid).socket.assigns.meeting_type)
+
+      # The page's own type is still chosen the same way.
+      send(view.pid, {:step_event, moment, :select_duration, "iso-audit"})
+      _html = render(view)
+      assert :sys.get_state(view.pid).socket.assigns.meeting_type.name == "ISO audit"
+    end
+
+    test "is not taken on the username's page when it is private", %{conn: conn, user: user} do
+      insert(:meeting_type, user: user, name: "Hidden review", is_private: true)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/joern?duration=hidden-review&step=schedule&timezone=#{@timezone}")
+
+      assert is_nil(:sys.get_state(view.pid).socket.assigns.meeting_type)
+    end
+
+    test "leaves a private type's own link working", %{conn: conn, user: user} do
+      hidden = insert(:meeting_type, user: user, name: "Hidden review", is_private: true)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/joern/hidden-review?duration=hidden-review&timezone=#{@timezone}")
+
+      assert :sys.get_state(view.pid).socket.assigns.meeting_type.id == hidden.id
+      assert has_element?(view, "button[phx-click='next_month']")
+    end
   end
 
   test "links inside the flow stay under the page's address", %{conn: conn} do

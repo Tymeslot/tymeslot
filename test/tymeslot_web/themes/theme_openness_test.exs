@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
     end
 
     test "gets the theme's own panel in the dashboard, beside the shared palette", %{conn: conn} do
-      {:ok, view, html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+      {:ok, view, html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
 
       assert has_element?(view, "[data-testid='fixture-emblem-panel']")
       assert html =~ "Colour Palette"
@@ -186,7 +186,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
     # A theme's second group of its own gets its panel too, with an upload
     # declared for each of its videos.
     test "gets an upload form per clip in the second group's panel", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
 
       for field <- ~w(fixture_intro_clip_path fixture_outro_clip_path fixture_intro_captions_path) do
         assert has_element?(
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
     end
 
     test "saves through its panel", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
 
       view
       |> element(
@@ -295,7 +295,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
     test "uploads through the theme's own panel in the dashboard", %{conn: conn} do
       {:ok, ctx} = setup_dashboard_user_with_theme(%{conn: conn}, @theme_id)
       %{conn: conn, profile: profile} = Map.new(ctx)
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
 
       emblem = %{
         last_modified: System.system_time(:millisecond),
@@ -320,7 +320,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
     test "uploads captions through the theme's own panel in the dashboard", %{conn: conn} do
       {:ok, ctx} = setup_dashboard_user_with_theme(%{conn: conn}, @theme_id)
       %{conn: conn, profile: profile} = Map.new(ctx)
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
 
       captions = %{
         last_modified: System.system_time(:millisecond),
@@ -352,7 +352,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
     test "saves through the panel form's upload_asset event", %{conn: conn} do
       {:ok, ctx} = setup_dashboard_user_with_theme(%{conn: conn}, @theme_id)
       %{conn: conn, profile: profile, user: user} = Map.new(ctx)
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
 
       bucket = "theme_upload:#{user.id}"
       on_exit(fn -> RateLimiter.clear_bucket(bucket) end)

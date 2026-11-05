@@ -1,0 +1,94 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Accept your invitation"
+msgstr "Przyjmij zaproszenie"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Choose how you'll sign in as %{email} to finish setting up your account."
+msgstr "Wybierz, jak chcesz logować się jako %{email}, aby dokończyć konfigurację konta."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm password"
+msgstr "Potwierdź hasło"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "No sign-in method is switched on, so this invitation can't be accepted. Please contact your administrator."
+msgstr "Żadna metoda logowania nie jest włączona, więc nie można przyjąć tego zaproszenia. Skontaktuj się z administratorem."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Or sign in with"
+msgstr "Lub zaloguj się przez"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Hasło"
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Password sign-in is turned off. Please choose another way to sign in."
+msgstr "Logowanie hasłem jest wyłączone. Wybierz inny sposób logowania."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "Set password and sign in"
+msgstr "Ustaw hasło i zaloguj się"
+
+#: lib/tymeslot/auth/invitations.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be set. Please try again with a different one."
+msgstr "Nie udało się ustawić hasła. Spróbuj ponownie z innym hasłem."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation has expired. Ask your administrator to send you a new one."
+msgstr "To zaproszenie wygasło. Poproś administratora o przesłanie nowego."
+
+#: lib/tymeslot_web/controllers/invitation_html.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. It may have been used already, or replaced by a newer invitation."
+msgstr "Ten link z zaproszeniem jest już nieważny. Mógł zostać już użyty lub zastąpiony nowszym zaproszeniem."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This sign-in option is not available."
+msgstr "Ta metoda logowania jest niedostępna."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many OAuth attempts. Please try again later."
+msgstr "Zbyt wiele prób OAuth. Spróbuj ponownie później."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! Your password is set."
+msgstr "Witamy w aplikacji Tymeslot! Twoje hasło zostało ustawione."
+
+#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your password is set. Please log in to continue."
+msgstr "Twoje hasło zostało ustawione. Zaloguj się, aby kontynuować."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "You have been invited to Tymeslot with this email address. Open the invitation link we emailed you to choose how you will sign in. If the link has expired, ask your administrator to send a new one."
+msgstr "Na ten adres e-mail wysłano zaproszenie do aplikacji Tymeslot. Otwórz link z zaproszeniem, który wysłaliśmy ci e-mailem, i wybierz, jak chcesz się logować. Jeśli link wygasł, poproś administratora o przesłanie nowego."

@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
   end
 
   defp open_tab(conn, theme_id, kind) do
-    {:ok, view, _html} = live(conn, "/dashboard/theme/customize/#{theme_id}")
+    {:ok, view, _html} = live(conn, "/dashboard/pages/customize/#{theme_id}")
 
     view
     |> element("button[phx-click='theme:set_browsing_type'][phx-value-type='#{kind}']")
@@ -122,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
 
     test "a successful upload pushes upload-complete so the AutoUpload hook clears the picker",
          %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
           "background_video_path" => video_rel
         })
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -198,7 +198,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
     } do
       profile = profile |> Changeset.change(username: "joern") |> Repo.update!()
       page = insert(:booking_page, profile: profile, slug: "einfachiso", booking_theme: "1")
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1?#{[page: page.id]}")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1?#{[page: page.id]}")
 
       view
       |> element("button[phx-click='theme:set_browsing_type'][phx-value-type='image']")

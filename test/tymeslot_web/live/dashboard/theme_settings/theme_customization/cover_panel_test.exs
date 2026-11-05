@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
   end
 
   defp open(conn) do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/#{@theme_id}")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
     view
   end
 

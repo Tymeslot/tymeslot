@@ -142,6 +142,18 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
+  Gets a profile by username with its user preloaded, as the scheduling flow
+  needs its organiser (`organizer_context/1`).
+  """
+  @spec get_organizer_by_username(username) :: profile | nil
+  def get_organizer_by_username(username) do
+    case ProfileQueries.get_by_username_with_user(username) do
+      {:ok, profile} -> profile
+      {:error, :not_found} -> nil
+    end
+  end
+
+  @doc """
   Marks a host's booking page as published the first time it goes live.
 
   A page is "published" once the host has a username set. The write is guarded
@@ -525,4 +537,11 @@ defmodule Tymeslot.Profiles do
   """
   @spec resolve_organizer_context(username) :: {:ok, map()} | {:error, :profile_not_found}
   defdelegate resolve_organizer_context(username), to: OrganizerContext
+
+  @doc """
+  The organiser context for a profile already found (`get_organizer_by_username/1`),
+  wearing its booking page when it presents one.
+  """
+  @spec organizer_context(profile) :: map()
+  defdelegate organizer_context(profile), to: OrganizerContext, as: :for_organizer
 end

@@ -19,6 +19,14 @@ defmodule Tymeslot.Auth.AccountDeletion.Operator do
   deletion job is queued to run at once, or at the `:job_at` option when the
   caller deletes synchronously itself and keeps the job only as a retry. No
   notice is emailed: the operator owns that conversation.
+
+  A caller with its own condition or write on the account passes it as
+  `:on_target`, a function of the locked account returning `{:ok, account}`
+  or `{:error, reason}`. It runs in the same transaction, before the account
+  is marked, and an error rolls the deletion back with that reason. Callers
+  never wrap `delete_now/3` in a transaction of their own: the sessions are
+  ended and the deletion logged after it commits, which an enclosing
+  transaction would turn into before.
   """
 
   require Logger
@@ -36,7 +44,7 @@ defmodule Tymeslot.Auth.AccountDeletion.Operator do
   def delete_now(actor, target_user_id, opts \\ []) do
     with :ok <- ensure_admin_ui(actor),
          {:ok, {pending, session_hashes}} <-
-           schedule_now(actor, target_user_id, force?(actor, opts), opts[:job_at]) do
+           schedule_now(actor, target_user_id, force?(actor, opts), opts) do
       Session.disconnect_sessions(session_hashes)
 
       Logger.info("Account deletion started by an operator",
@@ -54,20 +62,23 @@ defmodule Tymeslot.Auth.AccountDeletion.Operator do
   defp force?(:cli, opts), do: Keyword.get(opts, :force, false) == true
   defp force?(_admin, _opts), do: false
 
-  defp schedule_now(actor, target_user_id, force?, job_at) do
+  defp schedule_now(actor, target_user_id, force?, opts) do
     now = DateTime.utc_now(:second)
+    on_target = Keyword.get(opts, :on_target, &{:ok, &1})
 
     Repo.transaction(fn ->
       AdminUserQueries.lock_admins()
 
       with :ok <- authorise(actor),
-           {:ok, target} <- UserQueries.get_user_for_update(target_user_id),
+           {:ok, locked} <- UserQueries.get_user_for_update(target_user_id),
+           {:ok, target} <- on_target.(locked),
            :ok <- refuse_self(actor, target),
            :ok <- refuse_last_admin(target, force?),
            {:ok, pending} <-
              UserQueries.mark_deletion_scheduled(target, target.deletion_requested_at || now, now),
            {_count, nil} <- Jobs.delete_user_jobs(AccountDeletionWorker, target.id),
-           {:ok, _job} <- AccountDeletionWorker.schedule(target.id, job_at || now, force: force?) do
+           {:ok, _job} <-
+             AccountDeletionWorker.schedule(target.id, opts[:job_at] || now, force: force?) do
         {pending, Session.delete_session_rows(pending.id)}
       else
         {:error, reason} -> Repo.rollback(reason)

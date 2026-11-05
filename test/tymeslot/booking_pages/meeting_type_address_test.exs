@@ -108,9 +108,9 @@ defmodule Tymeslot.BookingPages.MeetingTypeAddressTest do
   end
 
   test "a custom slug may not be a path routed beneath a type", %{user: user} do
-    for slug <- ["book", "thank-you"] do
-      assert {:error, changeset} = MeetingTypes.create_meeting_type(attrs(user, %{slug: slug}))
-      assert {"is reserved", _opts} = changeset.errors[:slug]
-    end
+    assert {:error, changeset} =
+             MeetingTypes.create_meeting_type(attrs(user, %{slug: "thank-you"}))
+
+    assert {"is reserved", _opts} = changeset.errors[:slug]
   end
 end

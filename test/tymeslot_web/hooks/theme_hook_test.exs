@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
   import Tymeslot.Factory
   import TymeslotWeb.Test.SocketHelpers
 
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Hooks.ThemeHook
 
@@ -72,6 +73,30 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
                ThemeHook.on_mount(:default, %{"username" => "rhythmuser"}, %{}, build_socket())
 
       assert updated_socket.assigns.theme_id == "2"
+    end
+  end
+
+  describe "on_mount/4: the organiser PageAddress settled" do
+    test "takes the settled organiser's theme without looking the username up" do
+      # No profile is stored under this username, so the theme can only come
+      # from the organiser the booking route's hook already settled.
+      organiser = %ProfileSchema{username: "unstored", booking_theme: "2"}
+      socket = build_socket(page_address: %{params: %{}, organiser: organiser})
+
+      assert {:cont, updated_socket} =
+               ThemeHook.on_mount(:default, %{"username" => "unstored"}, %{}, socket)
+
+      assert updated_socket.assigns.theme_id == "2"
+    end
+
+    test "takes the default when the settled address has no organiser" do
+      insert(:profile, user: insert(:user), username: "demo-like", booking_theme: "2")
+      socket = build_socket(page_address: %{params: %{}, organiser: nil})
+
+      assert {:cont, updated_socket} =
+               ThemeHook.on_mount(:default, %{"username" => "demo-like"}, %{}, socket)
+
+      assert updated_socket.assigns.theme_id == Catalog.default_id()
     end
   end
 

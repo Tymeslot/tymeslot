@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Helpers.PageTitles do
   def dashboard_title(:automation), do: section_title(dgettext("dashboard_common", "Automation"))
 
   def dashboard_title(action) when action in [:theme, :theme_customization],
-    do: section_title(dgettext("dashboard_common", "Theme"))
+    do: section_title(dgettext("dashboard_common", "Booking pages"))
 
   def dashboard_title(:polls), do: section_title(dgettext("dashboard_common", "Polls"))
   def dashboard_title(:analytics), do: section_title(dgettext("dashboard_common", "Analytics"))

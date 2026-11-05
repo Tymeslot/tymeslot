@@ -9,6 +9,7 @@ defmodule Tymeslot.ThemeCustomizations do
   require Logger
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.Access
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles.ProfileSchema
@@ -172,10 +173,16 @@ defmodule Tymeslot.ThemeCustomizations do
   @doc """
   `:ok` when the customisations of `scope` may be changed: always for the
   profile's own page, and for one of its booking pages only while the owner
-  may change booking pages (`Tymeslot.BookingPages.Access`).
+  may change booking pages (`Tymeslot.BookingPages.Access`). A page that is
+  not the profile's is `{:error, :not_found}`.
   """
-  @spec check_write(scope()) :: :ok | {:error, :upgrade_required}
-  def check_write({profile_id, _page_id}), do: Access.check_profile(profile_id)
+  @spec check_write(scope()) :: :ok | {:error, :not_found | :upgrade_required}
+  def check_write({profile_id, page_id}) do
+    with {:ok, _page} <- BookingPages.fetch(profile_id, page_id) do
+      Access.check_profile(profile_id)
+    end
+  end
+
   def check_write(_profile_id), do: :ok
 
   @doc """
@@ -214,8 +221,9 @@ defmodule Tymeslot.ThemeCustomizations do
   is stored, called on the locked row. `then_fun` returns `{:ok, result}`,
   or `{:error, reason}` to roll the save back.
 
-  A booking page's colours are refused as `{:error, :upgrade_required}` while
-  its owner lacks the feature (`check_write/1`).
+  A booking page that is not the profile's is refused as `{:error, :not_found}`,
+  and its colours as `{:error, :upgrade_required}` while its owner lacks the
+  feature (`check_write/1`).
 
   A refused save returns its changeset, and `{:error, :not_found}` means the
   row was deleted while the save waited for it (its profile was deleted).

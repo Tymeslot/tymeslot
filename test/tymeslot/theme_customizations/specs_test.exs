@@ -332,6 +332,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
                background: %{kind: :color, color: "#123456"},
                logo: %{src: "/uploads/themes/1/9/images/logo.png"},
                calendar_view: "month",
+               font: "system",
                cover: %{src: "/uploads/themes/1/9/images/cover.png", preset: nil}
              }
     end
@@ -342,7 +343,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
                "background_type" => "gradient",
                "background_value" => "gradient_999",
                "cover_value" => "custom"
-             }) == %{calendar_view: "month"}
+             }) == %{calendar_view: "month", font: "system"}
     end
   end
 
@@ -393,6 +394,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
       assert ShowcaseThemeSpec.tokens(settings, %{}).media == %{
                background: %{kind: :color, color: "#123456"},
                calendar_view: "month",
+               font: "system",
                cover: %{
                  src: Presets.find_preset_by_id(:cover, "elegant-still-life").src,
                  preset: "elegant-still-life"

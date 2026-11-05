@@ -11,17 +11,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.PageVisibility do
   @type row :: %{id: String.t(), address: String.t(), checked: boolean()}
 
   @doc """
-  One row per page, the username's first; none without a type. A page's
-  address is under the username, `<username>/<slug>`.
+  One row per page, the username's first; none without a type, nor without
+  a username, since every page's address is under it, `<username>/<slug>`.
   """
   @spec rows(String.t() | nil, [map()], map(), map() | nil) :: [row()]
   def rows(_username, _pages, _memberships, nil), do: []
+  def rows(username, _pages, _memberships, _type) when username in [nil, ""], do: []
 
   def rows(username, pages, memberships, type) do
     listed_on = Map.get(memberships, type.id, MapSet.new())
 
     [
-      %{id: "profile", address: username || "", checked: not type.is_private}
+      %{id: "profile", address: username, checked: not type.is_private}
       | Enum.map(pages, fn page ->
           %{
             id: to_string(page.id),

@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
   describe "Theme selection" do
     test "renders theme options", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       # A card per offered theme, named in its heading, each with its own
       # customise button.
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "offers only the real themes, with no coming-soon teaser", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       assert has_element?(view, "h2", "Quill")
       html = render(view)
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "selects a theme and persists it", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("[phx-click='select_theme'][phx-value-theme='2']")
@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     test "locks Live Preview, focusable and explained, until a calendar is connected", %{
       conn: conn
     } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       refute has_element?(view, "a", "Live Preview")
 
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       user: user,
       profile: profile
     } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       href = preview_href(view, profile.username)
 
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       user: user,
       profile: profile
     } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       href = preview_href(view, profile.username)
 
@@ -125,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     # Customisations are kept per theme and the booking page renders only the
     # chosen one, so customising another saves changes no visitor sees.
     test "says when the theme being customised is not the booking page's", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='2']", "Customise Style")
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "says nothing of the kind for the booking page's own theme", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "opens and closes customization", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
     test "navigates directly to the customize URL without going through the selection screen",
          %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       assert html =~ "Colour Palette"
       assert html =~ "Background Design"
@@ -186,7 +186,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
         background_value: "gradient_1"
       )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "changes color scheme and persists it", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -219,7 +219,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "changes background type tabs", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -239,7 +239,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "selects a solid color background and persists it", %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -261,7 +261,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "handles background image upload safely", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -302,7 +302,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       # is `upload_ready?/2` returning false once entries are drained plus
       # `upsert_theme_customization/3` keying on (profile_id, theme_id).
       # If either is removed a duplicate row would surface here.
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -348,7 +348,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "switching browsing type tabs renders each valid category", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")
@@ -394,7 +394,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
     test "theme:toggle_palette_picker with no seed persists default seed and opens picker",
          %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       # No seed stored yet — clicking "Custom" should write the default seed to the DB
       view
@@ -421,7 +421,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
           "background_value" => "gradient_1"
         })
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       # The picker button should initially be open because a seed exists
       html_before = render(view)
@@ -442,7 +442,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     test "theme:set_option with a palette seed, valid hex persists lowercased seed",
          %{conn: conn, profile: profile} do
       # First open the picker by toggling (no seed stored)
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       view
       |> element("button[phx-click='theme:toggle_palette_picker']")
@@ -463,7 +463,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
     test "theme:toggle_custom_picker toggles the custom background picker",
          %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       # Switch to Solid Colour tab first so the picker button is visible
       view
@@ -482,7 +482,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
     test "theme:set_option persists a custom background hex color",
          %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       # Switch to Solid Colour tab and open the custom picker
       view
@@ -509,7 +509,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
     test "theme:set_option saves a custom background as a three-digit hex colour",
          %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       view |> element("button", "Solid Colour") |> render_click()
       view |> element("button[phx-click='theme:toggle_custom_picker']") |> render_click()
@@ -528,7 +528,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
     end
 
     test "the image picker shows presets from the booking pages' image path", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/1")
 
       html = view |> element("button", "Image") |> render_click()
 

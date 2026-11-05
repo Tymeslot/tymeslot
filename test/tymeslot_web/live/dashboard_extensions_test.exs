@@ -65,7 +65,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       assert html =~ "Meetings"
       assert html =~ "Meeting Types"
       assert html =~ "Availability"
-      assert html =~ "Theme"
+      assert html =~ "Booking pages"
       assert html =~ "Profile"
     end
 

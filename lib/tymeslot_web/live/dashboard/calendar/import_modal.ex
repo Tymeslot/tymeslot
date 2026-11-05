@@ -193,7 +193,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   def drop_zone(assigns) do
     ~H"""
     <form id="calendar-ics-upload" phx-change="calendar:ics_validate" phx-target={@target}>
-      <.live_file_input upload={@uploads.ics_file} class="sr-only" />
+      <%!-- The import dialog's picker button is the control keyboard and
+            screen reader users meet, so the input is out of the tab order and
+            the accessibility tree. It stays rendered (no `hidden`), or neither
+            the drop target nor the button's `click()` reaches it. --%>
+      <.live_file_input
+        upload={@uploads.ics_file}
+        class="sr-only"
+        tabindex="-1"
+        aria-hidden="true"
+      />
     </form>
     <div
       id="calendar-drop-overlay"

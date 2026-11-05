@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   Allows users to select their booking page theme.
 
   Everything here applies to the page chosen by the `page` query parameter
-  (`/dashboard/theme?page=<id>`), or to the profile's own page at
+  (`/dashboard/pages?page=<id>`), or to the profile's own page at
   `/<username>` without one. A booking page is edited through the owner's
   profile as that page presents it (`BookingPages.apply_to_profile/2`, held in
   `@page_profile`), so the theme cards, booking texts and colour editor read
@@ -102,7 +102,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <.dashboard_page icon="hero-paint-brush" title={dgettext("dashboard_common", "Theme")}>
+      <.dashboard_page
+        icon="hero-rectangle-stack"
+        title={dgettext("dashboard_common", "Booking pages")}
+      >
         <%= if @show_customization && @customization_theme_id do %>
           <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <p :if={@pages != []} class="mb-6 text-token-sm font-semibold text-tymeslot-600">
@@ -159,6 +162,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
           <%!-- A disabled fieldset disables the forms and buttons in it; the
           theme cards, which are not controls, drop their click instead. --%>
           <fieldset disabled={@read_only} class="min-w-0 m-0 p-0 border-0">
+            <.section_header icon="hero-paint-brush">
+              {dgettext("dashboard_common", "Theme")}
+            </.section_header>
             <div class="mb-16 max-w-2xl">
               <p class="text-xl text-tymeslot-500 font-medium leading-relaxed">
                 {dgettext(
@@ -356,13 +362,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   The Theme screen for `page`, or for the profile's own page when nil.
   """
   @spec theme_path(map() | nil) :: String.t()
-  def theme_path(nil), do: ~p"/dashboard/theme"
-  def theme_path(%{id: id}), do: ~p"/dashboard/theme?#{[page: id]}"
+  def theme_path(nil), do: ~p"/dashboard/pages"
+  def theme_path(%{id: id}), do: ~p"/dashboard/pages?#{[page: id]}"
 
-  defp customize_path(theme_id, nil), do: ~p"/dashboard/theme/customize/#{theme_id}"
+  defp customize_path(theme_id, nil), do: ~p"/dashboard/pages/customize/#{theme_id}"
 
   defp customize_path(theme_id, %{id: id}),
-    do: ~p"/dashboard/theme/customize/#{theme_id}?#{[page: id]}"
+    do: ~p"/dashboard/pages/customize/#{theme_id}?#{[page: id]}"
 
   defp page_profile(profile, nil), do: profile
   defp page_profile(profile, page), do: BookingPages.apply_to_profile(profile, page)

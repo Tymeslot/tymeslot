@@ -226,3 +226,13 @@ msgstr "más allá de la antelación máxima"
 #, elixir-autogen, elixir-format
 msgid "inside the minimum notice"
 msgstr "dentro de la antelación mínima"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}."
+msgstr "La hora %{time} no existe el %{date} porque se adelantan los relojes, así que se ha guardado como %{saved}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr "La hora %{time} se repite el %{date} porque se atrasan los relojes, así que se ha guardado la primera (%{zone})."

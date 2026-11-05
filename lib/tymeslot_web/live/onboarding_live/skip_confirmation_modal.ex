@@ -44,7 +44,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
       </p>
 
       <:footer>
-        <div class="flex flex-row gap-3">
+        <div class="flex w-full flex-row gap-3">
           <Buttons.action_button
             variant={:danger}
             phx-click="skip_onboarding"
