@@ -119,6 +119,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               username={@profile.username}
               booking_pages={@booking_pages}
               page_memberships={@page_memberships}
+              pages_editable={@pages_editable}
             />
 
             <BookingLinkModal.booking_link_modal
@@ -203,9 +204,15 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
     Endpoint.url() <> Map.fetch!(paths, type.id)
   end
 
-  # Everything before the slug, for the link editor's prefix.
+  # Everything before the slug, for the link editor's prefix; none without a
+  # username, since every address is under it.
   defp type_base_url(_assigns, nil), do: ""
-  defp type_base_url(assigns, type), do: assigns |> type_url(type) |> Path.dirname()
+
+  defp type_base_url(assigns, type) do
+    if booking_base_url(assigns.profile),
+      do: assigns |> type_url(type) |> Path.dirname(),
+      else: ""
+  end
 
   defp event_link_paths(profile, events, pages, memberships),
     do: type_paths(profile, Enum.map(events, & &1.type), pages, memberships)

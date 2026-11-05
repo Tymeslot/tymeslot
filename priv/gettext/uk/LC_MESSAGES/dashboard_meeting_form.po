@@ -888,3 +888,8 @@ msgstr "На жодній сторінці бронювання: доступн�
 #, elixir-autogen, elixir-format
 msgid "Show on %{address}"
 msgstr "Показувати на %{address}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it. Until then, this meeting type is bookable only through its direct link."
+msgstr "Спершу виберіть ім'я користувача на сторінці «Профіль»: з нього формуються адреси ваших сторінок бронювання. Доти цей тип зустрічі можна забронювати лише за прямим посиланням."

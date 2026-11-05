@@ -402,7 +402,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.visibility_section
             type={@type}
             parent={@parent_myself}
+            username={@username}
             pages={PageVisibility.rows(@username, @booking_pages, @page_memberships, @type)}
+            pages_editable={@pages_editable}
           />
         </.card>
 
