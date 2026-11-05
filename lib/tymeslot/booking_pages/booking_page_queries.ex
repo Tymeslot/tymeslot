@@ -115,9 +115,18 @@ defmodule Tymeslot.BookingPages.BookingPageQueries do
     Repo.one(query)
   end
 
-  @doc "Whether a page with `id` exists."
-  @spec exists?(integer()) :: boolean()
-  def exists?(id), do: Repo.exists?(from(p in BookingPageSchema, where: p.id == ^id))
+  @doc "Whether a page with `id` exists on a profile of the user `user_id`."
+  @spec exists_for_user?(integer(), integer()) :: boolean()
+  def exists_for_user?(id, user_id) do
+    query =
+      from(p in BookingPageSchema,
+        join: pr in ProfileSchema,
+        on: pr.id == p.profile_id,
+        where: p.id == ^id and pr.user_id == ^user_id
+      )
+
+    Repo.exists?(query)
+  end
 
   @doc """
   Lists a meeting type on a page; listing it again is a no-op. The row is

@@ -251,17 +251,19 @@ defmodule Tymeslot.BookingPages do
   def page_id(_profile), do: nil
 
   @doc """
-  `id` when that page still exists, otherwise nil: a booking keeps the page it
-  came through only while there is one, so a page deleted while its visitor
-  was on the booking form is dropped from the booking. This is a check before
-  the booking is written, not a guarantee: a page deleted between the check
-  and the insert still fails that booking on the foreign key.
+  `id` when that page still exists and belongs to the organiser
+  `organizer_user_id`, otherwise nil: a booking keeps the page it came through
+  only while there is one, so a page deleted while its visitor was on the
+  booking form is dropped from the booking, and another host's page is never
+  recorded on it. This is a check before the booking is written, not a
+  guarantee: a page deleted between the check and the insert still fails that
+  booking on the foreign key.
   """
-  @spec existing_id(integer() | nil) :: integer() | nil
-  def existing_id(id) when is_integer(id),
-    do: if(BookingPageQueries.exists?(id), do: id, else: nil)
+  @spec existing_id(integer() | nil, integer() | nil) :: integer() | nil
+  def existing_id(id, organizer_user_id) when is_integer(id) and is_integer(organizer_user_id),
+    do: if(BookingPageQueries.exists_for_user?(id, organizer_user_id), do: id, else: nil)
 
-  def existing_id(_none), do: nil
+  def existing_id(_id, _organizer_user_id), do: nil
 
   @doc "A profile's pages, oldest first."
   @spec list(integer()) :: [page()]
