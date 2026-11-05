@@ -73,6 +73,7 @@ msgid "This sign-in option is not available."
 msgstr "Цей спосіб входу недоступний."
 
 #: lib/tymeslot_web/controllers/auth/invitation_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Too many OAuth attempts. Please try again later."
 msgstr "Забагато спроб входу через OAuth. Спробуйте пізніше."
@@ -86,3 +87,8 @@ msgstr "Ласкаво просимо до Tymeslot! Ваш пароль вст�
 #, elixir-autogen, elixir-format
 msgid "Your password is set. Please log in to continue."
 msgstr "Ваш пароль встановлено. Увійдіть, щоб продовжити."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "You have been invited to Tymeslot with this email address. Open the invitation link we emailed you to choose how you will sign in. If the link has expired, ask your administrator to send a new one."
+msgstr "На цю адресу електронної пошти надіслано запрошення до Tymeslot. Відкрийте посилання із запрошенням, яке ми надіслали вам електронною поштою, і виберіть спосіб входу. Якщо термін дії посилання минув, попросіть адміністратора надіслати нове."

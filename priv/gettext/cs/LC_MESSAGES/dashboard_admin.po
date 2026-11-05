@@ -940,11 +940,6 @@ msgstr "Odesílání…"
 msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
 msgstr "Účet byl vytvořen, ale e-mail s pozváním se nepodařilo odeslat. Zkuste to znovu pomocí tlačítka Odeslat pozvání znovu."
 
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "This user has already accepted their invitation."
-msgstr "Tento uživatel už své pozvání přijal."
-
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
 msgid "name@example.com"
@@ -964,3 +959,8 @@ msgstr "Pozvánky vyžadují způsob přihlášení. Nejprve zapněte ověření
 #, elixir-autogen, elixir-format
 msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
 msgstr "Vytvoříme účet a pošleme pozvanému e-mail s odkazem, kde si zvolí způsob přihlášení. Veřejná registrace může zůstat zavřená."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has no pending invitation."
+msgstr "Tento uživatel nemá žádné čekající pozvání."

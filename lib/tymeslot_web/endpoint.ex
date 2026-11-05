@@ -213,6 +213,7 @@ defmodule TymeslotWeb.Endpoint do
     {["healthcheck"], :debug},
     {["auth", "verify-complete"], false},
     {["auth", "reset-password", :_], false},
+    {["auth", "invitation", :_], false},
     {["auth", "oauth", "confirm", :_], false},
     {["email-change", :_], false},
     {["guest", :_], false},

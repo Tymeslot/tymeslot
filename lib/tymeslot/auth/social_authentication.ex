@@ -40,7 +40,11 @@ defmodule Tymeslot.Auth.SocialAuthentication do
           admission()
           | {:register, map()}
           | {:error,
-             :oauth_error | :general_error | :registration_disabled | :email_already_taken}
+             :oauth_error
+             | :general_error
+             | :registration_disabled
+             | :email_already_taken
+             | :invitation_pending}
 
   @type completion_error ::
           :registration_disabled
@@ -80,6 +84,8 @@ defmodule Tymeslot.Auth.SocialAuthentication do
       unusable
     * `{:error, :email_already_taken}` - no account carries this identity,
       but its email belongs to one created another way
+    * `{:error, :invitation_pending}` - no account carries this identity, and
+      its email belongs to an invited account not yet accepted
     * `{:error, :registration_disabled}` - a new identity, and sign-ups are
       closed
 
@@ -98,8 +104,8 @@ defmodule Tymeslot.Auth.SocialAuthentication do
         {:error, :not_found} ->
           new_identity(provider, identity, opts)
 
-        {:error, :email_already_taken} ->
-          refuse(provider, identity, :email_already_taken, opts)
+        {:error, reason} when reason in [:email_already_taken, :invitation_pending] ->
+          refuse(provider, identity, reason, opts)
       end
     end
   end

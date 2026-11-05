@@ -89,7 +89,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
       )
 
   defp invite_error_message(:not_invited),
-    do: dgettext("dashboard_admin", "This user has already accepted their invitation.")
+    do: dgettext("dashboard_admin", "This user has no pending invitation.")
 
   defp invite_error_message(:email_not_sent), do: invitation_not_sent_message()
 

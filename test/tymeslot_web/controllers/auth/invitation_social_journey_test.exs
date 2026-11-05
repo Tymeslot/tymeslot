@@ -15,6 +15,7 @@ defmodule TymeslotWeb.InvitationSocialJourneyTest do
   @moduletag :integration
 
   import Tymeslot.Factory, only: [insert: 2]
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
   import Tymeslot.Test.OAuthProviderStub
 
   alias Ecto.Changeset
@@ -150,6 +151,53 @@ defmodule TymeslotWeb.InvitationSocialJourneyTest do
 
     assert redirected_to(conn) == "/auth/complete-registration"
     assert Invitations.pending?(Repo.get!(UserSchema, invitee.id))
+  end
+
+  test "an ordinary sign-in with the invited address is sent to the invitation link", %{
+    invitee: invitee
+  } do
+    stub_github(%{"id" => 7003, "email" => "invitee@example.com"}, [
+      %{"email" => "invitee@example.com", "primary" => true, "verified" => true}
+    ])
+
+    conn = sign_in(build_conn(), "github")
+
+    assert redirected_to(conn) == ~p"/?auth=login"
+    assert Flash.get(conn.assigns.flash, :info) =~ "Open the invitation link we emailed you"
+    refute get_session(conn, :user_token)
+
+    user = Repo.get!(UserSchema, invitee.id)
+    assert Invitations.pending?(user)
+    assert user.github_user_id == nil
+  end
+
+  test "an address over the acceptance limit is refused at the callback", %{
+    invitee: invitee,
+    path: path
+  } do
+    stub_github(%{"id" => 7004, "email" => "busy@example.com"}, [
+      %{"email" => "busy@example.com", "primary" => true, "verified" => true}
+    ])
+
+    conn = %{build_conn() | remote_ip: {10, 77, 0, 4}}
+    start = post(conn, path <> "/github")
+    %{"state" => state} = start |> redirected_to(302) |> authorise_params()
+
+    exhaust_limit!(:invitation_accept, "10.77.0.4")
+
+    conn =
+      start
+      |> recycle()
+      |> Map.put(:remote_ip, {10, 77, 0, 4})
+      |> get("/auth/github/callback", %{"code" => "provider-code", "state" => state})
+
+    assert redirected_to(conn) == path
+    assert Flash.get(conn.assigns.flash, :error) =~ "Too many"
+    refute get_session(conn, :user_token)
+
+    user = Repo.get!(UserSchema, invitee.id)
+    assert Invitations.pending?(user)
+    assert user.github_user_id == nil
   end
 
   test "with password sign-in off, the page offers the providers alone", %{path: path} do

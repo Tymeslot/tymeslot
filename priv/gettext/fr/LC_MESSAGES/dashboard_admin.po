@@ -940,11 +940,6 @@ msgstr "Envoi en cours…"
 msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
 msgstr "Le compte a été créé, mais l’e-mail d’invitation n’a pas pu être envoyé. Utilisez Renvoyer l’invitation pour réessayer."
 
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "This user has already accepted their invitation."
-msgstr "Cet utilisateur a déjà accepté son invitation."
-
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
 msgid "name@example.com"
@@ -964,3 +959,8 @@ msgstr "Les invitations nécessitent un moyen de connexion. Activez d’abord l�
 #, elixir-autogen, elixir-format
 msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
 msgstr "Nous créerons le compte et enverrons à la personne un e-mail contenant un lien pour choisir sa méthode de connexion. L’inscription publique peut rester fermée."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has no pending invitation."
+msgstr "Cet utilisateur n’a aucune invitation en attente."

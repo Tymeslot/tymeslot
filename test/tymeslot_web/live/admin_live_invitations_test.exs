@@ -65,6 +65,27 @@ defmodule TymeslotWeb.AdminLiveInvitationsTest do
     assert [_job] = invitation_jobs()
   end
 
+  test "resending an invitation revoked since the page loaded says none is pending", %{
+    conn: conn,
+    admin: admin
+  } do
+    {:ok, user} = Invitations.invite(admin, "revoked@example.com")
+    Repo.delete_all(Oban.Job)
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    # A password reset through "forgot password" clears the invitation.
+    user |> Changeset.change(invitation_token_hash: nil) |> Repo.update!()
+
+    html =
+      lv
+      |> element(~s|button[phx-click="resend_invitation"][phx-value-id="#{user.id}"]|)
+      |> render_click()
+
+    assert html =~ "This user has no pending invitation."
+    assert invitation_jobs() == []
+  end
+
   test "an expired invitation is marked as such", %{conn: conn, admin: admin} do
     {:ok, user} = Invitations.invite(admin, "late@example.com")
     eight_days_ago = DateTime.add(DateTime.utc_now(:second), -8, :day)

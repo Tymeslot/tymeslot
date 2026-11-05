@@ -936,11 +936,6 @@ msgstr "Wysyłanie…"
 msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
 msgstr "Konto zostało utworzone, ale nie udało się wysłać e-maila z zaproszeniem. Użyj opcji Wyślij zaproszenie ponownie, aby spróbować jeszcze raz."
 
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "This user has already accepted their invitation."
-msgstr "Ten użytkownik przyjął już swoje zaproszenie."
-
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
 msgid "name@example.com"
@@ -960,3 +955,8 @@ msgstr "Zaproszenia wymagają metody logowania. Najpierw włącz uwierzytelniani
 #, elixir-autogen, elixir-format
 msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
 msgstr "Utworzymy konto i wyślemy e-mailem link do wyboru sposobu logowania. Rejestracja publiczna może pozostać zamknięta."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has no pending invitation."
+msgstr "Ten użytkownik nie ma oczekującego zaproszenia."

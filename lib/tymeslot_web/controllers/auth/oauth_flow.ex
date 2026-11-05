@@ -52,7 +52,8 @@ defmodule TymeslotWeb.OAuthFlow do
           | {:registration_required, Plug.Conn.t(), provider(), map()}
           | {:error, :invalid_state, Plug.Conn.t()}
           | {:error, :oauth_error | :general_error | :session_failed, provider(), Plug.Conn.t()}
-          | {:error, :registration_disabled | :email_already_taken, provider(), Plug.Conn.t()}
+          | {:error, :registration_disabled | :email_already_taken | :invitation_pending,
+             provider(), Plug.Conn.t()}
 
   @doc """
   Starts a sign-in: issues the state and PKCE verifier into the session and
@@ -148,6 +149,8 @@ defmodule TymeslotWeb.OAuthFlow do
     creation failed.
   - `{:error, :email_already_taken, provider, conn}` - no account carries this
     provider ID, but the email belongs to an account created another way.
+  - `{:error, :invitation_pending, provider, conn}` - no account carries this
+    provider ID, and the email belongs to an invited account not yet accepted.
   - `{:error, :registration_disabled, provider, conn}` - a new identity, and
     sign-ups are closed.
   """

@@ -65,6 +65,7 @@ defmodule Tymeslot.Auth.Invitations do
           :invalid_token
           | :token_expired
           | :provider_disabled
+          | :rate_limited
           | :identity_in_use
           | :oauth_error
           | :general_error
@@ -204,8 +205,8 @@ defmodule Tymeslot.Auth.Invitations do
   verifies it. The caller signs the returned user in.
 
   The web layer has already checked the flow's state and recovered its PKCE
-  `code_verifier`; `opts` carries the client (`:ip`, `:user_agent`) for the
-  audit entry. `{:error, :identity_in_use}` means the identity already signs
+  `code_verifier`; `opts` carries the client (`:ip`, `:user_agent`), for the
+  per-address limit on attempts (shared with `accept/4`) and the audit entry. `{:error, :identity_in_use}` means the identity already signs
   in to another account; the invitation stays pending.
   """
   @spec accept_with_provider(
@@ -217,8 +218,20 @@ defmodule Tymeslot.Auth.Invitations do
           keyword()
         ) :: {:ok, UserSchema.t()} | {:error, provider_accept_error()}
   def accept_with_provider(token, provider, code, code_verifier, callback_url, opts) do
-    with :ok <- ensure_provider(provider),
-         {:ok, identity} <-
+    with :ok <- ensure_provider(provider) do
+      case RateLimit.with_limit(
+             RateLimiter.check(:invitation_accept, opts[:ip]),
+             [event: "invitation_accept", ip: opts[:ip], user_agent: opts[:user_agent]],
+             fn -> identify_and_link(token, provider, code, code_verifier, callback_url, opts) end
+           ) do
+        {:error, :rate_limited, _message} -> {:error, :rate_limited}
+        result -> result
+      end
+    end
+  end
+
+  defp identify_and_link(token, provider, code, code_verifier, callback_url, opts) do
+    with {:ok, identity} <-
            SocialAuthentication.identify(provider, code, code_verifier, callback_url, opts),
          :ok <- ensure_identity_free(provider, identity) do
       link_identity(token, provider, identity)

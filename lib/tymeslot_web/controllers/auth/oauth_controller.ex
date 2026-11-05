@@ -242,6 +242,9 @@ defmodule TymeslotWeb.OAuthController do
         provider: provider_name(provider)
       )
 
+  defp invitation_failure_message(:rate_limited, _provider),
+    do: dgettext("auth_invitation", "Too many OAuth attempts. Please try again later.")
+
   defp invitation_failure_message(:oauth_error, provider),
     do:
       dgettext("auth", "Failed to authenticate with %{provider}.",
@@ -582,6 +585,20 @@ defmodule TymeslotWeb.OAuthController do
       :email_already_taken,
       paths[:login_path]
     )
+  end
+
+  # The invitee is signing in before accepting: the invitation link is where
+  # they choose how they will sign in.
+  defp respond_to_oauth_result({:error, :invitation_pending, _provider, flow_conn}, paths) do
+    flow_conn
+    |> put_flash(
+      :info,
+      dgettext(
+        "auth_invitation",
+        "You have been invited to Tymeslot with this email address. Open the invitation link we emailed you to choose how you will sign in. If the link has expired, ask your administrator to send a new one."
+      )
+    )
+    |> redirect(to: paths[:login_path])
   end
 
   @spec provider_name(provider() | String.t()) :: String.t()
