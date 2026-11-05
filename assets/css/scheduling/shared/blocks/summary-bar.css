@@ -28,10 +28,26 @@
   list-style: none;
 }
 
+/* Each item keeps to one line, shortening its value with an ellipsis rather
+   than wrapping: a long meeting name would otherwise add lines to a bar
+   that stays at the top of the window. The link's text keeps the whole
+   name for a screen reader. The bar never grows past its row for it,
+   wherever a theme places it. */
+.summary-bar {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.summary-bar__item {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .summary-bar__link {
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-2xs);
+  max-width: 100%;
   color: var(--ink-1);
   text-decoration: none;
 }
@@ -46,10 +62,16 @@
 }
 
 .summary-bar__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: var(--font-weight-semibold);
 }
 
 .summary-bar__label {
+  flex-shrink: 0;
+  white-space: nowrap;
   color: var(--ink-2);
   font-size: var(--theme-font-size-sm);
 }
