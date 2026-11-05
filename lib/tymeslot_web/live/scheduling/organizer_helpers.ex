@@ -13,9 +13,11 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
 
   alias Phoenix.Component
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.BookingPages
   alias Tymeslot.Demo
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
@@ -27,7 +29,10 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   @doc """
   Handles username resolution and organizer setup.
   """
-  @spec handle_username_resolution(Phoenix.LiveView.Socket.t(), String.t() | nil) ::
+  @spec handle_username_resolution(
+          Phoenix.LiveView.Socket.t(),
+          ProfileSchema.t() | String.t() | nil
+        ) ::
           Phoenix.LiveView.Socket.t()
   def handle_username_resolution(socket, nil) do
     socket
@@ -36,11 +41,23 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
     |> assign(:host_currency, nil)
   end
 
-  def handle_username_resolution(socket, username) do
+  # A booking URL's organiser, already settled by `PageAddress` with its user
+  # and the page it presents: its context is built without looking it up
+  # again. A username the demo overlay may claim still goes through it.
+  def handle_username_resolution(socket, %ProfileSchema{username: username} = organiser) do
+    if Demo.demo_username?(username),
+      do: handle_username_resolution(socket, BookingPages.public_address(organiser)),
+      else: assign_organizer_context(socket, {:ok, Profiles.organizer_context(organiser)})
+  end
+
+  def handle_username_resolution(socket, address) when is_binary(address),
+    do: assign_organizer_context(socket, Demo.resolve_organizer_context(address))
+
+  defp assign_organizer_context(socket, resolution) do
     # Store client IP during username resolution to ensure it's available later
     socket = store_client_ip(socket)
 
-    case Demo.resolve_organizer_context(username) do
+    case resolution do
       {:error, :profile_not_found} ->
         # During mount, we can't use put_flash/redirect - let the mount handle this
         socket

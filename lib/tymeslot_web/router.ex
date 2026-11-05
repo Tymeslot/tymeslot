@@ -582,6 +582,9 @@ defmodule TymeslotWeb.Router do
       on_mount: [
         TymeslotWeb.Hooks.EmbedAuthHook,
         TymeslotWeb.Hooks.LocaleHook,
+        # Settles the booking URL before `ThemeHook`, which reads the
+        # organiser it found rather than looking them up again.
+        TymeslotWeb.Live.Scheduling.PageAddress,
         TymeslotWeb.Hooks.ThemeHook,
         TymeslotWeb.Hooks.ClientInfoHook,
         TymeslotWeb.Hooks.PageViewHook
