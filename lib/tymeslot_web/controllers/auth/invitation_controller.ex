@@ -36,9 +36,9 @@ defmodule TymeslotWeb.InvitationController do
   end
 
   @spec accept(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def accept(conn, %{"token" => token, "invitation" => params}) do
-    password = Map.get(params, "password", "")
-    confirmation = Map.get(params, "password_confirmation", "")
+  def accept(conn, %{"token" => token, "invitation" => %{} = params}) do
+    password = string_param(params, "password")
+    confirmation = string_param(params, "password_confirmation")
 
     case Invitations.accept(token, password, confirmation, ClientIP.request_opts(conn)) do
       {:ok, user} ->
@@ -55,8 +55,18 @@ defmodule TymeslotWeb.InvitationController do
     end
   end
 
+  # No form fields, or a crafted body whose `invitation` is not a map: treat
+  # it as an empty form, which re-renders the page with the reason.
   def accept(conn, %{"token" => token}),
     do: accept(conn, %{"token" => token, "invitation" => %{}})
+
+  # A crafted body can send a list or map where the form sends a string.
+  defp string_param(params, key) do
+    case Map.get(params, key) do
+      value when is_binary(value) -> value
+      _missing_or_not_a_string -> ""
+    end
+  end
 
   @doc """
   Starts accepting the invitation with a social sign-in: checks the link and

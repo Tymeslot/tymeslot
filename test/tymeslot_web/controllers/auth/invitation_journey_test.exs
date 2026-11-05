@@ -118,6 +118,31 @@ defmodule TymeslotWeb.InvitationJourneyTest do
     assert Repo.get!(UserSchema, user.id).password_hash == nil
   end
 
+  for {label, body} <- [
+        {"a string where the form is expected", %{"invitation" => "not-a-form"}},
+        {"a map where the password is expected",
+         %{"invitation" => %{"password" => %{"x" => "y"}, "password_confirmation" => ["z"]}}}
+      ] do
+    test "a crafted body with #{label} re-renders the form instead of crashing", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+      lv
+      |> form("#invite-user-form", invite: %{email: "crafted@example.com"})
+      |> render_submit()
+
+      path = URI.parse(deliver_invitation()).path
+
+      html =
+        build_conn()
+        |> post(path, unquote(Macro.escape(body)))
+        |> html_response(200)
+
+      assert html =~ ~s|role="alert"|
+      user = Auth.get_user_by_email("crafted@example.com")
+      assert Repo.get!(UserSchema, user.id).password_hash == nil
+    end
+  end
+
   defp close_registration do
     original = Application.get_env(:tymeslot, :registration_enabled, true)
     Application.put_env(:tymeslot, :registration_enabled, false)
