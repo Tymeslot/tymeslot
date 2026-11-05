@@ -6,8 +6,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
     * `theme_shell/1`: the theme's outermost element, marked
       `data-booker-root` (the element the shared embed rules in
       `shared/embed.css` size to content), holding the organiser's
-      customisation as a `<style>` block (`ThemeStyle`), the theme's
-      background (`:background` slot) and then the theme's own markup;
+      customisation as a `<style>` block (`ThemeStyle`), the preloads of
+      the page's web fonts (`FontPreload`: the font the customisation
+      chose, `Tokens.media[:font]`, else the theme's `default_font`), the
+      theme's background (`:background` slot) and then the theme's own
+      markup;
     * `chrome/1`: the owner-preview notice and the language switcher, which
       the theme places at the top of its content. A hidden switcher's
       container carries `theme-shell__language--hidden` next to Tailwind's
@@ -39,6 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
   alias Tymeslot.Locales
   alias TymeslotWeb.Layouts
   alias TymeslotWeb.Themes.Shared.Components.CalendarRefusedNotice
+  alias TymeslotWeb.Themes.Shared.FontPreload
   alias TymeslotWeb.Themes.Shared.ThemeStyle
 
   import TymeslotWeb.Components.LanguageSwitcher, only: [language_switcher: 1]
@@ -48,15 +52,24 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
   attr :locale, :string, default: nil
   attr :theme_tokens, :any, default: nil, doc: "the page's `%Tokens{}`, or nil for none"
 
+  attr :default_font, :string,
+    default: nil,
+    doc:
+      "the font id the theme's stylesheet sets its text in, for a theme with no font option " <>
+        "(`--theme-font-family` in its `variables.css`); a font the customisation chose wins"
+
   slot :background, doc: "the theme's background, rendered before its markup"
   slot :inner_block, required: true
 
   @doc "The theme's outermost element: the booker root, its colours and its background."
   @spec theme_shell(map()) :: Phoenix.LiveView.Rendered.t()
   def theme_shell(assigns) do
+    assigns = assign(assigns, :font, chosen_font(assigns.theme_tokens) || assigns.default_font)
+
     ~H"""
     <div class={@class} data-locale={@locale} data-booker-root>
       <ThemeStyle.theme_style tokens={@theme_tokens} />
+      <FontPreload.links font={@font} locale={@locale} />
 
       {render_slot(@background)}
 
@@ -64,6 +77,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
     </div>
     """
   end
+
+  defp chosen_font(%{media: %{font: font}}), do: font
+  defp chosen_font(_tokens), do: nil
 
   attr :language_class, :any, required: true, doc: "classes on the language switcher's container"
   attr :locale, :string, default: nil
