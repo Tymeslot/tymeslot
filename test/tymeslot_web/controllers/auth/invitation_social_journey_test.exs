@@ -136,6 +136,33 @@ defmodule TymeslotWeb.InvitationSocialJourneyTest do
     assert Repo.get!(UserSchema, invitee.id).provider_uid == nil
   end
 
+  test "an invitation revoked while the invitee is at the provider is refused at the callback",
+       %{invitee: invitee, path: path} do
+    stub_github(%{"id" => 7005, "email" => "inflight@example.com"}, [
+      %{"email" => "inflight@example.com", "primary" => true, "verified" => true}
+    ])
+
+    # The flow starts while the invitation is still live: the raw token now
+    # waits in the session for the callback.
+    start = post(build_conn(), path <> "/github")
+    %{"state" => state} = start |> redirected_to(302) |> authorise_params()
+
+    {:ok, _revoked} = Invitations.revoke(insert(:user, is_admin: true), invitee.id)
+
+    conn =
+      start
+      |> recycle()
+      |> get("/auth/github/callback", %{"code" => "provider-code", "state" => state})
+
+    assert redirected_to(conn) == ~p"/auth/login"
+    assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
+    refute get_session(conn, :user_token)
+
+    user = Repo.get!(UserSchema, invitee.id)
+    assert user.github_user_id == nil
+    assert user.verified_at == nil
+  end
+
   test "an ordinary sign-in started after an abandoned acceptance does not accept it", %{
     invitee: invitee,
     path: path

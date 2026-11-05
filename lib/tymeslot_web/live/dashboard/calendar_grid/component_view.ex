@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Dashboard.PublicPageNotice
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
   alias TymeslotWeb.Dashboard.CalendarGrid.Header
@@ -74,10 +75,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
       </div>
       <div :if={@_initialized} class="flex-1 flex flex-col min-h-0">
         <%!-- The setup checklist already carries "Connect a calendar" as its
-              first step, so the banner only appears once the checklist is gone. --%>
+              first step, and the dashboard-wide public-page notice makes the
+              same ask more urgently, so the banner only appears once both are
+              gone. --%>
         <EmptyState.connect_calendar_banner :if={
           @integrations == [] and
-            not OnboardingChecklist.visible?(@current_user, @integration_status)
+            not OnboardingChecklist.visible?(@current_user, @integration_status) and
+            not PublicPageNotice.visible?(@profile, @integration_status)
         } />
         <Header.toolbar
           view={@view}

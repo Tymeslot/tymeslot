@@ -199,6 +199,12 @@ defmodule TymeslotWeb.AdminLive do
   def handle_event("resend_invitation", %{"id" => id}, socket),
     do: UserActions.resend_invitation(id, socket)
 
+  def handle_event("request_cancel_invitation", params, socket),
+    do: UserActions.open_pending_action(:cancel_invitation, params, socket)
+
+  def handle_event("cancel_invitation", %{"id" => id}, socket),
+    do: UserActions.cancel_invitation(id, socket)
+
   # --- Email branding helpers ---
 
   # Auto-upload progress callback. Consumes the entry only once it is fully

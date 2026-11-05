@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
       assert {:noreply, _socket} =
                ServiceSettingsComponent.handle_event(
                  "toggle_private",
-                 %{"id" => to_string(mt.id)},
+                 %{"id" => to_string(mt.id), "listed" => "false"},
                  build_component_socket(user)
                )
 

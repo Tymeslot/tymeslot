@@ -577,11 +577,6 @@ msgstr "Сталася помилка. Спробуйте ще раз."
 msgid "Step %{current} of %{total}"
 msgstr "Крок %{current} із %{total}"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
-#, elixir-autogen, elixir-format
-msgid "Sync to avoid double-bookings"
-msgstr "Синхронізуйте, щоб уникнути накладок"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
@@ -930,3 +925,8 @@ msgstr "Ваша сторінка бронювання ще не доступн�
 #, elixir-autogen, elixir-format
 msgid "Your link is ready, but the page only goes live once a calendar is connected."
 msgstr "Посилання готове, але сторінка запрацює лише після підключення календаря."
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page can't take bookings without one"
+msgstr "Без календаря ваша сторінка бронювання не може приймати бронювань"

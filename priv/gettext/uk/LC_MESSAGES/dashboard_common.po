@@ -388,3 +388,33 @@ msgstr "Зберегти зміни"
 #, elixir-autogen, elixir-format
 msgid "Booking pages"
 msgstr "Сторінки бронювання"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Anyone who opens your link is told the page isn't available until you connect a calendar."
+msgstr "Кожен, хто відкриє ваше посилання, побачить, що сторінка недоступна, доки ви не підключите календар."
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Підключити календар"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Fix calendar connection"
+msgstr "Виправити підключення календаря"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "None of your calendars can take a booking right now, so anyone who opens your link is told the page isn't available. Check your calendar connection to fix it."
+msgstr "Зараз жоден із ваших календарів не може прийняти бронювання, тож кожен, хто відкриє ваше посилання, побачить, що сторінка недоступна. Перевірте підключення календаря, щоб це виправити."
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page has stopped taking bookings"
+msgstr "Ваша сторінка бронювання перестала приймати бронювання"
+
+#: lib/tymeslot_web/components/dashboard/public_page_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page isn't taking bookings yet"
+msgstr "Ваша сторінка бронювання ще не приймає бронювань"

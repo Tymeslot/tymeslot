@@ -310,6 +310,27 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     assert has_element?(view, "#page-settings-type-#{type.id}[aria-checked='false']")
   end
 
+  test "a switch does what the host saw when another tab changed it meanwhile", ctx do
+    page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
+    type = insert(:meeting_type, user: ctx.user, name: "Automation call", is_private: false)
+    {:ok, main, _html} = live(ctx.conn, ~p"/dashboard/pages")
+    {:ok, on_page, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: page.id]}")
+
+    # Another tab unlists the type from the username's page; this one still
+    # shows it listed, and the host switches it off.
+    type |> Changeset.change(is_private: true) |> Repo.update!()
+    main |> element("#page-settings-type-#{type.id}") |> render_click()
+    assert Repo.reload!(type).is_private
+
+    # A page's switch likewise sets the state it asks for, not the opposite
+    # of the listings held here: asking twice to list leaves it listed.
+    switch = "#page-settings-#{page.id}-type-#{type.id}"
+    on_page |> element(switch) |> render_click(%{"listed" => "true"})
+    on_page |> element(switch) |> render_click(%{"listed" => "true"})
+
+    assert BookingPages.memberships(ctx.profile.id)[type.id] == MapSet.new([page.id])
+  end
+
   test "a meeting type that is not the host's is not listed, and says so", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
     # A public page shows its meeting types only once a calendar is connected.

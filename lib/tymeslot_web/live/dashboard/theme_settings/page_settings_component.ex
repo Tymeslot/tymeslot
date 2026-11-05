@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   works the meeting types' existing "unlisted" flag; on a booking page it works
   the page's listings (`BookingPages.set_meeting_type/3`). Either way a flip is
   a meeting type write, under the same rate limit as the meeting type screen's
-  own switches.
+  own switches, and sends the state it asks for (`phx-value-listed`), so it
+  does what the host saw even when another tab changed the listing meanwhile.
 
   `read_only` is set for a booking page its owner may no longer change
   (`BookingPages.editable?/1`): its fields and switches are disabled, and
@@ -156,6 +157,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
               on_change="toggle_type"
               target={@myself}
               phx-value-id={type.id}
+              phx-value-listed={to_string(not listed?(@page, @memberships, type))}
             />
           </div>
         </fieldset>
@@ -220,11 +222,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_type", %{"id" => id}, socket) do
+  def handle_event("toggle_type", %{"id" => id, "listed" => listed}, socket) do
     user_id = socket.assigns.profile.user_id
 
     with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      do_toggle_type(socket, id, user_id)
+      do_toggle_type(socket, id, listed == "true", user_id)
     end)
   end
 
@@ -289,10 +291,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
     end
   end
 
-  defp do_toggle_type(socket, id, user_id) do
+  defp do_toggle_type(socket, id, listed?, user_id) do
     with {type_id, ""} <- Integer.parse(id),
          %{} = type <- MeetingTypes.get_meeting_type(type_id, user_id),
-         :ok <- toggle(socket.assigns.page, socket.assigns.memberships, type) do
+         :ok <- set_listed(socket.assigns.page, type, listed?) do
       send(self(), {:meeting_type_changed})
       Flash.info(dgettext("dashboard_booking_pages", "Booking page saved"))
       {:noreply, load_listings(socket)}
@@ -344,15 +346,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   defp page_form(changeset, id), do: to_form(changeset, as: :page, id: "#{id}-details")
 
   # The profile's own page is the type's existing "unlisted" flag.
-  defp toggle(nil, _memberships, type) do
-    case MeetingTypes.set_private(type, !type.is_private) do
+  defp set_listed(nil, type, listed?) do
+    case MeetingTypes.set_private(type, not listed?) do
       {:ok, _type} -> :ok
       {:error, _reason} -> :error
     end
   end
 
-  defp toggle(page, memberships, type),
-    do: BookingPages.set_meeting_type(page, type.id, not listed?(page, memberships, type))
+  defp set_listed(page, type, listed?), do: BookingPages.set_meeting_type(page, type.id, listed?)
 
   defp listed?(nil, _memberships, type), do: not type.is_private
 

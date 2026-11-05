@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
   @moduledoc """
-  Confirmation modal for deleting one's own account, on `CoreComponents.modal`.
+  Confirmation modal for deleting one's own account, on `CoreComponents.confirm_modal`.
 
   Says plainly what happens before anything is confirmed: with a grace period,
   the date of the deletion, that the account is frozen until then and that
@@ -29,18 +29,15 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
   @spec delete_account_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_account_modal(assigns) do
     ~H"""
-    <.modal
+    <.confirm_modal
       id="delete-account-modal"
       show={true}
+      title={dgettext("account", "Delete your account")}
+      confirm_label={confirm_label(@grace_days)}
+      confirm_form="delete-account-form"
       on_cancel={JS.push("close_delete_account_modal")}
-      size={:medium}
+      phx-disable-with={dgettext("account", "Deleting...")}
     >
-      <:header>
-        <span class="text-token-xl font-black tracking-tight">
-          {dgettext("account", "Delete your account")}
-        </span>
-      </:header>
-
       <.form
         for={%{}}
         as={:delete_account}
@@ -48,6 +45,15 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
         phx-submit="request_account_deletion"
         class="space-y-5"
       >
+        <%!-- First in the body, so a refusal is the first thing in view on a
+              phone, where the explanation below fills the sheet; the handler
+              also scrolls the first alert into view. --%>
+        <div :if={@errors[:base]} role="alert">
+          <.info_box variant={:error} class="mb-0 p-4!">
+            {List.first(@errors[:base])}
+          </.info_box>
+        </div>
+
         <p :if={@grace_days == 0} class="text-tymeslot-700">
           {dgettext(
             "account",
@@ -79,10 +85,6 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
               "Calendar events and video links that already exist stay as they are. If a meeting will not take place, contact your guests yourself."
             )}
           </p>
-        </.info_box>
-
-        <.info_box :if={@errors[:base]} variant={:error} class="mb-0 p-4!">
-          {List.first(@errors[:base])}
         </.info_box>
 
         <.input
@@ -129,28 +131,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
           />
         </div>
       </.form>
-
-      <:footer>
-        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <.action_button
-            variant={:secondary}
-            phx-click="close_delete_account_modal"
-            class="w-full sm:w-auto"
-          >
-            {dgettext("account", "Cancel")}
-          </.action_button>
-          <.action_button
-            type="submit"
-            form="delete-account-form"
-            variant={:danger}
-            class="w-full sm:w-auto"
-            phx-disable-with={dgettext("account", "Deleting...")}
-          >
-            {confirm_label(@grace_days)}
-          </.action_button>
-        </div>
-      </:footer>
-    </.modal>
+    </.confirm_modal>
     """
   end
 

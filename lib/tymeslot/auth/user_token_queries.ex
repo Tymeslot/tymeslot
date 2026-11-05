@@ -86,6 +86,16 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   end
 
   @doc """
+  Clears a pending invitation's token hash, so its link stops working.
+  """
+  @spec clear_invitation_token(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def clear_invitation_token(%UserSchema{} = user) do
+    user
+    |> Changeset.change(invitation_token_hash: nil)
+    |> Repo.update()
+  end
+
+  @doc """
   Gets the user holding a live token of the given purpose.
 
   A token is live while its hash is stored and it has not been consumed:

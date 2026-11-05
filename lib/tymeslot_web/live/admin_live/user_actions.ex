@@ -75,6 +75,42 @@ defmodule TymeslotWeb.AdminLive.UserActions do
     end)
   end
 
+  @spec cancel_invitation(String.t(), socket()) :: {:noreply, socket()}
+  def cancel_invitation(id, socket) do
+    with_user_id(id, socket, fn user_id ->
+      socket = assign(socket, :role_change_submitting, true)
+
+      case Invitations.revoke(socket.assigns.current_user, user_id) do
+        {:ok, user} ->
+          {:noreply,
+           socket
+           |> clear_pending_action()
+           |> put_flash(
+             :info,
+             dgettext("dashboard_admin", "The invitation to %{email} is cancelled.",
+               email: user.email
+             )
+           )
+           |> push_patch(to: ~p"/admin/users")}
+
+        {:error, reason} ->
+          {:noreply,
+           socket
+           |> clear_pending_action()
+           |> put_flash(:error, cancel_invitation_error_message(reason))}
+      end
+    end)
+  end
+
+  # :not_invited: accepted, or its link cleared by a password reset, since
+  # the page loaded.
+  defp cancel_invitation_error_message(reason)
+       when reason in [:not_invited, :not_found, :forbidden, :admin_ui_disabled],
+       do: invite_error_message(reason)
+
+  defp cancel_invitation_error_message(_other),
+    do: dgettext("dashboard_admin", "Could not cancel the invitation. Please try again.")
+
   defp invite_error_message(:invalid_email),
     do: dgettext("dashboard_admin", "Enter a valid email address.")
 

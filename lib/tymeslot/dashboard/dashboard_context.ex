@@ -17,6 +17,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
            has_calendar: boolean(),
            calendar_ready: boolean(),
            refused_calendars: [String.t()],
+           has_calendar_connection: boolean(),
            has_video: boolean(),
            has_meeting_types: boolean()
          }
@@ -31,6 +32,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
       has_calendar: false,
       calendar_ready: false,
       refused_calendars: [],
+      has_calendar_connection: false,
       has_video: false,
       has_meeting_types: false
     }
@@ -44,6 +46,10 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   it). `calendar_ready` says the booking page can actually offer times, which
   it cannot while any calendar's credentials are refused; those calendars are
   named in `refused_calendars`. See `Calendar.booking_page_health/1`.
+  `has_calendar_connection` says whether any calendar integration exists at
+  all, active or not, so a host whose calendar stopped working can be told to
+  repair it rather than to connect one; it is only read when no bookable
+  calendar is connected, since one implies the other.
 
   Read fresh every time rather than cached, so a change made anywhere (another
   tab, a background job, a reconnect) shows on the next mount or refresh
@@ -76,10 +82,22 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   def get_integration_status(_user_id), do: default_integration_status()
 
   defp calendar_status(:taking_bookings, _user_id),
-    do: %{has_calendar: true, calendar_ready: true, refused_calendars: []}
+    do: %{
+      has_calendar: true,
+      calendar_ready: true,
+      refused_calendars: [],
+      has_calendar_connection: true
+    }
 
-  defp calendar_status(:no_calendar, _user_id),
-    do: %{has_calendar: false, calendar_ready: false, refused_calendars: []}
+  # Only this branch pays for the extra lookup: a host with a bookable
+  # calendar has a connection by definition.
+  defp calendar_status(:no_calendar, user_id),
+    do: %{
+      has_calendar: false,
+      calendar_ready: false,
+      refused_calendars: [],
+      has_calendar_connection: Calendar.has_any_integration?(user_id)
+    }
 
   # A refused calendar may sit beside a healthy one, so whether one is
   # connected at all is still its own question.
@@ -87,7 +105,8 @@ defmodule Tymeslot.Dashboard.DashboardContext do
     do: %{
       has_calendar: Calendar.has_bookable_integration?(user_id),
       calendar_ready: false,
-      refused_calendars: names
+      refused_calendars: names,
+      has_calendar_connection: true
     }
 
   @doc """

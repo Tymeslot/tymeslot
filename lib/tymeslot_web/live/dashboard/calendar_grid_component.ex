@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   Component-specific assigns (declared as `attr`):
   - `:current_user` — required, owns the calendar preferences and integrations.
-  - `:profile`      — optional, only its `:timezone` field is read.
+  - `:profile`      — optional; its `:timezone` is read, and the connect banner
+    asks `PublicPageNotice.visible?/2` of it.
 
   Additional assigns forwarded from the parent dashboard LiveView:
   - `:shared_data`: map of shared cross-component data, defaults to `%{}`.
@@ -108,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   attr :profile, :any,
     default: nil,
-    doc: "Profile struct or nil; only `:timezone` is read."
+    doc: "Profile struct or nil; its `:timezone` and demo status are read."
 
   @impl Phoenix.LiveComponent
   def mount(socket) do

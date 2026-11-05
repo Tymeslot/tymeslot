@@ -333,16 +333,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
       {:ok, conn: conn, user: user}
     end
 
-    test "shows the connect banner over a live grid when no calendars are connected", %{
+    test "asks for a calendar over a live grid when no calendars are connected", %{
       conn: conn,
       user: user
     } do
-      # The banner defers to the setup checklist, which carries the same
-      # "Connect a calendar" step, so dismiss the checklist first.
+      # The grid's own banner defers to the setup checklist and to the
+      # dashboard-wide public-page notice, which makes the same ask; with the
+      # checklist dismissed, the notice is what remains.
       {:ok, _user} = Onboarding.dismiss_dashboard_setup(user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ "data-testid=\"connect-calendar-banner\""
+      assert html =~ "data-testid=\"public-page-notice\""
+      refute html =~ "data-testid=\"connect-calendar-banner\""
       assert html =~ "Connect a calendar"
       assert html =~ ~p"/dashboard/integrations?tab=calendars"
       # The grid itself stays rendered rather than being replaced by a

@@ -50,6 +50,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
       class="quill-theme-wrapper"
       locale={@locale}
       theme_tokens={@theme_tokens}
+      default_font="inter"
     >
       <:background :if={@has_video_background}>
         <div class="video-background" id="quill-video-container" phx-hook="QuillVideo">

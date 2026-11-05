@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandl
     |> Component.assign(:offered_time_rows, rows(socket.assigns[:type]))
     |> Component.assign_new(:new_offered_time, fn -> %{} end)
     |> Component.assign_new(:offered_time_error, fn -> nil end)
+    |> Component.assign_new(:offered_time_notice, fn -> nil end)
   end
 
   @doc "The form's events for offered times, by name; `MeetingTypeForm` hands each here."
@@ -37,7 +38,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandl
     Component.assign(socket,
       new_offered_time:
         Map.merge(socket.assigns[:new_offered_time] || %{}, Map.take(params, ~w(date time))),
-      offered_time_error: nil
+      offered_time_error: nil,
+      offered_time_notice: nil
     )
   end
 
@@ -80,18 +82,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandl
   # saved by autosave, not by this form's copy of it.
   defp add(socket) do
     %{current_user: %{id: user_id}, type: type, host_timezone: timezone} = socket.assigns
+    input = socket.assigns.new_offered_time
 
     with %{} = type <- type && MeetingTypes.get_meeting_type(type.id, user_id),
-         {:ok, starts_at} <-
-           SessionHandlers.parse_start(socket.assigns.new_offered_time, timezone),
+         {:ok, starts_at} <- SessionHandlers.parse_start(input, timezone),
          {:ok, _offered_time} <- OfferedTimes.add(type, user_id, starts_at) do
       socket
-      |> Component.assign(new_offered_time: %{}, offered_time_error: nil)
+      |> Component.assign(
+        new_offered_time: %{},
+        offered_time_error: nil,
+        offered_time_notice: SessionHandlers.clock_change_notice(input, timezone)
+      )
       |> assign_offered_times()
     else
-      {:error, reason} -> Component.assign(socket, :offered_time_error, error_message(reason))
-      _no_type -> Component.assign(socket, :offered_time_error, error_message(:not_found))
+      {:error, reason} -> failed(socket, reason)
+      _no_type -> failed(socket, :not_found)
     end
+  end
+
+  defp failed(socket, reason) do
+    Component.assign(socket, offered_time_error: error_message(reason), offered_time_notice: nil)
   end
 
   defp remove(id, socket) do

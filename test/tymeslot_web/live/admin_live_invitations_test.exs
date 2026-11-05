@@ -86,6 +86,49 @@ defmodule TymeslotWeb.AdminLiveInvitationsTest do
     assert invitation_jobs() == []
   end
 
+  test "cancelling an invitation accepted since the page loaded is refused", %{
+    conn: conn,
+    admin: admin
+  } do
+    {:ok, user} = Invitations.invite(admin, "quick@example.com")
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> element(~s|button[phx-click="request_cancel_invitation"][phx-value-id="#{user.id}"]|)
+    |> render_click()
+
+    # Accepting clears the invitation, as a password does here.
+    user |> Changeset.change(invitation_token_hash: nil) |> Repo.update!()
+
+    html =
+      lv
+      |> element(~s|#confirm-cancel-invitation-modal button[phx-click="cancel_invitation"]|)
+      |> render_click()
+
+    assert html =~ "This user has no pending invitation."
+    refute has_element?(lv, "#confirm-cancel-invitation-modal")
+    assert Repo.get!(UserSchema, user.id).deletion_scheduled_at == nil
+  end
+
+  test "keeping the invitation closes the dialog and changes nothing", %{
+    conn: conn,
+    admin: admin
+  } do
+    {:ok, user} = Invitations.invite(admin, "keep@example.com")
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> element(~s|button[phx-click="request_cancel_invitation"][phx-value-id="#{user.id}"]|)
+    |> render_click()
+
+    lv
+    |> element(~s|#confirm-cancel-invitation-modal button|, "Keep invitation")
+    |> render_click()
+
+    refute has_element?(lv, "#confirm-cancel-invitation-modal")
+    assert Invitations.pending?(Repo.get!(UserSchema, user.id))
+  end
+
   test "an expired invitation is marked as such", %{conn: conn, admin: admin} do
     {:ok, user} = Invitations.invite(admin, "late@example.com")
     eight_days_ago = DateTime.add(DateTime.utc_now(:second), -8, :day)

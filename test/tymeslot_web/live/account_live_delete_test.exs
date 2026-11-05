@@ -87,6 +87,36 @@ defmodule TymeslotWeb.AccountLiveDeleteTest do
     assert Repo.get(UserSchema, user.id).deletion_scheduled_at == nil
   end
 
+  test "the dialog is a danger confirmation whose button submits the form", %{conn: conn} do
+    view = open_modal(conn)
+
+    assert has_element?(view, "#delete-account-modal-title .bg-red-50 svg")
+    assert has_element?(view, "#delete-account-modal-title", "Delete your account")
+
+    assert has_element?(
+             view,
+             ~s|#delete-account-modal .modal-footer button[type=submit][form=delete-account-form][phx-disable-with="Deleting..."]|,
+             "Schedule deletion"
+           )
+
+    assert has_element?(view, "#delete-account-modal .modal-footer button[type=button]", "Cancel")
+  end
+
+  test "a rejected submit asks the browser to scroll the first error into view",
+       %{conn: conn} do
+    view = open_modal(conn)
+
+    submit(view, %{current_password: "nope"})
+
+    assert_push_event(view, "scroll-to-error", %{id: "delete-account-modal"})
+
+    assert has_element?(
+             view,
+             "#delete-account-modal [role=alert]",
+             "Current password is incorrect"
+           )
+  end
+
   test "the right password schedules the deletion and signs the user out",
        %{conn: conn, user: user} do
     view = open_modal(conn)
@@ -162,7 +192,20 @@ defmodule TymeslotWeb.AccountLiveDeleteTest do
 
     assert html =~ "Your account could not be scheduled for deletion"
 
-    assert has_element?(view, "#delete-account-modal .bg-red-50")
+    assert has_element?(view, "#delete-account-modal [role=alert] .bg-red-50")
+  end
+
+  test "an error for the whole request is shown above the explanation" do
+    user = email_user()
+    view = email_view(user)
+    Repo.delete!(user)
+
+    submit(view, %{confirm_email: user.email})
+
+    modal = view |> element("#delete-account-form") |> render()
+    {error_at, _len} = :binary.match(modal, "could not be scheduled for deletion")
+    {explanation_at, _len} = :binary.match(modal, "Your account will be deleted on")
+    assert error_at < explanation_at
   end
 
   test "the chosen reason and comment reach the deletion hook" do

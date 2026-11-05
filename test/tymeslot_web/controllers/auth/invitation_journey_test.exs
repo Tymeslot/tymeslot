@@ -14,15 +14,16 @@ defmodule TymeslotWeb.InvitationJourneyTest do
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AdminPageHelpers
+  import Tymeslot.Factory, only: [insert: 1]
 
   alias Phoenix.Flash
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Auth.{Invitations, UserSchema}
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.{AccountDeletionWorker, EmailWorker}
 
   @password "Sup3r-secret!"
 
@@ -141,6 +142,69 @@ defmodule TymeslotWeb.InvitationJourneyTest do
       user = Auth.get_user_by_email("crafted@example.com")
       assert Repo.get!(UserSchema, user.id).password_hash == nil
     end
+  end
+
+  test "an admin cancels the invitation, and the emailed link then refuses", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> form("#invite-user-form", invite: %{email: "jon@exmaple.com"})
+    |> render_submit()
+
+    path = URI.parse(deliver_invitation()).path
+    user = Auth.get_user_by_email("jon@exmaple.com")
+
+    lv
+    |> element(~s|button[phx-click="request_cancel_invitation"][phx-value-id="#{user.id}"]|)
+    |> render_click()
+
+    assert has_element?(
+             lv,
+             "#confirm-cancel-invitation-modal",
+             "The invitation link stops working"
+           )
+
+    html =
+      lv
+      |> element(~s|#confirm-cancel-invitation-modal button[phx-click="cancel_invitation"]|)
+      |> render_click()
+
+    assert html =~ "The invitation to jon@exmaple.com is cancelled."
+    refute has_element?(lv, "#confirm-cancel-invitation-modal")
+    assert_enqueued(worker: AccountDeletionWorker, args: %{"user_id" => user.id})
+
+    shown = get(build_conn(), path)
+    assert redirected_to(shown) == ~p"/auth/login"
+    assert Flash.get(shown.assigns.flash, :error) =~ "no longer valid"
+
+    accepted =
+      post(build_conn(), path, %{
+        "invitation" => %{"password" => @password, "password_confirmation" => @password}
+      })
+
+    assert redirected_to(accepted) == ~p"/auth/login"
+    refute get_session(accepted, :user_token)
+    assert Repo.get!(UserSchema, user.id).password_hash == nil
+
+    # Once the deletion has run, the address can be invited again.
+    assert :ok = perform_job(AccountDeletionWorker, %{"user_id" => user.id})
+    assert Auth.get_user_by_email("jon@exmaple.com") == nil
+  end
+
+  test "a non-admin's revoke is refused and the link keeps working", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> form("#invite-user-form", invite: %{email: "kept@example.com"})
+    |> render_submit()
+
+    path = URI.parse(deliver_invitation()).path
+    user = Auth.get_user_by_email("kept@example.com")
+
+    assert {:error, :forbidden} = Invitations.revoke(insert(:user), user.id)
+
+    page = build_conn() |> get(path) |> html_response(200)
+    assert page =~ "Set password and sign in"
   end
 
   defp close_registration do

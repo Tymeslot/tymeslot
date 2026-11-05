@@ -960,3 +960,44 @@ msgstr "Utworzymy konto i wyślemy e-mailem link do wyboru sposobu logowania. Re
 #, elixir-autogen, elixir-format
 msgid "This user has no pending invitation."
 msgstr "Ten użytkownik nie ma oczekującego zaproszenia."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel invitation"
+msgstr "Anuluj zaproszenie"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the invitation to %{email}"
+msgstr "Anuluj zaproszenie wysłane na adres %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the invitation to %{email}?"
+msgstr "Anulować zaproszenie wysłane na adres %{email}?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling..."
+msgstr "Anulowanie…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not cancel the invitation. Please try again."
+msgstr "Nie udało się anulować zaproszenia. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep invitation"
+msgstr "Zachowaj zaproszenie"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The invitation link stops working and the invited account is removed. You can invite this address again later."
+msgstr "Link z zaproszenia przestanie działać, a zaproszone konto zostanie usunięte. Później możesz ponownie zaprosić ten adres."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The invitation to %{email} is cancelled."
+msgstr "Zaproszenie wysłane na adres %{email} zostało anulowane."

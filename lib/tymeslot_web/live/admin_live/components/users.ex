@@ -11,7 +11,13 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
 
   alias Tymeslot.Auth.Invitations
   alias Tymeslot.Profiles.ProfileSchema
-  alias TymeslotWeb.AdminLive.Components.{ConfirmDeleteUserModal, ConfirmRoleChangeModal, Shared}
+
+  alias TymeslotWeb.AdminLive.Components.{
+    ConfirmCancelInvitationModal,
+    ConfirmDeleteUserModal,
+    ConfirmRoleChangeModal,
+    Shared
+  }
 
   attr :users, :list, required: true
   attr :current_user, :map, required: true
@@ -110,6 +116,12 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
 
     <ConfirmDeleteUserModal.confirm_delete_user_modal
       :if={@pending_action && @pending_action.kind == :delete}
+      user={@pending_action}
+      submitting={@role_change_submitting}
+    />
+
+    <ConfirmCancelInvitationModal.confirm_cancel_invitation_modal
+      :if={@pending_action && @pending_action.kind == :cancel_invitation}
       user={@pending_action}
       submitting={@role_change_submitting}
     />
@@ -275,6 +287,21 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       }
     >
       {dgettext("dashboard_admin", "Resend invitation")}
+    </.action_button>
+
+    <.action_button
+      :if={Invitations.pending?(@user)}
+      variant={:danger_soft}
+      size={:sm}
+      class="ml-2"
+      phx-click="request_cancel_invitation"
+      phx-value-id={@user.id}
+      phx-value-email={@user.email}
+      aria-label={
+        dgettext("dashboard_admin", "Cancel the invitation to %{email}", email: @user.email)
+      }
+    >
+      {dgettext("dashboard_admin", "Cancel invitation")}
     </.action_button>
 
     <%!-- Deleting oneself goes through account settings, with re-authentication. --%>
