@@ -39,6 +39,14 @@
   border-color: var(--theme-primary);
 }
 
+/* Under a finger the week arrows grow to a full touch target. */
+@media (pointer: coarse) {
+  .calendar-nav-button {
+    min-width: var(--min-touch-target);
+    min-height: var(--min-touch-target);
+  }
+}
+
 .calendar-grid {
   display: grid;
   /* minmax(0, ...): a day's label and padding never widen its column, so
@@ -145,6 +153,13 @@
     width: 100%;
     gap: var(--calendar-gap-mobile);
     box-sizing: border-box;
+  }
+
+  /* Under a finger the days trade their gutters for width. */
+  @media (pointer: coarse) {
+    .calendar-grid {
+      gap: var(--space-hairline);
+    }
   }
 
   .calendar-day {

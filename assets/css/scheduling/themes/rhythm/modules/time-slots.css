@@ -72,6 +72,13 @@
   font-size: var(--theme-font-size-xs);
 }
 
+/* Under a finger a time is a full touch target. */
+@media (pointer: coarse) {
+  .slot-list__slot {
+    min-height: var(--min-touch-target);
+  }
+}
+
 .slot-list__slot:hover {
   background: var(--surface-intense);
   border-color: var(--theme-primary);

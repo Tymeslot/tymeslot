@@ -120,6 +120,13 @@
   font-size: var(--theme-font-size-3xs);
 }
 
+/* Under a finger the trigger is a full touch target. */
+@media (pointer: coarse) {
+  .tz-picker__trigger {
+    min-height: var(--min-touch-target);
+  }
+}
+
 .tz-picker__trigger:hover {
   border-color: var(--theme-primary);
   transform: translateY(-1px);

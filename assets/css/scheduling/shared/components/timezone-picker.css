@@ -31,6 +31,12 @@
   background: linear-gradient(135deg, var(--surface-intense) 0%, var(--surface-medium) 100%);
 }
 
+@media (pointer: coarse) {
+  .tz-picker__trigger {
+    min-height: var(--min-touch-target);
+  }
+}
+
 /* --- Dropdown --- */
 
 .tz-picker__panel {
