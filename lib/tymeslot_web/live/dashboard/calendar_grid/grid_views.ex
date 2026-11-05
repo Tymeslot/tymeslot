@@ -87,12 +87,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         />
       </div>
 
-      <%!-- Main scrollable area --%>
+      <%!-- Main scrollable area. Focusable so a keyboard user can scroll to
+            hours with no event in them; the ring is inset because the grid is
+            full-bleed and an outer one would be clipped. --%>
       <div
         id="calendar-drag-zone"
         phx-hook="CalendarDrag"
         phx-target={@myself}
-        class="flex-1 overflow-y-auto overflow-x-auto relative"
+        tabindex="0"
+        role="region"
+        aria-label={dgettext("dashboard_calendar", "Calendar grid")}
+        class="flex-1 overflow-y-auto overflow-x-auto relative focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400"
         data-current-top-rem={@current_top_rem}
         data-show-now={to_string(@today_visible?)}
         data-timed={to_string(@is_timed)}

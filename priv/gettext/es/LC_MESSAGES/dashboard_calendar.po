@@ -423,3 +423,8 @@ msgstr "Vistas"
 #, elixir-autogen, elixir-format
 msgid "Week view"
 msgstr "Vista de semana"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar grid"
+msgstr "Cuadrícula del calendario"

@@ -58,7 +58,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       panel_label={dgettext("dashboard_calendar_events", "Pick a date")}
       trigger_class="flex items-center gap-1 min-w-0 max-w-full rounded px-1.5 py-1 hover:bg-tymeslot-100 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       class="bg-white border border-tymeslot-200 rounded-token-xl shadow-lg p-3 w-72"
-      aria-label={dgettext("dashboard_calendar_events", "Pick a date")}
     >
       <:trigger>
         <%!-- `title` keeps the full period readable when it truncates. --%>
