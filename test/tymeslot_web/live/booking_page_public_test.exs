@@ -365,6 +365,45 @@ defmodule TymeslotWeb.BookingPagePublicTest do
     assert :sys.get_state(view.pid).socket.assigns.meeting_type.id == session.id
   end
 
+  # The lookup by duration spans every type the host has; booked here, the
+  # type would be recorded against a page that does not offer it. On a page
+  # the URL's `slug` (the page's) shadows `?duration=`, so there the way in
+  # is a pushed `select_duration`.
+  describe "a type the address does not offer, named by duration" do
+    test "is not taken from a crafted select_duration on a page", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/joern/einfachiso?timezone=#{@timezone}")
+      moment = :sys.get_state(view.pid).socket.assigns.current_state
+
+      send(view.pid, {:step_event, moment, :select_duration, "automation-call"})
+      _html = render(view)
+      assert is_nil(:sys.get_state(view.pid).socket.assigns.meeting_type)
+
+      # The page's own type is still chosen the same way.
+      send(view.pid, {:step_event, moment, :select_duration, "iso-audit"})
+      _html = render(view)
+      assert :sys.get_state(view.pid).socket.assigns.meeting_type.name == "ISO audit"
+    end
+
+    test "is not taken on the username's page when it is private", %{conn: conn, user: user} do
+      insert(:meeting_type, user: user, name: "Hidden review", is_private: true)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/joern?duration=hidden-review&step=schedule&timezone=#{@timezone}")
+
+      assert is_nil(:sys.get_state(view.pid).socket.assigns.meeting_type)
+    end
+
+    test "leaves a private type's own link working", %{conn: conn, user: user} do
+      hidden = insert(:meeting_type, user: user, name: "Hidden review", is_private: true)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/joern/hidden-review?duration=hidden-review&timezone=#{@timezone}")
+
+      assert :sys.get_state(view.pid).socket.assigns.meeting_type.id == hidden.id
+      assert has_element?(view, "button[phx-click='next_month']")
+    end
+  end
+
   test "links inside the flow stay under the page's address", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/joern/einfachiso/iso-audit?timezone=#{@timezone}")
 
