@@ -40,4 +40,12 @@ defmodule TymeslotWeb.Components.LanguageSwitcherTest do
     assert [active] = Floki.find(doc, ".lang-switcher__item--active")
     assert Floki.attribute([active], "phx-value-locale") == ["de"]
   end
+
+  test "names the trigger after the language it shows, then what it does" do
+    doc = render_switcher()
+
+    # Label in Name (WCAG 2.5.3): the name starts with the visible "Deutsch".
+    assert [label] = Floki.attribute(doc, ".lang-switcher__button", "aria-label")
+    assert label == "Deutsch, change language"
+  end
 end

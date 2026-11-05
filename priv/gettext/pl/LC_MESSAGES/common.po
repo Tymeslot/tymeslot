@@ -37,11 +37,6 @@ msgstr "Nieobsługiwana przeglądarka"
 msgid "Cancel"
 msgstr "Anuluj"
 
-#: lib/tymeslot_web/components/language_switcher.ex
-#, elixir-autogen, elixir-format
-msgid "Change language"
-msgstr "Zmień język"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -376,3 +371,9 @@ msgstr "✓ Potwierdzono"
 #, elixir-autogen, elixir-format
 msgid "Your session has changed since this page was opened. Please try again."
 msgstr "Twoja sesja zmieniła się od otwarcia tej strony. Spróbuj ponownie."
+
+#. Spoken name of the language menu button. Keep %{language} first: speech input users say the language name they see on the button.
+#: lib/tymeslot_web/components/language_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "%{language}, change language"
+msgstr "%{language}, zmień język"

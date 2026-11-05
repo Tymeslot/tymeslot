@@ -41,11 +41,6 @@ msgstr "Navegador no compatible"
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: lib/tymeslot_web/components/language_switcher.ex
-#, elixir-autogen, elixir-format
-msgid "Change language"
-msgstr "Cambiar de idioma"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -375,3 +370,9 @@ msgstr "✓ Confirmado"
 #, elixir-autogen, elixir-format
 msgid "Your session has changed since this page was opened. Please try again."
 msgstr "Tu sesión ha cambiado desde que se abrió esta página. Inténtalo de nuevo."
+
+#. Spoken name of the language menu button. Keep %{language} first: speech input users say the language name they see on the button.
+#: lib/tymeslot_web/components/language_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "%{language}, change language"
+msgstr "%{language}, cambiar de idioma"
