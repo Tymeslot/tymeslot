@@ -11,7 +11,7 @@ defmodule Tymeslot.Auth.InvitationsTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Test.OAuthProviderStub
-  alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.{AccountDeletionWorker, EmailWorker}
 
   @ip [ip: "203.0.113.7", user_agent: "test"]
   @password "Sup3r-secret!"
@@ -100,6 +100,69 @@ defmodule Tymeslot.Auth.InvitationsTest do
       regular = insert(:user)
 
       assert {:error, :not_invited} = Invitations.resend(admin, regular.id)
+    end
+  end
+
+  describe "revoke/2" do
+    setup %{admin: admin} do
+      {:ok, user} = Invitations.invite(admin, "mistyped@exmaple.com")
+      {:ok, user: user, token: token_from_job(user)}
+    end
+
+    test "kills the link at once and queues the account's deletion", %{
+      admin: admin,
+      user: user,
+      token: token
+    } do
+      assert {:ok, revoked} = Invitations.revoke(admin, user.id)
+      assert revoked.id == user.id
+
+      stored = Repo.get!(UserSchema, user.id)
+      refute Invitations.pending?(stored)
+      assert stored.deletion_scheduled_at
+      assert {:error, :invalid_token} = Invitations.fetch(token)
+      assert_enqueued(worker: AccountDeletionWorker, args: %{"user_id" => user.id})
+
+      assert {:error, :invalid_token} =
+               Invitations.accept(token, @password, @password, @ip)
+    end
+
+    test "the deletion job removes the invited account", %{admin: admin, user: user} do
+      {:ok, _revoked} = Invitations.revoke(admin, user.id)
+
+      assert :ok = perform_job(AccountDeletionWorker, %{"user_id" => user.id})
+      assert Repo.get(UserSchema, user.id) == nil
+    end
+
+    test "the queued invitation email is discarded", %{admin: admin, user: user} do
+      [job] = invitation_jobs()
+      {:ok, _revoked} = Invitations.revoke(admin, user.id)
+
+      assert {:discard, _reason} = perform_job(EmailWorker, job.args)
+    end
+
+    test "refuses an invitation that has already been accepted", %{
+      admin: admin,
+      user: user,
+      token: token
+    } do
+      {:ok, _accepted} = Invitations.accept(token, @password, @password, @ip)
+
+      assert {:error, :not_invited} = Invitations.revoke(admin, user.id)
+      assert Repo.get!(UserSchema, user.id).deletion_scheduled_at == nil
+      refute_enqueued(worker: AccountDeletionWorker, args: %{"user_id" => user.id})
+    end
+
+    test "refuses an actor who is not an admin", %{user: user, token: token} do
+      regular = insert(:user, is_admin: false)
+
+      assert {:error, :forbidden} = Invitations.revoke(regular, user.id)
+      assert Invitations.pending?(Repo.get!(UserSchema, user.id))
+      assert {:ok, _user} = Invitations.fetch(token)
+    end
+
+    test "refuses an unknown user", %{admin: admin} do
+      assert {:error, :not_found} = Invitations.revoke(admin, 999_999_999)
     end
   end
 
