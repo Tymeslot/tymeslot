@@ -66,15 +66,6 @@ defmodule Tymeslot.BookingPages.ResolutionTest do
              {:error, :profile_not_found}
   end
 
-  test "presented_at/2 wears the page at a slug, and only a page's", %{
-    profile: profile,
-    page: page
-  } do
-    assert BookingPages.presented_at(profile, "EinfachISO").booking_page.id == page.id
-    assert BookingPages.presented_at(profile, "a-meeting-type").booking_page == nil
-    assert BookingPages.presented_at(profile, nil).booking_page == nil
-  end
-
   test "an unknown address resolves to nothing" do
     assert Profiles.get_profile_by_username("nobody-here") == nil
     assert Profiles.resolve_organizer_context("nobody-here") == {:error, :profile_not_found}
@@ -107,7 +98,7 @@ defmodule Tymeslot.BookingPages.ResolutionTest do
       color_scheme: "rose"
     )
 
-    resolved = BookingPages.presented_at(profile, "einfachiso")
+    resolved = BookingPages.apply_to_profile(profile, page)
 
     assert primary_colour(resolved) == Presets.get_color_schemes()["rose"].colors.primary
     assert primary_colour(profile) == Presets.get_color_schemes()["ocean"].colors.primary

@@ -117,22 +117,6 @@ defmodule Tymeslot.BookingPages do
   end
 
   @doc """
-  `profile` as its page at `slug` presents it, or `profile` unchanged when it
-  has no page there (`slug` nil, a meeting type's slug, or nothing at all).
-  For whatever needs only the look of `/<username>/<slug>`, such as the
-  stylesheet chosen before the page mounts.
-  """
-  @spec presented_at(ProfileSchema.t() | nil, String.t() | nil) :: ProfileSchema.t() | nil
-  def presented_at(%ProfileSchema{id: profile_id} = profile, slug) when is_binary(slug) do
-    case BookingPageQueries.get_by_slug(profile_id, slug) do
-      nil -> profile
-      page -> apply_to_profile(profile, page)
-    end
-  end
-
-  def presented_at(profile, _no_slug), do: profile
-
-  @doc """
   What `/<username>/<slug>` is for `profile`, ignoring case:
 
     * `{:ok, page}`: one of its pages, draft or not (`published?/1`), with
