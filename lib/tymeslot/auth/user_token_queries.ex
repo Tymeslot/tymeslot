@@ -1,7 +1,7 @@
 defmodule Tymeslot.Auth.UserTokenQueries do
   @moduledoc """
-  Query interface for user token lifecycle operations — verification tokens,
-  password reset tokens, and email change tokens.
+  Query interface for user token lifecycle operations: verification tokens,
+  password reset tokens, email change tokens and invitation tokens.
   """
   import Ecto.Query, warn: false
   require Logger
@@ -72,6 +72,20 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   end
 
   @doc """
+  Sets an invitation token for an invited user, replacing any earlier one.
+  """
+  @spec set_invitation_token(UserSchema.t(), String.t()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def set_invitation_token(%UserSchema{} = user, token) when is_binary(token) do
+    user
+    |> Changeset.change(
+      invitation_token_hash: Token.hash_token(token),
+      invitation_sent_at: DateTime.utc_now(:second)
+    )
+    |> Repo.update()
+  end
+
+  @doc """
   Gets the user holding a live token of the given purpose.
 
   A token is live while its hash is stored and it has not been consumed:
@@ -115,6 +129,12 @@ defmodule Tymeslot.Auth.UserTokenQueries do
     where(UserSchema, [u], u.email_change_token_hash == ^hash and not is_nil(u.pending_email))
   end
 
+  # An accepted invitation clears its hash (see `accept_invitation/2`), so a
+  # stored hash is a live one.
+  defp live_token_query(:invitation, hash) do
+    where(UserSchema, [u], u.invitation_token_hash == ^hash)
+  end
+
   defp maybe_lock(query, true), do: lock(query, "FOR UPDATE")
   defp maybe_lock(query, false), do: query
 
@@ -134,6 +154,38 @@ defmodule Tymeslot.Auth.UserTokenQueries do
     |> verify_through_reset(user, now)
     |> Repo.update()
     |> UserSchema.drop_plaintext_password()
+  end
+
+  @doc """
+  Accepts an invitation: sets the invitee's first password and marks the
+  account verified, since the link was delivered to its address. The
+  password changeset revokes every outstanding credential token, the
+  invitation's own included, which is what marks it accepted.
+  """
+  @spec accept_invitation(UserSchema.t(), map()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def accept_invitation(%UserSchema{} = user, attrs) do
+    now = DateTime.utc_now(:second)
+
+    user
+    |> UserSchema.password_reset_changeset(attrs)
+    |> verify_through_reset(user, now)
+    |> Repo.update()
+    |> UserSchema.drop_plaintext_password()
+  end
+
+  @doc """
+  Accepts an invitation with a social sign-in: links the provider identity
+  in `attrs` to the invitee's account and marks it verified, clearing every
+  outstanding credential token, the invitation's own included.
+  """
+  @spec accept_invitation_with_identity(UserSchema.t(), map()) ::
+          {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t()}
+  def accept_invitation_with_identity(%UserSchema{} = user, attrs) do
+    user
+    |> UserSchema.invitation_identity_changeset(attrs)
+    |> verify_through_reset(user, DateTime.utc_now(:second))
+    |> Repo.update()
   end
 
   # The reset link was delivered to the account's address, so following it

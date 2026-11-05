@@ -33,6 +33,8 @@ defmodule Tymeslot.Auth.UserSchema do
           email_change_token_hash: String.t() | nil,
           email_change_sent_at: DateTime.t() | nil,
           email_change_confirmed_at: DateTime.t() | nil,
+          invitation_token_hash: String.t() | nil,
+          invitation_sent_at: DateTime.t() | nil,
           name: String.t() | nil,
           provider: String.t() | nil,
           provider_uid: String.t() | nil,
@@ -73,6 +75,8 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:email_change_token_hash, :string)
     field(:email_change_sent_at, :utc_datetime)
     field(:email_change_confirmed_at, :utc_datetime)
+    field(:invitation_token_hash, :string)
+    field(:invitation_sent_at, :utc_datetime)
     field(:name, :string)
     field(:provider, :string)
     field(:provider_uid, :string)
@@ -132,6 +136,38 @@ defmodule Tymeslot.Auth.UserSchema do
     |> validate_confirmation(:password)
     |> unique_constraint(:email)
     |> put_password_hash()
+  end
+
+  @doc """
+  Changeset for an account an admin invites by email. It carries the address
+  alone: the invitee chooses a password when they accept, and the invitation
+  token is issued separately (see `Tymeslot.Auth.AccountTokens`).
+  """
+  @spec invitation_changeset(t(), map()) :: Ecto.Changeset.t()
+  def invitation_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email])
+    |> validate_required([:email])
+    |> update_change(:email, &String.downcase/1)
+    |> validate_email()
+    |> unique_constraint(:email)
+  end
+
+  @doc """
+  Changeset for accepting an invitation with a social sign-in: links the
+  provider identity (`:provider` and the provider's ID column) to the
+  invited account. Accepting changes the account's credentials, so it
+  revokes every outstanding credential token, the invitation's own included.
+  """
+  @spec invitation_identity_changeset(t(), map()) :: Ecto.Changeset.t()
+  def invitation_identity_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:provider, :provider_uid, :github_user_id, :google_user_id])
+    |> validate_required([:provider])
+    |> unique_constraint([:provider, :provider_uid])
+    |> unique_constraint(:github_user_id)
+    |> unique_constraint(:google_user_id)
+    |> revoke_credential_tokens()
   end
 
   @spec social_registration_changeset(t(), map()) :: Ecto.Changeset.t()
@@ -198,7 +234,8 @@ defmodule Tymeslot.Auth.UserSchema do
 
   @doc """
   Clears every outstanding token that could change the account's credentials:
-  a pending password reset and a pending email change.
+  a pending password reset, a pending email change and an unaccepted
+  invitation.
 
   Applied whenever the credentials themselves change (password reset, password
   update, confirmed email change). Without it, a token issued before the change
@@ -212,7 +249,8 @@ defmodule Tymeslot.Auth.UserSchema do
     :reset_sent_at,
     :pending_email,
     :email_change_token_hash,
-    :email_change_sent_at
+    :email_change_sent_at,
+    :invitation_token_hash
   ]
 
   @spec revoke_credential_tokens(Ecto.Changeset.t()) :: Ecto.Changeset.t()

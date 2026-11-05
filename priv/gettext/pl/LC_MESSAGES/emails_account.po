@@ -699,3 +699,48 @@ msgstr "Zaplanowano usunięcie konta Tymeslot"
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr "⚠️ Prośba o zmianę adresu e-mail – ostrzeżenie dotyczące bezpieczeństwa"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation"
+msgstr "Przyjmij zaproszenie"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Accept invitation:"
+msgstr "Przyjmij zaproszenie:"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "If you weren't expecting this invitation, you can ignore this email."
+msgstr "Jeśli nie spodziewasz się tego zaproszenia, możesz zignorować tę wiadomość."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation"
+msgstr "Zaproszenie"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "This link is valid for 7 days."
+msgstr "Ten link jest ważny przez 7 dni."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "You're invited to Tymeslot"
+msgstr "Zaproszenie do Tymeslot"
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is ready and waiting."
+msgstr "Twoje konto jest gotowe i czeka na ciebie."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "An administrator has created a Tymeslot account for you. Accept the invitation to choose how you'll sign in and set up your booking page."
+msgstr "Administrator utworzył dla ciebie konto Tymeslot. Przyjmij zaproszenie, aby wybrać sposób logowania i skonfigurować stronę rezerwacji."
+
+#: lib/tymeslot/emails/templates/account_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account is ready. Accept the invitation to sign in."
+msgstr "Twoje konto Tymeslot jest gotowe. Przyjmij zaproszenie, aby się zalogować."

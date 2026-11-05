@@ -137,6 +137,16 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Creates the account an admin invites: an address, with no password yet.
+  """
+  @spec create_invited_user(map()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def create_invited_user(attrs) do
+    %UserSchema{}
+    |> UserSchema.invitation_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
   Creates a user from social auth.
 
   Accepts an optional `repo` argument for use within transactions.
@@ -203,7 +213,8 @@ defmodule Tymeslot.Auth.UserQueries do
   @doc """
   Whether user `id` still meets every condition of
   `list_stale_unverified_users/3` for `cutoff`: still unverified, not an
-  admin, not sent a fresh link, and with no meeting still to come. Run under
+  admin, not invited, not sent a fresh link, and with no meeting still to
+  come. Run under
   the row lock just before a purge deletes the account, it catches one that
   was verified, promoted or booked since the list was read.
   """
@@ -220,6 +231,8 @@ defmodule Tymeslot.Auth.UserQueries do
     |> where([u], is_nil(u.verified_at) and u.inserted_at < ^cutoff)
     |> where([u], is_nil(u.verification_sent_at) or u.verification_sent_at < ^cutoff)
     |> where([u], not u.is_admin)
+    # An invited account was made by an admin, who decides when it goes.
+    |> where([u], is_nil(u.invitation_sent_at))
     |> where([u], not exists(upcoming_meetings_of_user(DateTime.utc_now())))
   end
 

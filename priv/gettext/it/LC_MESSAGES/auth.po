@@ -974,3 +974,18 @@ msgid "Welcome back. Your account has been restored, but %{names} needs reconnec
 msgid_plural "Welcome back. Your account has been restored, but %{names} need reconnecting. Until you reconnect them, your booking page may not offer times or take bookings."
 msgstr[0] "Ti diamo il bentornato. Il tuo account è stato ripristinato, ma l'integrazione %{names} va ricollegata. Finché non la ricolleghi, la tua pagina di prenotazione potrebbe non offrire fasce orarie né ricevere prenotazioni."
 msgstr[1] "Ti diamo il bentornato. Il tuo account è stato ripristinato, ma le integrazioni %{names} vanno ricollegate. Finché non le ricolleghi, la tua pagina di prenotazione potrebbe non offrire fasce orarie né ricevere prenotazioni."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This %{provider} account already signs in to another Tymeslot account. Use a different one, or choose another way to sign in."
+msgstr "Questo account %{provider} è già usato per accedere a un altro account Tymeslot. Usane un altro o scegli un altro metodo di accesso."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! You'll sign in with %{provider}."
+msgstr "Ti diamo il benvenuto su Tymeslot! Accederai con %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is ready. Please sign in with %{provider} to continue."
+msgstr "Il tuo account è pronto. Accedi con %{provider} per continuare."

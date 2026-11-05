@@ -182,20 +182,38 @@ defmodule Tymeslot.Auth.AdminRoles do
     end
   end
 
-  # Runs inside the role-change transaction and rolls it back with
-  # `:forbidden` unless the actor may change roles. A user actor's admin flag
-  # is re-read rather than trusted from the struct, which may have been loaded
-  # before that user was demoted.
-  defp authorise!(:cli), do: :ok
+  @doc """
+  Whether `actor` may act as an admin right now: the admin UI is enabled and
+  the actor is `:cli` or a user who is an admin *now* (the flag is re-read
+  from the database, so a stale struct from a long-lived session does not
+  count). For admin actions outside this module, such as inviting a user.
+  """
+  @spec authorise(term()) :: :ok | {:error, :admin_ui_disabled | :forbidden}
+  def authorise(actor) do
+    with :ok <- ensure_admin_ui_enabled(), do: check_actor(actor)
+  end
 
-  defp authorise!(%UserSchema{is_admin: true, id: actor_id}) do
-    case UserQueries.get_user(actor_id) do
-      {:ok, %UserSchema{is_admin: true}} -> :ok
-      _demoted_or_deleted -> Repo.rollback(:forbidden)
+  # Runs inside the role-change transaction and rolls it back with
+  # `:forbidden` unless the actor may change roles.
+  defp authorise!(actor) do
+    case check_actor(actor) do
+      :ok -> :ok
+      {:error, :forbidden} -> Repo.rollback(:forbidden)
     end
   end
 
-  defp authorise!(_actor), do: Repo.rollback(:forbidden)
+  # A user actor's admin flag is re-read rather than trusted from the struct,
+  # which may have been loaded before that user was demoted.
+  defp check_actor(:cli), do: :ok
+
+  defp check_actor(%UserSchema{is_admin: true, id: actor_id}) do
+    case UserQueries.get_user(actor_id) do
+      {:ok, %UserSchema{is_admin: true}} -> :ok
+      _demoted_or_deleted -> {:error, :forbidden}
+    end
+  end
+
+  defp check_actor(_actor), do: {:error, :forbidden}
 
   # A forced CLI demotion skips the guard: it is the operator escape hatch.
   defp check_last_admin(_target, true = _force?), do: :ok

@@ -165,6 +165,7 @@ msgid "Enter a number between 0.0 and 1.0."
 msgstr "Zadejte číslo mezi 0,0 a 1,0."
 
 #: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Zadejte platnou e-mailovou adresu."
@@ -873,3 +874,93 @@ msgstr "Když dorazí upozornění pro správce, nahlaste ho na GitHubu jako pro
 #, elixir-autogen, elixir-format
 msgid "Version %{version}"
 msgstr "Verze %{version}"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "A new invitation is on its way to %{email}."
+msgstr "Nové pozvání bylo odesláno na adresu %{email}."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists."
+msgstr "Účet s touto e-mailovou adresou již existuje."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not send the invitation. Please try again."
+msgstr "Pozvání se nepodařilo odeslat. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Email address to invite"
+msgstr "E-mailová adresa pozvaného"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation expired"
+msgstr "Pozvání vypršelo"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{email}."
+msgstr "Pozvání bylo odesláno na adresu %{email}."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invite a user"
+msgstr "Pozvat uživatele"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invited"
+msgstr "Pozvání odesláno"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend invitation"
+msgstr "Odeslat pozvání znovu"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend the invitation to %{email}"
+msgstr "Znovu odeslat pozvání na adresu %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitation"
+msgstr "Odeslat pozvání"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Odesílání…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
+msgstr "Účet byl vytvořen, ale e-mail s pozváním se nepodařilo odeslat. Zkuste to znovu pomocí tlačítka Odeslat pozvání znovu."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com"
+msgstr "name@example.com"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+msgstr "Pozvánky vyžadují způsob, jak se pozvaný přihlásí. Chcete-li zvát uživatele, zapněte na kartě Ověření ověření heslem nebo poskytovatele přihlášení přes sociální sítě."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
+msgstr "Pozvánky vyžadují způsob přihlášení. Nejprve zapněte ověření heslem nebo poskytovatele přihlášení přes sociální sítě."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+msgstr "Vytvoříme účet a pošleme pozvanému e-mail s odkazem, kde si zvolí způsob přihlášení. Veřejná registrace může zůstat zavřená."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has no pending invitation."
+msgstr "Tento uživatel nemá žádné čekající pozvání."

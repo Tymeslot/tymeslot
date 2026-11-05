@@ -29,7 +29,7 @@ defmodule Tymeslot.Security.RateLimiterRefusalLoggingTest do
 
   # The auth flows log these refusals once themselves, as a security event.
   @audited_by_auth ~w(
-    email_change_verify oauth_callback oauth_completion oauth_initiation
+    email_change_verify invitation_accept oauth_callback oauth_completion oauth_initiation
     password_reset_email password_reset_ip password_reset_submit
     signup_attempt_notice signup_email signup_ip social_signup_confirmation
     verification_ip verification_link verification_user

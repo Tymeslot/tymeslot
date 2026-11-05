@@ -40,7 +40,11 @@ defmodule Tymeslot.Auth.SocialAuthentication do
           admission()
           | {:register, map()}
           | {:error,
-             :oauth_error | :general_error | :registration_disabled | :email_already_taken}
+             :oauth_error
+             | :general_error
+             | :registration_disabled
+             | :email_already_taken
+             | :invitation_pending}
 
   @type completion_error ::
           :registration_disabled
@@ -80,6 +84,8 @@ defmodule Tymeslot.Auth.SocialAuthentication do
       unusable
     * `{:error, :email_already_taken}` - no account carries this identity,
       but its email belongs to one created another way
+    * `{:error, :invitation_pending}` - no account carries this identity, and
+      its email belongs to an invited account not yet accepted
     * `{:error, :registration_disabled}` - a new identity, and sign-ups are
       closed
 
@@ -88,7 +94,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   @spec resolve_callback(provider(), String.t(), String.t(), String.t(), keyword()) ::
           callback_outcome()
   def resolve_callback(provider, code, code_verifier, callback_url, opts) do
-    with {:ok, identity} <- fetch_identity(provider, code, code_verifier, callback_url, opts) do
+    with {:ok, identity} <- identify(provider, code, code_verifier, callback_url, opts) do
       case UserRegistration.find_existing_user(provider, identity) do
         {:ok, existing} ->
           existing
@@ -98,8 +104,8 @@ defmodule Tymeslot.Auth.SocialAuthentication do
         {:error, :not_found} ->
           new_identity(provider, identity, opts)
 
-        {:error, :email_already_taken} ->
-          refuse(provider, identity, :email_already_taken, opts)
+        {:error, reason} when reason in [:email_already_taken, :invitation_pending] ->
+          refuse(provider, identity, reason, opts)
       end
     end
   end
@@ -188,7 +194,14 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   defp signup_metadata(opts),
     do: %{ip: opts[:ip], user_agent: opts[:user_agent], source: "oauth_signup"}
 
-  defp fetch_identity(provider, code, code_verifier, callback_url, opts) do
+  @doc """
+  Exchanges a callback's code and fetches the identity it belongs to, without
+  deciding anything about accounts. A failure is audited and answered as
+  `resolve_callback/5` answers it.
+  """
+  @spec identify(provider(), String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, :oauth_error | :general_error}
+  def identify(provider, code, code_verifier, callback_url, opts) do
     with {:ok, token} <- Client.exchange_code(provider, code, code_verifier, callback_url),
          {:ok, identity} <- UserProcessor.fetch_identity(provider, token) do
       {:ok, identity}
