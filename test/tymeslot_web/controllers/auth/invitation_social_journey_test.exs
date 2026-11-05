@@ -71,6 +71,31 @@ defmodule TymeslotWeb.InvitationSocialJourneyTest do
     assert get_session(signed_in, :user_token)
   end
 
+  test "with public registration closed, the invitee still accepts with GitHub", %{
+    invitee: invitee,
+    path: path
+  } do
+    original = Application.get_env(:tymeslot, :registration_enabled, true)
+    Application.put_env(:tymeslot, :registration_enabled, false)
+    on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
+
+    stub_github(%{"id" => 7101, "email" => "closed@example.com"}, [
+      %{"email" => "closed@example.com", "primary" => true, "verified" => true}
+    ])
+
+    # Registration really is closed: a new identity signing in the ordinary
+    # way is turned away.
+    stranger = sign_in(build_conn(), "github")
+    refute get_session(stranger, :user_token)
+    refute Repo.get_by(UserSchema, github_user_id: "7101")
+
+    conn = accept_with(build_conn(), path, "github")
+
+    assert redirected_to(conn) == Config.success_redirect_path()
+    assert get_session(conn, :user_token)
+    assert Repo.get!(UserSchema, invitee.id).github_user_id == "7101"
+  end
+
   test "an identity that already signs in to another account is refused", %{
     invitee: invitee,
     path: path

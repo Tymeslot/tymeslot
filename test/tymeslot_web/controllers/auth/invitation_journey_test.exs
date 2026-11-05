@@ -61,6 +61,42 @@ defmodule TymeslotWeb.InvitationJourneyTest do
     assert Flash.get(again.assigns.flash, :error) =~ "no longer valid"
   end
 
+  test "with public registration closed, the invitee still accepts and is signed in", %{
+    conn: conn
+  } do
+    close_registration()
+
+    # Registration really is closed: the sign-up form refuses a stranger.
+    assert {:error, :registration_disabled, _message} =
+             Auth.register_user(
+               %{
+                 "email" => "stranger@example.com",
+                 "password" => @password,
+                 "password_confirmation" => @password,
+                 "terms_accepted" => "true"
+               },
+               ip: "203.0.113.9",
+               user_agent: "test"
+             )
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> form("#invite-user-form", invite: %{email: "closed@example.com"})
+    |> render_submit()
+
+    path = URI.parse(deliver_invitation()).path
+
+    conn =
+      post(build_conn(), path, %{
+        "invitation" => %{"password" => @password, "password_confirmation" => @password}
+      })
+
+    assert redirected_to(conn) == Config.success_redirect_path()
+    assert get_session(conn, :user_token)
+    assert Repo.get!(UserSchema, Auth.get_user_by_email("closed@example.com").id).verified_at
+  end
+
   test "a password that breaks the rules re-renders the form with the reason", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
@@ -80,6 +116,12 @@ defmodule TymeslotWeb.InvitationJourneyTest do
     assert html =~ ~s|role="alert"|
     user = Auth.get_user_by_email("weak@example.com")
     assert Repo.get!(UserSchema, user.id).password_hash == nil
+  end
+
+  defp close_registration do
+    original = Application.get_env(:tymeslot, :registration_enabled, true)
+    Application.put_env(:tymeslot, :registration_enabled, false)
+    on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
   end
 
   # Runs the queued invitation job through its handler, as the worker would,
