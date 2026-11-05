@@ -36,4 +36,27 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeHandSentEventsLiveTest do
     assert render(view) =~ "Strategy Session"
     refute MeetingTypes.get_meeting_type(type.id, user.id).is_private
   end
+
+  test "a visibility switch sent without a state it can read is ignored", %{
+    conn: conn,
+    user: user
+  } do
+    type = insert(:meeting_type, user: user, name: "Strategy Session", is_private: false)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+    target = with_target(view, "#meeting_settings")
+    id = to_string(type.id)
+
+    render_click(target, "toggle_private", %{"id" => id})
+    render_click(target, "toggle_private", %{"id" => id, "listed" => "maybe"})
+    render_click(target, "toggle_page_membership", %{"id" => id, "listed" => "true"})
+
+    render_click(target, "toggle_page_membership", %{
+      "id" => id,
+      "page" => %{"x" => "1"},
+      "listed" => "true"
+    })
+
+    assert render(view) =~ "Strategy Session"
+    refute MeetingTypes.get_meeting_type(type.id, user.id).is_private
+  end
 end

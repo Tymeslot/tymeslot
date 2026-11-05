@@ -19,6 +19,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias TymeslotWeb.Live.Shared.RateLimit
   require Logger
 
+  # The two values a visibility switch sends as `listed`.
+  @listed_values ~w(true false)
+
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
@@ -210,8 +213,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   # Both visibility switches send the state they ask for (`listed`), as the
   # host saw it, rather than flipping whatever is stored: another tab may
-  # have changed it since this one rendered.
-  def handle_event("toggle_private", %{"id" => id, "listed" => listed}, socket) do
+  # have changed it since this one rendered. Sent by hand without a
+  # `listed` or a page it can read, either is ignored.
+  def handle_event("toggle_private", %{"id" => id, "listed" => listed}, socket)
+      when listed in @listed_values do
     user_id = socket.assigns.current_user.id
 
     with_type_id(id, socket, fn type_id ->
@@ -225,7 +230,8 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
         "toggle_page_membership",
         %{"id" => id, "page" => page_id, "listed" => listed},
         socket
-      ) do
+      )
+      when is_binary(page_id) and listed in @listed_values do
     user_id = socket.assigns.current_user.id
 
     with_type_id(id, socket, fn type_id ->
@@ -234,6 +240,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       end)
     end)
   end
+
+  def handle_event(event, _params, socket)
+      when event in ~w(toggle_private toggle_page_membership),
+      do: {:noreply, socket}
 
   def handle_event("open_slug_modal", _params, socket) do
     case socket.assigns.editing_type do

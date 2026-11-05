@@ -325,6 +325,19 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
     assert has_element?(view, "#page-settings-type-#{type.id}[aria-checked='false']")
   end
 
+  test "a listing switch sent by hand without an id or state it can read is ignored", ctx do
+    type = insert(:meeting_type, user: ctx.user, name: "Automation call", is_private: false)
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
+    target = with_target(view, "#page-settings")
+
+    render_click(target, "toggle_type", %{"id" => to_string(type.id)})
+    render_click(target, "toggle_type", %{"id" => to_string(type.id), "listed" => "maybe"})
+    render_click(target, "toggle_type", %{"id" => %{"x" => "1"}, "listed" => "false"})
+
+    assert has_element?(view, "#page-settings-type-#{type.id}[aria-checked='true']")
+    refute Repo.reload!(type).is_private
+  end
+
   test "a switch does what the host saw when another tab changed it meanwhile", ctx do
     page = insert(:booking_page, profile: ctx.profile, slug: "einfachiso")
     type = insert(:meeting_type, user: ctx.user, name: "Automation call", is_private: false)

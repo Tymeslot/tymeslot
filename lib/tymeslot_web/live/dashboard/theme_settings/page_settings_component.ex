@@ -39,6 +39,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   # their controls, so there they can only arrive hand-sent.
   @page_events ~w(validate_details save_details show_delete confirm_delete)
 
+  # The two values a listing switch sends as `listed`.
+  @listed_values ~w(true false)
+
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
@@ -229,13 +232,17 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   def handle_event(event, _params, %{assigns: %{page: nil}} = socket) when event in @page_events,
     do: {:noreply, socket}
 
-  def handle_event("toggle_type", %{"id" => id, "listed" => listed}, socket) do
+  def handle_event("toggle_type", %{"id" => id, "listed" => listed}, socket)
+      when is_binary(id) and listed in @listed_values do
     user_id = socket.assigns.profile.user_id
 
     with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       do_toggle_type(socket, id, listed == "true", user_id)
     end)
   end
+
+  # Sent by hand without an id or a `listed` it can read: ignored.
+  def handle_event("toggle_type", _params, socket), do: {:noreply, socket}
 
   def handle_event("validate_details", %{"page" => params}, socket) do
     changeset = BookingPages.change_details(socket.assigns.page, params)
