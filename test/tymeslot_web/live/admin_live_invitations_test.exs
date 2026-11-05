@@ -13,6 +13,7 @@ defmodule TymeslotWeb.AdminLiveInvitationsTest do
   alias Tymeslot.Auth
   alias Tymeslot.Auth.{Invitations, UserSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Test.OAuthProviderStub
   alias Tymeslot.Workers.EmailWorker
 
   setup :admin_conn
@@ -76,15 +77,31 @@ defmodule TymeslotWeb.AdminLiveInvitationsTest do
     refute has_element?(lv, ~s|[data-testid="invitation-pending-badge"]|)
   end
 
-  test "with password sign-in off, the form is replaced by an explanation", %{conn: conn} do
-    original = Application.get_env(:tymeslot, :password_auth_enabled)
-    Application.put_env(:tymeslot, :password_auth_enabled, false)
-    on_exit(fn -> Application.put_env(:tymeslot, :password_auth_enabled, original) end)
+  test "with no sign-in method switched on, the form is replaced by an explanation", %{
+    conn: conn
+  } do
+    password_auth_off()
 
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
     refute has_element?(lv, "#invite-user-form")
     assert has_element?(lv, ~s|[data-testid="invitations-unavailable"]|)
+  end
+
+  test "with password sign-in off, a social sign-in provider keeps the form", %{conn: conn} do
+    password_auth_off()
+    OAuthProviderStub.setup_providers(%{})
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    assert has_element?(lv, "#invite-user-form")
+    refute has_element?(lv, ~s|[data-testid="invitations-unavailable"]|)
+  end
+
+  defp password_auth_off do
+    original = Application.get_env(:tymeslot, :password_auth_enabled)
+    Application.put_env(:tymeslot, :password_auth_enabled, false)
+    on_exit(fn -> Application.put_env(:tymeslot, :password_auth_enabled, original) end)
   end
 
   defp invitation_jobs do

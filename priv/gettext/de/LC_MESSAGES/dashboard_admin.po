@@ -907,16 +907,6 @@ msgstr "Einladung an %{email} gesendet."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
-msgstr "Einladungen setzen die Anmeldung per Passwort voraus, damit die eingeladene Person ein Passwort wählen kann. Aktivieren Sie die Passwort-Authentifizierung im Tab „Authentifizierung“, um Nutzer einzuladen."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in. Enable password authentication first."
-msgstr "Einladungen setzen die Anmeldung per Passwort voraus. Aktivieren Sie zuerst die Passwort-Authentifizierung."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
 msgid "Invite a user"
 msgstr "Nutzer einladen"
 
@@ -957,10 +947,20 @@ msgstr "Dieser Nutzer hat seine Einladung bereits angenommen."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "We'll create the account and email them a link to choose a password. Public registration can stay closed."
-msgstr "Wir erstellen das Konto und senden der Person eine E-Mail mit einem Link zur Passwortwahl. Die öffentliche Registrierung kann geschlossen bleiben."
+msgid "name@example.com"
+msgstr "name@example.com"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "name@example.com"
-msgstr "name@example.com"
+msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+msgstr "Einladungen setzen voraus, dass sich die eingeladene Person anmelden kann. Aktivieren Sie im Tab Authentifizierung die Passwort-Authentifizierung oder einen Social-Login-Anbieter, um Nutzer einzuladen."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
+msgstr "Einladungen setzen eine Anmeldemöglichkeit voraus. Aktivieren Sie zuerst die Passwort-Authentifizierung oder einen Social-Login-Anbieter."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+msgstr "Wir erstellen das Konto und senden der Person eine E-Mail mit einem Link, über den sie ihre Anmeldemethode wählt. Die öffentliche Registrierung kann geschlossen bleiben."

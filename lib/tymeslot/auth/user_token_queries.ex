@@ -174,6 +174,20 @@ defmodule Tymeslot.Auth.UserTokenQueries do
     |> UserSchema.drop_plaintext_password()
   end
 
+  @doc """
+  Accepts an invitation with a social sign-in: links the provider identity
+  in `attrs` to the invitee's account and marks it verified, clearing every
+  outstanding credential token, the invitation's own included.
+  """
+  @spec accept_invitation_with_identity(UserSchema.t(), map()) ::
+          {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t()}
+  def accept_invitation_with_identity(%UserSchema{} = user, attrs) do
+    user
+    |> UserSchema.invitation_identity_changeset(attrs)
+    |> verify_through_reset(user, DateTime.utc_now(:second))
+    |> Repo.update()
+  end
+
   # The reset link was delivered to the account's address, so following it
   # proves the mailbox just as the verification link would. Verifying here is
   # what lets an address's owner reclaim an account someone else signed up

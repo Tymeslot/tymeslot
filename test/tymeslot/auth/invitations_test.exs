@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.InvitationsTest do
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.Test.OAuthProviderStub
   alias Tymeslot.Workers.EmailWorker
 
   @ip [ip: "203.0.113.7", user_agent: "test"]
@@ -61,13 +62,22 @@ defmodule Tymeslot.Auth.InvitationsTest do
       assert invitation_jobs() == []
     end
 
-    test "refuses while password sign-in is switched off", %{admin: admin} do
+    test "refuses while no sign-in method is switched on", %{admin: admin} do
       with_password_auth_off(fn ->
-        assert {:error, :password_auth_disabled} =
-                 Invitations.invite(admin, "someone@example.com")
+        assert {:error, :no_sign_in_method} = Invitations.invite(admin, "someone@example.com")
       end)
 
       assert Auth.get_user_by_email("someone@example.com") == nil
+    end
+
+    test "with password sign-in off, an enabled social provider is enough", %{admin: admin} do
+      OAuthProviderStub.setup_providers(%{})
+
+      with_password_auth_off(fn ->
+        assert {:ok, _user} = Invitations.invite(admin, "social@example.com")
+      end)
+
+      assert [_job] = invitation_jobs()
     end
   end
 

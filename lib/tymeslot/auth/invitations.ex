@@ -6,12 +6,20 @@ defmodule Tymeslot.Auth.Invitations do
   An invitation creates the account straight away, with its profile and
   default meeting types, but with no password and an unverified address. The
   invitee is emailed a single-use link (see `Tymeslot.Auth.AccountTokens`,
-  purpose `:invitation`); following it, they choose a password, which
-  verifies the address, since the link was delivered to it, and signs them in.
+  purpose `:invitation`); following it, they choose how they will sign in: a
+  password (`accept/4`) or one of the enabled social sign-in providers
+  (`accept_with_provider/6`). Either verifies the address, since the link was
+  delivered to it, and signs them in.
 
-  Invitations need password sign-in: with it switched off, an invitee would
-  have no way to sign in to the account. Whether public registration is open
-  makes no difference.
+  A social acceptance links the provider identity to the invited account on
+  the strength of the link alone: the identity's own email is never compared
+  with the invited address, so an invitee whose provider account uses a
+  different address can still accept. The invited address stays the
+  account's email.
+
+  Invitations need at least one way to sign in: password sign-in or an
+  enabled social provider. Whether public registration is open makes no
+  difference.
 
   An invitation is pending while its token hash is stored. Accepting it, or
   any other change to the account's credentials (a password reset requested
@@ -27,10 +35,13 @@ defmodule Tymeslot.Auth.Invitations do
     AdminRoles,
     RateLimit,
     RegistrationAnnouncement,
+    SocialAuthentication,
     UserQueries,
     UserSchema,
     Validation
   }
+
+  alias Tymeslot.Auth.OAuth.Providers
 
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Emails.EmailScheduler
@@ -44,18 +55,26 @@ defmodule Tymeslot.Auth.Invitations do
   @type invite_error ::
           :admin_ui_disabled
           | :forbidden
-          | :password_auth_disabled
+          | :no_sign_in_method
           | :invalid_email
           | :email_taken
           | :email_not_sent
           | term()
 
+  @type provider_accept_error ::
+          :invalid_token
+          | :token_expired
+          | :provider_disabled
+          | :identity_in_use
+          | :oauth_error
+          | :general_error
+
   @doc """
-  Whether invitations can be sent on this deployment: they need password
-  sign-in.
+  Whether invitations can be sent and accepted on this deployment: they need
+  password sign-in or at least one enabled social sign-in provider.
   """
   @spec available?() :: boolean()
-  def available?, do: Config.password_auth_enabled?()
+  def available?, do: Config.password_auth_enabled?() or Providers.enabled() != []
 
   @doc """
   Whether `user` holds an invitation that has not been accepted yet.
@@ -83,7 +102,7 @@ defmodule Tymeslot.Auth.Invitations do
   @spec invite(AdminRoles.actor(), String.t()) :: {:ok, UserSchema.t()} | {:error, invite_error()}
   def invite(actor, email) do
     with :ok <- AdminRoles.authorise(actor),
-         :ok <- ensure_password_auth(),
+         :ok <- ensure_available(),
          {:ok, email} <- validate_email(email),
          {:ok, user, token} <- create_invited_account(email) do
       AccountLogging.log_user_created(user, %{source: "invitation"})
@@ -101,7 +120,7 @@ defmodule Tymeslot.Auth.Invitations do
           {:ok, UserSchema.t()} | {:error, :not_found | :not_invited | invite_error()}
   def resend(actor, user_id) do
     with :ok <- AdminRoles.authorise(actor),
-         :ok <- ensure_password_auth(),
+         :ok <- ensure_available(),
          {:ok, user} <- fetch_pending(user_id),
          {:ok, user, token} <- AccountTokens.issue(:invitation, user) do
       log_invitation(:account_invitation_resent, actor, user)
@@ -115,9 +134,9 @@ defmodule Tymeslot.Auth.Invitations do
   """
   @spec fetch(String.t()) ::
           {:ok, UserSchema.t()}
-          | {:error, :invalid_token | :token_expired | :password_auth_disabled}
+          | {:error, :invalid_token | :token_expired | :no_sign_in_method}
   def fetch(token) when is_binary(token) do
-    with :ok <- ensure_password_auth() do
+    with :ok <- ensure_available() do
       case AccountTokens.fetch(:invitation, token) do
         {:ok, user} -> {:ok, user}
         {:error, :token_expired, _user} -> {:error, :token_expired}
@@ -179,8 +198,80 @@ defmodule Tymeslot.Auth.Invitations do
     end
   end
 
+  @doc """
+  Accepts an invitation with a social sign-in, from the provider's callback:
+  exchanges the code, then links the identity to the invited account and
+  verifies it. The caller signs the returned user in.
+
+  The web layer has already checked the flow's state and recovered its PKCE
+  `code_verifier`; `opts` carries the client (`:ip`, `:user_agent`) for the
+  audit entry. `{:error, :identity_in_use}` means the identity already signs
+  in to another account; the invitation stays pending.
+  """
+  @spec accept_with_provider(
+          String.t(),
+          Providers.provider(),
+          String.t(),
+          String.t(),
+          String.t(),
+          keyword()
+        ) :: {:ok, UserSchema.t()} | {:error, provider_accept_error()}
+  def accept_with_provider(token, provider, code, code_verifier, callback_url, opts) do
+    with :ok <- ensure_provider(provider),
+         {:ok, identity} <-
+           SocialAuthentication.identify(provider, code, code_verifier, callback_url, opts),
+         :ok <- ensure_identity_free(provider, identity) do
+      link_identity(token, provider, identity)
+    end
+  end
+
+  defp link_identity(token, provider, identity) do
+    attrs = identity_attrs(provider, identity)
+
+    result =
+      Repo.transaction(fn ->
+        with {:ok, user} <- fetch_locked(token),
+             {:ok, accepted} <- AccountTokens.consume(:invitation, user, attrs) do
+          accepted
+        else
+          # The identity's ID columns are the only unique ones the link
+          # writes: another account took the identity since it was checked.
+          {:error, %Ecto.Changeset{}} -> Repo.rollback(:identity_in_use)
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    with {:ok, user} <- result do
+      AccountLogging.log_user_verified(user, "invitation", %{provider: to_string(provider)})
+      {:ok, user}
+    end
+  end
+
+  defp identity_attrs(provider, identity) do
+    Map.put(
+      %{provider: to_string(provider)},
+      Providers.fetch!(provider).uid_field,
+      identity.provider_uid
+    )
+  end
+
+  defp ensure_provider(provider) do
+    if Providers.enabled?(provider), do: :ok, else: {:error, :provider_disabled}
+  end
+
+  defp ensure_identity_free(provider, identity) do
+    case Providers.find_user(provider, identity.provider_uid, Repo) do
+      {:ok, _account} -> {:error, :identity_in_use}
+      {:error, :not_found} -> :ok
+    end
+  end
+
   defp password_not_set,
-    do: dgettext("auth", "The password couldn't be set. Please try again with a different one.")
+    do:
+      dgettext(
+        "auth_invitation",
+        "The password couldn't be set. Please try again with a different one."
+      )
 
   defp fetch_locked(token) do
     case AccountTokens.fetch(:invitation, token, lock: true) do
@@ -200,7 +291,11 @@ defmodule Tymeslot.Auth.Invitations do
   end
 
   defp ensure_password_auth do
-    if available?(), do: :ok, else: {:error, :password_auth_disabled}
+    if Config.password_auth_enabled?(), do: :ok, else: {:error, :password_auth_disabled}
+  end
+
+  defp ensure_available do
+    if available?(), do: :ok, else: {:error, :no_sign_in_method}
   end
 
   defp validate_email(email) do

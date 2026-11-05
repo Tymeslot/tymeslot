@@ -212,7 +212,6 @@ msgstr "Або продовжте через"
 #: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #: lib/tymeslot_web/components/auth/session/login_component.ex
-#: lib/tymeslot_web/controllers/invitation_html.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Пароль"
@@ -979,53 +978,17 @@ msgstr[0] "З поверненням. Ваш обліковий запис ві�
 msgstr[1] "З поверненням. Ваш обліковий запис відновлено, але інтеграції %{names} потрібно перепідключити. Доки ви їх не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."
 msgstr[2] "З поверненням. Ваш обліковий запис відновлено, але інтеграції %{names} потрібно перепідключити. Доки ви їх не перепідключите, ваша сторінка бронювання може не пропонувати слотів і не приймати бронювань."
 
-#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
-#: lib/tymeslot_web/controllers/invitation_html.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
-msgid "Accept your invitation"
-msgstr "Прийміть запрошення"
+msgid "This %{provider} account already signs in to another Tymeslot account. Use a different one, or choose another way to sign in."
+msgstr "Цей обліковий запис %{provider} уже використовується для входу в інший обліковий запис Tymeslot. Скористайтеся іншим або виберіть інший спосіб входу."
 
-#: lib/tymeslot_web/controllers/invitation_html.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
-msgid "Choose a password for %{email} to finish setting up your account."
-msgstr "Виберіть пароль для %{email}, щоб завершити налаштування облікового запису."
+msgid "Welcome to Tymeslot! You'll sign in with %{provider}."
+msgstr "Ласкаво просимо до Tymeslot! Ви входитимете через %{provider}."
 
-#: lib/tymeslot_web/controllers/invitation_html.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
-msgid "Confirm password"
-msgstr "Підтвердьте пароль"
-
-#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Password sign-in is turned off, so this invitation can't be accepted. Please contact your administrator."
-msgstr "Вхід за паролем вимкнено, тому це запрошення не можна прийняти. Зверніться до адміністратора."
-
-#: lib/tymeslot_web/controllers/invitation_html.ex
-#, elixir-autogen, elixir-format
-msgid "Set password and sign in"
-msgstr "Встановити пароль і увійти"
-
-#: lib/tymeslot/auth/invitations.ex
-#, elixir-autogen, elixir-format
-msgid "The password couldn't be set. Please try again with a different one."
-msgstr "Не вдалося встановити пароль. Спробуйте ще раз з іншим паролем."
-
-#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
-#, elixir-autogen, elixir-format
-msgid "This invitation has expired. Ask your administrator to send you a new one."
-msgstr "Термін дії цього запрошення минув. Попросіть адміністратора надіслати вам нове."
-
-#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
-#, elixir-autogen, elixir-format
-msgid "This invitation link is no longer valid. It may have been used already, or replaced by a newer invitation."
-msgstr "Це посилання із запрошенням більше не дійсне. Можливо, його вже використали або замінили новішим запрошенням."
-
-#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome to Tymeslot! Your password is set."
-msgstr "Ласкаво просимо до Tymeslot! Ваш пароль встановлено."
-
-#: lib/tymeslot_web/controllers/auth/invitation_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Your password is set. Please log in to continue."
-msgstr "Ваш пароль встановлено. Увійдіть, щоб продовжити."
+msgid "Your account is ready. Please sign in with %{provider} to continue."
+msgstr "Ваш обліковий запис готовий. Щоб продовжити, увійдіть через %{provider}."

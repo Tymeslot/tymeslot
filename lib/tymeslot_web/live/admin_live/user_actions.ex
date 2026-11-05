@@ -81,11 +81,11 @@ defmodule TymeslotWeb.AdminLive.UserActions do
   defp invite_error_message(:email_taken),
     do: dgettext("dashboard_admin", "An account with this email address already exists.")
 
-  defp invite_error_message(:password_auth_disabled),
+  defp invite_error_message(:no_sign_in_method),
     do:
       dgettext(
         "dashboard_admin",
-        "Invitations need password sign-in. Enable password authentication first."
+        "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
       )
 
   defp invite_error_message(:not_invited),

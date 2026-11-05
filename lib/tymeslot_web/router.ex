@@ -192,10 +192,13 @@ defmodule TymeslotWeb.Router do
     get "/guest/:token/:response", GuestRsvpController, :confirm
     post "/guest/:token/:response", GuestRsvpController, :submit
 
-    # An admin's invitation from the emailed link. GET renders the form to
-    # choose a password; POST spends the token and signs the invitee in.
+    # An admin's invitation from the emailed link. GET renders the page to
+    # choose how to sign in; POST spends the token with a password, and the
+    # provider route starts a social sign-in that spends it on the callback
+    # (a POST, so another site cannot start one with an invitation it holds).
     get "/auth/invitation/:token", InvitationController, :show
     post "/auth/invitation/:token", InvitationController, :accept
+    post "/auth/invitation/:token/:provider", InvitationController, :social
 
     # The one page an account pending deletion can reach while signed in.
     # It has to come before "/auth/:provider", which would otherwise take it.

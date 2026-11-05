@@ -16,9 +16,13 @@ defmodule TymeslotWeb.OAuthFlow do
   responsibility of the calling controller.
   """
 
+  import Plug.Conn, only: [put_session: 3, get_session: 2, delete_session: 2]
+
   require Logger
 
+  alias Phoenix.Token
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.Invitations
   alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Helpers.ClientIP
@@ -28,6 +32,19 @@ defmodule TymeslotWeb.OAuthFlow do
   @type provider :: Providers.provider()
 
   @type oauth_callback_params :: %{code: String.t(), state: String.t(), provider: provider()}
+
+  # An invitation being accepted with a social sign-in rides in the session,
+  # encrypted, across the provider's round trip, and expires with the flow's
+  # state (`TymeslotWeb.OAuthFlow.State`).
+  @invitation_session_key "_oauth_invitation"
+  @invitation_salt "oauth invitation acceptance"
+  @invitation_max_age 600
+
+  @type invitation_result ::
+          {:ok, Plug.Conn.t(), provider()}
+          | {:error, :invalid_state, Plug.Conn.t()}
+          | {:error, Invitations.provider_accept_error() | :session_failed, provider(),
+             Plug.Conn.t()}
 
   @type flow_result ::
           {:ok, Plug.Conn.t(), provider()}
@@ -45,6 +62,67 @@ defmodule TymeslotWeb.OAuthFlow do
   def authorize(conn, provider) do
     {conn, flow} = State.generate_and_store_state(conn)
     {conn, Auth.social_authorize_url(provider, callback_url(conn, provider), flow)}
+  end
+
+  @doc """
+  Starts a social sign-in that accepts the invitation `token` rather than
+  signing in or registering: stores the token for the callback, then starts
+  the flow as `authorize/2` does.
+  """
+  @spec authorize_invitation(Plug.Conn.t(), provider(), String.t()) ::
+          {Plug.Conn.t(), String.t()}
+  def authorize_invitation(conn, provider, token) do
+    conn
+    |> put_session(@invitation_session_key, Token.encrypt(conn, @invitation_salt, token))
+    |> authorize(provider)
+  end
+
+  @doc """
+  Forgets any invitation an earlier flow left in the session, so an ordinary
+  sign-in started afterwards is not taken for an acceptance.
+  """
+  @spec forget_invitation(Plug.Conn.t()) :: Plug.Conn.t()
+  def forget_invitation(conn), do: delete_session(conn, @invitation_session_key)
+
+  @doc """
+  The invitation token the flow in progress is accepting, if any, removed
+  from the session. A token past the flow's lifetime counts as none.
+  """
+  @spec pop_invitation(Plug.Conn.t()) :: {String.t() | nil, Plug.Conn.t()}
+  def pop_invitation(conn) do
+    token =
+      with stored when is_binary(stored) <- get_session(conn, @invitation_session_key),
+           {:ok, token} <-
+             Token.decrypt(conn, @invitation_salt, stored, max_age: @invitation_max_age) do
+        token
+      else
+        _missing_or_expired -> nil
+      end
+
+    {token, forget_invitation(conn)}
+  end
+
+  @doc """
+  Handles the callback of a flow started by `authorize_invitation/3`: checks
+  the flow's state, lets the domain link the identity to the invited account
+  (`Tymeslot.Auth.Invitations.accept_with_provider/6`), and signs it in.
+  """
+  @spec handle_invitation_callback(Plug.Conn.t(), oauth_callback_params(), String.t()) ::
+          invitation_result()
+  def handle_invitation_callback(conn, %{code: code, state: state, provider: provider}, token) do
+    with {:ok, conn, code_verifier} <- validate_oauth_state(conn, state, provider) do
+      case Invitations.accept_with_provider(
+             token,
+             provider,
+             code,
+             code_verifier,
+             callback_url(conn, provider),
+             ClientIP.request_opts(conn)
+           ) do
+        {:ok, user} -> create_user_session(conn, user, provider)
+        {:error, reason} -> {:error, reason, provider, conn}
+      end
+    end
   end
 
   @doc """

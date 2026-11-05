@@ -128,7 +128,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       <p class="mt-1 mb-4 text-token-sm text-tymeslot-600">
         {dgettext(
           "dashboard_admin",
-          "We'll create the account and email them a link to choose a password. Public registration can stay closed."
+          "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
         )}
       </p>
 
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       >
         {dgettext(
           "dashboard_admin",
-          "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
+          "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
         )}
       </p>
     </.card>

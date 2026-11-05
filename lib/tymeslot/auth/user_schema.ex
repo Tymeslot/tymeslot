@@ -153,6 +153,23 @@ defmodule Tymeslot.Auth.UserSchema do
     |> unique_constraint(:email)
   end
 
+  @doc """
+  Changeset for accepting an invitation with a social sign-in: links the
+  provider identity (`:provider` and the provider's ID column) to the
+  invited account. Accepting changes the account's credentials, so it
+  revokes every outstanding credential token, the invitation's own included.
+  """
+  @spec invitation_identity_changeset(t(), map()) :: Ecto.Changeset.t()
+  def invitation_identity_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:provider, :provider_uid, :github_user_id, :google_user_id])
+    |> validate_required([:provider])
+    |> unique_constraint([:provider, :provider_uid])
+    |> unique_constraint(:github_user_id)
+    |> unique_constraint(:google_user_id)
+    |> revoke_credential_tokens()
+  end
+
   @spec social_registration_changeset(t(), map()) :: Ecto.Changeset.t()
   def social_registration_changeset(user, attrs) do
     user

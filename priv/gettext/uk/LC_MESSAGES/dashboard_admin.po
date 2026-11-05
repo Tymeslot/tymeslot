@@ -907,16 +907,6 @@ msgstr "Запрошення надіслано на адресу %{email}."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
-msgstr "Запрошення потребують входу за паролем, щоб запрошений міг вибрати пароль. Щоб запрошувати користувачів, увімкніть автентифікацію за паролем на вкладці «Автентифікація»."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in. Enable password authentication first."
-msgstr "Запрошення потребують входу за паролем. Спочатку увімкніть автентифікацію за паролем."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
 msgid "Invite a user"
 msgstr "Запросити користувача"
 
@@ -957,10 +947,20 @@ msgstr "Цей користувач уже прийняв своє запрош�
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "We'll create the account and email them a link to choose a password. Public registration can stay closed."
-msgstr "Ми створимо обліковий запис і надішлемо запрошеному лист із посиланням для вибору пароля. Публічна реєстрація може залишатися закритою."
+msgid "name@example.com"
+msgstr "name@example.com"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "name@example.com"
-msgstr "name@example.com"
+msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+msgstr "Запрошеному потрібен спосіб входу. Щоб запрошувати користувачів, увімкніть автентифікацію за паролем або провайдер входу через соціальні мережі на вкладці «Автентифікація»."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
+msgstr "Для запрошень потрібен спосіб входу. Спочатку ввімкніть автентифікацію за паролем або провайдер входу через соціальні мережі."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+msgstr "Ми створимо обліковий запис і надішлемо запрошеному лист із посиланням, за яким можна вибрати спосіб входу. Публічна реєстрація може залишатися закритою."

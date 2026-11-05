@@ -16,6 +16,7 @@ defmodule TymeslotWeb.OAuthController do
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.InvitationHTML
   alias TymeslotWeb.OAuthFlow
   alias TymeslotWeb.Plugs.ReturnTo
 
@@ -53,7 +54,11 @@ defmodule TymeslotWeb.OAuthController do
   defp social_auth_enabled?(provider), do: Providers.enabled?(provider)
 
   defp do_provider_auth(conn, provider) do
-    {updated_conn, authorize_url} = OAuthFlow.authorize(conn, provider)
+    {updated_conn, authorize_url} =
+      conn
+      |> OAuthFlow.forget_invitation()
+      |> OAuthFlow.authorize(provider)
+
     redirect(updated_conn, external: authorize_url)
   end
 
@@ -161,17 +166,93 @@ defmodule TymeslotWeb.OAuthController do
 
   # Private helper functions
 
+  # A flow started from an invitation page accepts that invitation; every
+  # other flow signs in or registers.
   defp handle_provider_callback(conn, provider, code, state) do
-    paths = get_redirect_paths(conn)
+    params = %{code: code, state: state, provider: provider}
 
-    conn
-    |> OAuthFlow.handle_oauth_callback(%{
-      code: code,
-      state: state,
-      provider: provider
-    })
-    |> respond_to_oauth_result(paths)
+    case OAuthFlow.pop_invitation(conn) do
+      {nil, conn} ->
+        conn
+        |> OAuthFlow.handle_oauth_callback(params)
+        |> respond_to_oauth_result(get_redirect_paths(conn))
+
+      {token, conn} ->
+        conn
+        |> OAuthFlow.handle_invitation_callback(params, token)
+        |> respond_to_invitation_result(token)
+    end
   end
+
+  defp respond_to_invitation_result({:ok, authed_conn, provider}, _token) do
+    authed_conn
+    |> put_flash(
+      :success,
+      dgettext("auth", "Welcome to Tymeslot! You'll sign in with %{provider}.",
+        provider: provider_name(provider)
+      )
+    )
+    |> redirect(to: Config.success_redirect_path())
+  end
+
+  defp respond_to_invitation_result({:error, :invalid_state, conn}, token) do
+    conn
+    |> put_flash(:error, dgettext("auth", "Security validation failed. Please try again."))
+    |> redirect(to: ~p"/auth/invitation/#{token}")
+  end
+
+  # The account is ready but has no session: the identity is linked, so the
+  # ordinary social sign-in reaches it.
+  defp respond_to_invitation_result({:error, :session_failed, provider, conn}, _token) do
+    conn
+    |> put_flash(
+      :info,
+      dgettext("auth", "Your account is ready. Please sign in with %{provider} to continue.",
+        provider: provider_name(provider)
+      )
+    )
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  defp respond_to_invitation_result({:error, reason, _provider, conn}, _token)
+       when reason in [:invalid_token, :token_expired] do
+    conn
+    |> put_flash(:error, InvitationHTML.refusal_message(reason))
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  # The invitation is still pending: back to its page to choose again.
+  defp respond_to_invitation_result({:error, reason, provider, conn}, token) do
+    conn
+    |> put_flash(:error, invitation_failure_message(reason, provider))
+    |> redirect(to: ~p"/auth/invitation/#{token}")
+  end
+
+  defp invitation_failure_message(:identity_in_use, provider),
+    do:
+      dgettext(
+        "auth",
+        "This %{provider} account already signs in to another Tymeslot account. Use a different one, or choose another way to sign in.",
+        provider: provider_name(provider)
+      )
+
+  defp invitation_failure_message(:provider_disabled, provider),
+    do:
+      dgettext("auth", "%{provider} authentication is not available",
+        provider: provider_name(provider)
+      )
+
+  defp invitation_failure_message(:oauth_error, provider),
+    do:
+      dgettext("auth", "Failed to authenticate with %{provider}.",
+        provider: provider_name(provider)
+      )
+
+  defp invitation_failure_message(_general_error, provider),
+    do:
+      dgettext("auth", "An error occurred during %{provider} authentication.",
+        provider: provider_name(provider)
+      )
 
   defp process_oauth_completion(conn, params) do
     pending = get_session(conn, :pending_oauth_registration)

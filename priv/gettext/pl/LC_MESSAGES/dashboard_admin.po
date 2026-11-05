@@ -903,16 +903,6 @@ msgstr "Zaproszenie zostało wysłane na adres %{email}."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
-msgstr "Zaproszenia wymagają logowania hasłem, aby zaproszona osoba mogła wybrać hasło. Aby zapraszać użytkowników, włącz uwierzytelnianie hasłem na karcie Uwierzytelnianie."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in. Enable password authentication first."
-msgstr "Zaproszenia wymagają logowania hasłem. Najpierw włącz uwierzytelnianie hasłem."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
 msgid "Invite a user"
 msgstr "Zaproś użytkownika"
 
@@ -953,10 +943,20 @@ msgstr "Ten użytkownik przyjął już swoje zaproszenie."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "We'll create the account and email them a link to choose a password. Public registration can stay closed."
-msgstr "Utworzymy konto i wyślemy e-mailem link do wyboru hasła. Rejestracja publiczna może pozostać zamknięta."
+msgid "name@example.com"
+msgstr "name@example.com"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "name@example.com"
-msgstr "name@example.com"
+msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+msgstr "Zaproszenia wymagają, aby zaproszona osoba mogła się zalogować. Aby zapraszać użytkowników, włącz uwierzytelnianie hasłem lub dostawcę logowania społecznościowego na karcie Uwierzytelnianie."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
+msgstr "Zaproszenia wymagają metody logowania. Najpierw włącz uwierzytelnianie hasłem lub dostawcę logowania społecznościowego."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+msgstr "Utworzymy konto i wyślemy e-mailem link do wyboru sposobu logowania. Rejestracja publiczna może pozostać zamknięta."

@@ -907,16 +907,6 @@ msgstr "Pozvání bylo odesláno na adresu %{email}."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in, so the invitee can choose a password. Enable password authentication on the Authentication tab to invite users."
-msgstr "Pozvánky vyžadují přihlášení heslem, aby si pozvaný mohl zvolit heslo. Chcete-li zvát uživatele, zapněte ověřování heslem na kartě Ověření."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invitations need password sign-in. Enable password authentication first."
-msgstr "Pozvánky vyžadují přihlášení heslem. Nejprve zapněte ověřování heslem."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
 msgid "Invite a user"
 msgstr "Pozvat uživatele"
 
@@ -957,10 +947,20 @@ msgstr "Tento uživatel už své pozvání přijal."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "We'll create the account and email them a link to choose a password. Public registration can stay closed."
-msgstr "Vytvoříme účet a pošleme pozvanému e-mail s odkazem pro zvolení hesla. Veřejná registrace může zůstat zavřená."
+msgid "name@example.com"
+msgstr "name@example.com"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
-msgid "name@example.com"
-msgstr "name@example.com"
+msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+msgstr "Pozvánky vyžadují způsob, jak se pozvaný přihlásí. Chcete-li zvát uživatele, zapněte na kartě Ověření ověření heslem nebo poskytovatele přihlášení přes sociální sítě."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
+msgstr "Pozvánky vyžadují způsob přihlášení. Nejprve zapněte ověření heslem nebo poskytovatele přihlášení přes sociální sítě."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+msgstr "Vytvoříme účet a pošleme pozvanému e-mail s odkazem, kde si zvolí způsob přihlášení. Veřejná registrace může zůstat zavřená."

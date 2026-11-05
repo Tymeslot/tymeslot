@@ -88,7 +88,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   @spec resolve_callback(provider(), String.t(), String.t(), String.t(), keyword()) ::
           callback_outcome()
   def resolve_callback(provider, code, code_verifier, callback_url, opts) do
-    with {:ok, identity} <- fetch_identity(provider, code, code_verifier, callback_url, opts) do
+    with {:ok, identity} <- identify(provider, code, code_verifier, callback_url, opts) do
       case UserRegistration.find_existing_user(provider, identity) do
         {:ok, existing} ->
           existing
@@ -188,7 +188,14 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   defp signup_metadata(opts),
     do: %{ip: opts[:ip], user_agent: opts[:user_agent], source: "oauth_signup"}
 
-  defp fetch_identity(provider, code, code_verifier, callback_url, opts) do
+  @doc """
+  Exchanges a callback's code and fetches the identity it belongs to, without
+  deciding anything about accounts. A failure is audited and answered as
+  `resolve_callback/5` answers it.
+  """
+  @spec identify(provider(), String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, :oauth_error | :general_error}
+  def identify(provider, code, code_verifier, callback_url, opts) do
     with {:ok, token} <- Client.exchange_code(provider, code, code_verifier, callback_url),
          {:ok, identity} <- UserProcessor.fetch_identity(provider, token) do
       {:ok, identity}

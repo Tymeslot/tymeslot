@@ -138,8 +138,10 @@ defmodule Tymeslot.Auth.AccountTokens do
       `:password_confirmation`)
     * `:verification` marks the account verified
     * `:email_change` moves the pending email into place
-    * `:invitation` sets the invitee's first password from `attrs`
-      (`:password`, `:password_confirmation`) and marks the account verified
+    * `:invitation` marks the account verified and gives it its first way
+      to sign in: the provider identity in `attrs` (`:provider` and the
+      provider's ID column) when it carries a `:provider`, else the password
+      from `attrs` (`:password`, `:password_confirmation`)
 
   A reset, an email change and an accepted invitation all change the
   account's credentials, so each also revokes every other outstanding
@@ -157,6 +159,9 @@ defmodule Tymeslot.Auth.AccountTokens do
 
   def consume(:email_change, %UserSchema{} = user, _attrs),
     do: UserTokenQueries.confirm_email_change(user)
+
+  def consume(:invitation, %UserSchema{} = user, %{provider: _provider} = attrs),
+    do: UserTokenQueries.accept_invitation_with_identity(user, attrs)
 
   def consume(:invitation, %UserSchema{} = user, attrs),
     do: UserTokenQueries.accept_invitation(user, attrs)
