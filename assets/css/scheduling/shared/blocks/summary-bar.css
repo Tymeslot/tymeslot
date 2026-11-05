@@ -52,6 +52,23 @@
   text-decoration: none;
 }
 
+/* Under a finger each link takes a full touch target's height. It grows by
+   real padding, never by a hit box overflowing its line: stacked on a phone,
+   the two links would otherwise cover each other's edge, so they give up the
+   row gap their padding now holds. The value and its label keep their
+   shared baseline. */
+@media (pointer: coarse) {
+  .summary-bar__items {
+    row-gap: 0;
+  }
+
+  .summary-bar__link {
+    box-sizing: border-box;
+    min-height: var(--min-touch-target);
+    padding-block: calc((var(--min-touch-target) - 1lh) / 2);
+  }
+}
+
 .summary-bar__link:hover .summary-bar__value {
   text-decoration: underline;
 }
