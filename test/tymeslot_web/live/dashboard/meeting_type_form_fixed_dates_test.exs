@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -127,6 +128,31 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
 
     assert has_element?(view, "[data-testid='planned-session']", "0 of 10 seats taken")
     refute has_element?(view, "[data-testid='session-error']")
+  end
+
+  # The last Sunday of March next year, when Europe/Berlin's clocks go forward.
+  defp spring_forward_day do
+    last = Date.new!(Date.utc_today().year + 1, 3, 31)
+    last |> Date.add(-rem(Date.day_of_week(last), 7)) |> Date.to_iso8601()
+  end
+
+  test "a date in the spring clock-change gap is planned at the gap's end, and the host is told",
+       %{conn: conn, user: user, profile: profile} do
+    {:ok, _profile} = Profiles.update_timezone(profile, "Europe/Berlin")
+    meeting_type = group_type(user, fixed_dates: true)
+    view = edit(conn, meeting_type)
+    date = spring_forward_day()
+
+    plan(view, date, "02:30")
+
+    # 03:00 CEST is 01:00 UTC.
+    assert [session] = PlannedSessions.list(meeting_type)
+    assert session.start_time == DateTime.new!(Date.from_iso8601!(date), ~T[01:00:00])
+    assert has_element?(view, "[data-testid='session-clock-change']", "does not exist on")
+    assert has_element?(view, "[data-testid='session-clock-change']", "saved as 03:00")
+
+    plan(view, future_date(10), "18:00")
+    refute has_element?(view, "[data-testid='session-clock-change']")
   end
 
   test "refuses a date in the past and says why", %{conn: conn, user: user} do
