@@ -39,7 +39,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       <.input field={@form[:email]} type="email" label="Email" icon="hero-envelope" />
       <.input name="search" value="" label="Search" placeholder="Search..." />
   """
-  attr :id, :any, default: nil
+  attr :id, :any,
+    default: nil,
+    doc: "defaults to one derived from `name` when the field has a label"
+
   attr :name, :any
   attr :label, :string, default: nil
   attr :value, :any
@@ -100,8 +103,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   def input(assigns) do
     assigns =
       assigns
-      |> assign_new(:id, fn -> nil end)
       |> assign_new(:name, fn -> nil end)
+      |> assign_new(:id, fn -> nil end)
+      |> default_id()
       |> assign_new(:checked, fn -> nil end)
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:maxlength, fn -> nil end)
@@ -188,6 +192,18 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     </div>
     """
   end
+
+  # A labelled field needs an id for `<label for>` (and for its error message)
+  # to point at, so one given only a `name` takes an id derived from it, the
+  # way Phoenix derives one from a form field. Unlabelled fields are left
+  # alone: a name repeated across a page (a checkbox group, one row per day)
+  # would repeat the id too, and nothing needs it there.
+  defp default_id(%{id: nil, label: label, name: name} = assigns)
+       when is_binary(label) and is_binary(name) do
+    assign(assigns, :id, name |> String.replace(~r/[^\w-]+/, "_") |> String.trim("_"))
+  end
+
+  defp default_id(assigns), do: assigns
 
   # Associates a field's error message with the control for assistive tech.
   # `aria-invalid` flags the failed state; `aria-describedby` points screen

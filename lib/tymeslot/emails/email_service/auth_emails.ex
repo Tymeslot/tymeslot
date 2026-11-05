@@ -1,6 +1,7 @@
 defmodule Tymeslot.Emails.EmailService.AuthEmails do
   @moduledoc """
-  Authentication emails: email verification, password reset, and the account
+  Authentication emails: email verification, password reset, an admin's
+  invitation, and the account
   notices sent instead of an on-screen answer. Each template builds its own
   email; this module delivers it.
   """
@@ -11,6 +12,7 @@ defmodule Tymeslot.Emails.EmailService.AuthEmails do
 
   alias Tymeslot.Emails.Templates.{
     AccountDeletionNotice,
+    AccountInvitation,
     EmailVerification,
     NoPasswordToReset,
     PasswordReset,
@@ -38,6 +40,18 @@ defmodule Tymeslot.Emails.EmailService.AuthEmails do
     Logger.info("Sending password reset email", user_id: user.id)
 
     user |> PasswordReset.render(reset_url) |> Delivery.deliver()
+  end
+
+  @doc """
+  Sends the invitation an admin issued for a new account, with the link to
+  choose a password.
+  """
+  @spec send_account_invitation(Tymeslot.Emails.EmailService.user_map(), String.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_account_invitation(user, invitation_url) do
+    Logger.info("Sending account invitation email", user_id: user.id)
+
+    user |> AccountInvitation.render(invitation_url) |> Delivery.deliver()
   end
 
   @doc """

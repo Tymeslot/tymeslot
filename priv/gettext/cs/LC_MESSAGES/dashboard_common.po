@@ -123,8 +123,6 @@ msgstr "Profil"
 msgid "Scheduling"
 msgstr "Plánování"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -383,3 +381,10 @@ msgstr "Připojte znovu %{names}: do té doby vaše rezervační stránka nemus�
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Uložit změny"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Rezervační stránky"

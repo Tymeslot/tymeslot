@@ -185,14 +185,14 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
               </.nav_link>
 
               <.nav_link
-                patch={~p"/dashboard/theme"}
+                patch={~p"/dashboard/pages"}
                 current={
                   if @current_action == :theme_customization, do: :theme, else: @current_action
                 }
                 action={:theme}
               >
-                <.icon name="hero-paint-brush" class="w-5 h-5" />
-                <span>{dgettext("dashboard_common", "Theme")}</span>
+                <.icon name="hero-rectangle-stack" class="w-5 h-5" />
+                <span>{dgettext("dashboard_common", "Booking pages")}</span>
               </.nav_link>
             </div>
           </div>

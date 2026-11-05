@@ -28,14 +28,11 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
         on_close="close_language_dropdown"
         trigger_class="flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 lang-switcher__button"
         class="w-48 rounded-lg shadow-xl lang-switcher__panel"
+        aria-label={trigger_label(@locale, @locales)}
       >
         <:trigger>
-          <%!-- The button's name is its visible language plus a hidden
-                "Change language", never a label that leaves the visible
-                text out: a voice user says what they see. --%>
           <.locale_flag locale={@locale} class="w-5 h-4" />
           <span class="ml-2 hidden sm:inline">{current_locale_name(@locale, @locales)}</span>
-          <span class="sr-only">{dgettext("common", "Change language")}</span>
           <.icon name="hero-chevron-down-mini" class="w-4 h-4 ml-1" />
         </:trigger>
         <:panel>
@@ -61,6 +58,20 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
       </.dropdown>
     </div>
     """
+  end
+
+  # Starts with the language name the trigger shows, so speech input can say
+  # it and screen readers hear which language is active. On phones the name is
+  # hidden and only the flag shows, so the label carries it there too.
+  defp trigger_label(locale, locales) do
+    gettext_comment(
+      "Spoken name of the language menu button. Keep %{language} first: " <>
+        "speech input users say the language name they see on the button."
+    )
+
+    dgettext("common", "%{language}, change language",
+      language: current_locale_name(locale, locales)
+    )
   end
 
   defp current_locale_name(locale, locales) do

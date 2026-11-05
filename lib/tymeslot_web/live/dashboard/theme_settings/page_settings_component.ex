@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.UrlBuilder
+  alias TymeslotWeb.Components.Dashboard.BookingPages.AddressPreview
   alias TymeslotWeb.Components.Dashboard.BookingPages.DeletePageModal
   alias TymeslotWeb.Dashboard.ThemeSettingsComponent
   alias TymeslotWeb.Live.Shared.Flash
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
         </span>
       </.section_header>
 
-      <.card padding={:lg} class="space-y-8">
+      <.card padding={:lg} class="space-y-6">
         <p :if={@draft} class="text-token-sm text-tymeslot-600" data-testid="page-draft-note">
           {dgettext(
             "dashboard_booking_pages",
@@ -67,78 +68,83 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
           )}
         </p>
 
-        <div class="space-y-2">
-          <p class="label">{dgettext("dashboard_booking_pages", "Address")}</p>
-          <div class="flex flex-wrap items-center gap-3">
-            <code class="text-token-sm font-semibold text-tymeslot-700 break-all">
-              {page_url(@profile, @page)}
-            </code>
-            <.action_button
-              id={"#{@id}-copy"}
-              type="button"
-              variant={:secondary}
-              icon="hero-clipboard-document"
-              phx-hook="CopyOnClick"
-              data-copy-text={page_url(@profile, @page)}
-              data-copy-feedback={
-                dgettext("dashboard_common", "Scheduling link copied to clipboard!")
-              }
-            >
-              {dgettext("dashboard_booking_pages", "Copy link")}
-            </.action_button>
-            <.action_link
-              :if={not @draft}
-              href={page_url(@profile, @page)}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant={:secondary}
-              icon="hero-arrow-top-right-on-square"
-            >
-              {dgettext("dashboard_booking_pages", "Open")}
-            </.action_link>
-          </div>
-        </div>
-
-        <%!-- A disabled fieldset disables every control in it, the submit
-        button included, without a `disabled` on each. --%>
-        <fieldset disabled={@read_only} class="min-w-0 m-0 p-0 border-0 space-y-8">
-          <.form
-            :if={@page}
-            for={@details_form}
-            id={"#{@id}-details"}
-            phx-change="validate_details"
-            phx-submit="save_details"
-            phx-target={@myself}
-            class="space-y-4"
+        <%!-- A booking page's address is edited here, its whole link shown
+        under the field; the main page's is its username, set on the profile,
+        so it is only shown. --%>
+        <.form
+          :if={@page}
+          for={@details_form}
+          id={"#{@id}-details"}
+          phx-change="validate_details"
+          phx-submit="save_details"
+          phx-target={@myself}
+          class="space-y-4"
+        >
+          <%!-- A disabled fieldset disables every field in it without a
+          `disabled` on each. --%>
+          <fieldset
+            disabled={@read_only}
+            class="min-w-0 m-0 p-0 border-0 grid gap-4 md:grid-cols-2"
           >
             <.input
               field={@details_form[:name]}
               label={dgettext("dashboard_booking_pages", "Page name")}
               maxlength={BookingPageSchema.name_max_length()}
-            />
+            >
+              <:description>
+                {dgettext(
+                  "dashboard_booking_pages",
+                  "For you only: it labels the page in your dashboard."
+                )}
+              </:description>
+            </.input>
             <.input
               field={@details_form[:slug]}
               label={dgettext("dashboard_booking_pages", "Address")}
-            />
-            <p class="text-token-sm text-tymeslot-500">
-              {dgettext(
-                "dashboard_booking_pages",
-                "You can change the address at any time: the old one keeps leading to this page."
-              )}
-            </p>
-            <.action_button type="submit">
+            >
+              <:description>
+                <AddressPreview.address_preview
+                  id={"#{@id}-address-preview"}
+                  username={@profile.username}
+                  slug={@details_form[:slug].value}
+                />
+              </:description>
+            </.input>
+          </fieldset>
+          <p class="text-token-xs text-tymeslot-500">
+            {dgettext(
+              "dashboard_booking_pages",
+              "You can change the address at any time: the old one keeps leading to this page."
+            )}
+          </p>
+          <div class="flex flex-wrap items-center gap-3">
+            <.action_button type="submit" disabled={@read_only}>
               {dgettext("dashboard_booking_pages", "Save")}
             </.action_button>
-          </.form>
+            <.link_actions id={@id} url={page_url(@profile, @page)} draft={@draft} />
+          </div>
+        </.form>
 
-          <div class="space-y-3">
-            <p class="label">{dgettext("dashboard_booking_pages", "Meeting types on this page")}</p>
-            <p :if={@meeting_types == []} class="text-token-sm text-tymeslot-500">
-              {dgettext("dashboard_booking_pages", "No meeting types yet.")}
-            </p>
-            <%!-- Switches, as in the meeting type editor: each one writes at
-            once, and a refused write leaves a switch showing what is stored,
-            where a checkbox would stay ticked. --%>
+        <div :if={!@page} class="space-y-2">
+          <p class="label">{dgettext("dashboard_booking_pages", "Address")}</p>
+          <div class="flex flex-wrap items-center gap-3">
+            <code class="text-token-sm font-semibold text-tymeslot-700 break-all">
+              {page_url(@profile, @page)}
+            </code>
+            <.link_actions id={@id} url={page_url(@profile, @page)} draft={@draft} />
+          </div>
+        </div>
+
+        <fieldset disabled={@read_only} class="min-w-0 m-0 p-0 border-0 space-y-3">
+          <p class="label">{dgettext("dashboard_booking_pages", "Meeting types on this page")}</p>
+          <p :if={@meeting_types == []} class="text-token-sm text-tymeslot-500">
+            {dgettext("dashboard_booking_pages", "No meeting types yet.")}
+          </p>
+          <%!-- Switches, as in the meeting type editor: each one writes at
+          once, and a refused write leaves a switch showing what is stored,
+          where a checkbox would stay ticked. Two columns on a wide screen, so
+          a long list stays short. --%>
+          <div class="grid gap-3 lg:grid-cols-2">
             <.setting_row
               :for={type <- @meeting_types}
               id={"#{@id}-type-#{type.id}"}
@@ -178,6 +184,38 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
         on_confirm={JS.push("confirm_delete", target: @myself)}
       />
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :url, :string, required: true
+  attr :draft, :boolean, required: true
+
+  # Copying the link stays open on a draft, so it can be shared ahead of
+  # going live; opening it waits until it is live.
+  defp link_actions(assigns) do
+    ~H"""
+    <.action_button
+      id={"#{@id}-copy"}
+      type="button"
+      variant={:secondary}
+      icon="hero-clipboard-document"
+      phx-hook="CopyOnClick"
+      data-copy-text={@url}
+      data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
+    >
+      {dgettext("dashboard_booking_pages", "Copy link")}
+    </.action_button>
+    <.action_link
+      :if={not @draft}
+      href={@url}
+      target="_blank"
+      rel="noopener noreferrer"
+      variant={:secondary}
+      icon="hero-arrow-top-right-on-square"
+    >
+      {dgettext("dashboard_booking_pages", "Open")}
+    </.action_link>
     """
   end
 

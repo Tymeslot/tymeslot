@@ -245,12 +245,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                 aria-current={day.today && "date"}
                                 aria-pressed={to_string(@selected_date == day.date)}
                               >
-                                <span class="week-day-name" aria-hidden="true">{day.day_name}</span>
-                                <span class="week-day-number" aria-hidden="true">{day.day_number}</span>
-                                <%!-- The full date is the button's name, as text rather
-                                      than an aria-label the visible "MON 2" is not part of. --%>
+                                <%!-- The name starts with the visible text, so speech
+                                      input can say what is on screen; the full
+                                      date follows for screen readers. --%>
+                                <span class="week-day-name">{day.day_name}</span>
+                                <span class="week-day-number">{day.day_number}</span>
                                 <span class="sr-only">
-                                  {LocalizationHelpers.format_full_date_label(day.date)}
+                                  , {LocalizationHelpers.format_full_date_label(day.date)}
                                 </span>
                               </button>
                             <% end %>

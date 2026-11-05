@@ -73,20 +73,22 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       assert Repo.reload!(user).email == "new@example.com"
     end
 
-    test "refuses a confirmation posted without the form's CSRF token", %{conn: conn} do
+    test "refuses a confirmation posted without the form's CSRF token, and returns to the page",
+         %{conn: conn} do
       user = Factory.insert(:user, email: "old@example.com")
       token = Token.generate()
       {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
 
       page = get(conn, ~p"/email-change/#{token}")
 
-      assert_error_sent 403, fn ->
+      conn =
         page
         |> recycle()
         |> put_private(:plug_skip_csrf_protection, false)
+        |> put_req_header("referer", "http://www.example.com/email-change/#{token}")
         |> post(~p"/email-change/#{token}")
-      end
 
+      assert redirected_to(conn) == "/email-change/#{token}"
       assert Repo.reload!(user).email == "old@example.com"
     end
 

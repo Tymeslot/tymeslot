@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationRateLimitLiveTes
       for _i <- 1..150,
           do: assert(:ok = RateLimiter.check(:theme_customization, user.id))
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
       |> element("button[phx-value-theme='1']", "Customise Style")

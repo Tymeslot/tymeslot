@@ -123,8 +123,6 @@ msgstr "Perfil"
 msgid "Scheduling"
 msgstr "Agendamento"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -382,3 +380,10 @@ msgstr "Reconecte %{names}: até lá, sua página de agendamento pode não receb
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Salvar alterações"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Páginas de agendamento"

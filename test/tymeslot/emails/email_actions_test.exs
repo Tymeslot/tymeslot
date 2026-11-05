@@ -9,7 +9,7 @@ defmodule Tymeslot.Emails.EmailActionsTest do
   # The names are stored in queued jobs. Renaming one strands every job queued
   # under the old name, so a change to this list must be deliberate.
   @names ~w(
-    send_account_deletion_notice send_admin_alert send_admin_alert_digest
+    send_account_deletion_notice send_account_invitation send_admin_alert send_admin_alert_digest
     send_booking_approval_nudge send_booking_request_emails send_booking_request_outcome
     send_calendar_invitation send_calendars_removed_notification send_cancellation_emails
     send_confirmation_emails send_email_change_confirmations send_email_change_notification

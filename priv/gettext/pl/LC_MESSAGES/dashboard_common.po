@@ -119,8 +119,6 @@ msgstr "Profil"
 msgid "Scheduling"
 msgstr "Umawianie"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -379,3 +377,10 @@ msgstr "Połącz ponownie %{names}: do tego czasu strona rezerwacji może nie pr
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Zapisz zmiany"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Strony rezerwacji"

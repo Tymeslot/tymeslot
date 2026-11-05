@@ -123,8 +123,6 @@ msgstr "Perfil"
 msgid "Scheduling"
 msgstr "Reservas"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -382,3 +380,10 @@ msgstr "Vuelve a conectar %{names}: hasta que lo hagas, puede que tu página de 
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Guardar los cambios"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Páginas de reservas"

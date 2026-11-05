@@ -198,3 +198,9 @@ msgstr "Adresu můžete kdykoli změnit: ta stará bude dál vést na tuto strá
 #, elixir-autogen, elixir-format
 msgid "Your main page is included in every plan. Extra booking pages need an upgraded plan."
 msgstr "Hlavní stránka je součástí každého tarifu. Další rezervační stránky vyžadují vyšší tarif."
+
+#: lib/tymeslot_web/components/dashboard/booking_pages/new_page_modal.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings/page_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "For you only: it labels the page in your dashboard."
+msgstr "Jen pro vás: označuje stránku na vaší nástěnce."

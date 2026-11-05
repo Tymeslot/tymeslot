@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationUploadAssetTest 
   defp isolated_upload_root(_context), do: %{upload_root: UploadRoot.isolate()}
 
   defp open_tab(conn, theme_id, kind) do
-    {:ok, view, _html} = live(conn, "/dashboard/theme/customize/#{theme_id}")
+    {:ok, view, _html} = live(conn, "/dashboard/pages/customize/#{theme_id}")
 
     view
     |> element("button[phx-click='theme:set_browsing_type'][phx-value-type='#{kind}']")

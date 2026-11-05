@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "a page is shown read-only, its theme cannot be changed", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     assert has_element?(view, "[data-testid='booking-pages-locked']", "read-only")
     assert has_element?(view, "#page-settings-#{ctx.page.id} fieldset[disabled]")
@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "a forged rename is refused with the reason", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view
     |> element("#page-settings-#{ctx.page.id}-details")
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "the main page stays editable", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     refute has_element?(view, "[data-testid='booking-pages-locked']")
     view |> element("[phx-click='select_theme'][phx-value-theme='2']") |> render_click()
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "a new page asks for the upgrade instead of opening the dialog", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages")
 
     view |> element("[data-testid='new-booking-page']") |> render_click()
 
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesReadOnlyTest do
   end
 
   test "the page can still be deleted", ctx do
-    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/theme?#{[page: ctx.page.id]}")
+    {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/pages?#{[page: ctx.page.id]}")
 
     view |> element("[phx-click='show_delete']") |> render_click()
 

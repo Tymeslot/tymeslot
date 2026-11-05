@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
                   <div class="w-full border-t border-tymeslot-100"></div>
                 </div>
                 <div class="relative flex justify-center text-token-2xs font-black uppercase tracking-[0.2em]">
-                  <span class="bg-white px-4 text-tymeslot-400">
+                  <span class="bg-white px-4 text-tymeslot-500">
                     {dgettext("auth", "Or continue with")}
                   </span>
                 </div>

@@ -123,8 +123,6 @@ msgstr "Профіль"
 msgid "Scheduling"
 msgstr "Планування"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -383,3 +381,10 @@ msgstr "Перепідключіть %{names}: доти ваша сторінк�
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Зберегти зміни"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages"
+msgstr "Сторінки бронювання"

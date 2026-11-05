@@ -67,6 +67,24 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
   end
 
+  # The booking pages screen was the Theme screen; bookmarks and sent emails
+  # still carry its old addresses.
+  describe "the Theme screen's old addresses" do
+    setup %{conn: conn} do
+      {:ok, setup_authenticated_user(conn)}
+    end
+
+    test "forward to the booking pages screen, keeping the selected page", %{conn: conn} do
+      assert conn |> get("/dashboard/theme") |> redirected_to() == "/dashboard/pages"
+
+      assert conn |> get("/dashboard/theme?page=7") |> redirected_to() ==
+               "/dashboard/pages?page=7"
+
+      assert conn |> get("/dashboard/theme/customize/2?page=7") |> redirected_to() ==
+               "/dashboard/pages/customize/2?page=7"
+    end
+  end
+
   describe "dashboard pages" do
     setup %{conn: conn} do
       {:ok, setup_authenticated_user(conn)}
@@ -81,7 +99,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {"/dashboard/locations", "Locations"},
       {"/dashboard/calendar", "calendar-grid"},
       {"/dashboard/integrations", "Integrations"},
-      {"/dashboard/theme", "Booking Page Text"},
+      {"/dashboard/pages", "Booking Page Text"},
       {"/dashboard/meetings", "Meetings"},
       {"/dashboard/automation", "Automation"},
       {"/dashboard/polls", "Polls"}
@@ -105,8 +123,8 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {"/dashboard/locations", "Locations"},
       {"/dashboard/availability", "Availability"},
       {"/dashboard/polls", "Polls"},
-      {"/dashboard/theme", "Theme"},
-      {"/dashboard/theme/customize/1", "Theme"},
+      {"/dashboard/pages", "Booking pages"},
+      {"/dashboard/pages/customize/1", "Booking pages"},
       {"/dashboard/integrations", "Integrations"},
       {"/dashboard/integrations?tab=video", "Integrations"},
       {"/dashboard/embed", "Embed & Share"},
@@ -183,7 +201,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
 
     test "theme customization can be opened and browsed", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/dashboard/theme")
+      {:ok, view, _html} = live(conn, "/dashboard/pages")
 
       view
       |> element("button[phx-click='show_customization'][phx-value-theme='1']")
