@@ -82,6 +82,46 @@ defmodule Tymeslot.BookingPages.ResolutionTest do
     assert context.user_id == profile.user_id
   end
 
+  describe "the organiser context of a profile already found" do
+    test "comes with its user, and nil for a username nobody holds", %{profile: profile} do
+      organiser = Profiles.get_organizer_by_username("joern")
+
+      assert organiser.id == profile.id
+      assert organiser.user.id == profile.user_id
+      assert Profiles.get_organizer_by_username("nobody-here") == nil
+    end
+
+    test "wearing a page, is the context of the page's address", %{profile: profile, page: page} do
+      on_page = insert(:meeting_type, user: profile.user, name: "ISO audit")
+      insert(:meeting_type, user: profile.user, name: "Automation call")
+      :ok = BookingPages.set_meeting_type(page, on_page.id, true)
+
+      organiser =
+        "joern" |> Profiles.get_organizer_by_username() |> BookingPages.apply_to_profile(page)
+
+      {:ok, by_address} = Profiles.resolve_organizer_context("joern/einfachiso")
+      context = Profiles.organizer_context(organiser)
+
+      assert context.username == "joern/einfachiso"
+      assert Enum.map(context.meeting_types, & &1.name) == ["ISO audit"]
+      assert context.profile.booking_theme == "1"
+      assert context.page_title == by_address.page_title
+      assert context.user_id == by_address.user_id
+    end
+
+    test "bare, is the context of the username's own page", %{profile: profile} do
+      insert(:meeting_type, user: profile.user, name: "Automation call")
+
+      context = "joern" |> Profiles.get_organizer_by_username() |> Profiles.organizer_context()
+      {:ok, by_address} = Profiles.resolve_organizer_context("joern")
+
+      assert context.username == "joern"
+      assert Enum.map(context.meeting_types, & &1.name) == ["Automation call"]
+      assert context.profile.booking_page == nil
+      assert context.page_title == by_address.page_title
+    end
+  end
+
   test "a page with nothing to list offers nothing, not the profile's types", %{profile: profile} do
     insert(:meeting_type, user: profile.user, name: "Automation call")
 

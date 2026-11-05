@@ -4,10 +4,11 @@ defmodule TymeslotWeb.Live.Scheduling.PageAddress do
 
   It runs once per mount, as the scheduling routes' `on_mount` hook (ahead of
   `TymeslotWeb.Hooks.ThemeHook`), and leaves what it found in the
-  `:page_address` assign: the settled `params`, and the organiser as the
-  page presents them. The hook picks the theme from that organiser and the
-  dispatcher mounts the settled params, so neither looks the profile or the
-  page up again.
+  `:page_address` assign: the settled `params`, and the organiser, with
+  their user, as the page presents them. The hook picks the theme from that
+  organiser, and the dispatcher mounts the settled params and builds the
+  organiser context from them, so neither looks the profile or the page up
+  again.
 
   A host's booking pages live under the username: `/<username>/<page>`, with
   the flow's steps beneath (`/<username>/<page>/<type>`, `.../book`,
@@ -77,7 +78,8 @@ defmodule TymeslotWeb.Live.Scheduling.PageAddress do
   organiser}` to go ahead with, `{:redirect, path}` for a URL that has
   moved, or `:not_found` for a page address that leads nowhere.
 
-  `organiser` is the username's profile as the settled page presents it
+  `organiser` is the username's profile, with its user, as the settled page
+  presents it
   (`BookingPages.apply_to_profile/2`): wearing a page only where the URL is
   that page's and it is published or previewed by its owner, so a draft
   never lends its look to a meeting type's URL. It is nil for a username
@@ -90,7 +92,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageAddress do
       when is_binary(username) and action in @scheduling_actions do
     username
     |> String.downcase()
-    |> Profiles.get_profile_by_username()
+    |> Profiles.get_organizer_by_username()
     |> settle_for(params, action, candidate(params, action))
   end
 

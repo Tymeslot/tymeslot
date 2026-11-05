@@ -13,6 +13,7 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Profiles.ProfileSchema
 
   @type username :: String.t()
 
@@ -28,14 +29,23 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   @spec resolve_organizer_context(username()) :: {:ok, map()} | {:error, :profile_not_found}
   def resolve_organizer_context(address) when is_binary(address) do
     case resolve_profile(address) do
-      {:ok, profile} ->
-        meeting_types = load_meeting_types(profile)
-        profile_with_meeting_types = %{profile | meeting_types: meeting_types}
-        {:ok, build_organizer_context(profile_with_meeting_types, address)}
-
-      {:error, :not_found} ->
-        {:error, :profile_not_found}
+      {:ok, profile} -> {:ok, for_organizer(profile, address)}
+      {:error, :not_found} -> {:error, :profile_not_found}
     end
+  end
+
+  @doc """
+  The organiser context for a profile already found, with its user, and
+  wearing the booking page it presents when there is one
+  (`BookingPages.apply_to_profile/2`): what `resolve_organizer_context/1`
+  answers for that address, without looking the profile or page up again.
+  """
+  @spec for_organizer(ProfileSchema.t()) :: map()
+  def for_organizer(%ProfileSchema{} = profile),
+    do: for_organizer(profile, profile.username)
+
+  defp for_organizer(profile, address) do
+    build_organizer_context(%{profile | meeting_types: load_meeting_types(profile)}, address)
   end
 
   defp resolve_profile(address) do
