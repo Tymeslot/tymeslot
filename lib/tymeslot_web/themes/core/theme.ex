@@ -43,7 +43,11 @@ defmodule TymeslotWeb.Themes.Core.Theme do
       `%{group_module => panel_module}`;
     * `voice/0`, returning `:voice` (default `nil`): the module implementing
       `TymeslotWeb.Themes.Shared.Voice` that words the shared booking lines
-      for this theme; without one the theme keeps the shared wording.
+      for this theme; without one the theme keeps the shared wording;
+    * `font/0`, returning `:font` (default `nil`): the `Presets.Fonts` id
+      the theme's stylesheet sets its text in (`--theme-font-family` in its
+      `variables.css`), which the page preloads when the customisation
+      chose no font of its own (`TymeslotWeb.Themes.Shared.FontPreload`).
 
   Every render callback is overridable; an override carries
   `@impl TymeslotWeb.Themes.Core.Behaviour` like any other callback. A
@@ -69,6 +73,7 @@ defmodule TymeslotWeb.Themes.Core.Theme do
     renders = renders(Keyword.get(opts, :page_shell), __CALLER__.module)
     option_panels = Keyword.get(opts, :option_panels, Macro.escape(%{}))
     voice = Keyword.get(opts, :voice)
+    font = Keyword.get(opts, :font)
 
     quote do
       @behaviour TymeslotWeb.Themes.Core.Behaviour
@@ -109,6 +114,9 @@ defmodule TymeslotWeb.Themes.Core.Theme do
 
       @impl TymeslotWeb.Themes.Core.Behaviour
       def voice, do: unquote(voice)
+
+      @impl TymeslotWeb.Themes.Core.Behaviour
+      def font, do: unquote(font)
 
       defoverridable render_meeting_action: 2,
                      render_poll_action: 1,

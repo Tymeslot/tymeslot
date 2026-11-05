@@ -50,7 +50,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
       class="rhythm-theme-wrapper"
       locale={@locale}
       theme_tokens={@theme_tokens}
-      default_font="inter"
     >
       <:background>
         <%= cond do %>

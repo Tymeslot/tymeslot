@@ -11,7 +11,6 @@ defmodule TymeslotWeb.Themes.Shared.FontPreloadTest do
   @moduletag :themes
 
   import Mox
-  import Phoenix.LiveViewTest
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
   import Tymeslot.Factory, only: [insert: 2]
 
@@ -114,10 +113,15 @@ defmodule TymeslotWeb.Themes.Shared.FontPreloadTest do
     id
   end
 
-  defp preloads(html) do
-    html
-    |> Floki.parse_document!()
-    |> Floki.find(~s(link[rel="preload"][as="font"]))
+  # The page as served, preloads read from its head: a preload in the body
+  # starts only once the parser reaches it, after the stylesheet's.
+  defp preloads(conn, path) do
+    document = conn |> get(path) |> html_response(200) |> Floki.parse_document!()
+
+    assert Floki.find(document, ~s(body link[rel="preload"][as="font"])) == []
+
+    document
+    |> Floki.find(~s(head link[rel="preload"][as="font"]))
     |> Enum.flat_map(&Floki.attribute(&1, "href"))
   end
 
@@ -126,9 +130,8 @@ defmodule TymeslotWeb.Themes.Shared.FontPreloadTest do
       %{profile: profile} =
         seed_booking_account(unquote(theme_id), "fonts-#{unquote(key)}", "UTC")
 
-      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
-
-      assert preloads(html) == FontPreload.files(stylesheet_font(unquote(key)), "en")
+      assert preloads(conn, ~p"/#{profile.username}") ==
+               FontPreload.files(stylesheet_font(unquote(key)), "en")
     end
   end
 
@@ -142,8 +145,7 @@ defmodule TymeslotWeb.Themes.Shared.FontPreloadTest do
       settings: %{"font" => "plex"}
     )
 
-    {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
-
-    assert preloads(html) == ["/fonts/ibm-plex-sans-latin-wght-normal.woff2"]
+    assert preloads(conn, ~p"/#{profile.username}") ==
+             ["/fonts/ibm-plex-sans-latin-wght-normal.woff2"]
   end
 end

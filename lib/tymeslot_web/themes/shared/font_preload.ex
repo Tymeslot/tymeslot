@@ -8,9 +8,11 @@ defmodule TymeslotWeb.Themes.Shared.FontPreload do
   system fallback, which is wider than Inter: a heading that fits one line in
   Inter wraps onto two, so when the font swaps in, everything below it jumps
   up (Rhythm's landing measured a cumulative layout shift of up to 0.08 on a
-  phone, with no input). A `<link rel="preload">` in the page's own HTML
-  starts the download alongside the stylesheet, so the face is there before
-  the first layout and nothing swaps.
+  phone, with no input). A `<link rel="preload">` in the scheduling root
+  layout's `<head>` (`TymeslotWeb.Layouts`) starts the download alongside
+  the stylesheet, so the face is there before the first layout and nothing
+  swaps. The font is the one the customisation chose, else the theme's own
+  (`font/0`, the `:font` option of `use TymeslotWeb.Themes.Core.Theme`).
 
   `links/1` takes a font id (`Presets.Fonts`) and the page's locale, and
   preloads the subsets of that id's body and heading families the locale's
