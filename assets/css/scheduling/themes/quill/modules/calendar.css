@@ -353,6 +353,23 @@
   background: var(--border-medium);
 }
 
+/* Under a finger: the arrows grow to a full touch target, and the week's
+   days trade their gutters for width, so each is as wide as the strip
+   allows (44px from a 390px phone up). */
+@media (pointer: coarse) {
+  .calendar-nav-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--min-touch-target);
+    min-height: var(--min-touch-target);
+  }
+
+  .week-day-strip {
+    gap: var(--space-hairline);
+  }
+}
+
 .calendar-month-label {
   font-size: var(--theme-font-size-xs);
   padding-left: var(--space-xs);

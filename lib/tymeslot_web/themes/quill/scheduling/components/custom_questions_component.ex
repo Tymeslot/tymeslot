@@ -78,10 +78,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                     <p class="text-quill-secondary mb-2">{@definition["help_text"]}</p>
                   <% end %>
 
+                  <%!-- Not in an embed: the browser refuses autofocus inside a
+                        cross-origin frame and logs an error for the attempt. --%>
                   <InputRenderer.render
                     definition={@definition}
                     value={@value}
                     myself={@myself}
+                    autofocus={!assigns[:embedded]}
                   />
 
                   <%= if @error do %>
