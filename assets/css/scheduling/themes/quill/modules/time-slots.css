@@ -154,6 +154,14 @@
     min-height: var(--time-slot-min-height-sm);
   }
 
+  /* The shorter time above suits a mouse; a phone on its side is this
+     wide too, so under a finger a time stays a full touch target. */
+  @media (pointer: coarse) {
+    .slot-list__slot {
+      min-height: var(--min-touch-target);
+    }
+  }
+
   .slot-list__body {
     flex: 1;
     min-height: 150px;
