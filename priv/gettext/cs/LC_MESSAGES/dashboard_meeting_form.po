@@ -891,5 +891,5 @@ msgstr "Zobrazit na stránce %{address}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
 #, elixir-autogen, elixir-format
-msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it. Until then, this meeting type is bookable only through its direct link."
-msgstr "Nejprve si na stránce Profil zvolte uživatelské jméno: tvoří se z něj adresy vašich rezervačních stránek. Do té doby lze tento typ schůzky rezervovat jen přes přímý odkaz."
+msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
+msgstr "Nejprve si na stránce Profil zvolte uživatelské jméno: tvoří se z něj adresy vašich rezervačních stránek, takže do té doby nelze tento typ schůzky rezervovat."

@@ -886,5 +886,5 @@ msgstr "Mostra su %{address}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
 #, elixir-autogen, elixir-format
-msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it. Until then, this meeting type is bookable only through its direct link."
-msgstr "Scegli prima un nome utente nella pagina Profilo: gli indirizzi delle tue pagine di prenotazione si basano su di esso. Fino ad allora, questo tipo di riunione è prenotabile solo tramite il suo link diretto."
+msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
+msgstr "Scegli prima un nome utente nella pagina Profilo: gli indirizzi delle tue pagine di prenotazione si basano su di esso, quindi fino ad allora questo tipo di riunione non è prenotabile."

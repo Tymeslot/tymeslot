@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
       >
         {dgettext(
           "dashboard_meeting_form",
-          "Choose a username on your Profile page first: your booking pages' addresses are built from it. Until then, this meeting type is bookable only through its direct link."
+          "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
         )}
       </p>
 
