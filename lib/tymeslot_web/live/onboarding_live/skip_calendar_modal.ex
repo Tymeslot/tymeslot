@@ -53,7 +53,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
       </p>
 
       <:footer>
-        <div class="flex flex-row gap-3">
+        <div class="flex w-full flex-row gap-3">
           <Buttons.action_button
             variant={:outline}
             phx-click="confirm_skip_calendar"
