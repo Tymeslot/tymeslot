@@ -41,8 +41,8 @@ defmodule Tymeslot.CalendarGrid.BookingEventsGuestsTest do
       )
 
     assert booking.guests |> Enum.map(&{&1.email, &1.status}) |> Enum.sort() == [
-             {"alan@example.com", "declined"},
-             {"grace@example.com", "pending"}
+             {"alan@example.com", :declined},
+             {"grace@example.com", :pending}
            ]
   end
 

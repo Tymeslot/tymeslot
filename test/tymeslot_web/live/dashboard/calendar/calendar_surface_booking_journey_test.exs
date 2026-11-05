@@ -297,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingJourneyTest do
       lv |> element("#calendar-preview-accept") |> render_click()
       render_async(lv, @push_timeout)
 
-      assert Repo.get!(MeetingSchema, held.id).status == "confirmed"
+      assert Repo.get!(MeetingSchema, held.id).status == :confirmed
 
       # Accept answers with the Meetings page's flash, not a calendar toast.
       assert render(lv) =~ "Booking confirmed. The invitee has been told."
@@ -356,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingJourneyTest do
       assert has_element?(lv, "#calendar-preview-note", "This request expired without an answer")
       refute has_element?(lv, "#calendar-preview-accept")
       refute has_element?(lv, "#calendar-preview-decline")
-      assert Repo.get!(MeetingSchema, expired.id).status == "expired"
+      assert Repo.get!(MeetingSchema, expired.id).status == :expired
     end
   end
 end

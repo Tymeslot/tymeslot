@@ -148,7 +148,7 @@ defmodule Tymeslot.Availability.OpeningRaceTest do
         )
       end)
 
-    assert [%{override_type: "custom_hours"} = override] = overrides
+    assert [%{override_type: :custom_hours} = override] = overrides
 
     assert {override.start_time, override.end_time} in [
              {first.start_time, first.end_time},

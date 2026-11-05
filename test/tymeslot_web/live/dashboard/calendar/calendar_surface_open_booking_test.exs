@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
     insert(:availability_override,
       schedule: schedule,
       date: ~D[2026-10-19],
-      override_type: "custom_hours",
+      override_type: :custom_hours,
       start_time: start_time,
       end_time: end_time
     )
@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
 
       assert_reply(lv, %{accepted: true})
 
-      assert %{override_type: "custom_hours", start_time: ~T[09:00:00], end_time: ~T[18:30:00]} =
+      assert %{override_type: :custom_hours, start_time: ~T[09:00:00], end_time: ~T[18:30:00]} =
                override(schedule)
 
       assert %{start_time: ~T[09:00:00], end_time: ~T[17:00:00]} = monday(schedule)
@@ -224,7 +224,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
       {:ok, _override} =
         DateOverrides.upsert(profile.id, schedule.id, %{
           date: ~D[2026-10-19],
-          override_type: "custom_hours",
+          override_type: :custom_hours,
           start_time: ~T[08:00:00],
           end_time: ~T[20:00:00]
         })
@@ -262,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
 
       # Hours the date cannot take, so putting them back fails on the write.
       unwritable = %{
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[18:00:00],
         end_time: ~T[09:00:00],
         ends_next_day: false,

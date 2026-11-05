@@ -29,7 +29,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntrySchema
   alias Tymeslot.Workers.EmailWorker
-  alias TymeslotWeb.RepeatSeriesFixtures
 
   @first ~U[2026-11-03 09:30:00.000000Z]
   @second ~U[2026-11-10 09:30:00.000000Z]
@@ -483,11 +482,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
 
   describe "a CalDAV series" do
     test "its first occurrence is addressed by the resource's UID", %{user: user} do
-      integration = RepeatSeriesFixtures.caldav_integration(user)
+      integration = caldav_integration(user)
       first = ~U[2026-09-30 09:00:00.000000Z]
 
       event =
-        RepeatSeriesFixtures.caldav_occurrence(integration, %{
+        caldav_occurrence(integration, %{
           uid: "weekly-standup_20260930T090000",
           start_at: first,
           end_at: DateTime.add(first, 1, :hour),
@@ -517,6 +516,55 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
 
   # What a write to every occurrence does to the cache: the series' rows go,
   # and the sync that brings them back reads the series' rule again.
+  defp caldav_integration(user) do
+    insert(:calendar_integration,
+      user: user,
+      provider: "caldav",
+      base_url: "https://caldav.example.com",
+      calendar_paths: ["/cal/"]
+    )
+  end
+
+  # An occurrence of the weekly CalDAV series "weekly-standup", with `attrs`.
+  defp caldav_occurrence(integration, attrs) do
+    insert(
+      :provider_calendar_event,
+      Map.merge(
+        %{
+          calendar_integration: integration,
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: "/cal/weekly-standup.ics",
+          provider_metadata: %{"uid" => "weekly-standup"},
+          etag: "\"etag-1\"",
+          summary: "Weekly standup",
+          all_day: false,
+          timezone: "Etc/UTC",
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=WE",
+          sync_state: "synced",
+          raw_ical:
+            Enum.join(
+              [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "BEGIN:VEVENT",
+                "UID:weekly-standup",
+                "DTSTAMP:20260901T090000Z",
+                "DTSTART:20260930T090000Z",
+                "DTEND:20260930T100000Z",
+                "RRULE:FREQ=WEEKLY;BYDAY=WE",
+                "SUMMARY:Weekly standup",
+                "END:VEVENT",
+                "END:VCALENDAR"
+              ],
+              "\r\n"
+            ) <> "\r\n"
+        },
+        attrs
+      )
+    )
+  end
+
   defp resync_series(integration) do
     :ok = EventDeletion.delete_series_rows(integration.id, {:master, "master-g"})
     cache_rule(integration, "master-g", nil)

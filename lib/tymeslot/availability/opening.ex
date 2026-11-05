@@ -187,7 +187,7 @@ defmodule Tymeslot.Availability.Opening do
         nil ->
           {:ok, nil}
 
-        %{override_type: "available", start_time: nil} ->
+        %{override_type: :available, start_time: nil} ->
           {:ok, nil}
 
         _own_say ->
@@ -285,7 +285,7 @@ defmodule Tymeslot.Availability.Opening do
   # The date still holds the custom hours the opening wrote for it.
   defp unchanged_date(profile_id, schedule_id, date, hours) do
     case DateOverrides.lock(profile_id, schedule_id, date) do
-      {:ok, %{override_type: "custom_hours"} = override} -> same_hours(override, hours)
+      {:ok, %{override_type: :custom_hours} = override} -> same_hours(override, hours)
       {:ok, _other_or_none} -> {:error, :changed}
       {:error, _reason} = error -> error
     end
@@ -332,7 +332,7 @@ defmodule Tymeslot.Availability.Opening do
     attrs =
       Map.merge(hours, %{
         date: date,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         reason: current && current.reason
       })
 
@@ -405,7 +405,7 @@ defmodule Tymeslot.Availability.Opening do
   # (`BusinessHours`): an override with hours of its own wins, `unavailable`
   # closes the day, and `available` without hours or no override at all
   # falls back to the weekly row.
-  defp once_hours(%{override_type: "unavailable"}, _row), do: nil
+  defp once_hours(%{override_type: :unavailable}, _row), do: nil
 
   defp once_hours(%{start_time: %Time{}, end_time: %Time{}} = override, _row),
     do: span(override)

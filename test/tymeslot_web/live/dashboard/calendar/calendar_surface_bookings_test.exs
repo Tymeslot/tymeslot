@@ -160,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
 
       render_async(lv, @async_timeout)
 
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
       assert render(lv) =~ "Booking confirmed. The invitee has been told."
       assert has_element?(lv, "#calendar-preview-cancel")
       refute has_element?(lv, "#calendar-preview-accept")
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       render_async(lv, @async_timeout)
 
       stored = reload(meeting)
-      assert stored.status == "cancelled"
+      assert stored.status == :cancelled
       assert stored.decline_reason == "Away that week"
       refute has_element?(lv, "#decline-request-form")
       refute "booking-#{meeting.id}" in payload_ids(lv)
@@ -198,7 +198,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       lv |> element("#calendar-decline-request button", "Keep it open") |> render_click()
 
       refute has_element?(lv, "#decline-request-form")
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
       assert_push_event(lv, "calendar:preview-closed", %{})
     end
 
@@ -215,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       lv |> element("#calendar-preview-accept") |> render_click()
       render_async(lv, @async_timeout)
 
-      assert reload(meeting).status == "cancelled"
+      assert reload(meeting).status == :cancelled
       assert render(lv) =~ "That request had already been answered."
     end
 
@@ -249,11 +249,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       lv |> element("#calendar-preview-cancel") |> render_click()
 
       assert has_element?(lv, "#calendar-cancel-booking #cancel-meeting-form", "Anna Kowalski")
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
 
       lv |> form("#cancel-meeting-form") |> render_submit()
 
-      assert reload(meeting).status == "cancelled"
+      assert reload(meeting).status == :cancelled
       assert render(lv) =~ "Meeting cancelled successfully"
       refute has_element?(lv, "#cancel-meeting-form")
       refute "booking-#{meeting.id}" in payload_ids(lv)
@@ -294,7 +294,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       lv |> form("#cancel-meeting-form") |> render_submit()
 
       assert render(lv) =~ "reached the limit"
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
     end
 
     test "rescheduling is refused once the per-host limit is exhausted", %{
@@ -458,7 +458,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       send(task, {:release, ref})
       render_async(lv, @async_timeout)
 
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
       html = render(lv)
       assert html =~ "Booking confirmed. The invitee has been told."
       refute html =~ "That request had already been answered."
@@ -503,8 +503,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       send(task, {:release, ref})
       render_async(lv, @async_timeout)
 
-      assert reload(first).status == "confirmed"
-      assert reload(second).status == "confirmed"
+      assert reload(first).status == :confirmed
+      assert reload(second).status == :confirmed
       refute render(lv) =~ "That request had already been answered."
     end
   end
@@ -520,7 +520,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       hook(lv, "booking:accept", %{"id" => theirs.id})
       render_async(lv, @async_timeout)
 
-      assert reload(theirs).status == "awaiting_approval"
+      assert reload(theirs).status == :awaiting_approval
       assert render(lv) =~ "That request could not be found."
     end
 
@@ -546,7 +546,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
 
       assert render(lv) =~ "Cannot cancel a meeting that has already occurred"
       refute has_element?(lv, "#calendar-cancel-booking")
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
     end
 
     test "a confirm with no dialog open does nothing", %{conn: conn, user: user} do
@@ -557,7 +557,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       hook(lv, "booking:confirm_reschedule", %{})
       hook(lv, "booking:confirm_decline", %{"reason" => "x"})
 
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
       assert is_nil(reload(meeting).reschedule_requested_at)
     end
 
@@ -574,7 +574,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       render_async(lv, @async_timeout)
 
       assert Process.alive?(lv.pid)
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
   end
 
@@ -598,7 +598,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       lv |> element("#calendar-preview-accept") |> render_click()
 
       assert render(lv) =~ "reached the limit"
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
 
     test "declining is refused once the per-host limit is exhausted", %{conn: conn, user: user} do
@@ -614,7 +614,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       render_async(lv, @async_timeout)
 
       assert render(lv) =~ "reached the limit"
-      assert reload(meeting).status == "awaiting_approval"
+      assert reload(meeting).status == :awaiting_approval
     end
   end
 

@@ -394,12 +394,12 @@ msgstr "Uczestnik usunięty, ale nie udało się go powiadomić."
 #: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
-msgstr ""
+msgstr "Zamknij"
 
 #: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
 #, elixir-autogen, elixir-format
 msgid "The latest update could not be emailed to this guest. Let them know another way."
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Nie udało się wysłać e-mailem ostatniej zmiany do tego gościa. Powiadom go w inny sposób."
+msgstr[1] "Nie udało się wysłać e-mailem ostatniej zmiany do tych gości. Powiadom ich w inny sposób."
+msgstr[2] "Nie udało się wysłać e-mailem ostatniej zmiany do tych gości. Powiadom ich w inny sposób."

@@ -80,7 +80,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       insert(:availability_override,
         schedule: host.schedule,
         date: host.date,
-        override_type: "unavailable"
+        override_type: :unavailable
       )
 
       assert {:ok, result} =
@@ -91,13 +91,13 @@ defmodule Tymeslot.Availability.OpeningTest do
                  at(host.date, ~T[19:00:00])
                )
 
-      assert %{start_time: ~T[18:00:00], previous: %{override_type: "unavailable"}} = result
+      assert %{start_time: ~T[18:00:00], previous: %{override_type: :unavailable}} = result
       assert page(host, host.date) == ["6:00 PM", "6:30 PM"]
 
       assert :ok = Opening.restore(host.user.id, result)
       assert page(host, host.date) == []
 
-      assert {:ok, %{override_type: "unavailable"}} =
+      assert {:ok, %{override_type: :unavailable}} =
                DateOverrides.get(host.profile_id, host.schedule_id, host.date)
     end
 
@@ -147,7 +147,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       insert(:availability_override,
         schedule: host.schedule,
         date: host.date,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[12:00:00],
         reason: "Dentist"
@@ -166,7 +166,7 @@ defmodule Tymeslot.Availability.OpeningTest do
 
       assert {:ok,
               %{
-                override_type: "custom_hours",
+                override_type: :custom_hours,
                 start_time: ~T[10:00:00],
                 end_time: ~T[12:00:00],
                 reason: "Dentist"
@@ -177,7 +177,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       insert(:availability_override,
         schedule: host.schedule,
         date: host.date,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[12:00:00]
       )
@@ -350,7 +350,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       insert(:availability_override,
         schedule: host.schedule,
         date: host.date,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[12:00:00]
       )
@@ -408,7 +408,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       insert(:availability_override,
         schedule: host.schedule,
         date: yesterday,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[12:00:00]
       )
@@ -438,7 +438,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       insert(:availability_override,
         schedule: host.schedule,
         date: host.date,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[12:00:00]
       )
@@ -501,7 +501,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       {:ok, _override} =
         DateOverrides.upsert(host.profile_id, host.schedule_id, %{
           date: host.date,
-          override_type: "custom_hours",
+          override_type: :custom_hours,
           start_time: ~T[08:00:00],
           end_time: ~T[19:00:00]
         })
@@ -559,7 +559,7 @@ defmodule Tymeslot.Availability.OpeningTest do
       insert(:availability_override,
         schedule: host.schedule,
         date: host.date,
-        override_type: "custom_hours",
+        override_type: :custom_hours,
         start_time: ~T[10:00:00],
         end_time: ~T[12:00:00]
       )

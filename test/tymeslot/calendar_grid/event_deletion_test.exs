@@ -126,7 +126,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       assert {:ok, %{linked_meeting: :none}} = Changes.delete_event(user.id, event)
 
       {:ok, untouched} = MeetingQueries.get_meeting(meeting.id)
-      assert untouched.status == "cancelled"
+      assert untouched.status == :cancelled
       assert untouched.calendar_sync_status == meeting.calendar_sync_status
     end
 

@@ -30,7 +30,7 @@ defmodule Tymeslot.Availability.DateOverridesTest do
   end
 
   defp custom(date, from, to),
-    do: %{date: date, override_type: "custom_hours", start_time: from, end_time: to}
+    do: %{date: date, override_type: :custom_hours, start_time: from, end_time: to}
 
   describe "upsert/3" do
     test "opens a closed day on its own hours", host do
@@ -41,7 +41,7 @@ defmodule Tymeslot.Availability.DateOverridesTest do
                  custom(host.saturday, ~T[10:00:00], ~T[12:00:00])
                )
 
-      assert override.override_type == "custom_hours"
+      assert override.override_type == :custom_hours
       assert override.start_time == ~T[10:00:00]
 
       assert {:ok, ^override} =
@@ -59,11 +59,11 @@ defmodule Tymeslot.Availability.DateOverridesTest do
       assert {:ok, second} =
                DateOverrides.upsert(host.profile_id, host.schedule_id, %{
                  date: host.saturday,
-                 override_type: "unavailable"
+                 override_type: :unavailable
                })
 
       assert second.id == first.id
-      assert second.override_type == "unavailable"
+      assert second.override_type == :unavailable
       assert second.start_time == nil
       assert second.end_time == nil
     end
@@ -211,7 +211,7 @@ defmodule Tymeslot.Availability.DateOverridesTest do
           AvailabilityOverrideQueries.create_override(%{
             schedule_id: host.schedule_id,
             date: host.saturday,
-            override_type: "extra_hours",
+            override_type: :extra_hours,
             start_time: start,
             end_time: Time.add(start, 3600)
           })
@@ -224,7 +224,7 @@ defmodule Tymeslot.Availability.DateOverridesTest do
           custom(host.saturday, ~T[10:00:00], ~T[12:00:00])
         )
 
-      assert {:ok, %{override_type: "custom_hours"}} =
+      assert {:ok, %{override_type: :custom_hours}} =
                Repo.transaction(fn ->
                  {:ok, locked} =
                    DateOverrides.lock(host.profile_id, host.schedule_id, host.saturday)

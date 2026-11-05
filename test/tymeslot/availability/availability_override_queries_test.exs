@@ -32,11 +32,11 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
       schedule = insert(:availability_schedule)
       date = Date.add(Date.utc_today(), 5)
 
-      assert {:ok, %{id: id, override_type: "unavailable"}} =
+      assert {:ok, %{id: id, override_type: :unavailable}} =
                AvailabilityOverrideQueries.upsert_override(%{
                  schedule_id: schedule.id,
                  date: date,
-                 override_type: "unavailable",
+                 override_type: :unavailable,
                  reason: "Away"
                })
 
@@ -44,7 +44,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
                AvailabilityOverrideQueries.upsert_override(%{
                  schedule_id: schedule.id,
                  date: date,
-                 override_type: "custom_hours",
+                 override_type: :custom_hours,
                  start_time: ~T[09:00:00],
                  end_time: ~T[12:00:00],
                  ends_next_day: false,
@@ -53,7 +53,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
 
       assert %{
                id: ^id,
-               override_type: "custom_hours",
+               override_type: :custom_hours,
                start_time: ~T[09:00:00],
                end_time: ~T[12:00:00],
                reason: nil

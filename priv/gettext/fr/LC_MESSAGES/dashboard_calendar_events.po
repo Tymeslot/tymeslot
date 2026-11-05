@@ -393,11 +393,11 @@ msgstr "Participant supprimé, mais il n'a pas pu être notifié."
 #: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
-msgstr ""
+msgstr "Ignorer"
 
 #: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
 #, elixir-autogen, elixir-format
 msgid "The latest update could not be emailed to this guest. Let them know another way."
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "La dernière modification n’a pas pu être envoyée par e-mail à cet invité. Prévenez-le autrement."
+msgstr[1] "La dernière modification n’a pas pu être envoyée par e-mail à ces invités. Prévenez-les autrement."

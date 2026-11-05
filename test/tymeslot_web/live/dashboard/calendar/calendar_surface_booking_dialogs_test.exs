@@ -108,9 +108,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
       assert has_element?(lv, "#decline-request-form")
 
       assert emails() == []
-      assert reload(confirmed).status == "confirmed"
+      assert reload(confirmed).status == :confirmed
       assert is_nil(reload(confirmed).reschedule_requested_at)
-      assert reload(held).status == "awaiting_approval"
+      assert reload(held).status == :awaiting_approval
     end
   end
 
@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
 
       lv |> form("#cancel-meeting-form") |> render_submit()
 
-      assert reload(meeting).status == "cancelled"
+      assert reload(meeting).status == :cancelled
 
       assert_enqueued(
         worker: EmailWorker,
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
       lv |> form("#decline-request-form", %{"reason" => "Away"}) |> render_submit()
       render_async(lv, @async_timeout)
 
-      assert reload(meeting).status == "cancelled"
+      assert reload(meeting).status == :cancelled
 
       assert_enqueued(
         worker: EmailWorker,
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
       render_async(lv, @async_timeout)
 
       assert render(lv) =~ "That request had already been answered."
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
 
       refute_enqueued(
         worker: EmailWorker,
@@ -257,7 +257,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
     |> render_submit()
 
     assert render(lv) =~ "Meeting cancelled and refund issued"
-    assert reload(meeting).status == "cancelled"
+    assert reload(meeting).status == :cancelled
 
     assert %{status: "refunded", refunded_amount_cents: 5000} =
              BookingPaymentQueries.get(payment.id)
@@ -311,7 +311,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
 
       stored = Repo.reload!(copy)
       assert DateTime.compare(stored.start_at, copy.start_at) == :eq
-      assert reload(meeting).status == "confirmed"
+      assert reload(meeting).status == :confirmed
       assert DateTime.compare(reload(meeting).start_time, meeting.start_time) == :eq
     end
   end

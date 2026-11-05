@@ -243,7 +243,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingMoveTest do
 
       unchanged = reload(meeting)
       assert unchanged.start_time == @booked
-      assert unchanged.calendar_sync_status == "externally_modified"
+      assert unchanged.calendar_sync_status == :externally_modified
       assert reschedule_emails() == []
     end
 

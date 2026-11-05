@@ -36,8 +36,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.BookingPreview
   alias TymeslotWeb.Dashboard.Calendar.PreviewGuests
-  alias TymeslotWeb.Dashboard.Calendar.UndeliveredNotice
   alias TymeslotWeb.Dashboard.Calendar.TreatAs
+  alias TymeslotWeb.Dashboard.Calendar.UndeliveredNotice
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc "What `build/2` needs from the surface's assigns."

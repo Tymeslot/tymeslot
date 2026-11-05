@@ -392,11 +392,11 @@ msgstr "Se quitó al asistente, pero no se le pudo avisar."
 #: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
-msgstr ""
+msgstr "Ocultar"
 
 #: lib/tymeslot_web/live/dashboard/calendar/undelivered_notice.ex
 #, elixir-autogen, elixir-format
 msgid "The latest update could not be emailed to this guest. Let them know another way."
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "No se pudo enviar por correo la última actualización a este invitado. Avísale por otro medio."
+msgstr[1] "No se pudo enviar por correo la última actualización a estos invitados. Avísales por otro medio."

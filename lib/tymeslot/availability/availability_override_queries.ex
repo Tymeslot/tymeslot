@@ -86,7 +86,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   def lock_override_by_schedule_and_date(schedule_id, date) do
     AvailabilityOverrideSchema
     |> where([o], o.schedule_id == ^schedule_id and o.date == ^date)
-    |> where([o], o.override_type != "extra_hours")
+    |> where([o], o.override_type != :extra_hours)
     |> lock("FOR UPDATE")
     |> Repo.one()
   end
@@ -171,7 +171,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
     {count, _rows} =
       AvailabilityOverrideSchema
       |> where([o], o.schedule_id == ^schedule_id and o.date == ^date)
-      |> where([o], o.override_type != "extra_hours")
+      |> where([o], o.override_type != :extra_hours)
       |> Repo.delete_all()
 
     count

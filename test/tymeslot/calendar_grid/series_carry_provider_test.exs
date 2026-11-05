@@ -240,7 +240,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
       serve(google())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{start_at: ~U[2026-11-02 09:00:00Z], end_at: ~U[2026-11-02 10:00:00Z]},
