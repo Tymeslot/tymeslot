@@ -37,8 +37,12 @@ defmodule TymeslotWeb do
 
       # Import common connection and controller functions to use in pipelines
       import Plug.Conn
-      import Phoenix.Controller
+      # `plug :protect_from_forgery` resolves to ForgeryProtection's version:
+      # the same CSRF check, but a stale token sends the visitor back to try
+      # again instead of raising a 403.
+      import Phoenix.Controller, except: [protect_from_forgery: 1, protect_from_forgery: 2]
       import Phoenix.LiveView.Router
+      import TymeslotWeb.Plugs.ForgeryProtection, only: [protect_from_forgery: 2]
 
       # =============================================================================
       # Shared Pipelines
@@ -49,12 +53,14 @@ defmodule TymeslotWeb do
         plug :fetch_session
         plug :fetch_live_flash
         plug :put_root_layout, html: {TymeslotWeb.Layouts, :root}
-        plug :protect_from_forgery
         plug :put_secure_browser_headers
         plug TymeslotWeb.Plugs.SecurityHeadersPlug
         plug TymeslotWeb.Plugs.FetchCurrentUser
         plug TymeslotWeb.Plugs.SetLoggerMetadata
         plug TymeslotWeb.Plugs.LocalePlug, prefer_user_locale: true, surface: :admin
+        # After LocalePlug, so a stale token's retry flash is in the visitor's
+        # language. The plugs above only read the session or tidy it.
+        plug :protect_from_forgery
       end
 
       pipeline :theme_browser do
@@ -63,13 +69,14 @@ defmodule TymeslotWeb do
         plug :fetch_session
         plug :fetch_live_flash
         plug :put_root_layout, html: {TymeslotWeb.Layouts, :scheduling_root}
-        plug :protect_from_forgery
         plug :put_secure_browser_headers
         plug TymeslotWeb.Plugs.SecurityHeadersPlug, allow_embedding: true
         plug TymeslotWeb.Plugs.EmbedTokenPlug
         plug TymeslotWeb.Plugs.FetchCurrentUser
         plug TymeslotWeb.Plugs.SetLoggerMetadata
         plug TymeslotWeb.Plugs.LocalePlug, surface: :booking
+        # After LocalePlug, as in :browser.
+        plug :protect_from_forgery
         plug TymeslotWeb.Plugs.ThemeProtectionPlug
       end
 
