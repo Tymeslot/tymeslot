@@ -201,6 +201,15 @@
       height: max(100%, 44px);
       transform: translate(-50%, -50%);
     }
+
+    /* A small action button is a text control a thumb aims at, often in a row
+       with its neighbours a gap apart, where the stretched hit area above
+       would overlap the next one. Give it a real 44px height instead; the
+       ::before then only widens a very short label. Desktop keeps its
+       density. */
+    .action-button--sm {
+      min-height: 2.75rem;
+    }
   }
 
   .icon-button--neutral {
