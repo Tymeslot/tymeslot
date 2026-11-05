@@ -118,12 +118,14 @@
   padding: clamp(0.15rem, 0.8cqi, 0.75rem) clamp(0.1rem, 0.5cqi, 0.5rem);
 }
 
+/* The floors keep the labels legible where the container is narrow, a
+   360px sidebar embed among them: 11px names, 14px numbers. */
 .day-name {
-  font-size: clamp(0.6rem, 1.8cqi, 0.8rem);
+  font-size: clamp(0.6875rem, 1.8cqi, 0.8rem);
 }
 
 .day-number {
-  font-size: clamp(0.65rem, 2cqi, 1rem);
+  font-size: clamp(0.875rem, 2cqi, 1rem);
 }
 
 /* ===== Container Queries ===== */
