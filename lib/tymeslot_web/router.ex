@@ -237,9 +237,11 @@ defmodule TymeslotWeb.Router do
   # changes (signed out in another tab, cookie expired), and a stale Sign Out
   # should still sign out rather than fail. Nothing is lost: the worst a forged
   # request could do is sign someone out, and the SameSite=Lax session cookie
-  # is not sent on a cross-site form post anyway. Sobelow's Config.CSRF finding
-  # for the deliberate omission, and its Config.CSP false positive
-  # (SecurityHeadersPlug sets the policy), are recorded in .sobelow-skips.
+  # is not sent on a cross-site form post anyway. The skip below covers Sobelow's
+  # Config.CSRF finding for the deliberate omission and its Config.CSP false
+  # positive (SecurityHeadersPlug sets the policy); unlike a .sobelow-skips
+  # entry, it does not go stale when lines above it move.
+  # sobelow_skip ["Config.CSRF", "Config.CSP"]
   pipeline :sign_out do
     plug :accepts, ["html"]
     plug :fetch_session
