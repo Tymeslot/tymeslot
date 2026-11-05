@@ -34,7 +34,6 @@ defmodule Tymeslot.Auth.Invitations do
   alias Tymeslot.Auth.{
     AccountTokens,
     AdminRoles,
-    AdminUserQueries,
     RateLimit,
     RegistrationAnnouncement,
     SocialAuthentication,
@@ -163,21 +162,18 @@ defmodule Tymeslot.Auth.Invitations do
     end
   end
 
+  # Inside the deletion's own transaction, on the account it has locked (the
+  # admins first, so an invitee promoted to admin cannot deadlock against a
+  # role change): only a still pending invitation is cancelled, and its link
+  # stops working in the same commit.
   defp revoke_and_delete(actor, user_id) do
-    Repo.transaction(fn ->
-      # The deletion's own lock order, admins before the account, so an
-      # invitee promoted to admin cannot deadlock against a role change.
-      AdminUserQueries.lock_admins()
+    Operator.delete_now(actor, user_id, on_target: &revoke_pending/1)
+  end
 
-      with {:ok, user} <- UserQueries.get_user_for_update(user_id),
-           :ok <- ensure_pending(user),
-           {:ok, _revoked} <- UserTokenQueries.clear_invitation_token(user),
-           {:ok, pending} <- Operator.delete_now(actor, user.id) do
-        pending
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+  defp revoke_pending(user) do
+    with :ok <- ensure_pending(user) do
+      UserTokenQueries.clear_invitation_token(user)
+    end
   end
 
   defp ensure_pending(user), do: if(pending?(user), do: :ok, else: {:error, :not_invited})
