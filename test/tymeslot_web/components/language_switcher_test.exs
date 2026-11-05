@@ -46,6 +46,6 @@ defmodule TymeslotWeb.Components.LanguageSwitcherTest do
 
     # Label in Name (WCAG 2.5.3): the name starts with the visible "Deutsch".
     assert [label] = Floki.attribute(doc, ".lang-switcher__button", "aria-label")
-    assert label == "Deutsch, Change language"
+    assert label == "Deutsch, change language"
   end
 end

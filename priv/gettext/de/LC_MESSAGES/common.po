@@ -41,11 +41,6 @@ msgstr "Browser nicht unterstützt"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: lib/tymeslot_web/components/language_switcher.ex
-#, elixir-autogen, elixir-format
-msgid "Change language"
-msgstr "Sprache ändern"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -370,3 +365,9 @@ msgstr "Wird geladen"
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged"
 msgstr "✓ Bestätigt"
+
+#. Spoken name of the language menu button. Keep %{language} first: speech input users say the language name they see on the button.
+#: lib/tymeslot_web/components/language_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "%{language}, change language"
+msgstr "%{language}, Sprache ändern"

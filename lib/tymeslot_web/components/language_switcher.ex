@@ -64,7 +64,14 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   # it and screen readers hear which language is active. On phones the name is
   # hidden and only the flag shows, so the label carries it there too.
   defp trigger_label(locale, locales) do
-    "#{current_locale_name(locale, locales)}, #{dgettext("common", "Change language")}"
+    gettext_comment(
+      "Spoken name of the language menu button. Keep %{language} first: " <>
+        "speech input users say the language name they see on the button."
+    )
+
+    dgettext("common", "%{language}, change language",
+      language: current_locale_name(locale, locales)
+    )
   end
 
   defp current_locale_name(locale, locales) do
