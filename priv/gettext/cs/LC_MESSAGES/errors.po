@@ -470,7 +470,7 @@ msgstr "Je nutné připojit Stripe"
 msgid "Work hours not found"
 msgstr "Pracovní doba nebyla nalezena"
 
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a confirmed meeting at this time."
 msgstr "V tuto dobu už máte potvrzenou schůzku."

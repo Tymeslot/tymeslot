@@ -260,3 +260,18 @@ msgstr "Ten link z zaproszeniem został już użyty lub jest nieważny. Poproś 
 #, elixir-autogen, elixir-format
 msgid "This meeting type can be booked only with a personal invitation link."
 msgstr "Ten typ spotkania można zarezerwować tylko przez osobisty link z zaproszeniem."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
+msgstr "Ten link z zaproszeniem został już użyty do zarezerwowania spotkania. Aby je zmienić, użyj linku z e-maila z potwierdzeniem."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has expired. Please contact the host for a new one."
+msgstr "Ten link z zaproszeniem wygasł. Poproś organizatora o nowy."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. Please contact the host for a new one."
+msgstr "Ten link z zaproszeniem jest już nieważny. Poproś organizatora o nowy."

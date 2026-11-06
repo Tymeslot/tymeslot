@@ -212,6 +212,10 @@ defmodule TymeslotWeb.Router do
     post "/seat/:token/cancel", SeatController, :cancel_submit
     get "/seat/:token/reschedule", SeatController, :reschedule
 
+    # A host's personal link for an invitation-only meeting type: on to the
+    # type's own address with the token, which the booking page checks.
+    get "/invite/:token", BookingInvitationController, :show
+
     # OAuth routes (must remain as controllers for external redirects)
     get "/auth/:provider", OAuthController, :request
     get "/auth/:provider/callback", OAuthController, :callback

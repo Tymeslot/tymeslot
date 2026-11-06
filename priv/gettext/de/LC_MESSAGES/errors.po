@@ -447,7 +447,7 @@ msgstr "Stripe muss verbunden sein"
 msgid "Work hours not found"
 msgstr "Arbeitszeiten nicht gefunden"
 
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a confirmed meeting at this time."
 msgstr "Sie haben zu dieser Zeit bereits einen bestätigten Termin."

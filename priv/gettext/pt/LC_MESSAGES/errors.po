@@ -454,7 +454,7 @@ msgstr "O Stripe precisa estar conectado"
 msgid "Work hours not found"
 msgstr "Horário de trabalho não encontrado"
 
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a confirmed meeting at this time."
 msgstr "Você já tem uma reunião confirmada neste horário."

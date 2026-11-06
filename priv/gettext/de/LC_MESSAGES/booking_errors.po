@@ -260,3 +260,18 @@ msgstr "Dieser Einladungslink wurde bereits verwendet oder ist nicht mehr gülti
 #, elixir-autogen, elixir-format
 msgid "This meeting type can be booked only with a personal invitation link."
 msgstr "Dieser Termintyp kann nur über einen persönlichen Einladungslink gebucht werden."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
+msgstr "Mit diesem Einladungslink wurde bereits ein Termin gebucht. Um ihn zu ändern, verwenden Sie den Link in Ihrer Bestätigungs-E-Mail."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has expired. Please contact the host for a new one."
+msgstr "Dieser Einladungslink ist abgelaufen. Wenden Sie sich bitte an den Gastgeber, um einen neuen zu erhalten."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. Please contact the host for a new one."
+msgstr "Dieser Einladungslink ist nicht mehr gültig. Wenden Sie sich bitte an den Gastgeber, um einen neuen zu erhalten."

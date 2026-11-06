@@ -260,3 +260,18 @@ msgstr "Це посилання із запрошенням уже викори�
 #, elixir-autogen, elixir-format
 msgid "This meeting type can be booked only with a personal invitation link."
 msgstr "Цей тип зустрічі можна забронювати лише за особистим посиланням із запрошенням."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
+msgstr "За цим посиланням із запрошенням уже забронювали зустріч. Щоб змінити її, скористайтеся посиланням у листі-підтвердженні."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has expired. Please contact the host for a new one."
+msgstr "Термін дії цього посилання із запрошенням минув. Попросіть організатора надіслати нове."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. Please contact the host for a new one."
+msgstr "Це посилання із запрошенням більше не дійсне. Попросіть організатора надіслати нове."

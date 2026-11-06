@@ -131,6 +131,24 @@ defmodule Tymeslot.Invitations do
   def resolve(_token), do: {:error, :not_found}
 
   @doc """
+  The host whose link `token` is, for a page to send a guest to when
+  `resolve/1` refuses the link as used, expired or revoked. nil wherever
+  `resolve/1` gives `:not_found`, so a guess at a token learns no host.
+  """
+  @spec host_user_id(String.t() | nil) :: pos_integer() | nil
+  def host_user_id(token) when is_binary(token) do
+    case token |> Token.hash_token() |> InvitationQueries.get_by_token_hash() do
+      %InvitationSchema{user_id: user_id} = invitation ->
+        if bookable_type?(invitation), do: user_id
+
+      nil ->
+        nil
+    end
+  end
+
+  def host_user_id(_token), do: nil
+
+  @doc """
   Pre-check at booking time: the invitation belongs to the meeting type and is
   still available, and its type is active and still invitation-only. The
   database index, not this, guarantees single use.

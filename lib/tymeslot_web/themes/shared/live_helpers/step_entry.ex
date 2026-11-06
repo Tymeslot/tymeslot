@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
+  alias Tymeslot.Invitations
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
@@ -35,8 +36,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     AvailabilityHelpers,
     BookingConfig,
     CalendarHelpers,
+    InvitationMessages,
     NextAvailable,
-    OrganizerHelpers
+    OrganizerHelpers,
+    PreviewMode
   }
 
   alias TymeslotWeb.Themes.Shared.BookingLocation
@@ -227,9 +230,49 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     profile = socket.assigns[:organizer_profile]
 
     if at_own_address?(profile, meeting_type),
-      do: {:ok, assign_meeting_type(socket, meeting_type)},
+      do: admit(socket, meeting_type, params),
       else: {:unresolvable, redirect(socket, to: own_address(socket, meeting_type, params, step))}
   end
+
+  # The entry gate of an invitation-only type: it books only on a valid
+  # invitation for that type, which becomes `:invitation` for the submit to
+  # claim. Every other type, and the owner's preview of one, which books
+  # nothing, enters with `:invitation` nil. It runs after the redirect to the
+  # type's own address, which carries `?invite=` along with the page's query.
+  defp admit(socket, meeting_type, params) do
+    case invitation_for(socket, meeting_type, params) do
+      {:ok, invitation} ->
+        {:ok, socket |> assign(:invitation, invitation) |> assign_meeting_type(meeting_type)}
+
+      {:error, reason} ->
+        {:unresolvable,
+         socket
+         |> put_flash(:error, InvitationMessages.message(reason))
+         |> redirect(to: invalid_meeting_type_redirect_path(socket))}
+    end
+  end
+
+  defp invitation_for(socket, %{invitation_only: true, id: type_id}, params) do
+    if PreviewMode.owner_preview?(socket) do
+      {:ok, nil}
+    else
+      case Invitations.resolve(invite_token(socket, params)) do
+        {:ok, %{meeting_type_id: ^type_id} = invitation} -> {:ok, invitation}
+        {:ok, _for_another_type} -> {:error, :required}
+        {:error, :not_found} -> {:error, :required}
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  defp invitation_for(_socket, _meeting_type, _params), do: {:ok, nil}
+
+  # The URL's token, else the one this page was let in on, so an entry whose
+  # params do not carry the query checks the same link again. A crafted
+  # `?invite[]=` is no token at all.
+  defp invite_token(_socket, %{"invite" => token}) when is_binary(token), do: token
+  defp invite_token(%{assigns: %{invitation: %{token: token}}}, _params), do: token
+  defp invite_token(_socket, _params), do: nil
 
   # A booking page serves the types it lists, and those listed nowhere
   # (`BookingPages.serves?/2`); the host's own page serves every type but
@@ -461,7 +504,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     form_data =
       ThemeFlow.build_booking_form_data(
         socket.assigns[:seat_move_context] || socket.assigns[:reschedule_context],
-        fragment_prefill(socket)
+        Map.merge(invitation_prefill(socket.assigns[:invitation]), fragment_prefill(socket))
       )
 
     socket
@@ -487,6 +530,17 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
         %{}
     end
   end
+
+  # The name and email the host wrote on the invitation, which the booker
+  # may still change; a link's fragment, typed by whoever shared it, wins.
+  defp invitation_prefill(%{name: name, email: email}) do
+    for {field, value} <- [{"name", name}, {"email", email}],
+        is_binary(value) and value != "",
+        into: %{},
+        do: {field, value}
+  end
+
+  defp invitation_prefill(nil), do: %{}
 
   defp fragment_prefill(%{assigns: %{reschedule_meeting_uid: uid}}) when is_binary(uid), do: %{}
   defp fragment_prefill(socket), do: socket.assigns[:attendee_prefill] || %{}
