@@ -4,8 +4,9 @@ defmodule TymeslotWeb.Themes.Quill.MarkupContractTest do
   §"The markup contract") on each of its booking steps. Quill renders its
   days twice, a week strip for narrow screens beside the month grid, so
   both are marked and the week strip's marks also carry `data-alternate`;
-  a padded day of the neighbouring month is not marked. The steps are reached through their existing
-  test ids, so this holds whatever the contract's own driver does.
+  a padded day of the neighbouring month is not marked. The steps are
+  reached through their existing test ids, so this holds whatever the
+  contract's own driver does.
   """
   use TymeslotWeb.LiveCase, async: false
 
