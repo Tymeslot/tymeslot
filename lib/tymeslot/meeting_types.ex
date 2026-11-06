@@ -434,10 +434,12 @@ defmodule Tymeslot.MeetingTypes do
   # Once the write commits, never inside a caller's transaction, where a read
   # in between would cache the old answer again.
   #
-  # An edit that leaves the host's calendars alone (a name, a length, a
-  # place, a schedule) keeps the cached calendar events: their window is set
-  # by the host's calendars and schedules, never by a meeting type, so only
-  # the folded ranges go.
+  # An edit that leaves the host's calendars and the fetch window alone (a
+  # name, a length, a place, a schedule) keeps the cached calendar events, so
+  # only the folded ranges go. The window is the longest of the host's
+  # schedules and active types' `advance_booking_days` overrides
+  # (`Calendar.Events`), so a type that changes its override or its active
+  # state can move it, and then the cached events no longer cover it.
   defp invalidate_after_commit(user_id, calendar_touched? \\ true)
 
   defp invalidate_after_commit(user_id, calendar_touched?) do
@@ -450,8 +452,12 @@ defmodule Tymeslot.MeetingTypes do
 
   defp calendar_touched?(_before, _after, :promoted), do: true
 
-  defp calendar_touched?(before, updated, _promotion),
-    do: before.calendar_integration_id != updated.calendar_integration_id
+  defp calendar_touched?(before, updated, _promotion) do
+    Enum.any?(
+      [:calendar_integration_id, :advance_booking_days, :is_active],
+      &(Map.fetch!(before, &1) != Map.fetch!(updated, &1))
+    )
+  end
 
   @doc """
   Creates a meeting type from form parameters with validation.
