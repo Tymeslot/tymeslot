@@ -2,6 +2,11 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
   @moduledoc """
   The five-step onboarding wizard in a real browser, at a desktop and a
   phone width: link, calendar, meeting, look, live, then the dashboard.
+  On every step the way on (Continue, or from lg the live step's finish)
+  is on screen, and at the desktop size, a 1440×900-class screen, the
+  question column holds the whole step with nothing to scroll
+  (`assert_fits/1`). The window is taller than that: the page gets what its
+  frame leaves.
 
   The calendar is stubbed at its boundary, as in every test run
   (`config :tymeslot, :calendar_module, Tymeslot.CalendarMock`, answered
@@ -25,13 +30,30 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
 
   @continue "button[phx-click='next_step']"
 
+  # The way on's place on screen, and how far the question column scrolls
+  # (from lg; below it the page scrolls as one). A phone's live step has no
+  # pinned way on: its finish ends the page.
+  @layout_js """
+  const way =
+    document.querySelector('[data-role="onboarding-nav"] button[phx-click="next_step"]') ||
+    (innerWidth >= 1024 && document.querySelector('#onboarding-finish'));
+  const inner = document.querySelector('.onboarding-panel-inner');
+  const r = way && way.getBoundingClientRect();
+  return {
+    way_in_view: !way || (r.top >= 0 && r.bottom <= innerHeight + 1),
+    desktop: innerWidth >= 1024,
+    height: innerHeight,
+    column_overflow: inner.scrollHeight - inner.clientHeight
+  };
+  """
+
   setup do
     stub_free_calendar()
     :ok
   end
 
   feature "a new host walks the wizard to the dashboard at desktop width", %{session: session} do
-    walk_the_wizard(session, {1280, 900})
+    walk_the_wizard(session, {1440, 1050})
   end
 
   feature "a new host walks the wizard to the dashboard at phone width", %{session: session} do
@@ -90,6 +112,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     |> assert_has(css("#onboarding-step-heading-profile"))
     |> wait_for_live()
     |> assert_has(css("#onboarding-stage"))
+    |> assert_fits()
     |> click(css(@continue))
   end
 
@@ -100,6 +123,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     |> assert_has(css("#onboarding-step-heading-connect_calendar"))
     |> assert_has(css("#onboarding-stage"))
     |> assert_has(css("#{@continue}[disabled]"))
+    |> assert_fits()
 
     insert(:calendar_integration, user: user)
 
@@ -113,6 +137,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
   defp meeting_step(session) do
     session
     |> assert_has(css("#onboarding-step-heading-meeting"))
+    |> assert_fits()
     |> fill_in(css("#meeting-name"), with: "Consultation")
     # Typed, not chosen: the matching chip lights once the server has the
     # name, and leaving the field saves it.
@@ -127,12 +152,13 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     |> click(css(@continue))
   end
 
-  # Look: a story other than the one already chosen.
+  # Look: a theme other than the one already chosen.
   defp look_step(session) do
     session
     |> assert_has(css("#onboarding-step-heading-choose_theme"))
-    |> press(~s(button[data-testid="theme-story"][aria-pressed="false"]))
-    |> assert_has(css(~s(button[data-testid="theme-story"][aria-pressed="true"])))
+    |> assert_fits()
+    |> press(~s(button[data-testid="theme-thumbnail"][aria-pressed="false"]))
+    |> assert_has(css(~s(button[data-testid="theme-thumbnail"][aria-pressed="true"])))
     |> click(css(@continue))
   end
 
@@ -143,6 +169,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
       |> assert_has(css("#onboarding-step-heading-ready"))
       |> assert_has(css("#onboarding-stage"))
       |> assert_has(css(~s(#onboarding-finish[aria-disabled="true"])))
+      |> assert_fits()
       |> press("#onboarding-finish")
       |> assert_has(css("#onboarding-finish-helper", text: "Send or keep your link first"))
       |> assert_has(css("#onboarding-step-heading-ready"))
@@ -153,6 +180,24 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     |> press("#onboarding-keep-copy:not([disabled])")
     |> assert_has(css("#onboarding-finish:not([aria-disabled])"))
     |> press("#onboarding-finish")
+  end
+
+  # Read where the page has settled: the step's slide-in has run by the time
+  # its heading is found.
+  defp assert_fits(session) do
+    session = execute_script(session, @layout_js, [], &send(self(), {:layout, &1}))
+    assert_received {:layout, layout}
+
+    assert layout["way_in_view"], "the way on is off screen"
+
+    if layout["desktop"] do
+      assert layout["height"] >= 860, "the page is #{layout["height"]}px tall, too short to judge"
+
+      assert layout["column_overflow"] <= 1,
+             "the question column scrolls by #{layout["column_overflow"]}px"
+    end
+
+    session
   end
 
   # A phone shows the step under the stage and above a pinned Continue bar,

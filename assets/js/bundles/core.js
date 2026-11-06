@@ -19,7 +19,7 @@ import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { EmailLogoUpload } from "../hooks/email_logo_upload"
 import { AutoUpload } from "../hooks/auto_upload"
 import { ScrollStrip } from "../hooks/scroll_strip"
-import { StageScale } from "../hooks/stage_scale"
+import { StageScale, prefitStages } from "../hooks/stage_scale"
 import { StickyNavClearance } from "../hooks/sticky_nav_clearance"
 import { ShareLink, StageIframe } from "../hooks/share_link"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
@@ -99,6 +99,11 @@ const CoreHooks = {
   ShareLink,
   StageIframe
 }
+
+// The onboarding stage's miniature is sized by a hook, which only mounts once
+// the socket connects; fitting it now keeps a reload from showing it small
+// and then growing (stage_scale.js).
+prefitStages()
 
 // /embed-live for framed pages and pages served as an embed (see liveSocketPath)
 const socketPath = liveSocketPath()

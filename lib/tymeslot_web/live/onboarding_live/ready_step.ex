@@ -5,15 +5,18 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
 
   The link itself leads the column, in full and selectable, with a one-tap
   Copy beside it. The stage shows the host's real booking page
-  (`StageFrame`, iframe mode), so "Try booking yourself" leads there. The
+  (`StageFrame`, iframe mode), and "Try booking yourself" opens it at full
+  size (`StagePreviewModal`) for a test booking. The
   question column then asks for one keep action, any of which completes
   onboarding (`NavigationHandlers.handle_keep_link/2`):
 
     * **Copy.** The link's own Copy button.
-    * **First person.** An optional name and "Send them your link". The
-      message is built here, server-side, and handed to the `ShareLink`
-      hook, which opens the device's share sheet where there is one and the
-      mail client otherwise. On a desktop, "Copy message" copies it instead.
+    * **First person.** An optional name and email address, and "Send them
+      your link". The message is built here, server-side, and handed to the
+      `ShareLink` hook. With a valid address it opens a mail draft addressed
+      to them; without one, the device's share sheet where there is one and
+      an unaddressed draft otherwise. On a desktop, "Copy message" copies it
+      instead.
     * **For later.** Email the link to yourself, copy an email signature
       line, or (from `lg`) scan a QR code to open the page on a phone, which
       counts once the phone opens it.
@@ -22,6 +25,9 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   gives way to it (`kept_swap/1`, which reserves the wider of the two, so
   nothing moves), and the first-person card keeps a line for its own. The
   layout's one polite live region announces it as well.
+
+  Beside it a quiet Back returns to the look step, so a host who sees the
+  real page and wants another theme need not finish first.
 
   "Go to dashboard" stays locked (`aria-disabled`, still focusable) until a
   keep action, and then only navigates. A page that is not live (no
@@ -38,13 +44,28 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   use TymeslotWeb.Components.CoreComponents,
     only: [action_button: 1, glass_morphism_card: 1, icon: 1, info_box: 1, input: 1]
 
-  alias Phoenix.LiveView.JS
+  alias Tymeslot.Security.FieldValidators.EmailValidator
 
   @name_max_length 60
+  @email_max_length 254
 
   @doc "The longest first-person name the message takes."
   @spec name_max_length() :: pos_integer()
   def name_max_length, do: @name_max_length
+
+  @doc "The longest first-person email address the field takes."
+  @spec email_max_length() :: pos_integer()
+  def email_max_length, do: @email_max_length
+
+  @doc """
+  The address the first-person draft goes to: the typed email when it is a
+  valid address, otherwise `nil`, which leaves the recipient to the host.
+  """
+  @spec share_recipient(String.t() | nil) :: String.t() | nil
+  def share_recipient(email) do
+    email = String.trim(email || "")
+    if EmailValidator.validate(email) == :ok, do: email
+  end
 
   @doc """
   The message sent to the first person, with their name when one is given.
@@ -95,6 +116,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   * `kept_method` - The latest keep action's confirmation (a key of
     `kept_label/1`), or `nil` before the first
   * `first_person_name` - The name typed for the first person
+  * `first_person_email` - The email address typed for the first person
   * `email` - The host's own address, for "Sent to"
   * `handoff_qr` - The QR code's data URI once shown, else `nil`
   * `handoff_url` - The link the QR code carries, once shown
@@ -105,6 +127,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   attr :page_live, :boolean, required: true
   attr :kept_method, :string, default: nil
   attr :first_person_name, :string, default: ""
+  attr :first_person_email, :string, default: ""
   attr :email, :string, default: nil
   attr :handoff_qr, :string, default: nil
   attr :handoff_url, :string, default: nil
@@ -116,13 +139,14 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
     assigns =
       assign(assigns,
         share_text: share_text(assigns.first_person_name, assigns.booking_url),
+        share_to: share_recipient(assigns.first_person_email),
         signature: signature(assigns.booking_url),
         link_parts: link_parts(assigns.booking_url),
         actions_off: assigns.page_live != true
       )
 
     ~H"""
-    <div class="space-y-6">
+    <div class="space-y-6 lg:space-y-4">
       <div id="onboarding-link-hero" class="onboarding-link-hero">
         <%!-- It breaks before the name first, then anywhere, but is never
              cut off. --%>
@@ -173,50 +197,64 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
       </.info_box>
 
       <p :if={@page_live} class="onboarding-try-booking text-token-sm text-tymeslot-600">
-        <%!-- On a desktop the page is right beside the column; on a phone
-             the stage card is a glimpse, so the expanded page is where to
-             try it. --%>
+        <%!-- Opens the page full size, at any width: beside the column it
+             is drawn small, and on a phone the stage card is a glimpse.
+             From lg the note is read with the link but shown in the modal
+             it opens, where the host books. --%>
         <button
           id="onboarding-try-booking"
           type="button"
-          class="onboarding-text-link hidden lg:inline"
-          phx-click={JS.push("try_booking") |> JS.focus(to: "#onboarding-stage-iframe")}
-          aria-describedby="onboarding-try-booking-note"
-        >
-          {dgettext("onboarding_wizard", "Try booking yourself")}
-        </button>
-        <button
-          id="onboarding-try-booking-phone"
-          type="button"
-          class="onboarding-text-link inline-flex items-center min-h-10 -my-2.5 lg:hidden"
+          class="onboarding-text-link inline-flex items-center min-h-10 -my-2.5"
           phx-click="try_booking"
-          phx-value-expand="true"
           aria-describedby="onboarding-try-booking-note"
         >
           {dgettext("onboarding_wizard", "Try booking yourself")}
         </button>
-        <span id="onboarding-try-booking-note">
+        <span id="onboarding-try-booking-note" class="lg:sr-only">
           {dgettext("onboarding_wizard", "Test bookings don't create meetings or send emails.")}
         </span>
       </p>
 
-      <.glass_morphism_card id="onboarding-first-person" class="onboarding-keep-card p-5 space-y-4">
+      <.glass_morphism_card
+        id="onboarding-first-person"
+        class="onboarding-keep-card p-5 lg:p-4 space-y-4 lg:space-y-3"
+      >
+        <%!-- The question names the pair; each field is named by what it
+             asks for, and from lg they sit side by side. --%>
         <form
           id="onboarding-first-person-form"
-          phx-change="first_person_name"
-          phx-submit="first_person_name"
+          phx-change="first_person_change"
+          phx-submit="first_person_change"
         >
-          <.input
-            type="text"
-            id="onboarding-first-person-name"
-            name="name"
-            value={@first_person_name}
-            label={dgettext("onboarding_wizard", "Who should book you first?")}
-            placeholder={dgettext("onboarding_wizard", "Their name (optional)")}
-            maxlength={name_max_length()}
-            autocomplete="off"
-            phx-debounce="150"
-          />
+          <fieldset class="onboarding-form-group">
+            <legend class="label mb-1">
+              {dgettext("onboarding_wizard", "Who should book you first?")}
+            </legend>
+            <div class="grid gap-3 lg:grid-cols-2 lg:gap-2">
+              <.input
+                type="text"
+                id="onboarding-first-person-name"
+                name="name"
+                value={@first_person_name}
+                aria-label={dgettext("onboarding_wizard", "Their name (optional)")}
+                placeholder={dgettext("onboarding_wizard", "Their name (optional)")}
+                maxlength={name_max_length()}
+                autocomplete="off"
+                phx-debounce="150"
+              />
+              <.input
+                type="email"
+                id="onboarding-first-person-email"
+                name="email"
+                value={@first_person_email}
+                aria-label={dgettext("onboarding_wizard", "Their email (optional)")}
+                placeholder={dgettext("onboarding_wizard", "Their email (optional)")}
+                maxlength={email_max_length()}
+                autocomplete="off"
+                phx-debounce="150"
+              />
+            </div>
+          </fieldset>
         </form>
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -227,6 +265,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
             disabled={@actions_off}
             phx-hook="ShareLink"
             data-share-text={@share_text}
+            data-share-to={@share_to}
             data-share-subject={dgettext("onboarding_wizard", "Book a time with me")}
           >
             {dgettext("onboarding_wizard", "Send them your link")}
@@ -269,6 +308,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           <.action_button
             id="onboarding-keep-email"
             variant={:secondary}
+            size={:sm}
             icon={if @kept_method == "email_me", do: "hero-check-circle-mini", else: "hero-envelope"}
             disabled={@actions_off}
             phx-click="keep_link"
@@ -283,6 +323,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           <.action_button
             id="onboarding-keep-signature"
             variant={:secondary}
+            size={:sm}
             icon={
               if @kept_method == "signature", do: "hero-check-circle-mini", else: "hero-pencil-square"
             }
@@ -303,6 +344,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           <.action_button
             id="onboarding-keep-phone"
             variant={:secondary}
+            size={:sm}
             icon={if @kept_method == "phone", do: "hero-check-circle-mini", else: "hero-qr-code"}
             class="onboarding-keep-phone"
             disabled={@actions_off or not @handoff_ready}
@@ -368,18 +410,27 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
       </p>
 
       <div class="onboarding-finish">
-        <.action_button
-          id="onboarding-finish"
-          variant={if @finish_locked, do: :secondary, else: :primary}
-          size={:lg}
-          class="w-full"
-          aria-disabled={@finish_locked && "true"}
-          aria-describedby={@finish_locked && "onboarding-finish-helper"}
-          phx-click={if @finish_locked, do: "finish_locked", else: "next_step"}
-        >
-          {dgettext("onboarding_wizard", "Go to dashboard")}
-          <.icon name="hero-arrow-right-mini" class="w-5 h-5 shrink-0" />
-        </.action_button>
+        <div class="flex items-center gap-2">
+          <.action_button
+            id="onboarding-back"
+            variant={:ghost}
+            icon="hero-arrow-left-mini"
+            phx-click="previous_step"
+          >
+            {dgettext("onboarding_wizard", "Back")}
+          </.action_button>
+          <.action_button
+            id="onboarding-finish"
+            variant={if @finish_locked, do: :secondary, else: :primary}
+            class="flex-1"
+            aria-disabled={@finish_locked && "true"}
+            aria-describedby={@finish_locked && "onboarding-finish-helper"}
+            phx-click={if @finish_locked, do: "finish_locked", else: "next_step"}
+          >
+            {dgettext("onboarding_wizard", "Go to dashboard")}
+            <.icon name="hero-arrow-right-mini" class="w-5 h-5 shrink-0" />
+          </.action_button>
+        </div>
         <p
           :if={@finish_locked}
           id="onboarding-finish-helper"

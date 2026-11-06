@@ -22,6 +22,20 @@ describe('mailtoHref', () => {
   });
 });
 
+describe('mailtoHref with a recipient', () => {
+  test('addresses the draft, keeping the @ readable', () => {
+    expect(mailtoHref('Book', 'Hi', 'sam@example.com')).toBe(
+      'mailto:sam@example.com?subject=Book&body=Hi'
+    );
+  });
+
+  test('encodes anything in the address that could start a header', () => {
+    expect(mailtoHref('Book', 'Hi', 'a?cc=x@y.test&b')).toBe(
+      'mailto:a%3Fcc%3Dx@y.test%26b?subject=Book&body=Hi'
+    );
+  });
+});
+
 describe('canUseShareSheet', () => {
   const data = { text: 't' };
 
@@ -47,11 +61,11 @@ describe('ShareLink hook', () => {
     vi.restoreAllMocks();
   });
 
-  function setup() {
+  function setup(attrs = '') {
     document.body.innerHTML = `
       <div class="onboarding-keep-card">
         <button id="send" data-share-text="Hi Sam, pick a time: https://x.test/sam"
-          data-share-subject="Book a time with me">Send</button>
+          data-share-subject="Book a time with me" ${attrs}>Send</button>
       </div>`;
     const el = document.getElementById('send');
     const handlers = {};
@@ -105,6 +119,22 @@ describe('ShareLink hook', () => {
 
     expect(hrefs).toHaveLength(1);
     expect(hrefs[0]).toMatch(/^mailto:\?subject=Book%20a%20time%20with%20me&body=Hi%20Sam/);
+    expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'first_person', via: 'mail' });
+  });
+
+  test('with a recipient it opens a draft to them, not the share sheet', async () => {
+    stubShare(() => Promise.resolve());
+    const hrefs = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+      hrefs.push(this.href);
+    });
+    const { hook } = setup('data-share-to="sam@example.com"');
+
+    await hook.share();
+
+    expect(navigator.share).not.toHaveBeenCalled();
+    expect(hrefs).toHaveLength(1);
+    expect(hrefs[0]).toMatch(/^mailto:sam@example\.com\?subject=Book%20a%20time%20with%20me&body=Hi%20Sam/);
     expect(hook.pushEvent).toHaveBeenCalledWith('keep_link', { method: 'first_person', via: 'mail' });
   });
 

@@ -53,15 +53,6 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   end
 
   @doc """
-  Switches the theme step between the stories (`:stories`, "Which of these
-  sounds like you?") and the visual picker of every theme's look (`:all`).
-  """
-  @spec handle_theme_picker(:stories | :all, LiveView.Socket.t()) ::
-          {:noreply, LiveView.Socket.t()}
-  def handle_theme_picker(picker, socket) when picker in [:stories, :all],
-    do: {:noreply, Component.assign(socket, :theme_picker, picker)}
-
-  @doc """
   Applies one of the current theme's onboarding choices (`:onboarding_choices`)
   through its option group, preserving the theme's other customisation (e.g.
   the seeded video background). The group and field come from the theme's

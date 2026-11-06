@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
-  import TymeslotWeb.OnboardingLive.PreviewParts, only: [book_button: 1, color: 3]
+  import TymeslotWeb.OnboardingLive.PreviewParts, only: [book_button: 1, color: 3, tint: 2]
 
   alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.OnboardingLive.PreviewWeek
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Themes.Rhythm.OnboardingPreview do
     canvas = color(colors, :background, "#0f172a")
     primary = color(colors, :primary, "#06b6d4")
 
-    "background: radial-gradient(60% 50% at 50% 35%, #{primary}40, transparent 70%), #{canvas};"
+    "background: radial-gradient(60% 50% at 50% 35%, #{tint(primary, 25)}, transparent 70%), #{canvas};"
   end
 
   # A shade over the still keeps the card's text readable on a light frame.

@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
 
     assert [card] = html |> Floki.parse_fragment!() |> Floki.find("[data-preview='paper']")
     assert [style] = Floki.attribute(card, "style")
-    assert style =~ "border-color: #f4f4f51f;"
+    assert style =~ "border-color: color-mix(in srgb, #f4f4f5 12%, transparent);"
     assert [class] = Floki.attribute(card, "class")
     refute class =~ "border-tymeslot"
   end

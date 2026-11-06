@@ -168,13 +168,18 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
 
     html = view |> element("button[phx-value-theme='3']") |> render_click()
 
-    canvas = ThemeCustomizations.tokens("3", nil).vars["--theme-canvas"]
+    tokens = ThemeCustomizations.tokens("3", nil)
+    canvas = tokens.vars["--theme-canvas"]
     assert canvas =~ ~r/^#[0-9a-f]{6}$/i
     # Paper's light canvas, not the dark one the page opened with.
     refute canvas == ThemeCustomizations.tokens("1", nil).vars["--theme-canvas"]
 
+    # Paper follows the visitor's OS by default, so the stage carries both
+    # canvases and lets the system choose, as the page itself does.
+    dark = tokens.dark_vars["--theme-canvas"]
     assert [style] = html |> find(~s([data-role="onboarding-stage"])) |> Floki.attribute("style")
-    assert style =~ "--stage-canvas: #{canvas}"
+    assert style =~ "--stage-canvas: light-dark(#{canvas}, #{dark});"
+    assert style =~ "color-scheme: light dark;"
   end
 
   describe "the heading focus" do
@@ -264,7 +269,11 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
 
       # Drawn on the chosen theme's canvas from the start, under the one id
       # the connected render keeps.
-      canvas = ThemeCustomizations.tokens("3", nil).vars["--theme-canvas"]
+      tokens = ThemeCustomizations.tokens("3", nil)
+
+      canvas =
+        "light-dark(#{tokens.vars["--theme-canvas"]}, #{tokens.dark_vars["--theme-canvas"]})"
+
       assert [stage] = find(html, ~s(#onboarding-stage[data-role="onboarding-stage"]))
       assert [style] = Floki.attribute(stage, "style")
       assert style =~ "--stage-canvas: #{canvas}"

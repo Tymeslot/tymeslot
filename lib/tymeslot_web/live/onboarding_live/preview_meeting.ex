@@ -64,7 +64,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewMeeting do
     ~H"""
     <p
       class="self-center max-w-full min-w-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-token-full text-token-xs font-semibold"
-      style={"background: #{primary(@colors)}1f;color: #{ink(@colors)};"}
+      style={"background: #{PreviewParts.tint(primary(@colors), 12)};color: #{ink(@colors)};"}
       data-role="preview-meeting"
       data-variant="pill"
     >
@@ -83,11 +83,11 @@ defmodule TymeslotWeb.OnboardingLive.PreviewMeeting do
       data-role="preview-meeting"
       data-variant="rule"
     >
-      <span class="flex-1 h-px" style={"background: #{muted(@colors)}40;"} />
+      <span class="flex-1 h-px" style={"background: #{PreviewParts.tint(muted(@colors), 25)};"} />
       <.meeting_icon name={@meeting.icon} colors={@colors} />
       <span class="truncate" data-role="preview-meeting-name">{@meeting.name}</span>
       <.meeting_duration meeting={@meeting} colors={@colors} />
-      <span class="flex-1 h-px" style={"background: #{muted(@colors)}40;"} />
+      <span class="flex-1 h-px" style={"background: #{PreviewParts.tint(muted(@colors), 25)};"} />
     </p>
     """
   end

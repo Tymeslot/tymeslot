@@ -154,14 +154,54 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     text_secondary: "--theme-text-secondary"
   }
 
-  @doc "The colour map the previews draw with, read from a theme's resolved tokens."
+  @doc """
+  The colour map the previews draw with, read from a theme's resolved tokens.
+
+  A page that follows the visitor's OS (a colour mode of `"auto"`, whose
+  tokens carry `dark_vars`) has two values for a colour; the map holds them
+  as one CSS `light-dark()` value, so the preview, like the page, shows the
+  dark set on a dark system. That value resolves only under
+  `color-scheme: light dark`, which `scheme_style/1` declares for the
+  element that draws the preview.
+  """
   @spec colors(Tokens.t()) :: %{optional(atom()) => String.t()}
-  def colors(%Tokens{vars: vars}) do
-    for {key, var} <- @preview_vars, Map.has_key?(vars, var), into: %{}, do: {key, vars[var]}
+  def colors(%Tokens{vars: vars, dark_vars: dark_vars}) do
+    for {key, var} <- @preview_vars, Map.has_key?(vars, var), into: %{} do
+      {key, light_dark(vars[var], dark_vars[var])}
+    end
   end
+
+  defp light_dark(light, dark) when dark in [nil, light], do: light
+  defp light_dark(light, dark), do: "light-dark(#{light}, #{dark})"
 
   @spec color(map(), atom(), String.t()) :: String.t()
   def color(colors, key, fallback), do: Map.get(colors, key) || fallback
+
+  @doc """
+  The `color-scheme` a preview drawn in `colors` (or a single colour from
+  them) needs: `light dark` when it follows the OS, so its `light-dark()`
+  values resolve, otherwise nothing.
+  """
+  @spec scheme_style(map() | String.t() | nil) :: String.t()
+  def scheme_style(colour) when is_binary(colour) do
+    if String.starts_with?(colour, "light-dark("), do: "color-scheme: light dark;", else: ""
+  end
+
+  def scheme_style(%{} = colors),
+    do:
+      if(Enum.any?(colors, fn {_key, c} -> scheme_style(c) != "" end),
+        do: "color-scheme: light dark;",
+        else: ""
+      )
+
+  def scheme_style(nil), do: ""
+
+  @doc """
+  A colour at `percent` opacity, for any colour `colors/1` holds, a
+  `light-dark()` pair included (which a hex alpha suffix cannot take).
+  """
+  @spec tint(String.t(), 0..100) :: String.t()
+  def tint(colour, percent), do: "color-mix(in srgb, #{colour} #{percent}%, transparent)"
 
   @spec card_style(map()) :: String.t()
   def card_style(colors) do
@@ -170,7 +210,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
 
   @spec divider_style(map()) :: String.t()
   def divider_style(colors) do
-    "background: #{color(colors, :text_secondary, "#475569")}26;"
+    "background: #{tint(color(colors, :text_secondary, "#475569"), 15)};"
   end
 
   @spec step_dot_style(map(), boolean()) :: String.t()
@@ -179,7 +219,7 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   end
 
   def step_dot_style(colors, false) do
-    "background: #{color(colors, :primary, "#14b8a6")}1f;color: #{color(colors, :text_secondary, "#475569")};"
+    "background: #{tint(color(colors, :primary, "#14b8a6"), 12)};color: #{color(colors, :text_secondary, "#475569")};"
   end
 
   @doc """

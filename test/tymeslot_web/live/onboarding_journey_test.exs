@@ -109,16 +109,16 @@ defmodule TymeslotWeb.OnboardingJourneyTest do
     click_continue(view)
     assert on_step?(view, :choose_theme)
 
-    # A story other than the one already chosen, so the pick is observable.
+    # A theme other than the one already chosen, so the pick is observable.
     assert [theme | _others] =
              Page.attribute(
                view,
-               ~s(button[data-testid="theme-story"][aria-pressed="false"]),
+               ~s(button[data-testid="theme-thumbnail"][aria-pressed="false"]),
                "phx-value-theme"
              )
 
     view
-    |> element(~s(button[data-testid="theme-story"][phx-value-theme="#{theme}"]))
+    |> element(~s(button[data-testid="theme-thumbnail"][phx-value-theme="#{theme}"]))
     |> render_click()
 
     click_continue(view)

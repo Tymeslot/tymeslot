@@ -22,6 +22,7 @@ msgid "App password or token"
 msgstr "Mot de passe d’application ou jeton"
 
 #: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr "Retour"
@@ -146,11 +147,6 @@ msgstr "Mot de passe"
 #, elixir-autogen, elixir-format
 msgid "Password is required"
 msgstr "Le mot de passe est requis"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Pick the look and feel invitees see on your booking page."
-msgstr "Choisissez l’apparence que verront vos invités sur votre page de réservation."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
@@ -294,16 +290,6 @@ msgstr "votre-nom-utilisateur"
 #, elixir-autogen, elixir-format
 msgid "One click: connect %{email}"
 msgstr "En un clic : connectez %{email}"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Choose by description instead"
-msgstr "Choisir plutôt d’après une description"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Which of these sounds like you?"
-msgstr "Laquelle de ces descriptions vous correspond ?"
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
@@ -819,6 +805,7 @@ msgid "Signature copied"
 msgstr "Signature copiée"
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Test bookings don't create meetings or send emails."
 msgstr "Les réservations test ne créent pas de réunion et n’envoient pas d’e-mail."
@@ -883,11 +870,6 @@ msgstr "Tout est prêt : %{link} est en ligne"
 msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one to go live."
 msgstr "Aucun calendrier fonctionnel n’est connecté : toute personne qui ouvre votre lien verra que la page n’est pas disponible. Connectez-en un pour mettre la page en ligne."
 
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Compare the looks side by side"
-msgstr "Comparer les styles côte à côte"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Someone already has this link. Try another one."
@@ -927,3 +909,13 @@ msgstr "Vos invités la verront sous votre nom. Vous pourrez ajouter une biograp
 #, elixir-autogen, elixir-format
 msgid "One line about you (optional)"
 msgstr "Une phrase sur vous (facultatif)"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Their email (optional)"
+msgstr "Son adresse e-mail (facultatif)"
+
+#: lib/tymeslot_web/live/onboarding_live/meeting_step.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"

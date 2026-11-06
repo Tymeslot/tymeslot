@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
   use Phoenix.Component
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
-    only: [book_button: 1, card_style: 1, color: 3]
+    only: [book_button: 1, card_style: 1, color: 3, tint: 2]
 
   alias TymeslotWeb.OnboardingLive.PreviewWeek
 
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
               class={["h-2.5", row > 0 && "border-t border-tymeslot-200"]}
               style={
                 if(row == 0,
-                  do: "border-left: 2px solid #{@primary}; background: #{@primary}14;",
+                  do: "border-left: 2px solid #{@primary}; background: #{tint(@primary, 8)};",
                   else: nil
                 )
               }
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
         <%!-- The chosen day, marked as Paper marks a chosen choice --%>
         <div
           class="flex flex-col gap-0.5 px-2 py-1.5 rounded-token-md border text-left"
-          style={"border-color: #{@edge};border-left: 2px solid #{@primary};background: #{@primary}0f;"}
+          style={"border-color: #{@edge};border-left: 2px solid #{@primary};background: #{tint(@primary, 6)};"}
           data-preview-part="day"
         >
           <span class="text-token-xs font-semibold">{@view.heading}</span>
@@ -127,5 +127,5 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
   # The card's edge, the rule and the list's lines: the text colour at 12%,
   # as Paper's own lines are, so they follow a dark card instead of staying
   # a light grey.
-  defp edge(colors), do: "#{color(colors, :text, "#111111")}1f"
+  defp edge(colors), do: tint(color(colors, :text, "#111111"), 12)
 end

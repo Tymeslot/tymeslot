@@ -2,7 +2,8 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
   @moduledoc """
   The meeting step of the onboarding flow, in two groups: the meeting people
   book (its name, length and place) and when they can book it (a preset
-  week, or days and one window of the host's own).
+  week, or days and one window of the host's own, whose controls show once
+  the host picks "Custom" or their week is one no preset describes).
 
   The step only draws the forms; their state and events are
   `MeetingHandlers`'. Every chip row is a `segmented_control/1` that wraps
@@ -20,7 +21,6 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
   alias Tymeslot.Onboarding.MeetingSetup
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.OnboardingLive.MeetingHandlers
-  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :meeting_form, :map, required: true
   attr :meeting_errors, :map, required: true
@@ -30,6 +30,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
     doc: "the names the host's other meeting types use, which no chip offers"
 
   attr :hours_form, :map, required: true
+  attr :hours_open, :boolean, default: false, doc: "whether the day and time controls show"
   attr :video_integration, :any, default: nil, doc: "the integration a video place binds to"
 
   @doc """
@@ -75,7 +76,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             size={:lg}
             aria_label={dgettext("onboarding_wizard", "Suggested names")}
             overflow={:wrap}
-            class="mt-1"
+            class="mt-1 onboarding-chips"
           >
             <:option
               :for={{name, index} <- @suggestions}
@@ -102,11 +103,12 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             size={:lg}
             aria_label={dgettext("onboarding_wizard", "Meeting length")}
             overflow={:wrap}
+            class="onboarding-chips"
           >
             <:option
               :for={minutes <- MeetingHandlers.duration_presets()}
               value={minutes}
-              label={LocalizationHelpers.format_duration(minutes)}
+              label={dgettext("onboarding_wizard", "%{minutes} min", minutes: minutes)}
             />
             <:option value="other" label={dgettext("onboarding_wizard", "Other")} />
           </.segmented_control>
@@ -153,6 +155,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             size={:lg}
             aria_label={dgettext("onboarding_wizard", "Where the meeting is held")}
             overflow={:wrap}
+            class="onboarding-chips"
           >
             <:option
               value="video"
@@ -179,8 +182,8 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
         </div>
       </.form>
 
-      <section class="onboarding-form" aria-labelledby="meeting-hours-heading">
-        <h2 id="meeting-hours-heading" class="text-token-lg font-bold text-tymeslot-900">
+      <section class="onboarding-form-group" aria-labelledby="meeting-hours-heading">
+        <h2 id="meeting-hours-heading" class="label">
           {dgettext("onboarding_wizard", "When can people book you?")}
         </h2>
 
@@ -192,6 +195,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           size={:lg}
           aria_label={dgettext("onboarding_wizard", "Weekly hours")}
           overflow={:wrap}
+          class="onboarding-chips"
         >
           <:option value="weekdays" label={dgettext("onboarding_wizard", "Weekdays 9 to 5")} />
           <:option value="mornings" label={dgettext("onboarding_wizard", "Mornings")} />
@@ -203,7 +207,8 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
              command that reads the button ("Mon") finds it; the full name
              is its description. --%>
         <div
-          class="grid grid-cols-7 gap-1"
+          :if={@hours_open or @meeting_errors[:hours]}
+          class="grid grid-cols-7 gap-1 mt-2"
           role="group"
           aria-label={dgettext("onboarding_wizard", "Days you take bookings")}
           aria-describedby={@meeting_errors[:hours] && "meeting-hours-error"}
@@ -229,7 +234,12 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           </button>
         </div>
 
-        <form id="meeting-hours-form" phx-change="hours_change" class="grid grid-cols-2 gap-3">
+        <form
+          :if={@hours_open or @meeting_errors[:hours]}
+          id="meeting-hours-form"
+          phx-change="hours_change"
+          class="grid grid-cols-2 gap-3 mt-2"
+        >
           <.input
             type="select"
             id="meeting-hours-start"
@@ -255,7 +265,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
         <p
           :if={@meeting_errors[:hours]}
           id="meeting-hours-error"
-          class="text-token-sm text-red-600 font-bold"
+          class="mt-1 text-token-sm text-red-600 font-bold"
           data-role="hours-error"
         >
           <.icon name="hero-exclamation-circle-mini" class="w-4 h-4 inline-block align-text-bottom" />

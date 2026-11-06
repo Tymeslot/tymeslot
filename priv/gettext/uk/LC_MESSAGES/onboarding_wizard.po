@@ -22,6 +22,7 @@ msgid "App password or token"
 msgstr "Пароль застосунку або токен"
 
 #: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr "Назад"
@@ -146,11 +147,6 @@ msgstr "Пароль"
 #, elixir-autogen, elixir-format
 msgid "Password is required"
 msgstr "Потрібно ввести пароль"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Pick the look and feel invitees see on your booking page."
-msgstr "Виберіть, як ваша сторінка бронювання виглядатиме для гостей."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
@@ -294,16 +290,6 @@ msgstr "vashe-imya-korystuvacha"
 #, elixir-autogen, elixir-format
 msgid "One click: connect %{email}"
 msgstr "Підключити %{email} одним кліком"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Choose by description instead"
-msgstr "Краще вибрати за описом"
-
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Which of these sounds like you?"
-msgstr "Який із цих описів вам ближчий?"
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
 #, elixir-autogen, elixir-format
@@ -822,6 +808,7 @@ msgid "Signature copied"
 msgstr "Підпис скопійовано"
 
 #: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#: lib/tymeslot_web/live/onboarding_live/stage_preview_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Test bookings don't create meetings or send emails."
 msgstr "Тестові бронювання не створюють зустрічей і не надсилають листів."
@@ -886,11 +873,6 @@ msgstr "Усе готово: сторінка %{link} працює"
 msgid "No working calendar is connected, so anyone who opens your link is told the page isn't available. Connect one to go live."
 msgstr "Справний календар не підключено, тож кожен, хто відкриє ваше посилання, побачить, що сторінка недоступна. Підключіть календар, щоб сторінка запрацювала."
 
-#: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
-#, elixir-autogen, elixir-format
-msgid "Compare the looks side by side"
-msgstr "Порівняти варіанти оформлення"
-
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Someone already has this link. Try another one."
@@ -930,3 +912,13 @@ msgstr "Гості бачитимуть його під вашим ім'ям. Д
 #, elixir-autogen, elixir-format
 msgid "One line about you (optional)"
 msgstr "Один рядок про вас (необов'язково)"
+
+#: lib/tymeslot_web/live/onboarding_live/ready_step.ex
+#, elixir-autogen, elixir-format
+msgid "Their email (optional)"
+msgstr "Email (необов'язково)"
+
+#: lib/tymeslot_web/live/onboarding_live/meeting_step.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} хв"

@@ -3,16 +3,20 @@
  *
  * The message is built on the server and carried in `data-share-text`, which
  * already ends with the booking URL, and a mail subject in
- * `data-share-subject`. The sheet is given the text alone: given the URL as
- * well, most targets paste it twice. On click:
+ * `data-share-subject`, and the recipient's address in `data-share-to` when
+ * the host typed a valid one. The sheet is given the text alone: given the
+ * URL as well, most targets paste it twice. On click:
  *
- *   - Where the device has a share sheet (`navigator.share`, and
+ *   - With a recipient, it opens a mail draft addressed to them, even where
+ *     there is a share sheet: a sheet cannot be given a recipient, and the
+ *     host typed one to have it used.
+ *   - Otherwise, where the device has a share sheet (`navigator.share`, and
  *     `navigator.canShare` does not refuse the data), it opens it. Settling
  *     the promise counts as a keep (`share_sheet`): most platforms settle on
  *     completion, some as soon as the sheet opens, and either will do. An
  *     `AbortError` (the sheet dismissed) counts as nothing; any other error
  *     falls through to the mail client.
- *   - Otherwise it opens a new message in the mail client (`mailto:`), which
+ *   - Failing both, it opens an unaddressed draft. A draft (`mailto:`)
  *     counts as `first_person` with `via: "mail"`: the keep counts, but
  *     nothing is sent until the host sends it there, so the confirmation
  *     says the mail app opened rather than "Sent".
@@ -23,15 +27,19 @@
  */
 
 /**
- * The `mailto:` address for a message, with both parts percent-encoded so
+ * The `mailto:` address for a message, with every part percent-encoded so
  * spaces read as spaces (a form-encoded `+` shows literally in some clients).
+ * The recipient keeps its `@` readable; everything else in it is encoded, so
+ * a stray `?` or `&` cannot start a header of its own.
  *
  * @param {string} subject
  * @param {string} body
+ * @param {string} [to] the recipient's address, or empty for none
  * @returns {string}
  */
-export function mailtoHref(subject, body) {
-  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+export function mailtoHref(subject, body, to = "") {
+  const recipient = encodeURIComponent(to).replace(/%40/g, "@")
+  return `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
 /**
@@ -67,7 +75,13 @@ export const ShareLink = {
 
   async share() {
     const text = this.el.dataset.shareText || ""
+    const to = this.el.dataset.shareTo || ""
     const data = { text }
+
+    if (to) {
+      this.openMail(text, to)
+      return
+    }
 
     if (canUseShareSheet(navigator, data)) {
       try {
@@ -82,9 +96,9 @@ export const ShareLink = {
     this.openMail(text)
   },
 
-  openMail(text) {
+  openMail(text, to = "") {
     const link = document.createElement("a")
-    link.href = mailtoHref(this.el.dataset.shareSubject || "", text)
+    link.href = mailtoHref(this.el.dataset.shareSubject || "", text, to)
     link.click()
     this.pushEvent("keep_link", { method: "first_person", via: "mail" })
   },

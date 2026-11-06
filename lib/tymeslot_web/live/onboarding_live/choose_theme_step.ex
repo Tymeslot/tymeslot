@@ -2,13 +2,10 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   @moduledoc """
   Theme selection step for the onboarding flow.
 
-  Asks the organiser which theme's story sounds like them: one button per
-  offered theme, its first-person story (`story/0`, from the theme's persona
-  sheet) above its name. "Compare the looks side by side" swaps the stories
-  for a thumbnail of every theme's look, and "Choose by description instead"
-  swaps back. The stage shows one theme at a time, so the thumbnails are the
-  only place a host who chooses by eye sees them all at once; both send the same `select_theme` event. Below either sits whatever
-  the chosen theme's customisation spec offers for onboarding (a colour
+  Shows a thumbnail of every offered theme's look, each a button sending
+  `select_theme`. The stage shows one theme at a time, so the thumbnails are
+  the only place a host sees them all at once. Below them sits whatever the
+  chosen theme's customisation spec offers for onboarding (a colour
   scheme, for a theme with a palette), and, for a theme that introduces the
   host (`Catalog.shows_intro?/1`), one optional line about them, the headline
   its page shows under their name. It saves as it is typed
@@ -32,8 +29,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
-  Renders the theme picker (the stories, or every theme's look) and the
-  spec's onboarding choices.
+  Renders the theme picker (every theme's look) and the spec's onboarding
+  choices.
 
   ## Attributes
 
@@ -43,8 +40,6 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   * `choices` - The theme's `ThemeCustomizations.onboarding_choices/1`; `nil`
     hides the choice row. Their names are translated through
     `dashboard_appearance`, as the dashboard's panels translate them.
-  * `picker` - `:stories` (the default: "Which of these sounds like you?")
-    or `:all` (every theme's thumbnail)
   * `headline_form` - The headline form (`ThemeHandlers.headline_form/1`),
     shown only for a theme that introduces the host
   """
@@ -52,7 +47,6 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   attr :theme_options, :list, required: true
   attr :theme_customization, :any, required: true
   attr :choices, :map, default: nil
-  attr :picker, :atom, default: :stories, values: [:stories, :all]
   attr :headline_form, Phoenix.HTML.Form, required: true
 
   @spec choose_theme_step(map()) :: Phoenix.LiveView.Rendered.t()
@@ -70,70 +64,22 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
       assigns
       |> assign(:primary, PreviewParts.color(colors, :primary, "#14b8a6"))
       |> assign(:selected, assigns.choices && settings[assigns.choices.setting])
-      |> assign(:stories, stories(assigns.theme_options))
       |> assign(:shows_intro, Catalog.shows_intro?(theme_id))
 
     ~H"""
     <div class="onboarding-form">
-      <%!-- Booking theme, by story: the organiser picks a sentence they
-           recognise, not a screenshot --%>
-      <div :if={@picker == :stories} class="onboarding-form-group">
-        <label class="label">{dgettext("onboarding_wizard", "Your booking theme")}</label>
-        <p id="theme-story-question" class="onboarding-form-helper">
-          {dgettext("onboarding_wizard", "Which of these sounds like you?")}
-        </p>
-        <%!-- A column from lg; below it a row the host swipes through
-             right under the stage card (`onboarding.css`). A swipe never
-             chooses: only a tap on a card does. --%>
+      <%!-- Booking theme, by look: every theme's thumbnail --%>
+      <div class="onboarding-form-group">
+        <%!-- The step's description already asks for a look, so the group
+             needs only its name. From lg the thumbnails share one row. --%>
+        <span id="theme-look-question" class="label">
+          {dgettext("onboarding_wizard", "Your booking theme")}
+        </span>
         <div
           role="group"
-          aria-labelledby="theme-story-question"
-          class="onboarding-theme-stories"
-          data-role="theme-stories"
+          aria-labelledby="theme-look-question"
+          class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-2"
         >
-          <button
-            :for={story <- @stories}
-            type="button"
-            phx-click="select_theme"
-            phx-value-theme={story.id}
-            aria-pressed={to_string(theme_selected?(@profile, story.id))}
-            data-testid="theme-story"
-            class={[
-              "onboarding-theme-story p-4 rounded-token-xl border-2 flex flex-col justify-between gap-2 text-left transition-colors",
-              if(theme_selected?(@profile, story.id),
-                do: "border-turquoise-500 bg-turquoise-50",
-                else: "border-tymeslot-200 bg-white hover:border-tymeslot-300"
-              )
-            ]}
-          >
-            <q class="text-token-base text-tymeslot-800 leading-relaxed">{story.story}</q>
-            <span class={[
-              "font-semibold text-token-sm",
-              if(theme_selected?(@profile, story.id),
-                do: "text-turquoise-700",
-                else: "text-tymeslot-600"
-              )
-            ]}>
-              {story.name}
-            </span>
-          </button>
-        </div>
-        <button
-          type="button"
-          phx-click="show_all_themes"
-          class="self-start min-h-10 mt-1 text-left text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
-        >
-          {dgettext("onboarding_wizard", "Compare the looks side by side")}
-        </button>
-      </div>
-
-      <%!-- Booking theme, by look: every theme's thumbnail --%>
-      <div :if={@picker == :all} class="onboarding-form-group">
-        <label class="label">{dgettext("onboarding_wizard", "Your booking theme")}</label>
-        <p id="theme-look-question" class="onboarding-form-helper">
-          {dgettext("onboarding_wizard", "Pick the look and feel invitees see on your booking page.")}
-        </p>
-        <div role="group" aria-labelledby="theme-look-question" class="grid grid-cols-2 gap-3">
           <button
             :for={{name, id} <- @theme_options}
             type="button"
@@ -142,7 +88,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
             data-testid="theme-thumbnail"
             aria-pressed={to_string(theme_selected?(@profile, id))}
             class={[
-              "p-3 rounded-token-xl border-2 flex flex-col gap-2 transition-colors",
+              "p-3 lg:p-2 rounded-token-xl border-2 flex flex-col gap-2 lg:gap-1.5 transition-colors",
               if(theme_selected?(@profile, id),
                 do: "border-turquoise-500 bg-turquoise-50",
                 else: "border-tymeslot-200 bg-white hover:border-tymeslot-300"
@@ -155,20 +101,13 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
               primary={@primary}
             />
             <span class={[
-              "font-semibold text-token-sm",
+              "font-semibold text-token-sm lg:text-token-xs truncate",
               if(theme_selected?(@profile, id), do: "text-turquoise-700", else: "text-tymeslot-600")
             ]}>
               {name}
             </span>
           </button>
         </div>
-        <button
-          type="button"
-          phx-click="show_theme_stories"
-          class="self-start min-h-10 mt-1 text-left text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
-        >
-          {dgettext("onboarding_wizard", "Choose by description instead")}
-        </button>
       </div>
 
       <%!-- The theme's onboarding choices (its colour schemes) --%>
@@ -237,14 +176,6 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   end
 
   defp theme_selected?(profile, id), do: (profile && profile.booking_theme) == id
-
-  # Each offered theme's first-person story, in the pickers' order. `story/0`
-  # is translated into the current locale, as `metadata/0`'s description is.
-  # The `<q>` around it lets the browser draw the locale's own quotation
-  # marks.
-  defp stories(theme_options) do
-    for {name, id} <- theme_options, do: %{id: id, name: name, story: theme_module(id).story()}
-  end
 
   # The names come from the preset catalogues, which register the translatable
   # ones in `dashboard_appearance` (`dgettext_noop/2`), as the dashboard's

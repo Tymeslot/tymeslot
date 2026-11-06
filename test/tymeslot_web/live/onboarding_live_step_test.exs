@@ -18,7 +18,9 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
   alias Ecto.Changeset
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Onboarding
+  alias Tymeslot.Onboarding.MeetingSetup
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.Utils.QrCode
@@ -41,6 +43,13 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
     do: Repo.get_by!(ProfileSchema, user_id: user.id).booking_link_first_shared_at
 
   defp profile(user), do: Repo.get_by!(ProfileSchema, user_id: user.id)
+
+  defp meeting_slug(user) do
+    {:ok, meeting_type} = MeetingSetup.meeting_type(user.id)
+    slug = MeetingTypes.effective_slug(meeting_type)
+    assert slug =~ ~r/^[a-z0-9-]+$/
+    slug
+  end
 
   # Each confirmation shows on the button that was pressed: its label gives
   # way to it, so nothing else on the page moves.
@@ -72,8 +81,10 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
         |> Floki.attribute("iframe#onboarding-stage-iframe", "src")
 
       # Relative, so the frame is same-origin (`frame-src 'self'`), and
-      # marked as the stage's own frame.
-      assert String.starts_with?(src, "/#{profile(user).username}?")
+      # marked as the stage's own frame. It opens at the meeting the wizard
+      # set up, the dates and times the miniature drew, not at the page's
+      # list of meeting types, so the stage keeps its design as it arrives.
+      assert String.starts_with?(src, "/#{profile(user).username}/#{meeting_slug(user)}?")
       assert src =~ "stage=1"
       assert src =~ "preview=true"
       assert src =~ "preview_token="
@@ -138,8 +149,19 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
         |> Floki.parse_document!()
         |> Floki.attribute("iframe#onboarding-stage-iframe", "src")
 
-      assert String.starts_with?(src, "/#{new}?")
-      refute src =~ "/#{old}?"
+      assert String.starts_with?(src, "/#{new}/#{meeting_slug(user)}?")
+      refute src =~ "/#{old}/"
+    end
+  end
+
+  describe "Back" do
+    # A host who sees the real page and wants another look returns to the
+    # look step without finishing first.
+    test "returns to the look step, and the address follows", %{view: view} do
+      view |> element("#onboarding-back") |> render_click()
+
+      assert has_element?(view, ".onboarding-step-title", "Your look")
+      assert_patch(view, "/onboarding/choose_theme")
     end
   end
 
@@ -348,6 +370,23 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       assert String.starts_with?(text, "Hi Sam, you can pick a time with me here: http")
       assert String.ends_with?(text, "/" <> profile(user).username)
       assert has_element?(view, ~s(#onboarding-send-link[phx-hook="ShareLink"]))
+    end
+
+    test "a valid email addresses the first-person draft to them", %{view: view} do
+      view
+      |> element("#onboarding-first-person-form")
+      |> render_change(%{"name" => "Sam", "email" => " sam@example.com "})
+
+      assert has_element?(view, ~s(#onboarding-send-link[data-share-to="sam@example.com"]))
+    end
+
+    test "an address that is not valid leaves the recipient to the host", %{view: view} do
+      view
+      |> element("#onboarding-first-person-form")
+      |> render_change(%{"name" => "Sam", "email" => "sam@"})
+
+      assert has_element?(view, "#onboarding-send-link")
+      refute has_element?(view, "#onboarding-send-link[data-share-to]")
     end
 
     test "without a name the message is plain", %{view: view} do

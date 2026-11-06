@@ -12,6 +12,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Ecto.Changeset
   alias Phoenix.Component
   alias Phoenix.LiveView
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
@@ -130,9 +131,13 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     * the subscription that hears the handoff being opened, made once per
       LiveView process (`share_subscribed`);
     * the owner-preview path the stage's iframe shows, built for the
-      profile's username (`share_username`) and rebuilt when it changes, so
-      a patch never re-signs the token and reloads the page, but a new link
-      never shows the old one. The handoff link and its QR code go with it;
+      profile's username and the meeting the wizard set up
+      (`share_preview_key`) and rebuilt when either changes, so a patch
+      never re-signs the token and reloads the page, but a new link never
+      shows the old one. It opens at that meeting's own step, the dates
+      and times the miniature it fades in over drew, not at the page's
+      list of meeting types, so the stage does not change design as the
+      real page arrives. The handoff link and its QR code go with it;
       they are signed only when the QR code is shown
       (`handle_show_handoff_qr/1`), so its hour starts then.
   """
@@ -155,18 +160,31 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     Component.assign(socket, :share_subscribed, true)
   end
 
-  defp build_preview(%{assigns: %{share_username: username}} = socket, username), do: socket
-
   defp build_preview(socket, username) do
-    Component.assign(socket,
-      share_username: username,
-      # Relative: the stage frames the page from this origin (`frame-src 'self'`).
-      owner_preview_url:
-        PreviewMode.owner_path(username, socket.assigns.current_user.id, stage: true),
-      handoff_url: nil,
-      handoff_qr: nil
-    )
+    slug = meeting_slug(socket.assigns[:meeting_type])
+
+    if socket.assigns[:share_preview_key] == {username, slug} do
+      socket
+    else
+      Component.assign(socket,
+        share_username: username,
+        share_preview_key: {username, slug},
+        # Relative: the stage frames the page from this origin (`frame-src 'self'`).
+        owner_preview_url:
+          PreviewMode.owner_path(username, socket.assigns.current_user.id,
+            stage: true,
+            meeting_slug: slug
+          ),
+        handoff_url: nil,
+        handoff_qr: nil
+      )
+    end
   end
+
+  defp meeting_slug(%{name: name} = meeting_type) when is_binary(name),
+    do: MeetingTypes.effective_slug(meeting_type)
+
+  defp meeting_slug(_none), do: nil
 
   @doc """
   Shows the QR code of the handoff link: the host's page, absolute (a phone
@@ -300,18 +318,16 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   end
 
   @doc """
-  "Try booking yourself" on the live step (`guest_preview_opened`). On a
-  desktop the button focuses the page beside the column itself; on a phone
-  it asks for the expanded page (`expand`), which opens here.
+  "Try booking yourself" on the live step (`guest_preview_opened`): opens
+  the host's page at full size, at any screen width, to make a test booking.
   """
   @spec handle_try_booking(Phoenix.LiveView.Socket.t(), map()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_try_booking(%{assigns: %{current_step: :ready}} = socket, params) do
-    socket = Analytics.push(socket, "guest_preview_opened", %{})
-
-    if params["expand"] == "true",
-      do: {:noreply, ModalHook.show_modal(socket, :stage_preview)},
-      else: {:noreply, socket}
+  def handle_try_booking(%{assigns: %{current_step: :ready}} = socket, _params) do
+    socket
+    |> Analytics.push("guest_preview_opened", %{})
+    |> ModalHook.show_modal(:stage_preview)
+    |> then(&{:noreply, &1})
   end
 
   def handle_try_booking(socket, _params), do: {:noreply, socket}

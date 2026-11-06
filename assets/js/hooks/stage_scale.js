@@ -23,6 +23,17 @@
  * the viewport crosses `lg`, and after every LiveView update (a new step
  * draws a page of a different height). The element is rendered with
  * `JS.ignore_attributes(["style"])`, so a patch never wipes what it sets.
+ *
+ * A hook mounts only once the LiveView has connected, most of a second
+ * after the page first paints, and the miniature would sit at its design
+ * size until then and visibly grow. So `prefitStages()` fits the stage
+ * before that and keeps it fitted until the first hook mounts and takes
+ * over. It runs from `stage_prefit.js`, a classic script in the page head
+ * that fits the stage as it is parsed, before any browser paints (a module
+ * script, like the app bundle, may run after the first paint), and from the
+ * app bundle, for a page that did not load it. The two builds share their
+ * list of fitters on `window`, so a stage has one fitter and the hook
+ * releases them all.
  */
 
 const DESIGN_WIDTH = 400
@@ -79,8 +90,46 @@ export function focusShift({ viewport, top, bottom, pageHeight, margin = 12 }) {
   return Math.round(Math.min(furthest, Math.max(0, wanted)))
 }
 
+const PREFITS = "__tymeslotStagePrefits"
+
+function prefits() {
+  window[PREFITS] = window[PREFITS] || []
+  return window[PREFITS]
+}
+
+/**
+ * Fits every stage on the page now, before the LiveView connects, with the
+ * same rules as the hook (see the module doc). A stage that already has a
+ * fitter, made earlier in the parse or by the other build, is refitted by
+ * it, picking up a page parsed since.
+ */
+export function prefitStages(root = document) {
+  const fitters = prefits()
+
+  for (const el of root.querySelectorAll('[phx-hook="StageScale"]')) {
+    const existing = fitters.find((fitter) => fitter.el === el)
+
+    if (existing) {
+      existing.observeInner()
+      existing.fit()
+    } else {
+      const fitter = Object.assign(Object.create(StageScale), { el, prefit: true })
+      fitter.mounted()
+      fitters.push(fitter)
+    }
+  }
+}
+
+function releasePrefits() {
+  for (const fitter of prefits()) fitter.destroyed()
+  window[PREFITS] = []
+}
+
 export const StageScale = {
   mounted() {
+    // The hook takes over from the fitting done before it connected.
+    if (!this.prefit) releasePrefits()
+
     this.media = window.matchMedia(WIDE_QUERY)
     this.onMediaChange = () => this.fit()
     this.media.addEventListener("change", this.onMediaChange)

@@ -3,7 +3,7 @@
 
    One markup at every size (question column first, then stage), so reading
    and tab order never change. Below lg the stage is a card above the column
-   and the page scrolls as one; from lg the column is a 440px panel on the
+   and the page scrolls as one; from lg the column is a 480px panel on the
    left and the stage fills the rest at full height. Media queries, not
    container queries, pick the layout; the StageScale hook does the scaling.
    ========================================================================== */
@@ -24,7 +24,7 @@
 @media (min-width: 1024px) {
   .onboarding-shell {
     grid-template-areas: "panel stage";
-    grid-template-columns: 440px minmax(0, 1fr);
+    grid-template-columns: 480px minmax(0, 1fr);
     grid-template-rows: auto;
   }
 }
@@ -35,6 +35,18 @@
 @media (max-width: 1023.98px) {
   html:has(.onboarding-shell) {
     scroll-padding-bottom: calc(var(--onboarding-nav-height, var(--spacing-24)) + var(--spacing-4));
+  }
+}
+
+/* A phone's toasts sit at the bottom of the screen, where they would cover
+   the pinned nav (and swallow a tap meant for Continue) until they fade, so
+   they rise above it. With no nav they keep their usual place. */
+@media (max-width: 639.98px) {
+  html:has(.onboarding-shell) .flash-group {
+    bottom: max(
+      calc(var(--onboarding-nav-height, 0px) + var(--spacing-2)),
+      calc(var(--spacing-4) + env(safe-area-inset-bottom, 0px))
+    );
   }
 }
 
@@ -66,10 +78,30 @@
   }
 }
 
+/* From lg the column is exactly the screen's height and scrolls on its own
+   when a step needs more, so the step's way on (the nav, or the live step's
+   finish) can stick to its bottom edge and is always in view. The bottom
+   padding is the sticky row's own, so nothing scrolls under it. */
 @media (min-width: 1024px) {
+  .onboarding-panel {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+
   .onboarding-panel-inner {
     max-width: none;
-    padding: var(--spacing-12) var(--spacing-10) var(--spacing-8);
+    padding: var(--spacing-8) var(--spacing-8) 0;
+    overflow-y: auto;
+    /* A field the browser scrolls into view on focus clears the sticky row
+       below it, as the page does below lg. */
+    scroll-padding-bottom: calc(var(--onboarding-nav-height, var(--spacing-24)) + var(--spacing-4));
+  }
+
+  /* Each chip row of the meeting step fits on one line of the column. */
+  .onboarding-chips > button {
+    padding-inline: var(--spacing-3);
   }
 }
 
@@ -85,7 +117,7 @@
 
 @media (min-width: 1024px) {
   .onboarding-progress {
-    margin-bottom: var(--spacing-10);
+    margin-bottom: var(--spacing-8);
   }
 }
 
@@ -150,6 +182,19 @@
   margin-bottom: var(--spacing-2);
 }
 
+/* From lg the progress names the steps, the current one in bold, so the
+   "Step N of 5" line is for screen readers only. */
+@media (min-width: 1024px) {
+  .onboarding-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 .onboarding-step-title {
   font-size: var(--font-size-3xl);
   font-weight: 900;
@@ -208,12 +253,15 @@
   }
 }
 
+/* From lg it sits in the flow under the step, and sticks to the bottom of
+   the column only when the step is taller than the screen. Its top padding
+   fades in, so a step scrolling under it shows there is more. */
 @media (min-width: 1024px) {
   .onboarding-nav {
-    position: static;
-    margin: var(--spacing-8) 0 0;
-    padding: 0;
+    margin: var(--spacing-2) 0 0;
+    padding: var(--spacing-4) 0 var(--spacing-6);
     border-top: 0;
+    background: linear-gradient(to bottom, transparent, var(--color-bg-primary) var(--spacing-4));
   }
 }
 
@@ -824,7 +872,7 @@
   }
 }
 
-/* The expanded page on a phone: interactive, filling the dialog. */
+/* The expanded real page: interactive, filling the dialog. */
 .stage-preview-canvas--page .stage-iframe {
   height: calc(100svh - var(--spacing-32));
 }
@@ -945,9 +993,21 @@
   background-color: var(--color-bg-primary);
 }
 
-/* The finish ends the column, clear of the screen's bottom edge. */
+/* The finish ends the column, clear of the screen's bottom edge; from lg
+   it sticks to the bottom of the column, as the other steps' nav does. */
 .onboarding-finish {
   padding-bottom: max(var(--spacing-8), env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .onboarding-finish {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    padding-top: var(--spacing-4);
+    padding-bottom: var(--spacing-6);
+    background: linear-gradient(to bottom, transparent, var(--color-bg-primary) var(--spacing-4));
+  }
 }
 
 /* Pressing the locked finish pulses the first-person card once. */
@@ -977,56 +1037,6 @@
   .stage-frame-wrap:has(.stage-iframe[data-loaded]) [data-role="stage-live-badge"],
   .onboarding-keep-pulse {
     animation: none;
-  }
-}
-
-/* The look step's stories: a column from lg; below it a row of cards the
-   host swipes through, each about 80% of the screen wide so the next one
-   peeks in at the edge. The row bleeds through the column's side padding,
-   so on a phone (below 640px) it runs to the screen's edges. A pointer
-   that cannot swipe gets a thin scrollbar under the row as well; on a
-   touch screen the peeking card is the cue, and the bar stays hidden. */
-.onboarding-theme-stories {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-}
-
-@media (max-width: 1023.98px) {
-  .onboarding-theme-stories {
-    flex-direction: row;
-    align-items: stretch;
-    margin-inline: calc(-1 * var(--spacing-4));
-    padding: var(--spacing-1) var(--spacing-4) var(--spacing-2);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    scroll-padding-inline: var(--spacing-4);
-    scrollbar-width: thin;
-  }
-
-  .onboarding-theme-story {
-    flex: 0 0 min(80vw, 85%);
-    scroll-snap-align: start;
-  }
-}
-
-@media (max-width: 1023.98px) and (pointer: coarse) {
-  .onboarding-theme-stories {
-    padding-bottom: var(--spacing-1);
-    scrollbar-width: none;
-  }
-
-  .onboarding-theme-stories::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@media (min-width: 640px) and (max-width: 1023.98px) {
-  .onboarding-theme-stories {
-    margin-inline: calc(-1 * var(--spacing-6));
-    padding-inline: var(--spacing-6);
-    scroll-padding-inline: var(--spacing-6);
   }
 }
 

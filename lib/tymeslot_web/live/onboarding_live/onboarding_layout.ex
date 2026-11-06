@@ -9,10 +9,12 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
 
   Markup order is the same at every size (question column first, then
   stage), so the reading and tab order never change; only the stylesheet
-  (`onboarding.css`) moves them. From `lg` the column is a 440px panel on
-  the left and the stage fills the rest at full height; below `lg` the stage
-  is a card above the column and the Back and Continue row sticks to the
-  bottom of the screen.
+  (`onboarding.css`) moves them. From `lg` the column is a 480px panel on
+  the left, as tall as the screen and scrolling on its own when a step needs
+  more, and the stage fills the rest at full height; below `lg` the stage is
+  a card above the column. The Back and Continue row sticks to the bottom
+  of the screen at every size, and from `lg` the live step's finish does
+  too, so the way on is always in view.
 
   ## Focus and announcements
 
@@ -37,6 +39,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   use TymeslotWeb.Components.CoreComponents, only: [action_button: 1, icon: 1]
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.OnboardingLive.PreviewParts
   alias TymeslotWeb.OnboardingLive.StageFrame
   alias TymeslotWeb.OnboardingLive.StepConfig
 
@@ -72,6 +75,10 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :stage_canvas, :string, required: true, doc: "the theme's canvas colour"
   attr :stage_theme, :string, default: nil, doc: "the id of the theme the stage draws"
   attr :stage_caption, :string, default: nil, doc: "a line under the stage frame"
+
+  attr :reserve_caption, :boolean,
+    default: false,
+    doc: "keeps the caption's line, unseen, while a caption is still to come"
 
   attr :stage_iframe, :string,
     default: nil,
@@ -191,15 +198,21 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         data-compact={@stage_compact}
         data-theme={@stage_theme}
         data-stage-fit
-        style={"--stage-canvas: #{@stage_canvas};"}
+        style={"--stage-canvas: #{@stage_canvas};" <> PreviewParts.scheme_style(@stage_canvas)}
       >
         <StageFrame.frame url={@stage_url} live={@stage_live} iframe_src={@stage_iframe}>
           <StageFrame.scaled id="onboarding-stage-scale">
             {render_slot(@stage)}
           </StageFrame.scaled>
         </StageFrame.frame>
-        <p :if={@stage_caption} class="onboarding-stage-caption text-token-sm">
-          {@stage_caption}
+        <%!-- A caption still to come keeps its line, so the stage is sized
+             for it from the first paint and never shrinks when it lands. --%>
+        <p
+          :if={@stage_caption || @reserve_caption}
+          class={["onboarding-stage-caption text-token-sm", !@stage_caption && "invisible"]}
+          aria-hidden={!@stage_caption && "true"}
+        >
+          {@stage_caption || "\u00a0"}
         </p>
       </div>
     </div>

@@ -196,6 +196,41 @@ defmodule TymeslotWeb.OnboardingLive.CalendarRevealTest do
                week
     end
 
+    test "the first paint keeps the caption's line while the week loads", %{conn: conn} do
+      %{user: user} = host()
+      stub_events([])
+      conn = log_in_user(conn, user)
+
+      static = conn |> get("/onboarding/connect_calendar") |> html_response(200)
+
+      assert [reserved] =
+               static |> Floki.parse_document!() |> Floki.find(".onboarding-stage-caption")
+
+      assert hd(Floki.attribute(reserved, "class")) =~ "invisible"
+      assert Floki.attribute(reserved, "aria-hidden") == ["true"]
+
+      {:ok, view, _html} = live(conn, "/onboarding/connect_calendar")
+      render_async(view)
+
+      assert caption(view) =~ ~r/^\d+ open slots this week\.$/
+      refute has_element?(view, ".onboarding-stage-caption.invisible")
+    end
+
+    test "the first paint names the meeting on every step, as the connected one does",
+         %{conn: conn} do
+      %{user: user} = host()
+      insert(:meeting_type, user: user, name: "Intro chat")
+      stub_events([])
+
+      static =
+        conn |> log_in_user(user) |> get("/onboarding/connect_calendar") |> html_response(200)
+
+      assert static
+             |> Floki.parse_document!()
+             |> Floki.find(~s([data-role="preview-meeting-name"]))
+             |> Floki.text() =~ "Intro chat"
+    end
+
     test "the first paint never reads the calendar", %{conn: conn} do
       %{user: user} = host()
 

@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test, afterEach, vi } from 'vitest';
-import { StageScale, stageScale, heightForPage, focusShift } from '../hooks/stage_scale';
+import { StageScale, stageScale, heightForPage, focusShift, prefitStages } from '../hooks/stage_scale';
 
 describe('stageScale', () => {
   test('fills a narrow frame below lg', () => {
@@ -63,6 +63,64 @@ describe('focusShift', () => {
 
   test('never shifts past the end of the page', () => {
     expect(focusShift({ viewport: 300, top: 500, bottom: 590, pageHeight: 600 })).toBe(300);
+  });
+});
+
+describe('prefitStages', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    delete window.__tymeslotStagePrefits;
+  });
+
+  function stubMedia(wide, listeners) {
+    window.matchMedia = vi.fn(() => ({
+      matches: wide,
+      addEventListener: (_type, fun) => listeners.add(fun),
+      removeEventListener: (_type, fun) => listeners.delete(fun),
+    }));
+  }
+
+  test('fits a stage before any hook mounts, so the first paint is already to scale', () => {
+    const { el } = build({ width: 800, innerHeight: 400 });
+    el.setAttribute('phx-hook', 'StageScale');
+    stubMedia(true, new Set());
+
+    prefitStages();
+
+    expect(el.style.getPropertyValue('--stage-scale')).toBe('1.2');
+    expect(el.style.height).toBe('480px');
+  });
+
+  test('keeps one fitter per stage and refits it as more of the page arrives', () => {
+    const { el, inner } = build({ width: 800, innerHeight: 400 });
+    el.setAttribute('phx-hook', 'StageScale');
+    const listeners = new Set();
+    stubMedia(true, listeners);
+
+    prefitStages();
+    expect(el.style.height).toBe('480px');
+
+    Object.defineProperty(inner, 'offsetHeight', { value: 500, configurable: true });
+    prefitStages();
+
+    expect(listeners.size).toBe(1);
+    expect(el.style.height).toBe('600px');
+  });
+
+  test('stops fitting once the hook mounts and takes over', () => {
+    const { el } = build({ width: 800, innerHeight: 400 });
+    el.setAttribute('phx-hook', 'StageScale');
+    const listeners = new Set();
+    stubMedia(true, listeners);
+
+    prefitStages();
+    expect(listeners.size).toBe(1);
+
+    Object.assign(Object.create(StageScale), { el }).mounted();
+
+    // Only the hook's own listener is left.
+    expect(listeners.size).toBe(1);
+    expect(el.style.height).toBe('480px');
   });
 });
 

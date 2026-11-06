@@ -45,6 +45,8 @@ defmodule TymeslotWeb.OnboardingLive do
     else
       {:ok,
        socket
+       # Read by the root layout: load the stage's pre-paint fit.
+       |> assign(:stage_prefit, true)
        |> Initializer.initialize(user)
        |> maybe_apply_fixture(params["fixture"])
        |> focus_headings_after_first_event()}
@@ -95,8 +97,10 @@ defmodule TymeslotWeb.OnboardingLive do
       not connected?(socket) ->
         step = landing_step(socket, requested)
         socket = assign(socket, :current_step, step)
-        # The first paint of the meeting step draws its saved state.
-        {:noreply, if(step == :meeting, do: MeetingHandlers.load(socket, false), else: socket)}
+        # The first paint draws the saved meeting: the meeting step edits it,
+        # and the stage names it on every step, so it is there before the
+        # socket connects and the page does not grow when it does.
+        {:noreply, MeetingHandlers.load(socket, false)}
 
       # The address a control patched to (`NavigationHandlers.go_to_step/2`):
       # the step is on screen already.
@@ -137,6 +141,9 @@ defmodule TymeslotWeb.OnboardingLive do
       stage_canvas={LivePreview.canvas(stage_theme(@profile), @theme_customization)}
       stage_theme={stage_theme(@profile)}
       stage_caption={@stage_caption}
+      reserve_caption={
+        LivePreview.caption_pending?(%{current_step: @current_step, stage_week: @stage_week})
+      }
       stage_compact={@current_step == :connect_calendar and @booking_page_live != true}
       stage_iframe={stage_iframe(assigns)}
       show_nav={show_nav?(assigns)}
@@ -174,7 +181,6 @@ defmodule TymeslotWeb.OnboardingLive do
             theme_options={@theme_options}
             theme_customization={@theme_customization}
             choices={@onboarding_choices}
-            picker={@theme_picker}
             headline_form={@headline_form}
           />
         <% :connect_calendar -> %>
@@ -194,6 +200,7 @@ defmodule TymeslotWeb.OnboardingLive do
             meeting_errors={@meeting_errors}
             taken_names={@taken_names}
             hours_form={@hours_form}
+            hours_open={@hours_open}
             video_integration={@video_integration}
           />
         <% :ready -> %>
@@ -202,6 +209,7 @@ defmodule TymeslotWeb.OnboardingLive do
             page_live={@booking_page_live}
             kept_method={@kept_method}
             first_person_name={@first_person_name}
+            first_person_email={@first_person_email}
             email={@current_user.email}
             handoff_qr={@handoff_qr}
             handoff_url={@handoff_url}
@@ -297,13 +305,12 @@ defmodule TymeslotWeb.OnboardingLive do
     NavigationHandlers.handle_finish_locked(socket)
   end
 
-  def handle_event("first_person_name", params, socket) do
-    name =
-      (params["name"] || "")
-      |> String.replace("\x00", "")
-      |> String.slice(0, ReadyStep.name_max_length())
-
-    {:noreply, assign(socket, :first_person_name, name)}
+  def handle_event("first_person_change", params, socket) do
+    {:noreply,
+     assign(socket,
+       first_person_name: first_person_field(params["name"], ReadyStep.name_max_length()),
+       first_person_email: first_person_field(params["email"], ReadyStep.email_max_length())
+     )}
   end
 
   def handle_event("show_handoff_qr", _params, socket) do
@@ -396,14 +403,6 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("headline_change", params, socket) do
     ThemeHandlers.handle_headline_change(params, socket)
-  end
-
-  def handle_event("show_all_themes", _params, socket) do
-    ThemeHandlers.handle_theme_picker(:all, socket)
-  end
-
-  def handle_event("show_theme_stories", _params, socket) do
-    ThemeHandlers.handle_theme_picker(:stories, socket)
   end
 
   # ------------------------------------------------------------------
@@ -531,6 +530,11 @@ defmodule TymeslotWeb.OnboardingLive do
     do: ReadyStep.kept_label(method)
 
   defp stage_announcement(assigns), do: assigns.stage_caption || ""
+
+  defp first_person_field(value, max_length) when is_binary(value),
+    do: value |> String.replace("\x00", "") |> String.slice(0, max_length)
+
+  defp first_person_field(_value, _max_length), do: ""
 
   defp debug?(socket), do: socket.assigns.live_action in [:debug_welcome, :debug_step]
 

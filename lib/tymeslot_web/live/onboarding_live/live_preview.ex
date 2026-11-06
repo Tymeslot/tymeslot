@@ -271,6 +271,19 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   def caption(_assigns), do: nil
 
   @doc """
+  Whether the stage should keep a line for a caption that is still to come:
+  on the calendar and meeting steps, while the week loads. The ready week
+  brings its caption with it, and a stage sized without that line from the
+  first paint would shrink when it arrives.
+  """
+  @spec caption_pending?(map()) :: boolean()
+  def caption_pending?(%{current_step: step, stage_week: %{state: :loading}})
+      when step in [:connect_calendar, :meeting],
+      do: true
+
+  def caption_pending?(_assigns), do: false
+
+  @doc """
   What a ready week shows, in a sentence: the first busy block, if any, and
   the number of open slots. `nil` for a week that is not ready. The stage
   shows it under the page and the live region announces it.
@@ -393,7 +406,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # -------------------------------------------------------------------
 
   defp backdrop_style(colors) do
-    "background: #{canvas(colors)};"
+    "background: #{canvas(colors)};" <> PreviewParts.scheme_style(colors)
   end
 
   defp avatar_style(colors, highlighted?) do
@@ -411,7 +424,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   defp muted_style(colors), do: "color: #{color(colors, :text_secondary, "#475569")};"
 
   defp link_style(colors, highlighted?) do
-    "background: #{color(colors, :primary, "#14b8a6")}1a;color: #{color(colors, :text_secondary, "#475569")};" <>
+    "background: #{PreviewParts.tint(color(colors, :primary, "#14b8a6"), 10)};color: #{color(colors, :text_secondary, "#475569")};" <>
       ring(highlighted?, colors)
   end
 end

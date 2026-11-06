@@ -78,11 +78,8 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
   end
 
   describe "navigation buttons" do
-    test "Back is hidden on the first and last step only" do
-      assert Enum.reject(StepConfig.steps(), &StepConfig.show_back_button?/1) == [
-               :profile,
-               :ready
-             ]
+    test "Back is hidden on the first step only" do
+      assert Enum.reject(StepConfig.steps(), &StepConfig.show_back_button?/1) == [:profile]
     end
 
     test "Continue reads the same on every step but the last" do

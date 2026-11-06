@@ -207,10 +207,10 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def next_button_variant(_step), do: :primary
 
   @doc """
-  Returns whether the back button should be shown for a given step.
+  Returns whether a step offers Back: every step but the first. The live
+  step draws its own, beside its finish.
   """
   @spec show_back_button?(step()) :: boolean()
   def show_back_button?(:profile), do: false
-  def show_back_button?(:ready), do: false
   def show_back_button?(_step), do: true
 end

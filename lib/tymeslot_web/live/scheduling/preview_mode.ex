@@ -57,6 +57,9 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   (`stage=1`), which `iframe_embed.js` turns into `data-preview-stage` on
   `<html>` so the page can draw its preview chrome compactly in the stage's
   short phone card. Both are display hints with no authority.
+
+  Pass `:meeting_slug` to open the page at that meeting type's own step
+  (`/username/slug`) rather than its first screen.
   """
   @spec owner_path(String.t(), integer(), keyword()) :: String.t()
   def owner_path(username, user_id, opts \\ [])
@@ -68,8 +71,11 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
       |> put_flag("stage", Keyword.get(opts, :stage, false))
       |> URI.encode_query()
 
-    "/#{username}?#{query}"
+    "/#{username}#{slug_segment(Keyword.get(opts, :meeting_slug))}?#{query}"
   end
+
+  defp slug_segment(slug) when slug in [nil, ""], do: ""
+  defp slug_segment(slug), do: "/" <> URI.encode(slug, &URI.char_unreserved?/1)
 
   @doc """
   Absolute-URL form of `owner_path/3`, for an iframe of the owner's real

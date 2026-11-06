@@ -468,19 +468,27 @@ defmodule TymeslotWeb.OnboardingLive.PreviewWeek do
   # -------------------------------------------------------------------
 
   defp cell_style(colors, :selected), do: "background: #{primary(colors)};color: #ffffff;"
-  defp cell_style(colors, :open), do: "background: #{primary(colors)}26;color: #{ink(colors)};"
-  defp cell_style(colors, :idle), do: "background: #{muted(colors)}14;color: #{muted(colors)};"
+
+  defp cell_style(colors, :open),
+    do: "background: #{PreviewParts.tint(primary(colors), 15)};color: #{ink(colors)};"
+
+  defp cell_style(colors, :idle),
+    do: "background: #{PreviewParts.tint(muted(colors), 8)};color: #{muted(colors)};"
+
   defp cell_style(colors, :closed), do: "color: #{muted(colors)};opacity: 0.55;"
   # A day outside the seven shown is neither free nor taken: a plain number.
   defp cell_style(colors, :outside), do: "color: #{muted(colors)};"
 
   defp cell_style(colors, :slot, index),
-    do: "background: #{primary(colors)}1f;color: #{ink(colors)};--reveal-index: #{index};"
+    do:
+      "background: #{PreviewParts.tint(primary(colors), 12)};color: #{ink(colors)};--reveal-index: #{index};"
 
   defp cell_style(colors, :busy, _index),
-    do: "color: #{muted(colors)};background-color: #{muted(colors)}0f;"
+    do: "color: #{muted(colors)};background-color: #{PreviewParts.tint(muted(colors), 6)};"
 
-  defp cell_style(colors, :ghost, _index), do: "background-color: #{muted(colors)}0a;"
+  defp cell_style(colors, :ghost, _index),
+    do: "background-color: #{PreviewParts.tint(muted(colors), 4)};"
+
   defp cell_style(colors, :loading, _index), do: "color: #{muted(colors)};"
   defp cell_style(_colors, :filler, _index), do: nil
 

@@ -266,28 +266,28 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       refute_received {[:tymeslot, :onboarding, :link_kept], _ref, _, _}
     end
 
-    test "trying the page on a desktop pushes guest_preview_opened", %{view: view} do
+    test "trying the page pushes guest_preview_opened and opens it at full size",
+         %{view: view} do
+      refute has_element?(view, "#onboarding-stage-preview-iframe")
+
       view |> element("#onboarding-try-booking") |> render_click()
 
       assert_push_event view, "ts:analytics", %{name: "guest_preview_opened", props: props}
       assert props == %{}
-    end
-
-    test "trying the page on a phone pushes guest_preview_opened and expands it",
-         %{view: view} do
-      refute has_element?(view, "#onboarding-stage-preview-iframe")
-
-      view |> element("#onboarding-try-booking-phone") |> render_click()
-
-      assert_push_event view, "ts:analytics", %{name: "guest_preview_opened"}
       assert has_element?(view, "#onboarding-stage-preview-iframe")
+
+      assert has_element?(
+               view,
+               "#onboarding-stage-preview [data-role='stage-preview-note']",
+               "Test bookings don't create meetings or send emails."
+             )
     end
 
     test "props and link_kept metadata carry no PII", %{view: view, user: user} do
       :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
 
       name = "Ada Lovelace"
-      render_hook(view, "first_person_name", %{"name" => name})
+      render_hook(view, "first_person_change", %{"name" => name, "email" => "ada@example.com"})
       view |> element("#onboarding-copy-message") |> render_click()
       view |> element("#onboarding-try-booking") |> render_click()
 
@@ -300,7 +300,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       assert pushed != []
 
       user = Repo.reload!(user)
-      identifying = [name, "Ada", "Lovelace", user.email, to_string(user.id)]
+      identifying = [name, "Ada", "Lovelace", "ada@example.com", user.email, to_string(user.id)]
 
       leaks =
         for %{name: event, props: props} <- pushed,

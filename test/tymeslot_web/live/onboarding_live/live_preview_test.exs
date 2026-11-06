@@ -56,6 +56,47 @@ defmodule TymeslotWeb.OnboardingLive.LivePreviewTest do
     refute html =~ "#06b6d4"
   end
 
+  describe "a page that follows the visitor's OS" do
+    defp paper(mode) do
+      customization = %ThemeCustomizationSchema{
+        theme_id: "3",
+        settings: %{"color_scheme" => "paper_sunset", "colour_mode" => mode}
+      }
+
+      html =
+        render_component(&LivePreview.live_preview/1,
+          current_step: :ready,
+          booking_theme: "3",
+          theme_customization: customization,
+          booking_host: "tymeslot.test",
+          today: ~D[2026-11-03]
+        )
+
+      {html, LivePreview.canvas("3", customization)}
+    end
+
+    # The real page shows its dark set on a dark system, so the miniature it
+    # replaces on the live step must too, or the page changes as it loads.
+    test "draws both colour sets, for the system to choose between" do
+      {html, canvas} = paper("auto")
+
+      [root_style] =
+        html |> Floki.parse_fragment!() |> Floki.attribute("div", "style") |> Enum.take(1)
+
+      assert root_style =~ "color-scheme: light dark"
+      assert root_style =~ "light-dark("
+      assert canvas =~ ~r/^light-dark\(#\w+, #\w+\)$/
+    end
+
+    test "draws one set for a page fixed to light" do
+      {html, canvas} = paper("light")
+
+      refute html =~ "light-dark("
+      refute html =~ "color-scheme"
+      assert canvas =~ ~r/^#\w+$/
+    end
+  end
+
   test "draws a preset scheme with that preset's colours" do
     html =
       render_preview(%{

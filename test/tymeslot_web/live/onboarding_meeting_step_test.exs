@@ -180,9 +180,49 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     assert has_element?(view, "#meeting-hours-preset-mornings[aria-pressed='true']")
   end
 
+  test "a preset week hides the day and time controls until Custom", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+
+    refute has_element?(view, "#meeting-day-1")
+    refute has_element?(view, "#meeting-hours-form")
+
+    view |> element("#meeting-hours-preset-custom") |> render_click()
+
+    assert has_element?(view, "#meeting-day-1[aria-pressed='true']")
+    assert has_element?(view, "#meeting-hours-form")
+  end
+
+  # Once open, an edit that lands back on a preset's week leaves the
+  # controls in place under the host's hand.
+  test "the controls stay open when an edit lands on a preset", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+    view |> element("#meeting-hours-preset-custom") |> render_click()
+
+    view |> element("#meeting-day-6") |> render_click()
+    view |> element("#meeting-day-6") |> render_click()
+
+    assert has_element?(view, "#meeting-hours-preset-weekdays[aria-pressed='true']")
+    assert has_element?(view, "#meeting-day-1")
+  end
+
+  test "a week no preset describes shows the controls from the start", %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+    view |> element("#meeting-hours-preset-custom") |> render_click()
+    view |> element("#meeting-day-6") |> render_click()
+
+    {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/meeting")
+
+    assert has_element?(view, "#meeting-hours-preset-custom[aria-pressed='true']")
+    assert has_element?(view, "#meeting-day-6[aria-pressed='true']")
+  end
+
   test "a time change away from a preset shows Custom", %{conn: conn} do
     %{user: user, profile: profile} = new_host()
     view = open_step(conn, user)
+    view |> element("#meeting-hours-preset-custom") |> render_click()
 
     view
     |> element("#meeting-hours-form")
@@ -197,6 +237,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   test "each day is named by the text it shows", %{conn: conn} do
     %{user: user} = new_host()
     view = open_step(conn, user)
+    view |> element("#meeting-hours-preset-custom") |> render_click()
 
     [monday] = view |> render() |> Floki.parse_document!() |> Floki.find("#meeting-day-1")
 
@@ -208,6 +249,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   test "custom hours with no days are refused", %{conn: conn} do
     %{user: user, profile: profile} = new_host()
     view = open_step(conn, user)
+    view |> element("#meeting-hours-preset-custom") |> render_click()
     before = week(profile)
 
     for day <- 1..5, do: view |> element("#meeting-day-#{day}") |> render_click()
@@ -222,6 +264,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   test "an end before the start is refused", %{conn: conn} do
     %{user: user, profile: profile} = new_host()
     view = open_step(conn, user)
+    view |> element("#meeting-hours-preset-custom") |> render_click()
     before = week(profile)
 
     view
@@ -267,6 +310,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
   test "changes close together rebuild the preview once", %{conn: conn} do
     %{user: user} = new_host()
     view = open_step(conn, user)
+    view |> element("#meeting-hours-preset-custom") |> render_click()
     watch_refreshes(view, 1_500)
 
     for day <- [6, 7, 6, 7, 1], do: view |> element("#meeting-day-#{day}") |> render_click()

@@ -12,7 +12,10 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
       a chip or a place, and before Continue moves on, never on every key.
     * `hours_form`: the days and the one window, and the preset chip that
       shows. A change is saved straight away (the time selects reach here
-      debounced by the browser).
+      debounced by the browser). The day and time controls show only once
+      `hours_open` is set: by a week no preset describes, or by the host
+      picking "Custom". They then stay, even if an edit lands back on a
+      preset's week.
 
   A save that changes what the week offers (the duration, the place, the
   hours) reads the stage's week again (`WeekReveal.refresh/1`), so the
@@ -57,6 +60,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
       meeting_errors: %{},
       taken_names: MapSet.new(),
       hours_form: Map.put(@default_hours, :preset, :weekdays),
+      hours_open: false,
       video_integration: nil,
       meeting_loaded: false
     )
@@ -64,10 +68,10 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
 
   @doc """
   Reads the step's state from the host's meeting type, week and video
-  integrations. The connected mount does it for every step (the stage
-  names the meeting on all of them) and makes sure there is a meeting type
-  to edit; the disconnected render does it only for the meeting step, and
-  only reads.
+  integrations, for every step (the stage names the meeting on all of
+  them). The connected mount also makes sure there is a meeting type to
+  edit; the disconnected render only reads, so the first paint draws the
+  meeting the connected one will.
   """
   @spec load(socket(), boolean()) :: socket()
   def load(%{assigns: %{profile: nil}} = socket, _connected?), do: socket
@@ -75,13 +79,15 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   def load(%{assigns: %{current_user: user, profile: profile}} = socket, connected?) do
     meeting_type = load_meeting_type(user.id, profile, connected?)
     hours = Availability.weekly_hours(profile.id) || @default_hours
+    preset = preset_for(hours)
 
     Component.assign(socket,
       meeting_type: meeting_type,
       meeting_form: form_from(meeting_type),
       meeting_errors: %{},
       taken_names: MeetingSetup.taken_names(meeting_type),
-      hours_form: Map.put(hours, :preset, preset_for(hours)),
+      hours_form: Map.put(hours, :preset, preset),
+      hours_open: preset == :custom,
       video_integration: MeetingSetup.video_integration(user.id),
       meeting_loaded: true
     )
@@ -119,10 +125,6 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   @doc "The duration chips, in minutes; \"Other\" follows them."
   @spec duration_presets() :: [pos_integer()]
   def duration_presets, do: @duration_presets
-
-  @doc "The hours presets' keys, in the order the chips show them."
-  @spec hour_presets() :: [atom()]
-  def hour_presets, do: Keyword.keys(@hour_presets)
 
   # A week whose days differ is the host's own, whatever its first day says.
   defp preset_for(%{uniform: false}), do: :custom
@@ -391,11 +393,11 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   # Hours events
   # -------------------------------------------------------------------
 
-  @doc "A preset chip: writes its week. \"Custom\" only shows the controls as they are."
+  @doc "A preset chip: writes its week. \"Custom\" only shows the controls, as they are."
   @spec handle_hours_preset(String.t(), socket()) :: {:noreply, socket()}
   def handle_hours_preset("custom", socket) do
     hours = %{socket.assigns.hours_form | preset: :custom}
-    {:noreply, Component.assign(socket, :hours_form, hours)}
+    {:noreply, Component.assign(socket, hours_form: hours, hours_open: true)}
   end
 
   def handle_hours_preset(value, socket) do

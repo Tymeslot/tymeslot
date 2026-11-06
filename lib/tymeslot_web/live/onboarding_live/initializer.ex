@@ -114,8 +114,10 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       # `NavigationHandlers.assign_share_state/1`) and the QR code once shown.
       kept_method: nil,
       first_person_name: "",
+      first_person_email: "",
       owner_preview_url: nil,
       share_username: nil,
+      share_preview_key: nil,
       share_subscribed: false,
       handoff_url: nil,
       handoff_qr: nil,
@@ -149,8 +151,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       caldav_discovering: false,
       # The paused calendar the inline form reconnects, or nil for a new one.
       reconnecting_calendar: nil,
-      theme_options: ThemeInfo.theme_options(),
-      theme_picker: :stories
+      theme_options: ThemeInfo.theme_options()
     ]
   end
 
