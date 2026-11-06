@@ -2,8 +2,8 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   @moduledoc """
   Finds and scrubs the personal data invitees give a host, across every table
   that holds it: meetings, group seats, guests, poll participants, the
-  invitees a draft poll holds, booking payments and the outgoing delivery
-  logs.
+  invitees a draft poll holds, invitation links, booking payments and the
+  outgoing delivery logs.
 
   Pure data access. Which rows are scrubbed, and when, is decided by
   `Tymeslot.InviteeData`.
@@ -20,6 +20,7 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   import Ecto.Query
 
+  alias Tymeslot.Invitations.InvitationSchema, as: Invitation
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -297,6 +298,18 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   end
 
   @doc """
+  Clears the name and email a host addressed invitation links to `email`
+  under, keeping each link, its token and its status. Invitations hold the
+  address lower-cased already. Keeps to `scope`'s invitations.
+  """
+  @spec scrub_invitations(String.t(), scope(), DateTime.t()) :: {non_neg_integer(), nil}
+  def scrub_invitations(email, scope, %DateTime{} = now) do
+    from(i in Invitation, where: i.email == ^email)
+    |> scope_invitations(scope)
+    |> Repo.update_all(set: [name: nil, email: nil, updated_at: now])
+  end
+
+  @doc """
   Deletes the webhook, Slack and Telegram delivery logs of `meeting_ids`,
   whose payloads repeat the booking's details.
   """
@@ -386,6 +399,11 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   defp scope_joined_meeting(query, host_user_id) when is_integer(host_user_id),
     do: where(query, [meeting: m], m.organizer_user_id == ^host_user_id)
+
+  defp scope_invitations(query, :all), do: query
+
+  defp scope_invitations(query, host_user_id) when is_integer(host_user_id),
+    do: where(query, [i], i.user_id == ^host_user_id)
 
   defp scope_joined_poll(query, :all), do: query
 
