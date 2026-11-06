@@ -619,10 +619,16 @@ oauth_enabled =
     other -> raise ~s(ENABLE_OAUTH_AUTH must be "true" or "false", got: #{inspect(other)})
   end
 
-config :tymeslot, :social_auth,
-  google_enabled: System.get_env("ENABLE_GOOGLE_AUTH", "false") == "true",
-  github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true",
-  oauth_enabled: oauth_enabled
+# Not seeded in test, for the same reason as the reCAPTCHA flags below:
+# config/test.exs switches every provider off, so a developer shell that
+# exports ENABLE_GOOGLE_AUTH (as env.sh does) cannot give the sign-in lockout
+# tests a working path they did not set up.
+if config_env() != :test do
+  config :tymeslot, :social_auth,
+    google_enabled: System.get_env("ENABLE_GOOGLE_AUTH", "false") == "true",
+    github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true",
+    oauth_enabled: oauth_enabled
+end
 
 # Generic OAuth / OIDC Provider Configuration
 # For SSO authentication with any OAuth2/OIDC-compliant identity provider
