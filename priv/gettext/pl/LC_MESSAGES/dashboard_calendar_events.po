@@ -1021,3 +1021,43 @@ msgid_plural "The latest update could not be emailed to these guests. Let them k
 msgstr[0] "Nie udało się wysłać e-mailem ostatniej zmiany do tego gościa. Powiadom go w inny sposób."
 msgstr[1] "Nie udało się wysłać e-mailem ostatniej zmiany do tych gości. Powiadom ich w inny sposób."
 msgstr[2] "Nie udało się wysłać e-mailem ostatniej zmiany do tych gości. Powiadom ich w inny sposób."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "An address, a room or a meeting point"
+msgstr "Adres, sala lub miejsce spotkania"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location"
+msgstr "Własna lokalizacja"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location…"
+msgstr "Własna lokalizacja…"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Location (optional)"
+msgstr "Lokalizacja (opcjonalnie)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "No location"
+msgstr "Brak lokalizacji"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Zapisane lokalizacje"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on the calendar entry and in every invitation."
+msgstr "Widoczna we wpisie w kalendarzu i w każdym zaproszeniu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
+#, elixir-autogen, elixir-format
+msgid "That location can no longer be used. Please choose another one."
+msgstr "Tej lokalizacji nie można już użyć. Wybierz inną."

@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
@@ -341,6 +342,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           >{Helpers.tz_abbr(@user_timezone, recurrence_start(@creating_event, @user_timezone))}</span>
         </form>
       </div>
+
+      <LocationFields.location_fields
+        :if={not @group_mode}
+        choice={@creating_event[:location_choice] || ""}
+        custom={@creating_event[:location_custom] || ""}
+        venues={@venues}
+        myself={@myself}
+      />
 
       <GroupEventFields.group_event_fields
         :if={@group_mode}
