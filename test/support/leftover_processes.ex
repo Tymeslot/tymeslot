@@ -7,9 +7,11 @@ defmodule Tymeslot.Test.LeftoverProcesses do
   `Phoenix.LiveViewTest` among them, before it runs the test's `on_exit`
   callbacks. It knows nothing of what the code under test starts elsewhere:
   the background tasks under `Tymeslot.TaskSupervisor` (a calendar grid's
-  provider writes, an ad-hoc meeting's notifications) and the grid's write
-  guardians (`Tymeslot.CalendarGrid.WriteGuardian`), which take over the
-  queue when the test's LiveView goes. Left alone, one goes on working after
+  provider writes, an ad-hoc meeting's notifications), those under the
+  error tracker's own supervisor (an error raised inside a transaction is
+  recorded from a task, see `Tymeslot.Infrastructure.ErrorTracking`), and
+  the grid's write guardians (`Tymeslot.CalendarGrid.WriteGuardian`), which
+  take over the queue when the test's LiveView goes. Left alone, one goes on working after
   its test has ended. Once the test's sandbox owner has stopped, its next
   query finds the owner of the following test instead, if that test runs
   in shared mode, so it writes jobs, rows and emails into a test that never
@@ -22,6 +24,7 @@ defmodule Tymeslot.Test.LeftoverProcesses do
 
   alias ExUnit.Callbacks
   alias Tymeslot.CalendarGrid.WriteGuardian
+  alias Tymeslot.Infrastructure.ErrorTracking
 
   @doc """
   Kills, on exit of the calling test and before its sandbox owner stops,
@@ -43,7 +46,14 @@ defmodule Tymeslot.Test.LeftoverProcesses do
   def kill_processes_of(test_pid) do
     # Guardians first: each one starts tasks of its own.
     kill_all(guardians(), test_pid)
-    kill_all(Task.Supervisor.children(Tymeslot.TaskSupervisor), test_pid)
+    kill_all(tasks(), test_pid)
+  end
+
+  defp tasks do
+    Enum.flat_map(
+      [Tymeslot.TaskSupervisor, ErrorTracking.task_supervisor()],
+      &Task.Supervisor.children/1
+    )
   end
 
   defp guardians do
