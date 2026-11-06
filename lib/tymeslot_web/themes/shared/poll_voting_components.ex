@@ -280,6 +280,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
 
       <div class="poll-field">
         <label class="poll-field-label" for="poll-name">{dgettext("booking_polls", "Your name")}</label>
+        <%!-- raw-input: poll page field styled by the shared and Paper poll CSS through .poll-field-input, which <.input> would move to the wrapper --%>
         <input
           id="poll-name"
           class="poll-field-input"
@@ -293,6 +294,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
 
       <div class="poll-field">
         <label class="poll-field-label" for="poll-email">{dgettext("booking_polls", "Your email")}</label>
+        <%!-- raw-input: poll page field styled by the shared and Paper poll CSS through .poll-field-input, which <.input> would move to the wrapper --%>
         <input
           id="poll-email"
           class="poll-field-input"
@@ -342,6 +344,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           <label class="poll-field-label" for="poll-voter-name">
             {dgettext("booking_polls", "Your name")}
           </label>
+          <%!-- raw-input: poll page field styled by the shared and Paper poll CSS through .poll-field-input, which <.input> would move to the wrapper --%>
           <input
             id="poll-voter-name"
             class="poll-field-input"
@@ -480,6 +483,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           :for={response <- responses()}
           class={"poll-vote-option poll-vote-option--#{response}"}
         >
+          <%!-- raw-input: radio inside the pill-shaped vote option, which the poll CSS draws from :has(input:checked) --%>
           <input
             type="radio"
             name={"votes[#{@slot.id}]"}

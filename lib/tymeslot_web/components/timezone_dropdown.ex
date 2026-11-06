@@ -107,6 +107,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         <:panel>
           <div class="p-3 border-b border-white/20">
             <div class="relative">
+              <%!-- raw-input: borderless search box inside the dropdown panel with a magnifier overlay, not a labelled form field --%>
               <input
                 id="timezone-search"
                 type="text"

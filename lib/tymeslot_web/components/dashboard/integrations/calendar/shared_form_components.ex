@@ -400,17 +400,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
         </span>
       </div>
       <input type="hidden" name={@name} value={@value} />
-      <div class="relative" title={@tooltip}>
-        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-tymeslot-300 pointer-events-none">
-          <.icon name="hero-lock-closed" class="w-5 h-5" />
-        </div>
-        <input
-          type="text"
-          value={@value}
-          disabled
-          class="input input-with-icon opacity-60 cursor-not-allowed bg-tymeslot-100 text-tymeslot-500"
-        />
-      </div>
+      <.input type="text" value={@value} disabled icon="hero-lock-closed" title={@tooltip} />
     </div>
     """
   end
