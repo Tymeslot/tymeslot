@@ -350,6 +350,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   instead of wrapping. It may shrink below its content (`min-w-0`), so beside
   a label in a flex row it scrolls rather than pushing the label aside. Focus
   rings are drawn inside each option, where the scrolling row cannot clip them.
+
+  `overflow={:wrap}` wraps the options onto further rows instead, for a
+  control that is a set of choices on its own line rather than a toolbar
+  beside other controls, where a cut option would read as a broken label.
   """
   attr :id, :string, required: true
   attr :value, :any, required: true, doc: "the chosen option's value"
@@ -362,8 +366,19 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   attr :target, :any, default: nil
   attr :aria_label, :string, required: true, doc: "what the options choose"
-  attr :size, :atom, default: :md, values: [:sm, :md]
+
+  attr :size, :atom,
+    default: :md,
+    values: [:sm, :md, :lg],
+    doc: "`:lg` gives each option a 44px touch target"
+
   attr :disabled, :boolean, default: false
+
+  attr :overflow, :atom,
+    default: :scroll,
+    values: [:scroll, :wrap],
+    doc: "whether options that do not fit on one row scroll sideways or wrap"
+
   attr :class, :any, default: nil, doc: "layout classes for the group"
 
   slot :option, required: true do
@@ -386,7 +401,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       phx-hook="ScrollStrip"
       class={[
         "inline-flex min-w-0 max-w-full gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5",
-        strip_class(:scroll),
+        strip_class(@overflow),
         @class
       ]}
     >
@@ -435,6 +450,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   defp segment_size_class(:sm), do: "px-2.5 py-1 text-token-xs"
   defp segment_size_class(:md), do: "px-3 py-1.5 text-token-sm"
+  defp segment_size_class(:lg), do: "min-h-11 px-4 py-2 text-token-sm"
 
   attr :count, :integer, required: true
   attr :active, :boolean, required: true

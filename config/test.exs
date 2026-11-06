@@ -85,6 +85,7 @@ config :tymeslot, :extra_themes, [
     key: :fixture,
     name: "Fixture",
     heading_style: :generic,
+    shows_intro: true,
     customization_spec: Tymeslot.Test.FixtureThemeSpec,
     status: :beta,
     module: TymeslotWeb.Test.FixtureTheme.Theme

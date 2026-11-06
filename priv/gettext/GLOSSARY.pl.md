@@ -182,6 +182,12 @@ fragment: read how the code uses it.
 | retry / try again | spróbuj ponownie |
 | loading | wczytywanie |
 | failed | nie powiodło się |
+| booking link | link do rezerwacji ("Skopiowano link do rezerwacji!") |
+| link (the setup wizard's name for the username field, the address of the page) | link ("Ten link jest już zajęty. Wybierz inny.") |
+| keep (your link: save it somewhere you will find it) | zachowaj ("Albo zachowaj go na później") |
+| live (a page that accepts bookings; the wizard's step name and badge) | online ("Strona jest online", "%{link} jest już online"); not "na żywo", which is for live previews |
+| free/busy (a person's busy time, not the feed) | zajętość; in running text "kiedy masz zajęte" |
+| Apple Account (Apple's own Polish UI) | Konto Apple; its sections "Logowanie i bezpieczeństwo", "Hasła dla aplikacji" |
 
 ### Booking pages (a host's extra pages)
 

@@ -39,8 +39,8 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
       assert [%{date: @monday, start_dt: start_dt, end_dt: end_dt, breaks: []}] =
                BusinessHours.owner_windows([@monday], nil, "Etc/UTC", %{})
 
-      assert DateTime.to_time(start_dt) == ~T[11:00:00]
-      assert DateTime.to_time(end_dt) == ~T[19:30:00]
+      assert DateTime.to_time(start_dt) == ~T[09:00:00]
+      assert DateTime.to_time(end_dt) == ~T[17:00:00]
       assert start_dt.time_zone == "Etc/UTC"
     end
 

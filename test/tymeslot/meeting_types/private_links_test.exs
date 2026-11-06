@@ -100,7 +100,7 @@ defmodule Tymeslot.MeetingTypes.PrivateLinksTest do
       assert MeetingTypes.get_public_meeting_types(user.id) == []
 
       # A public page view must never write to the host's account: the default
-      # "15 Minutes"/"30 Minutes" types must not be conjured into existence.
+      # "Intro call" type must not be conjured into existence.
       assert MeetingTypeQueries.list_all_meeting_types(user.id) == []
     end
   end

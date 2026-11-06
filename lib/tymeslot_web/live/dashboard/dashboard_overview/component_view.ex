@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
 
         <%!-- Onboarding checklist — only while setup is incomplete and not dismissed --%>
         <OnboardingChecklist.onboarding_checklist
-          :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+          :if={OnboardingChecklist.visible?(@current_user, @integration_status, @profile)}
           integration_status={@integration_status}
           current_user={@current_user}
           profile={@profile}

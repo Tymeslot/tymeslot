@@ -12,6 +12,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   - `AuthScheduler` — email verification, password reset, and the account
     notices sent instead of an on-screen answer (no password to reset, a
     sign-up attempt with a registered address)
+  - `OnboardingScheduler`: the emails a new host asks for while setting up
+    (their booking link)
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
   - `PollScheduler`: poll deadline reminders, host nudges and vote updates, and
@@ -30,6 +32,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   alias Tymeslot.Emails.EmailScheduler.EndChangeScheduler
   alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Emails.EmailScheduler.OnboardingScheduler
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Emails.EmailScheduler.SessionScheduler
 
@@ -101,6 +104,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_signup_attempt_notice(user_id), to: AuthScheduler
   defdelegate schedule_social_signup_confirmation(details), to: AuthScheduler
   defdelegate schedule_account_deletion_notice(details), to: AuthScheduler
+
+  # Onboarding emails
+
+  defdelegate schedule_booking_link(user_id), to: OnboardingScheduler
 
   # Account emails
 

@@ -1,38 +1,37 @@
 defmodule Tymeslot.MeetingTypes.Defaults do
   @moduledoc """
-  The two meeting types every new host starts with, seeded once as the
+  The meeting type every new host starts with, seeded once as the
   profile is created. Reached through
   `Tymeslot.MeetingTypes.seed_default_meeting_types/2`.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.UUID
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
 
-  # What tells the defaults apart, in the order they are listed.
-  @templates [
-    %{
-      name: "15 Minutes",
-      description: "Quick chat or brief consultation",
-      duration_minutes: 15,
-      icon: "hero-bolt"
-    },
-    %{
-      name: "30 Minutes",
-      description: "In-depth discussion or detailed review",
-      duration_minutes: 30,
-      icon: "hero-rocket-launch"
-    }
-  ]
+  # The name and description are translated when seeded (see `templates/0`),
+  # so they are stored in the sign-up's language.
+  defp templates do
+    [
+      %{
+        name: dgettext("meeting_types", "Intro call"),
+        description: dgettext("meeting_types", "A short first conversation"),
+        duration_minutes: 30,
+        icon: "hero-chat-bubble-left-right"
+      }
+    ]
+  end
 
   @doc """
-  Seeds the two default meeting types for a new user, once, as the profile is
+  Seeds the default meeting type for a new user, once, as the profile is
   created (`Tymeslot.Profiles.create_profile/1` and the OAuth sign-up, which
-  passes its transaction's `repo`). A host who later deletes them keeps none:
-  nothing seeds them again.
+  passes its transaction's `repo`). A host who later deletes it keeps none:
+  nothing seeds it again.
 
-  A new account has no calendar and no username yet, so the defaults carry
+  A new account has no calendar and no username yet, so the default carries
   no booking calendar and there is no booking page to publish. A seed that
   meets types already there (a retried sign-up) inserts nothing.
   """
@@ -47,10 +46,38 @@ defmodule Tymeslot.MeetingTypes.Defaults do
     :ok
   end
 
+  @doc """
+  The attributes of the default meeting type created through the changeset
+  (`Tymeslot.MeetingTypes.create_default_meeting_type/1`), for a host who
+  has types but none active. The name is the default's, numbered past any
+  of `taken_names`.
+  """
+  @spec default_attrs(integer(), MapSet.t(String.t())) :: map()
+  def default_attrs(user_id, taken_names) when is_integer(user_id) do
+    [template | _rest] = templates()
+
+    Map.merge(template, %{
+      user_id: user_id,
+      name: free_name(template.name, taken_names),
+      is_active: true,
+      locations: [%{kind: :in_person, label: "In person", position: 0}],
+      reminder_config: [%{value: 30, unit: "minutes"}]
+    })
+  end
+
+  defp free_name(name, taken) do
+    Stream.iterate(1, &(&1 + 1))
+    |> Stream.map(fn
+      1 -> name
+      n -> "#{name} #{n}"
+    end)
+    |> Enum.find(&(not MapSet.member?(taken, &1)))
+  end
+
   # A new account has no calendar yet, so the defaults carry no booking
   # calendar.
   defp default_meeting_type_templates(user_id, now) do
-    @templates
+    templates()
     |> Enum.with_index()
     |> Enum.map(fn {template, sort_order} ->
       Map.merge(template, %{

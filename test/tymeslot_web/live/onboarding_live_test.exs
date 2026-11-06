@@ -30,128 +30,49 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
   describe "complete onboarding flow" do
     test "new user can complete full onboarding successfully", %{conn: conn} do
-      # Create a new user without onboarding completed
-      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Test User"})
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
 
-      # Should start at welcome step
-      assert has_element?(view, ".onboarding-step-title")
-
-      # Step 1: Welcome -> Profile
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Should now be at profile step
+      # A new host starts at their link
       assert has_element?(view, "#profile-form")
 
-      # Fill in profile form
       view
-      |> form("form#profile-form", %{
-        "full_name" => "Test User",
-        "username" => "testuser123"
-      })
+      |> form("form#profile-form", %{"full_name" => "Test User", "username" => "testuser123"})
       |> render_change()
 
-      # Step 2: Profile -> Connect Calendar
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Should now be at connect_calendar step
+      # Link -> calendar -> meeting -> look -> live
+      click_continue(view)
       assert has_element?(view, ".onboarding-provider-cards")
+      click_continue(view)
+      click_continue(view)
+      click_continue(view)
+      assert has_element?(view, ".onboarding-step-title", "You're live")
 
-      # Step 3: Connect Calendar -> Buffer Time. Forced choice — select
-      # "Not right now" before Continue, otherwise next_step is a no-op.
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Continuing without a calendar opens a nudge modal — confirm to advance.
-      render_click(view, "confirm_skip_calendar")
-
-      # Should now be at buffer_time step
-      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
-
-      # Steps 4-6: Buffer Time -> Booking Window -> Minimum Notice -> Ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Should now be at ready step
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
-
-      # Step 7: Ready -> Complete onboarding
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Should redirect to dashboard
+      # Live: keeping the link completes onboarding; finishing goes to the dashboard
+      view |> element("#onboarding-keep-copy") |> render_click()
+      view |> element("#onboarding-finish") |> render_click()
       assert_redirect(view, ~p"/dashboard")
 
-      # Verify onboarding_completed_at is set
       user = Repo.reload!(user)
       assert %DateTime{} = user.onboarding_completed_at
 
-      # Verify profile was created and updated with all fields
       profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.full_name == "Test User"
       assert profile.username == "testuser123"
       # Without connect_params, timezone falls back to business default
       assert profile.timezone == "Europe/Tallinn"
-
-      # Scheduling defaults are preserved when not changed
-      schedule = default_schedule(user)
-      assert schedule.buffer_before_minutes == 15
-      assert schedule.buffer_after_minutes == 15
-      assert schedule.advance_booking_days == 90
-      assert schedule.min_advance_hours == 3
-    end
-
-    test "the before and after buffers chosen on the buffer step persist separately", %{
-      conn: conn
-    } do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_steps(view)
-
-      view
-      |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='10']"
-      )
-      |> render_click()
-
-      view
-      |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_after_minutes='30']"
-      )
-      |> render_click()
-
-      # buffer_time -> booking_window -> minimum_notice -> ready -> dashboard
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      assert_redirect(view, ~p"/dashboard")
-
-      schedule = default_schedule(user)
-      assert {schedule.buffer_before_minutes, schedule.buffer_after_minutes} == {10, 30}
-      assert %DateTime{} = Repo.reload!(user).onboarding_completed_at
     end
 
     test "onboarding persists all fields including detected timezone", %{conn: conn} do
-      {:ok, view, _html, user} =
-        setup_onboarding(conn, %{name: "Jane Doe"}, nil,
-          connect_params: %{"timezone" => "Europe/Paris"}
-        )
+      user = insert(:user, name: "Jane Doe", onboarding_completed_at: nil)
+      insert(:calendar_integration, user: user)
 
-      # Navigate to profile step
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      conn =
+        conn
+        |> log_in_user(user)
+        |> put_connect_params(%{"timezone" => "Europe/Paris"})
 
-      # Fill in profile form
+      {:ok, view, _html} = live(conn, "/onboarding")
+
       view
       |> form("form#profile-form", %{
         "full_name" => "Jane Doe Updated",
@@ -159,24 +80,12 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       })
       |> render_change()
 
-      # profile -> connect_calendar
-      view |> element("button[phx-click='next_step']") |> render_click()
-      # connect_calendar is a forced choice — skip before Continue
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      # Continue opens the nudge modal; confirm it to leave the calendar step.
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
-      # buffer_time -> booking_window -> minimum_notice -> ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
+      # link -> calendar -> meeting -> look -> live, keep the link, finish
+      Enum.each(1..4, fn _step -> click_continue(view) end)
+      view |> element("#onboarding-keep-copy") |> render_click()
+      view |> element("#onboarding-finish") |> render_click()
+      assert_redirect(view, ~p"/dashboard")
 
-      # Complete onboarding
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Verify all data was persisted — including the browser-detected timezone
       profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.full_name == "Jane Doe Updated"
       assert profile.username == "janedoe2024"
@@ -202,8 +111,6 @@ defmodule TymeslotWeb.OnboardingLiveTest do
           connect_params: %{"timezone" => "Etc/Unknown"}
         )
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       view
       |> form("form#profile-form", %{"full_name" => "Odd Zone", "username" => "oddzone2024"})
       |> render_change()
@@ -225,8 +132,6 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       key = "user:" <> Integer.to_string(user.id)
       for _n <- 1..6, do: RateLimiter.check(:username_change, key)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       view
       |> form("form#profile-form", %{"full_name" => "Busy Host", "username" => "busyhost2024"})
       |> render_change()
@@ -244,8 +149,6 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       test "the profile step saves #{username} exactly as typed", %{conn: conn} do
         {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Team Alpha"})
 
-        view |> element("button[phx-click='next_step']") |> render_click()
-
         view
         |> form("form#profile-form", %{
           "full_name" => "Team Alpha",
@@ -262,78 +165,8 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       end
     end
 
-    test "onboarding with custom scheduling preference values", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Custom User"})
-
-      # Navigate to profile step
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Fill in profile form
-      view
-      |> form("form#profile-form", %{
-        "full_name" => "Custom User",
-        "username" => "customuser#{System.unique_integer([:positive])}"
-      })
-      |> render_change()
-
-      # Navigate through connect_calendar to buffer_time
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
-
-      # Buffer time step — click custom
-      view
-      |> element(
-        "button[phx-click='focus_custom_input'][phx-value-setting='buffer_before_minutes']"
-      )
-      |> render_click()
-
-      # Continue to booking_window
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Booking window step — click custom
-      view
-      |> element(
-        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
-      )
-      |> render_click()
-
-      # Continue to minimum_notice
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Minimum notice step — click custom
-      view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='min_advance_hours']")
-      |> render_click()
-
-      # Continue to ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Complete onboarding
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify custom values were persisted (defaults from step_config.ex: 20, 120, 8)
-      schedule = default_schedule(user)
-      assert schedule.buffer_before_minutes == 20
-      assert schedule.buffer_after_minutes == 15
-      assert schedule.advance_booking_days == 120
-      assert schedule.min_advance_hours == 8
-
-      # Verify user completed onboarding
-      user = Repo.reload!(user)
-      assert %DateTime{} = user.onboarding_completed_at
-    end
-
     test "user name is pre-filled in profile step", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Pre Filled Name"})
-
-      # Navigate to profile step
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       html = render(view)
       # The form should have the user's name pre-filled
@@ -341,16 +174,12 @@ defmodule TymeslotWeb.OnboardingLiveTest do
     end
 
     test "profile step blocks advancing when username is empty", %{conn: conn} do
-      # Front-line defence: NavigationHandlers.handle_username_validation
-      # rejects an empty username at the profile step with "Username is
-      # required", so the user can't reach the calendar step (let alone
+      # Front-line defence: the profile step's validation rejects an empty
+      # link, in the step's own words, so the user can't reach the calendar step (let alone
       # complete onboarding) without choosing a handle. Regression pins
       # the UX gate — the completion-time ensure_username/2 backfill is
       # a secondary safety net, not the primary guard.
       {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "No Username User"})
-
-      # Step 1: Welcome -> Profile
-      view |> element("button[phx-click='next_step']") |> render_click()
 
       # Profile step with blank username.
       view
@@ -365,7 +194,8 @@ defmodule TymeslotWeb.OnboardingLiveTest do
         |> element("button[phx-click='next_step']")
         |> render_click()
 
-      assert result =~ "Username is required"
+      assert result =~ "Your link needs 3 to 30 characters."
+      refute result =~ "Username is required"
       # The profile form is still visible — the step did not advance.
       assert has_element?(view, "#profile-form")
     end
@@ -376,11 +206,9 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       # event that no JS handler listened for, so clicking the icon copied
       # nothing. It must be wired to the `CopyOnClick` hook, with the booking
       # URL carried in `data-copy-text` for the hook to copy.
-      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Copy User"})
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
 
-      # Welcome -> Profile, then choose a username so the booking URL resolves.
-      view |> element("button[phx-click='next_step']") |> render_click()
-
+      # Choose a username so the booking URL resolves.
       view
       |> form("form#profile-form", %{
         "full_name" => "Copy User",
@@ -388,50 +216,21 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       })
       |> render_change()
 
-      # Profile -> connect_calendar
-      view |> element("button[phx-click='next_step']") |> render_click()
-      # connect_calendar is a forced choice — skip before Continue.
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-
-      # Continue opens the nudge modal; confirm it to leave the calendar step.
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
-
-      # buffer_time -> booking_window -> minimum_notice -> ready (three advances).
-      Enum.each(1..3, fn _step ->
-        view |> element("button[phx-click='next_step']") |> render_click()
-      end)
+      # link -> calendar -> meeting -> look -> live
+      Enum.each(1..4, fn _step -> click_continue(view) end)
 
       html = render(view)
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
+      assert has_element?(view, ".onboarding-step-title", "You're live")
 
-      # The button is wired to the clipboard hook and carries the booking URL.
+      # The button is wired to the clipboard hook and, since the copy itself
+      # never leaves the browser, reports itself to the server as a keep.
       assert has_element?(
                view,
-               "button#onboarding-copy-booking-url[phx-hook='CopyOnClick'][data-copy-text]"
+               "button#onboarding-keep-copy[phx-hook='CopyOnClick'][phx-click='keep_link'][phx-value-method='copy']",
+               "Copy link"
              )
 
-      # Copying is the step's primary action, labelled in text, and reports
-      # itself to the server since the copy itself never leaves the browser.
-      assert has_element?(
-               view,
-               "button#onboarding-copy-booking-url.action-button--primary",
-               "Copy booking link"
-             )
-
-      assert has_element?(
-               view,
-               "button#onboarding-copy-booking-url[phx-click='share_booking_link'][phx-value-channel='copy']"
-             )
-
-      # Finishing stays available but gives way to the share actions.
-      assert has_element?(
-               view,
-               "button.action-button--secondary[phx-click='next_step']",
-               "Go to dashboard"
-             )
-
-      button_html = view |> element("#onboarding-copy-booking-url") |> render()
+      button_html = view |> element("#onboarding-keep-copy") |> render()
       assert button_html =~ ~s(data-copy-text=")
       assert button_html =~ "/copyuser123"
 
@@ -518,20 +317,10 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       conn = log_in_user(conn, user)
 
-      {:ok, view, _html} = live(conn, ~p"/onboarding")
+      {:ok, view, _html} = live(conn, ~p"/onboarding/profile")
 
-      # Navigate to profile step
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # The form should contain the existing data
-      # Note: data might not be in value attribute but in assigns
-      # Let's just verify we can see the text somewhere
-      _html = render(view)
-
-      # Don't check exact HTML structure, just verify no errors
-      # The actual population will be tested in the happy path test
+      # The profile step is drawn from the stored profile.
+      assert render(view) =~ "existing_user"
 
       # Profile should not be duplicated
       profiles =

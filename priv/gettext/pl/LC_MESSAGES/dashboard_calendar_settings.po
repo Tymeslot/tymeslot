@@ -227,6 +227,7 @@ msgid "books into %{calendar}"
 msgstr "kalendarz rezerwacji: %{calendar}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Nie można ponownie aktywować – inna aktywna integracja już korzysta z tego konta"

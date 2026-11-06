@@ -151,6 +151,23 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Atomically stamps `booking_link_first_shared_at` for a profile, but only when
+  it is currently `nil`.
+
+  Returns the number of rows actually updated (`1` on the first share, `0` if it
+  was already set), so concurrent callers stamp it exactly once.
+  """
+  @spec mark_booking_link_shared(integer(), DateTime.t()) :: non_neg_integer()
+  def mark_booking_link_shared(profile_id, shared_at) do
+    {count, _result} =
+      ProfileSchema
+      |> where([p], p.id == ^profile_id and is_nil(p.booking_link_first_shared_at))
+      |> Repo.update_all(set: [booking_link_first_shared_at: shared_at])
+
+    count
+  end
+
+  @doc """
   Gets a profile with preloaded user.
 
   Keyed by *profile* id. `get_by_user_id/1` is the user-keyed lookup, and
@@ -205,6 +222,25 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   """
   @spec get_by_username(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
   def get_by_username(username) when is_binary(username), do: find_by_username(username, [])
+
+  @doc """
+  Which of `usernames` are taken, in one query, compared the way
+  `username_available?/1` compares them (case-insensitively). Returns the
+  taken ones lowercased.
+  """
+  @spec taken_usernames([String.t()]) :: MapSet.t(String.t())
+  def taken_usernames([]), do: MapSet.new()
+
+  def taken_usernames(usernames) when is_list(usernames) do
+    normalised = Enum.map(usernames, &String.downcase/1)
+
+    from(p in ProfileSchema,
+      where: fragment("lower(?)", p.username) in ^normalised,
+      select: fragment("lower(?)", p.username)
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
 
   @doc """
   Checks if a username is available.

@@ -173,6 +173,10 @@ export const AutoScrollToSlots = {
       // Skip auto-scroll when embedded in an iframe (modal handles its own viewport)
       if (document.documentElement.hasAttribute('data-embedded')) return;
 
+      // Nor in the onboarding stage's frame, which shows the page from its
+      // top, as the miniature it replaces did.
+      if (document.documentElement.hasAttribute('data-preview-stage')) return;
+
       // A page that places the view itself opts out (SlotList's `auto_scroll`).
       if (this.el.dataset.autoScroll === 'off') return;
 
