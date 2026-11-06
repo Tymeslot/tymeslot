@@ -84,6 +84,20 @@ defmodule Tymeslot.ContactsTest do
     assert Contacts.search(user.id, "ada") == []
   end
 
+  test "an address book that refuses every search is left out of the next ones", %{
+    user: user
+  } do
+    connection(user)
+    books = Map.put(@books, "/addressbooks/user/global/", :refuse)
+    CardDAVStub.stub("ada:secret", books)
+
+    assert [%{email: "ada@example.com"} | _rest] = Contacts.search(user.id, "ada")
+    assert_received {:carddav_request, "REPORT", "/addressbooks/user/global/", _body}
+
+    assert [%{email: "ada@example.com"} | _rest] = Contacts.search(user.id, "ada")
+    refute_received {:carddav_request, "REPORT", "/addressbooks/user/global/", _body}
+  end
+
   test "only the owner's connections are searched", %{user: user} do
     connection(insert(:user))
     CardDAVStub.stub("ada:secret", @books)

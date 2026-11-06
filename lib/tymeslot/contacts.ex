@@ -36,6 +36,9 @@ defmodule Tymeslot.Contacts do
   @max_results 8
   @search_timeout 6_000
 
+  # How an address book that cannot be searched at all answers a search.
+  @refusals [:server_error, :method_not_allowed, :forbidden, :not_found]
+
   @doc "Whether a calendar connection of `provider` can offer contact suggestions."
   @spec supported_provider?(String.t() | atom() | nil) :: boolean()
   def supported_provider?(provider) when is_atom(provider) and not is_nil(provider),
@@ -88,6 +91,7 @@ defmodule Tymeslot.Contacts do
   @spec forget(pos_integer()) :: :ok
   def forget(integration_id) do
     AddressBookCache.invalidate({:address_books, integration_id})
+    AddressBookCache.invalidate_pattern({:unsearchable, integration_id, :_})
     :ok
   end
 
@@ -116,7 +120,17 @@ defmodule Tymeslot.Contacts do
 
     case address_books(integration, client) do
       {:ok, hrefs} ->
-        Enum.flat_map(hrefs, &search_book(client, &1, term, integration.id))
+        hrefs
+        |> Enum.reject(&unsearchable?(integration.id, &1))
+        |> Tasks.async_stream(&search_book(client, &1, term, integration.id),
+          timeout: @search_timeout,
+          on_timeout: :kill_task,
+          ordered: false
+        )
+        |> Enum.flat_map(fn
+          {:ok, contacts} -> contacts
+          {:exit, _reason} -> []
+        end)
 
       {:error, reason} ->
         Logger.info("No address books to suggest contacts from",
@@ -150,9 +164,21 @@ defmodule Tymeslot.Contacts do
           reason: LogFormat.reason(reason)
         )
 
+        if reason in @refusals, do: mark_unsearchable(integration_id, href)
         []
     end
   end
+
+  # Some address books list fine but refuse every search: SOGo's global
+  # address lists (mailcow's per-domain ones among them) answer any
+  # addressbook-query with a server error. Such a book is left out of the
+  # searches for a while instead of being asked again on every keystroke.
+  defp unsearchable?(integration_id, href) do
+    match?({:ok, true}, AddressBookCache.lookup({:unsearchable, integration_id, href}))
+  end
+
+  defp mark_unsearchable(integration_id, href),
+    do: AddressBookCache.put({:unsearchable, integration_id, href}, true, :timer.minutes(30))
 
   # Servers differ in how they match, so the term is checked again here, and
   # the same address found in two address books is offered once, under the

@@ -19,9 +19,10 @@ defmodule Tymeslot.Test.CardDAVStub do
   @doc """
   Stubs `:tymeslot_http` with a server accepting `accept_basic`
   (`"user:password"`) whose address books are `books`, a map from href to
-  the cards in it.
+  the cards in it, or to `:refuse` for one that is listed but answers
+  every search with a server error (as SOGo's global address lists do).
   """
-  @spec stub(String.t(), %{String.t() => [card()]}, keyword()) :: :ok
+  @spec stub(String.t(), %{String.t() => [card()] | :refuse}, keyword()) :: :ok
   def stub(accept_basic, books, opts \\ []) do
     test = self()
     principal = Keyword.get(opts, :principal, "/principals/user/")
@@ -55,6 +56,9 @@ defmodule Tymeslot.Test.CardDAVStub do
           <C:addressbook-home-set xmlns:C="urn:ietf:params:xml:ns:carddav"><href>#{home}</href></C:addressbook-home-set>
         </prop><status>HTTP/1.1 200 OK</status></propstat></response>
         """)
+
+      String.contains?(body, "addressbook-query") and books[conn.request_path] == :refuse ->
+        Conn.resp(conn, 500, "")
 
       String.contains?(body, "addressbook-query") ->
         cards = Map.get(books, conn.request_path, [])
