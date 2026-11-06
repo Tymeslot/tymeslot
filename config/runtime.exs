@@ -611,13 +611,16 @@ cloudron_oidc_available? =
 # 1. Explicit ENABLE_OAUTH_AUTH env var always wins
 # 2. Cloudron OIDC addon auto-enables if present
 # 3. Default: false
+# Always false in test, so the shell's ENABLE_OAUTH_AUTH and OAUTH_* vars can
+# neither turn the provider on nor fail the suite at boot in the checks below.
 oauth_enabled =
-  case System.get_env("ENABLE_OAUTH_AUTH") do
-    "true" -> true
-    "false" -> false
-    nil -> cloudron_oidc_available?
-    other -> raise ~s(ENABLE_OAUTH_AUTH must be "true" or "false", got: #{inspect(other)})
-  end
+  config_env() != :test and
+    case System.get_env("ENABLE_OAUTH_AUTH") do
+      "true" -> true
+      "false" -> false
+      nil -> cloudron_oidc_available?
+      other -> raise ~s(ENABLE_OAUTH_AUTH must be "true" or "false", got: #{inspect(other)})
+    end
 
 # Not seeded in test, for the same reason as the reCAPTCHA flags below:
 # config/test.exs switches every provider off, so a developer shell that
