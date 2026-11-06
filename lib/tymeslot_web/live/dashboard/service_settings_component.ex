@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.{FixedDates, OfferedTimes}
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Utils.ChangesetErrors
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
@@ -241,8 +242,19 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end)
   end
 
+  def handle_event("toggle_invitation_only", %{"id" => id, "invitation_only" => on}, socket)
+      when on in @listed_values do
+    user_id = socket.assigns.current_user.id
+
+    with_type_id(id, socket, fn type_id ->
+      RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
+        do_toggle_invitation_only(socket, type_id, on == "true", user_id)
+      end)
+    end)
+  end
+
   def handle_event(event, _params, socket)
-      when event in ~w(toggle_private toggle_page_membership),
+      when event in ~w(toggle_private toggle_page_membership toggle_invitation_only),
       do: {:noreply, socket}
 
   def handle_event("open_slug_modal", _params, socket) do
@@ -414,6 +426,28 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             Flash.error(dgettext("dashboard_integrations", "Failed to update visibility"))
             {:noreply, socket}
         end
+    end
+  end
+
+  # A refusal names its reason (a group type cannot be invitation-only).
+  defp do_toggle_invitation_only(socket, type_id, on?, user_id) do
+    with %{} = type <- MeetingTypes.get_meeting_type(type_id, user_id),
+         {:ok, _updated} <- MeetingTypes.set_invitation_only(type, on?) do
+      send(self(), {:meeting_type_changed})
+      Flash.info(dgettext("dashboard_integrations", "Visibility updated"))
+      {:noreply, reload_editing_type(socket, type_id, user_id)}
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        Flash.error(
+          ChangesetErrors.first(changeset, &ChangesetErrors.translate/1) ||
+            dgettext("dashboard_integrations", "Failed to update visibility")
+        )
+
+        {:noreply, socket}
+
+      nil ->
+        Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
+        {:noreply, socket}
     end
   end
 

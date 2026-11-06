@@ -316,6 +316,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             payment_required={@payment_required}
             blocker={
               GroupRules.enable_blocker(%{
+                type: @type,
                 group_bookings_allowed: @group_bookings_allowed,
                 payment_required: @payment_required,
                 payments_charges_enabled: @payments_charges_enabled,
@@ -402,6 +403,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.visibility_section
             type={@type}
             parent={@parent_myself}
+            group={@group_bookings_enabled}
             username={@username}
             pages={PageVisibility.rows(@username, @booking_pages, @page_memberships, @type)}
             pages_editable={@pages_editable}

@@ -888,3 +888,18 @@ msgstr "Auf %{address} anzeigen"
 #, elixir-autogen, elixir-format
 msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
 msgstr "Wählen Sie zuerst auf der Seite „Profil“ einen Nutzernamen: Aus ihm werden die Adressen Ihrer Buchungsseiten gebildet, daher ist dieser Termintyp bis dahin nicht buchbar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your booking pages. Each invitation link books one appointment."
+msgstr "Auf Ihren Buchungsseiten ausgeblendet. Jeder Einladungslink bucht einen Termin."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "Einladungslinks gibt es nur für Einzeltermintypen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Only people with an invitation link can book"
+msgstr "Nur Personen mit einem Einladungslink können buchen"

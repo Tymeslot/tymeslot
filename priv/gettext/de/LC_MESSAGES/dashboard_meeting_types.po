@@ -352,6 +352,7 @@ msgid "Cancelled"
 msgstr "Abgesagt"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
 msgid "Copy link"
 msgstr "Link kopieren"
@@ -459,3 +460,138 @@ msgstr "Auf keiner Buchungsseite; nur über den direkten Link erreichbar"
 #, elixir-autogen, elixir-format
 msgid "Booking link"
 msgstr "Buchungslink"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Available"
+msgstr "Verfügbar"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booked as %{email}"
+msgstr "Gebucht als %{email}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booked for %{time}"
+msgstr "Gebucht für %{time}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create invitation link"
+msgstr "Einladungslink erstellen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Email (optional)"
+msgstr "E-Mail (optional)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Abgelaufen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Expires %{date}"
+msgstr "Läuft ab am %{date}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "If the appointment is cancelled, the link can be used again"
+msgstr "Wird der Termin abgesagt, kann der Link erneut verwendet werden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation link copied!"
+msgstr "Einladungslink kopiert!"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links"
+msgstr "Einladungslinks"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links are off for this type."
+msgstr "Einladungslinks sind für diesen Termintyp ausgeschaltet."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation only"
+msgstr "Nur mit Einladung"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "It will stop working. Any appointment already booked stays booked."
+msgstr "Er funktioniert dann nicht mehr. Bereits gebuchte Termine bleiben gebucht."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Link expires on (optional)"
+msgstr "Link läuft ab am (optional)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Name (optional)"
+msgstr "Name (optional)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "No invitations yet. Create one link per person you want to invite."
+msgstr "Noch keine Einladungen. Erstellen Sie einen Link pro Person, die Sie einladen möchten."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; booked only through the invitation links you send"
+msgstr "Auf keiner Buchungsseite; nur über die Einladungslinks buchbar, die Sie verschicken"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen"
+msgstr "Wieder öffnen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke"
+msgstr "Widerrufen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke link"
+msgstr "Link widerrufen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke this link?"
+msgstr "Diesen Link widerrufen?"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Revoked"
+msgstr "Widerrufen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Showing the latest 100 invitations."
+msgstr "Die neuesten 100 Einladungen werden angezeigt."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "That invitation can't be changed."
+msgstr "Diese Einladung kann nicht geändert werden."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unnamed invitation"
+msgstr "Unbenannte Einladung"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Used"
+msgstr "Verwendet"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Each link books one appointment. Tymeslot sends no email: copy the link and send it yourself."
+msgstr "Jeder Link bucht einen Termin. Tymeslot verschickt keine E-Mail: Kopieren Sie den Link und senden Sie ihn selbst."
