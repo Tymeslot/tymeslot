@@ -61,7 +61,7 @@ defmodule Tymeslot.Onboarding do
     with :ok <- maybe_email_link(user, method),
          {:ok, _outcome} <- Profiles.mark_booking_link_shared(profile),
          {:ok, _profile} <- Profiles.ensure_default_username(profile),
-         {outcome, completed} when outcome != :error <- stamp_complete(user) do
+         {:ok, outcome, completed} <- stamp_complete(user) do
       # The only analytics path for kept links; Core never client-pushes it.
       if outcome == :completed do
         :telemetry.execute([:tymeslot, :onboarding, :link_kept], %{}, %{
@@ -129,19 +129,22 @@ defmodule Tymeslot.Onboarding do
           {:ok, Ecto.Schema.t() | map()} | {:error, any()}
   def complete_onboarding(user) do
     case stamp_complete(user) do
+      {:ok, _outcome, completed} -> {:ok, completed}
       {:error, _reason} = error -> error
-      {_outcome, completed} -> {:ok, completed}
     end
   end
 
   defp stamp_complete(user) do
     case OnboardingQueries.stamp_onboarding_complete(user) do
-      {:completed, _user} = result ->
+      {:completed, completed} ->
         :telemetry.execute([:tymeslot, :onboarding, :completed], %{count: 1}, %{})
-        result
+        {:ok, :completed, completed}
 
-      other ->
-        other
+      {:already_completed, completed} ->
+        {:ok, :already_completed, completed}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
