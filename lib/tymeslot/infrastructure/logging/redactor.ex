@@ -10,6 +10,12 @@ defmodule Tymeslot.Infrastructure.Logging.Redactor do
   # diagnosis and carry no secret, so only the key names that do are listed.
   @secret_name "[a-z0-9_]*(?:secret|token|password|passcode|api_?key|private_key|encryption_key|signing_key)[a-z0-9_]*"
 
+  # A capability carried under a name too common to match anywhere in a key:
+  # `invite` is a booking page's invitation token, which books whoever holds
+  # it, while `invitee_email` or `invited_at` are not. Matched on the whole
+  # name only.
+  @capability_name "invite"
+
   # Error reports stored before a change here keep the old masking until
   # they are masked again: bump `ReasonScrubber`'s `@rules_version` with any
   # change to these patterns or to `@secret_name`.
@@ -23,12 +29,13 @@ defmodule Tymeslot.Infrastructure.Logging.Redactor do
     # parameter, with no `?` in front of it.
     {~r/(^|[&\?])code=[^&\s"]+/i, "\\1code=[REDACTED]"},
     {~r/(^|[&\?])state=[^&\s"]+/i, "\\1state=[REDACTED]"},
+    {~r/(^|[&\?])(#{@capability_name})=[^&\s"']+/i, "\\1\\2=[REDACTED]"},
     # A quoted value under a secret key name: `api_key: "…"` in an inspected
     # keyword list or atom-keyed map, `"api_key" => "…"`, JSON's
     # `"api_key":"…"`. The key must be followed by `:`, `=>` or `,` and not
     # preceded by `:`, so an atom such as `{:invalid_token, "Token expired"}`
     # keeps its message.
-    {~r/(?<![:\w])"?(#{@secret_name})"?\s*(?::|=>|,)\s*"(?:[^"\\]++|\\.)*+"/i,
+    {~r/(?<![:\w])"?(#{@secret_name}|#{@capability_name})"?\s*(?::|=>|,)\s*"(?:[^"\\]++|\\.)*+"/i,
      "\\1: \"[REDACTED]\""}
   ]
 
