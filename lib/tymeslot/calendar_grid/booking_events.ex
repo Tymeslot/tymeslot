@@ -11,6 +11,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.Seats
 
   @doc """
@@ -51,7 +52,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       location: presence(meeting.location),
       start_at: meeting.start_time,
       end_at: meeting.end_time,
-      attendee_name: presence(meeting.attendee_name),
+      attendee_name: attendee_name(meeting),
       attendee_email: presence(meeting.attendee_email),
       join_url: Meetings.organizer_join_url(meeting),
       provider_event_id: meeting.provider_event_id,
@@ -62,6 +63,14 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       # Event-shaped, like a provider copy: the grid reads statuses as strings.
       status: Atom.to_string(meeting.status)
     }
+  end
+
+  # The person the grid names under a booking. A meeting the host manages
+  # (`HostManaged.managed?/1`) has no such person: the one in its attendee
+  # fields is only the first of its guests, so naming them would read as if
+  # they had booked it.
+  defp attendee_name(meeting) do
+    if HostManaged.managed?(meeting), do: nil, else: presence(meeting.attendee_name)
   end
 
   # Counted like the meetings list and the booking page count them: a

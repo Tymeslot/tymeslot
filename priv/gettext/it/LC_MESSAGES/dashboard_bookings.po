@@ -891,3 +891,13 @@ msgstr "Pagina principale"
 #, elixir-autogen, elixir-format
 msgid "via %{page}"
 msgstr "tramite %{page}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told."
+msgstr "Vuoi davvero annullare «%{title}» programmata per %{when}? Tutti gli ospiti verranno avvisati."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Managed by you"
+msgstr "Gestita da te"

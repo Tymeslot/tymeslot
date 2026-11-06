@@ -159,15 +159,25 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   @doc """
   Creates an ad-hoc meeting from a flat params map (used by the calendar grid's
   ad-hoc creation flow).
+
+  With `managed_by_host: true` the meeting has no main participant: the host
+  manages it alone (`Tymeslot.Meetings.HostManaged`) and every address in
+  `guest_emails` is a guest. The first of them fills the attendee fields a
+  calendar entry needs, under their address for a name, as the first
+  participant does on a meeting confirmed from a poll
+  (`Tymeslot.Polls.Confirm`); they stay a guest like the rest, so no
+  attendee fields are taken from `params`.
   """
   @spec run_create_ad_hoc_meeting(map()) :: {:ok, map()} | {:error, term()}
   def run_create_ad_hoc_meeting(params) do
+    {attendee, guest_emails} = attendee_and_guests(params)
+
     ad_hoc_params = %{
       title: params.title,
       start_time: params.start_time,
       end_time: params.end_time,
-      attendee_name: params.attendee_name,
-      attendee_email: params.attendee_email,
+      attendee_name: attendee.name,
+      attendee_email: attendee.email,
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
       organizer_user_id: params.organizer_user_id,
       calendar_integration_id: params[:calendar_integration_id],
@@ -175,11 +185,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       video_integration_id: params[:video_integration_id],
       organizer_note: params[:organizer_note],
       attendee_locale: params[:attendee_locale],
-      # `CreateAdHoc` expects a pre-validated list. The form checks each address
-      # as it is added, but the main guest can still be typed in afterwards as
-      # one of them, so the list is settled here against the final address.
-      guest_emails: Guests.sanitize_emails(params[:guest_emails] || [], params.attendee_email),
-      reminders: params[:reminders] || []
+      guest_emails: guest_emails,
+      reminders: params[:reminders] || [],
+      managed_by_host: params[:managed_by_host] == true
     }
 
     case CreateAdHoc.execute(ad_hoc_params) do
@@ -192,6 +200,24 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   # Private
+
+  # `CreateAdHoc` expects a pre-validated list. The form checks each address
+  # as it is added, but the main guest can still be typed in afterwards as one
+  # of them, so the list is settled here against the final address. Without a
+  # main participant nothing is taken out: the attendee is the first guest,
+  # and stays one. No guest at all leaves the attendee blank, which
+  # `CreateAdHoc` refuses.
+  defp attendee_and_guests(%{managed_by_host: true} = params) do
+    case Guests.sanitize_emails(params[:guest_emails] || [], nil) do
+      [first | _rest] = guests -> {%{name: first, email: first}, guests}
+      [] -> {%{name: nil, email: nil}, []}
+    end
+  end
+
+  defp attendee_and_guests(params) do
+    {%{name: params.attendee_name, email: params.attendee_email},
+     Guests.sanitize_emails(params[:guest_emails] || [], params.attendee_email)}
+  end
 
   # Outlook's repeat pattern is built from the event's timing, so the check
   # runs the Outlook mapping on that same timing (`timing_data/1`), read in the

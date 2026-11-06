@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.Money
+  alias Tymeslot.Meetings.HostManaged
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
@@ -98,28 +99,40 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   end
 
   # A group meeting has no single attendee to name: it is with however many
-  # people currently hold a seat on it.
+  # people currently hold a seat on it. Nor has a meeting the host manages:
+  # the one in its attendee fields is only the first of its guests, so it is
+  # named by its title, as its card is.
   defp confirm_question(meeting, timezone, time_format) do
     scheduled_for =
       "#{Helpers.format_meeting_date(meeting, timezone)} • #{Helpers.format_meeting_time(meeting, timezone, time_format)}"
 
-    if Helpers.group_meeting?(meeting) do
-      count = length(Helpers.participants(meeting))
+    cond do
+      Helpers.group_meeting?(meeting) ->
+        count = length(Helpers.participants(meeting))
 
-      dngettext(
-        "dashboard_bookings",
-        "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?",
-        "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?",
-        count,
-        when: scheduled_for
-      )
-    else
-      dgettext(
-        "dashboard_bookings",
-        "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
-        name: meeting.attendee_name,
-        when: scheduled_for
-      )
+        dngettext(
+          "dashboard_bookings",
+          "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?",
+          "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?",
+          count,
+          when: scheduled_for
+        )
+
+      HostManaged.managed?(meeting) ->
+        dgettext(
+          "dashboard_bookings",
+          "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told.",
+          title: meeting.title,
+          when: scheduled_for
+        )
+
+      true ->
+        dgettext(
+          "dashboard_bookings",
+          "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
+          name: meeting.attendee_name,
+          when: scheduled_for
+        )
     end
   end
 

@@ -585,6 +585,7 @@ msgid "What to create"
 msgstr "O que criar"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "You cannot add yourself as a guest. Use a different email address."
 msgstr "Você não pode se adicionar como convidado. Use outro endereço de e-mail."
@@ -1014,3 +1015,33 @@ msgid "The latest update could not be emailed to this guest. Let them know anoth
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
 msgstr[0] "Não foi possível enviar por e-mail a última alteração a este convidado. Avise-o de outra forma."
 msgstr[1] "Não foi possível enviar por e-mail a última alteração a estes convidados. Avise-os de outra forma."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Add a title. A meeting without a main participant is known by its title."
+msgstr "Adicione um título. Uma reunião sem participante principal é reconhecida pelo título."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+msgstr "Todos são convidados em pé de igualdade e podem aceitar ou recusar. Só você pode remarcar ou cancelar a reunião."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Convidados"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Invite at least one guest."
+msgstr "Convide pelo menos uma pessoa."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Main participant"
+msgstr "Participante principal"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+msgstr "O participante principal pode remarcar ou cancelar a reunião. Desative para convidar todos como convidados em pé de igualdade."

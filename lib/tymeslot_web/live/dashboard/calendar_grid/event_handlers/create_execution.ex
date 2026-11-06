@@ -41,11 +41,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # limited like inviting guests to an existing booking. The check comes last
   # so that a form still being corrected does not spend the budget.
   defp handle_save_event_with(%{mode: :meeting} = creating, socket) do
+    organizer_email = socket.assigns.current_user.email
+
     with {:ok, creating} <- commit_pending_reminder(creating),
          :ok <- authorize_optional_integration(socket, creating[:integration_id]),
          {:ok, start_at, end_at} <- resolve_timed_range(creating, socket),
-         :ok <- validate_meeting_fields(creating, socket.assigns.current_user.email),
-         {:ok, guest_emails} <- extra_guest_emails(creating),
+         :ok <- validate_meeting_fields(creating, organizer_email),
+         {:ok, guest_emails} <- extra_guest_emails(creating, organizer_email),
+         :ok <- require_guests(creating, guest_emails),
          :ok <- Shared.check_quick_add_meeting_rate_limit(socket) do
       params =
         creating
@@ -150,9 +153,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     end
   end
 
-  # Builds the payload the async ad-hoc booking path consumes. An untitled
-  # meeting falls back to naming the guest, which is what the organiser will
-  # recognise it by on the grid.
+  # Builds the payload the async ad-hoc booking path consumes.
+  #
+  # Without a main participant the meeting is the host's to manage, and every
+  # address is a guest's: the booking path picks the one that fills the
+  # attendee fields (`EventCreation.run_create_ad_hoc_meeting/1`), so none is
+  # passed from here. Its title is required (`validate_meeting_fields/2`).
+  defp ad_hoc_params(%{main_participant: false} = creating, socket, start_at, end_at) do
+    creating
+    |> common_ad_hoc_params(socket, start_at, end_at)
+    |> Map.merge(%{title: String.trim(creating.title), managed_by_host: true})
+  end
+
+  # An untitled meeting with a main participant falls back to naming them,
+  # which is what the organiser will recognise it by on the grid.
   defp ad_hoc_params(creating, socket, start_at, end_at) do
     guest_name = String.trim(creating.guest_name)
 
@@ -162,12 +176,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         custom -> custom
       end
 
-    %{
+    creating
+    |> common_ad_hoc_params(socket, start_at, end_at)
+    |> Map.merge(%{
       title: title,
+      attendee_name: guest_name,
+      attendee_email: String.trim(creating.guest_email)
+    })
+  end
+
+  defp common_ad_hoc_params(creating, socket, start_at, end_at) do
+    %{
       start_time: start_at,
       end_time: end_at,
-      attendee_name: guest_name,
-      attendee_email: String.trim(creating.guest_email),
       attendee_timezone: socket.assigns.user_timezone,
       organizer_user_id: socket.assigns.current_user.id,
       calendar_integration_id: creating[:integration_id],
@@ -418,6 +439,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     end
   end
 
+  # Without a main participant the guests are checked as they are added
+  # (`CreateFormState.check_extra_guest/3`), so only the title is left: there
+  # is no guest whose name could stand in for it.
+  defp validate_meeting_fields(%{main_participant: false} = creating, _organizer_email) do
+    if String.trim(creating.title || "") == "",
+      do:
+        {:error,
+         dgettext(
+           "dashboard_calendar_events",
+           "Add a title. A meeting without a main participant is known by its title."
+         )},
+      else: :ok
+  end
+
   # The self-booking rule is enforced authoritatively by `Bookings.CreateAdHoc`,
   # which compares against the stored organiser address. Repeating it here buys
   # a translated message on the form rather than a flash after the round trip.
@@ -431,7 +466,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       not Shared.valid_email?(guest_email) ->
         {:error, dgettext("dashboard_calendar_events", "A valid guest email is required")}
 
-      same_address?(guest_email, organizer_email) ->
+      CreateFormState.same_address?(guest_email, organizer_email) ->
         {:error,
          dgettext(
            "dashboard_calendar_events",
@@ -444,25 +479,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   end
 
   # An address typed into the extra-guest field but never added is still one
-  # the host means to invite, so it is taken along rather than lost. Only an
-  # invalid one stops the save; a repeat or the main guest's own address is
-  # settled by `EventCreation` like any other.
-  defp extra_guest_emails(creating) do
+  # the host means to invite, so it is taken along rather than lost. An
+  # invalid one, or the host's own, stops the save; a repeat or the main
+  # guest's own address is settled by `EventCreation` like any other.
+  defp extra_guest_emails(creating, organizer_email) do
     added = creating[:guest_emails] || []
     pending = (creating[:guest_email_input] || "") |> String.trim() |> String.downcase()
 
     cond do
-      pending == "" -> {:ok, added}
-      Shared.valid_email?(pending) -> {:ok, added ++ [pending]}
-      true -> CreateFormState.check_extra_guest(creating, pending)
+      pending == "" ->
+        {:ok, added}
+
+      Shared.valid_email?(pending) and not CreateFormState.same_address?(pending, organizer_email) ->
+        {:ok, added ++ [pending]}
+
+      true ->
+        CreateFormState.check_extra_guest(creating, pending, organizer_email)
     end
   end
 
-  defp same_address?(guest_email, organizer_email) when is_binary(organizer_email) do
-    String.downcase(guest_email) == organizer_email |> String.trim() |> String.downcase()
-  end
+  # A meeting without a main participant is for its guests, so it needs one.
+  defp require_guests(%{main_participant: false}, []),
+    do: {:error, dgettext("dashboard_calendar_events", "Invite at least one guest.")}
 
-  defp same_address?(_guest_email, _organizer_email), do: false
+  defp require_guests(_creating, _guest_emails), do: :ok
 
   # All-day events store `start_date`/`end_date` (the cache row leaves
   # `start_at`/`end_at` null); timed events store `start_at`/`end_at`.
