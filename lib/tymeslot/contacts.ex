@@ -106,7 +106,7 @@ defmodule Tymeslot.Contacts do
     |> Tasks.async_stream(&search_source(&1, term),
       timeout: @search_timeout,
       on_timeout: :kill_task,
-      ordered: false
+      ordered: true
     )
     |> Enum.flat_map(fn
       {:ok, contacts} -> contacts
@@ -125,7 +125,7 @@ defmodule Tymeslot.Contacts do
         |> Tasks.async_stream(&search_book(client, &1, term, integration.id),
           timeout: @search_timeout,
           on_timeout: :kill_task,
-          ordered: false
+          ordered: true
         )
         |> Enum.flat_map(fn
           {:ok, contacts} -> contacts
@@ -182,7 +182,9 @@ defmodule Tymeslot.Contacts do
 
   # Servers differ in how they match, so the term is checked again here, and
   # the same address found in two address books is offered once, under the
-  # first name given for it.
+  # name the first of them gives it: connections and their books are searched
+  # in parallel but answer in their own order (`ordered: true`), so which name
+  # that is does not depend on which server happened to answer first.
   defp rank(contacts, term) do
     needle = String.downcase(term)
 
