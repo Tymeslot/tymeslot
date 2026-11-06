@@ -300,6 +300,18 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
+  Sets whether a meeting type is invitation-only. An invitation-only type is
+  hidden from every public listing and is booked only through an invitation
+  link. Only one-to-one types qualify; a group type gets an error on
+  `:invitation_only`.
+  """
+  @spec set_invitation_only(Ecto.Schema.t(), boolean()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def set_invitation_only(meeting_type, invitation_only) when is_boolean(invitation_only) do
+    MeetingTypeQueries.set_visibility(meeting_type, %{invitation_only: invitation_only})
+  end
+
+  @doc """
   Reorders meeting types for a user.
   """
   @spec reorder_meeting_types(integer(), [integer()]) :: {:ok, any()} | {:error, any()}

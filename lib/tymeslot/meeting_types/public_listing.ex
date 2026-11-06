@@ -21,9 +21,15 @@ defmodule Tymeslot.MeetingTypes.PublicListing do
   @spec offered([MeetingTypeSchema.t()]) :: [MeetingTypeSchema.t()]
   def offered(meeting_types) do
     meeting_types
+    |> reject_invitation_only()
     |> GroupAccess.reject_paused()
     |> FixedDates.reject_unbookable()
     |> PaymentAccess.reject_unsellable()
     |> OneOffEvents.order_for_listing()
   end
+
+  # An invitation-only type is reachable only through a valid invitation, so
+  # no page lists it.
+  defp reject_invitation_only(meeting_types),
+    do: Enum.reject(meeting_types, & &1.invitation_only)
 end

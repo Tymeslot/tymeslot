@@ -201,6 +201,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :icon,
       :is_active,
       :is_private,
+      :invitation_only,
       :slug,
       :show_as_free,
       :allow_video,
@@ -252,6 +253,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
     |> validate_group_rules()
+    |> validate_invitation_only_not_group()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")
@@ -340,7 +342,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   """
   @spec visibility_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
   def visibility_changeset(meeting_type, attrs) do
-    cast(meeting_type, attrs, [:is_private])
+    meeting_type
+    |> cast(attrs, [:is_private, :invitation_only])
+    |> validate_invitation_only_not_group()
   end
 
   @doc """
@@ -539,6 +543,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     else
       changeset
     end
+  end
+
+  # A group type cannot be invitation-only, nor the reverse. Reads `get_field/2`
+  # so a form that does not send the flag still has it checked.
+  defp validate_invitation_only_not_group(changeset) do
+    msg = dgettext("errors_input", "Invitation links work only for one-to-one meeting types.")
+
+    if get_field(changeset, :invitation_only) and
+         group_limit?(get_field(changeset, :max_participants)),
+       do: add_error(changeset, :invitation_only, msg),
+       else: changeset
   end
 
   defp group_limit?(max), do: is_integer(max) and max > 1

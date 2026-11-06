@@ -37,7 +37,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Gets the publicly listed meeting types for a user (active and not private),
+  Gets the publicly listed meeting types for a user (active, not private and not
+  invitation-only),
   ordered by sort_order. Private types are reachable only by their direct link,
   so they are excluded from the public overview this query feeds.
   """
@@ -45,7 +46,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   def list_public_meeting_types(user_id) do
     query =
       from(mt in MeetingTypeSchema,
-        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false,
+        where:
+          mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false and
+            mt.invitation_only == false,
         order_by: [asc: mt.sort_order, asc: mt.name],
         preload: [:video_integration, :calendar_integration]
       )

@@ -37,6 +37,7 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     :slot_interval_minutes,
     :icon,
     :is_private,
+    :invitation_only,
     :show_as_free,
     :sort_order,
     :user_id,

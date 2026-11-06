@@ -489,3 +489,8 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
 msgstr ""
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr ""
