@@ -25,6 +25,7 @@ defmodule TymeslotWeb.EndpointTest do
             ["seat", "secret-token", "calendar.ics"],
             ["free-busy", "abc"],
             ["meeting-request", "secret-token"],
+            ["invite", "secret-token"],
             ["alice", "poll", "secret-token"],
             ["alice", "meeting", "secret-uid", "cancel"],
             ["alice", "meeting", "secret-uid", "cancel-confirmed"],
@@ -49,6 +50,7 @@ defmodule TymeslotWeb.EndpointTest do
             ["auth", "reset-password-sent"],
             ["email-change"],
             ["meeting-request"],
+            ["invite"],
             ["alice", "poll"],
             # A meeting type slugged "meeting" has its booking page here.
             ["alice", "meeting", "book"],

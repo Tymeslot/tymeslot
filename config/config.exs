@@ -479,6 +479,7 @@ config :phoenix, :filter_parameters, [
   "api_key",
   "webhook_url",
   "custom_meeting_url",
+  "invite",
   "value"
 ]
 

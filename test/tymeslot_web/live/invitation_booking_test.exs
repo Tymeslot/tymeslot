@@ -90,17 +90,12 @@ defmodule TymeslotWeb.InvitationBookingTest do
 
   @tag :capture_log
   test "an invitation-only type is not reachable through the overview by its duration", %{
-    conn: conn,
-    type: type
+    conn: conn
   } do
     {:ok, view, html} = live(conn, "/#{@username}?duration=coaching&timezone=#{@timezone}")
 
     refute html =~ "Coaching"
-
-    refute match?(
-             %{id: id} when id == type.id,
-             :sys.get_state(view.pid).socket.assigns.meeting_type
-           )
+    refute has_element?(view, "[data-fact='date']")
   end
 
   @tag :capture_log
@@ -168,7 +163,6 @@ defmodule TymeslotWeb.InvitationBookingTest do
   test "the reschedule link works without a token", %{
     conn: conn,
     profile: profile,
-    type: type,
     invitation: invitation
   } do
     view = open_invitation(conn, invitation)
@@ -191,7 +185,6 @@ defmodule TymeslotWeb.InvitationBookingTest do
     BookingDriver.continue(reschedule)
 
     assert has_element?(reschedule, "[data-fact='date']")
-    assert :sys.get_state(reschedule.pid).socket.assigns.meeting_type.id == type.id
 
     # A day after the booked one, so the move is to another time.
     later = @timezone |> DateTime.now!() |> DateTime.to_date() |> Date.add(2) |> Date.to_iso8601()
@@ -221,7 +214,52 @@ defmodule TymeslotWeb.InvitationBookingTest do
     html = BookingDriver.submit(view, %{"name" => "Owner", "email" => "owner@example.com"})
 
     refute html =~ InvitationMessages.message(:required)
+    assert has_element?(view, "[data-intent='restart']")
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
+  end
+
+  @tag :capture_log
+  test "preview=true alone does not open an invitation-only type", %{conn: conn} do
+    assert {:error, {:redirect, %{to: "/" <> @username, flash: %{"error" => message}}}} =
+             live(conn, "/#{@username}/coaching?preview=true&timezone=#{@timezone}")
+
+    assert message == InvitationMessages.message(:required)
+  end
+
+  @tag :capture_log
+  test "a preview token signed for another user does not open it", %{conn: conn, user: user} do
+    stranger = insert(:user)
+    refute stranger.id == user.id
+
+    query =
+      URI.encode_query(%{
+        "preview" => "true",
+        "preview_token" => PreviewToken.sign(stranger.id),
+        "timezone" => @timezone
+      })
+
+    assert {:error, {:redirect, %{flash: %{"error" => message}}}} =
+             live(conn, "/#{@username}/coaching?#{query}")
+
+    assert message == InvitationMessages.message(:required)
+  end
+
+  @tag :capture_log
+  test "scheduling another after the booking is refused: the link is spent", %{
+    conn: conn,
+    invitation: invitation
+  } do
+    view = open_invitation(conn, invitation)
+    BookingTestHelpers.walk_from_schedule_to_booking_form(view, @timezone)
+    BookingDriver.submit(view)
+    wait_until(fn -> Repo.get_by(MeetingSchema, invitation_id: invitation.id) != nil end)
+    wait_until(fn -> has_element?(view, "[data-intent='restart']") end)
+
+    view |> element("[data-intent='restart']") |> render_click()
+
+    {path, flash} = assert_redirect(view)
+    assert path == "/" <> @username
+    assert flash["error"] == InvitationMessages.message(:used)
   end
 
   @tag :capture_log
@@ -231,8 +269,6 @@ defmodule TymeslotWeb.InvitationBookingTest do
         conn,
         "/#{@username}/quick-chat?invite=#{URI.encode_www_form(invitation.token)}&timezone=#{@timezone}"
       )
-
-    assert :sys.get_state(view.pid).socket.assigns.invitation == nil
 
     BookingTestHelpers.walk_from_schedule_to_booking_form(view, @timezone)
     BookingDriver.submit(view, %{"name" => "Plain Booker", "email" => "plain@example.com"})

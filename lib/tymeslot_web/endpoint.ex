@@ -220,6 +220,7 @@ defmodule TymeslotWeb.Endpoint do
     {["seat", :_], false},
     {["free-busy", :_], false},
     {["meeting-request", :_], false},
+    {["invite", :_], false},
     {[:_, "poll", :_], false},
     # Exact patterns: `/:username/meeting/book` is the booking page of a
     # meeting type slugged "meeting". The meeting uid alone authorises

@@ -9,8 +9,10 @@ defmodule TymeslotWeb.BookingInvitationController do
   (`TymeslotWeb.Live.Scheduling.InvitationMessages`); a token that names no
   link, or a type no longer taking invitations, is a 404.
 
-  The token is a credential, so the response is never cached and sends no
-  referrer onwards.
+  The token is a credential, so every redirect is marked `no-store` and
+  `no-referrer`: it is neither cached nor handed on in a referrer. The 404 is
+  rendered by the error pipeline, which sets neither header, and carries no
+  token.
   """
 
   use TymeslotWeb, :controller
@@ -22,11 +24,6 @@ defmodule TymeslotWeb.BookingInvitationController do
 
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"token" => token}) do
-    conn =
-      conn
-      |> put_resp_header("cache-control", "no-store")
-      |> put_resp_header("referrer-policy", "no-referrer")
-
     case Invitations.resolve(token) do
       {:ok, invitation} ->
         path =
@@ -35,7 +32,9 @@ defmodule TymeslotWeb.BookingInvitationController do
             invitation.meeting_type
           )
 
-        redirect(conn, to: path <> "?invite=" <> URI.encode_www_form(token))
+        conn
+        |> private_response()
+        |> redirect(to: path <> "?invite=" <> URI.encode_www_form(token))
 
       {:error, :not_found} ->
         not_found!()
@@ -44,9 +43,16 @@ defmodule TymeslotWeb.BookingInvitationController do
         profile = token |> Invitations.host_user_id() |> host_profile!()
 
         conn
+        |> private_response()
         |> put_flash(:error, InvitationMessages.message(reason))
         |> redirect(to: "/" <> profile.username)
     end
+  end
+
+  defp private_response(conn) do
+    conn
+    |> put_resp_header("cache-control", "no-store")
+    |> put_resp_header("referrer-policy", "no-referrer")
   end
 
   # A host without a username has no booking page to send anyone to.
