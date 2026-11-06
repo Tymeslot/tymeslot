@@ -10,6 +10,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
   import TymeslotWeb.OnboardingTestHelpers
 
   alias TymeslotWeb.Hooks.ModalHook
+  alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
 
   describe "caldav form" do
@@ -218,21 +219,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
     end
 
     test "returns a host who came from the share step to it", %{conn: conn} do
-      original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
-
-      Application.put_env(
-        :tymeslot,
-        :google_calendar_oauth_helper,
-        TymeslotWeb.OnboardingLive.CalendarHandlersTest.GoogleHelperHintStub
-      )
-
-      on_exit(fn ->
-        if original do
-          Application.put_env(:tymeslot, :google_calendar_oauth_helper, original)
-        else
-          Application.delete_env(:tymeslot, :google_calendar_oauth_helper)
-        end
-      end)
+      stub_google_helper()
 
       {:ok, view, _html} = live(conn_for_host_with_calendar(conn), "/onboarding/ready")
       render_click(view, "return_to_calendar_step")
@@ -242,6 +229,45 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       assert URI.decode_query(URI.parse(url).query)["return_to"] ==
                "/onboarding/connect_calendar?return=share"
     end
+
+    # The dev route is mounted only where `:dev_routes` is set, so the
+    # handler is driven with the socket that route builds.
+    test "returns a host on the dev route to the dev route" do
+      stub_google_helper()
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_user: insert(:user),
+          base_path: "/dev/onboarding"
+        }
+      }
+
+      assert {:noreply, %{redirected: {:redirect, %{external: url}}}} =
+               CalendarHandlers.handle_connect_google(socket)
+
+      assert URI.decode_query(URI.parse(url).query)["return_to"] ==
+               "/dev/onboarding/connect_calendar"
+    end
+  end
+
+  defp stub_google_helper do
+    original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
+
+    Application.put_env(
+      :tymeslot,
+      :google_calendar_oauth_helper,
+      TymeslotWeb.OnboardingLive.CalendarHandlersTest.GoogleHelperHintStub
+    )
+
+    on_exit(fn ->
+      if original do
+        Application.put_env(:tymeslot, :google_calendar_oauth_helper, original)
+      else
+        Application.delete_env(:tymeslot, :google_calendar_oauth_helper)
+      end
+    end)
   end
 
   describe "continuing from the calendar step" do

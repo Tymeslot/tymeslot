@@ -55,12 +55,17 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     end
   end
 
-  # A host sent back from the share step keeps that through the provider's
-  # redirect, so connecting still leads straight back to the share step.
-  defp oauth_return_path(%{assigns: %{returning_to_share: true}}),
-    do: ~p"/onboarding/connect_calendar?#{[return: "share"]}"
+  # The provider sends the host back to the calendar step on the route they
+  # left from (the dev and debug routes have their own `base_path`). A host
+  # sent back from the share step keeps that through the redirect, so
+  # connecting still leads straight back to the share step.
+  defp oauth_return_path(%{assigns: %{base_path: base_path} = assigns}) do
+    path = base_path <> "/connect_calendar"
 
-  defp oauth_return_path(_socket), do: ~p"/onboarding/connect_calendar"
+    if assigns[:returning_to_share],
+      do: path <> "?" <> URI.encode_query(return: "share"),
+      else: path
+  end
 
   defp maybe_put_login_hint(opts, nil), do: opts
   defp maybe_put_login_hint(opts, email), do: Keyword.put(opts, :login_hint, email)
