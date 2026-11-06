@@ -9,6 +9,7 @@ defmodule Tymeslot.InvitationsTest do
   alias Tymeslot.Invitations
   alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Token
@@ -294,6 +295,23 @@ defmodule Tymeslot.InvitationsTest do
 
       assert Invitations.check_claimable(invitation.id, type.id) ==
                {:error, :invitation_unavailable}
+    end
+  end
+
+  describe "deleting the meeting type" do
+    test "deleting a meeting type removes its invitations and keeps its meetings", %{
+      user: user,
+      type: type
+    } do
+      {:ok, invitation} =
+        Invitations.create(user.id, type, %{name: "Ada", email: "ada@example.com"})
+
+      meeting = book(invitation, user, :completed, meeting_type_id: type.id)
+
+      assert {:ok, _deleted} = MeetingTypes.delete_meeting_type(type)
+
+      refute Repo.get(InvitationSchema, invitation.id)
+      assert %{invitation_id: nil, meeting_type_id: nil} = Repo.get!(MeetingSchema, meeting.id)
     end
   end
 end
