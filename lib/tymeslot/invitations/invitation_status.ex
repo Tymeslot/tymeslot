@@ -9,6 +9,12 @@ defmodule Tymeslot.Invitations.InvitationStatus do
   not: the database lets only one such meeting carry the invitation, and a
   reopen is refused while one does. Payment and approval timeouts record `:expired`, which
   never consumes. Precedence is used, revoked, expired, available.
+
+  The database index guarantees only one *live* booking per invitation. On a
+  `release_on_cancel: false` link, the "spent after cancellation" state is
+  enforced only by the booking pre-check, so a very rare race (a check passes,
+  another booking is made and cancelled, then the first inserts) can use such
+  a link twice. This is accepted.
   """
 
   alias Tymeslot.Invitations.InvitationSchema
@@ -17,17 +23,26 @@ defmodule Tymeslot.Invitations.InvitationStatus do
   @type status :: :available | :used | :expired | :revoked
 
   @doc """
-  The status at `now`, given the invitation's consuming meeting (or nil).
+  The status at `now`, given the invitation's consuming meeting (see
+  `consuming_meeting/2`), or nil when none consumes it.
   """
   @spec status(InvitationSchema.t(), MeetingSchema.t() | nil, DateTime.t()) :: status()
-  def status(%InvitationSchema{} = invitation, consuming, %DateTime{} = now) do
+  def status(%InvitationSchema{}, %MeetingSchema{}, %DateTime{}), do: :used
+
+  def status(%InvitationSchema{revoked_at: revoked_at} = invitation, nil, %DateTime{} = now) do
     cond do
-      consuming && consumes?(invitation, consuming) -> :used
-      invitation.revoked_at -> :revoked
+      revoked_at -> :revoked
       expired?(invitation, now) -> :expired
       true -> :available
     end
   end
+
+  @doc """
+  The first of `meetings` (newest first) that uses `invitation` up, or nil.
+  """
+  @spec consuming_meeting(InvitationSchema.t(), [MeetingSchema.t()]) :: MeetingSchema.t() | nil
+  def consuming_meeting(%InvitationSchema{} = invitation, meetings),
+    do: Enum.find(meetings, &consumes?(invitation, &1))
 
   @doc "Whether `meeting` uses `invitation` up."
   @spec consumes?(InvitationSchema.t(), MeetingSchema.t()) :: boolean()
@@ -56,7 +71,7 @@ defmodule Tymeslot.Invitations.InvitationStatus do
   defp booked_since_reopen?(%InvitationSchema{reopened_at: nil}, _meeting), do: true
 
   defp booked_since_reopen?(%InvitationSchema{reopened_at: reopened_at}, meeting),
-    do: DateTime.compare(meeting.inserted_at, reopened_at) == :gt
+    do: DateTime.compare(meeting.inserted_at, reopened_at) != :lt
 
   # A finished meeting that still uses the invitation up.
   defp spent?(_invitation, %MeetingSchema{status: :completed}), do: true

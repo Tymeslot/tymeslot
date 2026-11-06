@@ -12,7 +12,7 @@ defmodule Tymeslot.Invitations do
 
   alias Tymeslot.Clock
   alias Tymeslot.Invitations.{InvitationQueries, InvitationSchema, InvitationStatus}
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.RateLimiter
@@ -62,7 +62,7 @@ defmodule Tymeslot.Invitations do
     user_id
     |> InvitationQueries.list_for_meeting_type(meeting_type_id)
     |> Enum.map(fn %InvitationSchema{meetings: meetings} = invitation ->
-      consuming = Enum.find(meetings, &InvitationStatus.consumes?(invitation, &1))
+      consuming = InvitationStatus.consuming_meeting(invitation, meetings)
 
       %{
         invitation: invitation,
@@ -96,7 +96,7 @@ defmodule Tymeslot.Invitations do
     now = Clock.utc_now()
 
     with_invitation(user_id, id, fn invitation ->
-      consuming = InvitationQueries.consuming_meeting(invitation)
+      consuming = consuming_meeting(invitation)
 
       if InvitationStatus.reopenable?(invitation, consuming) or
            InvitationStatus.status(invitation, consuming, now) == :revoked do
@@ -110,13 +110,15 @@ defmodule Tymeslot.Invitations do
   @doc """
   Finds the invitation behind a link's token, if the link can be used to book.
   The error says why not, for a page to explain.
+
+  Intentionally not scoped to a host: guests call it with only a token.
   """
   @spec resolve(String.t() | nil) ::
           {:ok, InvitationSchema.t()} | {:error, :not_found | :used | :expired | :revoked}
   def resolve(token) when is_binary(token) do
-    with %InvitationSchema{meeting_type: meeting_type} = invitation <-
+    with %InvitationSchema{} = invitation <-
            token |> Token.hash_token() |> InvitationQueries.get_by_token_hash(),
-         true <- meeting_type.is_active and meeting_type.invitation_only do
+         true <- bookable_type?(invitation) do
       case status_of(invitation) do
         :available -> {:ok, invitation}
         reason -> {:error, reason}
@@ -130,23 +132,32 @@ defmodule Tymeslot.Invitations do
 
   @doc """
   Pre-check at booking time: the invitation belongs to the meeting type and is
-  still available. The database index, not this, guarantees single use.
+  still available, and its type is active and still invitation-only. The
+  database index, not this, guarantees single use.
+
+  Intentionally not scoped to a host: guests call it with only an id.
   """
   @spec check_claimable(pos_integer(), pos_integer()) :: :ok | {:error, :invitation_unavailable}
   def check_claimable(invitation_id, meeting_type_id) do
     case InvitationQueries.get(invitation_id) do
       %InvitationSchema{meeting_type_id: ^meeting_type_id} = invitation ->
-        if status_of(invitation) == :available, do: :ok, else: {:error, :invitation_unavailable}
+        if bookable_type?(invitation) and status_of(invitation) == :available,
+          do: :ok,
+          else: {:error, :invitation_unavailable}
 
       _other ->
         {:error, :invitation_unavailable}
     end
   end
 
-  defp status_of(invitation) do
-    now = Clock.utc_now()
-    InvitationStatus.status(invitation, InvitationQueries.consuming_meeting(invitation), now)
-  end
+  defp bookable_type?(%InvitationSchema{meeting_type: meeting_type}),
+    do: meeting_type.is_active and meeting_type.invitation_only
+
+  defp consuming_meeting(%InvitationSchema{id: id} = invitation),
+    do: InvitationStatus.consuming_meeting(invitation, MeetingQueries.list_for_invitation(id))
+
+  defp status_of(invitation),
+    do: InvitationStatus.status(invitation, consuming_meeting(invitation), Clock.utc_now())
 
   defp with_invitation(user_id, id, fun) do
     case InvitationQueries.get_for_user(user_id, id) do

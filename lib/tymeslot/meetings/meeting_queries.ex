@@ -88,6 +88,15 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     end
   end
 
+  @doc "The meetings carrying the invitation, newest first."
+  @spec list_for_invitation(pos_integer()) :: [Meeting.t()]
+  def list_for_invitation(invitation_id) do
+    Meeting
+    |> where([m], m.invitation_id == ^invitation_id)
+    |> order_by([m], desc: m.inserted_at, desc: m.id)
+    |> Repo.all()
+  end
+
   @doc "The username the organiser of `uid` has now, if any and not pending deletion."
   @spec organizer_username_by_uid(String.t()) :: {:ok, String.t()} | {:error, :not_found}
   def organizer_username_by_uid(uid) when is_binary(uid) do

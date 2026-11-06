@@ -167,6 +167,12 @@ defmodule Tymeslot.InvitationsTest do
 
       assert id == cancelled.id
     end
+
+    test "shows nothing to another host", %{user: user, type: type} do
+      {:ok, _invitation} = Invitations.create(user.id, type, %{})
+
+      assert Invitations.list(insert(:user).id, type) == []
+    end
   end
 
   describe "revoke/2" do
@@ -219,6 +225,14 @@ defmodule Tymeslot.InvitationsTest do
       assert {:error, :not_reopenable} = Invitations.reopen(user.id, invitation.id)
     end
 
+    test "refuses another host's invitation", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      {:ok, _invitation} = Invitations.revoke(user.id, invitation.id)
+
+      assert Invitations.reopen(insert(:user).id, invitation.id) == {:error, :not_found}
+      assert Repo.reload!(invitation).reopened_at == nil
+    end
+
     test "makes a revoked invitation bookable again", %{user: user, type: type} do
       {:ok, invitation} = Invitations.create(user.id, type, %{})
       {:ok, _invitation} = Invitations.revoke(user.id, invitation.id)
@@ -242,6 +256,16 @@ defmodule Tymeslot.InvitationsTest do
       assert Invitations.check_claimable(0, type.id) == {:error, :invitation_unavailable}
 
       book(invitation, user, :pending)
+
+      assert Invitations.check_claimable(invitation.id, type.id) ==
+               {:error, :invitation_unavailable}
+    end
+
+    test "is refused once the type stops being invitation-only", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      assert Invitations.check_claimable(invitation.id, type.id) == :ok
+
+      type |> Changeset.change(invitation_only: false) |> Repo.update!()
 
       assert Invitations.check_claimable(invitation.id, type.id) ==
                {:error, :invitation_unavailable}

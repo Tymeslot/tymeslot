@@ -24,7 +24,10 @@ defmodule Tymeslot.Invitations.InvitationStatusTest do
   end
 
   # credo:disable-for-next-line CredoChecks.ThinWrapperFunctions
-  defp status(invitation, meeting \\ nil), do: InvitationStatus.status(invitation, meeting, @now)
+  defp status(invitation, meeting \\ nil) do
+    consuming = InvitationStatus.consuming_meeting(invitation, List.wrap(meeting))
+    InvitationStatus.status(invitation, consuming, @now)
+  end
 
   test "no meetings and no expiry is available" do
     assert status(invitation()) == :available
@@ -83,6 +86,12 @@ defmodule Tymeslot.Invitations.InvitationStatusTest do
     assert status(reopened, meeting(:cancelled)) == :used
   end
 
+  test "a finished meeting inserted in the same second as the reopen counts" do
+    at = ~U[2026-11-05 18:00:00Z]
+    reopened = invitation(release_on_cancel: false, reopened_at: at)
+    assert status(reopened, meeting(:cancelled, inserted_at: at)) == :used
+  end
+
   test "a live booking counts whenever it was made relative to the reopen" do
     reopened = invitation(reopened_at: ~U[2026-11-05 12:00:00Z])
     assert status(reopened, meeting(:confirmed)) == :used
@@ -101,6 +110,15 @@ defmodule Tymeslot.Invitations.InvitationStatusTest do
 
   test "a meeting carrying another invitation does not consume this one" do
     refute InvitationStatus.consumes?(invitation(), meeting(:confirmed, invitation_id: 8))
+  end
+
+  test "consuming_meeting returns the first consuming meeting in the list" do
+    newest = meeting(:confirmed, id: 2)
+    older = meeting(:confirmed, id: 1)
+    other = meeting(:cancelled, id: 3)
+
+    assert InvitationStatus.consuming_meeting(invitation(), [other, newest, older]) == newest
+    assert InvitationStatus.consuming_meeting(invitation(), [other]) == nil
   end
 
   describe "reopenable?/2" do
