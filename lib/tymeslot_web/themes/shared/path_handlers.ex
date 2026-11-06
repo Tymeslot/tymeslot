@@ -81,7 +81,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   `choices_query/1` carries them on any other journey: the day and the time
   (the path says only that both are known), a timezone the visitor chose,
   the length and the moment on screen. The meeting type is the path's, so
-  it never goes as `duration`; an outcome carries no choices. A visit that
+  it never goes as `duration`; an outcome carries no choices, and the
+  confirmation no invitation token. A visit that
   came through the overview, whose route the path has left, goes as
   `via=overview`, so a reconnect keeps the way back to the meeting types
   (`LiveHelpers.Mount` honours it only for a type the overview lists).
@@ -98,6 +99,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
         |> put_choices(assigns)
         |> Map.delete("duration")
         |> maybe_put_query_param("via", overview_mark(path, assigns))
+        |> drop_spent_invite(assigns)
 
       with_query(path, query)
     end
@@ -192,9 +194,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   let in on an invitation (`LiveHelpers.InvitationGate`) is let in again on
   the page the redirect lands: the token of the invitation the page holds,
   else the one its URL arrived with. Empty on a page with neither. The
-  links that keep the page's whole query (`choices_query/1`,
-  `restart_path/2`) carry it already; a redirect that rebuilds the query
-  needs it, as the locale switch does.
+  page's own address (`choices_query/1`) keeps it until the confirmation; a
+  link that rebuilds the query needs it, as the locale switch and the
+  restart (`restart_path/2`) do.
   """
   @spec invite_param(map()) :: %{optional(String.t()) => String.t()}
   def invite_param(%{invitation: %{token: token}}) when is_binary(token) and token != "",
@@ -261,7 +263,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   The query string that carries the visitor's choices on the page's own URL
   (`ChoicesInUrl`): the page's own query (an embed's parameters, a preview,
   a reschedule, the locale it arrived with), with the choices it named on
-  arrival replaced by the ones made since.
+  arrival replaced by the ones made since. The confirmation drops the
+  invitation token the booking spent.
   """
   @spec choices_query(Phoenix.LiveView.Socket.t()) :: %{String.t() => String.t()}
   def choices_query(socket) do
@@ -269,7 +272,16 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> Map.drop(@choice_params)
     |> maybe_put_query_param("minutes", chosen_length(socket.assigns))
     |> put_choices(socket.assigns)
+    |> drop_spent_invite(socket.assigns)
   end
+
+  # The confirmation's address does not keep the invitation's token: the
+  # booking has spent it, and an address bar is copied, shared and kept in
+  # history. The steps before it keep it, so the page lets the guest in
+  # again on a reconnect or a locale switch, and a restart names it again
+  # (`restart_path/2`).
+  defp drop_spent_invite(query, %{current_state: :confirmation}), do: Map.delete(query, "invite")
+  defp drop_spent_invite(query, _assigns), do: query
 
   defp chosen_length(%{current_state: state}) when state in [:confirmation, :awaiting_payment],
     do: nil
@@ -442,8 +454,12 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
         _none -> "/"
       end
 
+    # The confirmation's address no longer carries the invitation, so the
+    # restart names the one the page holds (`invite_param/1`).
     query =
-      Map.drop(socket.assigns[:page_query_params] || %{}, @reschedule_params ++ @slot_params)
+      (socket.assigns[:page_query_params] || %{})
+      |> Map.drop(@reschedule_params ++ @slot_params)
+      |> Map.merge(invite_param(socket.assigns))
 
     if query == %{}, do: base, else: "#{base}?#{URI.encode_query(query)}"
   end

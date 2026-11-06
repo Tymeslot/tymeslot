@@ -331,6 +331,38 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
         assert PathHandlers.choices_query(socket) == %{"embed" => "1"}, "on #{outcome}"
       end
     end
+
+    # The booking spent the invitation; the address bar is copied and kept
+    # in history.
+    test "keeps the invitation token before the confirmation and drops it there" do
+      assigns = %{
+        live_action: :schedule,
+        journey: classic_journey(),
+        page_query_params: %{"embed" => "1", "invite" => "inv-tok"}
+      }
+
+      booking = %Phoenix.LiveView.Socket{assigns: Map.put(assigns, :current_state, :booking)}
+      done = %Phoenix.LiveView.Socket{assigns: Map.put(assigns, :current_state, :confirmation)}
+
+      assert PathHandlers.choices_query(booking)["invite"] == "inv-tok"
+      assert PathHandlers.choices_query(done) == %{"embed" => "1"}
+    end
+  end
+
+  describe "facts_address/1" do
+    test "drops the invitation token on the confirmation only" do
+      assigns = %{
+        username_context: "johndoe",
+        page_query_params: %{"invite" => "inv-tok"},
+        selected_duration: "30-minutes"
+      }
+
+      assert PathHandlers.facts_address(Map.put(assigns, :current_state, :schedule)) ==
+               "/johndoe/30-minutes?invite=inv-tok"
+
+      assert PathHandlers.facts_address(Map.put(assigns, :current_state, :confirmation)) ==
+               "/johndoe/thank-you"
+    end
   end
 
   describe "restart_path/2" do
@@ -358,6 +390,23 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       assert URI.decode_query(URI.parse(path).query) == %{
                "embed" => "1",
                "duration" => "30-minutes"
+             }
+    end
+
+    # The confirmation's address no longer carries the token, so the restart
+    # names the invitation the page holds, whose gate then says it is spent.
+    test "names the invitation the page holds" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          invitation: %{token: "inv-tok"},
+          page_query_params: %{"embed" => "1"}
+        }
+      }
+
+      assert URI.decode_query(URI.parse(PathHandlers.restart_path(socket)).query) == %{
+               "embed" => "1",
+               "invite" => "inv-tok"
              }
     end
   end

@@ -352,6 +352,27 @@ defmodule TymeslotWeb.InvitationBookingTest do
     wait_until(fn -> Repo.get_by(MeetingSchema, invitation_id: invitation.id) != nil end)
   end
 
+  @tag :capture_log
+  test "the confirmation's address drops the spent invitation token", %{
+    conn: conn,
+    invitation: invitation
+  } do
+    view = open_invitation(conn, invitation)
+    BookingTestHelpers.walk_from_schedule_to_booking_form(view, @timezone)
+
+    # The steps before the booking keep it, so a reconnect lets the guest in.
+    before = BookingTestHelpers.last_patched_url(view)
+    assert URI.decode_query(URI.parse(before).query)["invite"] == invitation.token
+
+    BookingDriver.submit(view)
+    wait_until(fn -> Repo.get_by(MeetingSchema, invitation_id: invitation.id) != nil end)
+    wait_until(fn -> has_element?(view, "[data-intent='restart']") end)
+
+    confirmation = BookingTestHelpers.last_patched_url(view)
+    refute Map.has_key?(URI.decode_query(URI.parse(confirmation).query || ""), "invite")
+    refute confirmation =~ invitation.token
+  end
+
   test "invite is a reserved username" do
     assert ReservedPaths.reserved?("invite")
   end
