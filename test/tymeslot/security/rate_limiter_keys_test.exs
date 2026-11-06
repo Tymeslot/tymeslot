@@ -65,6 +65,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     seat_manage: {@ip, ["seat_manage:203.0.113.9"]},
     poll_register: {@ip, ["poll_register:203.0.113.9"]},
     poll_vote: {@ip, ["poll_vote:203.0.113.9"]},
+    invitation_create: {42, ["invitation_create:user:42:1h", "invitation_create:user:42:1d"]},
     poll_host_invitations: {42, ["poll_invitations:user:42:1h", "poll_invitations:user:42:1d"]},
     poll_recipient_email:
       {@email, ["poll_recipient:ada@example.com:1h", "poll_recipient:ada@example.com:1d"]},

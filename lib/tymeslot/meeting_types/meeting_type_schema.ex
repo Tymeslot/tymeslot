@@ -74,6 +74,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:icon, :string)
     field(:is_active, :boolean, default: true)
     field(:is_private, :boolean, default: false)
+    # Bookable only through a single-use invitation link (`Tymeslot.Invitations`).
+    field(:invitation_only, :boolean, default: false)
     field(:slug, :string)
     field(:show_as_free, :boolean, default: false)
     field(:allow_video, :boolean, default: false)

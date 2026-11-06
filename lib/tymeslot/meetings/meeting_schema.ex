@@ -358,6 +358,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Deleting the page nils it (`on_delete: :nilify_all`).
     belongs_to(:booking_page, Tymeslot.BookingPages.BookingPageSchema, type: :id)
 
+    # The single-use invitation link the booking came through, if any. Read
+    # only here for now: the status of an invitation is derived from the
+    # meetings carrying its id (`Tymeslot.Invitations.InvitationStatus`).
+    field(:invitation_id, :id)
+
     # Stamped once the retention purge has removed everything the invitees
     # gave, so the purge passes over the meeting from then on. See
     # `Tymeslot.InviteeData`.
