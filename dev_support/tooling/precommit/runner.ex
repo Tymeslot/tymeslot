@@ -40,6 +40,16 @@ defmodule Tymeslot.Precommit.Runner do
   dialyzer is still running. That is the cost of the arrangement: nothing
   scrolls live after the compile steps.
 
+  ## Who yields under contention
+
+  The suite is the only step with a deadline: ExUnit kills a test after 60
+  seconds, and the partitions are sized as if the cores were theirs. Dialyzer,
+  credo and the JavaScript suites have no deadline, but left at the same
+  priority the kernel splits the cores evenly between them and the partitions,
+  and a test that takes seconds alone has been seen to time out. So every step
+  except the suite is started under `nice` (see `launcher/1`). On an idle
+  machine that changes nothing; under load the steps that can wait do.
+
   ## Step results as they happen
 
   Every step also prints one plain line the moment it finishes, before any
@@ -369,10 +379,29 @@ defmodule Tymeslot.Precommit.Runner do
   # collected rather than streamed so it can be printed in one block when the
   # step finishes.
   defp capture(args, env, extra_env) do
-    System.cmd("mix", args,
+    {command, argv} = launcher(args)
+
+    System.cmd(command, argv,
       stderr_to_stdout: true,
       env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
     )
+  end
+
+  # Keyed off the command, as `suite?/1` is, so a niced step can never be the
+  # suite's parent: `nice` reaches every process a step starts, and the test
+  # partitions must keep the default priority. Where `nice` is missing the step
+  # simply runs at the default priority, as it did before.
+  @nice_increment "10"
+
+  @doc false
+  @spec launcher([String.t()]) :: {String.t(), [String.t()]}
+  def launcher([command | _rest] = args) when command in @suite_commands, do: {"mix", args}
+
+  def launcher(args) do
+    case System.find_executable("nice") do
+      nil -> {"mix", args}
+      nice -> {nice, ["-n", @nice_increment, "mix" | args]}
+    end
   end
 
   # Dialyzer sizes its analysis worker pool to
