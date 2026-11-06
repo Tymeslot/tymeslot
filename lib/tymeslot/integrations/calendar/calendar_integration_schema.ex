@@ -55,6 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           verify_ssl: boolean(),
           is_active: boolean(),
           all_events_busy: boolean(),
+          use_for_contacts: boolean(),
           needs_reauth: boolean(),
           reauth_flagged_at: DateTime.t() | nil,
           provider_account_id: String.t() | nil,
@@ -116,6 +117,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     # by `Ics.Provider.list_events/2` and by `FreeBusy`, which reads the event
     # cache directly; no other provider honours it.
     field(:all_events_busy, :boolean, default: false)
+    # Whether this connection's address books suggest contacts wherever the
+    # owner types in whom to invite (`Tymeslot.Contacts`). CalDAV family
+    # only; read over CardDAV from the same server.
+    field(:use_for_contacts, :boolean, default: false)
     field(:needs_reauth, :boolean, default: false)
     # When `needs_reauth` last went from false to true. Deliberately left in
     # place when the flag clears, so a flag raised and resolved within the
@@ -240,6 +245,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       :verify_ssl,
       :is_active,
       :all_events_busy,
+      :use_for_contacts,
       :provider_account_id,
       :provider_account_email,
       :user_id,

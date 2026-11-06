@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Dashboard.ContactSuggestions
+
   attr :editable, :boolean, default: false
   attr :attendees, :list, default: []
   attr :pending_attendees, :list, default: []
@@ -90,12 +92,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
             phx-change="update_attendee_input"
             phx-target={@myself}
             placeholder="attendee@example.com"
+            autocomplete="off"
             class="flex-1 bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-600 px-0 py-0 placeholder:text-tymeslot-400 transition-colors cursor-text"
           />
           <.action_button type="submit" variant={:secondary} size={:sm}>
             {dgettext("dashboard_calendar_events", "Add")}
           </.action_button>
         </form>
+        <ContactSuggestions.contact_suggestions for="edit-attendee-email" submit />
         <p :if={@pending_attendees == []} class="text-token-xs text-tymeslot-400 mt-1">
           {dgettext(
             "dashboard_calendar_events",

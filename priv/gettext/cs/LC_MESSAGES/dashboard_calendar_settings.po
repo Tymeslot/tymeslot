@@ -546,3 +546,23 @@ msgstr "Čísla týdnů"
 #, elixir-autogen, elixir-format
 msgid "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
 msgstr "Pro použití zvolte „Blokovat“: u kalendáře, který neblokuje obsazené časy, by tato volba nic nezměnila"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contact suggestions"
+msgstr "Návrhy kontaktů"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts from this account are no longer suggested."
+msgstr "Kontakty z tohoto účtu se už nenavrhují."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts from this account are now suggested when you invite people."
+msgstr "Kontakty z tohoto účtu se teď navrhují, když zvete lidi."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Suggest contacts from this account's address books when you invite people"
+msgstr "Navrhovat kontakty z adresářů tohoto účtu, když zvete lidi"

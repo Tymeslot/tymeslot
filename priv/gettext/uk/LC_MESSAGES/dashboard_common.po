@@ -418,3 +418,8 @@ msgstr "Ваша сторінка бронювання перестала при
 #, elixir-autogen, elixir-format
 msgid "Your booking page isn't taking bookings yet"
 msgstr "Ваша сторінка бронювання ще не приймає бронювань"
+
+#: lib/tymeslot_web/components/dashboard/contact_suggestions.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts suggested. Use the arrow keys to choose one."
+msgstr "Запропоновано контакти. Виберіть один клавішами зі стрілками."

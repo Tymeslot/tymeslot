@@ -540,3 +540,23 @@ msgstr "Kalenderwochen"
 #, elixir-autogen, elixir-format
 msgid "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
 msgstr "Wählen Sie „Blockieren“, um diese Option zu nutzen: Bei einem Kalender, der belegte Zeiten nicht blockiert, ändert sie nichts"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contact suggestions"
+msgstr "Kontaktvorschläge"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts from this account are no longer suggested."
+msgstr "Kontakte aus diesem Konto werden nicht mehr vorgeschlagen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts from this account are now suggested when you invite people."
+msgstr "Kontakte aus diesem Konto werden jetzt vorgeschlagen, wenn Sie Personen einladen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Suggest contacts from this account's address books when you invite people"
+msgstr "Kontakte aus den Adressbüchern dieses Kontos vorschlagen, wenn Sie Personen einladen"

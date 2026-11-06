@@ -260,6 +260,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             </:description>
           </.input>
           <PollInvite.invitees_input
+            id={"poll-invitees-#{@id}"}
             name="poll[invitees]"
             value={@invitees}
             errors={error_list(@errors, :invitees)}

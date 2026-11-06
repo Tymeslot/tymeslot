@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.Dashboard.ContactSuggestions
   alias TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill
 
   attr :id, :string, required: true
@@ -88,12 +89,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               name="email"
               value=""
               placeholder="colleague@example.com"
+              autocomplete="off"
               class="input flex-1"
             />
             <Buttons.action_button type="submit" variant={:secondary}>
               {dgettext("dashboard_bookings", "Add")}
             </Buttons.action_button>
           </form>
+          <ContactSuggestions.contact_suggestions for="stage-guest-email" submit />
 
           <p class="text-tymeslot-500 font-medium mt-2">
             {dngettext(

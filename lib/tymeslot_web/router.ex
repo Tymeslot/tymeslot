@@ -421,6 +421,7 @@ defmodule TymeslotWeb.Router do
     end
 
     post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
+    get "/dashboard/contacts/search", Dashboard.ContactSearchController, :search
 
     # The booking pages screen was the Theme screen; its old addresses live on
     # in bookmarks and sent emails.

@@ -14,8 +14,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
   alias Tymeslot.Polls.{Invitations, PollParticipantSchema, PollSchema}
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.Dashboard.ContactSuggestions
 
   attr :name, :string, required: true
+  attr :id, :string, required: true
   attr :value, :string, default: ""
   attr :errors, :list, default: []
 
@@ -26,12 +28,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
     <div data-testid="poll-invitees">
       <Forms.input
         type="textarea"
+        id={@id}
         name={@name}
         label={dgettext("dashboard_polls", "Invite by email (optional)")}
         value={@value}
         placeholder={dgettext("dashboard_polls", "ada@example.com, Grace Hopper <grace@example.com>")}
         errors={@errors}
+        autocomplete="off"
       />
+      <ContactSuggestions.contact_suggestions for={@id} mode="append" />
       <p class="text-token-xs text-tymeslot-500 mt-1">
         {dgettext(
           "dashboard_polls",
@@ -71,7 +76,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
       data-testid="poll-invite-form"
       novalidate
     >
-      <.invitees_input name="invite[emails]" value={@value} errors={List.wrap(@error)} />
+      <.invitees_input
+        id={"poll-invite-emails-#{@poll.id}"}
+        name="invite[emails]"
+        value={@value}
+        errors={List.wrap(@error)}
+      />
       <div class="flex justify-end">
         <Buttons.action_button type="submit" size={:sm} icon="hero-envelope">
           {dgettext("dashboard_polls", "Send invitations")}

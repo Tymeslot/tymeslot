@@ -14,6 +14,16 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
   @day 24 * @hour
 
   @limits %{
+    # Contact suggestions (`Tymeslot.Contacts`): one request per pause in
+    # typing, each of which may reach the host's address book servers.
+    contact_search: [
+      prefix: "contact_search",
+      scope: :user,
+      limit: 120,
+      window_ms: @minute,
+      operation: "contact search",
+      log: false
+    ],
     webhook_write: [
       prefix: "webhook_write",
       scope: :user,

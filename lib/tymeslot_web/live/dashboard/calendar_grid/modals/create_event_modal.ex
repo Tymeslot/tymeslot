@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.UI.LocaleButton
+  import TymeslotWeb.Components.Dashboard.ContactSuggestions
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid
@@ -142,8 +143,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           id="create-meeting-guest-email"
           phx-blur="update_create_guest_email"
           phx-target={@myself}
+          autocomplete="off"
         />
       </div>
+      <.contact_suggestions
+        :if={@meeting_mode}
+        for="create-meeting-guest-email"
+        name_input="create-meeting-guest-name"
+      />
 
       <%!-- Further guests and the language every email about the meeting is
             written in. Meeting mode only: a bare provider event has its own
@@ -186,12 +193,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-change="update_create_guest_input"
               phx-target={@myself}
               placeholder="colleague@example.com"
+              autocomplete="off"
               class="flex-1 rounded-token-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}
             </.action_button>
           </form>
+          <.contact_suggestions for="create-guest-email-input" submit />
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
               "dashboard_calendar_events",
@@ -480,12 +489,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-change="update_create_attendee_input"
               phx-target={@myself}
               placeholder="attendee@example.com"
+              autocomplete="off"
               class="flex-1 rounded-token-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}
             </.action_button>
           </form>
+          <.contact_suggestions for="create-attendee-email" submit />
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
               "dashboard_calendar_events",

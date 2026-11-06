@@ -417,3 +417,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your booking page isn't taking bookings yet"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/contact_suggestions.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts suggested. Use the arrow keys to choose one."
+msgstr ""

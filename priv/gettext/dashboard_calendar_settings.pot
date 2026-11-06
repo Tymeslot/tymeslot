@@ -537,3 +537,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contact suggestions"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts from this account are no longer suggested."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts from this account are now suggested when you invite people."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/contacts_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Suggest contacts from this account's address books when you invite people"
+msgstr ""

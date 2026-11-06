@@ -143,6 +143,8 @@ defmodule Tymeslot.Application do
       Enum.reject(
         [
           Tymeslot.Infrastructure.DashboardCache,
+          # Where each connection's address books are (contact suggestions)
+          Tymeslot.Contacts.AddressBookCache,
           Tymeslot.Infrastructure.AvailabilityCache,
           # Webhook idempotency cache
           Tymeslot.Payments.Webhooks.IdempotencyCache,

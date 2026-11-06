@@ -417,3 +417,8 @@ msgstr "Ihre Buchungsseite nimmt keine Buchungen mehr an"
 #, elixir-autogen, elixir-format
 msgid "Your booking page isn't taking bookings yet"
 msgstr "Ihre Buchungsseite nimmt noch keine Buchungen an"
+
+#: lib/tymeslot_web/components/dashboard/contact_suggestions.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts suggested. Use the arrow keys to choose one."
+msgstr "Kontakte vorgeschlagen. Wählen Sie mit den Pfeiltasten einen aus."
