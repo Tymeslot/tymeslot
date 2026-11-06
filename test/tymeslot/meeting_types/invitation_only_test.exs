@@ -82,7 +82,73 @@ defmodule Tymeslot.MeetingTypes.InvitationOnlyTest do
     changeset = MeetingTypeSchema.changeset(type, %{max_participants: 3})
 
     refute changeset.valid?
-    assert Keyword.has_key?(changeset.errors, :invitation_only)
+
+    assert {"Invitation links work only for one-to-one meeting types.", _opts} =
+             changeset.errors[:invitation_only]
+  end
+
+  test "creating a type that is both invitation-only and a group type is refused" do
+    user = insert(:user)
+
+    assert {:error, changeset} =
+             MeetingTypes.create_meeting_type(%{
+               name: "Workshop",
+               duration_minutes: 30,
+               user_id: user.id,
+               invitation_only: true,
+               max_participants: 4
+             })
+
+    assert {"Invitation links work only for one-to-one meeting types.", _opts} =
+             changeset.errors[:invitation_only]
+
+    assert MeetingTypes.get_all_meeting_types(user.id) == []
+  end
+
+  test "an explicit nil for invitation_only does not crash" do
+    type = insert(:meeting_type)
+
+    changeset = MeetingTypeSchema.visibility_changeset(type, %{"invitation_only" => nil})
+
+    refute Keyword.has_key?(changeset.errors, :invitation_only)
+  end
+
+  describe "the address of an invitation-only type listed on a page" do
+    setup do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "joern")
+      page = insert(:booking_page, profile: profile, slug: "coaching")
+
+      type =
+        insert(:meeting_type, user: user, name: "Intro", slug: "intro", is_private: true)
+
+      insert(:booking_page_meeting_type, booking_page: page, meeting_type: type)
+      %{profile: profile, page: page, type: type}
+    end
+
+    test "is /<username>/<slug>, not the page's, and returns to the page's when switched off",
+         %{profile: profile, page: page, type: type} do
+      assert BookingPages.meeting_type_path(profile, type) == "/joern/coaching/intro"
+      assert BookingPages.serves?(page, type)
+      assert BookingPages.published?(page)
+
+      {:ok, type} = MeetingTypes.set_invitation_only(type, true)
+
+      refute BookingPages.published?(page)
+      assert BookingPages.home_page(type) == nil
+      assert BookingPages.meeting_type_path(profile, type) == "/joern/intro"
+
+      assert BookingPages.meeting_type_paths(profile, [type]) == %{type.id => "/joern/intro"}
+
+      refute BookingPages.serves?(page, type)
+
+      {:ok, type} = MeetingTypes.set_invitation_only(type, false)
+
+      assert %{id: page_id} = BookingPages.home_page(type)
+      assert page_id == page.id
+      assert BookingPages.meeting_type_path(profile, type) == "/joern/coaching/intro"
+      assert BookingPages.serves?(page, type)
+    end
   end
 
   test "a one-to-one invitation-only type passes the main changeset without the flag in the params" do

@@ -349,37 +349,37 @@ msgstr "Esta imagen es demasiado grande (%{size} megapíxeles). Sube una de %{li
 msgid "We are busy processing other uploads. Please try again in a moment."
 msgstr "Estamos procesando otras subidas. Inténtalo de nuevo en un momento."
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type cannot ask each booker for their phone number"
 msgstr "un tipo de reunión de grupo no puede pedir el teléfono a cada persona que reserva"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type must offer exactly one location"
 msgstr "un tipo de reunión de grupo debe ofrecer exactamente un lugar"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type's in-person location must name a venue"
 msgstr "el lugar presencial de un tipo de reunión de grupo debe indicar una dirección"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type's in-person location must name exactly one venue"
 msgstr "el lugar presencial de un tipo de reunión de grupo debe indicar exactamente una dirección"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type's video call must use exactly one provider"
 msgstr "la videollamada de un tipo de reunión de grupo debe usar exactamente un proveedor"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require approval"
 msgstr "las reservas de grupo no pueden requerir aprobación"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require payment"
 msgstr "las reservas de grupo no pueden requerir pago"
@@ -853,7 +853,7 @@ msgstr "ya es la dirección de una de tus páginas de reservas"
 msgid "is already the address of one of your meeting types"
 msgstr "ya es la dirección de uno de tus tipos de reunión"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Invitation links work only for one-to-one meeting types."
 msgstr "Los enlaces de invitación solo funcionan con tipos de reunión individuales."
