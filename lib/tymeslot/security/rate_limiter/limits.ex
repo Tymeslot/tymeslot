@@ -302,7 +302,8 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               prefix: "invitation_create:user",
               scope: :user,
               tiers: @invitation_tiers,
-              operation: "invitation link"
+              operation: "invitation link",
+              action: dgettext_noop("errors", "invitation links")
             ],
             poll_host_invitations: [
               prefix: "poll_invitations:user",

@@ -855,3 +855,8 @@ msgstr "Les liens d’invitation ne fonctionnent qu’avec les types de réunion
 #, elixir-autogen, elixir-format
 msgid "must be in the future"
 msgstr "doit être dans le futur"
+
+#: lib/tymeslot/security/rate_limiter/limits.ex
+#, elixir-autogen, elixir-format
+msgid "invitation links"
+msgstr "liens d’invitation"

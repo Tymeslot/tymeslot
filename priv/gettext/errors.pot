@@ -861,3 +861,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "must be in the future"
 msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/limits.ex
+#, elixir-autogen, elixir-format
+msgid "invitation links"
+msgstr ""

@@ -880,3 +880,8 @@ msgstr "Odkazy na pozvání fungují jen u typů individuálních schůzek."
 #, elixir-autogen, elixir-format
 msgid "must be in the future"
 msgstr "musí být v budoucnosti"
+
+#: lib/tymeslot/security/rate_limiter/limits.ex
+#, elixir-autogen, elixir-format
+msgid "invitation links"
+msgstr "odkazy na pozvání"

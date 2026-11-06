@@ -873,3 +873,8 @@ msgstr "Посилання із запрошенням працюють лише
 #, elixir-autogen, elixir-format
 msgid "must be in the future"
 msgstr "має бути в майбутньому"
+
+#: lib/tymeslot/security/rate_limiter/limits.ex
+#, elixir-autogen, elixir-format
+msgid "invitation links"
+msgstr "посилань із запрошенням"

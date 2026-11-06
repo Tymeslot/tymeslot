@@ -877,3 +877,8 @@ msgstr "Linki z zaproszeniem działają tylko dla indywidualnych typów spotkań
 #, elixir-autogen, elixir-format
 msgid "must be in the future"
 msgstr "musi być w przyszłości"
+
+#: lib/tymeslot/security/rate_limiter/limits.ex
+#, elixir-autogen, elixir-format
+msgid "invitation links"
+msgstr "linków z zaproszeniem"

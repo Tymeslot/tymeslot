@@ -862,3 +862,8 @@ msgstr "Os links de convite só funcionam com tipos de reunião individuais."
 #, elixir-autogen, elixir-format
 msgid "must be in the future"
 msgstr "deve estar no futuro"
+
+#: lib/tymeslot/security/rate_limiter/limits.ex
+#, elixir-autogen, elixir-format
+msgid "invitation links"
+msgstr "links de convite"
