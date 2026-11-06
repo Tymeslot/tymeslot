@@ -280,6 +280,16 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               window_ms: @minute,
               operation: "seat management"
             ],
+            # A host's invitation link, `/invite/:token`. Keyed on the client:
+            # each token is single-use, so what is worth bounding is somebody
+            # working through guessed or harvested links.
+            booking_invitation: [
+              prefix: "booking_invitation",
+              scope: :source,
+              limit: 30,
+              window_ms: @minute,
+              operation: "invitation link"
+            ],
             # A poll's public write actions, sized to a handful of legitimate
             # submissions a minute.
             poll_register: [

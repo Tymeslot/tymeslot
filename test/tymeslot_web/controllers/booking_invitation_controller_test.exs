@@ -74,6 +74,36 @@ defmodule TymeslotWeb.BookingInvitationControllerTest do
     assert_error_sent 404, fn -> get(conn, "/invite/#{invitation.token}") end
   end
 
+  describe "rate limiting" do
+    test "too many requests from one address get a 429 before the token is looked at", %{
+      conn: conn,
+      invitation: invitation
+    } do
+      # An address of its own, so no other test's requests share the bucket.
+      conn = %{conn | remote_ip: {198, 51, 100, rem(System.unique_integer([:positive]), 250) + 1}}
+
+      for _attempt <- 1..30 do
+        assert conn
+               |> recycle_with_ip()
+               |> get("/invite/#{invitation.token}")
+               |> redirected_to(302)
+      end
+
+      refused = conn |> recycle_with_ip() |> get("/invite/#{invitation.token}")
+
+      assert text_response(refused, 429) == "Too Many Requests"
+      refute response(refused, 429) =~ invitation.token
+      assert get_resp_header(refused, "location") == []
+      assert Enum.join(get_resp_header(refused, "cache-control")) =~ "no-store"
+
+      # The refusal is per address: another client still follows its link.
+      other = %{build_conn() | remote_ip: {192, 0, 2, 77}}
+      assert other |> get("/invite/#{invitation.token}") |> redirected_to(302)
+    end
+  end
+
+  defp recycle_with_ip(conn), do: %{recycle(conn) | remote_ip: conn.remote_ip}
+
   defp assert_refused(conn, invitation, reason) do
     conn = get(conn, "/invite/#{invitation.token}")
 

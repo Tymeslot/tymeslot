@@ -13,6 +13,10 @@ defmodule TymeslotWeb.BookingInvitationController do
   `no-referrer`: it is neither cached nor handed on in a referrer. The 404 is
   rendered by the error pipeline, which sets neither header, and carries no
   token.
+
+  Every request counts against the client's `:booking_invitation` limit
+  before the token is looked at; past it the answer is the error pipeline's
+  plain-text `429 Too Many Requests`, which names no token.
   """
 
   use TymeslotWeb, :controller
@@ -20,10 +24,20 @@ defmodule TymeslotWeb.BookingInvitationController do
   alias Tymeslot.BookingPages
   alias Tymeslot.Invitations
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.ErrorHTML
+  alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.InvitationMessages
 
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"token" => token}) do
+    case RateLimiter.check(:booking_invitation, ClientIP.get(conn)) do
+      :ok -> follow(conn, token)
+      {:error, :rate_limited, _message} -> too_many_requests(conn)
+    end
+  end
+
+  defp follow(conn, token) do
     case Invitations.resolve(token) do
       {:ok, invitation} ->
         path =
@@ -47,6 +61,15 @@ defmodule TymeslotWeb.BookingInvitationController do
         |> put_flash(:error, InvitationMessages.message(reason))
         |> redirect(to: "/" <> profile.username)
     end
+  end
+
+  # The error pipeline's plain answer, without the page layout, whose
+  # canonical link would name the request's path and so the token.
+  defp too_many_requests(conn) do
+    conn
+    |> private_response()
+    |> put_resp_content_type("text/plain")
+    |> send_resp(:too_many_requests, ErrorHTML.render("429.html", %{}))
   end
 
   defp private_response(conn) do
