@@ -1,4 +1,9 @@
 Code.require_file(
+  "dev_support/credo_checks/html_tags.ex",
+  Path.join(__DIR__, "../../..")
+)
+
+Code.require_file(
   "dev_support/credo_checks/use_core_inputs.ex",
   Path.join(__DIR__, "../../..")
 )
@@ -48,6 +53,156 @@ defmodule CredoChecks.UseCoreInputsTest do
       '''
       |> check()
       |> refute_issues()
+    end
+
+    test "flags a tag whose attributes the formatter has wrapped" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <p>Pick one</p>
+          <select
+            name="kind"
+            phx-change="pick"
+          >
+            <option>a</option>
+          </select>
+          """
+        end
+      end
+      '''
+      |> check()
+      |> assert_issue(fn issue ->
+        assert issue.trigger == "<select"
+        assert issue.line_no == 5
+      end)
+    end
+
+    test "flags each wrapped tag on its own line" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <input
+            type="text"
+            name="a"
+          />
+          <textarea
+            name="b"
+          ></textarea>
+          """
+        end
+      end
+      '''
+      |> check()
+      |> assert_issues(fn issues ->
+        assert issues |> Enum.map(& &1.line_no) |> Enum.sort() == [4, 8]
+      end)
+    end
+
+    test "leaves a wrapped hidden input alone" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <input
+            name="_csrf_token"
+            type="hidden"
+            value={@token}
+          />
+          """
+        end
+      end
+      '''
+      |> check()
+      |> refute_issues()
+    end
+
+    test "reads past a > inside an attribute expression" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <input
+            disabled={@count > 1}
+            type="hidden"
+            name="n"
+          />
+          """
+        end
+      end
+      '''
+      |> check()
+      |> refute_issues()
+    end
+
+    test "leaves a component of the same name alone" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <.input
+            name="q"
+            type="text"
+          />
+          """
+        end
+      end
+      '''
+      |> check()
+      |> refute_issues()
+    end
+
+    test "leaves a tag exempted by a raw-input comment with a reason alone" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <label class="option-card">
+            <%!-- raw-input: radio drawn by the option card around it --%>
+            <input
+              type="radio"
+              name="choice"
+              class="sr-only"
+            />
+          </label>
+          """
+        end
+      end
+      '''
+      |> check()
+      |> refute_issues()
+    end
+
+    test "flags a tag whose raw-input comment gives no reason" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <%!-- raw-input: --%>
+          <input type="radio" name="choice" />
+          """
+        end
+      end
+      '''
+      |> check()
+      |> assert_issue()
+    end
+
+    test "an exemption covers only the tag directly below it" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <%!-- raw-input: radio drawn by the option card around it --%>
+          <input type="radio" name="a" />
+          <input type="radio" name="b" />
+          """
+        end
+      end
+      '''
+      |> check()
+      |> assert_issue(fn issue -> assert issue.line_no == 6 end)
     end
 
     test "leaves a comment that mentions a tag alone" do
