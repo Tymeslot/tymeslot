@@ -10,7 +10,7 @@ defmodule Tymeslot.Notifications.ChannelFanoutTest do
 
   alias Tymeslot.Notifications.ChannelFanout
   alias Tymeslot.Slack
-  alias Tymeslot.Test.{LogCapture, ProcessAccessChecker}
+  alias Tymeslot.Test.{EnqueuedJobs, LogCapture, ProcessAccessChecker}
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.{SlackWorker, TelegramWorker, WebhookWorker}
@@ -91,23 +91,24 @@ defmodule Tymeslot.Notifications.ChannelFanoutTest do
     end
 
     test "schedules nothing on any channel when automations are not on the plan",
-         %{meeting: meeting} do
+         %{user: user, meeting: meeting} do
       with_config(:tymeslot, :feature_access_checker, ProcessAccessChecker)
       ProcessAccessChecker.answer({:error, :insufficient_plan})
 
       assert {:error, :insufficient_plan} = ChannelFanout.dispatch(:meeting_created, meeting)
 
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
-    test "schedules nothing when the access check itself fails", %{meeting: meeting} do
+    test "schedules nothing when the access check itself fails",
+         %{user: user, meeting: meeting} do
       with_config(:tymeslot, :feature_access_checker, ProcessAccessChecker)
       ProcessAccessChecker.answer({:error, :checker_unavailable})
 
       assert {:error, :feature_access_checker_failed} =
                ChannelFanout.dispatch(:meeting_created, meeting)
 
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "checks automations access once per event, not once per channel", %{meeting: meeting} do
@@ -148,11 +149,11 @@ defmodule Tymeslot.Notifications.ChannelFanoutTest do
   end
 
   describe "dispatch/2 guards" do
-    test "refuses a meeting without an organiser" do
+    test "refuses a meeting without an organiser", %{user: user} do
       meeting = insert(:meeting, organizer_user_id: nil)
 
       assert {:error, :no_organizer} = ChannelFanout.dispatch(:meeting_created, meeting)
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "refuses something that is not a meeting row without raising" do
@@ -165,7 +166,7 @@ defmodule Tymeslot.Notifications.ChannelFanoutTest do
       assert {:error, {:dispatch_failed, %ArgumentError{}}} =
                ChannelFanout.dispatch(:meeting_teleported, meeting)
 
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
   end
 

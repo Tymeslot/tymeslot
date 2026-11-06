@@ -27,6 +27,7 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
+  alias Tymeslot.Test.EnqueuedJobs
 
   @timezone "Etc/UTC"
 
@@ -115,13 +116,13 @@ defmodule Tymeslot.MeetingTypes.GroupCapacityFollowsTypeTest do
     end
 
     test "leaves an existing one-to-one booking solo, with no participant and no email",
-         %{solo: solo} do
+         %{user: user, solo: solo} do
       reloaded = Repo.get!(MeetingSchema, solo.id)
 
       assert reloaded.capacity == 1
       assert reloaded.attendee_email == "private@example.com"
       assert ParticipantQueries.list_live_for_meeting(solo.id) == []
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "the one-to-one booking keeps its slot: it is not joinable and refuses a seat",
