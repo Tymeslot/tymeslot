@@ -191,13 +191,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       class="calendar-slots-container"
                     >
                       <div class="flex-1 calendar-section">
-                        <%!-- Weekly view: shown on small screens --%>
+                        <%!-- Weekly view: shown on small screens. It repeats the
+                              month grid's choices, so its marks carry
+                              data-alternate (the markup contract). --%>
                         <div class="calendar-weekly">
                           <div class="weekly-nav-row">
                             <button
                               phx-click="prev_week"
                               aria-label={dgettext("booking", "Previous week")}
                               phx-target={@myself}
+                              data-intent="earlier"
+                              data-alternate
                               disabled={
                                 CalendarNavigation.prev_week_disabled?(
                                   @current_week_start,
@@ -218,6 +222,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               phx-click="next_week"
                               aria-label={dgettext("booking", "Next week")}
                               phx-target={@myself}
+                              data-intent="later"
+                              data-alternate
                               disabled={
                                 CalendarNavigation.next_week_disabled?(
                                   @current_week_start,
@@ -238,6 +244,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                   @selected_date == day.date && "selected",
                                   day.loading && "loading"
                                 ]}
+                                data-fact="date"
+                                data-value={day.date}
+                                data-alternate
                                 phx-click="select_date"
                                 phx-value-date={day.date}
                                 phx-target={@myself}
