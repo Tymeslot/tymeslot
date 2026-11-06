@@ -40,6 +40,8 @@ defmodule Tymeslot.Bookings.Errors do
           | :checkout_failed
           | :meeting_not_found
           | :failed_to_update_meeting
+          | :invitation_required
+          | :invitation_unavailable
           | refusal()
 
   # Table rather than a clause ladder: every entry is the same behaviour over
@@ -56,6 +58,9 @@ defmodule Tymeslot.Bookings.Errors do
   # `:group_bookings_paused` (a group type whose host has lost access to group
   # bookings) reads to the booker exactly as an inactive type does: the page
   # no longer offers it, and a refresh shows as much.
+  # `:invitation_required` and `:invitation_unavailable` stay their own
+  # outcomes, never `:slot_taken`: another time would be refused the same way,
+  # so the booker must not be sent back to pick one.
   # `ScheduleCheck`'s own reasons (`:slot_not_offered`,
   # `:slot_availability_unverifiable`) are deliberately absent: they are
   # classified once, by `classify_schedule_check_reason/1` below, which
@@ -76,7 +81,9 @@ defmodule Tymeslot.Bookings.Errors do
     validation_error: :booking_failed,
     payments_unavailable: :payments_unavailable,
     host_not_found: :host_not_found,
-    host_missing: :host_not_found
+    host_missing: :host_not_found,
+    invitation_required: :invitation_required,
+    invitation_unavailable: :invitation_unavailable
   }
 
   # `Tymeslot.Bookings.ScheduleCheck` is shared by `Create` and `Reschedule`,

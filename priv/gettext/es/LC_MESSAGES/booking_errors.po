@@ -250,3 +250,13 @@ msgstr "No se pudo crear la reunión. Inténtalo de nuevo."
 #, elixir-autogen, elixir-format
 msgid "This booking page can't show times right now."
 msgstr "Esta página de reservas no puede mostrar horarios en este momento."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used or is no longer valid. Please contact the host for a new one."
+msgstr "Este enlace de invitación ya se ha usado o ya no es válido. Pide al anfitrión uno nuevo."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can be booked only with a personal invitation link."
+msgstr "Este tipo de reunión solo se puede reservar con un enlace de invitación personal."
