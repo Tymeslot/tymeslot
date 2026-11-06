@@ -249,6 +249,36 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
       assert PathHandlers.build_path_with_locale(socket, "de") == "/johndoe/30-minutes?locale=de"
     end
+
+    test "carries the token of the invitation the page holds" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :schedule,
+          duration: "30min",
+          invitation: %{token: "held-token"},
+          page_query_params: %{"invite" => "url-token"}
+        }
+      }
+
+      assert PathHandlers.build_path_with_locale(socket, "de") ==
+               "/johndoe/30-minutes?invite=held-token&locale=de"
+    end
+
+    test "carries the URL's token when the page holds no invitation" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :schedule,
+          duration: "30min",
+          invitation: nil,
+          page_query_params: %{"invite" => "url-token"}
+        }
+      }
+
+      assert PathHandlers.build_path_with_locale(socket, "de") ==
+               "/johndoe/30-minutes?invite=url-token&locale=de"
+    end
   end
 
   describe "choices_query/1" do

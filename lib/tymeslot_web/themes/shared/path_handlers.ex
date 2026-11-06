@@ -187,6 +187,26 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   def demo_theme_param(_assigns), do: %{}
 
+  @doc """
+  The `invite` parameter a redirect from the booking page carries, so a page
+  let in on an invitation (`LiveHelpers.InvitationGate`) is let in again on
+  the page the redirect lands: the token of the invitation the page holds,
+  else the one its URL arrived with. Empty on a page with neither. The
+  links that keep the page's whole query (`choices_query/1`,
+  `restart_path/2`) carry it already; a redirect that rebuilds the query
+  needs it, as the locale switch does.
+  """
+  @spec invite_param(map()) :: %{optional(String.t()) => String.t()}
+  def invite_param(%{invitation: %{token: token}}) when is_binary(token) and token != "",
+    do: %{"invite" => token}
+
+  def invite_param(assigns) do
+    case assigns[:page_query_params] do
+      %{"invite" => token} when is_binary(token) and token != "" -> %{"invite" => token}
+      _none -> %{}
+    end
+  end
+
   defp base_path(:overview, username, _assigns), do: "/#{username}"
 
   defp base_path(:schedule, username, assigns) do
@@ -229,6 +249,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
     |> maybe_put_query_param("minutes", chosen_length(socket.assigns))
     |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
+    |> Map.merge(invite_param(socket.assigns))
     |> put_choices(socket.assigns)
   end
 

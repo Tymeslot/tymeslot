@@ -263,6 +263,50 @@ defmodule TymeslotWeb.InvitationBookingTest do
   end
 
   @tag :capture_log
+  test "switching language keeps the invitation, and the guest can still book", %{
+    conn: conn,
+    invitation: invitation
+  } do
+    view = open_invitation(conn, invitation)
+    view |> element("button[phx-click='toggle_language_dropdown']") |> render_click()
+
+    # The switch is a full redirect, so the page it lands on knows only what
+    # the URL carries.
+    {:ok, conn} =
+      view
+      |> element("button[phx-click='change_locale'][phx-value-locale='de']")
+      |> render_click()
+      |> follow_redirect(conn)
+
+    assert URI.decode_query(conn.query_string)["invite"] == invitation.token
+
+    {:ok, view, html} = live(conn)
+    assert html =~ ~s(data-locale="de")
+
+    BookingTestHelpers.walk_from_schedule_to_booking_form(view, @timezone)
+    BookingDriver.submit(view)
+
+    wait_until(fn -> Repo.get_by(MeetingSchema, invitation_id: invitation.id) != nil end)
+  end
+
+  @tag :capture_log
+  test "a booking-step link with no time picked goes to the times with its invitation", %{
+    conn: conn,
+    invitation: invitation
+  } do
+    token = URI.encode_www_form(invitation.token)
+
+    assert {:error, {:redirect, %{to: to}}} =
+             live(conn, "/#{@username}/coaching/book?invite=#{token}&timezone=#{@timezone}")
+
+    assert %URI{path: "/#{@username}/coaching", query: query} = URI.parse(to)
+    assert URI.decode_query(query)["invite"] == invitation.token
+
+    {:ok, view, _html} = live(conn, to)
+    assert has_element?(view, "[data-fact='date']")
+  end
+
+  @tag :capture_log
   test "a plain type ignores an invite param", %{conn: conn, invitation: invitation} do
     {:ok, view, _html} =
       live(

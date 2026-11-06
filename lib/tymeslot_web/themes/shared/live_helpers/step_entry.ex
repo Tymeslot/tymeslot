@@ -450,7 +450,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
         to:
           PathHandlers.with_query(
             "/#{username}/#{slug}",
-            PathHandlers.demo_theme_param(socket.assigns)
+            Map.merge(
+              PathHandlers.demo_theme_param(socket.assigns),
+              PathHandlers.invite_param(socket.assigns)
+            )
           )
       )
     else
