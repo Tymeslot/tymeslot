@@ -53,6 +53,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   require Logger
 
+  # Refusals the booking flow makes as designed; not failures worth an error log.
+  @expected_refusals [:invitation_required, :invitation_unavailable, :slot_taken]
+
   @doc """
   Submits a booking using the booking orchestrator.
 
@@ -215,6 +218,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   # check working as meant; `CalendarCheck` has already logged its cause.
   defp log_booking_error(:availability_unverifiable),
     do: Logger.info("Booking refused: the organiser's availability could not be verified")
+
+  defp log_booking_error(reason) when reason in @expected_refusals,
+    do: Logger.info("Booking refused", reason: LogFormat.reason(reason))
 
   defp log_booking_error(reason),
     do: Logger.error("Failed to create meeting appointment", reason: LogFormat.reason(reason))

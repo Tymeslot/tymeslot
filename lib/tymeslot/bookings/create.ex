@@ -37,6 +37,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.Lengths
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias UUID
@@ -291,8 +292,13 @@ defmodule Tymeslot.Bookings.Create do
   # (`Tymeslot.Meetings.UniqueInvitation`) is what keeps two bookings racing
   # on one invitation from both landing, see `create_meeting/1`.
   defp validate_invitation(%{meeting_type: %{invitation_only: true} = type, invitation_id: id})
-       when is_integer(id),
-       do: Invitations.check_claimable(id, type.id)
+       when is_integer(id) do
+    # `CreateGroup` would book a group type without recording the invitation,
+    # leaving it unspent, so such a type is never claimable.
+    if MeetingTypeSchema.group?(type),
+      do: {:error, :invitation_unavailable},
+      else: Invitations.check_claimable(id, type.id)
+  end
 
   defp validate_invitation(%{meeting_type: %{invitation_only: true}}),
     do: {:error, :invitation_required}
@@ -451,14 +457,15 @@ defmodule Tymeslot.Bookings.Create do
 
   # A booking that lost its invitation to another one committed first (both
   # passed `validate_invitation/1`, serialised on the organiser's schedule
-  # lock) is refused by the invitation index at insert, not by the pre-check.
+  # lock), or whose invitation was deleted since, is refused by the database
+  # at insert, not by the pre-check.
   defp create_meeting(meeting_attrs) do
     case Scheduling.create_meeting_with_conflict_check(meeting_attrs) do
       {:ok, meeting} ->
         {:ok, meeting}
 
       {:error, {:validation_error, changeset}} ->
-        if UniqueInvitation.violation?(changeset),
+        if UniqueInvitation.unavailable?(changeset),
           do: {:error, :invitation_unavailable},
           else: {:error, :validation_error}
 

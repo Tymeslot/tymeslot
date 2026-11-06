@@ -19,8 +19,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.MeetingTypes.LocationOption
 
-  @unique_slot_constraint UniqueSlot.constraint()
-
   @type calendar_sync_status :: :externally_deleted | :externally_modified
 
   @type t :: %__MODULE__{
@@ -457,8 +455,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :tracking_params,
     :visitor_hash,
     :managed_by_host,
-    :booking_page_id,
-    :invitation_id
+    :booking_page_id
   ]
 
   @group_required_fields [
@@ -540,16 +537,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   def status_changeset(meeting, attrs) do
     meeting
     |> cast(attrs, @status_transition_fields)
-    |> unique_constraint([:organizer_user_id, :start_time],
-      name: @unique_slot_constraint,
-      message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
-    )
+    |> UniqueSlot.constrain()
     |> UniqueInvitation.constrain()
   end
 
   defp base_changeset(meeting, attrs, required_fields) do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
+    |> UniqueInvitation.cast_on_insert(attrs)
     |> ensure_calendar_uid()
     |> ensure_seen_calendar_end()
     |> validate_required([:calendar_uid | required_fields])
@@ -580,14 +575,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> calculate_duration()
     |> unique_constraint(:uid)
     |> unique_constraint(:calendar_uid)
-    |> unique_constraint([:organizer_user_id, :start_time],
-      name: @unique_slot_constraint,
-      message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
-    )
+    |> UniqueSlot.constrain()
     |> check_constraint(:end_time, name: :meetings_end_after_start)
     |> foreign_key_constraint(:venue_id)
     |> foreign_key_constraint(:booking_page_id)
-    |> foreign_key_constraint(:invitation_id)
     |> UniqueInvitation.constrain()
   end
 

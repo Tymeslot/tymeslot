@@ -14,7 +14,9 @@ defmodule Tymeslot.Invitations.InvitationStatus do
   `release_on_cancel: false` link, the "spent after cancellation" state is
   enforced only by the booking pre-check, so a very rare race (a check passes,
   another booking is made and cancelled, then the first inserts) can use such
-  a link twice. This is accepted.
+  a link twice. Nothing locks the invitation row either, so a booking that passed
+  the pre-check may still land just after the host revokes it. This is accepted,
+  since revoking stops only new bookings.
   """
 
   alias Tymeslot.Invitations.InvitationSchema

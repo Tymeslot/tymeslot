@@ -21,6 +21,7 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
   alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Scheduling
@@ -140,6 +141,54 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
     assert book(ctx, 4, invitation.id) == {:error, :invitation_unavailable}
   end
 
+  test "an update cannot rewrite which invitation a meeting was booked with", ctx do
+    invitation = invite(ctx)
+    other = invite(ctx)
+    {:ok, meeting} = book(ctx, 3, invitation.id)
+
+    assert {:ok, updated} = MeetingQueries.update_meeting(meeting, %{invitation_id: other.id})
+    assert updated.invitation_id == invitation.id
+    assert Repo.reload!(meeting).invitation_id == invitation.id
+  end
+
+  test "a group type is never claimable, as its booking would not record the invitation", ctx do
+    group =
+      insert(:meeting_type,
+        user: ctx.user,
+        invitation_only: true,
+        max_participants: 3,
+        is_active: true,
+        duration_minutes: 60
+      )
+
+    {:ok, invitation} = Invitations.create(ctx.user.id, group, %{})
+    attrs = %{meeting_type_id: group.id, invitation_id: invitation.id}
+
+    assert Create.execute(params(ctx, 3, attrs), build_form_data()) ==
+             {:error, :invitation_unavailable}
+
+    assert meeting_count(ctx.user) == 0
+  end
+
+  test "an approval-required invitation-only booking holds the invitation, and a decline frees it",
+       ctx do
+    {:ok, type} =
+      ctx.type |> Changeset.change(requires_approval: true) |> Repo.update()
+
+    ctx = %{ctx | type: type}
+    invitation = invite(ctx, %{release_on_cancel: false})
+
+    assert {:ok, meeting} = book(ctx, 3, invitation.id)
+    assert meeting.status == :awaiting_approval
+    assert meeting.invitation_id == invitation.id
+    assert status_of(ctx, invitation) == :used
+
+    assert book(ctx, 4, invitation.id) == {:error, :invitation_unavailable}
+
+    assert {:ok, _declined} = Approval.decline(meeting, "Not this time")
+    assert status_of(ctx, invitation) == :available
+  end
+
   test "a reschedule keeps the invitation and needs no second use", ctx do
     invitation = invite(ctx)
     {:ok, meeting} = book(ctx, 3, invitation.id)
@@ -205,8 +254,9 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
   end
 
   # A meeting brought back after its invitation was booked again (a late
-  # payment completing on an expired booking, the only reinstate path) would make a second live
-  # booking on the invitation: the index refuses it as a changeset error.
+  # payment completing on an expired booking, the only reinstate path) would
+  # make a second live booking on the invitation: the index refuses it as a
+  # changeset error.
   test "reinstating an expired meeting whose invitation was rebooked is refused cleanly", ctx do
     invitation = invite(ctx)
     {:ok, first} = book(ctx, 3, invitation.id)

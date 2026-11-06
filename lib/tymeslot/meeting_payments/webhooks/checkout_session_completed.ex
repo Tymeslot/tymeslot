@@ -55,6 +55,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.UniqueInvitation
+  alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Repo
 
@@ -275,7 +276,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
           refund_late_payment(payment, event_id, object)
 
         {:error, %Ecto.Changeset{} = changeset} = error ->
-          if UniqueInvitation.violation?(changeset),
+          if UniqueInvitation.violation?(changeset) or UniqueSlot.violation?(changeset),
             do: refund_late_payment(payment, event_id, object),
             else: error
 

@@ -8,31 +8,53 @@ defmodule Tymeslot.Meetings.UniqueInvitation do
   status declares it (`constrain/1`), so a second live booking on one
   invitation, or a meeting brought back after its invitation was booked
   again, comes back as a changeset error rather than a raised
-  `Ecto.ConstraintError`. Split out of `MeetingSchema` to keep it inside the
-  size limit, as `Tymeslot.Meetings.UniqueSlot` is.
+  `Ecto.ConstraintError`. The same call declares the invitation foreign key,
+  so an invitation deleted after the booking's pre-check is an error too
+  (`unavailable?/1` covers both). Split out of `MeetingSchema` to keep it
+  inside the size limit, as `Tymeslot.Meetings.UniqueSlot` is.
   """
 
-  import Ecto.Changeset, only: [unique_constraint: 3]
+  import Ecto.Changeset, only: [cast: 3, foreign_key_constraint: 2, unique_constraint: 3]
+
+  alias Tymeslot.Meetings.UniqueIndex
 
   @constraint :meetings_invitation_id_occupying_index
 
-  @doc "Declares the index on a meeting changeset."
+  @doc "Declares the index and the invitation foreign key on a meeting changeset."
   @spec constrain(Ecto.Changeset.t()) :: Ecto.Changeset.t()
-  def constrain(changeset), do: unique_constraint(changeset, :invitation_id, name: @constraint)
+  def constrain(changeset) do
+    changeset
+    |> foreign_key_constraint(:invitation_id)
+    |> unique_constraint(:invitation_id, name: @constraint)
+  end
+
+  @doc """
+  Casts `:invitation_id` on a new meeting only: a booking records the
+  invitation it used, and nothing later may rewrite which one that was.
+  """
+  @spec cast_on_insert(Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
+  def cast_on_insert(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = changeset, attrs),
+    do: cast(changeset, attrs, [:invitation_id])
+
+  def cast_on_insert(changeset, _attrs), do: changeset
 
   @doc """
   True when a changeset's error is a violation of the index: the invitation
   is already held by another live booking, not invalid input.
   """
   @spec violation?(Ecto.Changeset.t()) :: boolean()
-  def violation?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn
-      {:invitation_id, {_message, error_opts}} ->
-        error_opts[:constraint] == :unique and
-          to_string(error_opts[:constraint_name] || "") == Atom.to_string(@constraint)
+  def violation?(changeset), do: UniqueIndex.violated?(changeset, @constraint)
 
-      _other ->
-        false
-    end)
+  @doc """
+  True when the write was refused because the invitation cannot be booked: held
+  by another live booking (`violation?/1`), or deleted since the pre-check.
+  """
+  @spec unavailable?(Ecto.Changeset.t()) :: boolean()
+  def unavailable?(%Ecto.Changeset{errors: errors} = changeset) do
+    violation?(changeset) or
+      Enum.any?(errors, fn
+        {:invitation_id, {_message, opts}} -> opts[:constraint] == :foreign
+        _other -> false
+      end)
   end
 end
