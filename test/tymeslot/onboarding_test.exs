@@ -75,6 +75,26 @@ defmodule Tymeslot.OnboardingTest do
       assert Repo.reload!(user).onboarding_completed_at == nil
       assert Repo.reload!(profile).booking_link_first_shared_at == nil
     end
+
+    test "only the keep that completes onboarding is counted" do
+      attach_own_telemetry([
+        [:tymeslot, :onboarding, :link_kept],
+        [:tymeslot, :onboarding, :completed]
+      ])
+
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user)
+
+      assert {:ok, completed} = Onboarding.keep_booking_link(user, profile, "copy")
+
+      assert {:ok, _again} =
+               Onboarding.keep_booking_link(completed, Repo.reload!(profile), "phone")
+
+      assert_received {:telemetry, [:tymeslot, :onboarding, :link_kept], %{method: "copy"}}
+      assert_received {:telemetry, [:tymeslot, :onboarding, :completed], _}
+      refute_received {:telemetry, [:tymeslot, :onboarding, :link_kept], _}
+      refute_received {:telemetry, [:tymeslot, :onboarding, :completed], _}
+    end
   end
 
   describe "subscribe/1 and broadcast_preview_opened/1" do
@@ -145,6 +165,32 @@ defmodule Tymeslot.OnboardingTest do
       assert {:ok, _updated} = Onboarding.complete_onboarding(user)
       assert_received {:telemetry, %{count: 1}, %{}}
     end
+
+    test "emits nothing for a user who has already completed onboarding" do
+      attach_own_telemetry([[:tymeslot, :onboarding, :completed]])
+      user = insert(:user, onboarding_completed_at: ~U[2026-01-15 09:30:00Z])
+
+      assert {:ok, _user} = Onboarding.complete_onboarding(user)
+      refute_received {:telemetry, [:tymeslot, :onboarding, :completed], _}
+    end
+  end
+
+  # Forwards only events this test's own process emits, so concurrent async
+  # tests completing their own users cannot satisfy or break an assertion.
+  defp attach_own_telemetry(events) do
+    test_pid = self()
+    id = make_ref()
+
+    :telemetry.attach_many(
+      id,
+      events,
+      fn event, _measurements, metadata, _config ->
+        if self() == test_pid, do: send(test_pid, {:telemetry, event, metadata})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
   end
 
   describe "dashboard tour helpers" do

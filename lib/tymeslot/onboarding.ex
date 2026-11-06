@@ -47,9 +47,13 @@ defmodule Tymeslot.Onboarding do
 
   `email_me` emails the link first (`email_booking_link/1`) and counts only
   once the email is queued. Then the profile's first share is stamped, the
-  generated username settled, onboarding completed and
-  `[:tymeslot, :onboarding, :link_kept]` emitted with the method. Every step
-  is idempotent, so keeping the link again is harmless.
+  generated username settled and onboarding completed. Every step is
+  idempotent, so keeping the link again is harmless.
+
+  `[:tymeslot, :onboarding, :link_kept]` is emitted with the method only by
+  the keep that completes onboarding, so analytics count each host once, by
+  the method that got them through the last step; later keeps (copying after
+  emailing, a completed account on the debug route) emit nothing.
   """
   @spec keep_booking_link(Ecto.Schema.t(), Ecto.Schema.t(), String.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, :unknown_method | {:email, term()} | term()}
@@ -57,12 +61,14 @@ defmodule Tymeslot.Onboarding do
     with :ok <- maybe_email_link(user, method),
          {:ok, _outcome} <- Profiles.mark_booking_link_shared(profile),
          {:ok, _profile} <- Profiles.ensure_default_username(profile),
-         {:ok, completed} <- complete_onboarding(user) do
+         {outcome, completed} when outcome != :error <- stamp_complete(user) do
       # The only analytics path for kept links; Core never client-pushes it.
-      :telemetry.execute([:tymeslot, :onboarding, :link_kept], %{}, %{
-        user_id: user.id,
-        method: method
-      })
+      if outcome == :completed do
+        :telemetry.execute([:tymeslot, :onboarding, :link_kept], %{}, %{
+          user_id: user.id,
+          method: method
+        })
+      end
 
       {:ok, completed}
     end
@@ -114,17 +120,28 @@ defmodule Tymeslot.Onboarding do
 
   @doc """
   Completes the onboarding process for a user.
+
+  `[:tymeslot, :onboarding, :completed]` is emitted only by the call that
+  completes it; a user who has already completed onboarding is returned as
+  they are, without a second event.
   """
   @spec complete_onboarding(Ecto.Schema.t() | map()) ::
           {:ok, Ecto.Schema.t() | map()} | {:error, any()}
   def complete_onboarding(user) do
-    case mark_onboarding_complete(user) do
-      {:ok, _updated_user} = result ->
+    case stamp_complete(user) do
+      {:error, _reason} = error -> error
+      {_outcome, completed} -> {:ok, completed}
+    end
+  end
+
+  defp stamp_complete(user) do
+    case OnboardingQueries.stamp_onboarding_complete(user) do
+      {:completed, _user} = result ->
         :telemetry.execute([:tymeslot, :onboarding, :completed], %{count: 1}, %{})
         result
 
-      error ->
-        error
+      other ->
+        other
     end
   end
 

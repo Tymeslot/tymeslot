@@ -238,7 +238,9 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
       assert has_element?(view, "#onboarding-kept", "Sent")
 
       # The mail client opened with the message: it still counts as a
-      # first-person keep, but nothing has been sent yet.
+      # first-person keep, but nothing has been sent yet. The share sheet
+      # already completed onboarding, so this second keep is not counted
+      # again.
       :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
       render_hook(view, "keep_link", %{"method" => "first_person", "via" => "mail"})
 
@@ -248,8 +250,7 @@ defmodule TymeslotWeb.OnboardingLiveStepTest do
 
       user_id = user.id
 
-      assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{},
-                       %{user_id: ^user_id, method: "first_person"}}
+      refute_received {[:tymeslot, :onboarding, :link_kept], _ref, %{}, %{user_id: ^user_id}}
     end
 
     test "an unknown via confirms as a plain first-person keep", %{view: view} do
