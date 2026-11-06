@@ -283,7 +283,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   defp maybe_put(form, _key, nil), do: form
   defp maybe_put(form, key, value), do: Map.put(form, key, value)
 
-  defp put_duration_input(form, nil), do: form
+  defp put_duration_input(form, input) when not is_binary(input), do: form
 
   defp put_duration_input(form, input) do
     duration =

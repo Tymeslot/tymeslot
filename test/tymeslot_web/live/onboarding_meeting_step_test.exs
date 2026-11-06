@@ -482,4 +482,25 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     assert [%{name: "Strategy session"}] = meeting_types(user)
     assert has_element?(view, "#onboarding-step-heading-choose_theme")
   end
+
+  describe "malformed events" do
+    test "params that are missing or not strings leave the session running", %{conn: conn} do
+      %{user: user} = new_host()
+      view = open_step(conn, user)
+
+      for {event, params} <- [
+            {"meeting_suggestion", %{"index" => 1}},
+            {"meeting_duration", %{"duration" => 30}},
+            {"hours_toggle_day", %{"day" => [1]}},
+            {"hours_preset", %{}},
+            {"reconnect_calendar", %{"id" => 1}},
+            {"meeting_change", %{"meeting" => %{"duration_input" => 45}}}
+          ] do
+        render_hook(view, event, params)
+      end
+
+      assert Process.alive?(view.pid)
+      assert [%{duration_minutes: 30}] = meeting_types(user)
+    end
+  end
 end

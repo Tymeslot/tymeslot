@@ -329,23 +329,28 @@ defmodule TymeslotWeb.OnboardingLive do
     MeetingHandlers.handle_save(socket)
   end
 
-  def handle_event("meeting_suggestion", %{"index" => index}, socket) do
+  def handle_event("meeting_suggestion", %{"index" => index}, socket)
+      when is_binary(index) do
     MeetingHandlers.handle_suggestion(index, socket)
   end
 
-  def handle_event("meeting_duration", %{"duration" => value}, socket) do
+  def handle_event("meeting_duration", %{"duration" => value}, socket)
+      when is_binary(value) do
     MeetingHandlers.handle_duration(value, socket)
   end
 
-  def handle_event("meeting_location", %{"location" => value}, socket) do
+  def handle_event("meeting_location", %{"location" => value}, socket)
+      when is_binary(value) do
     MeetingHandlers.handle_location(value, socket)
   end
 
-  def handle_event("hours_preset", %{"preset" => value}, socket) do
+  def handle_event("hours_preset", %{"preset" => value}, socket)
+      when is_binary(value) do
     MeetingHandlers.handle_hours_preset(value, socket)
   end
 
-  def handle_event("hours_toggle_day", %{"day" => day}, socket) do
+  def handle_event("hours_toggle_day", %{"day" => day}, socket)
+      when is_binary(day) do
     MeetingHandlers.handle_toggle_day(day, socket)
   end
 
@@ -393,11 +398,13 @@ defmodule TymeslotWeb.OnboardingLive do
   # Event handlers — Theme
   # ------------------------------------------------------------------
 
-  def handle_event("select_theme", %{"theme" => theme_id}, socket) do
+  def handle_event("select_theme", %{"theme" => theme_id}, socket)
+      when is_binary(theme_id) do
     ThemeHandlers.handle_select_theme(theme_id, socket)
   end
 
-  def handle_event("select_onboarding_choice", %{"choice" => value}, socket) do
+  def handle_event("select_onboarding_choice", %{"choice" => value}, socket)
+      when is_binary(value) do
     ThemeHandlers.handle_select_choice(value, socket)
   end
 
@@ -409,11 +416,13 @@ defmodule TymeslotWeb.OnboardingLive do
   # Event handlers — Calendar connection
   # ------------------------------------------------------------------
 
-  def handle_event("select_calendar_option", %{"option" => option}, socket) do
+  def handle_event("select_calendar_option", %{"option" => option}, socket)
+      when is_binary(option) do
     CalendarHandlers.handle_choose_provider(option, socket)
   end
 
-  def handle_event("reconnect_calendar", %{"id" => id}, socket) do
+  def handle_event("reconnect_calendar", %{"id" => id}, socket)
+      when is_binary(id) do
     CalendarHandlers.handle_reconnect(id, socket)
   end
 
@@ -445,17 +454,25 @@ defmodule TymeslotWeb.OnboardingLive do
     TimezoneHandlers.handle_close_timezone_dropdown(socket)
   end
 
-  def handle_event("search_timezone", %{"search" => search}, socket) do
+  def handle_event("search_timezone", %{"search" => search}, socket)
+      when is_binary(search) do
     TimezoneHandlers.handle_search_timezone(search, socket)
   end
 
-  def handle_event("search_timezone", %{"value" => search}, socket) do
+  def handle_event("search_timezone", %{"value" => search}, socket)
+      when is_binary(search) do
     TimezoneHandlers.handle_search_timezone(search, socket)
   end
 
-  def handle_event("change_timezone", %{"timezone" => timezone}, socket) do
+  def handle_event("change_timezone", %{"timezone" => timezone}, socket)
+      when is_binary(timezone) do
     TimezoneHandlers.handle_change_timezone(timezone, socket)
   end
+
+  # A client can send any event with any params; one that matches no clause
+  # above (a missing key, a value that is not a string) is ignored rather
+  # than crashing the host's session.
+  def handle_event(_event, _params, socket), do: {:noreply, socket}
 
   # ------------------------------------------------------------------
   # handle_async
