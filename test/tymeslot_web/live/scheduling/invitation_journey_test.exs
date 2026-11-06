@@ -77,11 +77,16 @@ defmodule TymeslotWeb.Live.Scheduling.InvitationJourneyTest do
     editor = open_editor(ctx.host, ctx.type)
     editor |> element("#meeting-type-invitation-only-toggle-#{ctx.type.id}") |> render_click()
     # "Reusable after cancellation" is left on.
-    refute has_element?(editor, "input[name='invitation[release_on_cancel]'][value='false']")
+    assert has_element?(
+             editor,
+             "#invitations-#{ctx.type.id}-release-on-cancel[role='switch'][aria-checked='true']"
+           )
+
     url = create_invitation(editor, ctx.type, %{name: "Ada Parent", email: "ada@example.com"})
     [invitation_row] = invitation_rows(editor)
 
     assert has_element?(editor, "#{invitation_row}[data-status='available']", "Ada Parent")
+    assert [%{release_on_cancel: true}] = Repo.all(InvitationSchema)
 
     # 2. The link leads to the type, and the form is prefilled with Ada's details.
     view = open_link(url)
