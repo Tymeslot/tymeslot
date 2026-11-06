@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.PubSub
   alias Tymeslot.BookingPages
   alias Tymeslot.Demo
+  alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -35,6 +36,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
   alias TymeslotWeb.Themes.Shared.EventHandlers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   @type ctx :: %{
           meeting: Tymeslot.Meetings.MeetingSchema.t(),
@@ -62,19 +64,50 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   `rebook_path` points back to the meeting type's booking page so the
   attendee can try again, falling back to the host's overview page (or `/`
-  when the host has no public username).
+  when the host has no public username); see `rebook/2` for a meeting
+  booked through an invitation, and for `invitation_held`.
   """
   @spec lookup_for_cancel(meeting_id :: String.t(), theme_slug :: String.t()) ::
           {:ok,
            %{
              meeting: Tymeslot.Meetings.MeetingSchema.t(),
              profile: Tymeslot.Profiles.ProfileSchema.t(),
-             rebook_path: String.t()
+             rebook_path: String.t() | nil,
+             invitation_held: boolean()
            }}
           | {:error, atom()}
   def lookup_for_cancel(meeting_id, theme_slug) do
     with {:ok, meeting, profile} <- organizer(meeting_id, theme_slug) do
-      {:ok, %{meeting: meeting, profile: profile, rebook_path: rebook_path(profile, meeting)}}
+      {:ok, Map.merge(%{meeting: meeting, profile: profile}, rebook(profile, meeting))}
+    end
+  end
+
+  @doc """
+  Where the attendee can try again: `rebook_path`, and `invitation_held`.
+
+  A meeting booked through an invitation goes back with the invitation's
+  token (`Invitations.retry_token/1`), since its type books only on one.
+  While the meeting still awaits its payment it holds the invitation, which
+  the booking page would refuse as used, so there is no path yet
+  (`rebook_path: nil`, `invitation_held: true`); the hold ends when the
+  checkout lapses, which the payment topic announces (`:expired`), and the
+  page asks again then.
+  """
+  @spec rebook(Tymeslot.Profiles.ProfileSchema.t(), Meeting.t()) :: %{
+          rebook_path: String.t() | nil,
+          invitation_held: boolean()
+        }
+  def rebook(profile, meeting) do
+    case Invitations.retry_token(meeting) do
+      :held ->
+        %{rebook_path: nil, invitation_held: true}
+
+      {:ok, token} ->
+        path = PathHandlers.with_query(rebook_path(profile, meeting), %{"invite" => token})
+        %{rebook_path: path, invitation_held: false}
+
+      :none ->
+        %{rebook_path: rebook_path(profile, meeting), invitation_held: false}
     end
   end
 
@@ -264,12 +297,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
             socket
             |> assign_customization(profile)
             |> assign_organizer(profile)
-            |> Component.assign(
-              loading: false,
-              meeting: meeting,
-              payment: payment,
-              rebook_path: rebook_path(profile, meeting)
-            )
+            |> Component.assign(loading: false, meeting: meeting, payment: payment)
+            |> Component.assign(rebook(profile, meeting))
 
           {:ok, socket}
 
@@ -281,7 +310,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
         socket
         |> no_customization()
         |> no_organizer()
-        |> Component.assign(loading: true, meeting: nil, payment: nil, rebook_path: nil)
+        |> Component.assign(
+          loading: true,
+          meeting: nil,
+          payment: nil,
+          rebook_path: nil,
+          invitation_held: false
+        )
 
       {:ok, socket}
     end
@@ -294,7 +329,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   Re-fetches the meeting, not just the payment: paid does not always mean
   confirmed (a paid, approval-gated booking moves to `:awaiting_approval`),
-  and a failed checkout expires the meeting rather than the payment alone.
+  and a failed checkout expires the meeting rather than the payment alone,
+  which frees an invitation it held, so the way back is asked again
+  (`rebook/2`).
   """
   @spec refresh(LiveView.Socket.t()) :: LiveView.Socket.t()
   def refresh(socket) do
@@ -302,8 +339,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
     socket =
       case Meetings.get_meeting(socket.assigns.meeting.id) do
-        {:ok, meeting} -> Component.assign(socket, :meeting, meeting)
-        {:error, :not_found} -> socket
+        {:ok, meeting} ->
+          socket
+          |> Component.assign(:meeting, meeting)
+          |> Component.assign(rebook(socket.assigns.organizer_profile, meeting))
+
+        {:error, :not_found} ->
+          socket
       end
 
     Component.assign(socket, :payment, payment)

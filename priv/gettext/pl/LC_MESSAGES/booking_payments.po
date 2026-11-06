@@ -115,3 +115,8 @@ msgstr "Rezerwacja nie została potwierdzona. Możesz wrócić i spróbować pon
 #, elixir-autogen, elixir-format
 msgid "Paid: %{amount}"
 msgstr "Opłacono: %{amount}"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. Your invitation stays reserved for it until the unfinished checkout expires, and a link to book again will appear here as soon as it does."
+msgstr "Rezerwacja nie została potwierdzona. Zaproszenie pozostaje zarezerwowane dla niej, dopóki niedokończona płatność nie wygaśnie. Gdy to nastąpi, pojawi się tu link do ponownej rezerwacji."

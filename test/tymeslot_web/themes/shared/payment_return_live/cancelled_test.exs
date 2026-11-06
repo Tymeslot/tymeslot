@@ -16,6 +16,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Tymeslot.BookingTestHelpers
+  alias Tymeslot.Invitations
+  alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Profiles
 
   setup do
@@ -82,6 +85,102 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
            "rebook link must NOT use the stale name-derived slug"
 
     assert html =~ "Return to booking"
+  end
+
+  describe "a booking made through an invitation" do
+    setup do
+      %{user: user} = BookingTestHelpers.seed_booking_account("1", "invitehost", "Etc/UTC")
+
+      type =
+        insert(:meeting_type,
+          user: user,
+          name: "Coaching",
+          slug: "coaching",
+          duration_minutes: 30,
+          is_active: true,
+          invitation_only: true
+        )
+
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_id: type.id,
+          invitation_id: invitation.id,
+          status: :awaiting_payment
+        )
+
+      insert(:booking_payment,
+        meeting: meeting,
+        host_user_id: user.id,
+        status: :pending,
+        stripe_account_id: "acct_TEST",
+        stripe_checkout_session_id: "cs_TEST"
+      )
+
+      %{invitation: invitation, meeting: meeting}
+    end
+
+    test "says the invitation is held while the checkout is open, then offers the way back with it",
+         %{conn: conn, invitation: invitation, meeting: meeting} do
+      {:ok, view, html} = live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+
+      # The booking page would refuse the invitation as used while this
+      # meeting holds it, so there is no link to it yet.
+      assert html =~ ~s(data-testid="payment-invitation-held")
+      refute html =~ "Return to booking"
+
+      # The checkout lapses: the meeting expires and the page is told.
+      expire_checkout(meeting)
+
+      html = render(view)
+      refute html =~ ~s(data-testid="payment-invitation-held")
+
+      [href] =
+        html
+        |> Floki.parse_document!()
+        |> Floki.find("a.payment-page-link")
+        |> Floki.attribute("href")
+
+      assert %URI{path: "/invitehost/coaching", query: query} = URI.parse(href)
+      assert URI.decode_query(query) == %{"invite" => invitation.token}
+
+      # The link opens the type's times: the entry gate lets the guest in.
+      {:ok, booking, _html} = live(build_conn(), href <> "&timezone=Etc/UTC")
+      assert has_element?(booking, "[data-fact='date']")
+    end
+
+    test "offers the way back with the invitation once the hold has ended", %{
+      conn: conn,
+      invitation: invitation,
+      meeting: meeting
+    } do
+      expire_checkout(meeting)
+
+      {:ok, _view, html} = live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+
+      assert html =~ "Return to booking"
+      token = URI.encode_www_form(invitation.token)
+      assert html =~ ~s(href="/invitehost/coaching?invite=#{token}")
+    end
+  end
+
+  # The real webhook path for a checkout that lapsed: expires the meeting and
+  # broadcasts `:expired` on its payment topic.
+  defp expire_checkout(meeting) do
+    assert :ok =
+             FailAndExpire.handle(
+               %{
+                 "id" => "evt_expired_#{System.unique_integer([:positive])}",
+                 "account" => "acct_TEST",
+                 "data" => %{
+                   "object" => %{"id" => "cs_TEST", "client_reference_id" => meeting.id}
+                 }
+               },
+               "checkout.session.expired",
+               :webhook_expired
+             )
   end
 
   test "redirects to / when meeting belongs to a different theme", %{conn: conn, user: user} do

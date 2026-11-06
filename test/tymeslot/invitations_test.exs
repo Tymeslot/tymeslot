@@ -298,6 +298,39 @@ defmodule Tymeslot.InvitationsTest do
     end
   end
 
+  describe "retry_token/1" do
+    test "gives the link's token once the meeting no longer holds the invitation", %{
+      user: user,
+      type: type
+    } do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      meeting = book(invitation, user, :expired)
+
+      assert Invitations.retry_token(meeting) == {:ok, invitation.token}
+    end
+
+    test "is held while the meeting still awaits its payment", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      meeting = book(invitation, user, :awaiting_payment)
+
+      assert Invitations.retry_token(meeting) == :held
+    end
+
+    test "is none for a meeting booked without an invitation", %{user: user} do
+      meeting = insert(:meeting, organizer_user: user, status: :expired)
+
+      assert Invitations.retry_token(meeting) == :none
+    end
+
+    test "is none once the invitation is gone", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      meeting = book(invitation, user, :expired)
+      Repo.delete!(invitation)
+
+      assert Invitations.retry_token(%{meeting | invitation_id: invitation.id}) == :none
+    end
+  end
+
   describe "deleting the meeting type" do
     test "deleting a meeting type removes its invitations and keeps its meetings", %{
       user: user,

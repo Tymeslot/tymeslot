@@ -12,7 +12,7 @@ defmodule Tymeslot.Invitations do
 
   alias Tymeslot.Clock
   alias Tymeslot.Invitations.{InvitationQueries, InvitationSchema, InvitationStatus}
-  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
+  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema, MeetingState}
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Security.EncryptedString
@@ -172,6 +172,32 @@ defmodule Tymeslot.Invitations do
 
       _other ->
         {:error, :invitation_unavailable}
+    end
+  end
+
+  @doc """
+  What a guest whose paid booking through an invitation did not go ahead (a
+  checkout cancelled or failed) needs to book through the same invitation
+  again: `{:ok, token}`, the link's token, for a link back to the booking
+  page and never for a log; `:held` while `meeting` itself still awaits its
+  payment, so holds the invitation until its checkout lapses; `:none` for a
+  meeting booked without an invitation, or whose invitation is gone. Whether
+  the link then books is the entry gate's decision, which says why when it
+  does not.
+
+  Intentionally not scoped to a host: the guest has only their meeting.
+  """
+  @spec retry_token(MeetingSchema.t()) :: {:ok, String.t()} | :held | :none
+  def retry_token(%MeetingSchema{invitation_id: nil}), do: :none
+
+  def retry_token(%MeetingSchema{invitation_id: id} = meeting) do
+    if MeetingState.awaiting_payment?(meeting) do
+      :held
+    else
+      case InvitationQueries.get(id) do
+        %InvitationSchema{token: token} when is_binary(token) -> {:ok, token}
+        _gone -> :none
+      end
     end
   end
 
