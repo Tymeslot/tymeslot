@@ -55,6 +55,11 @@ defmodule Tymeslot.InviteeDataTest do
     {type, invitation}
   end
 
+  defp last_changed(invitation, days_ago) do
+    at = DateTime.utc_now() |> DateTime.add(-days_ago, :day) |> DateTime.truncate(:second)
+    {1, nil} = Repo.update_all(where(InvitationSchema, id: ^invitation.id), set: [updated_at: at])
+  end
+
   defp poll_with_slot_ended(days_ago, host) do
     poll = insert(:poll, user: host)
     slot = insert(:poll_time_slot, [poll: poll] ++ ended(days_ago))
@@ -360,6 +365,39 @@ defmodule Tymeslot.InviteeDataTest do
                PollSchema.draft_invitees(Repo.get!(PollSchema, recent.id))
 
       assert {0, nil} = InviteeData.anonymise_expired(730)
+    end
+
+    test "clears the name and email of invitations last changed before the window" do
+      host = insert(:user)
+      {_type, old} = invite(host, %{name: "Ada Parent", email: @email})
+      last_changed(old, 731)
+
+      assert {1, nil} = InviteeData.anonymise_expired(730)
+
+      assert %{name: nil, email: nil, token_hash: token_hash} =
+               Repo.get!(InvitationSchema, old.id)
+
+      assert token_hash == old.token_hash
+      assert {0, nil} = InviteeData.anonymise_expired(730)
+    end
+
+    test "keeps the name and email of invitations changed inside the window" do
+      host = insert(:user)
+      {_type, recent} = invite(host, %{name: "Ada Parent", email: @email})
+      last_changed(recent, 700)
+
+      assert {0, nil} = InviteeData.anonymise_expired(730)
+      assert %{name: "Ada Parent", email: @email} = Repo.get!(InvitationSchema, recent.id)
+    end
+
+    test "keeps an old invitation whose meeting ended inside the window" do
+      host = insert(:user)
+      {_type, invitation} = invite(host, %{name: "Ada Parent", email: @email})
+      last_changed(invitation, 731)
+      past_meeting(ended(700) ++ [organizer_user: host, invitation_id: invitation.id])
+
+      assert {0, nil} = InviteeData.anonymise_expired(730)
+      assert %{name: "Ada Parent", email: @email} = Repo.get!(InvitationSchema, invitation.id)
     end
 
     test "passes over what it has already anonymised" do

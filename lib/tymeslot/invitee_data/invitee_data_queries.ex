@@ -370,6 +370,32 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
     Repo.update_all(query, [])
   end
 
+  @doc """
+  Clears the name and email on invitation links last changed before
+  `cutoff` whose meetings all ended before it, keeping each link, its token
+  and its status. A link with a meeting ending on or after `cutoff` is kept
+  until that meeting ages out too.
+  """
+  @spec clear_invitations_before(DateTime.t(), DateTime.t()) :: {non_neg_integer(), nil}
+  def clear_invitations_before(%DateTime{} = cutoff, %DateTime{} = now) do
+    recent_meetings =
+      from(m in Meeting,
+        where: m.invitation_id == parent_as(:invitation).id and m.end_time >= ^cutoff,
+        select: 1
+      )
+
+    query =
+      from(i in Invitation,
+        as: :invitation,
+        where: not is_nil(i.email) or not is_nil(i.name),
+        where: i.updated_at < ^cutoff,
+        where: not exists(recent_meetings),
+        update: [set: [name: nil, email: nil, updated_at: ^now]]
+      )
+
+    Repo.update_all(query, [])
+  end
+
   # The guard is what tells Dialyzer the count is an integer: the Repo's own
   # `delete_all` return carries no type for it.
   defp delete_rows(query), do: deleted_count(Repo.delete_all(query))
