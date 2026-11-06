@@ -32,9 +32,6 @@ defmodule TymeslotWeb.OnboardingAvatarUploadTest do
          %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # Navigate to the profile step where the avatar upload form is present.
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       html = render(view)
 
       # The file input must be inside the hook's element for clearFileInputs
@@ -57,7 +54,6 @@ defmodule TymeslotWeb.OnboardingAvatarUploadTest do
 
     test "refuses an image over 40 megapixels and says how large it may be", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      view |> element("button[phx-click='next_step']") |> render_click()
 
       avatar = %{
         last_modified: System.system_time(:millisecond),

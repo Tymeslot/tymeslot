@@ -1,6 +1,8 @@
 defmodule Tymeslot.OnboardingTest do
   use Tymeslot.DataCase, async: true
 
+  use Oban.Testing, repo: Tymeslot.Repo
+
   @moduletag :utils
   @moduletag :onboarding
 
@@ -8,6 +10,7 @@ defmodule Tymeslot.OnboardingTest do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Onboarding
+  alias Tymeslot.Workers.EmailWorker
 
   describe "get_or_create_profile/1" do
     test "creates a profile when none exists" do
@@ -29,6 +32,60 @@ defmodule Tymeslot.OnboardingTest do
       {:ok, original_profile} = Onboarding.get_or_create_profile(user.id)
       {:ok, same_profile} = Onboarding.get_or_create_profile(user.id)
       assert same_profile.id == original_profile.id
+    end
+  end
+
+  describe "email_booking_link/1" do
+    test "enqueues one job per ten minutes" do
+      user = insert(:user)
+
+      assert :ok = Onboarding.email_booking_link(user)
+      assert :ok = Onboarding.email_booking_link(user)
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args == %{"action" => "send_booking_link_email", "user_id" => user.id}
+    end
+  end
+
+  describe "keep_booking_link/3" do
+    test "completes onboarding and stamps the first share" do
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user, booking_link_first_shared_at: nil)
+
+      assert {:ok, %{onboarding_completed_at: %DateTime{}}} =
+               Onboarding.keep_booking_link(user, profile, "copy")
+
+      assert %DateTime{} = Repo.reload!(profile).booking_link_first_shared_at
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "email_me queues the email first" do
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user)
+
+      assert {:ok, _user} = Onboarding.keep_booking_link(user, profile, "email_me")
+      assert_enqueued(worker: EmailWorker, args: %{"user_id" => user.id})
+    end
+
+    test "refuses a method outside the keep list, changing nothing" do
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user, booking_link_first_shared_at: nil)
+
+      assert {:error, :unknown_method} = Onboarding.keep_booking_link(user, profile, "fax")
+      assert Repo.reload!(user).onboarding_completed_at == nil
+      assert Repo.reload!(profile).booking_link_first_shared_at == nil
+    end
+  end
+
+  describe "subscribe/1 and broadcast_preview_opened/1" do
+    test "a subscriber hears its own user's opening, and no one else's" do
+      :ok = Onboarding.subscribe(42)
+
+      assert :ok = Onboarding.broadcast_preview_opened(43)
+      refute_receive {:onboarding, :preview_opened}, 50
+
+      assert :ok = Onboarding.broadcast_preview_opened(42)
+      assert_receive {:onboarding, :preview_opened}
     end
   end
 
@@ -121,33 +178,34 @@ defmodule Tymeslot.OnboardingTest do
   describe "dashboard setup widget helpers" do
     test "toggle_dashboard_setup_item/2 ticks an item and reflects in the predicate" do
       user = insert(:user)
-      refute "theme" in (user.dashboard_setup_done_items || [])
+      refute "avatar" in (user.dashboard_setup_done_items || [])
 
-      {:ok, updated} = Onboarding.toggle_dashboard_setup_item(user, "theme")
+      {:ok, updated} = Onboarding.toggle_dashboard_setup_item(user, "avatar")
 
-      assert "theme" in (updated.dashboard_setup_done_items || [])
-      assert "theme" in updated.dashboard_setup_done_items
+      assert "avatar" in (updated.dashboard_setup_done_items || [])
+      assert "avatar" in updated.dashboard_setup_done_items
     end
 
     test "toggle_dashboard_setup_item/2 un-ticks an already-done item" do
-      user = insert(:user, dashboard_setup_done_items: ["theme"])
+      user = insert(:user, dashboard_setup_done_items: ["avatar"])
 
-      {:ok, updated} = Onboarding.toggle_dashboard_setup_item(user, "theme")
+      {:ok, updated} = Onboarding.toggle_dashboard_setup_item(user, "avatar")
 
-      refute "theme" in (updated.dashboard_setup_done_items || [])
+      refute "avatar" in (updated.dashboard_setup_done_items || [])
       assert updated.dashboard_setup_done_items == []
     end
 
     test "toggle_dashboard_setup_item/2 refuses items that are not ticked by hand" do
-      user = insert(:user, dashboard_setup_done_items: ["theme"])
+      user = insert(:user, dashboard_setup_done_items: ["avatar"])
 
-      # Calendar and video complete only from a real connection; anything else
-      # is not an item at all.
-      for key <- ["calendar", "video", "bogus"] do
+      # Calendar and video complete only from a real connection; the items an
+      # earlier checklist offered (the wizard now does them) and anything else
+      # are not items at all.
+      for key <- ["calendar", "video", "theme", "meeting_types", "share", "bogus"] do
         assert {:error, :unknown_item} = Onboarding.toggle_dashboard_setup_item(user, key)
       end
 
-      assert Repo.get!(UserSchema, user.id).dashboard_setup_done_items == ["theme"]
+      assert Repo.get!(UserSchema, user.id).dashboard_setup_done_items == ["avatar"]
     end
 
     test "manual_dashboard_setup_items/0 lists the items a host may tick by hand" do
@@ -163,13 +221,13 @@ defmodule Tymeslot.OnboardingTest do
       user = insert(:user)
       stale = user
 
-      {:ok, _ticked_in_first_tab} = Onboarding.toggle_dashboard_setup_item(user, "theme")
-      {:ok, updated} = Onboarding.toggle_dashboard_setup_item(stale, "share")
+      {:ok, _ticked_in_first_tab} = Onboarding.toggle_dashboard_setup_item(user, "avatar")
+      {:ok, updated} = Onboarding.toggle_dashboard_setup_item(stale, "embed")
 
-      assert Enum.sort(updated.dashboard_setup_done_items) == ["share", "theme"]
+      assert Enum.sort(updated.dashboard_setup_done_items) == ["avatar", "embed"]
 
       assert Enum.sort(Repo.get!(UserSchema, user.id).dashboard_setup_done_items) ==
-               ["share", "theme"]
+               ["avatar", "embed"]
     end
 
     test "dismiss_dashboard_setup/1 stamps the timestamp and is idempotent" do

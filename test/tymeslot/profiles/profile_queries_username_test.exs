@@ -32,6 +32,16 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
       assert {:error, :not_found} == ProfileQueries.get_by_username_with_user(<<0xC0>>)
     end
 
+    test "taken_usernames/1 returns the taken ones of a list, compared case-insensitively" do
+      insert(:profile, username: "anna-kowalska")
+      insert(:profile, username: "LegacyHandle")
+
+      assert ProfileQueries.taken_usernames(["anna-kowalska", "legacyhandle", "free-name"]) ==
+               MapSet.new(["anna-kowalska", "legacyhandle"])
+
+      assert ProfileQueries.taken_usernames([]) == MapSet.new()
+    end
+
     test "username_available?/1 returns true for available username" do
       assert ProfileQueries.username_available?("available_#{System.unique_integer([:positive])}")
     end

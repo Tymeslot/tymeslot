@@ -1,0 +1,22 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot/meeting_types/defaults.ex
+#, elixir-autogen, elixir-format
+msgid "A short first conversation"
+msgstr "Krátký první rozhovor"
+
+#: lib/tymeslot/meeting_types/defaults.ex
+#, elixir-autogen, elixir-format
+msgid "Intro call"
+msgstr "Úvodní hovor"

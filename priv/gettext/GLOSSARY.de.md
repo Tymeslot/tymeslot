@@ -151,6 +151,12 @@ Settled while translating; reuse rather than re-coining.
 | rescheduling terms (a host's own policy) | **Bedingungen zur Terminverschiebung**, per *reschedule* above; never *Umbuchung* |
 | starter setup (the /for page section) | **Starter-Einrichtung** |
 | `%{profession_in_text}` (profession name mid-sentence) | The nominative plural, which German also uses after *für* (accusative plural is identical): *Alles, was %{profession_in_text} brauchen.* / *für %{profession_in_text}*. German nouns keep their capital, so it equals `profession` except for leading adjectives (*virtuelle Assistenzen*). |
+| link (the setup wizard's name for the username field, the host's `/<username>` address) | **Link** (*Ihr Link*, *Dieser Link ist bereits vergeben.*); the full URL stays **Buchungslink** |
+| keep (your link: save it somewhere you will find it again) | **speichern** (*Oder für später speichern*, *Senden oder speichern Sie zuerst Ihren Link*, *Ihr Link ist gespeichert*); never *aufbewahren* or *behalten* |
+| Live (wizard step name, stage badge) / go live / you're live | **Online** / **online gehen** / **Sie sind online**, matching *Sie geht online* on booking pages. *Live-Vorschau* (live preview) is a different sense and keeps *Live*. |
+| free time(s) (open bookable times shown on the page) | **freie Zeit** / **freie Zeiten**; a counted *open slot* is **Zeitfenster** (*%{count} freie Zeitfenster in dieser Woche*). Not *freier Termin*: *Termin* is the booked meeting. |
+| Apple Account (Apple's current name) | **Apple Account**, untranslated, as Apple's German UI writes it; strings that still say *Apple ID* keep **Apple-ID** |
+| a message the host sends to someone they know (wizard share text, *Hi %{name}, you can pick a time with me here*) | **du**: the only sanctioned exception to section 1, because the host is writing in their own voice to a contact. The wizard's own UI around it stays **Sie**. |
 
 **Weekday abbreviations:** Mo · Di · Mi · Do · Fr · Sa · So
 

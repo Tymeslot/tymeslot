@@ -88,6 +88,8 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             id="copy-scheduling-link"
             type="button"
             phx-hook="CopyOnClick"
+            phx-click="booking_link_copied"
+            phx-value-channel="sidebar"
             data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
             data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
             class="dashboard-nav-link shrink-0 border-2 border-tymeslot-100 hover:border-turquoise-400 hover:translate-x-0 shadow-sm hover:shadow-md group"

@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
   alias Phoenix.HTML
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias TymeslotWeb.OnboardingLive.ChooseThemeStep
+  alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.Themes.Quill.Theme, as: Quill
   alias TymeslotWeb.Themes.Rhythm.Theme, as: Rhythm
 
@@ -28,7 +29,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       theme_options: [{"Quill", "1"}, {"Rhythm", "2"}],
       theme_customization: %ThemeCustomizationSchema{theme_id: "1", settings: settings},
       choices: choices,
-      picker: picker
+      picker: picker,
+      headline_form: ThemeHandlers.headline_form(nil)
     )
   end
 
@@ -126,7 +128,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       stories = render_step(nil)
 
       assert stories =~ ~s(phx-click="show_all_themes")
-      assert stories =~ "Show all themes"
+      assert stories =~ "Compare the looks side by side"
       refute stories =~ "Choose by description instead"
 
       all = render_step(nil, %{}, :all)
@@ -136,6 +138,24 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       assert all =~ ~s(phx-value-theme="2")
       assert all =~ ~s(phx-click="show_theme_stories")
       assert all =~ "Choose by description instead"
+    end
+
+    test "offer no separate preview: the stage shows the page" do
+      for picker <- [:stories, :all] do
+        html = render_step(@choices, %{}, picker)
+
+        refute html =~ ~s(phx-click="preview_booking_page")
+        refute html =~ "Preview booking page"
+      end
+    end
+
+    test "sit in the swipeable row a phone shows under the stage" do
+      html = render_step(nil)
+
+      assert [group] =
+               html |> Floki.parse_fragment!() |> Floki.find("[data-role='theme-stories']")
+
+      assert group |> Floki.find("[data-testid='theme-story']") |> length() == 2
     end
 
     test "leave the colour row below them" do

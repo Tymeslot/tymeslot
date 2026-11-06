@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
         data-branding={to_string(@should_show_branding)}
         data-theme={@theme_id}
         data-demo={inspect(Map.fetch(assigns, :demo_mode))}
+        data-owner-preview={to_string(@owner_preview)}
       >
       </div>
       """
@@ -78,6 +79,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
             theme_id="7"
             organizer_user_id={42}
             should_show_branding={true}
+            owner_preview={@owner_preview}
             {@demo_attrs}
           />
         </div>
@@ -153,6 +155,19 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShellTest do
 
       assert Floki.attribute(doc, ".probe-grid > #extension-probe", "data-user") == ["42"]
       assert Floki.attribute(doc, ".probe-grid > #extension-probe", "data-branding") == ["true"]
+    end
+
+    test "tells the theme extensions whether the page is the owner's own preview" do
+      assert Floki.attribute(
+               render_page(owner_preview: true),
+               "#extension-probe",
+               "data-owner-preview"
+             ) ==
+               ["true"]
+
+      assert Floki.attribute(render_page([]), "#extension-probe", "data-owner-preview") == [
+               "false"
+             ]
     end
 
     test "hands the theme id to the theme extensions" do

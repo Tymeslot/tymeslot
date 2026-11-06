@@ -4,29 +4,36 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
 
   Asks the organiser which theme's story sounds like them: one button per
   offered theme, its first-person story (`story/0`, from the theme's persona
-  sheet) above its name. "Show all themes" swaps the stories for the visual
-  picker of every theme's look, and "Choose by description instead" swaps
-  back; both send the same `select_theme` event. Below either sits whatever
+  sheet) above its name. "Compare the looks side by side" swaps the stories
+  for a thumbnail of every theme's look, and "Choose by description instead"
+  swaps back. The stage shows one theme at a time, so the thumbnails are the
+  only place a host who chooses by eye sees them all at once; both send the same `select_theme` event. Below either sits whatever
   the chosen theme's customisation spec offers for onboarding (a colour
-  scheme, for a theme with a palette), and a button opening the organiser's
-  *real* booking page full-screen. This step only appears once a calendar is
-  connected: at that point the public page is ready, so the preview reflects
-  the live page rather than a mock.
+  scheme, for a theme with a palette), and, for a theme that introduces the
+  host (`Catalog.shows_intro?/1`), one optional line about them, the headline
+  its page shows under their name. It saves as it is typed
+  (`ThemeHandlers.handle_headline_change/2`) and never holds up Continue; the
+  bio is left to the dashboard.
+
+  There is no separate preview: the stage beside the step (above it on a
+  phone) redraws the host's page in the chosen theme and colours as they
+  pick, and the last step shows the real page.
   """
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [action_button: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [input: 1]
 
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.OnboardingLive.PreviewParts
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
-  Renders the theme picker (the stories, or every theme's look), the spec's
-  onboarding choices and a live full-page preview button.
+  Renders the theme picker (the stories, or every theme's look) and the
+  spec's onboarding choices.
 
   ## Attributes
 
@@ -38,12 +45,15 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
     `dashboard_appearance`, as the dashboard's panels translate them.
   * `picker` - `:stories` (the default: "Which of these sounds like you?")
     or `:all` (every theme's thumbnail)
+  * `headline_form` - The headline form (`ThemeHandlers.headline_form/1`),
+    shown only for a theme that introduces the host
   """
   attr :profile, :map, required: true
   attr :theme_options, :list, required: true
   attr :theme_customization, :any, required: true
   attr :choices, :map, default: nil
   attr :picker, :atom, default: :stories, values: [:stories, :all]
+  attr :headline_form, Phoenix.HTML.Form, required: true
 
   @spec choose_theme_step(map()) :: Phoenix.LiveView.Rendered.t()
   def choose_theme_step(assigns) do
@@ -61,6 +71,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
       |> assign(:primary, PreviewParts.color(colors, :primary, "#14b8a6"))
       |> assign(:selected, assigns.choices && settings[assigns.choices.setting])
       |> assign(:stories, stories(assigns.theme_options))
+      |> assign(:shows_intro, Catalog.shows_intro?(theme_id))
 
     ~H"""
     <div class="onboarding-form">
@@ -71,7 +82,15 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         <p id="theme-story-question" class="onboarding-form-helper">
           {dgettext("onboarding_wizard", "Which of these sounds like you?")}
         </p>
-        <div role="group" aria-labelledby="theme-story-question" class="flex flex-col gap-3">
+        <%!-- A column from lg; below it a row the host swipes through
+             right under the stage card (`onboarding.css`). A swipe never
+             chooses: only a tap on a card does. --%>
+        <div
+          role="group"
+          aria-labelledby="theme-story-question"
+          class="onboarding-theme-stories"
+          data-role="theme-stories"
+        >
           <button
             :for={story <- @stories}
             type="button"
@@ -80,7 +99,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
             aria-pressed={to_string(theme_selected?(@profile, story.id))}
             data-testid="theme-story"
             class={[
-              "p-4 rounded-token-xl border-2 flex flex-col gap-2 text-left transition-colors",
+              "onboarding-theme-story p-4 rounded-token-xl border-2 flex flex-col justify-between gap-2 text-left transition-colors",
               if(theme_selected?(@profile, story.id),
                 do: "border-turquoise-500 bg-turquoise-50",
                 else: "border-tymeslot-200 bg-white hover:border-tymeslot-300"
@@ -102,9 +121,9 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         <button
           type="button"
           phx-click="show_all_themes"
-          class="mt-3 text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
+          class="self-start min-h-10 mt-1 text-left text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
         >
-          {dgettext("onboarding_wizard", "Show all themes")}
+          {dgettext("onboarding_wizard", "Compare the looks side by side")}
         </button>
       </div>
 
@@ -146,7 +165,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         <button
           type="button"
           phx-click="show_theme_stories"
-          class="mt-3 text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
+          class="self-start min-h-10 mt-1 text-left text-token-sm font-semibold text-turquoise-700 hover:text-turquoise-800 underline underline-offset-2"
         >
           {dgettext("onboarding_wizard", "Choose by description instead")}
         </button>
@@ -160,7 +179,8 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         </p>
         <%!-- `choice`, not `value`: LiveView's client reads a button's native
         `value` property and would overwrite `phx-value-value` with "". --%>
-        <div class="flex flex-wrap gap-3">
+        <%!-- 40px to tap; on a narrow phone the row wraps. --%>
+        <div class="flex flex-wrap gap-2 lg:gap-3">
           <button
             :for={choice <- @choices.choices}
             type="button"
@@ -169,7 +189,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
             title={choice_name(choice.name)}
             aria-label={choice_name(choice.name)}
             class={[
-              "w-9 h-9 rounded-full border-2 transition-transform hover:scale-110",
+              "w-10 h-10 rounded-full border-2 transition-transform hover:scale-110",
               if(@selected == choice.value,
                 do: "border-turquoise-500 ring-2 ring-turquoise-200 scale-110",
                 else: "border-white shadow-sm"
@@ -180,22 +200,38 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         </div>
       </div>
 
-      <%!-- Real full-page preview --%>
-      <div class="onboarding-form-group">
-        <.action_button
-          variant={:secondary}
-          icon="hero-eye-mini"
-          phx-click="preview_booking_page"
-        >
-          {dgettext("onboarding_wizard", "Preview booking page")}
-        </.action_button>
-        <p class="onboarding-form-helper mt-2">
+      <%!-- A theme that introduces the host shows a line about them under
+           their name; the stage shows it as it is typed. --%>
+      <.form
+        :if={@shows_intro}
+        for={@headline_form}
+        id="onboarding-headline-form"
+        phx-change="headline_change"
+        phx-submit="headline_change"
+        class="onboarding-form-group"
+      >
+        <label class="label" for="onboarding-headline">
+          {dgettext("onboarding_wizard", "One line about you (optional)")}
+        </label>
+        <p id="onboarding-headline-help" class="onboarding-form-helper">
           {dgettext(
             "onboarding_wizard",
-            "Opens your real booking page exactly as invitees will see it."
+            "Guests see it under your name. You can add a longer bio later in your dashboard."
           )}
         </p>
-      </div>
+        <.input
+          field={@headline_form[:headline]}
+          id="onboarding-headline"
+          type="text"
+          placeholder={
+            dgettext("onboarding_wizard", "For example: Career coach for first-time managers")
+          }
+          maxlength={Constraints.profile_headline_max_length()}
+          autocomplete="off"
+          aria-describedby="onboarding-headline-help"
+          phx-debounce="300"
+        />
+      </.form>
     </div>
     """
   end

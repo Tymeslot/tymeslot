@@ -9,6 +9,9 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
   import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias TymeslotWeb.Hooks.ModalHook
+  alias TymeslotWeb.OnboardingLive.NavigationHandlers
+
   describe "caldav form" do
     test "switches to the inline credential form", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
@@ -38,6 +41,27 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       assert html =~ "Google Calendar"
       assert html =~ "Outlook Calendar"
       refute html =~ "Discover calendars"
+    end
+
+    test "an open provider form hides the wizard's Back and Continue until it is cancelled",
+         %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+      assert has_element?(view, "#onboarding-nav button[phx-click='next_step']")
+
+      open_apple_form(view)
+
+      # The form's own Cancel and Connect are the only actions on screen,
+      # and the focus moves into the form, since the tile that held it is gone.
+      assert has_element?(view, "#apple-form")
+      refute has_element?(view, "#onboarding-nav")
+      assert_push_event(view, "focus", %{id: "apple_username"})
+
+      view |> element("button[phx-click='cancel_caldav']") |> render_click()
+
+      assert has_element?(view, "#onboarding-nav button[phx-click='next_step']")
+      assert has_element?(view, "#calendar-provider-apple")
+      assert_push_event(view, "focus", %{id: "calendar-provider-apple"})
     end
   end
 
@@ -81,11 +105,9 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
     end
   end
 
-  # Selecting the Google option and pressing Continue is the only way to
-  # initiate Google OAuth under the forced-choice model.
+  # Choosing the Google tile goes straight out to Google's sign-in.
   defp continue_with_google(view) do
     view |> element(~s{button[phx-value-option="google"]}) |> render_click()
-    view |> element("button[phx-click='next_step']") |> render_click()
   end
 
   describe "connect_google_calendar" do
@@ -195,8 +217,6 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       refute url =~ "login_hint="
     end
 
-    # This host skipped the calendar, so the way back runs through the theme
-    # step they have not seen.
     test "returns a host who came from the share step to it", %{conn: conn} do
       original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
 
@@ -214,14 +234,34 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
         end
       end)
 
-      {conn, _user} = onboarding_conn(conn)
-      {:ok, view, _html} = live(conn, "/onboarding/ready")
-      view |> element("#onboarding-return-to-calendar") |> render_click()
+      {:ok, view, _html} = live(conn_for_host_with_calendar(conn), "/onboarding/ready")
+      render_click(view, "return_to_calendar_step")
 
       assert {:error, {:redirect, %{to: url}}} = continue_with_google(view)
 
       assert URI.decode_query(URI.parse(url).query)["return_to"] ==
-               "/onboarding/connect_calendar?return=theme"
+               "/onboarding/connect_calendar?return=share"
+    end
+  end
+
+  describe "continuing from the calendar step" do
+    test "a connected calendar continues to the meeting step", %{conn: conn} do
+      {:ok, view, _html} =
+        live(conn_for_host_with_calendar(conn), "/onboarding/connect_calendar")
+
+      click_continue(view)
+
+      assert has_element?(view, ".onboarding-step-title", "Your meeting")
+    end
+
+    test "the OAuth return of a host sent back from the share step goes back to it",
+         %{conn: conn} do
+      {:ok, view, _html} =
+        live(conn_for_host_with_calendar(conn), "/onboarding/connect_calendar?return=share")
+
+      click_continue(view)
+
+      assert has_element?(view, ".onboarding-step-title", "You're live")
     end
   end
 
@@ -273,8 +313,11 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
         name: "Google Calendar"
       )
 
+      insert(:profile, user: user, username: "alice#{System.unique_integer([:positive])}")
+
+      stub_free_calendar()
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/onboarding?step=connect_calendar")
+      {:ok, view, _html} = live(conn, ~p"/onboarding/connect_calendar")
 
       html = render(view)
 
@@ -289,75 +332,188 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
     end
   end
 
-  describe "forced choice Continue gating" do
-    test "Continue is disabled until an option is selected", %{conn: conn} do
+  describe "no way past the calendar without one" do
+    test "the calendar step has no skip", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_calendar_step(view)
 
-      # Nothing connected and nothing selected — Continue is disabled.
-      assert has_element?(view, "button[phx-click='next_step'][disabled]")
+      assert has_element?(view, ".onboarding-provider-cards")
+      refute has_element?(view, ~s{[phx-value-option="skip"]})
+      refute has_element?(view, "#skip-calendar-modal")
 
-      # Selecting any option enables Continue.
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-
-      refute has_element?(view, "button[phx-click='next_step'][disabled]")
-    end
-
-    test "clicking the selected option again toggles it off", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_calendar_step(view)
-
-      # Select, then click the same option again to clear the selection.
-      view |> element(~s{button[phx-value-option="outlook"]}) |> render_click()
-      refute has_element?(view, "button[phx-click='next_step'][disabled]")
-
-      view |> element(~s{button[phx-value-option="outlook"]}) |> render_click()
-
-      # Back to no selection — Continue is disabled again.
+      # A forged skip choice is ignored, and Continue stays put.
+      render_click(view, "select_calendar_option", %{"option" => "skip"})
       assert has_element?(view, "button[phx-click='next_step'][disabled]")
     end
-  end
 
-  describe "skip advances the flow" do
-    test "selecting skip then Continue opens the nudge modal before advancing",
+    test "there is no way past the calendar step without a bookable calendar",
          %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_calendar_step(view)
 
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
+      assert has_element?(view, "button[phx-click='next_step'][disabled]")
 
-      # The nudge modal becomes visible and we're still on the calendar step.
-      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: flex"]})
-      assert has_element?(view, ".onboarding-provider-cards")
-      refute has_element?(view, "button[phx-value-buffer_before_minutes]")
+      # Pressed anyway, as a forged event would.
+      render_click(view, "next_step", %{})
+
+      assert has_element?(view, ".onboarding-step-title", "Your calendar")
+      assert has_element?(view, "button[phx-click='next_step'][disabled]")
     end
 
-    test "confirming the nudge modal advances to buffer_time", %{conn: conn} do
+    test "choosing a tile does not unlock Continue on its own", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_calendar_step(view)
 
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
+      open_caldav_form(view)
+      view |> element("button[phx-click='cancel_caldav']") |> render_click()
 
-      assert has_element?(view, "button[phx-value-buffer_before_minutes]")
+      assert has_element?(view, "button[phx-click='next_step'][disabled]")
     end
 
-    test "dismissing the nudge modal returns to the calendar step", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_calendar_step(view)
+    test "an inactive calendar does not unlock the step", %{conn: conn} do
+      user = insert(:user, onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "inactive#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: user, is_active: false)
 
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "hide_skip_calendar_modal")
+      {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/connect_calendar")
 
-      # Modal hidden, still on the calendar step and free to pick a provider.
-      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: none"]})
-      assert has_element?(view, ".onboarding-provider-cards")
+      assert has_element?(
+               view,
+               ~s([data-role="calendar-not-bookable"]),
+               "This calendar is paused, so it can't take bookings. Reconnect it or connect another."
+             )
+
+      assert has_element?(view, "button[phx-click='next_step'][disabled]")
+
+      # Connecting another stays open.
       assert has_element?(view, ~s{button[phx-value-option="google"]})
-      refute has_element?(view, "button[phx-value-buffer_before_minutes]")
     end
+
+    test "the skip-setup events no longer exist", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      refute has_element?(view, "#skip-onboarding-modal")
+
+      # Their modals are no longer registered, so nothing can open them.
+      for modal <- [:skip, :skip_calendar] do
+        assert_raise ArgumentError, fn ->
+          ModalHook.show_modal(%Phoenix.LiveView.Socket{}, modal)
+        end
+      end
+
+      Code.ensure_loaded!(NavigationHandlers)
+
+      for handler <- [
+            :handle_show_skip_modal,
+            :handle_hide_skip_modal,
+            :handle_skip_onboarding,
+            :handle_confirm_skip_calendar,
+            :handle_hide_skip_calendar_modal
+          ] do
+        refute function_exported?(NavigationHandlers, handler, 1),
+               "#{handler} should no longer exist"
+      end
+    end
+  end
+
+  describe "the tiles" do
+    test "every provider has its own tile with its logo, and a privacy line", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+
+      for {option, name, logo} <- [
+            {"google", "Google Calendar", "google"},
+            {"outlook", "Outlook Calendar", "outlook"},
+            {"apple", "Apple Calendar", "apple"},
+            {"caldav", "Other calendar (CalDAV)", "caldav"}
+          ] do
+        tile = ~s{button[phx-value-option="#{option}"]}
+        assert has_element?(view, tile, name)
+        assert has_element?(view, ~s{#{tile} img[src*="/providers/calendar/"][src*="#{logo}"]})
+      end
+
+      # Tymeslot writes booked meetings into the calendar, so the line says so
+      # rather than promising read-only access the consent screen contradicts.
+      assert has_element?(
+               view,
+               ".onboarding-privacy-line",
+               "We check when you're busy and add the meetings people book. Visitors never see your events."
+             )
+
+      refute render(view) =~ "We only read"
+    end
+  end
+
+  describe "a paused calendar" do
+    defp mount_with_paused(conn, attrs) do
+      stub_free_calendar()
+      user = insert(:user, onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "paused#{System.unique_integer([:positive])}")
+      calendar = insert(:calendar_integration, Map.merge(%{user: user, is_active: false}, attrs))
+      {:ok, view, _html} = live(log_in_user(conn, user), "/onboarding/connect_calendar")
+      {view, calendar}
+    end
+
+    test "a paused Google calendar shows as paused, and Google can be connected again",
+         %{conn: conn} do
+      original = Application.get_env(:tymeslot, :google_calendar_oauth_helper)
+
+      Application.put_env(
+        :tymeslot,
+        :google_calendar_oauth_helper,
+        TymeslotWeb.OnboardingLive.CalendarHandlersTest.GoogleHelperStub
+      )
+
+      on_exit(fn ->
+        if original,
+          do: Application.put_env(:tymeslot, :google_calendar_oauth_helper, original),
+          else: Application.delete_env(:tymeslot, :google_calendar_oauth_helper)
+      end)
+
+      {view, calendar} =
+        mount_with_paused(conn, %{provider: "google", provider_account_email: "host@gmail.com"})
+
+      row = ~s([data-calendar-state="paused"])
+      assert has_element?(view, row, "host@gmail.com")
+      assert has_element?(view, row, "Google · Paused")
+      refute has_element?(view, ~s([data-calendar-state="connected"]))
+      assert has_element?(view, ~s{button[phx-value-option="google"]})
+
+      # The row's own Reconnect goes out to Google's sign-in again.
+      assert {:error, {:redirect, %{to: url}}} =
+               view
+               |> element(~s{#{row} button[phx-value-id="#{calendar.id}"]}, "Reconnect")
+               |> render_click()
+
+      assert url =~ "accounts.google.com"
+    end
+
+    test "a paused CalDAV calendar can still open the CalDAV form, and reconnect from its row",
+         %{conn: conn} do
+      {view, calendar} = mount_with_paused(conn, %{provider: "caldav"})
+
+      assert has_element?(view, ~s([data-calendar-state="paused"]), "CalDAV · Paused")
+
+      # The tile opens a new connection.
+      open_caldav_form(view)
+      assert has_element?(view, "#caldav-form", "Discover calendars")
+      view |> element("button[phx-click='cancel_caldav']") |> render_click()
+
+      # The row reconnects this calendar, starting from its server.
+      view
+      |> element(~s{button[phx-click="reconnect_calendar"][phx-value-id="#{calendar.id}"]})
+      |> render_click()
+
+      assert has_element?(view, "#caldav-form", "Reconnect")
+      assert has_element?(view, ~s{#caldav-form input[name="url"][value="#{calendar.base_url}"]})
+    end
+  end
+
+  defp conn_for_host_with_calendar(conn) do
+    stub_free_calendar()
+    user = insert(:user, onboarding_completed_at: nil)
+    insert(:profile, user: user, username: "calhost#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user)
+    log_in_user(conn, user)
   end
 end
 

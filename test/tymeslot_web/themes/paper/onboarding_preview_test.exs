@@ -2,8 +2,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
   @moduledoc """
   Paper as the onboarding wizard draws it: its own thumbnail and card, not
   the generic mock, tinted with the organiser's accent, in the two panes of
-  its first screen: the introduction on the left, a rule, and the meeting
-  types with the chosen one marked, the times and Book on the right.
+  its first screen: the introduction on the left, a rule, and the chosen
+  day marked, its times and Book on the right.
   """
   use ExUnit.Case, async: true
 
@@ -13,13 +13,18 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
   import Phoenix.Component, only: [sigil_H: 2]
   import Phoenix.LiveViewTest, only: [render_component: 2, rendered_to_string: 1]
 
+  alias Tymeslot.Availability.WeekPreview
   alias TymeslotWeb.OnboardingLive.PreviewParts
   alias TymeslotWeb.Themes.Paper.Theme
 
-  @slots [
-    %{label: "9:00", state: :default, check: false},
-    %{label: "9:30", state: :filled, check: true}
-  ]
+  @week %{
+    state: :ready,
+    preview: %WeekPreview{
+      days: [%{date: ~D[2026-11-03], slots: ["09:00", "09:30"], busy: []}],
+      slot_count: 2,
+      first_busy: nil
+    }
+  }
 
   test "the thumbnail is Paper's own, tinted with the primary colour" do
     html =
@@ -37,8 +42,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
     assert style =~ "border-left: 2px solid #2563eb;"
   end
 
-  test "the card sets the shared header beside the meeting types, the times and Book" do
-    assigns = %{slots: @slots}
+  test "the card sets the shared header beside the chosen day, its times and Book" do
+    assigns = %{week: @week}
 
     html =
       rendered_to_string(~H"""
@@ -46,7 +51,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
         theme_module={Theme}
         variant={:card}
         colors={%{primary: "#2563eb", surface: "#ffffff", text: "#111111"}}
-        slots={@slots}
+        week={@week}
+        today={~D[2026-11-03]}
       >
         <:header>
           <p id="shared-header">Ada Lovelace</p>
@@ -64,11 +70,13 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
     assert class =~ "items-start"
 
     assert [types] = Floki.find(doc, "[data-preview='paper'] > [data-preview-part='types']")
-    assert [chosen, _other] = Floki.find(types, "[data-preview-part='type']")
+    assert [chosen] = Floki.find(types, "[data-preview-part='day']")
+    assert Floki.text(chosen) =~ "Tuesday, 3 November"
+    assert Floki.text(chosen) =~ "2 free times"
     assert [chosen_style] = Floki.attribute(chosen, "style")
     assert chosen_style =~ "border-left: 2px solid #2563eb;"
     assert [times] = Floki.find(types, "[data-preview-part='times']")
-    assert Floki.text(times) =~ "9:30"
+    assert Floki.text(times) =~ "09:30 AM"
     assert Floki.find(doc, "[data-preview-part='calendar']") == []
     assert [book] = Floki.find(types, "button")
     assert Floki.text(book) =~ "Book"
@@ -77,7 +85,7 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
   end
 
   test "the card's edge follows the text colour, so a dark card gets a light edge" do
-    assigns = %{slots: @slots}
+    assigns = %{week: @week}
 
     html =
       rendered_to_string(~H"""
@@ -85,7 +93,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreviewTest do
         theme_module={Theme}
         variant={:card}
         colors={%{primary: "#0891b2", surface: "#18181b", text: "#f4f4f5"}}
-        slots={@slots}
+        week={@week}
+        today={~D[2026-11-03]}
       >
         <:header>
           <p>Ada Lovelace</p>

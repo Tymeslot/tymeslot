@@ -104,8 +104,10 @@ defmodule TymeslotWeb.Router do
       pipe_through [:browser, :require_authenticated_user]
 
       live_session :dev_onboarding,
+        session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
         on_mount: [
           {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+          TymeslotWeb.Hooks.AppLocaleHook,
           TymeslotWeb.Hooks.ClientInfoHook
         ] do
         live "/onboarding", OnboardingLive, :debug_welcome
@@ -470,7 +472,7 @@ defmodule TymeslotWeb.Router do
     live_session :onboarding,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: {TymeslotWeb.Router, :onboarding_hooks} do
-      live "/onboarding", OnboardingLive, :welcome
+      live "/onboarding", OnboardingLive, :index
       live "/onboarding/:step", OnboardingLive, :step
     end
   end

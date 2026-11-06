@@ -48,11 +48,6 @@ defmodule TymeslotWeb.OnboardingAvatarConcurrentUploadTest do
     }
   end
 
-  defp goto_profile_step(view) do
-    view |> element("button[phx-click='next_step']") |> render_click()
-    view
-  end
-
   defp stored_avatar(user) do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
     profile.avatar
@@ -62,7 +57,6 @@ defmodule TymeslotWeb.OnboardingAvatarConcurrentUploadTest do
     test "stores the finished photo when a second file exceeds the upload slot",
          %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      view = goto_profile_step(view)
 
       # Two files in one selection against `max_entries: 1`. Only the first is
       # preflighted; the second can never finish, but it is `valid?: true`.
@@ -83,7 +77,6 @@ defmodule TymeslotWeb.OnboardingAvatarConcurrentUploadTest do
 
     test "a later clean upload still lands after the excess entry", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      view = goto_profile_step(view)
 
       input = file_input(view, "#onboarding-avatar-form", :avatar, [png("a.png"), png("b.png")])
       render_upload(input, "a.png")

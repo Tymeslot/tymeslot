@@ -1,17 +1,27 @@
 defmodule TymeslotWeb.OnboardingAnalyticsTest do
   @moduledoc """
-  Verifies the onboarding funnel emits anonymous `onboarding_step_completed`
-  analytics events on the reliable (non-redirecting) success paths, that each
-  share action on the final step emits `booking_link_shared` with its channel,
-  and that the payloads never carry user-identifying props.
+  The setup wizard's funnel, as analytics sees it: every step entry pushes
+  `onboarding_step_viewed`, every step left forward `onboarding_step_completed`,
+  the calendar reveal reports how its read went (`calendar_reveal_loaded`),
+  each keep action on the live step is counted from the server's
+  `[:tymeslot, :onboarding, :link_kept]` telemetry (never a client push), and "Try booking yourself" pushes `guest_preview_opened`. No
+  payload carries anything that identifies the host, nor the name they type
+  for the first person they send their link to.
   """
 
   use TymeslotWeb.LiveCase, async: false
   @moduletag :onboarding
 
+  import Ecto.Query
   import Mox
+  import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
+
+  alias Tymeslot.CalendarMock
+  alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Repo
 
   setup :verify_on_exit!
 
@@ -20,64 +30,192 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
     {:ok, conn: setup_onboarding_session(tags.conn)}
   end
 
-  describe "onboarding analytics events" do
-    test "advancing from the welcome step pushes an anonymous step-completed event",
-         %{conn: conn} do
+  # Every analytics payload pushed to the view so far, in order.
+  defp analytics_pushed(view) do
+    _html = render(view)
+    drain_analytics([])
+  end
+
+  defp drain_analytics(acc) do
+    receive do
+      {_ref, {:push_event, "ts:analytics", payload}} -> drain_analytics([payload | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  # A host with a bookable calendar and a profile, so the calendar step
+  # reads their week as soon as it is shown.
+  defp reveal_host(conn) do
+    user = insert(:user, onboarding_completed_at: nil)
+    insert(:profile, user: user, username: "reveal#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user)
+    log_in_user(conn, user)
+  end
+
+  describe "step views" do
+    # Continue patches the address to the new step; the patch arriving back
+    # must not count the step a second time.
+    test "a step reached by Continue is one view, not one per address change", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      _landing = analytics_pushed(view)
+
+      navigate_to_calendar_step(view)
+      assert_patch(view, ~p"/onboarding/connect_calendar")
+
+      views =
+        for %{name: "onboarding_step_viewed", props: %{step: "connect_calendar"}} <-
+              analytics_pushed(view),
+            do: :viewed
+
+      assert views == [:viewed]
+    end
+
+    test "viewing a step pushes onboarding_step_viewed", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
+      # Landing on the wizard is a view of the step it resumes at.
+      assert_push_event view, "ts:analytics", %{
+        name: "onboarding_step_viewed",
+        props: %{step: "profile"}
+      }
+
+      navigate_to_calendar_step(view)
 
       assert_push_event view, "ts:analytics", %{
-        name: "onboarding_step_completed",
-        props: %{step: "welcome"}
+        name: "onboarding_step_viewed",
+        props: %{step: "connect_calendar"}
+      }
+
+      # Going back is a view of the step returned to.
+      view |> element("button[phx-click='previous_step']") |> render_click()
+
+      assert_push_event view, "ts:analytics", %{
+        name: "onboarding_step_viewed",
+        props: %{step: "profile"}
       }
     end
 
-    test "skipping the calendar step pushes a skipped step-completed event", %{conn: conn} do
+    test "resuming at a step by its address pushes its view", %{conn: conn} do
+      {conn, user} = onboarding_conn(conn)
+      insert(:profile, user: user, username: "resume#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: user)
+
+      {:ok, view, _html} = live(conn, "/onboarding/meeting")
+
+      assert_push_event view, "ts:analytics", %{
+        name: "onboarding_step_viewed",
+        props: %{step: "meeting"}
+      }
+    end
+
+    test "every step of the walk to the live step is viewed once", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+      navigate_to_ready_step(view)
+
+      viewed =
+        for %{name: "onboarding_step_viewed", props: %{step: step}} <- analytics_pushed(view),
+            do: step
+
+      assert viewed == ~w(profile connect_calendar meeting choose_theme ready)
+    end
+  end
+
+  describe "calendar reveal" do
+    test "a read that answers pushes calendar_reveal_loaded ok", %{conn: conn} do
+      stub_free_calendar()
+      {:ok, view, _html} = live(reveal_host(conn), "/onboarding/connect_calendar")
+      render_async(view)
+
+      assert_push_event view, "ts:analytics", %{
+        name: "calendar_reveal_loaded",
+        props: %{result: "ok"}
+      }
+    end
+
+    test "a failed reveal pushes calendar_reveal_loaded failed", %{conn: conn} do
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        {:error, :timeout}
+      end)
+
+      {:ok, view, _html} = live(reveal_host(conn), "/onboarding/connect_calendar")
+      render_async(view)
+
+      assert_push_event view, "ts:analytics", %{
+        name: "calendar_reveal_loaded",
+        props: %{result: "failed"}
+      }
+    end
+
+    test "a read outlasting the timer reports slow, and nothing when it lands", %{conn: conn} do
+      ConfigTestHelpers.setup_config(:tymeslot, :onboarding_week_slow_after_ms, 0)
+
+      test_pid = self()
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        send(test_pid, {:reading, self()})
+
+        receive do
+          :answer -> {:ok, []}
+        end
+      end)
+
+      {:ok, view, _html} = live(reveal_host(conn), "/onboarding/connect_calendar")
+      assert_receive {:reading, reader}
+
+      assert_push_event view, "ts:analytics", %{
+        name: "calendar_reveal_loaded",
+        props: %{result: "slow"}
+      }
+
+      send(reader, :answer)
+      render_async(view)
+
+      assert has_element?(view, ~s([data-week-state="ready"]))
+      refute Enum.any?(analytics_pushed(view), &(&1.name == "calendar_reveal_loaded"))
+    end
+  end
+
+  describe "step completions" do
+    test "saving the link pushes an anonymous step-completed event", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # welcome -> profile
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # fill the profile form and advance to connect_calendar
-      view
-      |> form("form#profile-form", %{
-        "full_name" => "Test User",
-        "username" => "testuser#{System.unique_integer([:positive])}"
-      })
-      |> render_change()
-
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # skip the calendar step: select "Not right now", Continue, then confirm
-      # the nudge modal — the skipped event fires only once the user confirms.
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
+      navigate_to_calendar_step(view)
 
       assert_push_event view, "ts:analytics", %{
         name: "onboarding_step_completed",
-        props: %{step: "connect_calendar", skipped: true}
+        props: %{step: "profile"}
       }
+    end
+
+    test "each later step pushes its own step-completed event", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+
+      navigate_to_ready_step(view)
+
+      for step <- ~w(profile connect_calendar meeting choose_theme) do
+        assert_push_event view, "ts:analytics", %{
+          name: "onboarding_step_completed",
+          props: %{step: ^step}
+        }
+      end
     end
 
     test "step events never carry user-identifying props", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
+      navigate_to_calendar_step(view)
 
       assert_push_event view, "ts:analytics", %{props: props}
-      refute Map.has_key?(props, :user_id)
-      refute Map.has_key?(props, :username)
-      refute Map.has_key?(props, :email)
+      assert props == %{step: "profile"}
     end
   end
 
   describe "share step with a live booking page" do
     setup %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      view |> goto_choose_theme() |> advance_to_share_step()
-      %{view: view}
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      navigate_to_ready_step(view)
+      %{view: view, user: user}
     end
 
     test "records that the host saw the live variant", %{view: view} do
@@ -89,53 +227,114 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       refute has_element?(view, "#onboarding-page-offline-warning")
     end
 
-    for {selector, channel} <- [
-          {"button#onboarding-copy-booking-url", "copy"},
-          {"a#onboarding-share-email", "email"},
-          {"a#onboarding-share-whatsapp", "whatsapp"},
-          {"a#onboarding-share-linkedin", "linkedin"}
+    for {selector, method} <- [
+          {"#onboarding-keep-copy", "copy"},
+          {"#onboarding-keep-signature", "signature"},
+          {"#onboarding-keep-email", "email_me"},
+          {"#onboarding-copy-message", "first_person"}
         ] do
-      test "the #{channel} action pushes a share event with its channel", %{view: view} do
+      test "a keep by #{method} emits link_kept telemetry and no client push", %{view: view} do
+        :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
+
         view |> element(unquote(selector)) |> render_click()
 
-        assert_push_event view, "ts:analytics", %{
-          name: "booking_link_shared",
-          props: %{channel: unquote(channel)}
-        }
+        assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{},
+                         %{method: unquote(method)}}
+
+        refute Enum.any?(
+                 analytics_pushed(view),
+                 &(&1.name in ~w(booking_link_kept booking_link_shared))
+               )
       end
     end
 
-    test "a channel the step does not offer is dropped", %{view: view} do
-      render_click(view, "share_booking_link", %{"channel" => "user@example.com"})
+    test "a keep by the phone handoff emits link_kept telemetry phone", %{view: view} do
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
 
-      refute_push_event view, "ts:analytics", %{name: "booking_link_shared"}
+      send(view.pid, {:onboarding, :preview_opened})
+      render(view)
+
+      assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{}, %{method: "phone"}}
+      refute Enum.any?(analytics_pushed(view), &(&1.name == "booking_link_kept"))
     end
 
-    test "share links carry the booking URL and open safely", %{view: view} do
-      email = view |> element("a#onboarding-share-email") |> render()
-      assert email =~ ~s(href="mailto:?subject=Book%20a%20time%20with%20me&amp;body=)
-      assert email =~ "%2Fada"
+    test "a method the step does not offer emits no telemetry", %{view: view} do
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
 
-      whatsapp = view |> element("a#onboarding-share-whatsapp") |> render()
+      render_hook(view, "keep_link", %{"method" => "user@example.com"})
 
-      assert whatsapp =~
-               ~s(href="https://wa.me/?text=You%20can%20book%20a%20time%20with%20me%20here%3A%20)
+      refute_received {[:tymeslot, :onboarding, :link_kept], _ref, _, _}
+    end
 
-      assert whatsapp =~ ~s(rel="noopener noreferrer")
-      assert whatsapp =~ ~s(target="_blank")
+    test "trying the page on a desktop pushes guest_preview_opened", %{view: view} do
+      view |> element("#onboarding-try-booking") |> render_click()
 
-      linkedin = view |> element("a#onboarding-share-linkedin") |> render()
-      assert linkedin =~ "https://www.linkedin.com/sharing/share-offsite/?url=http"
-      assert linkedin =~ "%2Fada"
-      assert linkedin =~ ~s(rel="noopener noreferrer")
+      assert_push_event view, "ts:analytics", %{name: "guest_preview_opened", props: props}
+      assert props == %{}
+    end
+
+    test "trying the page on a phone pushes guest_preview_opened and expands it",
+         %{view: view} do
+      refute has_element?(view, "#onboarding-stage-preview-iframe")
+
+      view |> element("#onboarding-try-booking-phone") |> render_click()
+
+      assert_push_event view, "ts:analytics", %{name: "guest_preview_opened"}
+      assert has_element?(view, "#onboarding-stage-preview-iframe")
+    end
+
+    test "props and link_kept metadata carry no PII", %{view: view, user: user} do
+      :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :onboarding, :link_kept]])
+
+      name = "Ada Lovelace"
+      render_hook(view, "first_person_name", %{"name" => name})
+      view |> element("#onboarding-copy-message") |> render_click()
+      view |> element("#onboarding-try-booking") |> render_click()
+
+      assert_received {[:tymeslot, :onboarding, :link_kept], _ref, %{}, meta}
+      # The SaaS forward whitelists `method`; nothing else of this reaches analytics.
+      assert meta == %{user_id: user.id, method: "first_person"}
+
+      pushed = analytics_pushed(view)
+      refute Enum.any?(pushed, &(&1.name == "booking_link_kept"))
+      assert pushed != []
+
+      user = Repo.reload!(user)
+      identifying = [name, "Ada", "Lovelace", user.email, to_string(user.id)]
+
+      leaks =
+        for %{name: event, props: props} <- pushed,
+            {key, value} <- props,
+            text = to_string(value),
+            Enum.any?(identifying, &String.contains?(text, &1)),
+            do: {event, key}
+
+      meta_leaks =
+        for {key, value} <- Map.delete(meta, :user_id),
+            text = to_string(value),
+            Enum.any?(identifying, &String.contains?(text, &1)),
+            do: key
+
+      assert leaks == []
+      assert meta_leaks == []
     end
   end
 
-  describe "share step without a connected calendar" do
+  # A calendar that stops being bookable during onboarding (removed, or
+  # deactivated elsewhere) leaves the host on a share step whose page refuses
+  # visitors.
+  describe "share step after the calendar stopped being bookable" do
     setup %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view |> navigate_to_scheduling_steps() |> advance_to_share_step()
-      %{view: view}
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      navigate_to_theme_step(view)
+
+      Repo.update_all(
+        from(c in CalendarIntegrationSchema, where: c.user_id == ^user.id),
+        set: [is_active: false]
+      )
+
+      click_continue(view)
+      %{view: view, user: user}
     end
 
     test "records that the host saw the offline variant", %{view: view} do
@@ -158,59 +357,34 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
                "Your link is ready, but the page only goes live once a calendar is connected."
              )
 
-      assert has_element?(view, "button#onboarding-copy-booking-url[disabled]")
-
-      for channel <- ~w(email whatsapp linkedin) do
-        assert has_element?(view, "button#onboarding-share-#{channel}[disabled]")
-        refute has_element?(view, "a#onboarding-share-#{channel}")
+      for id <- ~w(send-link keep-email keep-copy keep-signature keep-phone) do
+        assert has_element?(view, "button#onboarding-#{id}[disabled]")
       end
 
       # Finishing stays possible: the host can connect a calendar later.
-      assert has_element?(view, "button[phx-click='next_step']", "Go to dashboard")
+      assert has_element?(view, "#onboarding-finish[phx-click='next_step']", "Go to dashboard")
+      refute has_element?(view, "#onboarding-finish[aria-disabled]")
+    end
+
+    test "finishing without a keep completes onboarding", %{view: view, user: user} do
+      view |> element("#onboarding-finish") |> render_click()
+
+      assert_redirect(view, "/dashboard")
+      assert %DateTime{} = Repo.reload!(user).onboarding_completed_at
     end
 
     test "the warning takes the host back to the calendar step", %{view: view} do
       view |> element("#onboarding-return-to-calendar") |> render_click()
 
-      assert has_element?(view, ".onboarding-step-title", "Connect your calendar")
+      assert has_element?(view, ".onboarding-step-title", "Your calendar")
       assert has_element?(view, ".onboarding-provider-cards")
-    end
-
-    test "skipping again from there leads straight back to the share step", %{view: view} do
-      assert_push_event view, "ts:analytics", %{
-        name: "onboarding_step_completed",
-        props: %{step: "connect_calendar"}
-      }
-
-      assert_push_event view, "ts:analytics", %{
-        name: "share_step_viewed",
-        props: %{returned: false}
-      }
-
-      view |> element("#onboarding-return-to-calendar") |> render_click()
-      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      render_click(view, "confirm_skip_calendar")
-
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
-      assert has_element?(view, "#onboarding-page-offline-warning")
-
-      assert_push_event view, "ts:analytics", %{
-        name: "share_step_viewed",
-        props: %{page_live: false, returned: true}
-      }
-
-      # The host already completed the calendar step once.
-      refute_push_event view, "ts:analytics", %{
-        name: "onboarding_step_completed",
-        props: %{step: "connect_calendar"}
-      }
     end
   end
 
   describe "share step opened directly by URL" do
     setup %{conn: conn} do
       {conn, user} = onboarding_conn(conn)
+      insert(:profile, user: user, username: "ada#{System.unique_integer([:positive])}")
       insert(:calendar_integration, user: user)
       %{conn: conn}
     end
@@ -220,12 +394,12 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
     test "a live page never first renders as offline", %{conn: conn} do
       doc = conn |> get("/onboarding/ready") |> html_response(200) |> Floki.parse_document!()
 
-      assert [_copy_button] = Floki.find(doc, "button#onboarding-copy-booking-url")
+      assert [_copy_button] = Floki.find(doc, "button#onboarding-keep-copy")
       assert Floki.find(doc, "#onboarding-page-offline-warning") == []
       refute Floki.text(doc) =~ "only goes live once a calendar is connected"
 
       {:ok, view, _html} = live(conn, "/onboarding/ready")
-      assert has_element?(view, "button#onboarding-copy-booking-url:not([disabled])")
+      assert has_element?(view, "button#onboarding-keep-copy:not([disabled])")
       refute has_element?(view, "#onboarding-page-offline-warning")
     end
 
@@ -237,8 +411,8 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
-      assert has_element?(view, "a#onboarding-share-email")
+      assert has_element?(view, ".onboarding-step-title", "You're live")
+      assert has_element?(view, "button#onboarding-keep-email:not([disabled])")
 
       assert_push_event view, "ts:analytics", %{
         name: "share_step_viewed",
@@ -248,22 +422,15 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       refute_push_event view, "ts:analytics", %{name: "onboarding_step_completed"}
     end
 
-    # A host who skipped the calendar never saw the theme step, which only a
-    # host with a calendar is shown.
-    test "connecting from the share step, having skipped the calendar, shows the theme step first",
-         %{conn: conn} do
+    # Before the calendar became required, a host who had skipped it was sent
+    # back with `return=theme`. Such a host has seen neither the meeting nor
+    # the theme step, so the flow simply continues.
+    test "a return path from the old flow continues to the meeting step", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/onboarding/connect_calendar?return=theme")
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-      assert has_element?(view, ".onboarding-step-title", "Choose your theme")
+      click_continue(view)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-      assert has_element?(view, ".onboarding-step-title", "Share your booking page")
-
-      assert_push_event view, "ts:analytics", %{
-        name: "share_step_viewed",
-        props: %{returned: true}
-      }
+      assert has_element?(view, ".onboarding-step-title", "Your meeting")
     end
 
     test "connecting without coming from the share step continues as usual",
@@ -272,7 +439,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      refute has_element?(view, ".onboarding-step-title", "Share your booking page")
+      assert has_element?(view, ".onboarding-step-title", "Your meeting")
 
       assert_push_event view, "ts:analytics", %{
         name: "onboarding_step_completed",
@@ -283,24 +450,8 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
     test "reloading the step does not count another view", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/onboarding/ready")
 
-      assert has_element?(view, "a#onboarding-share-email")
+      assert has_element?(view, "button#onboarding-keep-email:not([disabled])")
       refute_push_event view, "ts:analytics", %{name: "share_step_viewed"}
-    end
-  end
-
-  # Clicks Continue until the share step, so each describe can reach it from
-  # wherever its own setup leaves the wizard.
-  defp advance_to_share_step(view, attempts_left \\ 6) do
-    cond do
-      has_element?(view, ".onboarding-step-title", "Share your booking page") ->
-        view
-
-      attempts_left == 0 ->
-        flunk("never reached the share step")
-
-      true ->
-        view |> element("button[phx-click='next_step']") |> render_click()
-        advance_to_share_step(view, attempts_left - 1)
     end
   end
 end

@@ -7,7 +7,8 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   there is the theme's own `onboarding_preview/1`; this module holds what
   those implementations share: `theme_preview/1` (the one entry point the
   wizard renders), the generic mock for a theme that draws none, the
-  per-user colour style builders, and the slot and Book-button pieces.
+  per-user colour style builders and the Book button. The week a card
+  shows, and the parts that draw it, are `PreviewWeek`'s.
 
   Per-user colours come from the theme's resolved customisation tokens
   (`colors/1`) and are applied through inline `style`; structural layout is
@@ -17,27 +18,54 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
-
   alias Tymeslot.ThemeCustomizations.Tokens
+  alias TymeslotWeb.OnboardingLive.PreviewWeek
 
   attr :theme_module, :atom, required: true
   attr :variant, :atom, values: [:thumbnail, :card], required: true
   attr :primary, :string, default: nil, doc: "`:thumbnail`: the theme's primary colour"
   attr :colors, :map, default: %{}, doc: "`:card`: the colour map from `colors/1`"
-  attr :slots, :list, default: [], doc: "`:card`: `%{label, state, check}` sample slots"
+
+  attr :background, :map,
+    default: nil,
+    doc:
+      "`:card`: the page background the customisation resolves (`Tokens.media.background`), for a theme that draws it"
+
+  attr :week, :map,
+    default: nil,
+    doc:
+      "`:card`: the stage's week, `%{state, preview}` (`PreviewWeek`); `nil` is the placeholder"
+
+  attr :today, :any,
+    default: nil,
+    doc: "`:card` (required): the host's date, `Tymeslot.Availability.today/1`"
+
   attr :locale, :string, default: "en"
-  attr :highlight_card, :boolean, default: false
-  attr :highlight_slots, :boolean, default: false
+  attr :id, :string, default: "preview", doc: "`:card`: names this copy, so ids never clash"
+  attr :reveal_key, :integer, default: 0, doc: "`:card`: bumped for each new week, which reveals"
+
+  attr :highlight, :list,
+    default: [],
+    doc: "`:card`: the regions ringed for the current step: `:calendar`, `:slots`"
+
+  attr :meeting, :map,
+    default: nil,
+    doc:
+      "`:card`: the meeting the page offers, `%{name, duration_minutes, location}`; `PreviewWeek.view/4`'s `:meeting`"
+
   slot :header, doc: "`:card`: the shared identity header the theme draws its card around"
 
   @doc """
   Renders a theme's onboarding preview through its `onboarding_preview/1`,
   or the generic mock for a module that does not implement it.
+
+  For the `:card` it adds `view`, the week as `PreviewWeek.view/4` resolves
+  it, which is all a theme reads about the week. A card needs `today`.
   """
   @spec theme_preview(map()) :: Phoenix.LiveView.Rendered.t()
   def theme_preview(assigns) do
     module = assigns.theme_module
+    assigns = with_view(assigns)
 
     if Code.ensure_loaded?(module) and function_exported?(module, :onboarding_preview, 1) do
       module.onboarding_preview(assigns)
@@ -46,7 +74,24 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     end
   end
 
-  @doc "The generic mock: a plain card with a slot grid and a solid Book button."
+  defp with_view(%{variant: :card, today: %Date{} = today} = assigns) do
+    view =
+      PreviewWeek.view(assigns.week, today, assigns.locale,
+        id: assigns.id,
+        reveal_key: assigns.reveal_key,
+        meeting: assigns.meeting
+      )
+
+    assign(assigns, :view, view)
+  end
+
+  defp with_view(assigns), do: assigns
+
+  @doc """
+  The generic mock: a plain card with a week strip, the chosen day and a
+  solid Book button. A theme may draw its card with it, setting `radius`
+  (the card's corner class) to its own.
+  """
   @spec generic(map()) :: Phoenix.LiveView.Rendered.t()
   def generic(%{variant: :thumbnail} = assigns) do
     ~H"""
@@ -60,15 +105,22 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   end
 
   def generic(%{variant: :card} = assigns) do
+    assigns = assign_new(assigns, :radius, fn -> "rounded-token-2xl" end)
+
     ~H"""
-    <div
-      class="rounded-token-2xl p-5 flex flex-col items-center gap-3"
-      style={card_style(@colors, @highlight_card)}
-    >
+    <div class={[@radius, "p-5 flex flex-col items-center gap-3"]} style={card_style(@colors)}>
       {render_slot(@header)}
-      <div class="grid grid-cols-2 gap-1.5 w-full" style={slots_style(@highlight_slots)}>
-        <.slot_chip :for={slot <- @slots} colors={@colors} slot={slot} />
-      </div>
+      <PreviewWeek.calendar_area colors={@colors} highlight={@highlight} class="flex flex-col gap-2">
+        <PreviewWeek.day_strip view={@view} colors={@colors} />
+        <PreviewWeek.times
+          view={@view}
+          colors={@colors}
+          layout={:rows}
+          limit={5}
+          class="flex flex-col gap-1.5"
+          highlight={@highlight}
+        />
+      </PreviewWeek.calendar_area>
       <.book_button
         class="w-full py-2 rounded-token-lg font-semibold text-white text-token-sm mt-1"
         style={"background: #{color(@colors, :primary, "#14b8a6")};"}
@@ -87,40 +139,6 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     <button type="button" class={@class} style={@style} disabled>
       {dgettext("onboarding_wizard", "Book")}
     </button>
-    """
-  end
-
-  attr :colors, :map, required: true
-  attr :slot, :map, required: true
-
-  @doc "A slot as a chip, for grid layouts."
-  @spec slot_chip(map()) :: Phoenix.LiveView.Rendered.t()
-  def slot_chip(assigns) do
-    ~H"""
-    <span
-      class="text-token-xs px-2 py-1.5 rounded-token-md font-medium inline-flex items-center justify-center gap-1"
-      style={slot_style(@colors, @slot.state)}
-    >
-      <.icon :if={@slot.check} name="hero-check-mini" class="w-3 h-3" />
-      {@slot.label}
-    </span>
-    """
-  end
-
-  attr :colors, :map, required: true
-  attr :slot, :map, required: true
-
-  @doc "A slot as a full-width row, for list layouts."
-  @spec slot_row(map()) :: Phoenix.LiveView.Rendered.t()
-  def slot_row(assigns) do
-    ~H"""
-    <span
-      class="text-token-xs px-3 py-2 rounded-token-md font-medium w-full inline-flex items-center gap-1.5"
-      style={slot_style(@colors, @slot.state)}
-    >
-      <.icon :if={@slot.check} name="hero-check-mini" class="w-3 h-3" />
-      {@slot.label}
-    </span>
     """
   end
 
@@ -145,10 +163,9 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
   @spec color(map(), atom(), String.t()) :: String.t()
   def color(colors, key, fallback), do: Map.get(colors, key) || fallback
 
-  @spec card_style(map(), boolean()) :: String.t()
-  def card_style(colors, highlighted?) do
-    "background: #{color(colors, :surface, "#ffffff")};color: #{color(colors, :text, "#0f172a")};" <>
-      ring(highlighted?, colors)
+  @spec card_style(map()) :: String.t()
+  def card_style(colors) do
+    "background: #{color(colors, :surface, "#ffffff")};color: #{color(colors, :text, "#0f172a")};"
   end
 
   @spec divider_style(map()) :: String.t()
@@ -165,47 +182,14 @@ defmodule TymeslotWeb.OnboardingLive.PreviewParts do
     "background: #{color(colors, :primary, "#14b8a6")}1f;color: #{color(colors, :text_secondary, "#475569")};"
   end
 
-  # A few cells get the primary tint to read as "available days".
-  @spec calendar_cell_style(map(), integer()) :: String.t()
-  def calendar_cell_style(colors, day) when day in [4, 9, 12, 17] do
-    "background: #{color(colors, :primary, "#14b8a6")};"
-  end
-
-  def calendar_cell_style(colors, _day) do
-    "background: #{color(colors, :primary, "#14b8a6")}14;"
-  end
-
-  @spec week_cell_style(map(), boolean()) :: String.t()
-  def week_cell_style(colors, true) do
-    "background: #{color(colors, :primary, "#14b8a6")};color: #ffffff;"
-  end
-
-  def week_cell_style(colors, false) do
-    "background: #{color(colors, :primary, "#14b8a6")}14;color: #{color(colors, :text_secondary, "#475569")};"
-  end
-
-  @spec slots_style(boolean()) :: String.t()
-  def slots_style(highlighted?) do
-    if highlighted?, do: "opacity: 1;", else: ""
-  end
-
-  @spec slot_style(map(), atom()) :: String.t()
-  def slot_style(colors, :muted) do
-    "background: #{color(colors, :text_secondary, "#475569")}1f;color: #{color(colors, :text_secondary, "#475569")};opacity: 0.5;"
-  end
-
-  def slot_style(colors, :filled) do
-    "background: #{color(colors, :primary, "#14b8a6")}26;color: #{color(colors, :primary, "#14b8a6")};"
-  end
-
-  def slot_style(colors, _state) do
-    "background: #{color(colors, :primary, "#14b8a6")}14;color: #{color(colors, :text, "#0f172a")};"
-  end
-
+  @doc """
+  The step highlight: an outline in the primary colour a little outside a
+  region, or nothing.
+  """
   @spec ring(boolean(), map()) :: String.t()
   def ring(false, _colors), do: ""
 
   def ring(true, colors) do
-    "box-shadow: 0 0 0 3px #{color(colors, :primary, "#14b8a6")};"
+    "outline: 2px solid #{color(colors, :primary, "#14b8a6")};outline-offset: 4px;"
   end
 end

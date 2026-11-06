@@ -160,3 +160,103 @@ msgid "%{count} participant"
 msgid_plural "%{count} participants"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "A few recommended steps. Tick off the ones you don't need."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a headline and a short bio"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add a video provider"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add it to your website"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add photo"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Add your photo"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Auto-add links to online meetings"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Connect"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss setup checklist"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Done"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Finish setting up"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Introduce yourself"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let guests see who they're meeting"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Let visitors book without leaving your site"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Mark %{title} as done"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Mark %{title} as not done"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Set up"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Write"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page can't take bookings without one"
+msgstr ""

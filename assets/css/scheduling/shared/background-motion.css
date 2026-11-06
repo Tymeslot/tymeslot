@@ -73,6 +73,19 @@
   }
 }
 
+/* The onboarding stage's short phone card (html[data-preview-stage], set by
+   iframe_embed.js) is a glimpse that takes no touch or focus, so the
+   control there could not be used and would only sit on the page (in a
+   viewport that short its corner lands on the card's avatar). The stage's
+   Expand view, tall enough to pass this query, keeps it. */
+@media (max-height: 30rem) {
+  :where(html:not([data-embedded])) {
+    &[data-preview-stage] .background-motion-toggle {
+      display: none;
+    }
+  }
+}
+
 /* Embeds hide the background video entirely, so the control would pause
    nothing. Printing has no motion either. */
 html[data-embedded] .background-motion-toggle {

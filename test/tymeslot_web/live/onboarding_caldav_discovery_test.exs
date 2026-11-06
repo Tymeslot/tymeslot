@@ -131,12 +131,9 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       html = render(view)
 
       # The exact wording comes from DisplayHelpers.normalize_discovery_error/1.
-      # Assert presence of the discovery error styling rather than exact text —
-      # "text-red-600" only renders for the field-error <p> tags, so its
-      # presence proves an error was actually surfaced (unlike the previous
-      # `html =~ "<p class=\""` disjunct, which is always true because the
-      # onboarding layout unconditionally renders `<p class="onboarding-step-description">`).
-      assert html =~ "text-red-600"
+      # Assert the form's error region rather than exact text: it renders
+      # only when there is an error to show.
+      assert has_element?(view, "#calendar-form-error")
       refute html =~ "successfully connected"
 
       # The button is no longer stuck in the discovering state — the user can retry.
@@ -241,7 +238,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       html = render(view)
 
       refute html =~ "Something went wrong while contacting the calendar server"
-      assert has_element?(view, "p.text-red-600")
+      assert has_element?(view, ".form-field-error")
       refute has_element?(view, "button[type='submit'][disabled]")
     end
 

@@ -150,12 +150,15 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
 
   def has_calendar?(_integration_status), do: false
 
-  # --- Private helpers ---
+  @doc """
+  Whether `profile` has a username to build a public link from. A blank
+  username does not count.
+  """
+  @spec has_username?(map() | nil) :: boolean()
+  def has_username?(nil), do: false
 
-  defp has_username?(nil), do: false
-
-  defp has_username?(%{username: username}) when is_binary(username),
+  def has_username?(%{username: username}) when is_binary(username),
     do: String.trim(username) != ""
 
-  defp has_username?(_user), do: false
+  def has_username?(_profile), do: false
 end

@@ -74,6 +74,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
 
   attr :class, :string, default: nil
 
+  attr :panel_attrs, :list,
+    default: [],
+    doc: "Extra `{name, value}` attributes for the floating panel, such as `data-*` markers."
+
   attr :unstyled, :boolean,
     default: false,
     doc: """
@@ -130,6 +134,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
         role={@role}
         aria-orientation={@aria_orientation}
         aria-label={@panel_label}
+        {@panel_attrs}
       >
         {render_slot(@panel)}
       </div>

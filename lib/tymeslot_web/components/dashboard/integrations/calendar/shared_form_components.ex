@@ -219,6 +219,56 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     """
   end
 
+  @apple_account_url "https://account.apple.com"
+
+  @doc """
+  The same guidance for iCloud as `app_password_hint/1`, as three short
+  numbered steps rather than a paragraph, for the onboarding wizard's
+  Apple Calendar form. The second step opens Apple's account page in a new
+  tab, so the form keeps what has been typed into it.
+  """
+  attr :class, :any, default: nil, doc: "layout classes for the list"
+
+  @spec apple_password_steps(map()) :: Phoenix.LiveView.Rendered.t()
+  def apple_password_steps(assigns) do
+    assigns = assign(assigns, :url, @apple_account_url)
+
+    ~H"""
+    <ol class={["onboarding-apple-steps", @class]} data-role="apple-steps">
+      <li>
+        {dgettext(
+          "dashboard_calendar_providers",
+          "iCloud needs an app-specific password, not your Apple ID password."
+        )}
+      </li>
+      <li>
+        <a
+          href={@url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-baseline gap-1 font-semibold text-turquoise-700 underline underline-offset-2 hover:text-turquoise-800"
+        >
+          {dgettext("dashboard_calendar_providers", "Open your Apple Account")}
+          <.icon
+            name="hero-arrow-top-right-on-square-mini"
+            class="w-4 h-4 self-center shrink-0"
+          />
+        </a>
+        {dgettext(
+          "dashboard_calendar_providers",
+          "Under Sign-In and Security, choose App-Specific Passwords and create one."
+        )}
+      </li>
+      <li>
+        {dgettext(
+          "dashboard_calendar_providers",
+          "Enter your Apple ID email and that password below."
+        )}
+      </li>
+    </ol>
+    """
+  end
+
   defp app_password_where("nextcloud"),
     do:
       dgettext(
