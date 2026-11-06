@@ -423,3 +423,14 @@
   height: 1rem;
 }
 
+
+/* A time in the poll form's week (AvailabilityWeek) where a meeting would
+   clash with the host's calendar or time off: hatched, still clickable. */
+.poll-availability-busy {
+  background-color: var(--color-neutral-100);
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-neutral-300) 0 2px,
+    transparent 2px 7px
+  );
+}

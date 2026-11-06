@@ -157,6 +157,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             current_user={@current_user}
             profile={@profile}
             meeting_types={@meeting_types}
+            time_format={@time_format}
             parent_id={@id}
             parent_myself={@myself}
           />
