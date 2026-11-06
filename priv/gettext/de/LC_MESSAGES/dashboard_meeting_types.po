@@ -549,7 +549,7 @@ msgstr "Wieder öffnen"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
 msgid "Revoke"
-msgstr "Widerrufen"
+msgstr "Link widerrufen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
@@ -629,10 +629,15 @@ msgstr "Link für %{name} widerrufen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "Showing the latest %{count} invitations."
-msgstr "Die neuesten %{count} Einladungen werden angezeigt."
+msgid "This link can't be shown. Revoke it and create a new one."
+msgstr "Dieser Link kann nicht angezeigt werden. Widerrufen Sie ihn und erstellen Sie einen neuen."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "This link can't be shown. Revoke it and create a new one."
-msgstr "Dieser Link kann nicht angezeigt werden. Widerrufen Sie ihn und erstellen Sie einen neuen."
+msgid "Showing the latest 100 invitations."
+msgstr "Die neuesten 100 Einladungen werden angezeigt."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link has expired, so it can't be reopened. Create a new one instead."
+msgstr "Dieser Link ist abgelaufen und kann deshalb nicht wieder geöffnet werden. Erstellen Sie stattdessen einen neuen."

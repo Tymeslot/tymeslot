@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
   alias Tymeslot.Invitations
   alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
@@ -69,6 +70,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
       end
 
     Repo.insert_all(InvitationSchema, rows)
+  end
+
+  # A revoked invitation whose expiry has since passed. The context refuses a
+  # past expiry, so the date is moved back in the table.
+  defp revoked_and_lapsed!(user, type, name) do
+    invitation = invite!(user, type, %{name: name})
+    {:ok, revoked} = Invitations.revoke(user.id, invitation.id)
+
+    revoked
+    |> Changeset.change(expires_at: DateTime.add(DateTime.utc_now(:second), -3600, :second))
+    |> Repo.update!()
   end
 
   defp book!(invitation, user, attrs) do
@@ -261,7 +273,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
            )
   end
 
-  test "another host's invitation id is refused", ctx do
+  test "revoking another host's invitation is refused and changes nothing", ctx do
     type = insert(:meeting_type, user: ctx.user, invitation_only: true)
     other = insert(:user)
     other_type = insert(:meeting_type, user: other, invitation_only: true)
@@ -269,10 +281,109 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     view = open_editor(ctx.conn, type)
 
     view |> with_target(panel(type)) |> render_click("revoke", %{"id" => foreign.id})
+
+    assert Repo.reload!(foreign).revoked_at == nil
+    assert [%{status: :available}] = Invitations.list(other.id, other_type)
+    assert has_element?(view, "#app-flash-group-error", "That invitation can't be changed.")
+  end
+
+  test "reopening another host's revoked invitation is refused and it stays revoked", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    other = insert(:user)
+    other_type = insert(:meeting_type, user: other, invitation_only: true)
+    foreign = invite!(other, other_type)
+    {:ok, _revoked} = Invitations.revoke(other.id, foreign.id)
+    view = open_editor(ctx.conn, type)
+
     view |> with_target(panel(type)) |> render_click("reopen", %{"id" => foreign.id})
 
-    assert [%{status: :available}] = Invitations.list(other.id, other_type)
+    assert Repo.reload!(foreign).revoked_at
+    assert [%{status: :revoked}] = Invitations.list(other.id, other_type)
+    assert has_element?(view, "#app-flash-group-error", "That invitation can't be changed.")
+  end
+
+  test "a revoked link whose expiry has passed offers no reopen", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    lapsed = revoked_and_lapsed!(ctx.user, type, "Lapsed")
+    current = invite!(ctx.user, type, %{name: "Current"})
+    {:ok, _revoked} = Invitations.revoke(ctx.user.id, current.id)
+    view = open_editor(ctx.conn, type)
+
+    assert has_element?(view, "#{row(lapsed)}[data-status='revoked']")
+    refute has_element?(view, "#{row(lapsed)} [phx-click='reopen']")
+    # A revoked link that has not expired can still be reopened.
+    assert has_element?(view, "#{row(current)} [phx-click='reopen']")
+  end
+
+  test "a forged reopen of a revoked, expired link says it has expired", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    lapsed = revoked_and_lapsed!(ctx.user, type, "Lapsed")
+    view = open_editor(ctx.conn, type)
+
+    view |> with_target(panel(type)) |> render_click("reopen", %{"id" => lapsed.id})
+
+    assert Repo.reload!(lapsed).revoked_at
+    assert has_element?(view, "#{row(lapsed)}[data-status='revoked']")
+
+    assert has_element?(
+             view,
+             "#app-flash-group-error",
+             "This link has expired, so it can't be reopened. Create a new one instead."
+           )
+  end
+
+  test "switching invitation-only off brings the direct booking link back", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    view = open_editor(ctx.conn, type)
+
     assert has_element?(view, panel(type))
+    refute has_element?(view, "#copy-booking-link-#{type.id}")
+
+    view |> element("#meeting-type-invitation-only-toggle-#{type.id}") |> render_click()
+
+    refute Repo.reload!(type).invitation_only
+    refute has_element?(view, panel(type))
+    assert has_element?(view, "#copy-booking-link-#{type.id}")
+  end
+
+  test "creating a link after the type stopped being invitation-only is refused", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    view = open_editor(ctx.conn, type)
+
+    {:ok, _listed} = MeetingTypes.set_invitation_only(type, false)
+
+    view
+    |> form("#{panel(type)}-form", invitation: %{name: "Ann Lee"})
+    |> render_submit()
+
+    assert Invitations.list(ctx.user.id, type) == []
+
+    assert has_element?(
+             view,
+             "#app-flash-group-error",
+             "Invitation links are off for this type."
+           )
+  end
+
+  test "the copy button carries the link and its copied feedback", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    invitation = invite!(ctx.user, type, %{name: "Ann Lee"})
+    view = open_editor(ctx.conn, type)
+
+    assert has_element?(
+             view,
+             "#copy-invitation-#{invitation.id}[phx-hook='CopyOnClick']" <>
+               "[data-copy-feedback='Invitation link copied!']"
+           )
+
+    assert {:ok, %{id: id}} =
+             view
+             |> copied_url(invitation)
+             |> String.split("/invite/")
+             |> List.last()
+             |> Invitations.resolve()
+
+    assert id == invitation.id
   end
 
   test "group bookings cannot be switched on for an invitation-only type", ctx do

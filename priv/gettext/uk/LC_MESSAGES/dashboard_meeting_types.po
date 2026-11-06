@@ -634,10 +634,15 @@ msgstr "Відкликати посилання для %{name}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "Showing the latest %{count} invitations."
-msgstr "Показано %{count} найновіших запрошень."
+msgid "This link can't be shown. Revoke it and create a new one."
+msgstr "Це посилання неможливо показати. Відкличте його та створіть нове."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "This link can't be shown. Revoke it and create a new one."
-msgstr "Це посилання неможливо показати. Відкличте його та створіть нове."
+msgid "Showing the latest 100 invitations."
+msgstr "Показано 100 найновіших запрошень."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link has expired, so it can't be reopened. Create a new one instead."
+msgstr "Термін дії цього посилання минув, тому його неможливо відкрити знову. Натомість створіть нове."

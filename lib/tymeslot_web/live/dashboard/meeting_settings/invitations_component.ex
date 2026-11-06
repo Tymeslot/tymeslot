@@ -7,7 +7,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   Tymeslot sends no email. Below the form, the type's invitations, newest
   first, each with its derived status (`Tymeslot.Invitations.list/2`) and the
   actions that status allows: copy and revoke an available link, reopen a
-  used one whose appointment no longer holds a slot, or a revoked one.
+  used one whose appointment no longer holds a slot, or a revoked one that
+  has not expired since.
 
   Every action is scoped to the host (`current_user_id`), and the list is
   reloaded from the context after each, so a status is never patched here.
@@ -24,7 +25,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   alias TymeslotWeb.Dashboard.MeetingSettings.RevokeInvitationModal
   alias TymeslotWeb.Endpoint
 
-  # The list is unbounded; the newest this many are shown.
+  # The list is unbounded; the newest this many are shown. The note under a
+  # truncated list states the number in its text, so change both together.
   @shown 100
 
   # Changeset fields the form shows under a field of another name.
@@ -119,6 +121,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
          {:ok, _invitation} <- action.(invitation_id) do
       {:noreply, load_entries(socket)}
     else
+      {:error, :expired} ->
+        Flash.error(
+          dgettext(
+            "dashboard_meeting_types",
+            "This link has expired, so it can't be reopened. Create a new one instead."
+          )
+        )
+
+        {:noreply, load_entries(socket)}
+
       _refused ->
         Flash.error(dgettext("dashboard_meeting_types", "That invitation can't be changed."))
         {:noreply, load_entries(socket)}
@@ -370,9 +382,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
       </ul>
 
       <p :if={@more?} class="text-token-sm text-tymeslot-500" data-testid="invitations-truncated">
-        {dgettext("dashboard_meeting_types", "Showing the latest %{count} invitations.",
-          count: shown()
-        )}
+        {dgettext("dashboard_meeting_types", "Showing the latest 100 invitations.")}
       </p>
 
       <RevokeInvitationModal.revoke_invitation_modal
@@ -403,8 +413,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   defp status_label(:used), do: dgettext("dashboard_meeting_types", "Used")
   defp status_label(:expired), do: dgettext("dashboard_meeting_types", "Expired")
   defp status_label(:revoked), do: dgettext("dashboard_meeting_types", "Revoked")
-
-  defp shown, do: @shown
 
   # The name a button's accessible label gives the invitation, if it has one.
   defp link_label(action, invitation) do
@@ -447,8 +455,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   defp normalise(nil), do: nil
   defp normalise(email), do: email |> String.trim() |> String.downcase()
 
-  # A used link whose appointment no longer holds a slot, or a revoked one.
-  defp reopenable?(%{status: :revoked}), do: true
+  # A used link whose appointment no longer holds a slot, or a revoked one
+  # that has not expired meanwhile: reopening that would only make it expired.
+  # The context refuses that reopen with `{:error, :expired}`.
+  defp reopenable?(%{status: :revoked, invitation: invitation}),
+    do: not InvitationStatus.expired?(invitation, Clock.utc_now())
 
   defp reopenable?(%{status: :used, invitation: invitation, meeting: meeting}),
     do: InvitationStatus.reopenable?(invitation, meeting)

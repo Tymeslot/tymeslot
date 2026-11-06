@@ -630,10 +630,15 @@ msgstr "Unieważnij link dla: %{name}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "Showing the latest %{count} invitations."
-msgstr "Wyświetlono %{count} najnowszych zaproszeń."
+msgid "This link can't be shown. Revoke it and create a new one."
+msgstr "Tego linku nie można wyświetlić. Unieważnij go i utwórz nowy."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "This link can't be shown. Revoke it and create a new one."
-msgstr "Tego linku nie można wyświetlić. Unieważnij go i utwórz nowy."
+msgid "Showing the latest 100 invitations."
+msgstr "Wyświetlono 100 najnowszych zaproszeń."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link has expired, so it can't be reopened. Create a new one instead."
+msgstr "Ten link wygasł, więc nie można go ponownie otworzyć. Zamiast tego utwórz nowy."

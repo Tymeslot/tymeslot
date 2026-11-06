@@ -634,10 +634,15 @@ msgstr "Zrušit platnost odkazu pro %{name}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "Showing the latest %{count} invitations."
-msgstr "Zobrazeno nejnovějších pozvánek: %{count}."
+msgid "This link can't be shown. Revoke it and create a new one."
+msgstr "Tento odkaz nelze zobrazit. Zrušte jeho platnost a vytvořte nový."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "This link can't be shown. Revoke it and create a new one."
-msgstr "Tento odkaz nelze zobrazit. Zrušte jeho platnost a vytvořte nový."
+msgid "Showing the latest 100 invitations."
+msgstr "Zobrazeno nejnovějších pozvánek: 100."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link has expired, so it can't be reopened. Create a new one instead."
+msgstr "Platnost tohoto odkazu vypršela, takže ho nelze znovu otevřít. Vytvořte místo něj nový."

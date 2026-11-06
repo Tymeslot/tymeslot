@@ -629,10 +629,15 @@ msgstr "Revoca il link di %{name}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "Showing the latest %{count} invitations."
-msgstr "Vengono mostrati i %{count} inviti più recenti."
+msgid "This link can't be shown. Revoke it and create a new one."
+msgstr "Questo link non può essere mostrato. Revocalo e creane uno nuovo."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "This link can't be shown. Revoke it and create a new one."
-msgstr "Questo link non può essere mostrato. Revocalo e creane uno nuovo."
+msgid "Showing the latest 100 invitations."
+msgstr "Vengono mostrati i 100 inviti più recenti."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link has expired, so it can't be reopened. Create a new one instead."
+msgstr "Questo link è scaduto, quindi non può essere riaperto. Creane invece uno nuovo."
