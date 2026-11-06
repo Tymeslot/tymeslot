@@ -30,6 +30,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   # Changeset fields the form shows under a field of another name.
   @form_fields %{expires_at: :expires_on}
 
+  # The changeset fields the form has an input for.
+  @shown_fields [:name, :email, :expires_on]
+
   @blank_params %{"name" => "", "email" => "", "expires_on" => "", "release_on_cancel" => "true"}
 
   @impl Phoenix.LiveComponent
@@ -52,6 +55,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   def handle_event("change", %{"invitation" => params}, socket) when is_map(params),
     do: {:noreply, assign_form(socket, params)}
 
+  # The switch sends a click, not a form value: the hidden input carries it.
+  def handle_event("toggle_release", _params, socket) do
+    params = Map.update(socket.assigns.form.params, "release_on_cancel", "false", &flip/1)
+    {:noreply, assign_form(socket, params)}
+  end
+
   def handle_event("create", %{"invitation" => params}, socket) when is_map(params) do
     %{current_user_id: user_id, meeting_type: type} = socket.assigns
 
@@ -67,7 +76,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
         {:noreply, socket |> assign(form_error: message) |> assign_form(params)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, socket |> assign(form_error: nil) |> assign_form(params, changeset)}
+        {:noreply,
+         socket
+         |> assign(form_error: unshown_error(changeset))
+         |> assign_form(params, changeset)}
 
       {:error, _not_found_or_not_invitation_only} ->
         Flash.error(
@@ -120,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
 
   defp load_entries(socket) do
     %{current_user_id: user_id, meeting_type: type} = socket.assigns
-    entries = Invitations.list(user_id, type)
+    entries = Invitations.list(user_id, type, limit: @shown + 1)
 
     assign(socket,
       entries: Enum.take(entries, @shown),
@@ -138,6 +150,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   end
 
   defp form_field(field), do: Map.get(@form_fields, field, field)
+
+  # An error on a field the form has no input for would otherwise vanish.
+  defp unshown_error(changeset) do
+    if Enum.all?(changeset.errors, fn {field, _error} -> form_field(field) in @shown_fields end),
+      do: nil,
+      else: dgettext("dashboard_meeting_types", "Could not create the invitation link.")
+  end
+
+  defp flip("false"), do: "true"
+  defp flip(_on), do: "false"
 
   defp create_attrs(params, timezone) do
     %{
@@ -211,15 +233,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
             min={Date.to_iso8601(today(@timezone))}
           />
         </div>
-        <.input
-          field={@form[:release_on_cancel]}
-          type="checkbox"
-          label={
+        <input
+          type="hidden"
+          name={@form[:release_on_cancel].name}
+          value={@form[:release_on_cancel].value}
+        />
+        <.setting_row
+          id={"#{@id}-release-on-cancel"}
+          control={:switch}
+          label={dgettext("dashboard_meeting_types", "Reusable after cancellation")}
+          description={
             dgettext(
               "dashboard_meeting_types",
-              "If the appointment is cancelled, the link can be used again"
+              "If the appointment is cancelled, the link can be used again."
             )
           }
+          checked={@form[:release_on_cancel].value != "false"}
+          on_change="toggle_release"
+          target={@myself}
         />
         <p :if={@form_error} class="form-error" role="alert" data-testid="invitation-form-error">
           {@form_error}
@@ -271,6 +302,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
                   time: when_label(entry.meeting.start_time, @timezone, @time_format)
                 )}
               </span>
+              <span
+                :if={entry.status == :used and reopenable?(entry)}
+                data-testid="invitation-cancelled"
+              >
+                {dgettext("dashboard_meeting_types", "Appointment cancelled")}
+              </span>
               <span :if={booked_as(entry)} data-testid="invitation-booked-as">
                 {dgettext("dashboard_meeting_types", "Booked as %{email}", email: booked_as(entry))}
               </span>
@@ -290,6 +327,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
               id={"copy-invitation-#{entry.invitation.id}"}
               phx-hook="CopyOnClick"
               data-copy-text={invite_url(entry.invitation)}
+              aria-label={link_label(:copy, entry.invitation)}
               data-copy-feedback={dgettext("dashboard_meeting_types", "Invitation link copied!")}
             >
               {dgettext("dashboard_meeting_types", "Copy link")}
@@ -301,6 +339,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
               phx-click="ask_revoke"
               phx-value-id={entry.invitation.id}
               phx-target={@myself}
+              aria-label={link_label(:revoke, entry.invitation)}
             >
               {dgettext("dashboard_meeting_types", "Revoke")}
             </.action_button>
@@ -312,15 +351,28 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
               phx-click="reopen"
               phx-value-id={entry.invitation.id}
               phx-target={@myself}
+              aria-label={link_label(:reopen, entry.invitation)}
             >
               {dgettext("dashboard_meeting_types", "Reopen")}
             </.action_button>
           </div>
+          <p
+            :if={entry.status == :available and not is_binary(entry.invitation.token)}
+            class="basis-full text-token-sm text-tymeslot-600"
+            data-testid="invitation-token-unavailable"
+          >
+            {dgettext(
+              "dashboard_meeting_types",
+              "This link can't be shown. Revoke it and create a new one."
+            )}
+          </p>
         </li>
       </ul>
 
       <p :if={@more?} class="text-token-sm text-tymeslot-500" data-testid="invitations-truncated">
-        {dgettext("dashboard_meeting_types", "Showing the latest 100 invitations.")}
+        {dgettext("dashboard_meeting_types", "Showing the latest %{count} invitations.",
+          count: shown()
+        )}
       </p>
 
       <RevokeInvitationModal.revoke_invitation_modal
@@ -351,6 +403,33 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
   defp status_label(:used), do: dgettext("dashboard_meeting_types", "Used")
   defp status_label(:expired), do: dgettext("dashboard_meeting_types", "Expired")
   defp status_label(:revoked), do: dgettext("dashboard_meeting_types", "Revoked")
+
+  defp shown, do: @shown
+
+  # The name a button's accessible label gives the invitation, if it has one.
+  defp link_label(action, invitation) do
+    case invitee_name(invitation) do
+      nil -> link_label(action)
+      name -> named_link_label(action, name)
+    end
+  end
+
+  defp link_label(:copy), do: dgettext("dashboard_meeting_types", "Copy link")
+  defp link_label(:revoke), do: dgettext("dashboard_meeting_types", "Revoke link")
+  defp link_label(:reopen), do: dgettext("dashboard_meeting_types", "Reopen link")
+
+  defp named_link_label(:copy, name),
+    do: dgettext("dashboard_meeting_types", "Copy link for %{name}", name: name)
+
+  defp named_link_label(:revoke, name),
+    do: dgettext("dashboard_meeting_types", "Revoke link for %{name}", name: name)
+
+  defp named_link_label(:reopen, name),
+    do: dgettext("dashboard_meeting_types", "Reopen link for %{name}", name: name)
+
+  defp invitee_name(%{name: name}) when is_binary(name) and name != "", do: name
+  defp invitee_name(%{email: email}) when is_binary(email) and email != "", do: email
+  defp invitee_name(_unnamed), do: nil
 
   defp invitee(%{name: name}) when is_binary(name) and name != "", do: name
   defp invitee(%{email: email}) when is_binary(email) and email != "", do: email

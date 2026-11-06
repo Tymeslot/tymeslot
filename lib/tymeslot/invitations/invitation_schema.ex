@@ -8,6 +8,7 @@ defmodule Tymeslot.Invitations.InvitationSchema do
   """
 
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Ecto.Changeset
 
@@ -84,7 +85,7 @@ defmodule Tymeslot.Invitations.InvitationSchema do
     validate_change(changeset, :expires_at, fn :expires_at, expires_at ->
       if DateTime.compare(expires_at, Clock.utc_now()) == :gt,
         do: [],
-        else: [expires_at: "must be in the future"]
+        else: [expires_at: dgettext_noop("errors", "must be in the future")]
     end)
   end
 

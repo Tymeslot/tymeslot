@@ -857,3 +857,8 @@ msgstr "já é o endereço de um dos seus tipos de reunião"
 #, elixir-autogen, elixir-format
 msgid "Invitation links work only for one-to-one meeting types."
 msgstr "Os links de convite só funcionam com tipos de reunião individuais."
+
+#: lib/tymeslot/invitations/invitation_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be in the future"
+msgstr "deve estar no futuro"

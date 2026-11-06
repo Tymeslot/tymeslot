@@ -850,3 +850,8 @@ msgstr "ist bereits die Adresse eines Ihrer Termintypen"
 #, elixir-autogen, elixir-format
 msgid "Invitation links work only for one-to-one meeting types."
 msgstr "Einladungslinks funktionieren nur bei Einzel-Termintypen."
+
+#: lib/tymeslot/invitations/invitation_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be in the future"
+msgstr "muss in der Zukunft liegen"

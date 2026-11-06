@@ -13,6 +13,7 @@ defmodule Tymeslot.Invitations do
   alias Tymeslot.Clock
   alias Tymeslot.Invitations.{InvitationQueries, InvitationSchema, InvitationStatus}
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.RateLimiter
@@ -40,13 +41,16 @@ defmodule Tymeslot.Invitations do
           | {:error, :not_invitation_only}
           | {:error, :not_found}
           | {:error, Ecto.Changeset.t()}
-  def create(user_id, %MeetingTypeSchema{user_id: owner_id}, _attrs) when owner_id != user_id,
-    do: {:error, :not_found}
+  def create(user_id, %MeetingTypeSchema{id: meeting_type_id}, attrs) do
+    # The type is read afresh: the struct the caller holds may be stale.
+    case MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
+      nil -> {:error, :not_found}
+      %MeetingTypeSchema{invitation_only: false} -> {:error, :not_invitation_only}
+      %MeetingTypeSchema{} = meeting_type -> insert_invitation(user_id, meeting_type, attrs)
+    end
+  end
 
-  def create(_user_id, %MeetingTypeSchema{invitation_only: false}, _attrs),
-    do: {:error, :not_invitation_only}
-
-  def create(user_id, %MeetingTypeSchema{} = meeting_type, attrs) do
+  defp insert_invitation(user_id, meeting_type, attrs) do
     with :ok <- RateLimiter.check(:invitation_create, user_id) do
       %InvitationSchema{meeting_type_id: meeting_type.id, user_id: user_id}
       |> InvitationSchema.creation_changeset(attrs)
@@ -54,13 +58,16 @@ defmodule Tymeslot.Invitations do
     end
   end
 
-  @doc "The host's invitations for a type, newest first, each with its derived status."
-  @spec list(pos_integer(), MeetingTypeSchema.t()) :: [entry()]
-  def list(user_id, %MeetingTypeSchema{id: meeting_type_id}) do
+  @doc """
+  The host's invitations for a type, newest first, each with its derived
+  status. `limit:` caps how many are loaded (the newest).
+  """
+  @spec list(pos_integer(), MeetingTypeSchema.t(), limit: pos_integer()) :: [entry()]
+  def list(user_id, %MeetingTypeSchema{id: meeting_type_id}, opts \\ []) do
     now = Clock.utc_now()
 
     user_id
-    |> InvitationQueries.list_for_meeting_type(meeting_type_id)
+    |> InvitationQueries.list_for_meeting_type(meeting_type_id, opts)
     |> Enum.map(fn %InvitationSchema{meetings: meetings} = invitation ->
       consuming = InvitationStatus.consuming_meeting(invitation, meetings)
 

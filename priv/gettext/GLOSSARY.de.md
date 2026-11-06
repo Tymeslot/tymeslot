@@ -31,6 +31,7 @@ Capitalisation matters. `E-Mail` is always hyphenated, capital E and M.
 | to book | **buchen** |
 | to book / arrange (marketing register) | **vereinbaren** |
 | **meeting type / event type** | **Termintyp** **[DECIDED]** (never Terminart, Besprechungstyp, Stundentyp or Sitzungstyp, even where the English says *lesson type* or *session type* for the product entity) |
+| one-to-one meeting type (a type that is not a group type) | **Einzeltermintyp** |
 | slot / time slot | **Zeitfenster** **[DECIDED]** (never Zeitblock) |
 | **organiser / organizer** | **Organisator** **[DECIDED]** (never Veranstalter) |
 | **host** (noun) | **Gastgeber**, a distinct role from Organisator; keep them distinct |

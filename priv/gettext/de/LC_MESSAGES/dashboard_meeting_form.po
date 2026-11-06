@@ -892,7 +892,7 @@ msgstr "Wählen Sie zuerst auf der Seite „Profil“ einen Nutzernamen: Aus ihm
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
 #, elixir-autogen, elixir-format
 msgid "Hidden from your booking pages. Each invitation link books one appointment."
-msgstr "Auf Ihren Buchungsseiten ausgeblendet. Jeder Einladungslink bucht einen Termin."
+msgstr "Auf Ihren Buchungsseiten ausgeblendet. Mit jedem Einladungslink kann ein Termin gebucht werden."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
 #, elixir-autogen, elixir-format

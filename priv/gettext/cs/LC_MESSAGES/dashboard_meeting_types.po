@@ -503,11 +503,6 @@ msgstr "Platnost končí %{date}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
-msgid "If the appointment is cancelled, the link can be used again"
-msgstr "Pokud bude schůzka zrušena, odkaz lze použít znovu"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
-#, elixir-autogen, elixir-format
 msgid "Invitation link copied!"
 msgstr "Odkaz na pozvání byl zkopírován."
 
@@ -561,6 +556,7 @@ msgstr "Znovu otevřít"
 msgid "Revoke"
 msgstr "Zrušit platnost"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Revoke link"
@@ -575,11 +571,6 @@ msgstr "Zrušit platnost tohoto odkazu?"
 #, elixir-autogen, elixir-format
 msgid "Revoked"
 msgstr "Zrušeno"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
-#, elixir-autogen, elixir-format
-msgid "Showing the latest 100 invitations."
-msgstr "Zobrazuje se posledních 100 pozvánek."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
@@ -600,3 +591,53 @@ msgstr "Použito"
 #, elixir-autogen, elixir-format
 msgid "Each link books one appointment. Tymeslot sends no email: copy the link and send it yourself."
 msgstr "Každý odkaz rezervuje jednu schůzku. Tymeslot neposílá žádný e-mail: zkopírujte odkaz a pošlete ho sami."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Appointment cancelled"
+msgstr "Schůzka zrušena"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link for %{name}"
+msgstr "Kopírovat odkaz pro %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the invitation link."
+msgstr "Odkaz na pozvání se nepodařilo vytvořit."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "If the appointment is cancelled, the link can be used again."
+msgstr "Pokud je schůzka zrušena, lze odkaz použít znovu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen link"
+msgstr "Znovu otevřít odkaz"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen link for %{name}"
+msgstr "Znovu otevřít odkaz pro %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reusable after cancellation"
+msgstr "Znovu použitelný po zrušení"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke link for %{name}"
+msgstr "Zrušit platnost odkazu pro %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Showing the latest %{count} invitations."
+msgstr "Zobrazeno nejnovějších pozvánek: %{count}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link can't be shown. Revoke it and create a new one."
+msgstr "Tento odkaz nelze zobrazit. Zrušte jeho platnost a vytvořte nový."

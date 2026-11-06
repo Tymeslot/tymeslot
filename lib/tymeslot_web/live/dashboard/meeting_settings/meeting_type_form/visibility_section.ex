@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
   is disabled for one.
 
   Without a username there is no page to show a type on yet, so the section
-  says to choose one instead. While the plan does not allow changing booking
+  says to choose one instead (not for an invitation-only type, whose
+  `/invite/<token>` links need no username). While the plan does not allow changing booking
   pages (`BookingPages.editable?/1`), their switches are disabled; the
   username's own page is never gated.
   """
@@ -49,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
       />
 
       <p
-        :if={@username in [nil, ""]}
+        :if={@username in [nil, ""] and not @type.invitation_only}
         class="text-token-sm text-tymeslot-600"
         data-testid="visibility-needs-username"
       >

@@ -875,3 +875,8 @@ msgstr "je již adresou jednoho z vašich typů schůzek"
 #, elixir-autogen, elixir-format
 msgid "Invitation links work only for one-to-one meeting types."
 msgstr "Odkazy na pozvání fungují jen u typů individuálních schůzek."
+
+#: lib/tymeslot/invitations/invitation_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be in the future"
+msgstr "musí být v budoucnosti"

@@ -40,6 +40,21 @@ defmodule Tymeslot.InvitationsTest do
       assert Repo.aggregate(InvitationSchema, :count) == 0
     end
 
+    test "re-reads the type, so a stale invitation-only struct is refused", %{user: user} do
+      open = insert(:meeting_type, user: user, invitation_only: false)
+      stale = %{open | invitation_only: true}
+
+      assert Invitations.create(user.id, stale, %{}) == {:error, :not_invitation_only}
+      assert Repo.aggregate(InvitationSchema, :count) == 0
+    end
+
+    test "rejects a past expiry with a translatable message", %{user: user, type: type} do
+      past = DateTime.add(DateTime.utc_now(), -3600, :second)
+
+      assert {:error, changeset} = Invitations.create(user.id, type, %{expires_at: past})
+      assert {"must be in the future", _opts} = changeset.errors[:expires_at]
+    end
+
     test "on another host's type is refused", %{type: type} do
       other = insert(:user)
 
@@ -166,6 +181,16 @@ defmodule Tymeslot.InvitationsTest do
                Invitations.list(user.id, type)
 
       assert id == cancelled.id
+    end
+
+    test "keeps the newest when a limit is given", %{user: user, type: type} do
+      {:ok, _oldest} = Invitations.create(user.id, type, %{})
+      {:ok, middle} = Invitations.create(user.id, type, %{})
+      {:ok, newest} = Invitations.create(user.id, type, %{})
+
+      ids = user.id |> Invitations.list(type, limit: 2) |> Enum.map(& &1.invitation.id)
+
+      assert ids == [newest.id, middle.id]
     end
 
     test "shows nothing to another host", %{user: user, type: type} do

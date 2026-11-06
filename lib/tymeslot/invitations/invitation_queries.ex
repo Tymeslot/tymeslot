@@ -35,15 +35,23 @@ defmodule Tymeslot.Invitations.InvitationQueries do
     |> Repo.one()
   end
 
-  @doc "A host's invitations for one meeting type, newest first, with their meetings (newest first)."
-  @spec list_for_meeting_type(pos_integer(), pos_integer()) :: [InvitationSchema.t()]
-  def list_for_meeting_type(user_id, meeting_type_id) do
+  @doc """
+  A host's invitations for one meeting type, newest first, with their meetings
+  (newest first). `limit:` keeps only the newest that many.
+  """
+  @spec list_for_meeting_type(pos_integer(), pos_integer(), limit: pos_integer()) ::
+          [InvitationSchema.t()]
+  def list_for_meeting_type(user_id, meeting_type_id, opts \\ []) do
     meetings = from(m in MeetingSchema, order_by: [desc: m.inserted_at, desc: m.id])
 
     InvitationSchema
     |> where([i], i.user_id == ^user_id and i.meeting_type_id == ^meeting_type_id)
     |> order_by([i], desc: i.inserted_at, desc: i.id)
+    |> limit_to(opts[:limit])
     |> preload(meetings: ^meetings)
     |> Repo.all()
   end
+
+  defp limit_to(query, nil), do: query
+  defp limit_to(query, limit), do: limit(query, ^limit)
 end

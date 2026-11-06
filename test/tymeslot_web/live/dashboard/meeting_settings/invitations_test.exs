@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Invitations
+  alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -38,6 +39,36 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
   defp invite!(user, type, attrs \\ %{}) do
     {:ok, invitation} = Invitations.create(user.id, type, attrs)
     invitation
+  end
+
+  # The link the copy button of an invitation carries.
+  defp copied_url(view, invitation) do
+    view
+    |> element("#copy-invitation-#{invitation.id}")
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.attribute("data-copy-text")
+    |> hd()
+  end
+
+  # Invitations written straight to the table, in bulk.
+  defp insert_invitations(user, type, count) do
+    now = DateTime.utc_now(:second)
+
+    rows =
+      for n <- 1..count do
+        %{
+          user_id: user.id,
+          meeting_type_id: type.id,
+          token: "token-#{n}-#{System.unique_integer([:positive])}",
+          token_hash: "hash-#{n}-#{System.unique_integer([:positive])}",
+          release_on_cancel: true,
+          inserted_at: DateTime.add(now, -n, :second),
+          updated_at: now
+        }
+      end
+
+    Repo.insert_all(InvitationSchema, rows)
   end
 
   defp book!(invitation, user, attrs) do
@@ -112,15 +143,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     assert invitation.release_on_cancel
     assert has_element?(view, "#{row(invitation)}[data-status='available']", "Ann Lee")
 
-    [_whole, token] =
-      Regex.run(
-        ~r{id="copy-invitation-#{invitation.id}"[^>]*data-copy-text="[^"]*/invite/([^"]+)"},
-        render(view)
-      ) ||
-        Regex.run(
-          ~r{data-copy-text="[^"]*/invite/([^"]+)"[^>]*id="copy-invitation-#{invitation.id}"},
-          render(view)
-        )
+    assert [_whole, token] = Regex.run(~r{/invite/(.+)$}, copied_url(view, invitation))
 
     assert {:ok, resolved} = Invitations.resolve(token)
     assert resolved.id == invitation.id
@@ -193,6 +216,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     refute has_element?(view, "#{row(held)} [phx-click='reopen']")
     assert has_element?(view, "#{row(spent)}[data-status='used']")
 
+    # Reopen is offered on the cancelled one, and the row says why.
+    assert has_element?(view, "#{row(spent)} [data-testid='invitation-cancelled']")
+    refute has_element?(view, "#{row(held)} [data-testid='invitation-cancelled']")
+
     view |> element("#{row(spent)} [phx-click='reopen']") |> render_click()
 
     assert has_element?(view, "#{row(spent)}[data-status='available']")
@@ -220,7 +247,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     |> form("#{panel(type)}-form", invitation: %{name: "Ann Lee"})
     |> render_submit()
 
-    assert has_element?(view, "[data-testid='invitation-form-error']")
+    assert has_element?(
+             view,
+             "[data-testid='invitation-form-error']",
+             "You've reached the limit of"
+           )
+
     assert Invitations.list(ctx.user.id, type) == []
     # What was typed is kept for a later try.
     assert has_element?(
@@ -248,14 +280,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     view = open_editor(ctx.conn, type)
 
     group_switch = "input[id^='group-bookings-toggle-']"
+    participants = "input[name='meeting_type[max_participants_input]']"
     assert has_element?(view, "#{group_switch}[disabled]")
     assert render(view) =~ "Invitation links work only for one-to-one meeting types."
 
+    # A forged click only changes the form's state, so the form is what shows
+    # whether the blocker held: the switch stays off and no limit input opens.
     view
     |> with_target("[id^='meeting-type-form-wrapper-']")
     |> render_click("toggle_group_bookings", %{})
 
-    assert Repo.reload!(type).max_participants in [nil, 1]
+    refute has_element?(view, "#{group_switch}[checked]")
+    refute has_element?(view, participants)
+    assert render(view) =~ "Invitation links work only for one-to-one meeting types."
   end
 
   test "the expiry is the end of the chosen day in the host's timezone", ctx do
@@ -271,5 +308,141 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     # 23:59:59 on 15 June in Auckland (NZST, UTC+12).
     assert invitation.expires_at == ~U[2030-06-15 11:59:59Z]
     assert has_element?(view, "#{row(invitation)} [data-testid='invitation-expiry']")
+  end
+
+  test "the expiry on a daylight-saving change day is the end of that local day", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    view = open_editor(ctx.conn, type)
+
+    # Berlin springs forward on 2030-03-31, so the day ends at UTC+2, not +1.
+    view
+    |> form("#{panel(type)}-form", invitation: %{expires_on: "2030-03-31"})
+    |> render_submit()
+
+    [%{invitation: invitation}] = Invitations.list(ctx.user.id, type)
+    assert invitation.expires_at == ~U[2030-03-31 21:59:59Z]
+  end
+
+  test "a past expiry date shows the error on the date field", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    view = open_editor(ctx.conn, type)
+
+    view
+    |> form("#{panel(type)}-form", invitation: %{expires_on: "2020-01-01"})
+    |> render_submit()
+
+    assert Invitations.list(ctx.user.id, type) == []
+    assert has_element?(view, "#{panel(type)}-form", "must be in the future")
+    refute has_element?(view, "[data-testid='invitation-form-error']")
+  end
+
+  test "the reuse switch decides whether a cancelled booking frees the link", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    view = open_editor(ctx.conn, type)
+
+    view |> element("#{panel(type)}-release-on-cancel") |> render_click()
+
+    view
+    |> form("#{panel(type)}-form", invitation: %{name: "One-off"})
+    |> render_submit()
+
+    [%{invitation: invitation}] = Invitations.list(ctx.user.id, type)
+    refute invitation.release_on_cancel
+
+    # The switch is back on for the next link.
+    view
+    |> form("#{panel(type)}-form", invitation: %{name: "Reusable"})
+    |> render_submit()
+
+    assert [%{invitation: %{release_on_cancel: false}}, %{invitation: %{release_on_cancel: true}}] =
+             Enum.reverse(Invitations.list(ctx.user.id, type))
+  end
+
+  test "the buttons are named after the invitee, falling back to the email and then nothing",
+       ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    named = invite!(ctx.user, type, %{name: "Ann Lee", email: "ann@example.com"})
+    by_email = invite!(ctx.user, type, %{email: "bob@example.com"})
+    unnamed = invite!(ctx.user, type)
+    view = open_editor(ctx.conn, type)
+
+    assert has_element?(view, "#copy-invitation-#{named.id}[aria-label='Copy link for Ann Lee']")
+    assert has_element?(view, "#{row(named)} [aria-label='Revoke link for Ann Lee']")
+
+    assert has_element?(
+             view,
+             "#copy-invitation-#{by_email.id}[aria-label='Copy link for bob@example.com']"
+           )
+
+    assert has_element?(view, "#copy-invitation-#{unnamed.id}[aria-label='Copy link']")
+    assert has_element?(view, "#{row(unnamed)} [aria-label='Revoke link']")
+
+    {:ok, _revoked} = Invitations.revoke(ctx.user.id, named.id)
+    view = open_editor(ctx.conn, type)
+    assert has_element?(view, "#{row(named)} [aria-label='Reopen link for Ann Lee']")
+  end
+
+  test "an available link whose token cannot be read says so instead of offering a copy", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    now = DateTime.utc_now(:second)
+
+    Repo.insert_all("meeting_type_invitations", [
+      %{
+        user_id: ctx.user.id,
+        meeting_type_id: type.id,
+        token_encrypted: "not a ciphertext",
+        token_hash: "unreadable-#{System.unique_integer([:positive])}",
+        release_on_cancel: true,
+        inserted_at: now,
+        updated_at: now
+      }
+    ])
+
+    view = open_editor(ctx.conn, type)
+
+    assert has_element?(
+             view,
+             "[data-testid='invitation-token-unavailable']",
+             "This link can't be shown. Revoke it and create a new one."
+           )
+
+    refute has_element?(view, "[id^='copy-invitation-']")
+    assert has_element?(view, "[phx-click='ask_revoke']")
+  end
+
+  test "only the newest hundred are listed, with a note when there are more", ctx do
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    insert_invitations(ctx.user, type, 100)
+    view = open_editor(ctx.conn, type)
+
+    refute has_element?(view, "[data-testid='invitations-truncated']")
+
+    insert_invitations(ctx.user, type, 1)
+    view = open_editor(ctx.conn, type)
+
+    assert has_element?(
+             view,
+             "[data-testid='invitations-truncated']",
+             "Showing the latest 100 invitations."
+           )
+
+    assert view
+           |> render()
+           |> Floki.parse_document!()
+           |> Floki.find("#{panel(type)} li[id^='invitation-']")
+           |> length() ==
+             100
+  end
+
+  test "an invitation-only type needs no username, a listed one does", ctx do
+    ctx.profile |> Changeset.change(username: nil) |> Repo.update!()
+    invite_only = insert(:meeting_type, user: ctx.user, invitation_only: true)
+    listed = insert(:meeting_type, user: ctx.user)
+
+    view = open_editor(ctx.conn, listed)
+    assert has_element?(view, "[data-testid='visibility-needs-username']")
+
+    view = open_editor(ctx.conn, invite_only)
+    refute has_element?(view, "[data-testid='visibility-needs-username']")
   end
 end
