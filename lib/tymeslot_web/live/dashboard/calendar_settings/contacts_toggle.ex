@@ -19,15 +19,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle do
   @doc "The tile, or nothing for a connection that keeps no address books."
   @spec contacts_toggle(map()) :: Phoenix.LiveView.Rendered.t()
   def contacts_toggle(assigns) do
+    assigns = assign(assigns, :enabled?, Map.get(assigns.integration, :use_for_contacts, false))
+
     ~H"""
     <button
-      :if={Contacts.supported_provider?(@integration.provider)}
+      :if={Contacts.supported_provider?(Map.get(@integration, :provider))}
       type="button"
       phx-click="toggle_use_for_contacts"
       phx-value-id={@integration.id}
       phx-target={@myself}
       class={Helpers.tile_class(:neutral)}
-      aria-pressed={to_string(@integration.use_for_contacts)}
+      aria-pressed={to_string(@enabled?)}
       data-testid="use-for-contacts-toggle"
       title={
         dgettext(
@@ -37,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle do
       }
     >
       <.icon
-        name={if @integration.use_for_contacts, do: "hero-check-circle", else: "hero-user-circle"}
+        name={if @enabled?, do: "hero-check-circle", else: "hero-user-circle"}
         class="w-4 h-4"
       /><span>{dgettext("dashboard_calendar_settings", "Contact suggestions")}</span>
     </button>

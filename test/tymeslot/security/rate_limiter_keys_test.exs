@@ -88,6 +88,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     webhook_form: {"user:42", ["webhook_form:user:42"]},
     webhook_form_validate: {"ip:203.0.113.9", ["webhook_form_validate:ip:203.0.113.9"]},
     calendar_refresh: {42, ["calendar_refresh:42"]},
+    contact_search: {42, ["contact_search:42"]},
     integration_write: {42, ["integration_write:42"]},
     series_rule_read: {42, ["series_rule_read:42"]},
     integration_appearance: {42, ["integration_appearance:42"]},
