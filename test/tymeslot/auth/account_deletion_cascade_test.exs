@@ -318,9 +318,12 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
     end
 
     test "deletes an invitation-only type's invitations with the meeting booked through one" do
-      # Deleted: meeting_type_invitations -> users and -> meeting_types are
-      # both :delete_all, and the meeting booked through the invitation goes
-      # with its organiser.
+      # Pins the cascade for invitation links. Deleted:
+      # meeting_type_invitations -> users and -> meeting_types are both
+      # :delete_all, and the meeting booked through the invitation goes with
+      # its organiser. Deleting only the meeting type takes another path,
+      # whose regression test (the meeting is kept, its links nilified) is in
+      # test/tymeslot/invitations_test.exs.
       user = insert(:user)
       type = insert(:meeting_type, user: user, invitation_only: true)
       {:ok, invitation} = Invitations.create(user.id, type, %{email: "ada@example.com"})

@@ -189,6 +189,9 @@ defmodule TymeslotWeb.Live.Scheduling.InvitationJourneyTest do
     assert rebooked.status == :confirmed
     assert [%{id: live_id}] = live_meetings(ctx.user)
     assert live_id == rebooked.id
+
+    editor = open_editor(ctx.host, ctx.type)
+    assert has_element?(editor, "#{invitation_row}[data-status='used']")
   end
 
   # -- the host ---------------------------------------------------------------
