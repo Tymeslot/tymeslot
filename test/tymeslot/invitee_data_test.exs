@@ -253,6 +253,36 @@ defmodule Tymeslot.InviteeDataTest do
                Repo.get!(InvitationSchema, other.id)
     end
 
+    test "scrubs an invitation addressed by name only that the person booked through" do
+      host = insert(:user)
+      {_type, invitation} = invite(host, %{name: "Ada Parent"})
+      past_meeting(organizer_user: host, attendee_email: @email, invitation_id: invitation.id)
+
+      assert {:ok, %{invitations: 1}} = InviteeData.erase(@email)
+      assert %{name: nil, email: nil} = Repo.get!(InvitationSchema, invitation.id)
+    end
+
+    test "scrubs an invitation sent to one address and booked under another" do
+      host = insert(:user)
+      {_type, invitation} = invite(host, %{name: "Ada Parent", email: "ada.work@example.com"})
+      past_meeting(organizer_user: host, attendee_email: @email, invitation_id: invitation.id)
+
+      {_type, untouched} =
+        invite(host, %{name: "Bob Parent", email: "bob@example.com"})
+
+      past_meeting(
+        organizer_user: host,
+        attendee_email: "bob@example.com",
+        invitation_id: untouched.id
+      )
+
+      assert {:ok, %{invitations: 1}} = InviteeData.erase(@email)
+      assert %{name: nil, email: nil} = Repo.get!(InvitationSchema, invitation.id)
+
+      assert %{name: "Bob Parent", email: "bob@example.com"} =
+               Repo.get!(InvitationSchema, untouched.id)
+    end
+
     test "rejects a blank or missing email" do
       assert {:error, :invalid_email} = InviteeData.erase("   ")
       assert {:error, :invalid_email} = InviteeData.erase(nil)

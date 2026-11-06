@@ -6,10 +6,17 @@ defmodule Tymeslot.Invitations do
   (see `Tymeslot.Invitations.InvitationStatus`), can expire or be revoked, and
   its status is always derived from its meetings. Revoking stops new bookings
   only; it never cancels one.
+
+  A link resolves only while its type is active and invitation-only. Switching
+  `invitation_only` off makes every outstanding link resolve `:not_found`;
+  switching it back on makes each link that was never used, revoked or let
+  expire bookable again. This is intended: none of those links was revoked,
+  and the host can revoke any of them.
   """
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
+  alias Ecto.Changeset
   alias Tymeslot.Clock
   alias Tymeslot.Invitations.{InvitationQueries, InvitationSchema, InvitationStatus}
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema, MeetingState}
@@ -50,13 +57,23 @@ defmodule Tymeslot.Invitations do
     end
   end
 
+  # Validates before rate-limiting, so a rejected form spends none of the
+  # host's allowance.
   defp insert_invitation(user_id, meeting_type, attrs) do
-    with :ok <- RateLimiter.check(:invitation_create, user_id) do
-      %InvitationSchema{meeting_type_id: meeting_type.id, user_id: user_id}
-      |> InvitationSchema.creation_changeset(attrs)
-      |> InvitationQueries.insert()
+    changeset =
+      InvitationSchema.creation_changeset(
+        %InvitationSchema{meeting_type_id: meeting_type.id, user_id: user_id},
+        attrs
+      )
+
+    with :ok <- validated(changeset),
+         :ok <- RateLimiter.check(:invitation_create, user_id) do
+      InvitationQueries.insert(changeset)
     end
   end
+
+  defp validated(%Changeset{valid?: true}), do: :ok
+  defp validated(%Changeset{} = changeset), do: {:error, %{changeset | action: :insert}}
 
   @doc """
   The host's invitations for a type, newest first, each with its derived
@@ -96,22 +113,30 @@ defmodule Tymeslot.Invitations do
   @doc """
   Makes a used invitation (whose meeting no longer holds a slot) or a revoked
   one bookable again. Meetings booked before the reopen stop counting.
+
+  A revoked invitation whose expiry has passed is refused with
+  `{:error, :expired}`, since reopening it would only leave it expired; nothing
+  is written.
   """
   @spec reopen(pos_integer(), pos_integer()) ::
-          {:ok, InvitationSchema.t()} | {:error, :not_found | :not_reopenable}
+          {:ok, InvitationSchema.t()} | {:error, :not_found | :not_reopenable | :expired}
   def reopen(user_id, id) do
     now = Clock.utc_now()
 
     with_invitation(user_id, id, fn invitation ->
-      consuming = consuming_meeting(invitation)
-
-      if InvitationStatus.reopenable?(invitation, consuming) or
-           InvitationStatus.status(invitation, consuming, now) == :revoked do
+      with :ok <- check_reopenable(invitation, consuming_meeting(invitation), now) do
         invitation |> InvitationSchema.reopen_changeset(now) |> InvitationQueries.update()
-      else
-        {:error, :not_reopenable}
       end
     end)
+  end
+
+  defp check_reopenable(invitation, consuming, now) do
+    cond do
+      InvitationStatus.reopenable?(invitation, consuming) -> :ok
+      InvitationStatus.status(invitation, consuming, now) != :revoked -> {:error, :not_reopenable}
+      InvitationStatus.expired?(invitation, now) -> {:error, :expired}
+      true -> :ok
+    end
   end
 
   @doc """

@@ -17,6 +17,14 @@ defmodule Tymeslot.Invitations.InvitationStatus do
   a link twice. Nothing locks the invitation row either, so a booking that passed
   the pre-check may still land just after the host revokes it. This is accepted,
   since revoking stops only new bookings.
+
+  A late payment can also leave such a link with two meetings. Meeting A's
+  checkout lapses (`:expired`, so A no longer consumes the link), the guest
+  books meeting B through the same link and cancels it (the link is now
+  used), and then A's Stripe payment completes after all. The late-completion
+  recovery (`checkout_session_completed.ex`) reinstates A, because the unique
+  index covers only slot-holding meetings and B holds none. This is accepted:
+  the guest paid for A first.
   """
 
   alias Tymeslot.Invitations.InvitationSchema
@@ -65,9 +73,11 @@ defmodule Tymeslot.Invitations.InvitationStatus do
     consumes?(invitation, meeting) and meeting.status not in MeetingState.occupying()
   end
 
-  defp expired?(%InvitationSchema{expires_at: nil}, _now), do: false
+  @doc "Whether the invitation's expiry has passed at `now`."
+  @spec expired?(InvitationSchema.t(), DateTime.t()) :: boolean()
+  def expired?(%InvitationSchema{expires_at: nil}, %DateTime{}), do: false
 
-  defp expired?(%InvitationSchema{expires_at: expires_at}, now),
+  def expired?(%InvitationSchema{expires_at: expires_at}, %DateTime{} = now),
     do: DateTime.compare(expires_at, now) != :gt
 
   defp booked_since_reopen?(%InvitationSchema{reopened_at: nil}, _meeting), do: true

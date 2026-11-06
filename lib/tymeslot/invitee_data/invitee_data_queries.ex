@@ -298,13 +298,24 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   end
 
   @doc """
-  Clears the name and email a host addressed invitation links to `email`
-  under, keeping each link, its token and its status. Invitations hold the
-  address lower-cased already. Keeps to `scope`'s invitations.
+  Clears the name and email of the invitation links a host addressed to
+  `email`, and of those that booked the meetings `meeting_ids` (the person's
+  own bookings, as `meeting_ids_for_attendee/2` selects them): a link
+  addressed by name only, or to another address than the one the person
+  booked under, still names them. Keeps each link, its token and its status.
+  Invitations hold the address lower-cased already. Keeps to `scope`'s
+  invitations.
   """
-  @spec scrub_invitations(String.t(), scope(), DateTime.t()) :: {non_neg_integer(), nil}
-  def scrub_invitations(email, scope, %DateTime{} = now) do
-    from(i in Invitation, where: i.email == ^email)
+  @spec scrub_invitations(String.t(), [binary()], scope(), DateTime.t()) ::
+          {non_neg_integer(), nil}
+  def scrub_invitations(email, meeting_ids, scope, %DateTime{} = now) do
+    booked_with =
+      from(m in Meeting,
+        where: m.id in ^meeting_ids and not is_nil(m.invitation_id),
+        select: m.invitation_id
+      )
+
+    from(i in Invitation, where: i.email == ^email or i.id in subquery(booked_with))
     |> scope_invitations(scope)
     |> Repo.update_all(set: [name: nil, email: nil, updated_at: now])
   end

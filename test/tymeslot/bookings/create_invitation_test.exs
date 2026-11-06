@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.UniqueInvitation
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
@@ -187,6 +188,21 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
 
     assert {:ok, _declined} = Approval.decline(meeting, "Not this time")
     assert status_of(ctx, invitation) == :available
+  end
+
+  test "re-enabling invitation-only revives a link left outstanding", ctx do
+    invitation = invite(ctx)
+
+    assert {:ok, open} = MeetingTypes.set_invitation_only(ctx.type, false)
+    assert Invitations.resolve(invitation.token) == {:error, :not_found}
+
+    assert {:ok, type} = MeetingTypes.set_invitation_only(open, true)
+    assert {:ok, %{id: id}} = Invitations.resolve(invitation.token)
+    assert id == invitation.id
+
+    assert {:ok, meeting} = book(%{ctx | type: type}, 3, invitation.id)
+    assert meeting.invitation_id == invitation.id
+    assert status_of(ctx, invitation) == :used
   end
 
   test "a reschedule keeps the invitation and needs no second use", ctx do

@@ -112,6 +112,17 @@ defmodule Tymeslot.InvitationsTest do
       other_type = insert(:meeting_type, user: other, invitation_only: true)
       assert {:ok, _invitation} = Invitations.create(other.id, other_type, %{})
     end
+
+    test "a rejected create spends none of the host's allowance", %{user: user, type: type} do
+      leave(:invitation_create, user.id, 1)
+      past = DateTime.add(DateTime.utc_now(), -60, :second)
+
+      assert {:error, %Changeset{action: :insert}} =
+               Invitations.create(user.id, type, %{expires_at: past})
+
+      assert {:ok, _invitation} = Invitations.create(user.id, type, %{})
+      assert {:error, :rate_limited, _message} = Invitations.create(user.id, type, %{})
+    end
   end
 
   describe "resolve/1" do
@@ -265,6 +276,31 @@ defmodule Tymeslot.InvitationsTest do
 
       assert {:ok, reopened} = Invitations.reopen(user.id, invitation.id)
       assert reopened.revoked_at == nil
+      assert {:ok, _invitation} = Invitations.resolve(invitation.token)
+    end
+
+    test "refuses a revoked invitation whose expiry has passed, writing nothing", %{
+      user: user,
+      type: type
+    } do
+      future = DateTime.add(DateTime.utc_now(), 3600, :second)
+      {:ok, invitation} = Invitations.create(user.id, type, %{expires_at: future})
+      {:ok, revoked} = Invitations.revoke(user.id, invitation.id)
+
+      freeze_clock(DateTime.add(future, 1, :second))
+
+      assert Invitations.reopen(user.id, invitation.id) == {:error, :expired}
+      assert %{revoked_at: revoked_at, reopened_at: nil} = Repo.reload!(invitation)
+      assert revoked_at == revoked.revoked_at
+      assert {:error, :revoked} = Invitations.resolve(invitation.token)
+    end
+
+    test "reopens a revoked invitation whose expiry is still ahead", %{user: user, type: type} do
+      future = DateTime.add(DateTime.utc_now(), 3600, :second)
+      {:ok, invitation} = Invitations.create(user.id, type, %{expires_at: future})
+      {:ok, _invitation} = Invitations.revoke(user.id, invitation.id)
+
+      assert {:ok, %{revoked_at: nil}} = Invitations.reopen(user.id, invitation.id)
       assert {:ok, _invitation} = Invitations.resolve(invitation.token)
     end
   end

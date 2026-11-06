@@ -308,6 +308,10 @@ defmodule Tymeslot.MeetingTypes do
   hidden from every public listing and is booked only through an invitation
   link. Only one-to-one types qualify; a group type gets an error on
   `:invitation_only`.
+
+  Switching it off leaves the type's invitation links in place but makes them
+  resolve as not found; switching it back on revives every one that was never
+  used, revoked or let expire (see `Tymeslot.Invitations`).
   """
   @spec set_invitation_only(Ecto.Schema.t(), boolean()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
