@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.WriteOutcomeMessages do
   # in is longer than a location may be.
   def ad_hoc_failed_message(:invalid_location) do
     dgettext(
-      "dashboard_calendar_events",
+      "dashboard_calendar_location",
       "That location can no longer be used. Please choose another one."
     )
   end

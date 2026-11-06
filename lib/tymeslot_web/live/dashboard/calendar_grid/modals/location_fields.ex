@@ -35,8 +35,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields do
         type="select"
         id="create-location-choice"
         name="location_choice"
-        label={dgettext("dashboard_calendar_events", "Location (optional)")}
-        prompt={dgettext("dashboard_calendar_events", "No location")}
+        label={dgettext("dashboard_calendar_location", "Location (optional)")}
+        prompt={dgettext("dashboard_calendar_location", "No location")}
         options={options(@venues)}
         value={@choice}
       />
@@ -47,13 +47,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields do
         name="location_custom"
         value={@custom}
         maxlength={CreateAdHoc.custom_location_max_length()}
-        placeholder={dgettext("dashboard_calendar_events", "An address, a room or a meeting point")}
-        aria-label={dgettext("dashboard_calendar_events", "Custom location")}
+        placeholder={dgettext("dashboard_calendar_location", "An address, a room or a meeting point")}
+        aria-label={dgettext("dashboard_calendar_location", "Custom location")}
         phx-debounce="300"
       />
       <p class="text-token-xs text-tymeslot-400">
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_location",
           "Shown on the calendar entry and in every invitation."
         )}
       </p>
@@ -70,10 +70,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields do
           []
 
         _some ->
-          [{dgettext("dashboard_calendar_events", "Saved locations"), venue_options(venues)}]
+          [{dgettext("dashboard_calendar_location", "Saved locations"), venue_options(venues)}]
       end
 
-    saved ++ [{dgettext("dashboard_calendar_events", "Custom location…"), "custom"}]
+    saved ++ [{dgettext("dashboard_calendar_location", "Custom location…"), "custom"}]
   end
 
   defp venue_options(venues), do: Enum.map(venues, &{&1.name, "venue:#{&1.id}"})
