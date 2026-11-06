@@ -156,6 +156,31 @@ defmodule Tymeslot.Availability.WeekPreviewTest do
       assert second.busy == [{~T[09:00:00], ~T[10:00:00]}]
     end
 
+    test "an overnight window on a night the clocks go back at midnight still draws its block" do
+      # In Santiago 23:59:59 on Saturday 3 April 2027 happens twice.
+      saturday = ~D[2027-04-03]
+      ClockHelpers.freeze_clock(~U[2027-04-01 00:00:00Z])
+      zone = "America/Santiago"
+
+      profile =
+        host(
+          timezone: zone,
+          days: [6],
+          hours: %{
+            is_available: true,
+            start_time: ~T[20:00:00],
+            end_time: ~T[02:00:00],
+            ends_next_day: true
+          }
+        )
+
+      stub_events([event_at(saturday, ~T[21:00:00], ~T[22:00:00], zone: zone)])
+
+      assert {:ok, %{days: [first | _rest]}} = Availability.week_preview(profile, today: saturday)
+      assert first.date == saturday
+      assert first.busy == [{~T[21:00:00], ~T[22:00:00]}]
+    end
+
     test "an all-day event blocks the whole open day", %{monday: monday} do
       tuesday = Date.add(monday, 1)
 

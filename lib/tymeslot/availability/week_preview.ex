@@ -28,6 +28,7 @@ defmodule Tymeslot.Availability.WeekPreview do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Utils.DateTimeUtils
 
   @days 7
   @fallback_duration_minutes 30
@@ -138,10 +139,12 @@ defmodule Tymeslot.Availability.WeekPreview do
     |> Enum.reverse()
   end
 
-  # An overnight window is drawn up to midnight on the date it opens.
+  # An overnight window is drawn up to midnight on the date it opens. Where
+  # the clocks change at midnight, the last second of the day can be repeated
+  # or skipped, so it is resolved the way every other wall-clock time is.
   defp day_end(window_end, date) do
     if Date.compare(DateTime.to_date(window_end), date) == :gt,
-      do: DateTime.new!(date, ~T[23:59:59], window_end.time_zone),
+      do: DateTimeUtils.create_datetime_safe(date, ~T[23:59:59], window_end.time_zone),
       else: window_end
   end
 
