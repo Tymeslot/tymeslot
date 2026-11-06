@@ -12,14 +12,23 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
   @moduletag :payments
   @moduletag :integration
 
+  import Mox
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Invitations
+  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Profiles
+  alias Tymeslot.SignedToken
+
+  # The guest's mount expires their checkout from a task the LiveView starts.
+  setup :set_mox_global
+  setup :verify_on_exit!
 
   setup do
     user = insert(:user)
@@ -122,16 +131,26 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
       %{invitation: invitation, meeting: meeting}
     end
 
-    test "says the invitation is held while the checkout is open, then offers the way back with it",
+    test "the guest is told the invitation is held, their checkout is ended, then the way back has it",
          %{conn: conn, invitation: invitation, meeting: meeting} do
-      {:ok, view, html} = live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+      test_pid = self()
+
+      expect(StripeAdapterMock, :expire_checkout_session, fn "cs_TEST", opts ->
+        send(test_pid, {:expired_session, opts[:connect_account]})
+        {:ok, %{id: "cs_TEST", status: "expired"}}
+      end)
+
+      {:ok, view, html} = live(conn, guest_path(meeting))
 
       # The booking page would refuse the invitation as used while this
       # meeting holds it, so there is no link to it yet.
       assert html =~ ~s(data-testid="payment-invitation-held")
       refute html =~ "Return to booking"
 
-      # The checkout lapses: the meeting expires and the page is told.
+      # Leaving the checkout ends it at Stripe rather than at its timeout.
+      assert_receive {:expired_session, "acct_TEST"}
+
+      # Stripe's `checkout.session.expired` webhook releases the hold.
       expire_checkout(meeting)
 
       html = render(view)
@@ -151,20 +170,74 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
       assert has_element?(booking, "[data-fact='date']")
     end
 
-    test "offers the way back with the invitation once the hold has ended", %{
+    test "offers the guest the way back with the invitation once the hold has ended", %{
       conn: conn,
       invitation: invitation,
       meeting: meeting
     } do
       expire_checkout(meeting)
 
-      {:ok, _view, html} = live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+      {:ok, _view, html} = live(conn, guest_path(meeting))
 
       assert html =~ "Return to booking"
       token = URI.encode_www_form(invitation.token)
       assert html =~ ~s(href="/invitehost/coaching?invite=#{token}")
     end
+
+    test "the language switch keeps the guest's proof", %{conn: conn, meeting: meeting} do
+      stub(StripeAdapterMock, :expire_checkout_session, fn _id, _opts -> {:ok, %{}} end)
+      {:ok, view, _html} = live(conn, guest_path(meeting))
+
+      render_hook(view, "change_locale", %{"locale" => "de"})
+      {path, _flash} = assert_redirect(view)
+
+      query = URI.decode_query(URI.parse(path).query)
+      assert query["locale"] == "de"
+      assert MeetingPayments.returned_from_checkout?(meeting.id, query["return_token"])
+    end
+
+    # Anyone else holding the meeting id (a shared screen, a log line, a
+    # forwarded address) must not learn the token.
+    for {label, proof} <- [
+          {"no proof", :none},
+          {"a proof for another meeting", :other_meeting},
+          {"a tampered proof", :tampered}
+        ] do
+      test "with #{label}, the page never shows the token and leaves the checkout alone", %{
+        conn: conn,
+        invitation: invitation,
+        meeting: meeting
+      } do
+        path =
+          ~p"/themes/quill/payment-cancelled/#{meeting.id}" <>
+            proof_query(unquote(proof), meeting)
+
+        {:ok, view, html} = live(conn, path)
+        refute html =~ invitation.token
+        assert html =~ ~s(data-testid="payment-invitation-withheld")
+        refute html =~ "Return to booking"
+
+        # Not even once the hold has ended.
+        expire_checkout(meeting)
+        html = render(view)
+        refute html =~ invitation.token
+        refute html =~ URI.encode_www_form(invitation.token)
+        assert html =~ ~s(data-testid="payment-invitation-withheld")
+      end
+    end
   end
+
+  defp proof_query(:none, _meeting), do: ""
+
+  defp proof_query(:other_meeting, _meeting),
+    do: "?return_token=" <> SignedToken.sign(:checkout_return, UUID.generate())
+
+  defp proof_query(:tampered, meeting),
+    do: "?return_token=" <> SignedToken.sign(:checkout_return, meeting.id) <> "x"
+
+  defp guest_path(meeting),
+    do:
+      ~p"/themes/quill/payment-cancelled/#{meeting.id}?#{%{return_token: SignedToken.sign(:checkout_return, meeting.id)}}"
 
   # The real webhook path for a checkout that lapsed: expires the meeting and
   # broadcasts `:expired` on its payment topic.

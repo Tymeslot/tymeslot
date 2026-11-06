@@ -133,6 +133,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
     <PaymentReturnComponents.cancelled_body
       rebook_path={@rebook_path}
       invitation_held={assigns[:invitation_held] || false}
+      invitation_withheld={assigns[:invitation_withheld] || false}
     />
     """
   end

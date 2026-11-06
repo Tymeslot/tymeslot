@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Cancelled do
       <PaymentReturnComponents.cancelled_body
         rebook_path={assigns[:rebook_path]}
         invitation_held={assigns[:invitation_held] || false}
+        invitation_withheld={assigns[:invitation_withheld] || false}
       />
     </Page.page>
     """

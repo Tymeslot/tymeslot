@@ -221,6 +221,11 @@ defmodule TymeslotWeb.Endpoint do
     {["free-busy", :_], false},
     {["meeting-request", :_], false},
     {["invite", :_], false},
+    # Stripe's return pages for a paid booking: the meeting id in the path
+    # leads to the meeting, and the cancelled page's retry link can carry the
+    # booking's invitation token.
+    {["themes", :_, "payment-processing", :_], false},
+    {["themes", :_, "payment-cancelled", :_], false},
     {[:_, "poll", :_], false},
     # Exact patterns: `/:username/meeting/book` is the booking page of a
     # meeting type slugged "meeting". The meeting uid alone authorises
