@@ -798,11 +798,6 @@ msgstr "Hostů na rezervaci"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
-msgid "Limit the guests per booking"
-msgstr "Omezit počet hostů na rezervaci"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr "Každý host obsadí jedno z míst termínu, stejně jako ten, kdo rezervuje."
 
@@ -815,14 +810,6 @@ msgstr "Týdny začínají v pondělí, jak je nastaveno v Nastavení kalendář
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Týdny začínají v neděli, jak je nastaveno v Nastavení kalendáře."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
-msgid "Without a limit, each booking may bring up to %{count} guest."
-msgid_plural "Without a limit, each booking may bring up to %{count} guests."
-msgstr[0] "Bez omezení může každá rezervace přivést až %{count} hosta."
-msgstr[1] "Bez omezení může každá rezervace přivést až %{count} hosty."
-msgstr[2] "Bez omezení může každá rezervace přivést až %{count} hostů."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
@@ -893,3 +880,16 @@ msgstr "Zobrazit na stránce %{address}"
 #, elixir-autogen, elixir-format
 msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
 msgstr "Nejprve si na stránce Profil zvolte uživatelské jméno: tvoří se z něj adresy vašich rezervačních stránek, takže do té doby nelze tento typ schůzky rezervovat."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Set the guests per booking"
+msgstr "Nastavit počet hostů na rezervaci"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a number of your own, each booking may bring up to %{count} guest. Set one to allow fewer, or up to %{max}."
+msgid_plural "Without a number of your own, each booking may bring up to %{count} guests. Set one to allow fewer, or up to %{max}."
+msgstr[0] "Bez vlastního počtu může každá rezervace přivést až %{count} hosta. Nastavte méně, nebo až %{max}."
+msgstr[1] "Bez vlastního počtu může každá rezervace přivést až %{count} hosty. Nastavte méně, nebo až %{max}."
+msgstr[2] "Bez vlastního počtu může každá rezervace přivést až %{count} hostů. Nastavte méně, nebo až %{max}."

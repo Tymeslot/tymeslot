@@ -89,7 +89,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:one_off, :boolean, default: false)
     field(:show_seat_availability, :boolean, default: true)
     field(:last_spots_threshold, :integer)
-    # Guests one booking may bring; nil is the overall limit (`Guests.limit_for/1`).
+    # Guests one booking may bring; nil is the public page's default (`Guests.limit_for/1`).
     field(:max_guests_per_booking, :integer)
 
     # Bookings on this meeting type are held until the host approves them,

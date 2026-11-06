@@ -794,11 +794,6 @@ msgstr "Gäste pro Buchung"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
-msgid "Limit the guests per booking"
-msgstr "Gäste pro Buchung begrenzen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr "Jeder Gast belegt einen der Plätze des Termins, genau wie die buchende Person."
 
@@ -811,13 +806,6 @@ msgstr "Wochen beginnen am Montag, wie in den Kalendereinstellungen festgelegt."
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Wochen beginnen am Sonntag, wie in den Kalendereinstellungen festgelegt."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
-msgid "Without a limit, each booking may bring up to %{count} guest."
-msgid_plural "Without a limit, each booking may bring up to %{count} guests."
-msgstr[0] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gast mitbringen."
-msgstr[1] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gäste mitbringen."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
@@ -888,3 +876,15 @@ msgstr "Auf %{address} anzeigen"
 #, elixir-autogen, elixir-format
 msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
 msgstr "Wählen Sie zuerst auf der Seite „Profil“ einen Nutzernamen: Aus ihm werden die Adressen Ihrer Buchungsseiten gebildet, daher ist dieser Termintyp bis dahin nicht buchbar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Set the guests per booking"
+msgstr "Gäste pro Buchung festlegen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a number of your own, each booking may bring up to %{count} guest. Set one to allow fewer, or up to %{max}."
+msgid_plural "Without a number of your own, each booking may bring up to %{count} guests. Set one to allow fewer, or up to %{max}."
+msgstr[0] "Ohne eigene Angabe darf jede Buchung bis zu %{count} Gast mitbringen. Legen Sie weniger oder bis zu %{max} fest."
+msgstr[1] "Ohne eigene Angabe darf jede Buchung bis zu %{count} Gäste mitbringen. Legen Sie weniger oder bis zu %{max} fest."
