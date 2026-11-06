@@ -57,11 +57,19 @@ defmodule Tymeslot.Precommit.AffectedTest do
     }
   end
 
-  # The path dependency's suite, for its changes to resolve against.
+  # The path dependency's suite, for its changes to resolve against. It
+  # carries every domain this suite has, so none is selected for being this
+  # suite's own.
   defp upstream_index do
+    tags = %{
+      "test/tymeslot/payments/charge_test.exs" => MapSet.new([:payments]),
+      "test/tymeslot/auth/login_test.exs" => MapSet.new([:auth]),
+      "test/tymeslot/analytics/stats_test.exs" => MapSet.new([:analytics])
+    }
+
     %{
-      test_files: MapSet.new(["test/tymeslot/payments/charge_test.exs"]),
-      tags: %{"test/tymeslot/payments/charge_test.exs" => MapSet.new([:payments])},
+      test_files: tags |> Map.keys() |> MapSet.new(),
+      tags: tags,
       domain_tags: MapSet.new([:auth, :payments, :analytics]),
       sources: %{}
     }
