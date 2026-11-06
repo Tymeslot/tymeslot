@@ -548,7 +548,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   # A group type cannot be invitation-only, nor the reverse. Reads `get_field/2`
   # so a form that does not send the flag still has it checked.
   defp validate_invitation_only_not_group(changeset) do
-    msg = dgettext("errors_input", "Invitation links work only for one-to-one meeting types.")
+    msg = dgettext_noop("errors", "Invitation links work only for one-to-one meeting types.")
 
     if get_field(changeset, :invitation_only) and
          group_limit?(get_field(changeset, :max_participants)),

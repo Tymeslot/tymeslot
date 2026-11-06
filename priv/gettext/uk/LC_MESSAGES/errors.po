@@ -863,3 +863,8 @@ msgstr "вже є адресою однієї з ваших сторінок б�
 #, elixir-autogen, elixir-format
 msgid "is already the address of one of your meeting types"
 msgstr "вже є адресою одного з ваших типів зустрічей"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "Посилання із запрошенням працюють лише для індивідуальних типів зустрічей."

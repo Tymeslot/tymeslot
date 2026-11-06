@@ -847,3 +847,8 @@ msgstr "è già l'indirizzo di una delle tue pagine di prenotazione"
 #, elixir-autogen, elixir-format
 msgid "is already the address of one of your meeting types"
 msgstr "è già l'indirizzo di uno dei tuoi tipi di riunione"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "I link di invito funzionano solo con i tipi di riunione individuali."

@@ -491,8 +491,3 @@ msgstr[2] "Ім'я користувача має містити щонайбіл
 #, elixir-autogen, elixir-format
 msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
 msgstr "Ім'я користувача має починатися з літери або цифри та містити лише малі літери, цифри, підкреслення й дефіси"
-
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
-#, elixir-autogen, elixir-format
-msgid "Invitation links work only for one-to-one meeting types."
-msgstr "Запрошувальні посилання працюють лише для індивідуальних типів зустрічей."

@@ -489,8 +489,3 @@ msgstr[1] "Il nome utente può contenere al massimo %{count} caratteri"
 #, elixir-autogen, elixir-format
 msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
 msgstr "Il nome utente deve iniziare con una lettera o un numero e può contenere solo lettere minuscole, numeri, trattini bassi e trattini"
-
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
-#, elixir-autogen, elixir-format
-msgid "Invitation links work only for one-to-one meeting types."
-msgstr "I link di invito funzionano solo per i tipi di riunione individuali."

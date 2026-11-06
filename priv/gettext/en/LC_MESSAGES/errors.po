@@ -845,3 +845,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "is already the address of one of your meeting types"
 msgstr ""
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr ""
