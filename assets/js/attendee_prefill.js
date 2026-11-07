@@ -17,7 +17,9 @@
 // (NameValidator 100, EmailValidator 254 characters). A longer value would be
 // refused on submit anyway, and carrying it in the connect params makes the
 // websocket URL too long to open, leaving the page without a live connection.
-const PREFILL_LIMITS = { name: 100, email: 254 }
+// `company` and `phone` seed the organiser's questions of the same meaning
+// (see ThemeFlow.question_answers/2); their limits only keep the websocket URL short.
+const PREFILL_LIMITS = { name: 100, email: 254, company: 200, phone: 40 }
 const PREFILL_KEYS = Object.keys(PREFILL_LIMITS)
 
 // Counted in code points, as the server counts characters.

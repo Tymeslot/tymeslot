@@ -226,11 +226,19 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # answers may be carried; the step itself is still shown, so the booker sees
   # what will be sent and can change it.
   defp init_questions_engine(socket, definitions) do
-    carried = ThemeFlow.reschedule_answers(socket.assigns[:reschedule_context], definitions)
+    context = socket.assigns[:reschedule_context]
+    carried = ThemeFlow.reschedule_answers(context, definitions)
+
+    # A booking link's `#company=…&phone=…` seeds the matching questions of a
+    # new booking; a reschedule carries the booked answers instead.
+    linked =
+      if is_nil(context),
+        do: ThemeFlow.question_answers(socket.assigns[:question_prefill] || %{}, definitions),
+        else: %{}
 
     definitions
     |> QEngine.init()
-    |> QEngine.prefill(carried)
+    |> QEngine.prefill(Map.merge(linked, carried))
   end
 
   defp do_handle_schedule_entry(socket, params) do

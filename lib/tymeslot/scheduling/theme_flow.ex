@@ -150,6 +150,55 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
 
   def attendee_prefill(_params), do: %{}
 
+  # Values a booking link may carry for the organiser's own questions, with the
+  # longest value kept for each.
+  @question_prefill_limits %{"company" => 200, "phone" => 40}
+
+  @doc """
+  The answers a booking link carried in its URL fragment for the organiser's
+  questions (`#company=…&phone=…`), alongside the name and email of
+  `attendee_prefill/1`. Each value is trimmed, stripped of null bytes and kept
+  only within its length limit; anything else yields no prefill.
+  """
+  @spec question_prefill(any()) :: %{optional(String.t()) => String.t()}
+  def question_prefill(%{} = params) do
+    for {field, limit} <- @question_prefill_limits,
+        value = clean_prefill(params[field]),
+        is_binary(value),
+        value != "",
+        String.length(value) <= limit,
+        into: %{},
+        do: {field, value}
+  end
+
+  def question_prefill(_params), do: %{}
+
+  @doc """
+  Maps `question_prefill/1` values onto the meeting type's questions: `company`
+  answers the first text question labelled as the company, and `phone` the
+  first phone question (or one labelled as the phone). Questions it cannot
+  place are left blank, and the booker still walks the step and can change them.
+  """
+  @spec question_answers(map(), [map()]) :: %{optional(String.t()) => String.t()}
+  def question_answers(prefill, definitions) when is_map(prefill) and is_list(definitions) do
+    [
+      {"company", fn d -> d["type"] in ["text", "textarea"] and label_matches?(d, ~r/empresa|company|organi[sz]a/iu) end},
+      {"phone", fn d -> d["type"] == "phone" or (d["type"] == "text" and label_matches?(d, ~r/telefone|telem|phone/iu)) end}
+    ]
+    |> Enum.reduce(%{}, fn {key, matches?}, acc ->
+      with value when is_binary(value) <- prefill[key],
+           %{"id" => id} <- Enum.find(definitions, matches?) do
+        Map.put(acc, id, value)
+      else
+        _ -> acc
+      end
+    end)
+  end
+
+  def question_answers(_prefill, _definitions), do: %{}
+
+  defp label_matches?(definition, regex), do: is_binary(definition["label"]) and definition["label"] =~ regex
+
   defp clean_prefill(value) when is_binary(value),
     do: value |> String.replace("\x00", "") |> String.trim()
 

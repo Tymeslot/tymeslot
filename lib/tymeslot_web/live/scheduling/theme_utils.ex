@@ -56,7 +56,10 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   """
   @spec assign_attendee_prefill(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_attendee_prefill(socket) do
-    prefill = ThemeFlow.attendee_prefill((get_connect_params(socket) || %{})["attendee_prefill"])
-    assign(socket, :attendee_prefill, prefill)
+    params = (get_connect_params(socket) || %{})["attendee_prefill"]
+
+    socket
+    |> assign(:attendee_prefill, ThemeFlow.attendee_prefill(params))
+    |> assign(:question_prefill, ThemeFlow.question_prefill(params))
   end
 end
