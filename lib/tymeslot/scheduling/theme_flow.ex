@@ -154,6 +154,9 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   # longest value kept for each.
   @question_prefill_limits %{"company" => 200, "phone" => 40}
 
+  # Question types that hold free text (`short_text` is the organiser's "Texto curto").
+  @text_question_types ["short_text", "text"]
+
   @doc """
   The answers a booking link carried in its URL fragment for the organiser's
   questions (`#company=…&phone=…`), alongside the name and email of
@@ -182,8 +185,8 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   @spec question_answers(map(), [map()]) :: %{optional(String.t()) => String.t()}
   def question_answers(prefill, definitions) when is_map(prefill) and is_list(definitions) do
     [
-      {"company", fn d -> d["type"] in ["text", "textarea"] and label_matches?(d, ~r/empresa|company|organi[sz]a/iu) end},
-      {"phone", fn d -> d["type"] == "phone" or (d["type"] == "text" and label_matches?(d, ~r/telefone|telem|phone/iu)) end}
+      {"company", fn d -> d["type"] in @text_question_types and label_matches?(d, ~r/empresa|company|organi[sz]a/iu) end},
+      {"phone", fn d -> d["type"] == "phone" or (d["type"] in @text_question_types and label_matches?(d, ~r/telefone|telem|phone/iu)) end}
     ]
     |> Enum.reduce(%{}, fn {key, matches?}, acc ->
       with value when is_binary(value) <- prefill[key],
