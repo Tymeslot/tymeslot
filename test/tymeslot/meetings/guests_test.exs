@@ -46,6 +46,38 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
   end
 
+  describe "sanitize_entries/3" do
+    test "sanitises addresses as sanitize_emails does, keeping each valid name" do
+      entries = [
+        %{email: " Grace@Example.com ", name: "Grace Hopper"},
+        "grace@example.com",
+        %{email: "primary@example.com", name: "Me"},
+        %{email: "bad name@example.com", name: "Bad"},
+        %{email: "ada@example.com", name: "<script>"},
+        "plain@example.com"
+      ]
+
+      assert Guests.sanitize_entries(entries, "primary@example.com") == [
+               %{email: "grace@example.com", name: "Grace Hopper"},
+               %{email: "ada@example.com", name: nil},
+               %{email: "plain@example.com", name: nil}
+             ]
+    end
+  end
+
+  describe "with_names/2" do
+    test "pairs each address with its valid name" do
+      assert Guests.with_names(["a@example.com", "b@example.com", "c@example.com"], %{
+               "a@example.com" => "Ada",
+               "b@example.com" => "<b>"
+             }) == [
+               %{email: "a@example.com", name: "Ada"},
+               %{email: "b@example.com", name: nil},
+               %{email: "c@example.com", name: nil}
+             ]
+    end
+  end
+
   describe "limit_for/1" do
     test "is the meeting type's own limit, or the overall one without it" do
       assert Guests.limit_for(%{max_guests_per_booking: 2}) == 2

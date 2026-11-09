@@ -15,6 +15,7 @@
  * Choosing one, by mouse or with the arrow keys and Enter, fills it in as
  * the field's owner expects (`data-mode`):
  *   - `replace` (default): the field becomes the address. With
+ *     `data-named`, it becomes `Name <address>` instead. With
  *     `data-submit`, its form is then submitted (an "Add" form); with
  *     `data-name-input`, that field takes the contact's name when empty.
  *     Fields bound with `phx-blur` are told through a focusout, those in
@@ -209,7 +210,7 @@ export const ContactSuggest = {
       const caret = input.value.length - after.length;
       input.setSelectionRange?.(caret, caret);
     } else {
-      input.value = contact.email;
+      input.value = this.el.dataset.named !== undefined ? formatContact(contact) : contact.email;
     }
 
     this.close();

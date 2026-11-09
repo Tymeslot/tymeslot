@@ -24,6 +24,10 @@ defmodule TymeslotWeb.Components.Dashboard.ContactSuggestions do
   attr :submit, :boolean, default: false, doc: "submit the field's form once one is chosen"
   attr :name_input, :string, default: nil, doc: "the id of a name field to fill when empty"
 
+  attr :named, :boolean,
+    default: false,
+    doc: "in `replace` mode, set the field to `Name <address>` rather than the address alone"
+
   @spec contact_suggestions(map()) :: Phoenix.LiveView.Rendered.t()
   def contact_suggestions(assigns) do
     ~H"""
@@ -35,6 +39,7 @@ defmodule TymeslotWeb.Components.Dashboard.ContactSuggestions do
       data-mode={@mode}
       data-submit={@submit}
       data-name-input={@name_input}
+      data-named={@named}
       data-announce={
         dgettext("dashboard_common", "Contacts suggested. Use the arrow keys to choose one.")
       }

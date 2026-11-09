@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Validation.AddressList
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
@@ -51,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         creating
         |> ad_hoc_params(socket, start_at, end_at)
         |> Map.put(:guest_emails, guest_emails)
+        |> Map.put(:guest_names, guest_names(creating))
 
       send(self(), {:execute_create_ad_hoc_meeting, params})
 
@@ -449,7 +451,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # settled by `EventCreation` like any other.
   defp extra_guest_emails(creating) do
     added = creating[:guest_emails] || []
-    pending = (creating[:guest_email_input] || "") |> String.trim() |> String.downcase()
+    %{email: pending} = pending_guest(creating)
 
     cond do
       pending == "" -> {:ok, added}
@@ -457,6 +459,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       true -> CreateFormState.check_extra_guest(creating, pending)
     end
   end
+
+  # The names typed with the extra guests, the one still in the input
+  # among them.
+  defp guest_names(creating) do
+    creating
+    |> CreateFormState.put_guest_name(pending_guest(creating))
+    |> Map.get(:guest_names, %{})
+  end
+
+  defp pending_guest(creating), do: AddressList.parse_entry(creating[:guest_email_input] || "")
 
   defp same_address?(guest_email, organizer_email) when is_binary(organizer_email) do
     String.downcase(guest_email) == organizer_email |> String.trim() |> String.downcase()

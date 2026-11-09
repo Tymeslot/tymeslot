@@ -164,8 +164,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             <span
               :for={email <- @creating_event[:guest_emails] || []}
               class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+              title={email}
             >
-              {email}
+              {Map.get(@creating_event[:guest_names] || %{}, email, email)}
               <button
                 type="button"
                 phx-click="remove_create_guest"
@@ -186,7 +187,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             class="flex gap-2"
           >
             <input
-              type="email"
+              type="text"
+              inputmode="email"
               id="create-guest-email-input"
               name="email"
               value={@creating_event[:guest_email_input] || ""}
@@ -200,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               {dgettext("dashboard_calendar_events", "Add")}
             </.action_button>
           </form>
-          <.contact_suggestions for="create-guest-email-input" submit />
+          <.contact_suggestions for="create-guest-email-input" submit named />
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
               "dashboard_calendar_events",

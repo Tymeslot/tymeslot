@@ -59,17 +59,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
 
           <div :if={@staged != []} class="flex flex-wrap gap-2 mb-3">
             <span
-              :for={email <- @staged}
+              :for={guest <- @staged}
               class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-turquoise-800 font-medium"
+              title={guest.email}
             >
-              {email}
+              {guest.name || guest.email}
               <button
                 type="button"
                 phx-click="unstage_guest"
-                phx-value-email={email}
+                phx-value-email={guest.email}
                 phx-target={@target}
                 class="w-5 h-5 rounded-token-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
-                aria-label={dgettext("dashboard_bookings", "Remove %{email}", email: email)}
+                aria-label={dgettext("dashboard_bookings", "Remove %{email}", email: guest.email)}
               >
                 <Icons.icon name="hero-x-mark" class="w-3 h-3" />
               </button>
@@ -84,7 +85,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
             class="flex gap-3"
           >
             <input
-              type="email"
+              type="text"
+              inputmode="email"
               id="stage-guest-email"
               name="email"
               value=""
@@ -96,7 +98,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               {dgettext("dashboard_bookings", "Add")}
             </Buttons.action_button>
           </form>
-          <ContactSuggestions.contact_suggestions for="stage-guest-email" submit />
+          <ContactSuggestions.contact_suggestions for="stage-guest-email" submit named />
 
           <p class="text-tymeslot-500 font-medium mt-2">
             {dngettext(
@@ -117,7 +119,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               :for={guest <- @existing}
               class="flex items-center justify-between gap-3 text-tymeslot-600 font-medium"
             >
-              <span class="truncate">{guest.email}</span>
+              <span class="truncate" title={guest.email}>{guest.name || guest.email}</span>
               <GuestStatusPill.guest_status_pill status={guest.status} />
             </li>
           </ul>

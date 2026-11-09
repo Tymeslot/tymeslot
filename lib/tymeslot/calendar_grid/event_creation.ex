@@ -178,7 +178,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       # `CreateAdHoc` expects a pre-validated list. The form checks each address
       # as it is added, but the main guest can still be typed in afterwards as
       # one of them, so the list is settled here against the final address.
-      guest_emails: Guests.sanitize_emails(params[:guest_emails] || [], params.attendee_email),
+      guest_emails:
+        (params[:guest_emails] || [])
+        |> Guests.sanitize_emails(params.attendee_email)
+        |> Guests.with_names(params[:guest_names] || %{}),
       reminders: params[:reminders] || []
     }
 

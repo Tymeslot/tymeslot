@@ -33,6 +33,7 @@ defmodule Tymeslot.Meetings.Guests do
   alias Tymeslot.Meetings.Seats
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
+  alias Tymeslot.Validation.AddressList
   alias Tymeslot.Validation.Constraints
 
   @pubsub Tymeslot.PubSub
@@ -94,6 +95,59 @@ defmodule Tymeslot.Meetings.Guests do
   end
 
   def sanitize_emails(_emails, _primary_email, _limit), do: []
+
+  @doc """
+  Sanitises guests the host typed in, each a bare address or an address
+  with a name (`t:entry/0`), as `sanitize_emails/3` does addresses: the
+  same addresses are kept, and each keeps its name when it has a valid one.
+  A name no guest could be given is dropped rather than the guest.
+  """
+  @spec sanitize_entries([entry()] | nil, String.t() | nil, pos_integer()) :: [
+          %{email: String.t(), name: String.t() | nil}
+        ]
+  def sanitize_entries(entries, primary_email, limit \\ @max_guests)
+
+  def sanitize_entries(entries, primary_email, limit) when is_list(entries) do
+    # The first valid name an address is given, wherever it repeats.
+    names =
+      Enum.reduce(entries, %{}, fn
+        %{email: email} = entry, names ->
+          case valid_name(Map.get(entry, :name)) do
+            nil -> names
+            name -> Map.put_new(names, normalize(email), name)
+          end
+
+        _email, names ->
+          names
+      end)
+
+    entries
+    |> Enum.map(fn
+      %{email: email} -> email
+      email -> email
+    end)
+    |> sanitize_emails(primary_email, limit)
+    |> Enum.map(&%{email: &1, name: Map.get(names, &1)})
+  end
+
+  def sanitize_entries(_entries, _primary_email, _limit), do: []
+
+  @doc """
+  The sanitised `emails` as entries, each with the name `names` (a map by
+  address) gives it, when that name is valid.
+  """
+  @spec with_names([String.t()], %{optional(String.t()) => String.t() | nil}) :: [
+          %{email: String.t(), name: String.t() | nil}
+        ]
+  def with_names(emails, names) when is_map(names),
+    do: Enum.map(emails, &%{email: &1, name: valid_name(Map.get(names, &1))})
+
+  defp valid_name(name) when is_binary(name) do
+    entry = %{email: "", name: String.trim(name)}
+    if entry.name != "" and AddressList.valid_name?(entry), do: entry.name
+  end
+
+  defp valid_name(_name), do: nil
 
   @doc """
   Whether `email` is an address a guest can be invited at: the same rule
@@ -168,7 +222,7 @@ defmodule Tymeslot.Meetings.Guests do
   enqueued in the same transaction as the rows it sends to: either both exist
   or neither does.
   """
-  @spec invite_for_organizer(binary(), integer(), [String.t()] | nil) ::
+  @spec invite_for_organizer(binary(), integer(), [entry()] | nil) ::
           {:ok, [GuestSchema.t()]}
           | {:error, :not_found | :closed | :full | Ecto.Changeset.t() | String.t()}
   def invite_for_organizer(meeting_id, organizer_user_id, emails)
@@ -219,8 +273,8 @@ defmodule Tymeslot.Meetings.Guests do
 
     additions =
       emails
-      |> sanitize_emails(meeting.attendee_email)
-      |> Enum.reject(&MapSet.member?(known, &1))
+      |> sanitize_entries(meeting.attendee_email)
+      |> Enum.reject(&MapSet.member?(known, &1.email))
 
     cond do
       additions == [] -> {:ok, []}

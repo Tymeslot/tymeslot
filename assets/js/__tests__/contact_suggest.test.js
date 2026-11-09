@@ -101,6 +101,15 @@ describe("ContactSuggest hook", () => {
     expect(el.querySelector("[role=listbox]").hidden).toBe(true);
   });
 
+  it("fills in the name with the address in a field that takes both", async () => {
+    mount({ named: "" });
+    await type("ad");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+    expect(input.value).toBe("Ada Lovelace <ada@example.com>");
+  });
+
   it("closes on Escape without choosing", async () => {
     const el = mount({});
     await type("ad");

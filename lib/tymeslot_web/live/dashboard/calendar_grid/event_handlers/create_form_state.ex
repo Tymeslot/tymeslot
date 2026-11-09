@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UniversalSanitizer
+  alias Tymeslot.Validation.AddressList
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateRecurrence
@@ -119,6 +120,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       note_open: false,
       organizer_note: "",
       guest_emails: [],
+      # The name typed with an extra guest (`Name <address>`), by address.
+      guest_names: %{},
       guest_email_input: "",
       # Which language the guests are written to. Defaults to the host's own
       # (they know whom they are inviting) and is theirs to change per meeting.
@@ -200,17 +203,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   Capped at `Guests.max_guests/0`, the same number a booker may bring. An
   invalid address, the main guest's own and repeats are refused here with a
-  flash saying why, rather than silently dropped later.
+  flash saying why, rather than silently dropped later. A name typed with
+  the address (`Name <address>`, as a contact suggestion fills it in) is
+  kept for the guest's emails, unless it is not one a guest could be given.
   """
   @spec handle_add_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_add_create_guest(%{"email" => raw_email}, socket) do
-    email = raw_email |> String.trim() |> String.downcase()
+    %{email: email} = entry = AddressList.parse_entry(raw_email)
 
     update_creating(socket, fn creating ->
       case check_extra_guest(creating, email) do
         :ok ->
           %{creating | guest_emails: creating.guest_emails ++ [email], guest_email_input: ""}
+          |> put_guest_name(entry)
 
         {:error, message} ->
           Flash.error(message)
@@ -223,8 +229,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_remove_create_guest(%{"email" => email}, socket) do
     update_creating(socket, fn creating ->
-      Map.put(creating, :guest_emails, List.delete(creating.guest_emails, email))
+      creating
+      |> Map.put(:guest_emails, List.delete(creating.guest_emails, email))
+      |> Map.update(:guest_names, %{}, &Map.delete(&1, email))
     end)
+  end
+
+  @doc """
+  Records the name typed with an extra guest's address, when it is one a
+  guest could be given.
+  """
+  @spec put_guest_name(map(), AddressList.entry()) :: map()
+  def put_guest_name(creating, %{email: email, name: name} = entry) do
+    if is_binary(name) and AddressList.valid_name?(entry),
+      do: Map.update(creating, :guest_names, %{email => name}, &Map.put(&1, email, name)),
+      else: creating
   end
 
   @spec handle_update_create_guest_input(map(), Phoenix.LiveView.Socket.t()) ::

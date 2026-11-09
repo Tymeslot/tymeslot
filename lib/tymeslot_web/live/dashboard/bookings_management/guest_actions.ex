@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Validation.AddressList
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.RateLimit
@@ -29,22 +30,26 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   require Logger
 
   @doc """
-  Splits what the host typed into candidate addresses.
+  Splits what the host typed into candidate guests, each an address and the
+  name typed with it (`Name <address>`, as a contact suggestion fills it in),
+  read by `Tymeslot.Validation.AddressList`.
 
   Accepts the separators a person actually reaches for when listing
-  colleagues — newlines, commas, semicolons and plain spaces — because the
-  field is free text rather than a list of inputs. Validation, de-duplication
-  and the cap belong to `Meetings.Guests`; this only decides where one address
-  ends and the next begins.
+  colleagues — newlines, commas, semicolons and, between bare addresses,
+  plain spaces — because the field is free text rather than a list of
+  inputs. Validation, de-duplication and the cap belong to `Meetings.Guests`;
+  this only decides where one guest ends and the next begins.
   """
-  @spec parse_emails(String.t() | nil) :: [String.t()]
-  def parse_emails(nil), do: []
-
-  def parse_emails(raw) when is_binary(raw) do
+  @spec parse_guests(String.t() | nil) :: [AddressList.entry()]
+  def parse_guests(raw) do
     raw
-    |> String.split([",", ";", "\n", "\r", " ", "\t"], trim: true)
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
+    |> AddressList.split()
+    |> Enum.flat_map(fn entry ->
+      if String.contains?(entry, "<"),
+        do: [entry],
+        else: String.split(entry, [" ", "\t"], trim: true)
+    end)
+    |> Enum.map(&AddressList.parse_entry/1)
   end
 
   @doc """
@@ -85,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   yet.
 
   Addresses are collected one at a time, as they are everywhere else in the
-  app. Pasting several at once still works — `parse_emails/1` splits them —
+  app. Pasting several at once still works — `parse_guests/1` splits them —
   because a host copying a line out of an email should not have to take it
   apart by hand.
 
@@ -104,11 +109,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
 
     {staged, refusals} =
       raw_email
-      |> parse_emails()
-      |> Enum.map(&normalize/1)
-      |> Enum.reduce({staged(socket), []}, fn email, {staged, refusals} ->
-        case check_guest(email, meeting, taken ++ staged, room(existing) - length(staged)) do
-          :ok -> {staged ++ [email], refusals}
+      |> parse_guests()
+      |> Enum.reduce({staged(socket), []}, fn guest, {staged, refusals} ->
+        taken = taken ++ Enum.map(staged, & &1.email)
+
+        case check_guest(guest.email, meeting, taken, room(existing) - length(staged)) do
+          :ok -> {staged ++ [named(guest)], refusals}
           {:error, message} -> {staged, [message | refusals]}
         end
       end)
@@ -148,10 +154,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   defp normalize(nil), do: ""
   defp normalize(email), do: email |> String.trim() |> String.downcase()
 
+  # A name no guest could be given is left off rather than refusing the
+  # address with it, which is the part that matters.
+  defp named(guest),
+    do: if(AddressList.valid_name?(guest), do: guest, else: %{guest | name: nil})
+
   @doc "Takes an address back off the list before it is sent."
   @spec unstage(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
   def unstage(socket, email) do
-    assign(socket, :staged_guests, List.delete(staged(socket), email))
+    assign(socket, :staged_guests, Enum.reject(staged(socket), &(&1.email == email)))
   end
 
   @doc "How many more guests a meeting with `existing` guests can take."
@@ -198,7 +209,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   synchronously: the email job does the work, so a slow mail server cannot
   hold up the dashboard.
   """
-  @spec invite(Phoenix.LiveView.Socket.t(), map(), [String.t()]) ::
+  @spec invite(Phoenix.LiveView.Socket.t(), map(), [Guests.entry()]) ::
           Phoenix.LiveView.Socket.t()
   def invite(socket, meeting, candidates) do
     user_id = socket.assigns.current_user.id
