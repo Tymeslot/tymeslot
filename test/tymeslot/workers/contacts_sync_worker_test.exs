@@ -12,6 +12,7 @@ defmodule Tymeslot.Workers.ContactsSyncWorkerTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Contacts
   alias Tymeslot.Contacts.{AddressBookSchema, ContactQueries}
   alias Tymeslot.Security.Encryption
@@ -59,7 +60,7 @@ defmodule Tymeslot.Workers.ContactsSyncWorkerTest do
     integration = connection(user)
     :ok = run_sync(integration)
 
-    integration |> Ecto.Changeset.change(use_for_contacts: false) |> Repo.update!()
+    integration |> Changeset.change(use_for_contacts: false) |> Repo.update!()
 
     assert :ok = run_sync(integration)
     assert ContactQueries.list_books(integration.id) == []
@@ -96,7 +97,7 @@ defmodule Tymeslot.Workers.ContactsSyncWorkerTest do
     } do
       integration = connection(user)
       :ok = run_sync(integration)
-      integration |> Ecto.Changeset.change(use_for_contacts: false) |> Repo.update!()
+      integration |> Changeset.change(use_for_contacts: false) |> Repo.update!()
 
       assert :ok = perform_job(ContactsSyncSweepWorker, %{})
       assert Repo.aggregate(AddressBookSchema, :count) == 0

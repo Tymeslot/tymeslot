@@ -13,6 +13,7 @@ defmodule Tymeslot.ContactsTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Contacts
   alias Tymeslot.Contacts.{AddressBookSchema, ContactQueries, ContactSchema, Sync}
   alias Tymeslot.Integrations.Calendar
@@ -204,7 +205,7 @@ defmodule Tymeslot.ContactsTest do
       user: user,
       integration: integration
     } do
-      integration |> Ecto.Changeset.change(use_for_contacts: false) |> Repo.update!()
+      integration |> Changeset.change(use_for_contacts: false) |> Repo.update!()
 
       assert Contacts.search(user.id, "grace") == []
     end

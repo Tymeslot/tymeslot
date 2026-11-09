@@ -58,7 +58,11 @@ defmodule Tymeslot.Workers.ContactsSyncWorker do
   defp run(integration) do
     case Sync.run(integration) do
       {:ok, outcome} ->
-        Logger.debug("Contacts synced", integration_id: integration.id, outcome: inspect(outcome))
+        Logger.debug("Contacts synced",
+          integration_id: integration.id,
+          outcome: LogFormat.reason(outcome)
+        )
+
         :ok
 
       {:error, reason} ->

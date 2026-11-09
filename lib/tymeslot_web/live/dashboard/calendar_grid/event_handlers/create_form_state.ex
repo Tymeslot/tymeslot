@@ -215,8 +215,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     update_creating(socket, fn creating ->
       case check_extra_guest(creating, email) do
         :ok ->
-          %{creating | guest_emails: creating.guest_emails ++ [email], guest_email_input: ""}
-          |> put_guest_name(entry)
+          put_guest_name(
+            %{creating | guest_emails: creating.guest_emails ++ [email], guest_email_input: ""},
+            entry
+          )
 
         {:error, message} ->
           Flash.error(message)

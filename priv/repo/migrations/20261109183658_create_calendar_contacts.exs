@@ -14,6 +14,11 @@ defmodule Tymeslot.Repo.Migrations.CreateCalendarContacts do
   credentials.
   """
 
+  # Both tables are new and empty, so their foreign keys and indexes lock
+  # nothing anyone is using.
+  # excellent_migrations:safety-assured-for-this-file column_reference_added
+  # excellent_migrations:safety-assured-for-this-file index_not_concurrently
+
   def change do
     create table(:calendar_contact_books) do
       add :calendar_integration_id,

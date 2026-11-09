@@ -44,7 +44,7 @@ defmodule Tymeslot.Contacts.ContactQueries do
           %{name: String.t() | nil, email: String.t()}
         ]) :: {:ok, AddressBookSchema.t()} | {:error, term()}
   def replace_book(integration_id, href, token, contacts) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = DateTime.utc_now(:second)
 
     Repo.transaction(fn ->
       book =
@@ -73,7 +73,7 @@ defmodule Tymeslot.Contacts.ContactQueries do
   @doc "Deletes a connection's address books other than those at `hrefs`, with their contacts."
   @spec delete_books_except(pos_integer(), [String.t()]) :: non_neg_integer()
   def delete_books_except(integration_id, hrefs) do
-    {count, _} =
+    {count, _rows} =
       Repo.delete_all(
         from(b in AddressBookSchema,
           where: b.calendar_integration_id == ^integration_id and b.href not in ^hrefs
@@ -93,7 +93,7 @@ defmodule Tymeslot.Contacts.ContactQueries do
   """
   @spec delete_for_inactive() :: non_neg_integer()
   def delete_for_inactive do
-    {count, _} =
+    {count, _rows} =
       Repo.delete_all(
         from(b in AddressBookSchema,
           join: i in CalendarIntegrationSchema,
