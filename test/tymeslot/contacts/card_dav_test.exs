@@ -42,6 +42,61 @@ defmodule Tymeslot.Contacts.CardDAVTest do
     end
   end
 
+  describe "contacts/2" do
+    test "lists every address in the book, one entry per address, without the photos" do
+      CardDAVStub.stub("ada:secret", @books)
+
+      assert {:ok, contacts} = CardDAV.contacts(@client, "/addressbooks/user/contacts/")
+
+      assert contacts == [
+               %{name: "Grace Hopper", email: "grace@example.com"},
+               %{name: "Alan Turing", email: "alan@example.com"},
+               %{name: "Alan Turing", email: "turing@work.example"}
+             ]
+
+      assert_received {:carddav_request, "REPORT", "/addressbooks/user/contacts/", body}
+      assert body =~ "<card:filter/>"
+    end
+
+    test "passes a refused listing through" do
+      CardDAVStub.stub("ada:secret", %{"/addressbooks/user/contacts/" => {:search_only, []}})
+
+      assert {:error, :server_error} = CardDAV.contacts(@client, "/addressbooks/user/contacts/")
+    end
+  end
+
+  describe "drop_binary_properties/1" do
+    test "cuts photos and other binary properties with their folded lines, and nothing else" do
+      card =
+        Enum.join(
+          [
+            "BEGIN:VCARD",
+            "FN:Grace Hopper",
+            "PHOTO;ENCODING=b;TYPE=JPEG:AAAA",
+            " BBBB",
+            "\tCCCC",
+            "item1.LOGO;VALUE=uri:data:image/png;base64,DDDD",
+            "EMAIL:grace@example.com",
+            "PHOTOGRAPHER-NOTE:kept",
+            "END:VCARD"
+          ],
+          "\r\n"
+        )
+
+      assert CardDAV.drop_binary_properties(card) ==
+               Enum.join(
+                 [
+                   "BEGIN:VCARD",
+                   "FN:Grace Hopper",
+                   "EMAIL:grace@example.com",
+                   "PHOTOGRAPHER-NOTE:kept",
+                   "END:VCARD"
+                 ],
+                 "\r\n"
+               )
+    end
+  end
+
   describe "search/3" do
     test "returns one entry per address of the cards matching the term" do
       CardDAVStub.stub("ada:secret", @books)

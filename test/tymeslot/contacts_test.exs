@@ -49,6 +49,14 @@ defmodule Tymeslot.ContactsTest do
     )
   end
 
+  defp flush_requests do
+    receive do
+      {:carddav_request, _method, _path, _body} -> flush_requests()
+    after
+      0 -> :ok
+    end
+  end
+
   test "finds contacts by name or address, best first, one entry per address", %{user: user} do
     connection(user)
     CardDAVStub.stub("ada:secret", @books)
@@ -93,9 +101,86 @@ defmodule Tymeslot.ContactsTest do
 
     assert [%{email: "ada@example.com"} | _rest] = Contacts.search(user.id, "ada")
     assert_received {:carddav_request, "REPORT", "/addressbooks/user/global/", _body}
+    flush_requests()
 
     assert [%{email: "ada@example.com"} | _rest] = Contacts.search(user.id, "ada")
     refute_received {:carddav_request, "REPORT", "/addressbooks/user/global/", _body}
+  end
+
+  test "finds a contact by their given name where the server matches family names only", %{
+    user: user
+  } do
+    connection(user)
+    CardDAVStub.stub("ada:secret", @books, family_name_only: true)
+
+    assert Contacts.search(user.id, "grace") == [
+             %{name: "Grace Hopper", email: "grace@example.com"}
+           ]
+  end
+
+  test "lists each address book once and answers the next searches from memory", %{
+    user: user
+  } do
+    connection(user)
+    CardDAVStub.stub("ada:secret", @books)
+
+    assert [%{name: "Grace Hopper"}] = Contacts.search(user.id, "grace")
+    assert_received {:carddav_request, "REPORT", "/addressbooks/user/contacts/", body}
+    assert body =~ "<card:filter/>"
+    flush_requests()
+
+    assert [%{name: "Ada Lovelace"} | _rest] = Contacts.search(user.id, "ada")
+    refute_received {:carddav_request, "REPORT", _path, _body}
+  end
+
+  test "lists the address books again once the connection is forgotten", %{user: user} do
+    integration = connection(user)
+    CardDAVStub.stub("ada:secret", @books)
+
+    assert [_grace] = Contacts.search(user.id, "grace")
+    assert_received {:carddav_request, "REPORT", "/addressbooks/user/contacts/", _body}
+
+    Contacts.forget(integration.id)
+
+    assert [_grace] = Contacts.search(user.id, "grace")
+    assert_received {:carddav_request, "REPORT", "/addressbooks/user/contacts/", _body}
+  end
+
+  test "searches an address book that cannot be listed on the server instead", %{user: user} do
+    connection(user)
+
+    CardDAVStub.stub("ada:secret", %{
+      "/addressbooks/user/contacts/" => {:search_only, [{"Grace Hopper", ["grace@example.com"]}]}
+    })
+
+    assert Contacts.search(user.id, "hop") == [
+             %{name: "Grace Hopper", email: "grace@example.com"}
+           ]
+
+    assert Contacts.search(user.id, "grace") == [
+             %{name: "Grace Hopper", email: "grace@example.com"}
+           ]
+  end
+
+  test "finds the address books of a Nextcloud connection stored with the bare server address",
+       %{user: user} do
+    connection(user, base_url: "https://dav.example.com")
+
+    CardDAVStub.stub(
+      "ada:secret",
+      %{
+        "/remote.php/dav/addressbooks/users/ada/contacts/" => [
+          {"Grace Hopper", ["grace@example.com"]}
+        ]
+      },
+      dav_root: "/remote.php/dav",
+      principal: "/remote.php/dav/principals/users/ada/",
+      home: "/remote.php/dav/addressbooks/users/ada/"
+    )
+
+    assert Contacts.search(user.id, "grace") == [
+             %{name: "Grace Hopper", email: "grace@example.com"}
+           ]
   end
 
   test "only the owner's connections are searched", %{user: user} do
