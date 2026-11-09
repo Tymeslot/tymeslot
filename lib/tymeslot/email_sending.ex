@@ -9,6 +9,8 @@ defmodule Tymeslot.EmailSending do
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
+  require Logger
+
   alias Ecto.Changeset
   alias Swoosh.Email
   alias Tymeslot.Auth
@@ -17,6 +19,7 @@ defmodule Tymeslot.EmailSending do
 
   alias Tymeslot.EmailSending.{
     Connections,
+    DeliveryStatus,
     Sender,
     Settings,
     SettingsQueries,
@@ -30,6 +33,7 @@ defmodule Tymeslot.EmailSending do
   @type result :: {:ok, Settings.t()} | {:error, term()}
   @max_id 9_223_372_036_854_775_807
   @max_revision 2_147_483_646
+  @public_form_fields [:host, :port, :security, :from_address, :from_name]
 
   @doc "Whether the operator enabled the per-user SMTP feature."
   @spec enabled?() :: boolean()
@@ -136,14 +140,20 @@ defmodule Tymeslot.EmailSending do
     end
   end
 
-  @doc "Validates editable settings for the owner without contacting an SMTP server."
+  @doc """
+  Validates editable settings for the owner without contacting an SMTP server.
+
+  The returned changeset preserves public form values and validation errors,
+  but removes plaintext and encrypted credentials from its data, changes and
+  parameters. It is a presentation value, never a persistence changeset.
+  """
   @spec change_settings(UserSchema.t(), map()) :: {:ok, Changeset.t()} | {:error, term()}
   def change_settings(user, attrs) when is_map(attrs) do
     with {:ok, user_id} <- owner_id(user) do
       settings =
         SettingsQueries.get_for_user(user_id) || %UserSmtpSettingsSchema{user_id: user_id}
 
-      {:ok, UserSmtpSettingsSchema.changeset(settings, attrs)}
+      {:ok, settings |> UserSmtpSettingsSchema.changeset(attrs) |> redact_form()}
     end
   end
 
@@ -166,18 +176,17 @@ defmodule Tymeslot.EmailSending do
   def test_and_save_settings(user, attrs, expected_version) when is_map(attrs) do
     with :ok <- require_enabled(),
          {:ok, user_id} <- verified_owner_id(user),
+         {:ok, user} <- current_verified_owner(user_id),
          :ok <- valid_version(expected_version),
          {:ok, settings} <- load_revision(user_id, expected_version),
          changeset = UserSmtpSettingsSchema.changeset(settings, attrs),
          {:ok, candidate} <- Changeset.apply_action(changeset, :validate),
-         {:ok, transport} <- transport_credentials(candidate),
-         :ok <- charge_test(user_id),
-         {:ok, _receipt} <-
-           Connections.with_owner(user_id, fn ->
-             Transport.deliver(test_email(user, candidate), transport)
-           end),
+         {:ok, _receipt} <- test_candidate(user, candidate),
          {:ok, saved} <- persist_tested(settings, changeset) do
       {:ok, Settings.from_schema(saved)}
+    else
+      {:error, %Changeset{} = invalid} -> {:error, redact_form(invalid)}
+      error -> error
     end
   end
 
@@ -188,12 +197,16 @@ defmodule Tymeslot.EmailSending do
   def enable_settings(user, expected_version) do
     with :ok <- require_enabled(),
          {:ok, user_id} <- verified_owner_id(user),
+         {:ok, _current_user} <- current_verified_owner(user_id),
          :ok <- valid_version(expected_version),
          {:ok, settings} <- load_existing_revision(user_id, expected_version),
          :ok <- tested?(settings),
          {:ok, _credentials} <- transport_credentials(settings),
          {:ok, saved} <- settings |> Changeset.change(enabled: true) |> update_lifecycle() do
       {:ok, Settings.from_schema(saved)}
+    else
+      {:error, %Changeset{} = invalid} -> {:error, redact_form(invalid)}
+      error -> error
     end
   end
 
@@ -205,6 +218,9 @@ defmodule Tymeslot.EmailSending do
          {:ok, settings} <- load_existing_revision(user_id, expected_version),
          {:ok, saved} <- settings |> Changeset.change(enabled: false) |> update_lifecycle() do
       {:ok, Settings.from_schema(saved)}
+    else
+      {:error, %Changeset{} = invalid} -> {:error, redact_form(invalid)}
+      error -> error
     end
   end
 
@@ -216,6 +232,40 @@ defmodule Tymeslot.EmailSending do
       delete_version(user_id, expected_version)
     end
   end
+
+  @doc """
+  Best-effort account status for an exact selected sending revision.
+
+  Call with the sanitized transport result before applying ambiguous-timeout
+  policy. Status reporting never changes the delivery result, increments the
+  configuration revision, or exposes an exception/provider reply. Missing,
+  disabled, foreign and edited configurations cannot be updated by old sends.
+  """
+  @spec record_delivery_outcome(Sender.t(), term()) :: :ok
+  def record_delivery_outcome(
+        %Sender{kind: :user_smtp, owner_id: owner_id, settings_id: id, revision: revision} =
+          sender,
+        result
+      )
+      when is_integer(owner_id) and owner_id > 0 and owner_id <= @max_id and
+             is_integer(id) and id > 0 and id <= @max_id and
+             is_integer(revision) and revision > 0 and revision <= @max_revision do
+    case DeliveryStatus.outcome(result) do
+      :healthy -> SettingsQueries.clear_failure(sender)
+      {:failure, code} -> SettingsQueries.record_failure(sender, code, Clock.utc_now())
+      :ignore -> :ok
+    end
+  rescue
+    _error ->
+      Logger.warning("User SMTP delivery status unavailable")
+      :ok
+  catch
+    _kind, _reason ->
+      Logger.warning("User SMTP delivery status terminated")
+      :ok
+  end
+
+  def record_delivery_outcome(_sender, _result), do: :ok
 
   @impl Tymeslot.Security.EncryptedStorage
   @doc "The SMTP ciphertext columns included in key rotation and key reports."
@@ -235,6 +285,18 @@ defmodule Tymeslot.EmailSending do
        do: owner_id(user)
 
   defp verified_owner_id(_user), do: {:error, :unverified_user}
+
+  # A LiveView may outlive an account email/verification change in another tab.
+  # Resolve the test recipient from the current account, never the stale socket.
+  defp current_verified_owner(user_id) do
+    with {:ok, current} <- Auth.get_user(user_id),
+         {:ok, ^user_id} <- verified_owner_id(current) do
+      {:ok, current}
+    else
+      {:error, :not_found} -> {:error, :invalid_user}
+      error -> error
+    end
+  end
 
   defp require_enabled do
     if enabled?(), do: :ok, else: {:error, :feature_disabled}
@@ -275,6 +337,20 @@ defmodule Tymeslot.EmailSending do
   defp load_existing_revision(_user_id, :new), do: {:error, :not_found}
   defp load_existing_revision(user_id, version), do: load_revision(user_id, version)
 
+  # Resolve credentials before charging the test budget, then reserve capacity
+  # before opening a socket. The user is the fresh verified account, so only
+  # its current email can be selected as the test recipient.
+  @spec test_candidate(UserSchema.t(), UserSmtpSettingsSchema.t()) ::
+          {:ok, term()} | {:error, term()}
+  defp test_candidate(%UserSchema{id: user_id} = user, %UserSmtpSettingsSchema{} = candidate) do
+    with {:ok, transport} <- transport_credentials(candidate),
+         :ok <- charge_test(user_id) do
+      Connections.with_owner(user_id, fn ->
+        Transport.deliver(test_email(user, candidate), transport)
+      end)
+    end
+  end
+
   defp transport_credentials(candidate) do
     with {:ok, username} <- credential(candidate.username, candidate.username_encrypted),
          {:ok, password} <- credential(candidate.password, candidate.password_encrypted) do
@@ -314,10 +390,12 @@ defmodule Tymeslot.EmailSending do
       |> UserSmtpSettingsSchema.encrypt_credentials()
       |> Changeset.change(
         tested_revision: revision,
-        tested_at: Clock.utc_now(),
-        last_error: nil,
-        last_failed_at: nil
+        tested_at: Clock.utc_now()
       )
+      # A booking send can report failure while this network test is running.
+      # Force both clears even when they were nil in the pre-test snapshot.
+      |> Changeset.force_change(:last_error, nil)
+      |> Changeset.force_change(:last_failed_at, nil)
 
     if is_nil(settings.id),
       do: SettingsQueries.insert(changeset),
@@ -343,5 +421,27 @@ defmodule Tymeslot.EmailSending do
     else
       SettingsQueries.update(changeset)
     end
+  end
+
+  # Validation must run against the real row so blank credentials retain their
+  # existing meaning. Only the outward presentation copy loses secret fields.
+  defp redact_form(%Changeset{} = changeset) do
+    public_keys = Enum.map(@public_form_fields, &Atom.to_string/1)
+
+    data = %{
+      changeset.data
+      | username: nil,
+        password: nil,
+        username_encrypted: nil,
+        password_encrypted: nil,
+        last_error: DeliveryStatus.sanitize(changeset.data.last_error)
+    }
+
+    %{
+      changeset
+      | data: data,
+        changes: Map.take(changeset.changes, @public_form_fields),
+        params: if(changeset.params, do: Map.take(changeset.params, public_keys))
+    }
   end
 end

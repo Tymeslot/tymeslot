@@ -7,6 +7,8 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   require Logger
 
   alias Tymeslot.Agenda
+  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.EmailSending
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Video
@@ -142,8 +144,8 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   For the `:overview` and `:calendar` actions, builds the live agenda
   (`Agenda.Day`) for the user in their timezone — the merged Today/Tomorrow
   view of bookings and synced calendar events. The calendar uses it for the
-  "Up next" strip above the grid. Other actions need no extra data and return
-  an empty map.
+  "Up next" strip above the grid. The settings action loads only the signed-in
+  owner's redacted SMTP view when enabled. Other actions return an empty map.
 
   ## Examples
 
@@ -157,6 +159,19 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   def get_dashboard_data_for_action(%{email: email} = user, timezone, action)
       when is_binary(email) and action in [:overview, :calendar] do
     %{agenda: Agenda.day_agenda(user, timezone)}
+  end
+
+  def get_dashboard_data_for_action(%UserSchema{id: id} = user, _timezone, :settings)
+      when is_integer(id) and id > 0 do
+    if EmailSending.enabled?() do
+      case EmailSending.get_settings(user) do
+        {:ok, settings} -> %{smtp_settings: settings, smtp_settings_loaded: true}
+        {:error, :not_found} -> %{smtp_settings: nil, smtp_settings_loaded: true}
+        {:error, _invalid_owner} -> %{}
+      end
+    else
+      %{}
+    end
   end
 
   def get_dashboard_data_for_action(_user, _timezone, _action), do: %{}

@@ -1,8 +1,8 @@
 # Per user SMTP
 
-Phases 1 and 2 provide an internal domain API and secure SMTP delivery for one
-sending identity per user, including booking notifications. Dashboard controls
-follow in phase 3 of the [extension plan](plans/per-user-smtp.md).
+Each user can configure one secure SMTP identity for booking notifications
+under dashboard **Profile > Email sending**. The
+[extension plan](plans/per-user-smtp.md) describes later scheduling coverage.
 
 ## Deployment opt in
 
@@ -15,7 +15,8 @@ Compose. The provided Compose configurations forward `.env` with `env_file`;
 the Docker and Railway images also default the flag to `false`.
 
 The flag guards testing, activation, booking routing and the transport boundary.
-Enable it for controlled internal use after configuring tested identities.
+Enable it to expose the dashboard controls and route booking email through
+users' tested, enabled identities.
 The platform mailer and account recovery mail retain their deployment settings.
 
 ## Message coverage
@@ -57,8 +58,8 @@ encrypted under it.
 The configuration accepts a public SMTP hostname, port 465 with implicit TLS
 or port 587 with required STARTTLS, credentials, a From address, and a From
 display name. Users need an SMTP account that authorizes their chosen From
-address. Password and app-password authentication are supported; OAuth is
-outside this foundation.
+address. Password and app-password authentication are supported; SMTP OAuth
+is not supported.
 
 A blank password during an edit preserves the existing secret. Removing the
 settings deletes the stored credentials. Account deletion cascades to the
@@ -66,6 +67,25 @@ settings record. Credentials must never appear in job arguments, browser
 responses, email metadata, or application logs.
 
 ## Testing and activation
+
+Open **Profile > Email sending**, enter the relay hostname, matching port/TLS
+mode, SMTP username, password or app password, From address and display name.
+Select **Test and save**. Testing runs asynchronously; the page remains
+responsive, and **Use platform sender** can cancel a pending replacement test.
+The username and password are never shown from storage or returned in page
+markup. Leave either credential field blank when editing to preserve it.
+
+A new identity is saved disabled. Review it and select **Enable tested identity**
+to start using it for booking mail. Editing an enabled identity tests its
+replacement before updating the active settings. Failed tests preserve the
+active identity. Untested edits cannot activate the previously saved identity.
+Another tab's edit, activation or deletion invalidates an older form; reload
+and review the current settings before trying again.
+
+**Use platform sender** disables the identity while retaining its encrypted
+settings. **Delete saved identity** requires confirmation and deletes the
+credentials. Disabling or deleting one user's identity never changes another
+user's sender or the deployment's platform mailer.
 
 Test messages go only to the acting user's verified account email. A test
 must succeed before its settings revision can be enabled. Relay acceptance
@@ -133,3 +153,15 @@ handling apply. Each owner's configuration/revision has an independent circuit
 breaker, even when several owners share a relay hostname. Repairing and testing
 a new revision gives it a fresh breaker; the existing worker recovery/snooze
 policy applies to an open circuit. Idle account breakers expire automatically.
+
+The dashboard shows platform, saved-but-disabled, testing, enabled and
+attention-required states. An account failure records a fixed, safe category
+against that exact settings version. Repeated identical failures update at
+most once per five minutes; successful relay acceptance or a successful retest
+clears the recorded failure. This is the last observed outcome, rather than a
+guarantee of inbox delivery or a strict ordering of concurrent SMTP sessions.
+**Refresh status** reloads the saved settings and status; test or discard form
+edits before using it. Raw relay responses and credentials never enter the
+status message, and request logging filters the SMTP form including usernames.
+Status writes have a short deadline and skip a saturated database pool. They
+use a small, bounded budget and never reclassify an SMTP result.

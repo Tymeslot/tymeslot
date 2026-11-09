@@ -156,6 +156,22 @@ Include approval outcomes, reminders, rescheduling, cancellations, group seats, 
 
 ### Phase 3 Release SMTP settings for booking emails
 
+**Status:** Implemented. Dashboard Profile now includes
+feature-gated controls for asynchronous testing/saving, tested-revision
+activation, disablement and confirmed deletion. Public forms remove stored
+and submitted credentials; delivery status uses sanitized, revision-scoped
+outcomes. Copy is translated into every supported locale.
+
+**Validation:** The full suite passed 27,679 checks (29 doctests, 94 properties
+and 27,556 tests), with 420 expected exclusions. Strict Credo, incremental
+Dialyzer, formatting, Gettext freshness, security and migration checks passed.
+Desktop and 320-pixel English/German layouts were visually verified.
+
+The user deferred the external staging-account check. The local acceptance
+flow uses the scripted TLS relay, including dashboard configuration, real
+booking delivery and platform password recovery while custom SMTP is broken.
+Complete a provider-backed staging send before deployment.
+
 **Outcome:** A user can configure, test, enable, repair, disable, and delete their booking-email sender through the dashboard. This is the first public release with usable end-to-end value.
 
 Add an Email sending section within dashboard settings, with host, port, TLS mode, username, write-only password, From address, and display name. Reuse existing form components, Gettext conventions, and domain validation. Perform connection work asynchronously so the LiveView stays responsive; keep the synchronous domain operation independently testable. Fetch settings after authentication using the repository's data-loading conventions.

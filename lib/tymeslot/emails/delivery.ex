@@ -78,17 +78,22 @@ defmodule Tymeslot.Emails.Delivery do
   defp deliver_selected(email, %Sender{kind: :user_smtp} = sender, _opts) do
     with :ok <- check_sender_identity(email, sender) do
       Connections.with_owner(sender.owner_id, fn ->
-        with {:ok, credentials} <- EmailSending.delivery_credentials(sender) do
-          sender
-          |> Breakers.call(
-            fn ->
-              email
-              |> Transport.deliver_classified(credentials)
-              |> user_delivery_result(email)
-            end,
-            classify: &classify_outcome/1
-          )
-          |> delivery_result()
+        case EmailSending.delivery_credentials(sender) do
+          {:ok, credentials} ->
+            sender
+            |> Breakers.call(
+              fn ->
+                result = Transport.deliver_classified(email, credentials)
+                EmailSending.record_delivery_outcome(sender, result)
+                user_delivery_result(result, email)
+              end,
+              classify: &classify_outcome/1
+            )
+            |> delivery_result()
+
+          {:error, _reason} = error ->
+            EmailSending.record_delivery_outcome(sender, error)
+            error
         end
       end)
     end

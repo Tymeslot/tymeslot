@@ -307,7 +307,7 @@ Email configuration is **required for production deployments** to enable:
 
 The optional `USER_SMTP_ENABLED=false` flag controls per-user SMTP for booking
 notifications. It accepts exactly `true` or `false` and is disabled by default.
-Settings currently use an internal API; dashboard controls follow in phase 3.
+Users manage, test and enable their identity under dashboard Profile > Email sending.
 Account/security messages retain the platform sender. See
 [Per user SMTP](docs/USER_SMTP.md) for its security, credential storage, testing,
 and rollback contracts.

@@ -7,8 +7,12 @@ defmodule Tymeslot.EmailSending.SettingsQueries do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Tymeslot.EmailSending.DeliveryStatus
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.EmailSending.UserSmtpSettingsSchema
   alias Tymeslot.Repo
+
+  @status_deadline_ms 250
 
   @doc "Returns the owner's settings, without decrypting credentials."
   @spec get_for_user(pos_integer()) :: UserSmtpSettingsSchema.t() | nil
@@ -47,6 +51,63 @@ defmodule Tymeslot.EmailSending.SettingsQueries do
       {1, _deleted_rows} -> :ok
       {0, _deleted_rows} -> {:error, :stale}
     end
+  end
+
+  @doc """
+  Records a failure only against the selected enabled, tested SMTP revision.
+
+  Repeated identical failures update at most once per five minutes. These
+  operational fields do not change configuration revisions or test evidence,
+  so reporting the first failed copy cannot invalidate its remaining copies.
+  """
+  @spec record_failure(Sender.t(), String.t(), DateTime.t()) :: :ok
+  def record_failure(sender, code, now) do
+    code = DeliveryStatus.sanitize(code)
+    cutoff = DateTime.add(now, -5, :minute)
+
+    sender
+    |> current_sender_query()
+    |> where(
+      [s],
+      is_nil(s.last_error) or s.last_error != ^code or is_nil(s.last_failed_at) or
+        s.last_failed_at <= ^cutoff
+    )
+    |> Repo.update_all([set: [last_error: code, last_failed_at: now]], status_options())
+
+    :ok
+  end
+
+  @doc "Clears a recorded account failure after actual relay acceptance, without revision changes."
+  @spec clear_failure(Sender.t()) :: :ok
+  def clear_failure(sender) do
+    sender
+    |> current_sender_query()
+    |> where([s], not is_nil(s.last_error))
+    |> Repo.update_all([set: [last_error: nil, last_failed_at: nil]], status_options())
+
+    :ok
+  end
+
+  defp current_sender_query(sender) do
+    from(s in UserSmtpSettingsSchema,
+      where:
+        s.user_id == ^sender.owner_id and s.id == ^sender.settings_id and
+          s.revision == ^sender.revision and s.enabled and s.tested_revision == s.revision and
+          not is_nil(s.tested_at) and s.from_name == ^sender.from_name and
+          s.from_address == ^sender.from_address
+    )
+  end
+
+  # Status follows SMTP acceptance but precedes the recipient's durable claim.
+  # Never queue for a pool connection or consume its normal 15-second timeout:
+  # 42 copies at this bound add at most 10.5 seconds, below the worker's default
+  # 20-second headroom. Revisit this budget if recipient/send limits change.
+  defp status_options do
+    [
+      queue: false,
+      timeout: @status_deadline_ms,
+      deadline: System.monotonic_time(:millisecond) + @status_deadline_ms
+    ]
   end
 
   defp stale_result({:error, %Changeset{errors: errors} = invalid}) do

@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   @moduledoc """
   LiveView component for managing user profile settings including timezone,
-  display name, headline and bio, scheduling preferences, and username
-  configuration.
+  display name, headline and bio, scheduling preferences, username and
+  optional booking email sending identity.
 
   This component acts as a container for specialized profile settings forms.
   An overlay can append its own sections through `:profile_section_components`.
@@ -10,11 +10,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.EmailSending
   alias TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal
 
   alias TymeslotWeb.Dashboard.ProfileSettings.{
     AvatarUploadComponent,
     DisplayNameFormComponent,
+    EmailSendingComponent,
     IntroFormComponent,
     LegalLinksFormComponent,
     TimeFormatFormComponent,
@@ -27,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
     {:ok,
      assign(socket,
        saving: false,
+       shared_data: %{},
        section_components: Application.get_env(:tymeslot, :profile_section_components, [])
      )}
   end
@@ -38,6 +41,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :smtp_enabled, EmailSending.enabled?())
+
     ~H"""
     <div>
       <.dashboard_page
@@ -123,6 +128,15 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
             </div>
           </div>
         </.card>
+
+        <.live_component
+          :if={@smtp_enabled && Map.get(@shared_data, :smtp_settings_loaded, false)}
+          module={EmailSendingComponent}
+          id="email-sending-settings"
+          current_user={@current_user}
+          smtp_settings={Map.get(@shared_data, :smtp_settings)}
+          smtp_settings_loaded={true}
+        />
 
         <%!-- Delete Avatar Modal (rendered outside card to avoid z-index stacking issues) --%>
         <.live_component

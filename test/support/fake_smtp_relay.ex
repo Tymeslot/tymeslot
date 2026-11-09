@@ -29,7 +29,9 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
     * `:rcpt_replies` - optional recipient-address/reply map overriding that
       default, for partially successful booking deliveries.
     * `:after_data` - `:silent` takes the whole message and never acknowledges
-      it, like a relay that stalls once delivery is under way (default `:ack`)
+      it, like a relay that stalls once delivery is under way (default `:ack`).
+      `{:await, reference}` reports `{:awaiting_ack, pid, reference}` to the
+      test owner and waits for `{:ack, reference}` before accepting DATA.
     * `:starttls` - certificates from `certificates/1`; advertises STARTTLS
     * `:implicit_tls` - certificates from `certificates/1`; TLS from the first byte
   """
@@ -297,6 +299,17 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
     case Map.get(opts, :after_data, :ack) do
       :silent ->
         conn.mod.recv(conn.socket, 0, @timeout)
+
+      {:await, reference} ->
+        send(owner, {:smtp_relay, {:awaiting_ack, self(), reference}})
+
+        receive do
+          {:ack, ^reference} ->
+            reply(conn, "250 2.0.0 Ok: queued")
+            dialogue(conn, owner, opts)
+        after
+          @timeout -> conn.mod.close(conn.socket)
+        end
 
       :ack ->
         reply(conn, "250 2.0.0 Ok: queued")

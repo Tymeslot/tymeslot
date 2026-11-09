@@ -4,6 +4,7 @@ defmodule Tymeslot.EmailSending.Settings do
   leave the domain through ordinary settings reads.
   """
 
+  alias Tymeslot.EmailSending.DeliveryStatus
   alias Tymeslot.EmailSending.UserSmtpSettingsSchema
 
   @type t :: %__MODULE__{}
@@ -37,7 +38,7 @@ defmodule Tymeslot.EmailSending.Settings do
       revision: settings.revision,
       tested_revision: settings.tested_revision,
       tested_at: settings.tested_at,
-      last_error: settings.last_error,
+      last_error: DeliveryStatus.sanitize(settings.last_error),
       last_failed_at: settings.last_failed_at,
       enabled: settings.enabled,
       credentials_configured:

@@ -76,7 +76,13 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
 
   # The settings form suggests the browser's zone to a host who has none.
   def props_for_action(%{live_action: :settings} = assigns) do
-    %{profile: Profiles.prefill_timezone(assigns.profile, assigns[:detected_timezone])}
+    %{
+      profile: Profiles.prefill_timezone(assigns.profile, assigns[:detected_timezone]),
+      shared_data: %{
+        smtp_settings: assigns[:smtp_settings],
+        smtp_settings_loaded: assigns[:smtp_settings_loaded] == true
+      }
+    }
   end
 
   # The availability page shows the hours and time off on the clock the
