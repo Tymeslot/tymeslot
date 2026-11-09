@@ -27,7 +27,7 @@ defmodule Tymeslot.ContactsTest do
       {"Grace Hopper", ["grace@example.com"]},
       {"Ada Lovelace", ["ada@example.com"]},
       {"Adrian Mole", ["mole@example.com"]},
-      {"Lambertz, Lonie", ["lola.manheim@example.com"]},
+      {"Miller, Claudia", ["claudia.m@example.com"]},
       {"No Address", []},
       {"Broken", ["not an address"]}
     ],
@@ -81,8 +81,8 @@ defmodule Tymeslot.ContactsTest do
       assert Enum.sort(emails) == [
                "ada@example.com",
                "ada@example.com",
+               "claudia.m@example.com",
                "grace@example.com",
-               "lola.manheim@example.com",
                "mole@example.com"
              ]
     end
@@ -183,8 +183,8 @@ defmodule Tymeslot.ContactsTest do
                %{name: "Adrian Mole", email: "mole@example.com"}
              ]
 
-      assert Contacts.search(user.id, "lonie") == [
-               %{name: "Lambertz, Lonie", email: "lola.manheim@example.com"}
+      assert Contacts.search(user.id, "claudia") == [
+               %{name: "Miller, Claudia", email: "claudia.m@example.com"}
              ]
 
       assert [%{name: "Grace Hopper"}] = Contacts.search(user.id, "OPPER")

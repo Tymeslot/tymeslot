@@ -131,8 +131,8 @@ defmodule Tymeslot.Contacts do
   defp matches?(contact, needle),
     do: Enum.any?(fields(contact), &String.contains?(&1, needle))
 
-  # A field, or a word of it, starting with the term: "lonie" leads for
-  # "Lambertz, Lonie" as it does for "Lonie Lambertz".
+  # A field, or a word of it, starting with the term: "claudia" leads for
+  # "Miller, Claudia" as it does for "Claudia Miller".
   defp leading?(contact, needle) do
     contact
     |> fields()
