@@ -23,10 +23,29 @@ defmodule Tymeslot.Contacts.CardDAVTest do
 
   describe "address_books/1" do
     test "follows the principal to its address book home and lists the books in it" do
-      CardDAVStub.stub("ada:secret", @books)
+      CardDAVStub.stub("ada:secret", @books,
+        tokens: %{"/addressbooks/user/contacts/" => "sync-7"}
+      )
 
-      assert {:ok, hrefs} = CardDAV.address_books(@client)
-      assert Enum.sort(hrefs) == ["/addressbooks/user/contacts/", "/addressbooks/user/work/"]
+      assert {:ok, books} = CardDAV.address_books(@client)
+
+      assert Enum.sort_by(books, & &1.href) == [
+               %{href: "/addressbooks/user/contacts/", token: "sync-7"},
+               %{href: "/addressbooks/user/work/", token: nil}
+             ]
+    end
+
+    test "reads CalendarServer's getctag where a book has no sync token" do
+      xml = """
+      <multistatus xmlns="DAV:" xmlns:cs="http://calendarserver.org/ns/"><response>
+        <href>/book/</href><propstat><prop>
+          <resourcetype><collection/><C:addressbook xmlns:C="urn:ietf:params:xml:ns:carddav"/></resourcetype>
+          <cs:getctag>ctag-3</cs:getctag>
+        </prop></propstat>
+      </response></multistatus>
+      """
+
+      assert {:ok, [%{href: "/book/", token: "ctag-3"}]} = CardDAV.parse_address_books(xml)
     end
 
     test "says so when the server keeps no address books" do
@@ -59,7 +78,7 @@ defmodule Tymeslot.Contacts.CardDAVTest do
     end
 
     test "passes a refused listing through" do
-      CardDAVStub.stub("ada:secret", %{"/addressbooks/user/contacts/" => {:search_only, []}})
+      CardDAVStub.stub("ada:secret", %{"/addressbooks/user/contacts/" => :refuse})
 
       assert {:error, :server_error} = CardDAV.contacts(@client, "/addressbooks/user/contacts/")
     end
@@ -94,31 +113,6 @@ defmodule Tymeslot.Contacts.CardDAVTest do
                  ],
                  "\r\n"
                )
-    end
-  end
-
-  describe "search/3" do
-    test "returns one entry per address of the cards matching the term" do
-      CardDAVStub.stub("ada:secret", @books)
-
-      assert {:ok, contacts} = CardDAV.search(@client, "/addressbooks/user/contacts/", "TUR")
-
-      assert contacts == [
-               %{name: "Alan Turing", email: "alan@example.com"},
-               %{name: "Alan Turing", email: "turing@work.example"}
-             ]
-    end
-
-    test "asks for names and addresses only, with the term escaped" do
-      CardDAVStub.stub("ada:secret", @books)
-
-      assert {:ok, []} = CardDAV.search(@client, "/addressbooks/user/contacts/", "<a&b>")
-
-      assert_received {:carddav_request, "REPORT", "/addressbooks/user/contacts/", body}
-      assert body =~ ~s(<card:prop name="FN"/>)
-      assert body =~ ~s(<card:prop name="EMAIL"/>)
-      assert body =~ "&lt;a&amp;b&gt;"
-      refute body =~ "<a&b>"
     end
   end
 end

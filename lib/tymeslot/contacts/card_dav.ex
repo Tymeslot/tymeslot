@@ -4,23 +4,25 @@ defmodule Tymeslot.Contacts.CardDAV do
   credentials and the request guards of the CalDAV connection it belongs to
   (`Tymeslot.Integrations.Calendar.CalDAV.Http`).
 
-  Read-only and narrow on purpose: it finds the account's address books,
-  lists the names and addresses in one (`contacts/2`), or asks one for the
-  cards whose name or email address contains a search term (`search/3`).
-  Only names and addresses are returned. Nothing is written to the server.
+  Read-only and narrow on purpose: it finds the account's address books
+  (`address_books/1`) and lists the names and addresses in one
+  (`contacts/2`). Nothing is written to the server.
 
-  Listing a whole book is what suggestions are built on, because servers
-  differ in how far they honour a search: SOGo, for one, matches a name
-  filter against the family name only, so a search for a contact's given
-  name finds nothing there. Searching on the server is the fallback for a
-  book too large to list, or one that refuses to be listed.
+  A book is listed whole and searched in Tymeslot (`Tymeslot.Contacts`)
+  rather than searched on the server, because servers differ in how far
+  they honour a search: SOGo, for one, matches a name filter against the
+  family name only, so a contact could not be found by their given name
+  there. Listing every card is the one request all of them answer alike.
 
   Discovery follows the account's principal (RFC 6352 §7.1.1), found as
   calendar discovery finds it: `current-user-principal`, then the
   principal's `addressbook-home-set`, then the address book collections
-  under it. Every href the server hands back is resolved against the
-  connection's base URL (`UrlBuilder.build_calendar_url/2`), so requests stay
-  on the host the account owner connected.
+  under it, each with the token its contents are versioned by
+  (`DAV:sync-token`, RFC 6578, or CalendarServer's `getctag`), so a book
+  that has not changed need not be listed again. Every href the server
+  hands back is resolved against the connection's base URL
+  (`UrlBuilder.build_calendar_url/2`), so requests stay on the host the
+  account owner connected.
   """
 
   import SweetXml, only: [sigil_x: 2, transform_by: 2]
@@ -30,7 +32,7 @@ defmodule Tymeslot.Contacts.CardDAV do
   alias Tymeslot.Contacts.VCard
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.{Discovery, Http, UrlBuilder}
-  alias Tymeslot.Integrations.Calendar.Utils.{SafeXml, XmlEscape}
+  alias Tymeslot.Integrations.Calendar.Utils.SafeXml
 
   @type client :: %{
           required(:base_url) => String.t(),
@@ -41,15 +43,17 @@ defmodule Tymeslot.Contacts.CardDAV do
 
   @type contact :: %{name: String.t() | nil, email: String.t()}
 
-  # Cards asked for per address book. A suggestion list shows a handful, so a
-  # small page keeps the answer fast and the response small.
-  @results_per_book 20
-  @max_response_bytes 2_000_000
-  @timeout 5_000
+  @typedoc """
+  An address book: its href, and the token its contents are versioned by,
+  `nil` when the server keeps none.
+  """
+  @type address_book :: %{href: String.t(), token: String.t() | nil}
+
+  @timeout 10_000
 
   # A listing carries every card, and some servers send each one whole
-  # whatever properties are asked for, photos included, so it is allowed
-  # more room than a search. A book beyond this is searched on the server.
+  # whatever properties are asked for, photos included. A book beyond this
+  # is not synced.
   @max_listing_bytes 10_000_000
 
   # Properties that carry binary data, inline and base64-encoded: by far the
@@ -66,16 +70,16 @@ defmodule Tymeslot.Contacts.CardDAV do
 
   @collections_body """
   <?xml version="1.0" encoding="utf-8"?>
-  <d:propfind xmlns:d="DAV:">
-    <d:prop><d:resourcetype/><d:displayname/></d:prop>
+  <d:propfind xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/">
+    <d:prop><d:resourcetype/><d:sync-token/><cs:getctag/></d:prop>
   </d:propfind>
   """
 
   @doc """
-  The hrefs of the account's address books, or an error when the server
-  has none to offer (no `addressbook-home-set`) or cannot be reached.
+  The account's address books, or an error when the server has none to
+  offer (no `addressbook-home-set`) or cannot be reached.
   """
-  @spec address_books(client()) :: {:ok, [String.t()]} | {:error, term()}
+  @spec address_books(client()) :: {:ok, [address_book()]} | {:error, term()}
   def address_books(client) do
     with {:ok, principal_href} <- Discovery.current_user_principal(client),
          {:ok, %Req.Response{body: home_xml}} <-
@@ -105,54 +109,6 @@ defmodule Tymeslot.Contacts.CardDAV do
       {:ok, %Req.Response{body: body}} -> body |> drop_binary_properties() |> parse_cards()
       {:error, _reason} = error -> error
     end
-  end
-
-  @doc """
-  The contacts in the address book at `href` whose name or email address
-  contains `term`, ignoring case, one entry per address, as far as the
-  server's own matching goes (see the module doc).
-  """
-  @spec search(client(), String.t(), String.t()) :: {:ok, [contact()]} | {:error, term()}
-  def search(client, href, term) do
-    url = UrlBuilder.build_calendar_url(client.base_url, href)
-
-    case Http.report(url, client.username, client.password, query_body(term),
-           depth: "1",
-           timeout: @timeout,
-           max_response_bytes: @max_response_bytes
-         ) do
-      {:ok, %Req.Response{body: body}} -> parse_cards(body)
-      {:error, _reason} = error -> error
-    end
-  end
-
-  @doc false
-  # The addressbook-query REPORT (RFC 6352 §8.6): every card whose FN or one
-  # of its EMAILs contains the term, with only those two properties back.
-  @spec query_body(String.t()) :: String.t()
-  def query_body(term) do
-    match = XmlEscape.escape(term)
-
-    """
-    <?xml version="1.0" encoding="utf-8"?>
-    <card:addressbook-query xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
-      <d:prop>
-        <card:address-data>
-          <card:prop name="FN"/>
-          <card:prop name="EMAIL"/>
-        </card:address-data>
-      </d:prop>
-      <card:filter test="anyof">
-        <card:prop-filter name="FN">
-          <card:text-match collation="i;unicode-casemap" match-type="contains">#{match}</card:text-match>
-        </card:prop-filter>
-        <card:prop-filter name="EMAIL">
-          <card:text-match collation="i;unicode-casemap" match-type="contains">#{match}</card:text-match>
-        </card:prop-filter>
-      </card:filter>
-      <card:limit><card:nresults>#{@results_per_book}</card:nresults></card:limit>
-    </card:addressbook-query>
-    """
   end
 
   @doc false
@@ -213,14 +169,16 @@ defmodule Tymeslot.Contacts.CardDAV do
   end
 
   @doc false
-  @spec parse_address_books(String.t()) :: {:ok, [String.t()]} | {:error, term()}
+  @spec parse_address_books(String.t()) :: {:ok, [address_book()]} | {:error, term()}
   def parse_address_books(xml) do
     with {:ok, doc} <- SafeXml.parse(xml) do
-      hrefs =
+      books =
         doc
         |> SafeXml.xpath(
           ~x"//*[local-name()='response']"l,
           href: ~x"./*[local-name()='href']/text()"s,
+          sync_token: ~x".//*[local-name()='sync-token']/text()"s,
+          ctag: ~x".//*[local-name()='getctag']/text()"s,
           address_book?:
             transform_by(
               ~x".//*[local-name()='resourcetype']/*[local-name()='addressbook']",
@@ -228,11 +186,15 @@ defmodule Tymeslot.Contacts.CardDAV do
             )
         )
         |> Enum.filter(&(&1.address_book? and &1.href != ""))
-        |> Enum.map(& &1.href)
+        |> Enum.map(&%{href: &1.href, token: token(&1)})
 
-      if hrefs == [], do: {:error, :no_address_books}, else: {:ok, hrefs}
+      if books == [], do: {:error, :no_address_books}, else: {:ok, books}
     end
   end
+
+  defp token(%{sync_token: token}) when token != "", do: token
+  defp token(%{ctag: ctag}) when ctag != "", do: ctag
+  defp token(_book), do: nil
 
   @doc false
   @spec parse_cards(String.t()) :: {:ok, [contact()]} | {:error, term()}

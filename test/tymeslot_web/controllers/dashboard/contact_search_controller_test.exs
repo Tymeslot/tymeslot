@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Dashboard.ContactSearchControllerTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Contacts.Sync
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.CardDAVStub
 
@@ -18,18 +20,22 @@ defmodule TymeslotWeb.Dashboard.ContactSearchControllerTest do
   test "answers the signed-in host with their matching contacts", %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
 
-    insert(:calendar_integration,
-      user: user,
-      provider: "nextcloud",
-      base_url: "https://dav.example.com/remote.php/dav",
-      username_encrypted: Encryption.encrypt("ada"),
-      password_encrypted: Encryption.encrypt("secret"),
-      use_for_contacts: true
-    )
+    integration =
+      insert(:calendar_integration,
+        user: user,
+        provider: "nextcloud",
+        base_url: "https://dav.example.com/remote.php/dav",
+        username_encrypted: Encryption.encrypt("ada"),
+        password_encrypted: Encryption.encrypt("secret"),
+        use_for_contacts: true
+      )
 
     CardDAVStub.stub("ada:secret", %{
       "/addressbooks/user/contacts/" => [{"Grace Hopper", ["grace@example.com"]}]
     })
+
+    {:ok, integration} = CalendarIntegrationQueries.get(integration.id)
+    {:ok, _outcome} = Sync.run(integration)
 
     conn =
       conn

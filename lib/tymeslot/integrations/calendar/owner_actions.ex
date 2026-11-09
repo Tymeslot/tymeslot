@@ -142,8 +142,11 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
   def set_use_for_contacts(user_id, integration_id, enabled?) when is_boolean(enabled?) do
     with_owned(user_id, integration_id, :write, fn integration ->
       if Contacts.supported_provider?(integration.provider) do
-        Contacts.forget(integration.id)
-        CalendarIntegrationQueries.update(integration, %{use_for_contacts: enabled?})
+        with {:ok, updated} <-
+               CalendarIntegrationQueries.update(integration, %{use_for_contacts: enabled?}) do
+          if enabled?, do: Contacts.sync_soon(updated.id), else: Contacts.drop(updated.id)
+          {:ok, updated}
+        end
       else
         {:error, :contacts_not_supported}
       end

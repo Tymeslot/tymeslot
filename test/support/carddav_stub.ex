@@ -1,23 +1,21 @@
 defmodule Tymeslot.Test.CardDAVStub do
   @moduledoc """
   Plays a CardDAV server behind `Req.Test` (`:tymeslot_http`): the principal,
-  its `addressbook-home-set`, the address books under it and the
-  `addressbook-query` REPORT, answered to requests carrying the one Basic
-  credential it accepts and refused with 401 to any other.
+  its `addressbook-home-set`, the address books under it with their sync
+  tokens, and the `addressbook-query` REPORT listing every card of a book,
+  answered to requests carrying the one Basic credential it accepts and
+  refused with 401 to any other. Each card carries a folded `PHOTO`, as SOGo
+  sends whole cards whatever is asked for.
 
-  The REPORT answers with every card of the address book it is sent to
-  whose name or address contains the request's text-match, ignoring case,
-  as a server would, or with every card for an empty filter (a listing);
-  each card carries a folded `PHOTO`, as SOGo sends whole cards. Each
-  request is also sent to the test process as
+  Each request is also sent to the test process as
   `{:carddav_request, method, path, body}` so a test can see what was asked.
 
   Options:
 
     * `:principal`, `:home` — the hrefs of the principal and its address
       book home.
-    * `:family_name_only` — match a search's text against the last word of
-      a card's name and its addresses only, as SOGo matches `FN`.
+    * `:tokens` — a map from a book's href to the sync token it reports;
+      a book without one reports none.
     * `:dav_root` — answer 405 to any request outside this path, as a
       Nextcloud server does outside `/remote.php/dav`.
   """
@@ -30,23 +28,16 @@ defmodule Tymeslot.Test.CardDAVStub do
   @doc """
   Stubs `:tymeslot_http` with a server accepting `accept_basic`
   (`"user:password"`) whose address books are `books`, a map from href to
-  the cards in it, to `:refuse` for one that is listed but answers every
-  search with a server error (as SOGo's global address lists do), or to
-  `{:search_only, cards}` for one that refuses to be listed whole but
-  answers searches.
+  the cards in it, or to `:refuse` for one that is listed but answers a
+  REPORT with a server error (as SOGo's global address lists do).
   """
-  @spec stub(
-          String.t(),
-          %{String.t() => [card()] | :refuse | {:search_only, [card()]}},
-          keyword()
-        ) ::
-          :ok
+  @spec stub(String.t(), %{String.t() => [card()] | :refuse}, keyword()) :: :ok
   def stub(accept_basic, books, opts \\ []) do
     test = self()
     principal = Keyword.get(opts, :principal, "/principals/user/")
     home = Keyword.get(opts, :home, "/addressbooks/user/")
+    tokens = Keyword.get(opts, :tokens, %{})
     dav_root = Keyword.get(opts, :dav_root, "/")
-    family_name_only = Keyword.get(opts, :family_name_only, false)
 
     ReqTest.stub(:tymeslot_http, fn conn ->
       {:ok, body, conn} = Conn.read_body(conn)
@@ -55,7 +46,7 @@ defmodule Tymeslot.Test.CardDAVStub do
       with true <- String.starts_with?(conn.request_path, dav_root),
            ["Basic " <> encoded] <- Conn.get_req_header(conn, "authorization"),
            {:ok, ^accept_basic} <- Base.decode64(encoded) do
-        respond(conn, body, principal, home, books, family_name_only)
+        respond(conn, body, principal, home, books, tokens)
       else
         false -> Conn.resp(conn, 405, "")
         _no_match -> Conn.resp(conn, 401, "")
@@ -63,10 +54,7 @@ defmodule Tymeslot.Test.CardDAVStub do
     end)
   end
 
-  defp respond(conn, body, principal, home, books, family_name_only) do
-    book = books[conn.request_path]
-    listing? = String.contains?(body, "<card:filter/>")
-
+  defp respond(conn, body, principal, home, books, tokens) do
     cond do
       String.contains?(body, "current-user-principal") ->
         multistatus(conn, """
@@ -82,55 +70,18 @@ defmodule Tymeslot.Test.CardDAVStub do
         </prop><status>HTTP/1.1 200 OK</status></propstat></response>
         """)
 
-      String.contains?(body, "addressbook-query") and book == :refuse ->
+      String.contains?(body, "addressbook-query") and books[conn.request_path] == :refuse ->
         Conn.resp(conn, 500, "")
-
-      String.contains?(body, "addressbook-query") and listing? and match?({:search_only, _}, book) ->
-        Conn.resp(conn, 500, "")
-
-      String.contains?(body, "addressbook-query") and listing? ->
-        multistatus(conn, cards_xml(conn.request_path, book || []))
 
       String.contains?(body, "addressbook-query") ->
-        cards =
-          case book do
-            {:search_only, cards} -> cards
-            cards -> cards || []
-          end
-
-        matches = matching(cards, text_match(body), family_name_only)
-        multistatus(conn, cards_xml(conn.request_path, matches))
+        multistatus(conn, cards_xml(conn.request_path, Map.get(books, conn.request_path, [])))
 
       true ->
-        multistatus(conn, collections_xml(home, Map.keys(books)))
+        multistatus(conn, collections_xml(home, Map.keys(books), tokens))
     end
   end
 
-  defp text_match(body) do
-    case Regex.run(~r/<card:text-match[^>]*>([^<]*)</, body) do
-      [_whole, term] -> term |> unescape() |> String.downcase()
-      nil -> ""
-    end
-  end
-
-  defp unescape(text),
-    do:
-      text
-      |> String.replace("&lt;", "<")
-      |> String.replace("&gt;", ">")
-      |> String.replace("&amp;", "&")
-
-  defp matching(cards, term, family_name_only) do
-    Enum.filter(cards, fn {name, emails} ->
-      name = if family_name_only, do: family_name(name), else: name || ""
-      Enum.any?([name | emails], &String.contains?(String.downcase(&1), term))
-    end)
-  end
-
-  defp family_name(nil), do: ""
-  defp family_name(name), do: name |> String.split() |> List.last("")
-
-  defp collections_xml(home, hrefs) do
+  defp collections_xml(home, hrefs, tokens) do
     home_entry = """
     <response><href>#{home}</href><propstat><prop>
       <resourcetype><collection/></resourcetype>
@@ -139,10 +90,16 @@ defmodule Tymeslot.Test.CardDAVStub do
 
     books =
       Enum.map_join(hrefs, "\n", fn href ->
+        token =
+          case tokens[href] do
+            nil -> ""
+            token -> "<sync-token>#{token}</sync-token>"
+          end
+
         """
         <response><href>#{href}</href><propstat><prop>
-          <displayname>Contacts</displayname>
           <resourcetype><collection/><C:addressbook xmlns:C="urn:ietf:params:xml:ns:carddav"/></resourcetype>
+          #{token}
         </prop><status>HTTP/1.1 200 OK</status></propstat></response>
         """
       end)
