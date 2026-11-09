@@ -305,11 +305,12 @@ Email configuration is **required for production deployments** to enable:
 
 `EMAIL_ADAPTER` picks how mail leaves the container. Every option below is equally supported; the API adapters differ from SMTP mainly in reporting failures usefully and in not needing an outbound SMTP port.
 
-The optional `USER_SMTP_ENABLED=false` flag controls the internal per-user SMTP
-foundation. It accepts exactly `true` or `false` and is disabled by default.
-This foundation does not yet change notification routing or provide a dashboard
-form. See [Per user SMTP foundations](docs/USER_SMTP.md) for its security,
-credential storage, testing, and rollback contracts.
+The optional `USER_SMTP_ENABLED=false` flag controls per-user SMTP for booking
+notifications. It accepts exactly `true` or `false` and is disabled by default.
+Settings currently use an internal API; dashboard controls follow in phase 3.
+Account/security messages retain the platform sender. See
+[Per user SMTP](docs/USER_SMTP.md) for its security, credential storage, testing,
+and rollback contracts.
 
 | `EMAIL_ADAPTER` | Additional variables |
 |---|---|

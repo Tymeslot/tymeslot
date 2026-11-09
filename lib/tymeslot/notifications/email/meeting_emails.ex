@@ -7,6 +7,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
   require Logger
 
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.EmailSending
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
@@ -104,11 +105,13 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
             Reminders.normalize_reminder_unit(Map.get(args, "reminder_unit", "minutes"))
 
           if reminder_already_sent?(meeting, reminder_value, reminder_unit) do
-            Logger.info("Skipping reminder emails - already sent",
+            Logger.info("Primary reminder emails already sent; checking pending guests",
               meeting_id: meeting_id
             )
 
-            :ok
+            # Primary stamps do not settle the guests' copies. This query
+            # also recovers a custom send after settings or feature rollback.
+            remind_guests(meeting, reminder_value, reminder_unit)
           else
             send_reminder_emails(meeting, reminder_value, reminder_unit)
           end
@@ -138,6 +141,11 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
   consistent log line when the meeting no longer exists. `action` names the
   email action for the warning (e.g. "confirmation emails").
 
+  With user SMTP enabled, resolves the organizer's non-secret sending context
+  once for this execution. Recipient overlays and email builders carry that
+  context unchanged, so editing settings between copies cannot change their
+  From identity within one run. The context is virtual and never queued.
+
   Public so the per-seat handlers (`SeatJobs`) and
   `BookingApprovalEmails` share this instead of carrying their own copy — the
   meeting-lookup contract is identical for all of them, only what runs on
@@ -147,7 +155,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
   def with_meeting(meeting_id, action, fun) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        fun.(meeting)
+        with_sender(meeting, fun)
 
       {:error, :not_found} ->
         Logger.warning("Attempted to send email for non-existent meeting",
@@ -156,6 +164,20 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
         )
 
         {:discard, @meeting_gone}
+    end
+  end
+
+  defp with_sender(meeting, fun) do
+    if EmailSending.enabled?() do
+      case EmailSending.resolve_booking_sender(meeting) do
+        {:ok, sender} -> fun.(%{meeting | email_sender: sender})
+        {:error, :owner_not_found} -> {:discard, @meeting_gone}
+        {:error, _reason} = error -> error
+      end
+    else
+      # Preserve the original platform-only payloads for deployments that have
+      # not opted in, including consumers supplying their own EmailService.
+      fun.(meeting)
     end
   end
 
@@ -244,8 +266,6 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
       # stamped on its own, so a retry that finds both participants already
       # stamped still has to invite whoever the previous attempt missed.
       GuestEmails.invite_missed(meeting)
-
-      :ok
     else
       Logger.info("Sending confirmation emails", meeting_id: meeting.id)
 
@@ -313,13 +333,17 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
       # gated on it: a retry whose previous attempt stamped the attendee and
       # then failed part-way through the guests must still reach the rest.
       # Each guest is stamped with `confirmation_sent_at` after a successful
-      # send, so only unsent guests are ever re-attempted. Failures are logged
-      # but never block the organiser/attendee confirmation result.
-      meeting.id
-      |> GuestQueries.list_unsent_for_meeting()
-      |> GuestEmails.send_confirmations(meeting, appointment_details, email_service)
+      # send, so only unsent guests are ever re-attempted. Custom SMTP failures
+      # keep the job retryable after the participants' successes are recorded.
+      guests =
+        meeting.id
+        |> GuestQueries.list_unsent_for_meeting()
+        |> GuestEmails.send_confirmations(meeting, appointment_details, email_service)
 
-      process_email_results(meeting, organizer_result, attendee_result, :confirmation)
+      participants =
+        process_email_results(meeting, organizer_result, attendee_result, :confirmation)
+
+      DeliveryOutcome.combine("confirmation", [meeting_id: meeting.id], [participants, guests])
     end
   end
 
@@ -343,7 +367,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
              reminder_unit
            ) do
         :ok ->
-          remind_group_guests(meeting, reminder_value, reminder_unit)
+          guests = remind_guests(meeting, reminder_value, reminder_unit)
 
           with :ok <-
                  update_email_sent_flags(
@@ -359,7 +383,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
               participant_count: length(participants)
             )
 
-            :ok
+            guests
           end
 
         {:error, reason} ->
@@ -370,7 +394,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
     end
   end
 
-  defp remind_group_guests(meeting, reminder_value, reminder_unit) do
+  defp remind_guests(meeting, reminder_value, reminder_unit) do
     appointment_details =
       AppointmentBuilder.from_meeting(meeting, %{value: reminder_value, unit: reminder_unit})
 
@@ -415,16 +439,20 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
     # guards: a reminder for a meeting that has already started, or whose slot
     # was voided, never reaches a guest either. Each guest is stamped for this
     # specific offset, so a retry after a partial send re-emails only the
-    # guests it has not reached. Failures are logged but never change the
-    # organiser/attendee result.
-    GuestEmails.send_reminders(meeting, appointment_details, reminder_value, reminder_unit)
+    # guests it has not reached. Custom SMTP failures keep only those guests
+    # pending; the primary recipients' successful stamps are still persisted.
+    guests =
+      GuestEmails.send_reminders(meeting, appointment_details, reminder_value, reminder_unit)
 
-    process_email_results(
-      meeting,
-      organizer_result,
-      attendee_result,
-      {:reminder, reminder_value, reminder_unit}
-    )
+    participants =
+      process_email_results(
+        meeting,
+        organizer_result,
+        attendee_result,
+        {:reminder, reminder_value, reminder_unit}
+      )
+
+    DeliveryOutcome.combine("reminder", [meeting_id: meeting.id], [participants, guests])
   end
 
   # The per-recipient sent flags are recorded before the error is inspected,

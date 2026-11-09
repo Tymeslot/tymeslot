@@ -26,6 +26,10 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
 
   `require_auth: true` refuses a relay without AUTH. User-configured SMTP
   must set this option; trusted deployment relays retain the legacy fallback.
+
+  An internal `session_opened: {pid, reference}` option reports when connection,
+  TLS, and authentication have completed. It carries no account data and lets
+  a bounded caller distinguish an opening timeout from a possibly sent message.
   """
 
   use Swoosh.Adapter, required_config: [:relay], required_deps: [gen_smtp: :gen_smtp_client]
@@ -49,6 +53,7 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
     options = SMTP.gen_smtp_config(config)
 
     with {:ok, client} <- open_session(options, config) do
+      notify_session_opened(config)
       message = {Helpers.sender(email), recipients(email), Helpers.body(email, config)}
 
       try do
@@ -62,6 +67,16 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
       after
         :gen_smtp_client.close(client)
       end
+    end
+  end
+
+  defp notify_session_opened(config) do
+    case Keyword.get(config, :session_opened) do
+      {pid, reference} when is_pid(pid) and is_reference(reference) ->
+        send(pid, {reference, :smtp_session_opened})
+
+      _not_requested ->
+        :ok
     end
   end
 

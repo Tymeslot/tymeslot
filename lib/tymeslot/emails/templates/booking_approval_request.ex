@@ -99,7 +99,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
           stage_subtitle: request_sentence(meeting, kind)
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(meeting, :email_sender))
       |> addressed_to_host(meeting)
       |> subject(
         subject_line(variant, kind, meeting, Formatting.format_date_short(host_time, locale))

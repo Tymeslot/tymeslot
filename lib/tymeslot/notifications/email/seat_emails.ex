@@ -17,7 +17,8 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
     * a cancellation claims each send on the job (`DeliveryClaims`), since the
       seat's stamps were spent on its confirmation;
     * a guest's invitation (a confirmation, or the new seat of a move) is
-      stamped on the guest and never fails the job;
+      stamped on the guest; platform failures are best effort, while custom
+      SMTP failures keep the job pending for the missed guests;
     * a guest's cancellation (a cancellation, or the old seat of a move) is
       claimed on the job like the two above, and one that fails fails the
       job, so the retry writes only to the guests not yet told.
@@ -33,6 +34,7 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
   """
 
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -108,6 +110,9 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
   (cancelled, or its meeting cancelled) the job still cancels the old entry
   for the participant and their guests, and only the new seat's invitations
   are skipped.
+
+  The old seat carries the execution's same sending context. When one is
+  present, both slots must belong to its owner before any copy is sent.
   """
   @spec handle_seat_reschedule_emails(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -126,7 +131,11 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
       participant_id,
       "seat reschedule emails",
       {:any, :any},
-      &send_reschedule(&1, &2, old_seat(old_participant_id), old_slot_freed?, job_id)
+      fn meeting, participant ->
+        with {:ok, old} <- old_seat(old_participant_id, meeting) do
+          send_reschedule(meeting, participant, old, old_slot_freed?, job_id)
+        end
+      end
     )
   end
 
@@ -149,12 +158,12 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
         )
       end)
 
-    invite_guests(meeting, participant, details, email_service)
+    guests_result = invite_guests(meeting, participant, details, email_service)
 
     DeliveryOutcome.from_results(
       "seat confirmation",
       [meeting_id: meeting.id, participant_id: participant.id],
-      [organizer_result, attendee_result]
+      [organizer_result, attendee_result, guests_result]
     )
   end
 
@@ -241,33 +250,51 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
       end)
 
     old_guests_result = cancel_old_guests(old_seat, job_id)
-    if new_seat_live?, do: invite_guests(meeting, participant, details, email_service)
+
+    new_guests_result =
+      if new_seat_live?,
+        do: invite_guests(meeting, participant, details, email_service),
+        else: :ok
 
     DeliveryOutcome.from_results(
       "seat reschedule",
       [meeting_id: meeting.id, participant_id: participant.id],
-      [organizer_result, attendee_result, old_guests_result]
+      [organizer_result, attendee_result, old_guests_result, new_guests_result]
     )
   end
 
   # The seat a move left, with its own payload: the old slot's time and the
   # old seat's calendar entry. `nil` when either row has since gone (data
   # retention), in which case the move is announced without cancelling an
-  # entry nothing can name any more.
-  defp old_seat(old_participant_id) do
+  # entry nothing can name any more. Reuse this execution's sender without
+  # re-resolving settings, but only across slots owned by the same organizer.
+  defp old_seat(old_participant_id, current_meeting) do
     with {:ok, participant} <- ParticipantQueries.get(old_participant_id),
-         {:ok, meeting} <- MeetingQueries.get_meeting(participant.meeting_id) do
+         {:ok, meeting} <- MeetingQueries.get_meeting(participant.meeting_id),
+         {:ok, meeting} <- with_execution_sender(meeting, current_meeting.email_sender) do
       recipient = Recipient.from_participant(participant)
 
-      %{
-        meeting: meeting,
-        participant: participant,
-        details: AppointmentBuilder.from_meeting(meeting, recipient, nil)
-      }
+      {:ok,
+       %{
+         meeting: meeting,
+         participant: participant,
+         details: AppointmentBuilder.from_meeting(meeting, recipient, nil)
+       }}
     else
-      {:error, :not_found} -> nil
+      {:error, :not_found} -> {:ok, nil}
+      {:error, _reason} = error -> error
     end
   end
+
+  defp with_execution_sender(meeting, nil), do: {:ok, meeting}
+
+  defp with_execution_sender(
+         %{organizer_user_id: owner_id} = meeting,
+         %Sender{owner_id: owner_id} = sender
+       ),
+       do: {:ok, %{meeting | email_sender: sender}}
+
+  defp with_execution_sender(_meeting, _sender), do: {:error, :invalid_sender}
 
   # The new seat still stands: its invitation, carrying the old seat's
   # cancellation as a second attachment (or alone, when the old seat can no

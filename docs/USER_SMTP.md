@@ -1,9 +1,8 @@
-# Per user SMTP foundations
+# Per user SMTP
 
-Phase 1 provides an internal domain API and a secure SMTP transport for one
-sending identity per user. It does not yet route booking notifications through
-that identity or expose dashboard controls. Those integrations follow in the
-[extension plan](plans/per-user-smtp.md).
+Phases 1 and 2 provide an internal domain API and secure SMTP delivery for one
+sending identity per user, including booking notifications. Dashboard controls
+follow in phase 3 of the [extension plan](plans/per-user-smtp.md).
 
 ## Deployment opt in
 
@@ -15,10 +14,35 @@ Set the flag in the deployment environment or the `.env` file used by Docker
 Compose. The provided Compose configurations forward `.env` with `env_file`;
 the Docker and Railway images also default the flag to `false`.
 
-The flag guards testing and activation at the domain and transport boundaries.
-Leave it disabled until explicitly testing the foundation. Enabling it does
-not change the platform mailer, account recovery mail, or notification routing
-in phase 1.
+The flag guards testing, activation, booking routing and the transport boundary.
+Enable it for controlled internal use after configuring tested identities.
+The platform mailer and account recovery mail retain their deployment settings.
+
+## Message coverage
+
+Booking confirmations, reminders, cancellations, rescheduling, approvals and
+outcomes, guest invitations, group seats, registration-close notices and booking
+end-change notices use the organizer's enabled identity. Every recipient copy,
+including the organizer's own copy, uses that organizer's account. A recipient's
+SMTP settings never select the sender. Reply-To continues to reach the other
+booking party when appropriate; calendar attachments retain their UID, sequence,
+actual organizer address and existing RSVP behavior.
+
+Without an enabled custom identity, booking email uses the platform sender.
+Account, security, administration, integration-health and external calendar
+alerts remain platform messages. Polls, dashboard calendar invitations/updates
+and booking payment notices will gain routing in phase 4.
+
+Jobs keep their existing required arguments and load current settings when they
+run. Approval outcomes can also record that guest cancellations remain owed,
+so those copies retry even after the deployment feature is disabled. Jobs carry
+no SMTP credentials. Each execution snapshots a nonsecret sender
+and configuration version for all its recipient copies. If the settings change
+during execution, the remaining sends fail safely rather than switching
+accounts. A retry resolves the new settings and preserves completed recipient
+claims, so recipients already reached are not sent another copy.
+Jobs whose required organizer no longer exists follow the existing meeting-gone
+discard contract; they never infer an owner from the recipient's address.
 
 ## Settings and credentials
 
@@ -79,14 +103,33 @@ the destination again.
 Application-owned resolver and CA test fixtures allow isolated loopback relay
 tests. They are not user settings or environment variable escape hatches.
 
+Booking sends and settings tests share ten monitored connection slots per
+owner, independent of configuration revision. This matches the default email
+worker pool, allowing healthy group notifications to proceed concurrently.
+When all slots are occupied, contention uses the worker's
+bounded rate-limit snooze without counting as an account-breaker failure. The
+reservation releases when the caller finishes or dies. This cap is node-local:
+multiple nodes have independent reservations, and restarting the shared lock
+manager forgets active reservations. Deployments needing a strict limit across
+nodes or lock-manager restarts require additional coordination.
+
 ## Disablement and recovery
 
 Set `USER_SMTP_ENABLED=false` and restart to disable all user SMTP connection
-and activation operations. The additive table and encrypted values can remain
-in place across a code rollback. Existing platform SMTP/API-provider delivery
+and activation operations. New booking executions use the platform sender.
+An SMTP transaction already in progress may finish with its selected identity.
+The additive table and encrypted values can remain in place across a code
+rollback. Existing platform SMTP/API-provider delivery
 continues to follow its deployment configuration.
 
 Repair credentials with a new successful test, then enable the tested
 revision. Retain encryption keys until the existing re-encryption sweep
 confirms that no stored credentials require them. Test and connection errors
 must expose sanitized categories rather than raw provider replies.
+
+An enabled identity's authentication, TLS, DNS or delivery failures never trigger
+silent platform fallback. Existing Oban retries and bounded ambiguous-timeout
+handling apply. Each owner's configuration/revision has an independent circuit
+breaker, even when several owners share a relay hostname. Repairing and testing
+a new revision gives it a fresh breaker; the existing worker recovery/snooze
+policy applies to an open circuit. Idle account breakers expire automatically.

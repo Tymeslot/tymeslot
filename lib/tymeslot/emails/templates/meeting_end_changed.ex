@@ -129,7 +129,7 @@ defmodule Tymeslot.Emails.Templates.MeetingEndChanged do
         name: appointment_details.organizer_name
       )
 
-    MjmlEmail.base_email()
+    MjmlEmail.base_email(sender: Map.get(appointment_details, :email_sender))
     |> to(recipient)
     |> subject(subject)
     |> html_body(TemplateHelper.compile_template(mjml_content, header))

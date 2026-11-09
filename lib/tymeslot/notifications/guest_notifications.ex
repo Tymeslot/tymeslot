@@ -34,10 +34,13 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   host's and booker's emails. A failed send is logged and, for the reschedule
   and cancellation notices, returned as `{:error, {:guest_emails_failed,
   count}}`, so the email job retries; each guest's send is claimed on the job,
-  so the retry writes only to the guests who were missed.
+  so the retry writes only to the guests who were missed. Circuit and sender
+  capacity refusals retain their reason so the worker snoozes instead.
   """
 
-  @type result :: :ok | {:error, {:guest_emails_failed, pos_integer()}}
+  @type result ::
+          :ok
+          | {:error, {:guest_emails_failed, pos_integer()} | :circuit_open | :rate_limited}
 
   require Logger
 
@@ -50,6 +53,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.Recipient
+  alias Tymeslot.Notifications.Email.DeliveryOutcome
 
   @doc """
   Sends every guest the reschedule email, declined ones included. Their
@@ -258,12 +262,17 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   Tells the guests of a held request the host declined, or that expired, that
   the booking is off. Only a request a reschedule sent back into the gate had
   invited guests; `notify_cancelled/3` sends nothing for any other.
-  """
-  @spec notify_released(map()) :: result()
-  def notify_released(%{first_announced_at: nil}), do: :ok
 
-  def notify_released(meeting),
-    do: notify_cancelled(meeting, AppointmentBuilder.from_meeting(meeting))
+  `once` optionally claims each guest's delivery when called from an outcome
+  job. The one-argument form preserves the synchronous legacy release path.
+  """
+  @spec notify_released(map(), (String.t(), (-> term()) -> term())) :: result()
+  def notify_released(meeting, once \\ fn _key, send -> send.() end)
+
+  def notify_released(%{first_announced_at: nil}, _once), do: :ok
+
+  def notify_released(meeting, once),
+    do: notify_cancelled(meeting, AppointmentBuilder.from_meeting(meeting), once)
 
   # What the booker told the host and nobody else: their address, their
   # message, their contact details, and their answers to the booking form
@@ -320,18 +329,19 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   defp ever_confirmed?(_meeting), do: false
 
   # Every guest is tried, whatever became of the others. Returns
-  # `{:error, {:guest_emails_failed, count}}` when any of them failed, so a
-  # job whose sends are claimed per guest can retry and reach only those.
+  # `{:error, {:guest_emails_failed, count}}` for ordinary failures, preserving
+  # circuit and capacity refusals so a job snoozes without spending attempts.
+  # Its per-guest claims ensure the next run reaches only the missed guests.
   defp send_to_guests(guests_with_details, meeting_id, kind, send_fun) do
-    failed =
-      Enum.count(guests_with_details, fn {guest, appointment_details} ->
+    failures =
+      Enum.reduce(guests_with_details, [], fn {guest, appointment_details}, failures ->
         case send_fun.(guest, guest_details(appointment_details, guest)) do
           {:ok, _result} ->
-            false
+            failures
 
           # Already sent by an earlier run of the same job (see `notify_cancelled/3`).
           :ok ->
-            false
+            failures
 
           other ->
             Logger.error("Guest email failed",
@@ -340,10 +350,14 @@ defmodule Tymeslot.Notifications.GuestNotifications do
               result: LogFormat.reason(other)
             )
 
-            true
+            [other | failures]
         end
       end)
 
-    if failed == 0, do: :ok, else: {:error, {:guest_emails_failed, failed}}
+    case {failures, DeliveryOutcome.first_actionable(failures)} do
+      {[], _reason} -> :ok
+      {_failures, reason} when reason in [:circuit_open, :rate_limited] -> {:error, reason}
+      {failures, _reason} -> {:error, {:guest_emails_failed, length(failures)}}
+    end
   end
 end

@@ -1,20 +1,24 @@
 defmodule Tymeslot.Emails.Delivery do
   @moduledoc """
-  Email delivery infrastructure — circuit breaker, retry logic, and validation.
+  Email delivery infrastructure — sender selection, circuit breakers, and validation.
 
-  All `send_*` functions in `Tymeslot.Emails.EmailService` delegate to
-  `deliver/1` here once they have built a `Swoosh.Email` struct.
+  `Tymeslot.Emails.EmailService` builds a `Swoosh.Email` and delegates to
+  `deliver/2`. A resolved booking sender selects the owner's SMTP account;
+  other messages use the configured platform mailer.
   """
 
   require Logger
 
   alias Tymeslot.Emails.Shared.Sanitise
+  alias Tymeslot.EmailSending
+  alias Tymeslot.EmailSending.{Breakers, Connections, Sender, Transport}
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Infrastructure.Logging.EmailMasker
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Mailer
+  alias Tymeslot.Mailer.SMTPResult
 
   # Postmark reports an API-level rejection as `{422, %{"ErrorCode" => code}}`.
   # 300 (invalid email address) and 406 (inactive recipient — a prior hard
@@ -22,13 +26,6 @@ defmodule Tymeslot.Emails.Delivery do
   # Server, auth, and configuration codes are deliberately excluded so genuine
   # operational problems still surface as retryable failures.
   @permanent_rejection_codes [300, 406]
-
-  # The SMTP counterpart: RFC 3463 enhanced status codes that describe the
-  # address itself (bad mailbox, bad domain, bad syntax, domain accepts no
-  # mail, mailbox disabled). Reply codes alone cannot be used: a 550 or 553
-  # equally means "relaying denied" or "sender not owned", which are
-  # configuration problems every email hits.
-  @smtp_permanent_rejection ~r/\b5\.1\.(1|2|3|10)\b|\b5\.2\.1\b/
 
   # gen_smtp waits a fixed 20 minutes for each reply once connected, and Oban
   # workers kill a job that outlives their own budget from the outside,
@@ -59,6 +56,13 @@ defmodule Tymeslot.Emails.Delivery do
   `breaker:` names the circuit breaker to deliver through, the application's
   email breaker by default; tests pass their own so that no other delivery
   can change the counts they assert on.
+
+  `sender:` selects a resolved booking identity. User SMTP uses its own
+  configuration-revision breaker and rechecks credentials before connecting.
+  Booking and test sends share a ten-connection-per-owner cap on each node;
+  contention returns `{:error, :rate_limited}` without changing breaker state.
+  It never falls back to another identity on failure. Omitting the option or
+  passing a platform sender retains the platform mailer path.
   """
   @spec deliver(Swoosh.Email.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def deliver(email, opts \\ []) do
@@ -67,16 +71,58 @@ defmodule Tymeslot.Emails.Delivery do
     with :ok <- check_text_body(email) do
       Logger.debug("Delivering email via Mailer", recipient_domains: recipient_domains(email))
 
-      breaker = Keyword.get_lazy(opts, :breaker, &CircuitBreakerSupervisor.email_breaker_name/0)
-
-      breaker
-      |> CircuitBreaker.call(
-        fn -> email |> deliver_within_deadline() |> handle_delivery_result(email) end,
-        classify: &classify_outcome/1
-      )
-      |> delivery_result()
+      deliver_selected(email, Keyword.get(opts, :sender), opts)
     end
   end
+
+  defp deliver_selected(email, %Sender{kind: :user_smtp} = sender, _opts) do
+    with :ok <- check_sender_identity(email, sender) do
+      Connections.with_owner(sender.owner_id, fn ->
+        with {:ok, credentials} <- EmailSending.delivery_credentials(sender) do
+          sender
+          |> Breakers.call(
+            fn ->
+              email
+              |> Transport.deliver_classified(credentials)
+              |> user_delivery_result(email)
+            end,
+            classify: &classify_outcome/1
+          )
+          |> delivery_result()
+        end
+      end)
+    end
+  end
+
+  defp deliver_selected(email, nil, opts), do: deliver_platform(email, opts)
+  defp deliver_selected(email, %Sender{kind: :platform}, opts), do: deliver_platform(email, opts)
+  defp deliver_selected(_email, _invalid_sender, _opts), do: {:error, :invalid_sender}
+
+  defp check_sender_identity(%Swoosh.Email{from: from}, sender) do
+    # Header cleanup canonicalizes whitespace in an otherwise valid saved name.
+    # Credentials still require the exact raw snapshot to match the settings row.
+    expected = {Sanitise.sanitize_for_header(sender.from_name), sender.from_address}
+    if from == expected, do: :ok, else: {:error, :invalid_sender}
+  end
+
+  defp deliver_platform(email, opts) do
+    breaker = Keyword.get_lazy(opts, :breaker, &CircuitBreakerSupervisor.email_breaker_name/0)
+
+    breaker
+    |> CircuitBreaker.call(
+      fn -> email |> deliver_within_deadline() |> handle_delivery_result(email) end,
+      classify: &classify_outcome/1
+    )
+    |> delivery_result()
+  end
+
+  defp user_delivery_result({:error, :ambiguous_timeout}, email),
+    do: handle_delivery_error(:timeout, email, :ambiguous_timeout)
+
+  defp user_delivery_result({:error, :recipient_rejected}, email),
+    do: handle_delivery_error(:permanent, email, :recipient_rejected)
+
+  defp user_delivery_result(result, email), do: handle_delivery_result(result, email)
 
   # `CircuitBreaker.call/3` is typed for every breaker's results, but the
   # delivery function only ever returns `{:ok, _}` or `{:error, _}`, and so
@@ -291,10 +337,7 @@ defmodule Tymeslot.Emails.Delivery do
 
   def permanent_rejection?({:recipient_rejected, _reason}), do: true
 
-  def permanent_rejection?({:send, {:permanent_failure, _host, message}}) when is_binary(message),
-    do: message =~ @smtp_permanent_rejection
-
-  def permanent_rejection?(_reason), do: false
+  def permanent_rejection?(reason), do: SMTPResult.permanent_rejection?(reason)
 
   @doc """
   Returns true when a delivery error reason is a timeout that may have come

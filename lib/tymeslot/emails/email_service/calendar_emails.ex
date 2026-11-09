@@ -3,6 +3,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
 
   require Logger
 
+  alias Tymeslot.Emails.BookingDelivery
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.HostClock
   alias Tymeslot.Infrastructure.AdminAlerts
@@ -85,20 +86,22 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   Tells an organiser that a meeting now ends where they moved its end in their
   own calendar, and who was emailed the new end. `notice` carries the end it
   had before (`:previous_end_time`), the names of the attendees reached
-  (`:attendees`) and how many guests were (`:guests`).
+  (`:attendees`) and how many guests were (`:guests`). The summary uses the
+  same booking sender as the attendee and guest notices.
   """
   @spec send_end_change_to_organizer(map(), String.t(), ExternalBookingChange.end_notice()) ::
           {:ok, any()} | {:error, any()}
   def send_end_change_to_organizer(meeting, organizer_email, notice) do
     Logger.info("Sending external end change notice", meeting_id: meeting.id)
 
-    meeting
-    |> ExternalBookingChange.render_end_followed(
-      organizer_email,
-      notice,
-      HostClock.timezone(meeting)
-    )
-    |> Delivery.deliver()
+    BookingDelivery.deliver(meeting, fn meeting ->
+      ExternalBookingChange.render_end_followed(
+        meeting,
+        organizer_email,
+        notice,
+        HostClock.timezone(meeting)
+      )
+    end)
   end
 
   @doc """
@@ -132,7 +135,6 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   def send_reschedule_request(meeting) do
     Logger.info("Sending reschedule request", meeting_id: meeting.id)
 
-    email = RescheduleRequest.render(meeting)
-    Delivery.deliver(email)
+    BookingDelivery.deliver(meeting, &RescheduleRequest.render/1)
   end
 end

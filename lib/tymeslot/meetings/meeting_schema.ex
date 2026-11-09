@@ -52,6 +52,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           organizer_email: String.t() | nil,
           organizer_title: String.t() | nil,
           organizer_user_id: integer() | nil,
+          email_sender: Tymeslot.EmailSending.Sender.t() | nil,
           calendar_integration_id: integer() | nil,
           calendar_path: String.t() | nil,
           attendee_name: String.t() | nil,
@@ -171,6 +172,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # about it fired, and the seat a move replaced. Integrations read it to
     # address that seat.
     field(:seat, :map, virtual: true)
+    # Notification-only identity snapshot. It holds no credentials and is never
+    # cast or persisted; a handler shares it across all recipient views.
+    field(:email_sender, :any, virtual: true)
 
     # Organizer details
     field(:organizer_name, :string)

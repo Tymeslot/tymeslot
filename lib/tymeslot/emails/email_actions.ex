@@ -99,7 +99,8 @@ defmodule Tymeslot.Emails.EmailActions do
     "send_booking_approval_nudge" =>
       {["meeting_id"], {BookingApprovalEmails, :handle_booking_approval_nudge}},
     "send_booking_request_outcome" =>
-      {["meeting_id", "variant"], {BookingApprovalEmails, :handle_booking_request_outcome}},
+      {["meeting_id", "variant"],
+       {BookingApprovalEmails, :handle_booking_request_outcome, :with_job_id}},
     "send_reschedule_request_expired" =>
       {["meeting_id"], {BookingApprovalEmails, :handle_reschedule_request_expired}},
     # Polls

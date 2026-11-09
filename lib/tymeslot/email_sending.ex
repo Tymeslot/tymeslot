@@ -1,8 +1,8 @@
 defmodule Tymeslot.EmailSending do
   @moduledoc """
   User-owned SMTP identities. A successful send to the verified account owner
-  is required before saving and enabling a configuration. Existing notification
-  routing does not use these settings until a later delivery integration.
+  is required before saving and enabling a configuration. Booking notifications
+  snapshot the public sender once and load credentials separately at delivery.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -11,9 +11,19 @@ defmodule Tymeslot.EmailSending do
 
   alias Ecto.Changeset
   alias Swoosh.Email
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Clock
-  alias Tymeslot.EmailSending.{Settings, SettingsQueries, Transport, UserSmtpSettingsSchema}
+
+  alias Tymeslot.EmailSending.{
+    Connections,
+    Sender,
+    Settings,
+    SettingsQueries,
+    Transport,
+    UserSmtpSettingsSchema
+  }
+
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.RateLimiter
 
@@ -24,6 +34,95 @@ defmodule Tymeslot.EmailSending do
   @doc "Whether the operator enabled the per-user SMTP feature."
   @spec enabled?() :: boolean()
   def enabled?, do: Application.get_env(:tymeslot, :user_smtp_enabled, false) == true
+
+  @doc """
+  Resolves a booking's authoritative organizer to a credential-free sender.
+
+  An attached sender is reused only for the same owner, preserving one identity
+  across an execution's recipient copies. Legacy callers without an owner can
+  use the platform only while the feature is off. Callers must establish the
+  owner from their loaded meeting or trusted snapshot, never the recipient.
+  """
+  @spec resolve_booking_sender(map()) :: {:ok, Sender.t()} | {:error, atom()}
+  def resolve_booking_sender(resource) when is_map(resource) do
+    owner_id = Map.get(resource, :organizer_user_id)
+
+    case Map.get(resource, :email_sender) do
+      %Sender{owner_id: ^owner_id, kind: kind} = sender when kind in [:platform, :user_smtp] ->
+        {:ok, sender}
+
+      nil ->
+        resolve_owner_sender(owner_id)
+
+      _invalid_or_foreign ->
+        {:error, :invalid_sender}
+    end
+  end
+
+  def resolve_booking_sender(_resource), do: {:error, :invalid_sender}
+
+  @doc """
+  Loads credentials only for the exact enabled and tested sender version.
+
+  A configuration changed or removed after rendering fails closed. It cannot
+  redirect a remaining recipient copy through another account or From address.
+  The returned runtime map must never be persisted, logged or put in an email.
+  """
+  @spec delivery_credentials(Sender.t()) :: {:ok, map()} | {:error, atom()}
+  def delivery_credentials(
+        %Sender{kind: :user_smtp, owner_id: owner_id, settings_id: id, revision: revision} =
+          sender
+      )
+      when is_integer(owner_id) and owner_id > 0 and owner_id <= @max_id and
+             is_integer(id) and id > 0 and id <= @max_id and
+             is_integer(revision) and revision > 0 and revision <= @max_revision do
+    with :ok <- require_enabled(),
+         %UserSmtpSettingsSchema{} = settings <-
+           SettingsQueries.get_for_user(sender.owner_id),
+         true <- current_sender?(settings, sender),
+         :ok <- tested?(settings) do
+      transport_credentials(settings)
+    else
+      nil -> {:error, :settings_changed}
+      false -> {:error, :settings_changed}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def delivery_credentials(_sender), do: {:error, :invalid_sender}
+
+  defp resolve_owner_sender(owner_id) do
+    cond do
+      not enabled?() ->
+        {:ok, Sender.platform(owner_id)}
+
+      not (is_integer(owner_id) and owner_id > 0 and owner_id <= @max_id) ->
+        {:error, :owner_not_found}
+
+      true ->
+        case Auth.get_user(owner_id) do
+          {:ok, _owner} ->
+            case SettingsQueries.get_for_user(owner_id) do
+              %UserSmtpSettingsSchema{enabled: true} = settings ->
+                with :ok <- tested?(settings) do
+                  {:ok, Sender.from_settings(settings)}
+                end
+
+              _missing_or_disabled ->
+                {:ok, Sender.platform(owner_id)}
+            end
+
+          {:error, :not_found} ->
+            {:error, :owner_not_found}
+        end
+    end
+  end
+
+  defp current_sender?(settings, sender) do
+    settings.enabled and settings.id == sender.settings_id and
+      settings.revision == sender.revision and settings.from_name == sender.from_name and
+      settings.from_address == sender.from_address
+  end
 
   @doc "The owner's saved settings, with every credential omitted."
   @spec get_settings(UserSchema.t()) :: result()
@@ -59,6 +158,9 @@ defmodule Tymeslot.EmailSending do
   for an existing one, so deleted settings cannot be replaced by a stale form. Stored credentials
   are reused when their edit fields are blank. Client-supplied lifecycle and
   ownership fields are never cast.
+
+  Test and booking sends share a node-local owner connection reservation;
+  contention returns `{:error, :rate_limited}` before opening another socket.
   """
   @spec test_and_save_settings(UserSchema.t(), map(), :new | Settings.version()) :: result()
   def test_and_save_settings(user, attrs, expected_version) when is_map(attrs) do
@@ -70,7 +172,10 @@ defmodule Tymeslot.EmailSending do
          {:ok, candidate} <- Changeset.apply_action(changeset, :validate),
          {:ok, transport} <- transport_credentials(candidate),
          :ok <- charge_test(user_id),
-         {:ok, _receipt} <- Transport.deliver(test_email(user, candidate), transport),
+         {:ok, _receipt} <-
+           Connections.with_owner(user_id, fn ->
+             Transport.deliver(test_email(user, candidate), transport)
+           end),
          {:ok, saved} <- persist_tested(settings, changeset) do
       {:ok, Settings.from_schema(saved)}
     end

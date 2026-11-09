@@ -4,7 +4,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   require Logger
 
   alias Swoosh.Email
-  alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.BookingDelivery
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Integrations.Calendar.IcsGenerator
 
@@ -33,9 +33,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_organizer(organizer_email, appointment_details) do
-    Delivery.deliver(
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
       AppointmentConfirmation.render(:organizer, organizer_email, appointment_details)
-    )
+    end)
   end
 
   @doc """
@@ -47,9 +47,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_attendee(attendee_email, appointment_details) do
-    Delivery.deliver(
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
       AppointmentConfirmation.render(:attendee, attendee_email, appointment_details)
-    )
+    end)
   end
 
   @doc """
@@ -60,7 +60,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   """
   @spec send_booking_request_received(Meeting.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def send_booking_request_received(%Meeting{} = meeting, opts \\ []) do
-    Delivery.deliver(BookingRequestReceived.render(meeting, opts))
+    BookingDelivery.deliver(meeting, fn meeting ->
+      BookingRequestReceived.render(meeting, opts)
+    end)
   end
 
   @doc """
@@ -73,7 +75,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_booking_request_outcome(BookingRequestOutcome.variant(), Meeting.t()) ::
           {:ok, any()} | {:error, any()}
   def send_booking_request_outcome(variant, %Meeting{} = meeting) do
-    Delivery.deliver(BookingRequestOutcome.render(variant, meeting))
+    BookingDelivery.deliver(meeting, fn meeting ->
+      BookingRequestOutcome.render(variant, meeting)
+    end)
   end
 
   @doc """
@@ -83,7 +87,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_reschedule_request_expired(Meeting.t(), String.t()) ::
           {:ok, any()} | {:error, any()}
   def send_reschedule_request_expired(%Meeting{} = meeting, locale) do
-    Delivery.deliver(RescheduleRequestExpired.render(meeting, locale))
+    BookingDelivery.deliver(meeting, fn meeting ->
+      RescheduleRequestExpired.render(meeting, locale)
+    end)
   end
 
   @doc """
@@ -100,7 +106,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           keyword()
         ) :: {:ok, any()} | {:error, any()}
   def send_booking_approval_request(variant, %Meeting{} = meeting, urls, locale, opts \\ []) do
-    Delivery.deliver(BookingApprovalRequest.render(variant, meeting, urls, locale, opts))
+    BookingDelivery.deliver(meeting, fn meeting ->
+      BookingApprovalRequest.render(variant, meeting, urls, locale, opts)
+    end)
   end
 
   @doc """
@@ -114,7 +122,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_guest_confirmation(guest_email, appointment_details) do
-    Delivery.deliver(AppointmentConfirmation.render(:guest, guest_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      AppointmentConfirmation.render(:guest, guest_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -138,36 +148,35 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_seat_reschedule_to_participant(String.t(), map(), map()) ::
           {:ok, any()} | {:error, any()}
   def send_seat_reschedule_to_participant(participant_email, appointment_details, old_event) do
-    locale = RecipientLocale.attendee_locale(appointment_details)
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      locale = RecipientLocale.attendee_locale(appointment_details)
 
-    old_event_details =
-      Map.merge(appointment_details, %{
-        uid: old_event.uid,
-        start_time: old_event.start_time,
-        end_time: old_event.end_time
-      })
+      old_event_details =
+        Map.merge(appointment_details, %{
+          uid: old_event.uid,
+          start_time: old_event.start_time,
+          end_time: old_event.end_time
+        })
 
-    cancel_attachment =
-      IcsGenerator.generate_ics_cancel_attachment(
-        old_event_details,
-        old_event.ical_sequence + 1,
-        locale,
-        "appointment-#{old_event.uid}.ics"
-      )
+      cancel_attachment =
+        IcsGenerator.generate_ics_cancel_attachment(
+          old_event_details,
+          old_event.ical_sequence + 1,
+          locale,
+          "appointment-#{old_event.uid}.ics"
+        )
 
-    moved_details =
-      Map.merge(appointment_details, %{
-        seat_move: true,
-        original_start_time: old_event.start_time,
-        original_start_time_attendee_tz: Map.get(old_event, :start_time_attendee_tz)
-      })
+      moved_details =
+        Map.merge(appointment_details, %{
+          seat_move: true,
+          original_start_time: old_event.start_time,
+          original_start_time_attendee_tz: Map.get(old_event, :start_time_attendee_tz)
+        })
 
-    email =
       :attendee
       |> AppointmentRescheduled.render(participant_email, moved_details)
       |> Email.attachment(cancel_attachment)
-
-    Delivery.deliver(email)
+    end)
   end
 
   @doc """
@@ -181,7 +190,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           Tymeslot.Emails.EmailService.appointment_details()
         ) :: {:ok, any()} | {:error, any()}
   def send_seat_update_to_organizer(variant, organizer_email, appointment_details) do
-    Delivery.deliver(SeatUpdateForOrganizer.render(variant, organizer_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      SeatUpdateForOrganizer.render(variant, organizer_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -194,7 +205,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           [RegistrationClosed.entry()]
         ) :: {:ok, any()} | {:error, any()}
   def send_registration_closed(organizer_email, appointment_details, roster) do
-    Delivery.deliver(RegistrationClosed.render(organizer_email, appointment_details, roster))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      RegistrationClosed.render(organizer_email, appointment_details, roster)
+    end)
   end
 
   @doc """
@@ -203,26 +216,32 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_appointment_confirmations(Tymeslot.Emails.EmailService.appointment_details()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_confirmations(appointment_details) do
-    Logger.info("Sending appointment confirmations")
+    case BookingDelivery.prepare(appointment_details) do
+      {:ok, appointment_details, _sender} ->
+        Logger.info("Sending appointment confirmations")
 
-    organizer_result =
-      send_appointment_confirmation_to_organizer(
-        appointment_details.organizer_email,
-        appointment_details
-      )
+        organizer_result =
+          send_appointment_confirmation_to_organizer(
+            appointment_details.organizer_email,
+            appointment_details
+          )
 
-    attendee_result =
-      send_appointment_confirmation_to_attendee(
-        appointment_details.attendee_email,
-        appointment_details
-      )
+        attendee_result =
+          send_appointment_confirmation_to_attendee(
+            appointment_details.attendee_email,
+            appointment_details
+          )
 
-    Logger.info("Appointment confirmations sent",
-      organizer_sent: match?({:ok, _}, organizer_result),
-      attendee_sent: match?({:ok, _}, attendee_result)
-    )
+        Logger.info("Appointment confirmations sent",
+          organizer_sent: match?({:ok, _}, organizer_result),
+          attendee_sent: match?({:ok, _}, attendee_result)
+        )
 
-    {organizer_result, attendee_result}
+        {organizer_result, attendee_result}
+
+      {:error, _reason} = error ->
+        {error, error}
+    end
   end
 
   @doc """
@@ -234,7 +253,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_guest_reschedule(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_guest_reschedule(guest_email, appointment_details) do
-    Delivery.deliver(AppointmentRescheduled.render(:guest, guest_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      AppointmentRescheduled.render(:guest, guest_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -244,7 +265,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_guest_cancellation(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_guest_cancellation(guest_email, appointment_details) do
-    Delivery.deliver(AppointmentCancellation.render(:guest, guest_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      AppointmentCancellation.render(:guest, guest_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -256,9 +279,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_reschedule_email_to_organizer(organizer_email, appointment_details) do
-    Delivery.deliver(
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
       AppointmentRescheduled.render(:organizer, organizer_email, appointment_details)
-    )
+    end)
   end
 
   @doc """
@@ -270,7 +293,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           Tymeslot.Emails.EmailService.appointment_details()
         ) :: {:ok, any()} | {:error, any()}
   def send_end_change_to_attendee(attendee_email, appointment_details) do
-    Delivery.deliver(MeetingEndChanged.render(:attendee, attendee_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      MeetingEndChanged.render(:attendee, attendee_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -280,7 +305,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_guest_end_change(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_guest_end_change(guest_email, appointment_details) do
-    Delivery.deliver(MeetingEndChanged.render(:guest, guest_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      MeetingEndChanged.render(:guest, guest_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -292,9 +319,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_reschedule_email_to_attendee(attendee_email, appointment_details) do
-    Delivery.deliver(
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
       AppointmentRescheduled.render(:attendee, attendee_email, appointment_details)
-    )
+    end)
   end
 
   @doc """
@@ -306,7 +333,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_organizer(organizer_email, appointment_details) do
-    Delivery.deliver(AppointmentReminder.render(:organizer, organizer_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      AppointmentReminder.render(:organizer, organizer_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -318,7 +347,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_attendee(attendee_email, appointment_details) do
-    Delivery.deliver(AppointmentReminder.render(:attendee, attendee_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      AppointmentReminder.render(:attendee, attendee_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -328,7 +359,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_guest_reminder(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_guest_reminder(guest_email, appointment_details) do
-    Delivery.deliver(AppointmentReminder.render(:guest, guest_email, appointment_details))
+    BookingDelivery.deliver(appointment_details, fn appointment_details ->
+      AppointmentReminder.render(:guest, guest_email, appointment_details)
+    end)
   end
 
   @doc """
@@ -341,30 +374,36 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_reminders(appointment_details, time_until) do
-    Logger.info("Sending appointment reminders",
-      time_until: time_until
-    )
+    case BookingDelivery.prepare(appointment_details) do
+      {:ok, appointment_details, _sender} ->
+        Logger.info("Sending appointment reminders",
+          time_until: time_until
+        )
 
-    appointment_details_with_time = Map.put(appointment_details, :time_until, time_until)
+        appointment_details_with_time = Map.put(appointment_details, :time_until, time_until)
 
-    organizer_result =
-      send_appointment_reminder_to_organizer(
-        appointment_details.organizer_email,
-        appointment_details_with_time
-      )
+        organizer_result =
+          send_appointment_reminder_to_organizer(
+            appointment_details.organizer_email,
+            appointment_details_with_time
+          )
 
-    attendee_result =
-      send_appointment_reminder_to_attendee(
-        appointment_details.attendee_email,
-        appointment_details_with_time
-      )
+        attendee_result =
+          send_appointment_reminder_to_attendee(
+            appointment_details.attendee_email,
+            appointment_details_with_time
+          )
 
-    Logger.info("Appointment reminders sent",
-      organizer_sent: match?({:ok, _}, organizer_result),
-      attendee_sent: match?({:ok, _}, attendee_result)
-    )
+        Logger.info("Appointment reminders sent",
+          organizer_sent: match?({:ok, _}, organizer_result),
+          attendee_sent: match?({:ok, _}, attendee_result)
+        )
 
-    {organizer_result, attendee_result}
+        {organizer_result, attendee_result}
+
+      {:error, _reason} = error ->
+        {error, error}
+    end
   end
 
   @doc """
@@ -379,9 +418,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     Logger.info("Sending appointment cancellation to attendee")
 
     result =
-      Delivery.deliver(
+      BookingDelivery.deliver(appointment_details, fn appointment_details ->
         AppointmentCancellation.render(:attendee, attendee_email, appointment_details)
-      )
+      end)
 
     Logger.info("Cancellation email sent to attendee",
       sent: match?({:ok, _}, result)
@@ -402,9 +441,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     Logger.info("Sending appointment cancellation to organizer")
 
     result =
-      Delivery.deliver(
+      BookingDelivery.deliver(appointment_details, fn appointment_details ->
         AppointmentCancellation.render(:organizer, organizer_email, appointment_details)
-      )
+      end)
 
     Logger.info("Cancellation email sent to organizer",
       sent: match?({:ok, _}, result)

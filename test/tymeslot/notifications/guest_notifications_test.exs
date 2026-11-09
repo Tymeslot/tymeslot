@@ -120,7 +120,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
 
     # The send runs in the job's own process, so the one-shot flag is an
     # atomic shared with it rather than this process's dictionary.
-    defp fail_once_for(address, fun) do
+    defp fail_once_for(address, fun, reason \\ :smtp_down) do
       test_pid = self()
       failed = :atomics.new(1, [])
 
@@ -128,9 +128,46 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
         send(test_pid, {:guest_send, email})
 
         if email == address and :atomics.compare_exchange(failed, 1, 0, 1) == :ok,
-          do: {:error, :smtp_down},
+          do: {:error, reason},
           else: {:ok, :sent}
       end)
+    end
+
+    for reason <- [:rate_limited, :circuit_open],
+        {notice, guest_fun, organizer_fun, attendee_fun} <- [
+          {"reschedule", :send_guest_reschedule, :send_reschedule_email_to_organizer,
+           :send_reschedule_email_to_attendee},
+          {"cancellation", :send_guest_cancellation, :send_cancellation_email_to_organizer,
+           :send_cancellation_email_to_attendee}
+        ] do
+      test "#{notice} snoozes for a guest's #{reason} and retries only that guest" do
+        status = if unquote(notice) == "cancellation", do: :cancelled, else: :confirmed
+        %{meeting: meeting} = meeting_with_guests(moved(%{status: status}))
+
+        expect(EmailServiceMock, unquote(organizer_fun), fn _email, _details -> {:ok, :sent} end)
+        expect(EmailServiceMock, unquote(attendee_fun), fn _email, _details -> {:ok, :sent} end)
+        fail_once_for("no@example.com", unquote(guest_fun), unquote(reason))
+
+        if unquote(notice) == "cancellation" do
+          :ok = EmailScheduler.schedule_cancellation_emails(meeting.id)
+        else
+          :ok =
+            EmailScheduler.schedule_reschedule_emails(meeting, %{
+              start_time: DateTime.add(meeting.start_time, -1, :day),
+              end_time: DateTime.add(meeting.end_time, -1, :day)
+            })
+        end
+
+        action = "send_#{unquote(notice)}_emails"
+        assert {:snooze, seconds} = run_job(action)
+        assert seconds > 0
+        assert_received {:guest_send, "yes@example.com"}
+        assert_received {:guest_send, "no@example.com"}
+
+        assert :ok = run_job(action)
+        assert_received {:guest_send, "no@example.com"}
+        refute_received {:guest_send, _email}
+      end
     end
 
     test "the reschedule job retries, and the retry writes only to the guest missed" do

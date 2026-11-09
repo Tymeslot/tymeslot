@@ -124,6 +124,26 @@ Add strict runtime configuration for `USER_SMTP_ENABLED=false`, with matching `.
 
 ### Phase 2 Integrate booking sender resolution internally
 
+**Status:** Implemented. Booking handlers share a nonsecret sender snapshot;
+delivery rechecks its exact settings revision and uses a separate account
+breaker. Guest failures retain retry/snooze outcomes and completed recipient
+claims, including approval-release guests deferred to an existing outcome job.
+Older jobs retain their existing required arguments; an optional boolean records
+owed approval-release guest notices without retaining credentials.
+
+Validation passed: 27,623 default-suite checks (420 expected exclusions), strict
+Credo, incremental Dialyzer with no unused filters, warning-free compilation,
+formatting, translation freshness, Sobelow, dependency audit, migration safety
+and the compile-coupling gate. One existing 50 ms poll test flaked during a run
+concurrent with linting; its isolated run and the complete same-seed rerun at
+lower parallelism passed.
+
+Ten owner connection slots reuse the existing monitored lock manager and are
+node-local. Strict limits across nodes or lock-manager restarts require further
+coordination before such a guarantee is offered. The [operator guide](../USER_SMTP.md)
+describes routing, feature disablement and these operational limits. Dashboard
+controls remain in phase 3.
+
 **Outcome:** The complete booking email lifecycle can use an explicitly selected sender through existing jobs, templates, and delivery, with independent failure handling. It is ready for controlled internal use before exposing settings to users.
 
 Include approval outcomes, reminders, rescheduling, cancellations, group seats, guests, and snapshot jobs. Reuse owner IDs already carried by notification details. Preserve per-recipient delivery claims and partial-send recovery. Platform messages explicitly retain the platform identity.

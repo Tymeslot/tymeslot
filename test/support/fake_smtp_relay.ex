@@ -23,7 +23,11 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
       (default `true`)
     * `:auth` - `:accept`, `:reject`, or `:not_offered` (default `:accept`).
       After a rejected login MAIL FROM is refused with 530, as real relays do.
+    * `:auth_users` - optional username/password map; AUTH succeeds only for
+      a matching pair, so two accounts on one relay can be distinguished.
     * `:rcpt_reply` - the reply to RCPT TO (default `"250 OK"`)
+    * `:rcpt_replies` - optional recipient-address/reply map overriding that
+      default, for partially successful booking deliveries.
     * `:after_data` - `:silent` takes the whole message and never acknowledges
       it, like a relay that stalls once delivery is under way (default `:ack`)
     * `:starttls` - certificates from `certificates/1`; advertises STARTTLS
@@ -251,22 +255,17 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
   end
 
   defp command("AUTH " <> mechanism, conn, owner, opts) do
-    [name | _initial] = String.split(mechanism, " ")
+    [name | initial] = String.split(mechanism, " ")
     send(owner, {:smtp_relay, {:auth, String.upcase(name)}})
 
-    if String.upcase(name) == "LOGIN" do
-      reply(conn, "334 VXNlcm5hbWU6")
-      conn.mod.recv(conn.socket, 0, @timeout)
-      reply(conn, "334 UGFzc3dvcmQ6")
-      conn.mod.recv(conn.socket, 0, @timeout)
-    end
+    credentials = authentication_credentials(String.upcase(name), initial, conn)
 
-    case Map.get(opts, :auth, :accept) do
-      :accept ->
+    case {Map.get(opts, :auth, :accept), authorized?(opts, credentials)} do
+      {:accept, true} ->
         reply(conn, "235 2.7.0 Authentication successful")
         dialogue(%{conn | authed?: true}, owner, opts)
 
-      :reject ->
+      _rejected ->
         reply(conn, "535 5.7.8 Authentication credentials invalid")
         dialogue(conn, owner, opts)
     end
@@ -275,7 +274,7 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
   defp command("MAIL FROM:" <> _rest = line, conn, owner, opts) do
     send(owner, {:smtp_relay, {:mail_from, line}})
 
-    if Map.get(opts, :auth) == :reject and not conn.authed? do
+    if (Map.get(opts, :auth) == :reject or Map.has_key?(opts, :auth_users)) and not conn.authed? do
       reply(conn, "530 5.7.0 Authentication required")
     else
       reply(conn, "250 OK")
@@ -284,8 +283,10 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
     dialogue(conn, owner, opts)
   end
 
-  defp command("RCPT TO:" <> _rest, conn, owner, opts) do
-    reply(conn, Map.get(opts, :rcpt_reply, "250 OK"))
+  defp command("RCPT TO:" <> address, conn, owner, opts) do
+    recipient = address |> String.trim() |> String.trim_leading("<") |> String.trim_trailing(">")
+    default = Map.get(opts, :rcpt_reply, "250 OK")
+    reply(conn, opts |> Map.get(:rcpt_replies, %{}) |> Map.get(recipient, default))
     dialogue(conn, owner, opts)
   end
 
@@ -312,6 +313,39 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
     reply(conn, "250 OK")
     dialogue(conn, owner, opts)
   end
+
+  defp authentication_credentials("PLAIN", [encoded], _conn) do
+    with {:ok, decoded} <- Base.decode64(encoded),
+         [_authorization, username, password] <- :binary.split(decoded, <<0>>, [:global]) do
+      {username, password}
+    else
+      _invalid -> :invalid
+    end
+  end
+
+  defp authentication_credentials("LOGIN", _initial, conn) do
+    reply(conn, "334 VXNlcm5hbWU6")
+    username = conn.mod.recv(conn.socket, 0, @timeout)
+    reply(conn, "334 UGFzc3dvcmQ6")
+    password = conn.mod.recv(conn.socket, 0, @timeout)
+
+    with {:ok, user_line} <- username,
+         {:ok, password_line} <- password,
+         {:ok, user} <- Base.decode64(String.trim(user_line)),
+         {:ok, secret} <- Base.decode64(String.trim(password_line)) do
+      {user, secret}
+    else
+      _invalid -> :invalid
+    end
+  end
+
+  defp authentication_credentials(_mechanism, _initial, _conn), do: :invalid
+
+  defp authorized?(%{auth_users: users}, {username, password}),
+    do: Map.get(users, username) == password
+
+  defp authorized?(%{auth_users: _users}, _credentials), do: false
+  defp authorized?(_opts, _credentials), do: true
 
   defp read_data(conn, acc) do
     case conn.mod.recv(conn.socket, 0, @timeout) do

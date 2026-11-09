@@ -17,6 +17,7 @@ defmodule Tymeslot.Notifications.Email.BookingApprovalEmails do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Workers.DeliveryClaims
 
   @doc """
@@ -128,19 +129,47 @@ defmodule Tymeslot.Notifications.Email.BookingApprovalEmails do
   is precisely why it is being sent. It is guarded on the status matching the
   variant instead, so a decline email cannot be delivered for a request that
   a later reschedule returned to the gate.
+
+  New jobs may carry `notify_guests: true` when approval release deferred
+  guest cancellations. That marker, rather than the current feature flag,
+  decides whether they are owed. The attendee and every guest are claimed
+  separately, so retries send only copies an earlier run did not settle.
   """
-  @spec handle_booking_request_outcome(%{String.t() => term()}) ::
+  @spec handle_booking_request_outcome(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
-  def handle_booking_request_outcome(%{"meeting_id" => meeting_id, "variant" => variant})
+  def handle_booking_request_outcome(args, job_id \\ nil)
+
+  def handle_booking_request_outcome(
+        %{"meeting_id" => meeting_id, "variant" => variant} = args,
+        job_id
+      )
       when variant in ["declined", "expired"] do
     MeetingEmails.with_meeting(meeting_id, "booking request outcome", fn meeting ->
-      send_outcome(meeting, String.to_existing_atom(variant))
+      send_outcome(
+        meeting,
+        String.to_existing_atom(variant),
+        args["notify_guests"] == true,
+        job_id
+      )
     end)
   end
 
-  defp send_outcome(meeting, variant) do
+  defp send_outcome(meeting, variant, notify_guests, job_id) do
     if outcome_still_true?(meeting, variant) do
-      deliver_outcome(meeting, variant)
+      attendee =
+        leg(job_id, "booking_request_outcome:attendee", false, fn ->
+          Config.email_service_module().send_booking_request_outcome(variant, meeting)
+        end)
+
+      guests =
+        if notify_guests,
+          do: GuestNotifications.notify_released(meeting, &DeliveryClaims.once(job_id, &1, &2)),
+          else: :ok
+
+      DeliveryOutcome.combine("booking request outcome", [meeting_id: meeting.id], [
+        attendee,
+        guests
+      ])
     else
       Logger.info("Skipping booking request outcome - status no longer matches",
         meeting_id: meeting.id,
@@ -155,13 +184,6 @@ defmodule Tymeslot.Notifications.Email.BookingApprovalEmails do
   defp outcome_still_true?(%{status: :cancelled}, :declined), do: true
   defp outcome_still_true?(%{status: :expired}, :expired), do: true
   defp outcome_still_true?(_meeting, _variant), do: false
-
-  defp deliver_outcome(meeting, variant) do
-    case Config.email_service_module().send_booking_request_outcome(variant, meeting) do
-      {:ok, _sent} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
 
   @doc """
   Tells the host a confirmed booking was cancelled because the invitee's

@@ -68,7 +68,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(appointment_details, :email_sender))
       |> to({appointment_details.attendee_name, attendee_email})
       |> MjmlEmail.put_reply_to(
         appointment_details.organizer_name,
@@ -129,7 +129,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(appointment_details, :email_sender))
       |> to({guest_name, guest_email})
       |> MjmlEmail.put_reply_to(
         appointment_details.organizer_name,
@@ -189,7 +189,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(appointment_details, :email_sender))
       |> to({appointment_details.organizer_name, organizer_email})
       |> MjmlEmail.put_reply_to(
         appointment_details.attendee_name,

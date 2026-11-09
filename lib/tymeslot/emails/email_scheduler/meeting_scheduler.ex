@@ -128,14 +128,34 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   Sent immediately, not scheduled: an invitee whose time was held is owed the
   news the moment it stops being held. Uniqueness is keyed on the action and
   the meeting, so the expiry job and the sweep both firing produces one email.
+
+  `notify_guests: true` also owes cancellation notices to previously invited
+  guests. This internal boolean survives disabling user SMTP before execution;
+  older jobs without it keep their attendee-only behavior.
   """
-  @spec schedule_request_outcome(term(), :declined | :expired) :: :ok | {:error, term()}
-  def schedule_request_outcome(meeting_id, variant) when variant in [:declined, :expired] do
-    %{
+  @spec schedule_request_outcome(term(), :declined | :expired, keyword()) ::
+          :ok | {:error, term()}
+  def schedule_request_outcome(meeting_id, variant, opts \\ [])
+      when variant in [:declined, :expired] and is_list(opts) do
+    case Keyword.get(opts, :notify_guests, false) do
+      notify_guests when is_boolean(notify_guests) ->
+        insert_request_outcome(meeting_id, variant, notify_guests)
+
+      _invalid ->
+        {:error, :invalid_options}
+    end
+  end
+
+  defp insert_request_outcome(meeting_id, variant, notify_guests) do
+    args = %{
       "action" => "send_booking_request_outcome",
       "meeting_id" => meeting_id,
       "variant" => Atom.to_string(variant)
     }
+
+    args = if notify_guests, do: Map.put(args, "notify_guests", true), else: args
+
+    args
     |> EmailWorker.new(
       queue: :emails,
       priority: 0,

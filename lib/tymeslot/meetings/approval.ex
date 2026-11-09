@@ -81,6 +81,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Clock
+  alias Tymeslot.EmailSending
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
@@ -488,6 +489,11 @@ defmodule Tymeslot.Meetings.Approval do
   # in one cannot stop the next; none of them may fail the transition, which
   # has already been committed and cannot be undone.
   defp after_release(%Meeting{status: status} = meeting) do
+    # Freeze this release's delivery decision before side effects. The same
+    # boolean reaches the queued outcome, even if the operator flips the flag
+    # while calendar/refund work runs or before the email job executes.
+    notify_guests = EmailSending.enabled?()
+
     best_effort(meeting, "cancel request notifications", fn ->
       Orchestrator.cancel_request_notifications(meeting)
     end)
@@ -502,14 +508,22 @@ defmodule Tymeslot.Meetings.Approval do
       ApprovalRefunds.refund_unapproved_request(meeting)
     end)
 
-    best_effort(meeting, "announce release", fn -> announce_release(meeting, status) end)
-    best_effort(meeting, "notify guests", fn -> GuestNotifications.notify_released(meeting) end)
+    best_effort(meeting, "announce release", fn ->
+      announce_release(meeting, status, notify_guests)
+    end)
+
+    unless notify_guests do
+      best_effort(meeting, "notify guests", fn -> GuestNotifications.notify_released(meeting) end)
+    end
 
     :ok
   end
 
-  defp announce_release(meeting, :expired), do: Events.meeting_request_expired(meeting)
-  defp announce_release(meeting, _declined), do: Events.meeting_declined(meeting)
+  defp announce_release(meeting, :expired, notify_guests),
+    do: Events.meeting_request_expired(meeting, notify_guests: notify_guests)
+
+  defp announce_release(meeting, _declined, notify_guests),
+    do: Events.meeting_declined(meeting, notify_guests: notify_guests)
 
   # Mirrors `Bookings.Cancel`'s own video cleanup. A held request's video
   # room used to depend entirely on the daily orphan sweep

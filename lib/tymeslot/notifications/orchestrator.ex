@@ -8,6 +8,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.EmailSending
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalJobs
 
@@ -127,11 +128,19 @@ defmodule Tymeslot.Notifications.Orchestrator do
   When the request was a reschedule of a confirmed booking that lapsed, the
   booking itself is gone, and the host is told as well: nobody declined
   anything, so nothing else would tell them.
+
+  `notify_guests:` overrides the feature's current default with the exact
+  release decision, so synchronous and queued guest delivery cannot both run.
   """
-  @spec send_request_outcome_notifications(%{atom() => term()}, :declined | :expired) ::
+  @spec send_request_outcome_notifications(%{atom() => term()}, :declined | :expired, keyword()) ::
           {:ok, :notifications_scheduled} | {:error, term()}
-  def send_request_outcome_notifications(meeting, variant) do
-    with :ok <- EmailScheduler.schedule_request_outcome(meeting.id, variant),
+  def send_request_outcome_notifications(meeting, variant, opts \\ []) do
+    notify_guests = Keyword.get(opts, :notify_guests, EmailSending.enabled?())
+
+    with :ok <-
+           EmailScheduler.schedule_request_outcome(meeting.id, variant,
+             notify_guests: notify_guests
+           ),
          :ok <- maybe_schedule_host_expiry_notice(meeting, variant) do
       {:ok, :notifications_scheduled}
     end

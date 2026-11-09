@@ -5,11 +5,13 @@ defmodule Tymeslot.Notifications.Email.DeliveryOutcome do
 
   Handlers replace a delivery failure with a message describing which email
   failed, which is what an operator wants to read. That flattening also erased
-  two reasons the worker must treat differently from an ordinary retry:
+  reasons the worker must treat differently from an ordinary retry:
 
     * `:circuit_open` — the provider's breaker is open, so every attempt made
       inside the recovery window fails instantly. The worker snoozes past the
       window rather than spending attempts on a provider it knows is unavailable.
+    * `:rate_limited` — the sender's connection capacity is occupied. The
+      worker snoozes with its existing bounded rate-limit policy.
     * `{:recipient_rejected, _}` — the address is permanently undeliverable, so
       no number of retries can succeed. The worker discards.
 
@@ -28,7 +30,8 @@ defmodule Tymeslot.Notifications.Email.DeliveryOutcome do
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @spec from_error(term(), String.t()) :: {:error, term()}
-  def from_error(:circuit_open, _message), do: {:error, :circuit_open}
+  def from_error(reason, _message) when reason in [:circuit_open, :rate_limited],
+    do: {:error, reason}
 
   def from_error({:recipient_rejected, _reason} = rejection, _message),
     do: {:error, rejection}
@@ -97,6 +100,8 @@ defmodule Tymeslot.Notifications.Email.DeliveryOutcome do
 
   `:circuit_open` always wins: the provider is down for every recipient, so
   the worker snoozes past the outage regardless of what else is in the list.
+  A rate limit takes precedence over ordinary errors and recipient rejection
+  so temporary contention cannot consume every delivery attempt immediately.
   A permanent rejection is only returned when *every* result that isn't a
   success is a rejection — i.e. no recipient in the list still needs a
   retryable attempt. A rejection mixed with a genuinely retryable failure
@@ -105,10 +110,10 @@ defmodule Tymeslot.Notifications.Email.DeliveryOutcome do
   """
   @spec first_actionable([term()]) :: term() | nil
   def first_actionable(results) do
-    if Enum.any?(results, &match?({:error, :circuit_open}, &1)) do
-      :circuit_open
-    else
-      terminal_rejection(results)
+    cond do
+      Enum.any?(results, &match?({:error, :circuit_open}, &1)) -> :circuit_open
+      Enum.any?(results, &match?({:error, :rate_limited}, &1)) -> :rate_limited
+      true -> terminal_rejection(results)
     end
   end
 

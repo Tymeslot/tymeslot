@@ -13,6 +13,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Emails.Shared.Formatting
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.HostManaged
@@ -267,7 +268,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   defp base_details(meeting) do
     title = BookingTitle.localise(meeting)
 
-    %{
+    details = %{
       uid: meeting.calendar_uid,
       title: title,
       organizer_user_id: Map.get(meeting, :organizer_user_id),
@@ -288,6 +289,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       custom_fields_snapshot: Map.get(meeting, :custom_fields_snapshot) || [],
       custom_field_answers: Map.get(meeting, :custom_field_answers) || %{}
     }
+
+    Sender.copy_from(details, meeting)
   end
 
   defp determine_location_type(meeting), do: BookingRequestLocation.type(meeting)

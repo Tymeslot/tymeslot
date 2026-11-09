@@ -76,7 +76,7 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
           stage_subtitle: details.meeting_type || ""
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(details, :email_sender))
       |> to({details.organizer_name, organizer_email})
       |> subject(Sanitise.sanitize_for_header(copy.subject))
       |> html_body(TemplateHelper.compile_template(mjml_content, stage))
