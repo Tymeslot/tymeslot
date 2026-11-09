@@ -72,6 +72,7 @@ ENV LANG=en_US.UTF-8 \
 # config/runtime.exs, one missing variable per restart. Override in the Railway
 # dashboard to send real mail; "test" discards it.
 ENV EMAIL_ADAPTER=test \
+    USER_SMTP_ENABLED=false \
     EMAIL_FROM_NAME=Tymeslot \
     EMAIL_FROM_ADDRESS=hello@localhost
 

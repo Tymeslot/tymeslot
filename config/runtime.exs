@@ -426,6 +426,15 @@ config :tymeslot, :email,
       System.get_env("CLOUDRON_APP_DOMAIN") ||
       "tymeslot.app"
 
+# User-owned SMTP identities are opt-in. Fail closed on typos rather than
+# accidentally enabling a user-controlled outbound connection boundary.
+case System.get_env("USER_SMTP_ENABLED") do
+  nil -> :ok
+  "true" -> config :tymeslot, user_smtp_enabled: true
+  "false" -> config :tymeslot, user_smtp_enabled: false
+  _other -> raise "USER_SMTP_ENABLED must be true or false"
+end
+
 # Error tracking: every exception, crash and discarded job is stored in the
 # application database (ErrorTracker) with its request, LiveView or job
 # context. On by default; ERROR_TRACKING_ENABLED=false switches recording off

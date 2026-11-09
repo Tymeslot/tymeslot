@@ -98,7 +98,8 @@ defmodule Tymeslot.Mailer.SMTPConfig do
           ssl: boolean() | nil,
           tls_verify: tls_verify(),
           cacertfile: String.t() | nil,
-          middlebox_compat: boolean() | nil
+          middlebox_compat: boolean() | nil,
+          log_config: boolean()
         ]
 
   @type smtp_config :: keyword()
@@ -119,6 +120,8 @@ defmodule Tymeslot.Mailer.SMTPConfig do
     public certificate store
   - `:middlebox_compat` (optional) - `true` restores OTP's TLS 1.3 middlebox
     compatibility mode; `false` (default) leaves it off
+  - `:log_config` (optional) - `false` suppresses configuration logging for
+    user-owned credentials; defaults to `true` for deployment configuration
 
   ## Raises
 
@@ -156,7 +159,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
         no_mx_lookups: true
       ] ++ credentials ++ implicit_tls_sockopts(use_ssl, tls_options)
 
-    log_config(config)
+    if Keyword.get(opts, :log_config, true), do: log_config(config)
     config
   end
 

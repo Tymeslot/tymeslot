@@ -23,6 +23,9 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   by the same helpers, so what reaches the relay is unchanged. Errors keep
   that adapter's shapes too: a failure inside the transaction is
   `{:send, {type, host, message}}`.
+
+  `require_auth: true` refuses a relay without AUTH. User-configured SMTP
+  must set this option; trusted deployment relays retain the legacy fallback.
   """
 
   use Swoosh.Adapter, required_config: [:relay], required_deps: [gen_smtp: :gen_smtp_client]
@@ -68,7 +71,8 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   defp open_session(options, config) do
     owner = self()
     timeout = Keyword.get(config, :session_timeout, @default_session_timeout_ms)
-    task = Tasks.async(fn -> open_owned_by(options, owner) end)
+    require_auth = Keyword.get(config, :require_auth, false)
+    task = Tasks.async(fn -> open_safely(options, owner, require_auth) end)
 
     case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
       {:ok, {:ok, client}} ->
@@ -86,6 +90,22 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
     end
   end
 
+  # A malformed relay must not crash a task whose logged arguments include
+  # user credentials. Trusted deployment configuration retains its errors.
+  defp open_safely(options, owner, true) do
+    open_owned_by(options, owner, true)
+  rescue
+    _error ->
+      Logger.warning("User SMTP session failed unexpectedly")
+      {:error, :invalid_smtp_response}
+  catch
+    _kind, _reason ->
+      Logger.warning("User SMTP session terminated unexpectedly")
+      {:error, :invalid_smtp_response}
+  end
+
+  defp open_safely(options, owner, false), do: open_owned_by(options, owner, false)
+
   # `auth: :always` makes a rejected login fail loudly, but it also refuses a
   # relay that offers no AUTH at all, which `:if_available` used to send to
   # without logging in. Credentials left configured for such a relay are a
@@ -93,20 +113,20 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   # reopened without a login instead of failing every send. Stripping AUTH
   # from the relay's reply can only make the session unauthenticated, never
   # expose the credentials.
-  defp open_owned_by(options, owner) do
+  defp open_owned_by(options, owner, require_auth) do
     case :gen_smtp_client.open(options) do
       {:ok, client} ->
         :ok = :smtp_socket.controlling_process(smtp_client_socket(client, :socket), owner)
         {:ok, client}
 
-      {:error, :retries_exceeded, {:missing_requirement, host, :auth}} ->
+      {:error, :retries_exceeded, {:missing_requirement, host, :auth}} when not require_auth ->
         Logger.warning(
           "SMTP relay does not offer authentication; sending without logging in. " <>
             "Unset SMTP_USERNAME and SMTP_PASSWORD if the relay authorises by network.",
           relay: to_string(host)
         )
 
-        options |> Keyword.put(:auth, :never) |> open_owned_by(owner)
+        options |> Keyword.put(:auth, :never) |> open_owned_by(owner, false)
 
       error ->
         error

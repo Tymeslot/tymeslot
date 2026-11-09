@@ -20,6 +20,7 @@ defmodule Tymeslot.Security.CredentialReencryption do
   left as-is — they continue to flow through the normal `needs_reauth` path.
   """
 
+  alias Tymeslot.EmailSending
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Video
@@ -42,6 +43,7 @@ defmodule Tymeslot.Security.CredentialReencryption do
   # picked up automatically as long as its schema's
   # `encrypted_credential_fields/0` stays authoritative.
   @contexts [
+    EmailSending,
     Calendar,
     Video,
     Slack,

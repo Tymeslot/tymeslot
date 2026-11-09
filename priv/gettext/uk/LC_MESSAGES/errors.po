@@ -863,3 +863,23 @@ msgstr "вже є адресою однієї з ваших сторінок б�
 #, elixir-autogen, elixir-format
 msgid "is already the address of one of your meeting types"
 msgstr "вже є адресою одного з ваших типів зустрічей"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a public SMTP hostname"
+msgstr "має бути публічним ім’ям хоста SMTP"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be valid UTF-8"
+msgstr "має бути коректним текстом UTF-8"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must match the selected SMTP port"
+msgstr "має відповідати вибраному порту SMTP"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain control characters"
+msgstr "не має містити керівних символів"

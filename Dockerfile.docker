@@ -106,6 +106,7 @@ ENV LANG=C.UTF-8 \
     MIX_ENV=prod \
     DEPLOYMENT_TYPE=docker \
     PHX_SERVER=true \
+    USER_SMTP_ENABLED=false \
     PORT=4000 \
     TYMESLOT_EMBEDDED_DB=false
 

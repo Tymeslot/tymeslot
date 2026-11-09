@@ -852,3 +852,23 @@ msgstr "já é o endereço de uma das suas páginas de agendamento"
 #, elixir-autogen, elixir-format
 msgid "is already the address of one of your meeting types"
 msgstr "já é o endereço de um dos seus tipos de reunião"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a public SMTP hostname"
+msgstr "deve ser um nome de host SMTP público"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be valid UTF-8"
+msgstr "deve ser texto UTF-8 válido"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must match the selected SMTP port"
+msgstr "deve corresponder à porta SMTP selecionada"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain control characters"
+msgstr "não deve conter caracteres de controle"
