@@ -8,7 +8,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   number, a video option listing several providers asks which one, and an
   in-person option listing several saved venues asks which venue. A single
   video location with several providers, or a single in-person location with
-  several venues, is itself a choice, so the picker shows for it too.
+  several venues, is itself a choice, so the picker shows for it too. So does
+  a single phone location asking for the booker's number, with only the
+  number field in it: a submission cannot complete without that answer.
 
   A single in-person location with at most one venue asks nothing, but the
   booking step still states it (`stated_location?/1`): its venue's name and
@@ -32,7 +34,8 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
 
   The picker opens on the location, and the venue, the meeting already has,
   not the host's first, and the booker can move it. A meeting type with a
-  single location still asks nothing, and then no choice is submitted at all
+  single location that asks nothing still asks nothing, and then no choice is
+  submitted at all
   (`submitted_option_id/1`): with nothing shown, nothing the booker did can
   have meant "move it", even when the host has since replaced the location
   the meeting was booked against.
@@ -268,17 +271,19 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
 
   @doc """
   Whether the booking form should render the picker at all: only when there
-  is something to choose, between locations, between the providers of a
-  video location, or between the venues of an in-person one, on a new
-  booking and a reschedule alike.
+  is something to ask, a choice between locations, between the providers of
+  a video location, or between the venues of an in-person one, or the
+  booker's own number for a phone location that wants it, on a new booking
+  and a reschedule alike.
   """
   @spec choice_required?(map()) :: boolean()
   def choice_required?(assigns) do
-    LocationSelection.choice_required?(
-      assigns[:location_options] || [],
-      assigns[:location_video_choices],
-      assigns[:location_venue_choices]
-    )
+    phone_required?(assigns) or
+      LocationSelection.choice_required?(
+        assigns[:location_options] || [],
+        assigns[:location_video_choices],
+        assigns[:location_venue_choices]
+      )
   end
 
   @doc """
