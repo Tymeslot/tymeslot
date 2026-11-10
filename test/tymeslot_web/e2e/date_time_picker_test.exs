@@ -160,6 +160,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
         |> visit("/dashboard/meeting-settings")
         |> wait_for_live()
         |> click(css("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']"))
+        |> click(css("[role='tab']", text: "Questions"))
         |> click(css("button", text: "Add question"))
         |> assert_has(css("#definition_type-trigger"))
         |> choose_type("Date")
@@ -168,11 +169,11 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
         |> assert_has(css("#definition_max-field[data-picker-kind='time']"))
         |> click(css("#definition_max-trigger"))
         |> assert_open("definition_max")
-        |> click(css("#definition_max-time-panel [role='option']", text: "2:30 PM"))
+        |> click(css("#definition_max-time-panel [role='option']", text: "3:45 PM"))
 
       eventually(
         fn ->
-          assert ["14:30"] =
+          assert ["15:45"] =
                    evaluate_script(session, """
                    return [document.querySelector("#definition_max-field [data-picker-value]").value];
                    """)
