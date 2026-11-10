@@ -400,11 +400,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               name={"definition[options][#{index}][key]"}
               value={option.key || ""}
             />
-            <input
+            <.input
               type="text"
               name={"definition[options][#{index}][label]"}
               value={option.label || ""}
-              class="input flex-1"
+              class="flex-1"
               placeholder={
                 dgettext("dashboard_meeting_questions", "Option %{number}", number: index + 1)
               }

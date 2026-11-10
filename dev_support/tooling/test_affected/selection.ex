@@ -50,11 +50,15 @@ defmodule Tymeslot.TestAffected.Selection do
   A repository consuming another as a path dependency builds against that
   dependency's working tree, which its own diff cannot show. `plan/3` takes
   those changes as `:upstream` and resolves them against the dependency's own
-  index, then carries over what the two suites share: the domain tags. A
-  widening upstream change widens here too; an upstream test file changes
-  nothing here. The consumer can also name a directory of its own tests that
-  exist to check the two repositories against each other (`:upstream_tests`);
-  any upstream change that reaches the build selects all of them.
+  index, then carries over what the two suites share: the domain tags. Tests
+  in a domain no upstream test carries (the consumer's own features, which
+  wrap upstream code but which no upstream tag can name) are selected whole by
+  any upstream change that reaches code, since the tag sweep cannot reach
+  them. A widening upstream change widens here too; an upstream test file
+  changes nothing here. The consumer can also name a directory of its own
+  tests that exist to check the two repositories against each other
+  (`:upstream_tests`); any upstream change that reaches the build selects all
+  of them.
 
   ## Widen, never narrow
 
@@ -422,8 +426,36 @@ defmodule Tymeslot.TestAffected.Selection do
       true ->
         plan
         |> add_tagged(upstream.tags, index, upstream_summary(reaching, upstream.tags))
+        |> add_own_domains(reaching, upstream_index, index)
         |> add_upstream_tests(upstream_tests, index)
     end
+  end
+
+  # The tag sweep only crosses domains both suites share, so a domain no
+  # upstream test carries (marketing, billing, legal) can never be reached by
+  # it, though its tests render and wrap upstream code all the same. Any
+  # upstream change that reaches code selects those domains whole. An upstream
+  # test file reaches no code, so it is left to the cross-checks.
+  defp add_own_domains(plan, reaching, upstream_index, index) do
+    own = MapSet.difference(domain_tags_in(index), domain_tags_in(upstream_index))
+
+    if Enum.all?(reaching, &match?({:test, _}, classify(&1))) or Enum.empty?(own) do
+      plan
+    else
+      add_tagged(
+        plan,
+        own,
+        index,
+        "upstream: domains no upstream test carries: #{describe_tags(own)}"
+      )
+    end
+  end
+
+  defp domain_tags_in(index) do
+    index.tags
+    |> Map.values()
+    |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+    |> MapSet.intersection(index.domain_tags)
   end
 
   defp upstream_summary(changed, tags) do

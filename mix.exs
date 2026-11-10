@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.41.0",
+      version: "1.42.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -121,6 +121,8 @@ defmodule Tymeslot.MixProject do
       {:bandit, "~> 1.8"},
       {:tz, "~> 0.28"},
       {:uuid, "~> 1.1"},
+      # QR codes are drawn server-side (booking-link email, onboarding).
+      {:eqrcode, "~> 0.2"},
       {:bcrypt_elixir, "~> 3.2"},
       {:mox, "~> 1.0", only: :test},
       {:meck, "~> 1.1", only: :test},

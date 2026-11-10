@@ -85,6 +85,7 @@ config :tymeslot, :extra_themes, [
     key: :fixture,
     name: "Fixture",
     heading_style: :generic,
+    shows_intro: true,
     customization_spec: Tymeslot.Test.FixtureThemeSpec,
     status: :beta,
     module: TymeslotWeb.Test.FixtureTheme.Theme
@@ -240,6 +241,14 @@ config :tymeslot, :radicale,
   username: "test",
   password: "test",
   calendar_path: "/test/calendar.ics/"
+
+# Every SSO provider off, whatever the shell exports: config/runtime.exs
+# does not read ENABLE_*_AUTH in test. Tests that need a provider on set
+# `:social_auth` themselves (see `Tymeslot.AppSettingsEnvHelpers`).
+config :tymeslot, :social_auth,
+  google_enabled: false,
+  github_enabled: false,
+  oauth_enabled: false
 
 # OAuth state secrets for test (signs/validates the `state` parameter).
 # Tests typically mock State.validate/2, but OAuthStateGuard still reads

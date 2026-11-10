@@ -176,12 +176,13 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
 
   defp check_and_do(view, :slot, _ctx, before) do
     BookingDriver.load(view)
-    days = attribute(view, "[data-fact='date']", "data-value")
+    days = attribute(view, "[data-fact='date']:not([data-alternate])", "data-value")
     slots = slot_pairs(view)
 
     assert days ++ slots != [], "a moment collecting the slot marks no day and no slot"
 
-    # One control per value, checked on the first period the picker shows.
+    # One control per value, checked on the first period the picker shows; a
+    # copy for another screen size is marked data-alternate and not counted.
     assert days == Enum.uniq(days), "two day buttons share a data-value"
     assert slots == Enum.uniq(slots), "two slot buttons share a day and a time"
 

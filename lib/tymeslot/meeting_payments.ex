@@ -439,6 +439,22 @@ defmodule Tymeslot.MeetingPayments do
     as: :create_session_for_booking
 
   @doc """
+  Whether a checkout-cancelled page's `return_token` proves the visitor came
+  back from the checkout of the meeting `meeting_id`. See
+  `CheckoutSessions.returned_from_checkout?/2`.
+  """
+  @spec returned_from_checkout?(String.t(), String.t() | nil) :: boolean()
+  defdelegate returned_from_checkout?(meeting_id, return_token), to: CheckoutSessions
+
+  @doc """
+  Expires the open Stripe Checkout of a booking its guest has just left, so
+  its hold ends now rather than at the checkout's timeout. See
+  `CheckoutSessions.abandon_checkout/1`.
+  """
+  @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
+  defdelegate abandon_checkout(meeting_id), to: CheckoutSessions
+
+  @doc """
   What an attendee returning from Stripe Checkout should be told about their
   booking: still `:processing`, `:failed`, `:awaiting_approval`, `:declined`,
   `:expired`, `:confirmed` or `:cancelled`. See `CheckoutOutcome` for the rules.

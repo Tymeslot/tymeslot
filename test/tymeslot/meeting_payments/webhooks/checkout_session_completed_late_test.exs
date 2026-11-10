@@ -20,6 +20,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   import Mox, only: [expect: 3, stub: 3, verify_on_exit!: 1]
   import Tymeslot.Factory
 
+  alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
@@ -166,6 +167,49 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert :ok = CheckoutSessionCompleted.handle(%{event | "id" => "reconcile:cs_LATE_AGAIN"})
 
       assert [_one] = all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+    end
+
+    # The expiry released the invitation too, and it has been booked again at
+    # another time: bringing the booking back would make a second live
+    # booking on a single-use invitation, so the money goes back instead.
+    test "refunds a completion that arrived after expiry once its invitation was booked again" do
+      user = insert(:user)
+      type = insert(:meeting_type, user: user, invitation_only: true)
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+
+      meeting =
+        insert(:meeting,
+          status: :expired,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          invitation_id: invitation.id
+        )
+
+      _rebooked =
+        insert(:meeting,
+          status: :confirmed,
+          organizer_user_id: user.id,
+          invitation_id: invitation.id,
+          start_time: DateTime.add(meeting.start_time, 2, :day),
+          end_time: DateTime.add(meeting.end_time, 2, :day)
+        )
+
+      bp =
+        insert_payment(
+          meeting: meeting,
+          status: :failed,
+          stripe_checkout_session_id: "cs_LATE_INVITED"
+        )
+
+      stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
+        {:ok, %{"latest_charge" => "ch_LATE_INVITED"}}
+      end)
+
+      assert :ok = CheckoutSessionCompleted.handle(late_event("LATE_INVITED", meeting))
+
+      assert Repo.reload!(bp).status == :paid
+      assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+      assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     end
 
     test "refunds a completion that arrived after expiry for a meeting whose organiser is gone" do

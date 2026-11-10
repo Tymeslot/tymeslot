@@ -164,7 +164,10 @@ defmodule Tymeslot.JourneyFixtureHelpers do
         date
 
       [] ->
-        view |> element("[data-intent='later']:not([disabled])") |> render_click()
+        view
+        |> element("[data-intent='later']:not([disabled]):not([data-alternate])")
+        |> render_click()
+
         await_availability(view)
 
         case free_dates(view) -- [except] do
@@ -175,5 +178,10 @@ defmodule Tymeslot.JourneyFixtureHelpers do
   end
 
   defp free_dates(view),
-    do: Page.attribute(view, "[data-fact='date']:not([disabled])", "data-value")
+    do:
+      Page.attribute(
+        view,
+        "[data-fact='date']:not([disabled]):not([data-alternate])",
+        "data-value"
+      )
 end

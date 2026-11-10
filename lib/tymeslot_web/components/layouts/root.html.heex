@@ -21,6 +21,12 @@
     <link rel="icon" type="image/svg+xml" href={~p"/images/brand/favicon.svg"} />
     <%!-- Default app styles --%>
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
+    <%!-- A page with the onboarding stage fits it before the first paint:
+         a classic script in the head blocks that paint, which a module
+         script, or one placed after the stage, does not in every browser
+         (assets/js/stage_prefit.js). --%>
+    <script :if={assigns[:stage_prefit]} phx-track-static src={~p"/assets/stage_prefit.js"}>
+    </script>
     <%!-- Core bundle: always loaded (LiveSocket + utilities) --%>
     <script phx-track-static type="module" src={~p"/assets/app.js"}>
     </script>

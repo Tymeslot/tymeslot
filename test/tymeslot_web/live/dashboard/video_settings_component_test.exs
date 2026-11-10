@@ -257,7 +257,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
                "#mirotalk_base_url[aria-invalid='true'][aria-describedby='mirotalk_base_url-error']"
              )
 
-      assert has_element?(view, "#mirotalk_base_url-error p.form-error")
+      assert has_element?(view, "#mirotalk_base_url-error.form-field-error")
       refute has_element?(view, "#mirotalk_base_url-help")
     end
 
@@ -306,7 +306,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       assert has_element?(
                view,
-               "#custom-video-config-modal p.form-error",
+               "#custom-video-config-modal .form-field-error",
                "Use double curly brackets: {{meeting_id}} not {meeting_id}"
              )
 

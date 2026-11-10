@@ -115,3 +115,13 @@ msgstr "Seu agendamento não está confirmado. Você pode voltar e tentar de nov
 #, elixir-autogen, elixir-format
 msgid "Paid: %{amount}"
 msgstr "Pago: %{amount}"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. Your invitation stays reserved for it until the unfinished checkout expires, and a link to book again will appear here as soon as it does."
+msgstr "Seu agendamento não está confirmado. Seu convite fica reservado para ele até o pagamento não concluído expirar; assim que isso acontecer, um link para agendar de novo vai aparecer aqui."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. To try again, open the invitation link you were sent."
+msgstr "A sua reserva não está confirmada. Para tentar novamente, abra o link de convite que recebeu."

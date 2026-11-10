@@ -162,6 +162,11 @@ Settled while translating; reuse rather than re-coining.
 | **Wk** (calendar column header) | **Sett**: no full stop |
 | gradient / preset | **gradiente** / **preset** |
 | booking link | **link di prenotazione** |
+| **link** (the username field in the setup wizard: the part of the booking URL the host chooses) | **link** (masculine, invariable): `Il tuo link`, `Questo link è già di qualcun altro` |
+| **keep** (your link: save it somewhere you'll find it again) | **salvare**: `Oppure salvalo per dopo`, `Prima invia o salva il tuo link`. Never `tenere` |
+| **app-specific password** (Apple's term) | Apple's own Italian UI: **password specifica per l'app**, the Apple Account menu item **Password specifiche per le app**, the section **Accesso e sicurezza**, and **Account Apple** (capital A, as Apple writes it). `Apple ID` stays **ID Apple** where the source says Apple ID |
+| **Live** (the setup step name and the page-status badge) / *goes live* | **Online** / **andare online**: `Quasi online`, `La tua pagina non è ancora online`. Not `Live`, not `Attivo` |
+| **Book a time with me** / *pick a time with me* (the host's own share and signature line) | **Fissa un appuntamento con me** (the `fissare un appuntamento` idiom) |
 | **booking horizon / advance booking window** | **finestra di prenotazione**: the dashboard term, used on every marketing and profession page too |
 | **analytics** (our booking analytics feature) | **statistiche** (`statistiche sulle prenotazioni`); never `analytics` for our own feature |
 | third-party analytics / tracking | **strumenti di analisi di terze parti** (product names such as Google Analytics stay verbatim) |

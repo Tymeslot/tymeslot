@@ -82,6 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
           phx-target={@myself}
           class="flex gap-2"
         >
+          <%!-- raw-input: edit-in-place field drawn as plain text with an underline on hover, like the rest of the event detail panel --%>
           <input
             type="email"
             id="edit-attendee-email"

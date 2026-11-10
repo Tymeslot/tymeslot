@@ -32,6 +32,7 @@ defmodule Tymeslot.Bookings.BuildParams do
     :referrer_host,
     :visitor_hash,
     :booking_page_id,
+    :invitation_id,
     custom_fields_snapshot: [],
     custom_field_answers: %{},
     tracking_params: %{}
@@ -60,6 +61,7 @@ defmodule Tymeslot.Bookings.BuildParams do
           referrer_host: String.t() | nil,
           visitor_hash: String.t() | nil,
           booking_page_id: integer() | nil,
+          invitation_id: integer() | nil,
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
           tracking_params: map()

@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.TimezonePicker do
         </:trigger>
         <:panel>
           <div class="tz-picker__search-wrapper">
+            <%!-- raw-input: search box of the timezone picker panel, styled per theme by .tz-picker__search, which <.input> would move to the wrapper --%>
             <input
               id={"#{@id}-search"}
               type="text"

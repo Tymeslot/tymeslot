@@ -15,8 +15,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
     * `extensions/1`: the extensions configured under `:theme_extensions`
       (on the managed instance, the branding banner and the analytics
       beacon), which the theme places after its content. They receive
-      `theme_id`, `organizer_user_id`, `should_show_branding`, and
-      `demo_mode` when the page assigned one.
+      `theme_id`, `organizer_user_id`, `should_show_branding`,
+      `owner_preview` (the organiser viewing their own page through a
+      verified preview token), and `demo_mode` when the page assigned one.
 
   Everything between them is the theme's: the shipped themes lay their pages
   out as a grid (`.booker-page`) holding a content area and the extensions
@@ -105,6 +106,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
   attr :theme_id, :string, required: true, doc: "the rendering theme's catalogue id"
   attr :organizer_user_id, :integer, default: nil
   attr :should_show_branding, :boolean, default: false
+
+  attr :owner_preview, :boolean,
+    default: false,
+    doc: "the organiser's own preview of their page, not a visitor's view"
+
   attr :demo_mode, :boolean, doc: "handed to the extensions only when given"
 
   @doc "The configured theme extensions, handed this component's assigns."

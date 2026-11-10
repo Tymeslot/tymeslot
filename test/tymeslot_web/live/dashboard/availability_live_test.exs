@@ -405,8 +405,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       # Saturday should now be available with Monday's default hours
       saturday = WeeklySchedule.get_day_availability(schedule.id, 6)
       assert saturday.is_available == true
-      assert saturday.start_time == ~T[11:00:00]
-      assert saturday.end_time == ~T[19:30:00]
+      assert saturday.start_time == ~T[09:00:00]
+      assert saturday.end_time == ~T[17:00:00]
     end
 
     test "copies settings from Monday to workdays only", %{conn: conn, schedule: schedule} do
@@ -426,8 +426,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       # Tuesday through Friday should have Monday's hours
       tuesday = WeeklySchedule.get_day_availability(schedule.id, 2)
       assert tuesday.is_available == true
-      assert tuesday.start_time == ~T[11:00:00]
-      assert tuesday.end_time == ~T[19:30:00]
+      assert tuesday.start_time == ~T[09:00:00]
+      assert tuesday.end_time == ~T[17:00:00]
 
       # Weekend should remain unchanged
       saturday = WeeklySchedule.get_day_availability(schedule.id, 6)

@@ -3,7 +3,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   Keeps client errors out of ErrorTracker: 4xx exceptions raised while
   serving a request or a LiveView, by the rule in
   `Tymeslot.Infrastructure.ErrorTracking.ClientError` (the same exception
-  raised in a job or any other process is tracked), and events no
+  raised in a job or any other process is tracked, bar LiveView's
+  `ReloadError`, which is ignored wherever it comes from), and events no
   `handle_event/3` clause matches, by the rule in
   `Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent`, and requests whose
   client closed the connection before the response was sent, by the rule in

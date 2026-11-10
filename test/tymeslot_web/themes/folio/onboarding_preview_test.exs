@@ -12,17 +12,31 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreviewTest do
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Availability.WeekPreview
   alias TymeslotWeb.OnboardingLive.PreviewParts
   alias TymeslotWeb.Themes.Folio.OnboardingPreview
   alias TymeslotWeb.Themes.Folio.Theme
 
-  @slots [%{label: "9:00", state: :default, check: false}]
+  @week %{
+    state: :ready,
+    preview: %WeekPreview{
+      days: [%{date: ~D[2026-11-03], slots: ["09:00"], busy: []}],
+      slot_count: 1,
+      first_busy: nil
+    }
+  }
 
   defp card(colors) do
-    assigns = %{colors: colors, slots: @slots}
+    assigns = %{colors: colors, week: @week}
 
     rendered_to_string(~H"""
-    <PreviewParts.theme_preview theme_module={Theme} variant={:card} colors={@colors} slots={@slots}>
+    <PreviewParts.theme_preview
+      theme_module={Theme}
+      variant={:card}
+      colors={@colors}
+      week={@week}
+      today={~D[2026-11-03]}
+    >
       <:header>
         <p id="shared-header">Ada Lovelace</p>
       </:header>
@@ -56,7 +70,7 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreviewTest do
 
     assert html =~ "data-folio-cover"
     assert html =~ ~s(id="shared-header")
-    assert html =~ "9:00"
+    assert html =~ "09:00 AM"
     assert html =~ "Book"
   end
 

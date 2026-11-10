@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
+  alias TymeslotWeb.Live.Scheduling.PreviewToken
   alias TymeslotWeb.Themes.Core.{Context, ErrorBoundary, MeetingManagement, PollVoting, Registry}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
@@ -264,12 +265,19 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   # The message is assigned, deliberately not flashed. The scheduling layout
   # renders a flash group of its own on top of the root layout's, so a flash
   # here surfaced the same sentence twice above a card already carrying it.
+  #
+  # The refused mount never reaches the theme's own mount, where an owner
+  # preview is recognised, so it is recognised here too: the owner looking
+  # at their own page (the onboarding stage) is not a visitor to win over,
+  # and the page carries no branding invitation for them
+  # (`Shared.SchedulingPage`).
   defp mount_readiness_error(profile, params, socket, reason) do
     case prepare_theme_context(profile, params, socket) do
       {:ok, _context, socket} ->
         {:ok,
          socket
          |> LiveView.clear_flash()
+         |> assign(:owner_preview, PreviewToken.owner?(params["preview_token"], profile.user_id))
          |> assign(:scheduling_error_message, LinkAccessPolicy.reason_to_message(reason))}
 
       {:error, error_socket} ->

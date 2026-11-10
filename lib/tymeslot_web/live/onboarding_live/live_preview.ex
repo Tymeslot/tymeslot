@@ -10,6 +10,31 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   this module owns, so the picker feels like a real choice rather than a
   label swap.
 
+  A theme that introduces the host (`Catalog.shows_intro?/1`) also draws
+  their headline under their name, as its masthead does, updating as it is
+  typed on the look step; for any other theme the header has none, as its
+  page has none.
+
+  Above the times it names the meeting the page offers, its length and
+  where it is held, from the meeting step's form as the host edits it.
+
+  The card shows the host's real coming week (`PreviewWeek`): their dates
+  before a calendar is connected, then their free times and busy blocks
+  once the stage's week is ready, revealed once per new week.
+
+  The miniature is drawn at 400px wide on the theme's canvas colour, and the
+  onboarding stage scales it to fit (`StageFrame.scaled/1`); the stage takes
+  the same canvas colour (`canvas/2`) around it.
+
+  On a phone-width viewport (below `sm`) it is drawn as a guest sees the page
+  on a phone: a tighter canvas, the identity as one compact row on top, and
+  each theme's days and times across the card's full width, with more times
+  in the same height (`PreviewWeek.times/1`'s `phone_limit`). The switch is
+  CSS alone, a media query through Tailwind's `max-sm:` and `sm:` variants,
+  so the server renders one page for every screen and nothing measures the
+  stage: the stage is narrow at every phone width, so a query on its own
+  width would always match.
+
   Per-user colours come from the theme's resolved customisation tokens and
   are applied via inline `style`; structural layout is Tailwind utilities.
   The component is pure: its only lookup is that resolution, which reads no
@@ -18,14 +43,16 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
-
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
   import TymeslotWeb.OnboardingLive.PreviewParts, only: [color: 3, divider_style: 1, ring: 2]
 
+  alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.OnboardingLive.PreviewParts
-  alias TymeslotWeb.OnboardingLive.TextHelpers
+  alias TymeslotWeb.OnboardingLive.StageFrame
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @default_theme_id Catalog.default_id()
@@ -40,78 +67,145 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   attr :booking_theme, :string, default: @default_theme_id
   attr :name, :string, default: ""
   attr :username, :string, default: ""
-  attr :avatar_url, :string, default: nil
+
+  attr :avatar_url, :string,
+    default: nil,
+    doc: "the host's photo; `nil` draws their initials instead"
+
+  attr :headline, :string,
+    default: nil,
+    doc: "the host's headline, drawn under their name by a theme that introduces them"
 
   attr :theme_customization, :any,
     default: nil,
     doc: "the chosen theme's customisation; `nil` draws the theme's defaults"
 
-  attr :buffer_before_minutes, :integer, default: nil
-  attr :buffer_after_minutes, :integer, default: nil
-  attr :advance_booking_days, :integer, default: nil
-  attr :min_advance_hours, :integer, default: nil
-  attr :calendar_connected, :boolean, default: false
-  attr :booking_page_live, :boolean, default: true
   attr :booking_host, :string, required: true
+
+  attr :week, :map,
+    default: nil,
+    doc: "the stage's week, `%{state, preview}` (`PreviewWeek`); `nil` is the placeholder"
+
+  attr :reveal_key, :integer,
+    default: 0,
+    doc: "bumped when a new week arrives, which reveals its times once"
+
+  attr :meeting, :map,
+    default: nil,
+    doc:
+      "the meeting the page offers, `%{name, duration_minutes, location}`, drawn above the times; `nil` for none"
+
+  attr :today, Date,
+    required: true,
+    doc: "the host's date (`Tymeslot.Availability.today/1`), which dates the coming week"
+
+  attr :id, :string,
+    default: "stage",
+    doc: "names this copy of the page, so the stage and its expanded copy never share an id"
 
   @spec live_preview(map()) :: Phoenix.LiveView.Rendered.t()
   def live_preview(assigns) do
+    tokens = ThemeCustomizations.tokens(assigns.booking_theme, assigns.theme_customization)
+
     assigns =
       assigns
-      |> assign(:colors, preview_colors(assigns.booking_theme, assigns.theme_customization))
+      |> assign(:colors, PreviewParts.colors(tokens))
+      |> assign(:background, tokens.media[:background])
       |> assign(:theme_module, theme_module(assigns.booking_theme))
       |> assign(:display_name, display_name(assigns.name))
-      |> assign(:link_text, link_text(assigns.booking_host, assigns.username))
-      |> assign(:caption, caption(assigns))
-      |> assign(:slots, build_slots(assigns))
+      |> assign(:headline, headline(assigns.booking_theme, assigns.headline))
+      |> assign(:link_host, assigns.booking_host <> "/")
+      |> assign(:link_name, link_name(assigns.booking_host, assigns.username))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
-    <div class="w-full max-w-sm mx-auto">
-      <div class="rounded-token-3xl p-6 shadow-glass-lg" style={backdrop_style(@colors)}>
-        <PreviewParts.theme_preview
-          theme_module={@theme_module}
-          variant={:card}
-          colors={@colors}
-          slots={@slots}
-          locale={@locale}
-          highlight_card={highlight?(@current_step, :card)}
-          highlight_slots={highlight?(@current_step, :slots)}
-        >
-          <:header>
-            <%!-- Avatar + identity --%>
+    <div class="w-[400px] p-6 max-sm:p-3" style={backdrop_style(@colors)}>
+      <PreviewParts.theme_preview
+        theme_module={@theme_module}
+        variant={:card}
+        colors={@colors}
+        background={@background}
+        week={@week}
+        today={@today}
+        locale={@locale}
+        id={@id}
+        reveal_key={@reveal_key}
+        highlight={highlight(@current_step)}
+        meeting={@meeting}
+      >
+        <:header>
+          <%!-- On a phone the identity is one compact row (the photo, then
+               the name, headline and address beside it) above the full-width
+               times, as the themes lay out their own pages at that width.
+               From `sm` both wrappers are `contents`, so each theme lays
+               the parts out as before. --%>
+          <div
+            class="contents max-sm:flex max-sm:w-full max-sm:items-center max-sm:gap-3"
+            data-role="preview-identity"
+          >
+            <%!-- Avatar + identity: the photo, or until there is one the
+                 host's initials as they type their name, on the theme's own
+                 colour. --%>
             <div
-              class="w-16 h-16 rounded-full overflow-hidden bg-white/10"
+              :if={@avatar_url}
+              class="w-16 h-16 max-sm:w-11 max-sm:h-11 shrink-0 rounded-full overflow-hidden bg-white/10"
               style={avatar_style(@colors, highlight?(@current_step, :avatar))}
+              data-preview-avatar
             >
               <img src={@avatar_url} alt="" class="w-full h-full object-cover" />
             </div>
-            <p class="font-bold text-token-base text-center" style={text_style(@colors)}>
-              {@display_name}
-            </p>
-            <span
-              class="text-token-xs px-3 py-1 rounded-token-full font-medium"
-              style={link_style(@colors, highlight?(@current_step, :link))}
+            <div
+              :if={!@avatar_url}
+              class="w-16 h-16 max-sm:w-11 max-sm:h-11 shrink-0 rounded-full flex items-center justify-center font-bold text-token-xl max-sm:text-token-sm"
+              style={initials_style(@colors, highlight?(@current_step, :avatar))}
+              data-role="preview-initials"
+              data-preview-avatar
+              aria-hidden="true"
             >
-              {@link_text}
-            </span>
+              <%= if initials = initials(@name) do %>
+                {initials}
+              <% else %>
+                <.icon name="hero-user" class="w-7 h-7 max-sm:w-5 max-sm:h-5" />
+              <% end %>
+            </div>
+            <div class="contents max-sm:flex max-sm:min-w-0 max-sm:flex-1 max-sm:flex-col max-sm:items-start max-sm:gap-1">
+              <p
+                class="font-bold text-token-base max-sm:text-token-sm text-center max-sm:text-left break-words"
+                style={text_style(@colors)}
+              >
+                {@display_name}
+              </p>
+              <%!-- The masthead's headline: italic, in the secondary ink. A
+                   theme may set its face (Folio's serif). --%>
+              <p
+                :if={@headline}
+                class="-mt-2 max-sm:-mt-1 text-token-sm max-sm:text-token-xs italic text-center max-sm:text-left leading-snug break-words"
+                style={muted_style(@colors)}
+                data-role="preview-headline"
+              >
+                {@headline}
+              </p>
+              <%!-- On a narrow card (Paper's and Folio's side column) the
+                   name moves onto a line of its own under the host rather
+                   than either being cut. Only a host or a name wider than
+                   the card on its own gives way: the host truncates, a very
+                   long name breaks. --%>
+              <span
+                class="max-w-full min-w-0 inline-flex flex-wrap justify-center max-sm:justify-start text-token-xs max-sm:text-token-2xs px-3 py-1 max-sm:px-2 max-sm:py-0.5 rounded-token-full font-medium"
+                style={link_style(@colors, highlight?(@current_step, :link))}
+                data-role="preview-address"
+              >
+                <span class="max-w-full truncate" data-role="preview-address-host">{@link_host}</span>
+                <span class="min-w-0 [overflow-wrap:anywhere]" data-role="preview-address-name">
+                  {@link_name}
+                </span>
+              </span>
+            </div>
+          </div>
 
-            <div class="w-full h-px my-1" style={divider_style(@colors)} />
-
-            <%!-- Buffer callout: a labelled gap around meetings, never a slot --%>
-            <.buffer_callout
-              :if={@current_step == :buffer_time}
-              colors={@colors}
-              before_minutes={@buffer_before_minutes || 15}
-              after_minutes={@buffer_after_minutes || 15}
-            />
-          </:header>
-        </PreviewParts.theme_preview>
-
-        <p class="mt-4 text-center text-token-xs font-medium" style={caption_style(@colors)}>
-          {@caption}
-        </p>
-      </div>
+          <div class="w-full h-px my-1 max-sm:my-0" style={divider_style(@colors)} />
+        </:header>
+      </PreviewParts.theme_preview>
     </div>
     """
   end
@@ -127,65 +221,20 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   @spec preview_skeleton(map()) :: Phoenix.LiveView.Rendered.t()
   def preview_skeleton(assigns) do
     ~H"""
-    <div class="w-full max-w-sm mx-auto">
-      <div class="rounded-token-3xl p-6 shadow-glass-lg bg-tymeslot-900/80">
-        <div class="rounded-token-3xl p-5 bg-white/95 flex flex-col items-center gap-3 animate-pulse">
-          <div class="w-16 h-16 rounded-full bg-tymeslot-200" />
-          <div class="h-3 w-1/2 rounded-full bg-tymeslot-200" />
-          <div class="h-2 w-2/3 rounded-full bg-tymeslot-100" />
-          <div class="w-full h-px my-1 bg-tymeslot-100" />
-          <div class="grid grid-cols-2 gap-1.5 w-full">
-            <div :for={_n <- 1..4} class="h-7 rounded-token-md bg-tymeslot-100" />
-          </div>
-          <div class="w-full h-8 rounded-token-xl bg-tymeslot-200 mt-1" />
+    <div class="w-[400px] p-6">
+      <div class="rounded-token-3xl p-5 bg-white/95 flex flex-col items-center gap-3 motion-safe:animate-pulse">
+        <div class="w-16 h-16 rounded-full bg-tymeslot-200" />
+        <div class="h-3 w-1/2 rounded-full bg-tymeslot-200" />
+        <div class="h-2 w-2/3 rounded-full bg-tymeslot-100" />
+        <div class="w-full h-px my-1 bg-tymeslot-100" />
+        <div class="grid grid-cols-2 gap-1.5 w-full">
+          <div :for={_n <- 1..4} class="h-7 rounded-token-md bg-tymeslot-100" />
         </div>
-        <div class="mt-4 h-2 w-1/2 mx-auto rounded-full bg-tymeslot-700/40" />
+        <div class="w-full h-8 rounded-token-xl bg-tymeslot-200 mt-1" />
       </div>
     </div>
     """
   end
-
-  # -------------------------------------------------------------------
-  # Shared buffer piece
-  # -------------------------------------------------------------------
-
-  attr :colors, :map, required: true
-  attr :before_minutes, :integer, required: true
-  attr :after_minutes, :integer, required: true
-
-  defp buffer_callout(assigns) do
-    ~H"""
-    <div
-      class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-token-md text-token-2xs font-bold uppercase tracking-wide"
-      style={buffer_style(@colors)}
-    >
-      <.icon name="hero-arrows-up-down-mini" class="w-3 h-3" />
-      {buffer_callout_text(@before_minutes, @after_minutes)}
-    </div>
-    """
-  end
-
-  defp buffer_callout_text(0, 0),
-    do: dgettext("onboarding_wizard", "No buffer around meetings")
-
-  defp buffer_callout_text(0, after_minutes),
-    do:
-      dgettext("onboarding_wizard", "No buffer before, %{after_minutes} min after",
-        after_minutes: after_minutes
-      )
-
-  defp buffer_callout_text(before_minutes, 0),
-    do:
-      dgettext("onboarding_wizard", "%{before_minutes} min before, no buffer after",
-        before_minutes: before_minutes
-      )
-
-  defp buffer_callout_text(before_minutes, after_minutes),
-    do:
-      dgettext("onboarding_wizard", "%{before_minutes} min before, %{after_minutes} min after",
-        before_minutes: before_minutes,
-        after_minutes: after_minutes
-      )
 
   # -------------------------------------------------------------------
   # Theme + slot resolution
@@ -195,80 +244,113 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     ThemeInfo.get_theme_module(id) || ThemeInfo.get_theme_module(Catalog.default_id())
   end
 
-  defp build_slots(assigns) do
-    ~w(9:00 9:30 10:00 10:30)
-    |> Enum.with_index()
-    |> Enum.map(fn {label, index} ->
-      %{label: label, state: slot_state(assigns, index), check: check?(assigns, index)}
-    end)
-  end
-
-  defp check?(%{current_step: :connect_calendar, calendar_connected: true}, 0), do: true
-  defp check?(_assigns, _index), do: false
-
-  defp slot_state(%{current_step: :connect_calendar, calendar_connected: false}, _index),
-    do: :muted
-
-  defp slot_state(%{current_step: :connect_calendar}, _index), do: :filled
-  defp slot_state(%{current_step: :minimum_notice}, index) when index <= 1, do: :muted
-  defp slot_state(_assigns, _index), do: :default
-
   # -------------------------------------------------------------------
   # Captions
   # -------------------------------------------------------------------
 
-  defp caption(%{current_step: :welcome}),
-    do: dgettext("onboarding_wizard", "This is your live booking page")
+  @doc """
+  The line the stage shows under the page, or `nil` for none. On the last
+  step a live page with a username gets its address; on the calendar and meeting steps a
+  week that is ready gets what it shows (`week_caption/1`). Reads
+  `current_step`, `booking_page_live`, `booking_host`, `username` and
+  `stage_week`.
+  """
+  @spec caption(map()) :: String.t() | nil
+  def caption(%{current_step: :ready, booking_page_live: true} = assigns) do
+    # Only a real address is announced as live, never the placeholder name.
+    if String.trim(assigns.username || "") != "" do
+      dgettext("onboarding_wizard", "You're all set: %{link} is live",
+        link: link_text(assigns.booking_host, assigns.username)
+      )
+    end
+  end
 
-  defp caption(%{current_step: :profile}),
-    do: dgettext("onboarding_wizard", "Your page, your brand")
+  def caption(%{current_step: step, stage_week: week}) when step in [:connect_calendar, :meeting],
+    do: week_caption(week)
 
-  defp caption(%{current_step: :connect_calendar, calendar_connected: true}),
-    do: dgettext("onboarding_wizard", "Your calendar is synced - these slots are live")
+  def caption(_assigns), do: nil
 
-  defp caption(%{current_step: :connect_calendar}),
-    do: dgettext("onboarding_wizard", "Connect your calendar to fill these slots")
+  @doc """
+  Whether the stage should keep a line for a caption that is still to come:
+  on the calendar and meeting steps, while the week loads. The ready week
+  brings its caption with it, and a stage sized without that line from the
+  first paint would shrink when it arrives.
+  """
+  @spec caption_pending?(map()) :: boolean()
+  def caption_pending?(%{current_step: step, stage_week: %{state: :loading}})
+      when step in [:connect_calendar, :meeting],
+      do: true
 
-  defp caption(%{current_step: :buffer_time}),
-    do: dgettext("onboarding_wizard", "A breather around each meeting")
+  def caption_pending?(_assigns), do: false
 
-  defp caption(%{current_step: :booking_window} = assigns) do
-    dgettext("onboarding_wizard", "Bookable up to %{days}",
-      days: TextHelpers.humanize_days(assigns.advance_booking_days)
+  @doc """
+  What a ready week shows, in a sentence: the first busy block, if any, and
+  the number of open slots. `nil` for a week that is not ready. The stage
+  shows it under the page and the live region announces it.
+  """
+  @spec week_caption(map() | nil) :: String.t() | nil
+  # A refresh that could not be read keeps the week shown and says so.
+  def week_caption(%{state: :ready, stale: true}),
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Saved. The preview couldn't update just now; your page shows your latest hours."
+      )
+
+  def week_caption(%{state: :ready, preview: %WeekPreview{first_busy: nil} = preview}) do
+    dngettext(
+      "onboarding_wizard",
+      "%{count} open slot this week.",
+      "%{count} open slots this week.",
+      preview.slot_count
     )
   end
 
-  defp caption(%{current_step: :minimum_notice} = assigns) do
-    dgettext("onboarding_wizard", "Earliest booking: %{hours}h from now",
-      hours: assigns.min_advance_hours || 0
+  def week_caption(%{state: :ready, preview: %WeekPreview{first_busy: busy} = preview}) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    dngettext(
+      "onboarding_wizard",
+      "Your %{day} %{time} is already blocked. %{count} open slot this week.",
+      "Your %{day} %{time} is already blocked. %{count} open slots this week.",
+      preview.slot_count,
+      day: LocaleFormat.format_weekday_name(Date.day_of_week(busy.date), locale, :full),
+      time: LocaleFormat.format_time(busy.start, locale)
     )
   end
 
-  defp caption(%{current_step: :ready, booking_page_live: false}),
-    do: dgettext("onboarding_wizard", "Goes live once a calendar is connected")
-
-  defp caption(%{current_step: :ready} = assigns) do
-    dgettext("onboarding_wizard", "You're all set - %{link} is live",
-      link: link_text(assigns.booking_host, assigns.username)
-    )
-  end
-
-  defp caption(_assigns), do: dgettext("onboarding_wizard", "This is your live booking page")
+  def week_caption(_week), do: nil
 
   # -------------------------------------------------------------------
   # Highlight regions
   # -------------------------------------------------------------------
 
-  defp highlight?(:welcome, :card), do: true
-  defp highlight?(:ready, :card), do: true
+  # The regions of the theme's card ringed for a step (`PreviewParts.ring/2`),
+  # which the stage also brings into view on a phone. Choosing a theme
+  # changes the whole page, and the last step shows it finished, so neither
+  # rings anything.
+  defp highlight(:connect_calendar), do: [:calendar]
+  defp highlight(:meeting), do: [:slots]
+  defp highlight(_step), do: []
+
+  # The header's own regions, which only the profile step rings.
   defp highlight?(:profile, :avatar), do: true
   defp highlight?(:profile, :link), do: true
-  defp highlight?(:booking_window, :slots), do: true
   defp highlight?(_step, _region), do: false
 
   # -------------------------------------------------------------------
   # Value helpers
   # -------------------------------------------------------------------
+
+  # Only a theme whose page shows the host's introduction shows the line.
+  defp headline(theme_id, headline) do
+    with true <- Catalog.shows_intro?(theme_id),
+         trimmed when trimmed != "" <- String.trim(headline || "") do
+      trimmed
+    else
+      _no_line -> nil
+    end
+  end
 
   defp display_name(name) do
     case String.trim(name || "") do
@@ -277,19 +359,43 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     end
   end
 
-  defp link_text(host, username) do
-    slug =
-      case String.trim(username || "") do
-        "" -> dgettext("onboarding_wizard", "your-link")
-        trimmed -> trimmed
-      end
+  @doc """
+  The initials drawn for a host with no photo: the first letter of their
+  first and last names, or of their only one; `nil` for a blank name.
 
-    "#{host}/#{slug}"
+      iex> initials("maya okafor")
+      "MO"
+  """
+  @spec initials(String.t() | nil) :: String.t() | nil
+  def initials(name) do
+    case String.split(name || "") do
+      [] -> nil
+      [only] -> first_letter(only)
+      [first | rest] -> first_letter(first) <> first_letter(List.last(rest))
+    end
   end
+
+  defp first_letter(word), do: word |> String.first() |> String.upcase()
+
+  defp link_text(host, username), do: StageFrame.address(host, username)
+
+  defp link_name(host, username),
+    do: String.replace_prefix(link_text(host, username), host <> "/", "")
 
   # -------------------------------------------------------------------
   # Colour resolution
   # -------------------------------------------------------------------
+
+  @doc """
+  The theme's canvas colour: what the page is drawn on, and so what the
+  stage around it takes.
+  """
+  @spec canvas(String.t(), term()) :: String.t()
+  def canvas(theme_id, customization) do
+    theme_id |> preview_colors(customization) |> canvas()
+  end
+
+  defp canvas(colors), do: color(colors, :background, "#0f172a")
 
   defp preview_colors(theme_id, customization) do
     theme_id |> ThemeCustomizations.tokens(customization) |> PreviewParts.colors()
@@ -300,25 +406,25 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # -------------------------------------------------------------------
 
   defp backdrop_style(colors) do
-    "background: #{color(colors, :background, "#0f172a")};"
+    "background: #{canvas(colors)};" <> PreviewParts.scheme_style(colors)
   end
 
   defp avatar_style(colors, highlighted?) do
     "border: 2px solid #{color(colors, :surface, "#ffffff")};" <> ring(highlighted?, colors)
   end
 
-  defp text_style(colors), do: "color: #{color(colors, :text, "#0f172a")};"
-
-  defp link_style(colors, highlighted?) do
-    "background: #{color(colors, :primary, "#14b8a6")}1a;color: #{color(colors, :text_secondary, "#475569")};" <>
+  # The step dots' pairing: white on the theme's primary colour.
+  defp initials_style(colors, highlighted?) do
+    "background: #{color(colors, :primary, "#14b8a6")};color: #ffffff;" <>
       ring(highlighted?, colors)
   end
 
-  defp buffer_style(colors) do
-    "background: #{color(colors, :accent, "#f59e0b")}26;color: #{color(colors, :text_secondary, "#475569")};"
-  end
+  defp text_style(colors), do: "color: #{color(colors, :text, "#0f172a")};"
 
-  defp caption_style(colors) do
-    "color: #{color(colors, :text, "#e2e8f0")};"
+  defp muted_style(colors), do: "color: #{color(colors, :text_secondary, "#475569")};"
+
+  defp link_style(colors, highlighted?) do
+    "background: #{PreviewParts.tint(color(colors, :primary, "#14b8a6"), 10)};color: #{color(colors, :text_secondary, "#475569")};" <>
+      ring(highlighted?, colors)
   end
 end

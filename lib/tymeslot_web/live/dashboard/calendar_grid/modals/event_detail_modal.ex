@@ -135,6 +135,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-submit="update_event_title"
           class="pr-8"
         >
+          <%!-- raw-input: event title edited in place, drawn as the panel heading --%>
           <input
             type="text"
             id="event-title-input"
@@ -191,6 +192,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm"
         >
+          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
             type="date"
             id="event-all-day-start"
@@ -200,6 +202,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           />
           <span class="text-tymeslot-400">&ndash;</span>
           <%!-- end_date is stored exclusively; show the inclusive last day. --%>
+          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
             type="date"
             id="event-all-day-end"
@@ -217,6 +220,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm"
         >
+          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
             type="date"
             id="event-start-date"
@@ -224,6 +228,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             value={start_parts.date}
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
+          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
             type="time"
             id="event-start-time"
@@ -232,6 +237,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <span class="text-tymeslot-400">&ndash;</span>
+          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
             type="date"
             id="event-end-date"
@@ -239,6 +245,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             value={end_parts.date}
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
+          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
             type="time"
             id="event-end-time"
@@ -277,6 +284,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Location --%>
       <.detail_line :if={@editable} variant={:compact} icon="hero-map-pin" class="mb-3">
+        <%!-- raw-input: edit-in-place field drawn as plain text with an underline on hover, like the rest of the event detail panel --%>
         <input
           type="text"
           id="event-location-input"
@@ -311,6 +319,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Description --%>
       <.detail_line :if={@editable} variant={:compact} icon="hero-bars-3-bottom-left" class="mb-3">
+        <%!-- raw-input: description edited in place, drawn as plain text that grows with its content --%>
         <textarea
           id="event-description-input"
           name="value"

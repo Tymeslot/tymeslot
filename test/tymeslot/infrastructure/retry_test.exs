@@ -70,10 +70,15 @@ defmodule Tymeslot.Infrastructure.RetryTest do
         {:rate_limited, 30}
       ]
 
+      # A rate limit waits its named seconds capped at `max_delay`, not a delay
+      # scaled from `initial_delay`, so without the zero cap the last reason
+      # sleeps a real 16 s.
       for reason <- transient do
         {fun, calls} = counting([{:error, reason}, {:ok, :done}])
 
-        assert {:ok, :done} = quietly(fn -> Retry.with_backoff(fun, @fast) end)
+        assert {:ok, :done} =
+                 quietly(fn -> Retry.with_backoff(fun, @fast ++ [max_delay: 0]) end)
+
         assert calls.() == 2, inspect(reason)
       end
     end

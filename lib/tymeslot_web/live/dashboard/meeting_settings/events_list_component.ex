@@ -170,6 +170,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
               label={dgettext("dashboard_meeting_types", "Copy link")}
               tooltip={dgettext("dashboard_meeting_types", "Copy link")}
               phx-hook="CopyOnClick"
+              phx-click="booking_link_copied"
+              phx-target={@parent_myself}
               data-copy-text={copy_url(@booking_base_url, @link_paths, event.type)}
               data-copy-feedback={dgettext("dashboard_meeting_types", "Booking link copied!")}
             />

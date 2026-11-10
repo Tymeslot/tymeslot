@@ -41,12 +41,14 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     original_sidebar = Application.get_env(:tymeslot, :dashboard_sidebar_extensions)
     original_components = Application.get_env(:tymeslot, :dashboard_action_components)
     original_notices = Application.get_env(:tymeslot, :dashboard_notice_components)
+    original_profile_sections = Application.get_env(:tymeslot, :profile_section_components)
 
     on_exit(fn ->
       # Restore original config
       Application.put_env(:tymeslot, :dashboard_sidebar_extensions, original_sidebar)
       Application.put_env(:tymeslot, :dashboard_action_components, original_components)
       Application.put_env(:tymeslot, :dashboard_notice_components, original_notices)
+      Application.put_env(:tymeslot, :profile_section_components, original_profile_sections)
     end)
 
     %{conn: conn, user: user}
@@ -112,6 +114,39 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
       refute has_element?(view, "#test-notice")
+    end
+  end
+
+  defmodule ProfileSectionComponent do
+    use Phoenix.LiveComponent
+
+    @impl Phoenix.LiveComponent
+    def render(assigns) do
+      ~H"""
+      <p id="test-profile-section">Section for {@current_user.email}</p>
+      """
+    end
+  end
+
+  describe "profile sections" do
+    test "an overlay's section renders on the Profile page, for the signed-in user", %{
+      conn: conn,
+      user: user
+    } do
+      Application.put_env(:tymeslot, :profile_section_components, [ProfileSectionComponent])
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      assert has_element?(view, "#test-profile-section", "Section for #{user.email}")
+    end
+
+    test "the Profile page renders without any overlay section", %{conn: conn} do
+      Application.put_env(:tymeslot, :profile_section_components, [])
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      assert has_element?(view, "#time-format-form-container")
+      refute has_element?(view, "#test-profile-section")
     end
   end
 

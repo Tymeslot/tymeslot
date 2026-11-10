@@ -32,6 +32,7 @@ defmodule Tymeslot.Security.RateLimiterIPv6SourceTest do
           meeting_keep: 10,
           guest_rsvp: 60,
           seat_manage: 60,
+          booking_invitation: 30,
           webhook: 100,
           stripe_webhook: 1_000,
           calendar_push: 1_000,

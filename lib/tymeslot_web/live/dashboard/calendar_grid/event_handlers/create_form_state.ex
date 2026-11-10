@@ -240,7 +240,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @doc """
   Adds one more guest to an ad-hoc meeting.
 
-  Capped at `Guests.max_guests/0`, the same number a booker may bring. An
+  Capped at `Guests.max_guests/0`, the most guests a meeting can have: the
+  host is signed in, so their own meetings are not held to the lower default
+  of the public booking page (`Guests.default_booking_limit/0`). An
   invalid address, the main guest's own and repeats are refused here with a
   flash saying why, rather than silently dropped later.
   """

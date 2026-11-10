@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Live.Scheduling.FixedDatesBookingPageTest do
   # The session list is the shared `SessionList` component, the same markup
   # on every theme; the rest of the walk goes through `BookingDriver`.
   @entry "[data-testid='session-entry']"
-  @date "[data-fact='date']"
+  @date "[data-fact='date']:not([data-alternate])"
   @time "[data-fact='time']"
   @attendee %{name: "Ada Guest", email: "ada@example.com", message: ""}
 

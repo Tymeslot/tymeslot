@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
 
   alias Ecto.{Changeset, UUID}
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.UniqueInvitation
 
   @valid_base_attrs %{
     uid: "test-uid-123",
@@ -247,6 +248,36 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
         )
 
       refute Meeting.unique_slot_violation?(changeset)
+    end
+  end
+
+  describe "UniqueInvitation.unavailable?/1" do
+    test "recognises an insert naming an invitation that no longer exists" do
+      user = insert(:user)
+
+      {:error, changeset} =
+        %Meeting{}
+        |> Meeting.changeset(
+          @valid_base_attrs
+          |> Map.put(:organizer_user_id, user.id)
+          |> Map.put(:invitation_id, 0)
+        )
+        |> Repo.insert()
+
+      assert UniqueInvitation.unavailable?(changeset)
+      refute UniqueInvitation.violation?(changeset)
+    end
+
+    test "ignores any other constraint error" do
+      changeset =
+        %Meeting{}
+        |> Changeset.change()
+        |> Changeset.add_error(:uid, "has already been taken",
+          constraint: :unique,
+          constraint_name: "meetings_uid_index"
+        )
+
+      refute UniqueInvitation.unavailable?(changeset)
     end
   end
 end

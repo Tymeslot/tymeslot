@@ -4,12 +4,15 @@ defmodule CredoChecks.UseCoreInputs do
 
   Raw `<input>`, `<textarea>`, and `<select>` tags, as well as `Phoenix.HTML.Form` helpers,
   should be avoided in favor of standardized components in `TymeslotWeb.Components.CoreComponents`.
+
+  Tags are read whole, so one whose attributes the formatter has wrapped onto
+  the following lines is caught too. A control `input/1` cannot render is
+  exempted by a `<%!-- raw-input: <reason> --%>` comment directly above it.
   """
 
   use Credo.Check,
     base_priority: :high,
     category: :readability,
-    exit_status: 0,
     explanations: [
       check: """
       Ensures that core components are used instead of raw HTML input tags or standard Phoenix form helpers.
@@ -22,6 +25,7 @@ defmodule CredoChecks.UseCoreInputs do
 
   alias Credo.IssueMeta
   alias Credo.SourceFile
+  alias CredoChecks.HtmlTags
 
   @helpers ~w(text_input textarea select password_input email_input number_input checkbox
               radio_button date_input time_input datetime_local_input color_input file_input
@@ -31,9 +35,22 @@ defmodule CredoChecks.UseCoreInputs do
   # 4, `PhoenixHTMLHelpers.Form` since.
   @form_modules [[:Phoenix, :HTML, :Form], [:PhoenixHTMLHelpers, :Form]]
 
-  # Raw <input, <textarea, <select tags. Hidden inputs are ignored, as they
-  # are often used for CSRF or internal state.
-  @tag_regex ~r/<(input|textarea|select)(?![^>]*type=["']hidden["'])[\s\/>]/i
+  # Hidden inputs are ignored, as they are often used for CSRF or internal
+  # state. The attribute is looked for in the whole tag, which the formatter
+  # may have wrapped over several lines, written either as a plain value or as
+  # a literal expression (`type={"hidden"}`).
+  @hidden_regex ~r/\stype=(?:["']hidden["']|\{\s*"hidden"\s*\})/i
+
+  # A raw control that `input/1` cannot render (a radio drawn as an option
+  # card, a file input behind a styled button) is exempted where it stands,
+  # by a HEEx comment directly above the tag that says why:
+  #
+  #     <%!-- raw-input: radio drawn by the option card around it --%>
+  #     <input type="radio" ... />
+  #
+  # `# credo:disable-for-next-line` cannot do this: it is an Elixir comment,
+  # and the tag sits inside a `~H` template. The reason is required.
+  @exemption_regex ~r/^raw-input:\s*\S/
 
   @doc false
   @impl Credo.Check
@@ -54,12 +71,13 @@ defmodule CredoChecks.UseCoreInputs do
     end
   end
 
-  # Tags live in HEEx, which the AST holds as strings, so these are found
-  # line by line; a comment that mentions one is not a use of it.
+  # Tags live in HEEx, which the AST holds as strings, so these are read from
+  # the source text, whole, by `CredoChecks.HtmlTags`.
   defp tag_issues(source_file, issue_meta) do
-    for {line_no, line} <- SourceFile.lines(source_file),
-        not String.starts_with?(String.trim_leading(line), "#"),
-        [_match, tag] <- [Regex.run(@tag_regex, line)] do
+    for %{name: tag, line_no: line_no, text: text, comment: comment} <-
+          HtmlTags.tags(source_file, "input|textarea|select"),
+        not Regex.match?(@hidden_regex, text),
+        not exempt?(comment) do
       format_issue(issue_meta,
         message:
           "Avoid using raw `<#{tag}>` tags. Use `TymeslotWeb.Components.CoreComponents.Forms.input/1` instead.",
@@ -68,6 +86,9 @@ defmodule CredoChecks.UseCoreInputs do
       )
     end
   end
+
+  defp exempt?(nil), do: false
+  defp exempt?(comment), do: Regex.match?(@exemption_regex, comment)
 
   # Helpers are found as calls: qualified by a form module or an alias of
   # one, or unqualified where a form module is imported. Any other module's

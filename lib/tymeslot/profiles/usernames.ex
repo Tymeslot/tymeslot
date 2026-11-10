@@ -19,6 +19,9 @@ defmodule Tymeslot.Profiles.Usernames do
   @type username :: String.t()
   @type user_id :: pos_integer()
 
+  @max_length 30
+  @max_numbered 9
+
   @doc """
   Generates a unique default username for a user.
   """
@@ -32,6 +35,79 @@ defmodule Tymeslot.Profiles.Usernames do
       generate_random_username(base, 3)
     end
   end
+
+  @doc """
+  Suggests a booking link for a host from their full name, without writing
+  anything.
+
+  The name is folded to lowercase ASCII (accents dropped, any other run of
+  characters becoming `-`). A name that leaves fewer than three characters
+  falls back to the local part of the `:email` option (anything after a `+`
+  dropped), folded the same way, and failing that to `user-<id>`. The first
+  of the base, then `base-2` to `base-9`, that is valid, not reserved and
+  free is returned; if none is, `<base>-<id>`, then `user-<id>`.
+  """
+  @spec suggest(String.t() | nil, user_id, keyword()) :: username
+  def suggest(full_name, user_id, opts \\ []) do
+    fallback = "user-#{user_id}"
+
+    base =
+      Enum.find(
+        [normalise(full_name), normalise(email_name(opts[:email]))],
+        fallback,
+        &(String.length(&1) >= 3)
+      )
+
+    candidates =
+      [base | Enum.map(2..@max_numbered, &with_suffix(base, "-#{&1}"))] ++
+        [with_suffix(base, "-#{user_id}"), fallback]
+
+    candidates = Enum.filter(candidates, &allowed?/1)
+    taken = ProfileQueries.taken_usernames(candidates)
+
+    Enum.find(candidates, fallback, &(String.downcase(&1) not in taken))
+  end
+
+  defp normalise(name) when is_binary(name) do
+    name
+    |> String.normalize(:nfd)
+    |> String.replace(~r/\p{Mn}/u, "")
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]+/, "-")
+    |> String.trim("-")
+    |> cut(@max_length)
+  end
+
+  defp normalise(_name), do: ""
+
+  defp email_name(email) when is_binary(email),
+    do: email |> String.split("@") |> hd() |> String.split("+") |> hd()
+
+  defp email_name(_email), do: nil
+
+  @doc """
+  Whether `username` is no choice of the host's: blank, or the system
+  default `generate_default_username/1` gives `user_id`.
+  """
+  @spec system_default?(username | nil, user_id) :: boolean()
+  def system_default?(nil, _user_id), do: true
+
+  def system_default?(username, user_id) when is_binary(username) do
+    base = "user_#{user_id}"
+
+    case String.trim(username) do
+      "" -> true
+      ^base -> true
+      other -> Regex.match?(~r/\A#{base}_[0-9a-f]{8}\z/, other)
+    end
+  end
+
+  defp with_suffix(base, suffix), do: cut(base, @max_length - String.length(suffix)) <> suffix
+
+  defp cut(string, length), do: string |> String.slice(0, length) |> String.trim_trailing("-")
+
+  defp allowed?(candidate),
+    do: UsernameValidator.validate(candidate) == :ok and not ReservedPaths.reserved?(candidate)
 
   @doc "See `Tymeslot.Profiles.change_username/2`."
   @spec change(ProfileSchema.t(), username) :: {:ok, ProfileSchema.t()} | {:error, term()}

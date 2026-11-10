@@ -208,6 +208,18 @@ agosto · septiembre · octubre · noviembre · diciembre
 
 **Weekday abbreviations:** lun · mar · mié · jue · vie · sáb · dom
 
+### Setup wizard terms
+
+| English | Spanish |
+|---|---|
+| link (the username field: the part of the booking page address the host chooses) | **enlace** (`Tu enlace`, `Empieza tu enlace con una letra o un número`); in the wizard never `nombre de usuario`, which stays for the sign-in field of a CalDAV server |
+| keep (your link: save it somewhere you will find it again) | **guardar** (`O guárdalo para más tarde`, `Primero envía o guarda tu enlace`); never `conservar` here, which is for a credential you must not revoke |
+| free/busy (what Tymeslot reads from a calendar) | **disponibilidad** (`Consultamos tu disponibilidad`); in UI labels for the feed, `feed de disponibilidad` |
+| free times / open slots (on the host's own page preview) | **horarios libres** (`Esta semana hay 3 horarios libres`); never `huecos`, which reads as Spain |
+| Live (the wizard's last step and the badge on the page preview) | **En línea**; to go live → **estar en línea** / **ponerla en línea** (`Tu página de reservas todavía no está en línea`). Dashboard labels that say where a page is published (`Live at:` → `Publicada en:`) keep **publicada** |
+| app-specific password (Apple) | see *Third-party UI labels* below: **contraseña específica para la app** in prose, **Contraseñas específicas para apps** as Apple's menu label |
+| phone (the device) | **teléfono** (`Abrir en el teléfono`, `la cámara del teléfono`); see section 7 |
+
 ### Booking pages (a host's extra pages)
 
 A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.
