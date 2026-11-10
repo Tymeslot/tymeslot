@@ -42,13 +42,19 @@ defmodule Tymeslot.Precommit.Runner do
 
   ## Who yields under contention
 
-  The suite is the only step with a deadline: ExUnit kills a test after 60
+  The suite is the step whose deadline is tight: ExUnit kills a test after 60
   seconds, and the partitions are sized as if the cores were theirs. Dialyzer,
-  credo and the JavaScript suites have no deadline, but left at the same
-  priority the kernel splits the cores evenly between them and the partitions,
-  and a test that takes seconds alone has been seen to time out. So every step
-  except the suite is started under `nice` (see `launcher/1`). On an idle
-  machine that changes nothing; under load the steps that can wait do.
+  credo and sobelow have no deadline, but left at the same priority the kernel
+  splits the cores evenly between them and the partitions, and a test that
+  takes seconds alone has been seen to time out. So every step except the
+  suite is started under `nice` (see `launcher/1`). On an idle machine that
+  changes nothing; under load the steps that can wait do.
+
+  The JavaScript suites are niced too, though vitest has a per-test deadline
+  of its own: both repos' `assets/vitest.config.js` raise it to 30 seconds so
+  that waiting for the CPU does not count as failing. Keep those limits in
+  step with this arrangement; a new JavaScript suite with a timeout needs the
+  same headroom.
 
   ## Step results as they happen
 
