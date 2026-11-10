@@ -505,8 +505,8 @@ end
 
 # Self-host opt-in for the meeting-payments feature. Off by default — flipping
 # MEETING_PAYMENTS_ENABLED=true requires the instance owner to register their
-# instance as a Stripe platform and supply STRIPE_SECRET_KEY plus
-# STRIPE_CONNECT_WEBHOOK_SECRET above. The optional application fee is taken
+# instance as a Stripe platform and supply STRIPE_SECRET_KEY,
+# STRIPE_CONNECT_WEBHOOK_SECRET and STRIPE_CONNECT_CLIENT_ID above. The optional application fee is taken
 # from each charge in basis points (0–10000); defaults to 0 so no platform cut
 # is taken unless the operator explicitly sets one.
 case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
@@ -515,12 +515,6 @@ case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
 
   _ ->
     :ok
-end
-
-case System.get_env("MEETING_PAYMENTS_DEFAULT_COUNTRY") do
-  nil -> :ok
-  "" -> :ok
-  code -> config :tymeslot, :meeting_payments_default_country, String.downcase(code)
 end
 
 case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
