@@ -256,6 +256,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         min="0"
         max="1"
         step="0.05"
+        inputmode="decimal"
         phx-debounce="blur"
         value={format_score(@effective.value)}
         disabled={@disabled}

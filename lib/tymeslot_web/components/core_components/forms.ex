@@ -120,6 +120,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         assigns.errors
         |> error_aria(error_id)
         |> Map.merge(html_constraints(assigns))
+        |> Map.merge(number_keypad(assigns))
         |> disabled_attr(assigns.disabled)
         |> required_attr(assigns.required)
         |> Map.merge(assigns.rest)
@@ -330,6 +331,31 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   # learns the field is required. See the moduledoc for `novalidate`.
   defp required_attr(rest, true), do: Map.put(rest, :required, true)
   defp required_attr(rest, _required), do: rest
+
+  # A phone picks its keypad from `inputmode`. A field that can go negative
+  # asks for none, because the numeric and decimal pads on iOS have no minus
+  # key; `type="number"` alone gets a keyboard that does.
+  defp number_keypad(%{type: "number"} = assigns) do
+    cond do
+      not non_negative?(assigns[:min]) -> %{}
+      fractional_step?(assigns[:step]) -> %{inputmode: "decimal"}
+      true -> %{inputmode: "numeric"}
+    end
+  end
+
+  defp number_keypad(_assigns), do: %{}
+
+  defp non_negative?(nil), do: false
+
+  defp non_negative?(min) do
+    case Float.parse(to_string(min)) do
+      {number, _rest} -> number >= 0
+      :error -> false
+    end
+  end
+
+  defp fractional_step?(nil), do: false
+  defp fractional_step?(step), do: to_string(step) == "any" or to_string(step) =~ "."
 
   defp html_constraints(assigns) do
     Map.reject(

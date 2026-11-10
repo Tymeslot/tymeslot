@@ -156,6 +156,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
             <input
               type="number"
               name="interval"
+              inputmode="numeric"
               min="1"
               max={Pattern.max_number()}
               value={@interval}
@@ -247,6 +248,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               <input
                 type="number"
                 name="count"
+                inputmode="numeric"
                 min="1"
                 max={Pattern.max_number()}
                 value={@count}

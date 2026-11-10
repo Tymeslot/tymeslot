@@ -31,6 +31,44 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
     assert html =~ "can&#39;t be blank"
   end
 
+  describe "number field keypad" do
+    defp keypad(attrs) do
+      fn assigns ->
+        ~H"""
+        <Forms.input id="amount" name="amount" type={@type} value="" {@attrs} />
+        """
+      end
+      |> render_component(%{
+        type: Map.get(attrs, :type, "number"),
+        attrs: Map.delete(attrs, :type)
+      })
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("input")
+      |> LazyHTML.attribute("inputmode")
+    end
+
+    test "a whole number from zero up asks for the numeric keypad" do
+      assert keypad(%{min: 1, step: "1"}) == ["numeric"]
+    end
+
+    test "a fractional step asks for the decimal keypad" do
+      assert keypad(%{min: "0.01", step: "0.01"}) == ["decimal"]
+    end
+
+    test "a field that can go negative asks for no keypad, so the minus key stays" do
+      assert keypad(%{}) == []
+      assert keypad(%{min: -10, step: "1"}) == []
+    end
+
+    test "a caller's inputmode wins" do
+      assert keypad(%{min: 1, inputmode: "text"}) == ["text"]
+    end
+
+    test "only number fields get a keypad" do
+      assert keypad(%{type: "text", min: 1}) == []
+    end
+  end
+
   describe "textarea rows" do
     defp render_textarea(assigns) do
       fn assigns ->
