@@ -96,6 +96,7 @@
           # Suggest ~p/url(~p) in appropriate contexts (conservative by default)
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
+          {CredoChecks.NoNativePickers, []},
           {CredoChecks.UseCoreModal, []},
           {CredoChecks.NoInlineSvg,
            [

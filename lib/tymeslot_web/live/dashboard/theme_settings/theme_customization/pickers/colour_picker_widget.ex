@@ -6,17 +6,18 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
   preview swatch, a hex input, and an eyedropper button. The `CustomColourPicker`
   JS hook owns its DOM after mount; this module only renders the markup.
 
-  Pass a unique `id`, the parent LiveComponent's `target`, an `initial_hex`,
-  and the `commit_event` to push back to the server when the user releases the
-  pointer / commits the hex / picks via eyedropper. `commit_params` (for
-  example the option and field) are merged into every commit's payload, so
-  several pickers can share one event.
+  Pass a unique `id`, an `initial_hex`, and the `commit_event` to push back to
+  the server when the user releases the pointer / commits the hex / picks via
+  eyedropper. The event goes to the LiveComponent named by `target`, or to the
+  LiveView when there is none. The payload is `%{"choice" => hex}`, merged over
+  `commit_params` (for example the option and field), so several pickers can
+  share one event.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   attr :id, :string, required: true, doc: "Unique DOM id for the picker root."
-  attr :target, :any, required: true, doc: "Phx target for pushEventTo (LiveComponent CID)."
+  attr :target, :any, default: nil, doc: "Phx target for pushEventTo (LiveComponent CID)."
   attr :initial_hex, :string, required: true, doc: "Seed colour, e.g. \"#06b6d4\"."
   attr :commit_event, :string, required: true, doc: "Event name pushed on commit."
 

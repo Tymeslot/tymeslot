@@ -119,11 +119,11 @@ defmodule TymeslotWeb.AdminLive do
     handle_event("save_setting", %{"key" => key, "value" => locale}, socket)
   end
 
-  # The accent swatch is preview-only: picking a colour never writes to
+  # The accent picker is preview-only: picking a colour never writes to
   # `AppSettings` directly. It only updates `accent_draft`, which the hex
   # field mirrors, so the hex form's submit remains the single writer for
   # `email_brand_accent` - see the comment on `Settings.brand_accent_row/1`.
-  def handle_event("preview_accent", %{"value" => value}, socket) do
+  def handle_event("preview_accent", %{"choice" => value}, socket) do
     case Branding.normalise_accent(value) do
       nil -> {:noreply, socket}
       hex -> {:noreply, assign(socket, :accent_draft, hex)}

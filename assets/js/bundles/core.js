@@ -17,6 +17,7 @@ import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPag
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { EmailLogoUpload } from "../hooks/email_logo_upload"
+import { CustomColourPicker } from "../hooks/custom_colour_picker"
 import { AutoUpload } from "../hooks/auto_upload"
 import { ScrollStrip } from "../hooks/scroll_strip"
 import { StageScale, prefitStages } from "../hooks/stage_scale"
@@ -76,6 +77,10 @@ const CoreHooks = {
   // bundle for one hook would cost far more than the hook does. It mounts
   // only on the element carrying phx-hook, so every other page ignores it.
   EmailLogoUpload,
+
+  // The admin email accent uses the theme customiser's colour picker, and
+  // /admin has no route bundle (see EmailLogoUpload above).
+  CustomColourPicker,
 
   // Onboarding's profile step mounts this for the avatar picker, and
   // onboarding runs its own live_session with no route bundle (see
