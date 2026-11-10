@@ -1,7 +1,9 @@
 defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   @moduledoc """
-  Revokes the platform's access to a Stripe account a host connected but
-  Tymeslot refused, so a declined connection does not linger on their account.
+  Revokes the platform's access to a Stripe account a host connected through
+  OAuth that Tymeslot no longer holds: one it refused, or one the host
+  disconnected (or whose owner was deleted), which is scheduled after a delay
+  so a checkout session still open can be refunded first.
 
   An account that has a live row by the time this runs has been connected
   again, by the same host or another, and is left alone.

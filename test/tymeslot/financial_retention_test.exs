@@ -1,11 +1,16 @@
 defmodule Tymeslot.FinancialRetentionTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
+
+  import Mox
 
   @moduletag :database
   @moduletag :payments
 
   alias Tymeslot.FinancialRetention
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionInvoiceSchema
@@ -13,12 +18,48 @@ defmodule Tymeslot.FinancialRetentionTest do
   # The default period is ten years from the end of the calendar year, so the
   # records of 2026 are the last ones kept on 31 December 2036 and the first
   # ones past their period on 1 January 2037.
+  setup :verify_on_exit!
+
   @last_day_kept ~U[2036-12-31 23:59:59Z]
   @first_day_purged ~U[2037-01-01 00:00:00Z]
   @end_of_2026 ~U[2026-12-31 23:59:59Z]
   @start_of_2027 ~U[2027-01-01 00:00:00Z]
 
   describe "anonymise_host/1" do
+    test "revokes an OAuth-connected Stripe account once checkouts can have ended" do
+      user = insert(:user)
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_RET",
+        oauth_connected_at: DateTime.utc_now(:second)
+      )
+
+      assert :ok = FinancialRetention.anonymise_host(user.id)
+
+      refute ConnectAccountQueries.live_for_user(user.id)
+
+      assert_enqueued(
+        worker: DeauthorizeConnectAccount,
+        args: %{stripe_account_id: "acct_RET"},
+        scheduled_at: {DateTime.add(DateTime.utc_now(:second), 35 * 60), delta: 60}
+      )
+
+      expect(StripeAdapterMock, :deauthorize_account, 1, fn "acct_RET" -> :ok end)
+
+      assert %{success: 1, failure: 0} =
+               Oban.drain_queue(queue: :payments, with_scheduled: true)
+    end
+
+    test "does not attempt revocation for a legacy account" do
+      user = insert(:user)
+      insert(:connect_account, user: user, stripe_account_id: "acct_OLD")
+
+      assert :ok = FinancialRetention.anonymise_host(user.id)
+
+      refute_enqueued(worker: DeauthorizeConnectAccount)
+    end
+
     test "scrubs attendee PII, retains host PII, soft-deletes connect, touches both tables" do
       user = insert(:user, email: "host@example.com")
       insert(:connect_account, user: user, status: :active)

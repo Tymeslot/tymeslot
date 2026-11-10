@@ -32,6 +32,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   # Seconds: long enough for a host whose connection could not be read to retry.
   @unread_account_revocation_delay 3600
 
+  # Checkout sessions live 30 minutes (`@session_expiry_seconds` in
+  # `CheckoutSessions`), and a session Stripe failed to expire may still
+  # complete, which then needs access to the account for the automatic refund.
+  @revoke_delay_seconds 35 * 60
+
   @doc """
   Starts connecting a Stripe account for `user`, returning the Stripe URL to
   send them to.
@@ -240,6 +245,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
        `paid` is not overwritten), transition the linked `awaiting_payment`
        meeting to `expired`, then soft-delete the connect_account row.
 
+  For an account the host connected through OAuth, the removal also schedules
+  the revocation of Tymeslot's access to their Stripe account, 35 minutes
+  later (see `schedule_revocation/1`); a reconnection in the meantime cancels
+  it in effect, since the worker leaves a connected account alone.
+
   Returns `{:ok, %{cancelled_count: n, outstanding_refunds_count: m}}` on
   success, `{:error, reason}` if the transaction fails.
 
@@ -343,7 +353,47 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     if Currency.allowed?(currency), do: Profiles.record_last_charge_currency(user_id, currency)
 
     ConnectAccountQueries.soft_delete_for_user(user_id, now)
+    schedule_revocation(account)
   end
+
+  @doc """
+  Schedules the revocation of the platform's access to `account`'s Stripe
+  account, once any checkout session still open on it can have ended.
+
+  A later disconnect of the same account pushes back a revocation still
+  pending, so the delay always runs from the most recent disconnect.
+
+  Only an account the host connected through OAuth is revoked. A legacy
+  account was created by the platform, and Stripe refuses to deauthorise
+  those, so nothing is enqueued for it, nor for `nil`.
+
+  Must run inside the transaction that removes the row: a failed insert rolls
+  the transaction back, so the row is never removed with no revocation
+  scheduled.
+  """
+  @spec schedule_revocation(ConnectAccountSchema.t() | nil) :: :ok
+  def schedule_revocation(%ConnectAccountSchema{
+        stripe_account_id: stripe_account_id,
+        oauth_connected_at: %DateTime{}
+      })
+      when is_binary(stripe_account_id) do
+    case %{stripe_account_id: stripe_account_id}
+         |> DeauthorizeConnectAccount.new(
+           schedule_in: @revoke_delay_seconds,
+           unique: [
+             period: :infinity,
+             keys: [:stripe_account_id],
+             states: [:available, :scheduled, :retryable]
+           ],
+           replace: [scheduled: [:scheduled_at]]
+         )
+         |> Oban.insert() do
+      {:ok, _job} -> :ok
+      {:error, reason} -> Repo.rollback({:revocation_not_scheduled, reason})
+    end
+  end
+
+  def schedule_revocation(_account), do: :ok
 
   # Returns the number of bookings cancelled and the meetings whose hold was
   # released, which are announced only once the transaction has committed.

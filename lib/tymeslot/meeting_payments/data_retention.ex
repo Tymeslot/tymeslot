@@ -8,16 +8,20 @@ defmodule Tymeslot.MeetingPayments.DataRetention do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingPayments.ConnectAccounts
 
   @doc """
   Scrubs the attendee details from every booking payment of the host's,
-  keeping the host's own snapshot, and soft-deletes their Connect account.
+  keeping the host's own snapshot, and soft-deletes their Connect account,
+  scheduling the revocation of Tymeslot's access to a Stripe account the host
+  connected themselves.
   """
   @spec anonymise_host(integer(), DateTime.t()) :: :ok
   def anonymise_host(user_id, %DateTime{} = now) when is_integer(user_id) do
     BookingPaymentQueries.anonymise_for_host(user_id, now)
+    account = ConnectAccountQueries.lock_live_for_user(user_id)
     ConnectAccountQueries.soft_delete_for_user(user_id, now)
-    :ok
+    ConnectAccounts.schedule_revocation(account)
   end
 
   @doc """

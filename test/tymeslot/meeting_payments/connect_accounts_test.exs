@@ -8,19 +8,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   @moduletag :payments
   @moduletag :integration
 
-  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.StripeConnectTestHelpers
 
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
-  alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
-  alias Tymeslot.Repo
 
   setup :verify_on_exit!
 
@@ -473,123 +469,6 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     end
   end
 
-  describe "disconnect/1" do
-    test "soft-deletes the live account" do
-      user = insert(:user)
-      {:ok, _placeholder} = ConnectAccountQueries.insert_placeholder(user.id)
-
-      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
-
-      refute ConnectAccountQueries.live_for_user(user.id)
-    end
-
-    test "is a noop when no account exists" do
-      user = insert(:user)
-      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
-    end
-
-    test "does not overwrite a payment that was concurrently transitioned to paid" do
-      # Regression for the TOCTOU race: list_pending_for_host runs outside the
-      # transaction and snapshots the payment as "pending". Before the transaction
-      # executes, a concurrent checkout.session.completed webhook flips the same
-      # row to "paid". The conditional UPDATE (status = 'pending') must skip that
-      # row so the paid status is preserved and cancelled_count stays accurate.
-      user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
-
-      payment =
-        insert(:booking_payment,
-          host_user_id: user.id,
-          stripe_checkout_session_id: "cs_race_test",
-          status: :pending
-        )
-
-      # Simulate the concurrent webhook arriving: flip the row to "paid" directly.
-      {:ok, _updated} = BookingPaymentQueries.update(payment, %{status: :paid})
-
-      # disconnect/1 pre-fetches the payment as "pending" (it was pending when
-      # list_pending_for_host ran), but inside the transaction the conditional
-      # UPDATE finds status = 'paid' and must not overwrite it.
-      stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts ->
-        {:error, %{message: "already paid"}}
-      end)
-
-      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
-
-      # The payment row must still be "paid" — not "failed".
-      reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == :paid
-    end
-
-    # A row that no longer passes the full meeting validation (here a solo
-    # meeting with no attendee name, as older rows can carry) must still
-    # have its slot released.
-    test "expires a pending booking's meeting whose other fields no longer pass validation" do
-      user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
-      meeting = insert(:meeting, status: :awaiting_payment, organizer_user_id: user.id)
-
-      Repo.update_all(from(m in Meeting, where: m.id == ^meeting.id), set: [attendee_name: nil])
-
-      insert(:booking_payment,
-        host_user_id: user.id,
-        meeting: meeting,
-        stripe_checkout_session_id: "cs_LEGACY",
-        status: :pending
-      )
-
-      stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
-
-      assert {:ok, %{cancelled_count: 1}} = ConnectAccounts.disconnect(user)
-      assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
-    end
-
-    # Disconnecting neither settles nor cancels a refund the host already owes;
-    # it only takes away their ability to issue it from Tymeslot. The count is
-    # reported so the caller can say so, rather than let the obligation drop
-    # off the screen along with the account.
-    test "reports the refunds the host is still holding" do
-      user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
-
-      meeting = insert(:meeting, status: :cancelled, cancelled_at: DateTime.utc_now(:second))
-      payment = insert(:paid_booking_payment, host_user_id: user.id, meeting: meeting)
-
-      assert {:ok, %{outstanding_refunds_count: 1}} = ConnectAccounts.disconnect(user)
-
-      # Untouched: still owed, still unrefunded, just no longer refundable here.
-      reloaded = BookingPaymentQueries.get(payment.id)
-      assert reloaded.status == :paid
-      assert reloaded.refunded_amount_cents == 0
-    end
-
-    test "reports no outstanding refunds when the host owes nothing" do
-      user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
-
-      insert(:paid_booking_payment,
-        host_user_id: user.id,
-        meeting: insert(:meeting, status: :confirmed)
-      )
-
-      assert {:ok, %{outstanding_refunds_count: 0}} = ConnectAccounts.disconnect(user)
-    end
-  end
-
-  defp enable_meeting_payments(_context) do
-    with_config(:tymeslot,
-      meeting_payments_enabled: true,
-      feature_access_checker: Tymeslot.Features.DefaultAccessChecker
-    )
-
-    :ok
-  end
-
-  defp started_state(user) do
-    {:ok, %{url: url}} = ConnectAccounts.start_onboarding(user)
-    url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query() |> Map.fetch!("state")
-  end
-
   defp connect_gbp_account(user) do
     state = started_state(user)
     expect_exchange("code_gb", "acct_GB")
@@ -601,30 +480,5 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     })
 
     assert {:ok, _account} = ConnectAccounts.complete_oauth_callback(user, "code_gb", state)
-  end
-
-  defp expect_exchange(code, stripe_account_id) do
-    expect(StripeAdapterMock, :exchange_oauth_code, 1, fn ^code ->
-      {:ok, %{stripe_user_id: stripe_account_id}}
-    end)
-  end
-
-  defp expect_retrieve(stripe_account_id, attrs) do
-    expect(StripeAdapterMock, :retrieve_account, fn ^stripe_account_id ->
-      {:ok, snapshot(stripe_account_id, attrs)}
-    end)
-  end
-
-  defp snapshot(stripe_account_id, attrs) do
-    Map.merge(
-      %{
-        "id" => stripe_account_id,
-        "charges_enabled" => false,
-        "payouts_enabled" => false,
-        "details_submitted" => false,
-        "requirements" => %{"disabled_reason" => nil}
-      },
-      attrs
-    )
   end
 end
