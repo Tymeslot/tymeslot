@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
         </div>
 
         <%!-- Scheduling Link (Mobile and Desktop) --%>
-        <div class="mb-6 lg:mb-4 flex gap-2">
+        <div class="mb-6 lg:mb-4 flex flex-wrap gap-2">
           <.link
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
             href={LinkAccessPolicy.scheduling_path(@profile)}
@@ -73,8 +73,10 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </.link>
           <div
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
+            role="link"
+            aria-disabled="true"
+            aria-describedby="scheduling-link-disabled-reason"
             class="flex-1 min-w-0 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
-            title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
             <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0" />
             <span class="min-w-0 leading-tight wrap-break-word">{dgettext(
@@ -83,35 +85,47 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             )}</span>
           </div>
 
-          <button
+          <.tooltip
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
-            id="copy-scheduling-link"
-            type="button"
-            phx-hook="CopyOnClick"
-            phx-click="booking_link_copied"
-            phx-value-channel="sidebar"
-            data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
-            data-copy-feedback={dgettext("dashboard_common", "Scheduling link copied to clipboard!")}
-            class="dashboard-nav-link shrink-0 border-2 border-tymeslot-100 hover:border-turquoise-400 hover:translate-x-0 shadow-sm hover:shadow-md group"
-            title={dgettext("dashboard_common", "Copy link to clipboard")}
-            aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
+            text={dgettext("dashboard_common", "Copy link to clipboard")}
           >
-            <.icon name="hero-clipboard" class="w-5 h-5" />
-          </button>
+            <button
+              id="copy-scheduling-link"
+              type="button"
+              phx-hook="CopyOnClick"
+              phx-click="booking_link_copied"
+              phx-value-channel="sidebar"
+              data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
+              data-copy-feedback={
+                dgettext("dashboard_common", "Scheduling link copied to clipboard!")
+              }
+              class="dashboard-nav-link shrink-0 border-2 border-tymeslot-100 hover:border-turquoise-400 hover:translate-x-0 shadow-sm hover:shadow-md group"
+              aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
+            >
+              <.icon name="hero-clipboard" class="w-5 h-5" />
+            </button>
+          </.tooltip>
           <%!-- `aria-disabled` rather than `disabled`, so the control stays
-                focusable and its tooltip still explains why the link is
-                unavailable. The accessible name stays the action. --%>
+                focusable and the reason under the row reaches keyboard and
+                screen reader users. The accessible name stays the action. --%>
           <button
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
             id="copy-scheduling-link-disabled"
             type="button"
             aria-disabled="true"
+            aria-describedby="scheduling-link-disabled-reason"
             class="shrink-0 px-4 py-4 rounded-token-2xl bg-tymeslot-100 text-tymeslot-400 border-2 border-tymeslot-200 cursor-not-allowed opacity-60"
-            title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
             aria-label={dgettext("dashboard_common", "Copy link to clipboard")}
           >
             <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
+          <p
+            :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
+            id="scheduling-link-disabled-reason"
+            class="basis-full text-token-xs text-tymeslot-500"
+          >
+            {LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
+          </p>
         </div>
 
         <%!-- Navigation Links --%>
@@ -357,36 +371,37 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   @spec nav_link(map()) :: Phoenix.LiveView.Rendered.t()
   defp nav_link(assigns) do
     ~H"""
-    <.link
-      patch={@patch}
-      navigate={@navigate}
-      phx-click={close_sidebar_js()}
-      aria-current={if @current == @action, do: "page"}
-      title={@setup_reminder}
-      {@rest}
-      class={[
-        "dashboard-nav-link",
-        if(@current == @action, do: "dashboard-nav-link--active", else: ""),
-        if(@locked, do: "opacity-75", else: "")
-      ]}
-    >
-      {render_slot(@inner_block)}
-      <%!-- Setup reminder: a small dot and nothing more, so the row never reads
+    <.tooltip text={@setup_reminder}>
+      <.link
+        patch={@patch}
+        navigate={@navigate}
+        phx-click={close_sidebar_js()}
+        aria-current={if @current == @action, do: "page"}
+        {@rest}
+        class={[
+          "dashboard-nav-link",
+          if(@current == @action, do: "dashboard-nav-link--active", else: ""),
+          if(@locked, do: "opacity-75", else: "")
+        ]}
+      >
+        {render_slot(@inner_block)}
+        <%!-- Setup reminder: a small dot and nothing more, so the row never reads
             as a second selected item. Only the current section is styled as
-            active. The reason is a tooltip on the link for pointers, and
-            screen-reader-only text after the label, led by a comma so it is
-            read as a pause rather than run into the label. --%>
-      <span :if={@setup_reminder} class="dashboard-nav-notification">
-        <span
-          class={[
-            "block w-2 h-2 rounded-token-full",
-            if(@current == @action, do: "bg-white", else: "bg-turquoise-600")
-          ]}
-          aria-hidden="true"
-        ></span>
-        <span class="sr-only">, {@setup_reminder}</span>
-      </span>
-    </.link>
+            active. The reason is a tooltip on the row for pointers and
+            keyboards, and screen-reader-only text after the label, led by a
+            comma so it is read as a pause rather than run into the label. --%>
+        <span :if={@setup_reminder} class="dashboard-nav-notification">
+          <span
+            class={[
+              "block w-2 h-2 rounded-token-full",
+              if(@current == @action, do: "bg-white", else: "bg-turquoise-600")
+            ]}
+            aria-hidden="true"
+          ></span>
+          <span class="sr-only">, {@setup_reminder}</span>
+        </span>
+      </.link>
+    </.tooltip>
     """
   end
 

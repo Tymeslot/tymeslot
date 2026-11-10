@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Components.UI.LocaleButton do
 
   use Phoenix.Component
 
+  alias TymeslotWeb.Components.CoreComponents.Tooltip
+
   import TymeslotWeb.Components.FlagHelpers
 
   attr :locale, :map,
@@ -32,29 +34,30 @@ defmodule TymeslotWeb.Components.UI.LocaleButton do
   @spec locale_button(map()) :: Phoenix.LiveView.Rendered.t()
   def locale_button(assigns) do
     ~H"""
-    <button
-      type="button"
-      disabled={@active or @disabled}
-      aria-pressed={to_string(@active)}
-      title={@locale.name}
-      aria-label={@locale.name}
-      class={[
-        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all",
-        cond do
-          @active -> "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40 cursor-default"
-          @disabled -> "bg-tymeslot-50 text-tymeslot-300 cursor-not-allowed opacity-60"
-          true -> "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900 cursor-pointer"
-        end
-      ]}
-      {@rest}
-    >
-      <%= if @inner_block != [] do %>
-        {render_slot(@inner_block)}
-      <% else %>
-        <.safe_flag country_code={@locale.country_code} class="w-5 h-auto rounded-token-sm" />
-        <span>{@locale.code}</span>
-      <% end %>
-    </button>
+    <Tooltip.tooltip text={@locale.name}>
+      <button
+        type="button"
+        disabled={@active or @disabled}
+        aria-pressed={to_string(@active)}
+        aria-label={@locale.name}
+        class={[
+          "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all",
+          cond do
+            @active -> "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40 cursor-default"
+            @disabled -> "bg-tymeslot-50 text-tymeslot-300 cursor-not-allowed opacity-60"
+            true -> "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900 cursor-pointer"
+          end
+        ]}
+        {@rest}
+      >
+        <%= if @inner_block != [] do %>
+          {render_slot(@inner_block)}
+        <% else %>
+          <.safe_flag country_code={@locale.country_code} class="w-5 h-auto rounded-token-sm" />
+          <span>{@locale.code}</span>
+        <% end %>
+      </button>
+    </Tooltip.tooltip>
     """
   end
 end

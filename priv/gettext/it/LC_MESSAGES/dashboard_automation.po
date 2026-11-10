@@ -151,6 +151,7 @@ msgstr "Disattivato"
 msgid "Edit Webhook"
 msgstr "Modifica webhook"
 
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Enable webhook to test"
@@ -347,11 +348,6 @@ msgstr "Prova non riuscita: %{reason}"
 #, elixir-autogen, elixir-format
 msgid "Testing"
 msgstr "Prova in corso"
-
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
-#, elixir-autogen, elixir-format
-msgid "Testing..."
-msgstr "Prova in corso..."
 
 #: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex

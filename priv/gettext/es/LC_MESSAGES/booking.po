@@ -64,11 +64,6 @@ msgstr "Antelación máxima para reservar: %{advance}"
 msgid "Calendar is loading slowly"
 msgstr "El calendario tarda en cargar"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Click to schedule your meeting"
-msgstr "Haz clic para reservar tu reunión"
-
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Complete your payment in the new tab"
@@ -327,11 +322,6 @@ msgstr "Hora"
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Zona horaria"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Verifying slot availability and creating your meeting..."
-msgstr "Comprobando la disponibilidad y creando tu reunión…"
 
 #: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex

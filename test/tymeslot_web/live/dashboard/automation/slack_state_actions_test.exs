@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       open_slack_tab(view)
 
       view
-      |> element("button[title='Disconnect Slack']")
+      |> element("button[aria-label='Disconnect Slack']")
       |> render_click()
 
       assert render(view) =~ "Slack channel disconnected"
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       html = open_slack_tab(view)
 
-      refute html =~ "title=\"Disconnect Slack\""
+      refute html =~ "aria-label=\"Disconnect Slack\""
     end
   end
 
@@ -282,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_slack_tab(view)
 
-      view |> element("button[title='Edit']") |> render_click()
+      view |> element("button[aria-label='Edit']") |> render_click()
 
       html = render(view)
       assert html =~ "Original Name"

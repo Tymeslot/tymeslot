@@ -522,8 +522,13 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       # tooltip carries the reason.
       assert has_element?(
                view,
-               ~s(button[aria-disabled="true"][aria-label="Copy poll link to clipboard"]) <>
-                 ~s([title="Connect a calendar in Calendar settings to enable this feature"])
+               ~s(button[aria-disabled="true"][aria-label="Copy poll link to clipboard"][aria-describedby$="-tip"])
+             )
+
+      assert has_element?(
+               view,
+               ~s([role="tooltip"]),
+               "Connect a calendar in Calendar settings to enable this feature"
              )
 
       refute has_element?(view, ~s(button[aria-label="Copy poll link to clipboard"][disabled]))

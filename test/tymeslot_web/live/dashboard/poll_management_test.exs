@@ -271,7 +271,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       assert has_element?(
                view,
-               "[data-testid='poll-remove-participant'][aria-label='Remove Joker from the poll'][title='Remove from the poll']"
+               "[data-testid='poll-remove-participant'][aria-label='Remove Joker from the poll'][aria-describedby$='-tip']"
              )
 
       view |> element("[data-testid='poll-remove-participant']") |> render_click()
@@ -465,7 +465,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert has_element?(
                view,
                resend_button(grace) <>
-                 "[aria-label='Resend invitation to Grace'][title='Resend invitation']"
+                 "[aria-label='Resend invitation to Grace'][aria-describedby$='-tip']"
              )
 
       view |> element(resend_button(grace)) |> render_click()
@@ -486,7 +486,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert has_element?(
                view,
                resend_button(ada) <>
-                 "[aria-label='Resend voting link to Ada'][title='Resend voting link']"
+                 "[aria-label='Resend voting link to Ada'][aria-describedby$='-tip']"
              )
 
       view |> element(resend_button(ada)) |> render_click()
@@ -569,8 +569,10 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert has_element?(
                view,
                open <>
-                 "[aria-disabled='true'][title='Voting on this poll has closed. Move the deadline to send links again.']"
+                 "[aria-disabled='true'][aria-describedby$='-tip']:not([phx-click])"
              )
+
+      assert has_element?(view, "[role='tooltip']", "Voting on this poll has closed.")
     end
 
     test "says so when the poll is no longer open", %{conn: conn, poll: poll} do

@@ -25,13 +25,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   @spec seat_lock_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def seat_lock_badge(assigns) do
     ~H"""
-    <span
-      :if={@locked}
-      class="absolute bottom-0.5 right-0.5 inline-flex items-center rounded-full bg-black/25 p-px"
-      title={Shared.seat_lock_message()}
-    >
-      <.icon name="hero-lock-closed-micro" class="w-2.5 h-2.5" />
-    </span>
+    <.tooltip :if={@locked} text={Shared.seat_lock_message()}>
+      <span
+        role="img"
+        aria-label={Shared.seat_lock_message()}
+        class="absolute bottom-0.5 right-0.5 inline-flex items-center rounded-full bg-black/25 p-px"
+      >
+        <.icon name="hero-lock-closed-micro" class="w-2.5 h-2.5" />
+      </span>
+    </.tooltip>
     """
   end
 
@@ -43,17 +45,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   @spec event_guest_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def event_guest_badge(assigns) do
     ~H"""
-    <span
-      :if={@summary}
-      class={[
-        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-token-full px-1 py-px text-token-2xs font-bold leading-none",
-        guest_badge_tone(@summary)
-      ]}
-      title={guest_badge_title(@summary)}
-    >
-      <.icon name="hero-user-mini" class="w-2.5 h-2.5" />
-      {@summary.accepted}/{@summary.total}
-    </span>
+    <.tooltip :if={@summary} text={guest_badge_title(@summary)}>
+      <span
+        role="img"
+        aria-label={guest_badge_title(@summary)}
+        class={[
+          "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-token-full px-1 py-px text-token-2xs font-bold leading-none",
+          guest_badge_tone(@summary)
+        ]}
+      >
+        <.icon name="hero-user-mini" class="w-2.5 h-2.5" />
+        {@summary.accepted}/{@summary.total}
+      </span>
+    </.tooltip>
     """
   end
 

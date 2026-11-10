@@ -239,11 +239,13 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     view = open_step(conn, user)
     view |> element("#meeting-hours-preset-custom") |> render_click()
 
-    [monday] = view |> render() |> Floki.parse_document!() |> Floki.find("#meeting-day-1")
+    doc = view |> render() |> Floki.parse_document!()
+    [monday] = Floki.find(doc, "#meeting-day-1")
+    [anchor] = Floki.find(doc, "[data-tooltip]:has(#meeting-day-1)")
 
     assert Floki.attribute(monday, "aria-label") == []
     assert monday |> Floki.text() |> String.trim() == "Mon"
-    assert Floki.attribute(monday, "title") == ["Monday"]
+    assert anchor |> Floki.find("[role='tooltip']") |> Floki.text() |> String.trim() == "Monday"
   end
 
   test "custom hours with no days are refused", %{conn: conn} do

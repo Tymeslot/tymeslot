@@ -116,6 +116,7 @@
              ]
            ]},
           {CredoChecks.UseCoreModal, []},
+          {CredoChecks.NoNativeTitle, []},
           {CredoChecks.NoInlineSvg,
            [
              # Artwork, not icons: the icon renderer itself, the loading

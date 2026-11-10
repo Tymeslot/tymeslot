@@ -577,7 +577,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       # Slot health is computed asynchronously, so the badge appears once the
       # supervised check returns.
       wait_until(fn ->
-        assert has_element?(view, "#poll-slot-#{slot1.id}", "Calendar conflict")
+        assert has_element?(view, "#poll-slot-#{slot1.id} [aria-describedby]", "Calendar")
         refute has_element?(view, "#poll-slot-#{slot2.id}", "Calendar conflict")
         :ok
       end)

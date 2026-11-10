@@ -111,10 +111,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
   end
 
   test "the card says invitation only in place of unlisted", ctx do
-    insert(:meeting_type, user: ctx.user, invitation_only: true, is_private: true)
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true, is_private: true)
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meeting-settings")
 
     assert has_element?(view, "[data-testid='invitation-only']", "Invitation only")
+
+    # Why it is invitation only reaches keyboards and screen readers too.
+    tip = "meeting-type-#{type.id}-invitation-only-tip"
+
+    assert has_element?(
+             view,
+             "[data-testid='invitation-only'][tabindex='0'][aria-describedby='#{tip}']"
+           )
+
+    assert has_element?(
+             view,
+             "##{tip}[role='tooltip']",
+             "booked only through the invitation links"
+           )
+
     refute render(view) =~ "Unlisted"
   end
 

@@ -20,7 +20,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [input: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [input: 1, tooltip: 1]
 
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Themes.Catalog
@@ -120,22 +120,22 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         `value` property and would overwrite `phx-value-value` with "". --%>
         <%!-- 40px to tap; on a narrow phone the row wraps. --%>
         <div class="flex flex-wrap gap-2 lg:gap-3">
-          <button
-            :for={choice <- @choices.choices}
-            type="button"
-            phx-click="select_onboarding_choice"
-            phx-value-choice={choice.value}
-            title={choice_name(choice.name)}
-            aria-label={choice_name(choice.name)}
-            class={[
-              "w-10 h-10 rounded-full border-2 transition-transform hover:scale-110",
-              if(@selected == choice.value,
-                do: "border-turquoise-500 ring-2 ring-turquoise-200 scale-110",
-                else: "border-white shadow-sm"
-              )
-            ]}
-            style={"background: #{choice.swatch};"}
-          />
+          <.tooltip :for={choice <- @choices.choices} text={choice_name(choice.name)}>
+            <button
+              type="button"
+              phx-click="select_onboarding_choice"
+              phx-value-choice={choice.value}
+              aria-label={choice_name(choice.name)}
+              class={[
+                "w-10 h-10 rounded-full border-2 transition-transform hover:scale-110",
+                if(@selected == choice.value,
+                  do: "border-turquoise-500 ring-2 ring-turquoise-200 scale-110",
+                  else: "border-white shadow-sm"
+                )
+              ]}
+              style={"background: #{choice.swatch};"}
+            />
+          </.tooltip>
         </div>
       </div>
 
