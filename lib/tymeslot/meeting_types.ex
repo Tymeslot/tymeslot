@@ -129,6 +129,11 @@ defmodule Tymeslot.MeetingTypes do
   @doc """
   Returns true if the user has at least one active meeting type.
   """
+  @spec has_priced_meeting_types?(integer()) :: boolean()
+  def has_priced_meeting_types?(user_id) do
+    MeetingTypeQueries.has_priced_meeting_types?(user_id)
+  end
+
   @spec has_active_meeting_types?(integer()) :: boolean()
   def has_active_meeting_types?(user_id) do
     MeetingTypeQueries.has_active_meeting_types?(user_id)

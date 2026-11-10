@@ -22,6 +22,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.StripeConnectOAuth
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
+  alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SendConnectAccountRestricted
 
@@ -184,7 +186,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
         oauth_connected_at: DateTime.utc_now(:second),
         oauth_nonce: nil,
         country: snapshot["country"],
-        default_currency: snapshot["default_currency"],
+        default_currency: connection_currency(user_id, snapshot["default_currency"]),
         charges_enabled: false,
         payouts_enabled: false,
         details_submitted: false,
@@ -193,6 +195,17 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
       })
       |> classify_link_conflict()
     end
+  end
+
+  # Stored prices carry no currency, and a disconnect keeps them, so a host
+  # with prices stays in the currency they were set in whatever the new
+  # account's default is: 50.00 must not silently turn from euros into pounds.
+  defp connection_currency(user_id, stripe_default) do
+    last_currency = Profiles.last_charge_currency(user_id)
+
+    if Currency.allowed?(last_currency) and MeetingTypes.has_priced_meeting_types?(user_id),
+      do: last_currency,
+      else: stripe_default
   end
 
   defp classify_link_conflict({:error, %Ecto.Changeset{} = changeset} = error) do
@@ -264,6 +277,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   Deliberately: `payment_required` and `price_cents` survive a disconnect so a
   host who reconnects gets their prices back instead of re-entering every one.
+  The currency they were set in is recorded on the profile, so a reconnect
+  cannot re-denominate them.
   The form no longer clears them by omission
   (`Tymeslot.MeetingTypes.FormMapper.build_attrs/3`), the changeset no longer
   fails unrelated saves over the stored flag
@@ -288,7 +303,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
     fn ->
       {cancelled_count, expired} = cancel_pending_bookings(pending, now)
-      ConnectAccountQueries.soft_delete_for_user(user.id, now)
+      retire_connect_account(user.id, now)
 
       {%{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding.count}, expired}
     end
@@ -317,6 +332,17 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     fn -> cancel_pending_bookings(pending, now) end
     |> Repo.transaction()
     |> announce_after_commit()
+  end
+
+  # Must run inside a transaction: the row is locked so the currency recorded
+  # is the one the row held when it was removed.
+  defp retire_connect_account(user_id, now) do
+    account = ConnectAccountQueries.lock_live_for_user(user_id)
+    currency = account && account.default_currency
+
+    if Currency.allowed?(currency), do: Profiles.record_last_charge_currency(user_id, currency)
+
+    ConnectAccountQueries.soft_delete_for_user(user_id, now)
   end
 
   # Returns the number of bookings cancelled and the meetings whose hold was

@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   import Mox
   import Tymeslot.ConfigTestHelpers
 
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
@@ -421,6 +422,57 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     end
   end
 
+  describe "preserved prices across a reconnect" do
+    setup :enable_meeting_payments
+
+    test "reconnecting a different-currency account keeps the host's charge currency for preserved prices" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
+      insert(:connect_account, user: user, stripe_account_id: "acct_EU", default_currency: "eur")
+      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+
+      connect_gbp_account(user)
+
+      assert ConnectAccountQueries.live_for_user(user.id).default_currency == "eur"
+      assert MeetingPayments.charge_currency(user.id) == "eur"
+    end
+
+    test "a host with no priced types takes the new account's currency" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      insert(:meeting_type, user: user, payment_required: false, price_cents: nil)
+      insert(:connect_account, user: user, stripe_account_id: "acct_EU", default_currency: "eur")
+      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+
+      connect_gbp_account(user)
+
+      assert ConnectAccountQueries.live_for_user(user.id).default_currency == "gbp"
+    end
+
+    test "a host with no recorded currency takes the new account's currency" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
+
+      connect_gbp_account(user)
+
+      assert ConnectAccountQueries.live_for_user(user.id).default_currency == "gbp"
+    end
+
+    test "an unsupported legacy currency is not recorded as the charge currency" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
+      insert(:connect_account, user: user, stripe_account_id: "acct_JP", default_currency: "jpy")
+      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+
+      connect_gbp_account(user)
+
+      assert ConnectAccountQueries.live_for_user(user.id).default_currency == "gbp"
+    end
+  end
+
   describe "disconnect/1" do
     test "soft-deletes the live account" do
       user = insert(:user)
@@ -536,6 +588,19 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   defp started_state(user) do
     {:ok, %{url: url}} = ConnectAccounts.start_onboarding(user)
     url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query() |> Map.fetch!("state")
+  end
+
+  defp connect_gbp_account(user) do
+    state = started_state(user)
+    expect_exchange("code_gb", "acct_GB")
+
+    expect_retrieve("acct_GB", %{
+      "country" => "GB",
+      "default_currency" => "gbp",
+      "charges_enabled" => true
+    })
+
+    assert {:ok, _account} = ConnectAccounts.complete_oauth_callback(user, "code_gb", state)
   end
 
   defp expect_exchange(code, stripe_account_id) do
