@@ -224,17 +224,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
         oauth_connected_at: %DateTime{}
       })
       when is_binary(stripe_account_id) do
-    case %{stripe_account_id: stripe_account_id}
-         |> DeauthorizeConnectAccount.new(
-           schedule_in: @revoke_delay_seconds,
-           unique: [
-             period: :infinity,
-             keys: [:stripe_account_id],
-             states: [:available, :scheduled, :retryable]
-           ],
-           replace: [scheduled: [:scheduled_at]]
-         )
-         |> Oban.insert() do
+    case DeauthorizeConnectAccount.schedule(stripe_account_id, @revoke_delay_seconds) do
       {:ok, _job} -> :ok
       {:error, reason} -> Repo.rollback({:revocation_not_scheduled, reason})
     end

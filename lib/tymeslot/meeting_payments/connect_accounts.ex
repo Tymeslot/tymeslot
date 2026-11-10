@@ -25,8 +25,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   @type account :: ConnectAccountSchema.t()
 
-  # Seconds: long enough for a host whose connection could not be read to retry.
-  @unread_account_revocation_delay 3600
+  # Seconds: long enough for a host whose connection could not be saved to
+  # retry. A later disconnect or a refusal moves the job (see
+  # `DeauthorizeConnectAccount.schedule/2`); a connection that is kept leaves
+  # it to find a live row and do nothing.
+  @revocation_delay 3600
 
   @doc """
   Starts connecting a Stripe account for `user`, returning the Stripe URL to
@@ -62,8 +65,13 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   The nonce in `state` is claimed before the code is exchanged, so a replayed
   or concurrent callback never reaches Stripe. When the account cannot be read
   afterwards, or names no currency, nothing is saved and the result is
-  `{:error, :oauth_failed}`: the host retries with a fresh code, and the
-  connection is revoked an hour later if they never do.
+  `{:error, :oauth_failed}`: the host retries with a fresh code.
+
+  Once the exchange has named an account no other host holds, its revocation
+  is scheduled an hour ahead, before anything else can fail: whatever stops
+  the connection from being saved, Tymeslot does not keep access to an
+  account it has no row for. A connection that is saved leaves that job to
+  find a live row and do nothing.
 
   An account in a currency meeting payments do not support is refused and
   queued for revocation, which leaves alone any account with a live row. An
@@ -82,12 +90,17 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
              | :unsupported_currency
              | term()}
   def complete_oauth_callback(user, code, state) do
+    # Stamped before the exchange: a revocation landing between the exchange
+    # and the save is then dated after the stamp, and not ignored as older.
+    connected_at = DateTime.utc_now(:second)
+
     with :ok <- check_onboarding_access(user.id),
          {:ok, nonce} <- verify_state_for(user.id, state),
          :ok <- claim_nonce(user.id, nonce),
          {:ok, %{stripe_user_id: stripe_account_id}} <- StripeAdapter.exchange_oauth_code(code),
-         :ok <- check_not_linked_elsewhere(stripe_account_id, user.id) do
-      record_connection(user.id, stripe_account_id)
+         :ok <- check_not_linked_elsewhere(stripe_account_id, user.id),
+         :ok <- enqueue_revocation(stripe_account_id, @revocation_delay) do
+      record_connection(user.id, stripe_account_id, connected_at)
     end
   end
 
@@ -127,31 +140,29 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   end
 
   # A read that fails, or names no currency, cannot produce a row that is safe
-  # to take payments on, so nothing is saved. The code is spent, so the orphan
-  # connection is revoked after a delay long enough for the host to retry; a
-  # retry leaves a live row, and the job then does nothing.
-  defp record_connection(user_id, stripe_account_id) do
+  # to take payments on, so nothing is saved. The code is spent, and the
+  # revocation scheduled after the exchange stands.
+  defp record_connection(user_id, stripe_account_id, connected_at) do
     read_at = DateTime.utc_now(:second)
 
     case StripeAdapter.retrieve_account(stripe_account_id) do
       {:ok, %{"default_currency" => currency} = snapshot} when is_binary(currency) ->
         if Currency.allowed?(currency) do
-          connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at)
+          connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at, connected_at)
         else
-          enqueue_revocation(stripe_account_id)
+          enqueue_revocation(stripe_account_id, 0)
           {:error, :unsupported_currency}
         end
 
       _unusable ->
-        enqueue_revocation(stripe_account_id, schedule_in: @unread_account_revocation_delay)
         {:error, :oauth_failed}
     end
   end
 
-  defp enqueue_revocation(stripe_account_id, opts \\ []) do
-    case %{stripe_account_id: stripe_account_id}
-         |> DeauthorizeConnectAccount.new(opts)
-         |> Oban.insert() do
+  # A failed insert is logged and not fatal: the callback carries on, as a
+  # connection it saves needs no revocation.
+  defp enqueue_revocation(stripe_account_id, delay_seconds) do
+    case DeauthorizeConnectAccount.schedule(stripe_account_id, delay_seconds) do
       {:ok, _job} ->
         :ok
 
@@ -163,8 +174,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     end
   end
 
-  defp connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at) do
-    with {:ok, account} <- save_connection(user_id, stripe_account_id, snapshot),
+  defp connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at, connected_at) do
+    with {:ok, account} <- save_connection(user_id, stripe_account_id, snapshot, connected_at),
          :ok <- apply_account_event(snapshot, read_at) do
       {:ok, ConnectAccountQueries.get(account.id) || account}
     end
@@ -173,13 +184,13 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   # Reuses the host's live row, which is how a stuck legacy account gets
   # replaced. The row is fetched afresh because a disconnect may have removed
   # it during the exchange, and the code is spent either way.
-  defp save_connection(user_id, stripe_account_id, snapshot) do
+  defp save_connection(user_id, stripe_account_id, snapshot, connected_at) do
     with {:ok, row} <- ensure_placeholder(user_id) do
       row
       |> ConnectAccountQueries.update(%{
         stripe_account_id: stripe_account_id,
         status: :active,
-        oauth_connected_at: DateTime.utc_now(:second),
+        oauth_connected_at: connected_at,
         oauth_nonce: nil,
         country: snapshot["country"],
         default_currency: connection_currency(user_id, snapshot["default_currency"]),

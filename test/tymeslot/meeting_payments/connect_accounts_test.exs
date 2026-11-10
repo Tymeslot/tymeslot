@@ -241,7 +241,6 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert account.stripe_account_id == "acct_CH"
       assert %DateTime{} = account.oauth_connected_at
-      refute_enqueued(worker: DeauthorizeConnectAccount)
     end
 
     test "an account linked to another host is refused and left connected" do
@@ -270,7 +269,10 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert {:error, :account_already_linked} =
                ConnectAccounts.complete_oauth_callback(user, "code_x", state)
 
-      refute_enqueued(worker: DeauthorizeConnectAccount)
+      # The exchange succeeded before the other host's row appeared, so the
+      # job is scheduled; it finds the live row and leaves the account alone.
+      assert_enqueued(worker: DeauthorizeConnectAccount, args: %{stripe_account_id: "acct_RACE"})
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
     end
 
     test "an unsupported currency is refused and the connection revoked" do
@@ -284,10 +286,16 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == nil
 
-      assert_enqueued(worker: DeauthorizeConnectAccount, args: %{stripe_account_id: "acct_JP"})
+      assert_enqueued(
+        worker: DeauthorizeConnectAccount,
+        args: %{stripe_account_id: "acct_JP"},
+        scheduled_at: {DateTime.utc_now(:second), delta: 60}
+      )
+
+      assert length(all_enqueued(worker: DeauthorizeConnectAccount)) == 1
 
       expect(StripeAdapterMock, :deauthorize_account, fn "acct_JP" -> :ok end)
-      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments)
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
     end
 
     test "an unsupported currency leaves an account the host already holds connected" do
@@ -303,7 +311,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert_enqueued(worker: DeauthorizeConnectAccount, args: %{stripe_account_id: "acct_CH"})
 
       # No `deauthorize_account` expectation: Mox fails the job on any call.
-      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments)
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       row = ConnectAccountQueries.live_for_user(user.id)
       assert row.stripe_account_id == "acct_CH"
@@ -416,6 +424,112 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
                )
 
       refute ConnectAccountQueries.live_for_user(user.id).charges_enabled
+    end
+  end
+
+  describe "the revocation scheduled by the exchange" do
+    setup :enable_meeting_payments
+
+    defp revocation_jobs(stripe_account_id) do
+      all_enqueued(
+        worker: DeauthorizeConnectAccount,
+        args: %{stripe_account_id: stripe_account_id}
+      )
+    end
+
+    test "a connection leaves an hour-long revocation that does nothing on the live row" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_fr", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
+
+      assert {:ok, _account} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
+
+      assert [job] = revocation_jobs("acct_FR")
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now(), :second) in 3500..3601
+
+      # No `deauthorize_account` expectation: Mox fails the job on any call.
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_FR"
+    end
+
+    test "a save that fails after the exchange still leaves the revocation" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_x", "acct_RACE")
+
+      expect(StripeAdapterMock, :retrieve_account, fn "acct_RACE" ->
+        insert(:connect_account, stripe_account_id: "acct_RACE")
+        {:ok, snapshot("acct_RACE", %{"country" => "FR", "default_currency" => "eur"})}
+      end)
+
+      assert {:error, :account_already_linked} =
+               ConnectAccounts.complete_oauth_callback(user, "code_x", state)
+
+      assert [_job] = revocation_jobs("acct_RACE")
+    end
+
+    test "disconnecting straight after connecting moves the one job to 35 minutes" do
+      user = insert(:user)
+      connect_account(user, "acct_FR")
+
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
+
+      assert [job] = revocation_jobs("acct_FR")
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now(), :second) in 2000..2161
+    end
+
+    test "an unsupported currency moves the one job to now" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_jp", "acct_JP")
+      expect_retrieve("acct_JP", %{"country" => "JP", "default_currency" => "jpy"})
+
+      assert {:error, :unsupported_currency} =
+               ConnectAccounts.complete_oauth_callback(user, "code_jp", state)
+
+      assert [job] = revocation_jobs("acct_JP")
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now(), :second) <= 5
+    end
+
+    test "an account linked to another host enqueues nothing" do
+      user = insert(:user)
+      insert(:connect_account, stripe_account_id: "acct_X")
+      state = started_state(user)
+      expect_exchange("code_x", "acct_X")
+
+      assert {:error, :account_already_linked} =
+               ConnectAccounts.complete_oauth_callback(user, "code_x", state)
+
+      assert revocation_jobs("acct_X") == []
+    end
+
+    test "the connection is stamped before the code is exchanged" do
+      user = insert(:user)
+      state = started_state(user)
+      test_pid = self()
+
+      # Waits out the second so that a stamp taken after the exchange would
+      # differ from the one taken before it.
+      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_fr" ->
+        started = DateTime.utc_now(:second)
+        send(test_pid, {:exchange_started, started})
+        wait_until_after(started)
+        {:ok, %{stripe_user_id: "acct_FR"}}
+      end)
+
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
+
+      assert {:ok, account} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
+
+      assert_received {:exchange_started, started}
+      assert account.oauth_connected_at == started
+    end
+
+    defp wait_until_after(second) do
+      if DateTime.compare(DateTime.utc_now(:second), second) == :gt,
+        do: :ok,
+        else: wait_until_after(second)
     end
   end
 

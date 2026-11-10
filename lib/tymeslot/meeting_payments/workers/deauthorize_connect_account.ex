@@ -25,6 +25,29 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
 
+  @doc """
+  Schedules the revocation of `stripe_account_id` to run in `delay_seconds`.
+
+  There is one pending job per account: scheduling again while one waits moves
+  its time, so the latest caller decides when the revocation is due (`0` for
+  now). A job already running or completed does not count, and a new one is
+  inserted.
+  """
+  @spec schedule(String.t(), non_neg_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def schedule(stripe_account_id, delay_seconds) when is_binary(stripe_account_id) do
+    %{stripe_account_id: stripe_account_id}
+    |> new(
+      schedule_in: delay_seconds,
+      unique: [
+        period: :infinity,
+        keys: [:stripe_account_id],
+        states: [:available, :scheduled, :retryable]
+      ],
+      replace: [scheduled: [:scheduled_at]]
+    )
+    |> Oban.insert()
+  end
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}})
       when is_binary(stripe_account_id) do
