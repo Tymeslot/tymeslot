@@ -67,7 +67,7 @@ defmodule TymeslotWeb.OnboardingLive do
 
   # Where a host may be is derived from their account (`StepConfig.resume_step/1`):
   # `/onboarding` lands on that step, and a step out of reach from it
-  # (`StepConfig.reachable?/2`) patches back to it, so no step can be reached
+  # (`step_reachable?/2`) patches back to it, so no step can be reached
   # before what it depends on is done. The static render cannot patch, so it
   # draws the step the connected render will land on, and the patch that
   # follows changes only the address.
@@ -89,8 +89,11 @@ defmodule TymeslotWeb.OnboardingLive do
         step_query: Map.delete(params, "step"),
         # Set by the OAuth return path of a host sent back from the share step
         # to the calendar step, and honoured only there: anywhere else it
-        # would let a crafted link skip the steps in between later on.
-        returning_to_share: requested == :connect_calendar and params["return"] == "share"
+        # would let a crafted link skip the steps in between later on, as it
+        # would for a host who has not been through the meeting step yet.
+        returning_to_share:
+          requested == :connect_calendar and params["return"] == "share" and
+            (debug?(socket) or Onboarding.meeting_step_confirmed?(socket.assigns.current_user))
       )
 
     cond do
@@ -107,7 +110,7 @@ defmodule TymeslotWeb.OnboardingLive do
       not is_nil(requested) and requested == socket.assigns.patched_step ->
         {:noreply, assign(socket, :patched_step, nil)}
 
-      is_nil(requested) or not StepConfig.reachable?(requested, resume_step(socket)) ->
+      is_nil(requested) or not step_reachable?(socket, requested) ->
         {:noreply, push_patch(socket, to: step_path(socket, resume_step(socket), uri))}
 
       true ->
@@ -580,14 +583,23 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   defp landing_step(socket, requested) do
+    if requested && step_reachable?(socket, requested),
+      do: requested,
+      else: resume_step(socket)
+  end
+
+  # A debug route opens any step to look at it (`?fixture=calendar`), so past
+  # the calendar it does not wait for the meeting to be confirmed.
+  defp step_reachable?(socket, step) do
     resume = resume_step(socket)
-    if requested && StepConfig.reachable?(requested, resume), do: requested, else: resume
+    (debug?(socket) and resume == :meeting) or StepConfig.reachable?(step, resume)
   end
 
   defp resume_step(socket) do
     StepConfig.resume_step(%{
       username: socket.assigns.profile && socket.assigns.profile.username,
-      bookable_calendar?: socket.assigns.booking_page_live == true
+      bookable_calendar?: socket.assigns.booking_page_live == true,
+      meeting_confirmed?: Onboarding.meeting_step_confirmed?(socket.assigns.current_user)
     })
   end
 
