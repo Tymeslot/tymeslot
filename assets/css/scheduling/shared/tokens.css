@@ -110,6 +110,7 @@
   --z-dropdown: 50;
   --flag-height: 14px;
   --dropdown-max-height: clamp(200px, 50vh, 420px);
+  --lang-switcher-panel-width: 26rem;
   --readiness-card-max-width: 32rem;
   /* The least a control measures each way under a finger (pointer: coarse);
      the shared components below and the themes' own controls take it. */
