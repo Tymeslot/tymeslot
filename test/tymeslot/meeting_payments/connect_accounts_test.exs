@@ -1,14 +1,14 @@
 defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
-  # `start_onboarding/1` reads the global meeting-payments flag and default
-  # country, which these tests change.
+  # `start_onboarding/1` reads the global meeting-payments flag and the Connect
+  # client ID, which these tests change.
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :database
   @moduletag :payments
+  @moduletag :integration
 
   import Ecto.Query, only: [from: 2]
-  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.ConfigTestHelpers
 
@@ -16,214 +16,415 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.SendConnectAccountRestricted
 
   setup :verify_on_exit!
 
   describe "start_onboarding/1" do
-    setup do
-      with_config(:tymeslot,
-        meeting_payments_enabled: true,
-        feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
-        meeting_payments_default_country: "ch"
-      )
+    setup :enable_meeting_payments
 
-      :ok
-    end
-
-    test "creates Stripe account, persists row, returns AccountLink URL" do
+    test "start sends the host to Stripe's authorise page with no account created" do
       user = insert(:user)
 
-      expect(StripeAdapterMock, :create_account, fn params, opts ->
-        assert params.type == "standard"
-        assert params.country == "ch"
-        send(self(), {:idempotency_key, opts[:idempotency_key]})
-        {:ok, %{id: "acct_TEST_123", default_currency: "chf"}}
-      end)
+      # No adapter expectation: verify_on_exit! fails the test on any call.
+      assert {:ok, %{url: url, account: account}} = ConnectAccounts.start_onboarding(user)
 
-      expect(StripeAdapterMock, :create_account_link, fn params ->
-        assert params.account == "acct_TEST_123"
-        assert params.type == "account_onboarding"
-        {:ok, %{url: "https://connect.stripe.com/setup/acct_TEST"}}
-      end)
+      assert URI.parse(url).host == "connect.stripe.com"
+      assert account.user_id == user.id
 
-      assert {:ok, %{url: url}} = ConnectAccounts.start_onboarding(user)
-      assert url =~ "connect.stripe.com"
-
-      account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.stripe_account_id == "acct_TEST_123"
-      assert account.default_currency == "chf"
-      assert account.status == :active
-      assert_received {:idempotency_key, key}
-      assert key == "connect_account:#{account.id}"
+      row = ConnectAccountQueries.live_for_user(user.id)
+      assert byte_size(row.oauth_nonce) == 43
+      assert row.stripe_account_id == nil
+      assert row.country == nil
+      assert row.status == :creating
     end
 
-    test "refuses an account Stripe opened in an unsupported currency, keeping the placeholder" do
+    test "start is refused without a client ID" do
+      with_config(:tymeslot, stripe_connect_client_id: nil)
       user = insert(:user)
 
-      expect(StripeAdapterMock, :create_account, fn _params, _opts ->
-        {:ok, %{id: "acct_TEST_JPY", default_currency: "jpy"}}
-      end)
-
-      capture_log(fn ->
-        assert {:error, :unsupported_currency} = ConnectAccounts.start_onboarding(user)
-      end)
-
-      account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.status == :creating
-      assert account.default_currency == nil
-    end
-
-    test "uses the operator-configured default country" do
-      with_config(:tymeslot, meeting_payments_default_country: "de")
-      user = insert(:user)
-
-      expect(StripeAdapterMock, :create_account, fn params, _opts ->
-        assert params.country == "de"
-        {:ok, %{id: "acct_DE", default_currency: "eur"}}
-      end)
-
-      expect(StripeAdapterMock, :create_account_link, fn _params ->
-        {:ok, %{url: "https://connect.stripe.com/de"}}
-      end)
-
-      assert {:ok, _result} = ConnectAccounts.start_onboarding(user)
-      assert ConnectAccountQueries.live_for_user(user.id).country == "de"
+      assert {:error, :oauth_not_configured} = ConnectAccounts.start_onboarding(user)
+      refute ConnectAccountQueries.live_for_user(user.id)
     end
 
     test "is refused with the feature-access reason when meeting payments are disabled" do
       with_config(:tymeslot, meeting_payments_enabled: false)
       user = insert(:user)
 
-      # No Stripe expectation: verify_on_exit! fails the test on any call.
       assert {:error, :feature_disabled} = ConnectAccounts.start_onboarding(user)
       refute ConnectAccountQueries.live_for_user(user.id)
     end
 
-    test "resumes onboarding when placeholder exists from a prior crashed attempt" do
+    test "start replaces an unfinished legacy account" do
       user = insert(:user)
-      {:ok, placeholder} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      legacy = insert(:connect_account, user: user, stripe_account_id: "acct_CH")
 
-      expect(StripeAdapterMock, :create_account, fn _params, opts ->
-        assert opts[:idempotency_key] == "connect_account:#{placeholder.id}"
-        {:ok, %{id: "acct_RESUMED", default_currency: "chf"}}
-      end)
+      assert {:ok, %{url: url, account: account}} = ConnectAccounts.start_onboarding(user)
 
-      expect(StripeAdapterMock, :create_account_link, fn _params ->
-        {:ok, %{url: "https://connect.stripe.com/resume"}}
-      end)
-
-      assert {:ok, %{url: _url}} = ConnectAccounts.start_onboarding(user)
-
-      account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.stripe_account_id == "acct_RESUMED"
+      assert URI.parse(url).host == "connect.stripe.com"
+      assert account.id == legacy.id
+      assert byte_size(ConnectAccountQueries.live_for_user(user.id).oauth_nonce) == 43
     end
 
-    test "reuses the host's existing Stripe account instead of creating a second one" do
-      # A host who left the hosted onboarding part-way and returns days later
-      # (past Stripe's 24-hour idempotency-key window) must get a new link for
-      # the account they already have, not a second Standard account.
+    test "start is refused once an account is finished" do
       user = insert(:user)
-      existing = insert(:connect_account, user: user, stripe_account_id: "acct_EXISTING")
+      insert(:connect_account, user: user, details_submitted: true)
 
-      # No `create_account` expectation: verify_on_exit! fails on any call.
-      expect(StripeAdapterMock, :create_account_link, fn params ->
-        assert params.account == "acct_EXISTING"
-        {:ok, %{url: "https://connect.stripe.com/continue"}}
-      end)
-
-      assert {:ok, %{url: "https://connect.stripe.com/continue", account: account}} =
-               ConnectAccounts.start_onboarding(user)
-
-      assert account.id == existing.id
-      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_EXISTING"
+      assert {:error, :already_connected} = ConnectAccounts.start_onboarding(user)
+      assert ConnectAccountQueries.live_for_user(user.id).oauth_nonce == nil
     end
 
-    test "creates a new account after the host disconnects one that never finished onboarding" do
-      # An account Stripe has closed or rejected can never finish onboarding;
-      # disconnecting it is the host's way out. Starting again must create a
-      # new account, not reuse the old one or replay Stripe's cached answer
-      # for it within the idempotency-key window.
+    test "start is refused for an account already connected through OAuth" do
+      user = insert(:user)
+
+      insert(:connect_account,
+        user: user,
+        details_submitted: false,
+        oauth_connected_at: DateTime.utc_now(:second)
+      )
+
+      assert {:error, :already_connected} = ConnectAccounts.start_onboarding(user)
+      assert ConnectAccountQueries.live_for_user(user.id).oauth_nonce == nil
+    end
+
+    test "start after a disconnect begins on a new row" do
       user = insert(:user)
       old = insert(:connect_account, user: user, stripe_account_id: "acct_DEAD")
-
       assert {:ok, _result} = ConnectAccounts.disconnect(user)
 
-      expect(StripeAdapterMock, :create_account, fn _params, opts ->
-        refute opts[:idempotency_key] == "connect_account:#{old.id}"
-        {:ok, %{id: "acct_FRESH", default_currency: "chf"}}
-      end)
-
-      expect(StripeAdapterMock, :create_account_link, fn params ->
-        assert params.account == "acct_FRESH"
-        {:ok, %{url: "https://connect.stripe.com/fresh"}}
-      end)
-
-      assert {:ok, %{url: "https://connect.stripe.com/fresh", account: account}} =
-               ConnectAccounts.start_onboarding(user)
+      assert {:ok, %{account: account}} = ConnectAccounts.start_onboarding(user)
 
       refute account.id == old.id
-      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_FRESH"
+      assert account.stripe_account_id == nil
+    end
+  end
+
+  describe "complete_oauth_callback/3" do
+    setup :enable_meeting_payments
+
+    test "a completed callback connects the account Stripe names, in its own country" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_fr", "acct_FR")
+
+      expect_retrieve("acct_FR", %{
+        "country" => "FR",
+        "default_currency" => "eur",
+        "charges_enabled" => true
+      })
+
+      assert {:ok, account} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
+
+      assert account.stripe_account_id == "acct_FR"
+      assert account.country == "FR"
+      assert account.default_currency == "eur"
+      assert account.charges_enabled
+      assert %DateTime{} = account.oauth_connected_at
+      assert account.oauth_nonce == nil
+      assert account.status == :active
     end
 
-    test "classifies Stripe's hold on creating connected accounts" do
+    test "replaying a callback does not exchange the code twice" do
       user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_once", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
 
-      expect(StripeAdapterMock, :create_account, fn _params, _opts ->
-        {:error,
-         %Stripe.Error{
-           source: :stripe,
-           code: :invalid_request_error,
-           message:
-             "We've temporarily restricted your ability to create this type of connected account."
-         }}
-      end)
+      assert {:ok, _account} = ConnectAccounts.complete_oauth_callback(user, "code_once", state)
 
-      assert {:error, :account_creation_restricted} = ConnectAccounts.start_onboarding(user)
+      assert {:error, :state_already_used} =
+               ConnectAccounts.complete_oauth_callback(user, "code_once", state)
     end
 
-    test "passes other Stripe request errors through unclassified" do
+    test "two simultaneous callbacks exchange once" do
       user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_race", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
 
-      error = %Stripe.Error{
-        source: :stripe,
-        code: :invalid_request_error,
-        message: "Country is not supported."
-      }
+      results =
+        [1, 2]
+        |> Enum.map(fn _n ->
+          Task.async(fn -> ConnectAccounts.complete_oauth_callback(user, "code_race", state) end)
+        end)
+        |> Task.await_many()
 
-      expect(StripeAdapterMock, :create_account, fn _params, _opts -> {:error, error} end)
-
-      assert {:error, ^error} = ConnectAccounts.start_onboarding(user)
+      assert [{:error, :state_already_used}] = Enum.reject(results, &match?({:ok, _account}, &1))
+      assert [{:ok, _account}] = Enum.filter(results, &match?({:ok, _account}, &1))
     end
 
-    test "row stays in recoverable 'creating' state when create_account_link fails" do
+    test "a state issued to another host is refused before any exchange" do
+      user = insert(:user)
+      other = insert(:user)
+      state = started_state(other)
+
+      assert {:error, :user_mismatch} =
+               ConnectAccounts.complete_oauth_callback(user, "code", state)
+
+      assert byte_size(ConnectAccountQueries.live_for_user(other.id).oauth_nonce) == 43
+    end
+
+    test "a tampered state is refused before any exchange" do
+      user = insert(:user)
+      state = started_state(user)
+
+      assert {:error, :invalid_state} =
+               ConnectAccounts.complete_oauth_callback(user, "code", state <> "x")
+    end
+
+    test "a callback is refused by the feature gate before the state is spent" do
+      user = insert(:user)
+      state = started_state(user)
+      with_config(:tymeslot, meeting_payments_enabled: false)
+
+      assert {:error, :feature_disabled} =
+               ConnectAccounts.complete_oauth_callback(user, "code", state)
+
+      assert byte_size(ConnectAccountQueries.live_for_user(user.id).oauth_nonce) == 43
+    end
+
+    test "a refused code leaves the row unconnected" do
+      user = insert(:user)
+      state = started_state(user)
+
+      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_bad" ->
+        {:error, :invalid_grant}
+      end)
+
+      assert {:error, :invalid_grant} =
+               ConnectAccounts.complete_oauth_callback(user, "code_bad", state)
+
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == nil
+    end
+
+    test "a callback replaces a stuck legacy account" do
       user = insert(:user)
 
-      expect(StripeAdapterMock, :create_account, fn _params, _opts ->
-        {:ok, %{id: "acct_FAIL_LINK", default_currency: "chf"}}
+      legacy =
+        insert(:connect_account,
+          user: user,
+          stripe_account_id: "acct_CH",
+          country: "ch",
+          default_currency: "chf",
+          charges_enabled: true,
+          payouts_enabled: true,
+          disabled_reason: "requirements.past_due",
+          # In the future, so an event guard left armed would drop the snapshot.
+          last_account_event_at: DateTime.add(DateTime.utc_now(:second), 1, :day)
+        )
+
+      state = started_state(user)
+      expect_exchange("code_fr", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
+
+      assert {:ok, account} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
+
+      assert account.id == legacy.id
+      assert account.stripe_account_id == "acct_FR"
+      assert account.country == "FR"
+      assert account.default_currency == "eur"
+      refute account.charges_enabled
+      refute account.payouts_enabled
+      assert account.disabled_reason == nil
+      assert DateTime.compare(account.last_account_event_at, legacy.last_account_event_at) == :lt
+    end
+
+    test "choosing a legacy account again records it as an OAuth connection" do
+      user = insert(:user)
+      insert(:connect_account, user: user, stripe_account_id: "acct_CH")
+      state = started_state(user)
+      expect_exchange("code_ch", "acct_CH")
+      expect_retrieve("acct_CH", %{"country" => "CH", "default_currency" => "chf"})
+
+      assert {:ok, account} = ConnectAccounts.complete_oauth_callback(user, "code_ch", state)
+
+      assert account.stripe_account_id == "acct_CH"
+      assert %DateTime{} = account.oauth_connected_at
+      refute_enqueued(worker: DeauthorizeConnectAccount)
+    end
+
+    test "an account linked to another host is refused and left connected" do
+      user = insert(:user)
+      insert(:connect_account, stripe_account_id: "acct_X")
+      state = started_state(user)
+      expect_exchange("code_x", "acct_X")
+
+      assert {:error, :account_already_linked} =
+               ConnectAccounts.complete_oauth_callback(user, "code_x", state)
+
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == nil
+      refute_enqueued(worker: DeauthorizeConnectAccount)
+    end
+
+    test "an account linked elsewhere while the callback ran is refused and left connected" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_x", "acct_RACE")
+
+      expect(StripeAdapterMock, :retrieve_account, fn "acct_RACE" ->
+        insert(:connect_account, stripe_account_id: "acct_RACE")
+        {:ok, snapshot("acct_RACE", %{"country" => "FR", "default_currency" => "eur"})}
       end)
 
-      expect(StripeAdapterMock, :create_account_link, fn _params ->
-        {:error, %{message: "Stripe link creation failed"}}
+      assert {:error, :account_already_linked} =
+               ConnectAccounts.complete_oauth_callback(user, "code_x", state)
+
+      refute_enqueued(worker: DeauthorizeConnectAccount)
+    end
+
+    test "an unsupported currency is refused and the connection revoked" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_jp", "acct_JP")
+      expect_retrieve("acct_JP", %{"country" => "JP", "default_currency" => "jpy"})
+
+      assert {:error, :unsupported_currency} =
+               ConnectAccounts.complete_oauth_callback(user, "code_jp", state)
+
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == nil
+
+      assert_enqueued(worker: DeauthorizeConnectAccount, args: %{stripe_account_id: "acct_JP"})
+
+      expect(StripeAdapterMock, :deauthorize_account, fn "acct_JP" -> :ok end)
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments)
+    end
+
+    test "an unsupported currency leaves an account the host already holds connected" do
+      user = insert(:user)
+      insert(:connect_account, user: user, stripe_account_id: "acct_CH", default_currency: "chf")
+      state = started_state(user)
+      expect_exchange("code_ch", "acct_CH")
+      expect_retrieve("acct_CH", %{"country" => "JP", "default_currency" => "jpy"})
+
+      assert {:error, :unsupported_currency} =
+               ConnectAccounts.complete_oauth_callback(user, "code_ch", state)
+
+      assert_enqueued(worker: DeauthorizeConnectAccount, args: %{stripe_account_id: "acct_CH"})
+
+      # No `deauthorize_account` expectation: Mox fails the job on any call.
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments)
+
+      row = ConnectAccountQueries.live_for_user(user.id)
+      assert row.stripe_account_id == "acct_CH"
+      assert row.default_currency == "chf"
+      assert row.oauth_connected_at == nil
+    end
+
+    test "a host whose row disappears during the exchange keeps the connection" do
+      user = insert(:user)
+      state = started_state(user)
+      old_row = ConnectAccountQueries.live_for_user(user.id)
+
+      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_fr" ->
+        ConnectAccountQueries.soft_delete_for_user(user.id, DateTime.utc_now(:second))
+        {:ok, %{stripe_user_id: "acct_FR"}}
       end)
 
-      assert {:error, _reason} = ConnectAccounts.start_onboarding(user)
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
 
-      # Row must still exist in "creating" state — not left in "active" with a
-      # stripe_account_id set, since the link never succeeded.
-      account = ConnectAccountQueries.live_for_user(user.id)
-      assert account.status == :creating
-      assert is_nil(account.stripe_account_id)
+      assert {:ok, _account} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
+
+      row = ConnectAccountQueries.live_for_user(user.id)
+      refute row.id == old_row.id
+      assert row.stripe_account_id == "acct_FR"
+      assert %DateTime{} = row.oauth_connected_at
+    end
+
+    test "a failed read refuses, schedules revocation and can be retried" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_one", "acct_FR")
+      expect(StripeAdapterMock, :retrieve_account, fn "acct_FR" -> {:error, :timeout} end)
+
+      assert {:error, :oauth_failed} =
+               ConnectAccounts.complete_oauth_callback(user, "code_one", state)
+
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == nil
+
+      assert_enqueued(
+        worker: DeauthorizeConnectAccount,
+        args: %{stripe_account_id: "acct_FR"},
+        scheduled_at: {DateTime.add(DateTime.utc_now(:second), 3600), delta: 60}
+      )
+
+      retry_state = started_state(user)
+      expect_exchange("code_two", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
+
+      assert {:ok, account} =
+               ConnectAccounts.complete_oauth_callback(user, "code_two", retry_state)
+
+      assert account.stripe_account_id == "acct_FR"
+
+      # No `deauthorize_account` expectation: Mox fails the job on any call.
+      assert %{success: 1, failure: 0} =
+               Oban.drain_queue(queue: :payments, with_scheduled: true)
+    end
+
+    test "a snapshot with no currency is refused the same way" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_fr", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR"})
+
+      assert {:error, :oauth_failed} =
+               ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
+
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == nil
+
+      assert_enqueued(
+        worker: DeauthorizeConnectAccount,
+        args: %{stripe_account_id: "acct_FR"},
+        scheduled_at: {DateTime.add(DateTime.utc_now(:second), 3600), delta: 60}
+      )
+    end
+
+    test "a failed exchange can be retried" do
+      user = insert(:user)
+      state = started_state(user)
+
+      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_one" ->
+        {:error, :oauth_failed}
+      end)
+
+      assert {:error, :oauth_failed} =
+               ConnectAccounts.complete_oauth_callback(user, "code_one", state)
+
+      retry_state = started_state(user)
+      expect_exchange("code_two", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
+
+      assert {:ok, account} =
+               ConnectAccounts.complete_oauth_callback(user, "code_two", retry_state)
+
+      assert account.stripe_account_id == "acct_FR"
+    end
+
+    test "an account event older than the connection is ignored" do
+      user = insert(:user)
+      state = started_state(user)
+      expect_exchange("code_fr", "acct_FR")
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
+
+      assert {:ok, connected} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
+
+      assert :ok =
+               ConnectAccounts.apply_account_event(
+                 snapshot("acct_FR", %{"charges_enabled" => true}),
+                 DateTime.add(connected.last_account_event_at, -1, :hour)
+               )
+
+      refute ConnectAccountQueries.live_for_user(user.id).charges_enabled
     end
   end
 
   describe "disconnect/1" do
     test "soft-deletes the live account" do
       user = insert(:user)
-      {:ok, _placeholder} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, _placeholder} = ConnectAccountQueries.insert_placeholder(user.id)
 
       assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
 
@@ -242,7 +443,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       # row to "paid". The conditional UPDATE (status = 'pending') must skip that
       # row so the paid status is preserved and cancelled_count stays accurate.
       user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
 
       payment =
         insert(:booking_payment,
@@ -273,7 +474,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     # have its slot released.
     test "expires a pending booking's meeting whose other fields no longer pass validation" do
       user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
       meeting = insert(:meeting, status: :awaiting_payment, organizer_user_id: user.id)
 
       Repo.update_all(from(m in Meeting, where: m.id == ^meeting.id), set: [attendee_name: nil])
@@ -297,7 +498,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     # off the screen along with the account.
     test "reports the refunds the host is still holding" do
       user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
 
       meeting = insert(:meeting, status: :cancelled, cancelled_at: DateTime.utc_now(:second))
       payment = insert(:paid_booking_payment, host_user_id: user.id, meeting: meeting)
@@ -312,7 +513,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
     test "reports no outstanding refunds when the host owes nothing" do
       user = insert(:user)
-      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
 
       insert(:paid_booking_payment,
         host_user_id: user.id,
@@ -323,299 +524,42 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     end
   end
 
-  describe "apply_account_event/2" do
-    test "updates capability flags from a Stripe account event" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+  defp enable_meeting_payments(_context) do
+    with_config(:tymeslot,
+      meeting_payments_enabled: true,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker
+    )
 
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_EVENT",
-          status: :active
-        })
+    :ok
+  end
 
-      stripe_account = %{
-        "id" => "acct_EVENT",
-        "charges_enabled" => true,
-        "payouts_enabled" => true,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => nil}
-      }
+  defp started_state(user) do
+    {:ok, %{url: url}} = ConnectAccounts.start_onboarding(user)
+    url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query() |> Map.fetch!("state")
+  end
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
+  defp expect_exchange(code, stripe_account_id) do
+    expect(StripeAdapterMock, :exchange_oauth_code, 1, fn ^code ->
+      {:ok, %{stripe_user_id: stripe_account_id}}
+    end)
+  end
 
-      reloaded = ConnectAccountQueries.live_for_user(user.id)
-      assert reloaded.charges_enabled == true
-      assert reloaded.payouts_enabled == true
-      assert reloaded.details_submitted == true
-    end
+  defp expect_retrieve(stripe_account_id, attrs) do
+    expect(StripeAdapterMock, :retrieve_account, fn ^stripe_account_id ->
+      {:ok, snapshot(stripe_account_id, attrs)}
+    end)
+  end
 
-    test "returns the rejected changeset and leaves the row unchanged when the update fails" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_REJECTED",
-          status: :active
-        })
-
-      stripe_account = %{
-        "id" => "acct_REJECTED",
-        "charges_enabled" => "not-a-boolean",
-        "payouts_enabled" => true,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => nil}
-      }
-
-      assert {:error, %Ecto.Changeset{errors: errors}} =
-               ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-
-      assert Keyword.has_key?(errors, :charges_enabled)
-
-      reloaded = ConnectAccountQueries.live_for_user(user.id)
-      refute reloaded.payouts_enabled
-      assert reloaded.last_account_event_at == nil
-    end
-
-    test "ignores events for unknown accounts" do
-      stripe_account = %{
-        "id" => "acct_UNKNOWN",
-        "charges_enabled" => true,
-        "payouts_enabled" => true,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => nil}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-    end
-
-    test "enqueues a restriction email when disabled_reason transitions from nil to a value" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_RESTRICT",
-          status: :active,
-          disabled_reason: nil
-        })
-
-      stripe_account = %{
-        "id" => "acct_RESTRICT",
-        "charges_enabled" => false,
-        "payouts_enabled" => false,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => "requirements.past_due"}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-
-      reloaded = ConnectAccountQueries.live_for_user(user.id)
-
-      assert_enqueued(
-        worker: SendConnectAccountRestricted,
-        args: %{
-          connect_account_id: reloaded.id,
-          user_id: user.id,
-          stripe_account_id: "acct_RESTRICT",
-          disabled_reason: "requirements.past_due"
-        }
-      )
-    end
-
-    test "does not enqueue a restriction email while onboarding is still unsubmitted" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_UNSUBMITTED",
-          status: :active,
-          disabled_reason: nil
-        })
-
-      # Stripe stamps a brand-new account with past_due before the host finishes
-      # onboarding — that is not a restriction the host should be emailed about.
-      stripe_account = %{
-        "id" => "acct_UNSUBMITTED",
-        "charges_enabled" => false,
-        "payouts_enabled" => false,
-        "details_submitted" => false,
-        "requirements" => %{"disabled_reason" => "requirements.past_due"}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-
-      refute_enqueued(worker: SendConnectAccountRestricted)
-    end
-
-    test "does not enqueue a restriction email when disabled_reason is unchanged" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_SAME",
-          status: :active,
-          disabled_reason: "requirements.past_due"
-        })
-
-      stripe_account = %{
-        "id" => "acct_SAME",
-        "charges_enabled" => false,
-        "payouts_enabled" => false,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => "requirements.past_due"}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-
-      refute_enqueued(worker: SendConnectAccountRestricted)
-    end
-
-    test "enqueues a restriction email when disabled_reason changes between two values" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_CHANGE",
-          status: :active,
-          disabled_reason: "requirements.past_due"
-        })
-
-      stripe_account = %{
-        "id" => "acct_CHANGE",
-        "charges_enabled" => false,
-        "payouts_enabled" => false,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => "rejected.fraud"}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-
-      assert_enqueued(
-        worker: SendConnectAccountRestricted,
-        args: %{
-          disabled_reason: "rejected.fraud",
-          previous_disabled_reason: "requirements.past_due"
-        }
-      )
-    end
-
-    test "does not enqueue a restriction email when disabled_reason clears (non-nil → nil)" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_CLEAR",
-          status: :active,
-          disabled_reason: "requirements.past_due"
-        })
-
-      stripe_account = %{
-        "id" => "acct_CLEAR",
-        "charges_enabled" => true,
-        "payouts_enabled" => true,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => nil}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-
-      refute_enqueued(worker: SendConnectAccountRestricted)
-    end
-
-    test "ignores out-of-order older events" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      now = DateTime.utc_now(:second)
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_OOO",
-          status: :active,
-          charges_enabled: true,
-          last_account_event_at: now
-        })
-
-      older = DateTime.add(now, -3600, :second)
-
-      stripe_account = %{
-        "id" => "acct_OOO",
+  defp snapshot(stripe_account_id, attrs) do
+    Map.merge(
+      %{
+        "id" => stripe_account_id,
         "charges_enabled" => false,
         "payouts_enabled" => false,
         "details_submitted" => false,
         "requirements" => %{"disabled_reason" => nil}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, older)
-
-      reloaded = ConnectAccountQueries.live_for_user(user.id)
-      assert reloaded.charges_enabled == true
-    end
-
-    test "does not enqueue a duplicate job when the same event is delivered twice" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_REPLAY",
-          status: :active,
-          disabled_reason: nil
-        })
-
-      # Stripe replays carry the same envelope `created` timestamp.
-      event_at = DateTime.utc_now(:second)
-
-      stripe_account = %{
-        "id" => "acct_REPLAY",
-        "charges_enabled" => false,
-        "payouts_enabled" => false,
-        "details_submitted" => true,
-        "requirements" => %{"disabled_reason" => "requirements.past_due"}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, event_at)
-      # Second delivery with identical timestamp must be a no-op.
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, event_at)
-
-      assert [_single_job] =
-               all_enqueued(
-                 worker: SendConnectAccountRestricted,
-                 args: %{stripe_account_id: "acct_REPLAY"}
-               )
-    end
-
-    test "is a no-op for a stripe_account_id belonging to a soft-deleted account" do
-      user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
-
-      {:ok, _updated} =
-        ConnectAccountQueries.update(account, %{
-          stripe_account_id: "acct_DELETED",
-          status: :active,
-          charges_enabled: true
-        })
-
-      ConnectAccounts.disconnect(user)
-
-      stripe_account = %{
-        "id" => "acct_DELETED",
-        "charges_enabled" => false,
-        "payouts_enabled" => false,
-        "details_submitted" => false,
-        "requirements" => %{"disabled_reason" => nil}
-      }
-
-      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
-      # The deleted row must not have been updated.
-      refute ConnectAccountQueries.live_for_user(user.id)
-      refute_enqueued(worker: SendConnectAccountRestricted)
-    end
+      },
+      attrs
+    )
   end
 end

@@ -62,8 +62,7 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   or `status: :error` so dashboards can compute error rate without parsing
   the result tuple.
   """
-  @spec span_stripe(atom(), String.t() | nil, (-> result)) :: result
-        when result: {:ok, term()} | {:error, term()} | :ok
+  @spec span_stripe(atom(), String.t() | nil, (-> result)) :: result when result: term()
   def span_stripe(operation, account_id, fun)
       when is_atom(operation) and (is_binary(account_id) or is_nil(account_id)) and
              is_function(fun, 0) do

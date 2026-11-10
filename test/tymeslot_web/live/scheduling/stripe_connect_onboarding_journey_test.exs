@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
   @moduledoc """
-  A host connecting Stripe, end to end: the host starts Connect onboarding
-  from the dashboard, Stripe reports the account can take charges through a
+  A host connecting Stripe, end to end: the host starts the Connect
+  authorisation from the dashboard and completes it, Stripe reports the account can take charges through a
   signed `account.updated` delivered to the Connect webhook endpoint, and the
   host's paid meeting type, hidden from the booking page until then, can be
   booked through to Stripe Checkout.
@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.PaymentTestHelpers
@@ -84,20 +85,34 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     user: user,
     profile: profile
   } do
-    # Step 1: the host starts onboarding and is sent to Stripe.
-    expect(StripeAdapterMock, :create_account, fn _params, _opts ->
-      {:ok, %{id: @account_id, default_currency: "eur"}}
-    end)
-
-    expect(StripeAdapterMock, :create_account_link, fn params ->
-      assert params.account == @account_id
-      {:ok, %{url: "https://connect.stripe.com/setup/journey"}}
-    end)
-
+    # Step 1: the host starts the connection, is sent to Stripe and comes back
+    # with a code for the account they chose.
     host_conn =
       conn |> setup_session() |> log_in_user(user) |> post("/dashboard/payments/connect")
 
-    assert redirected_to(host_conn, 302) == "https://connect.stripe.com/setup/journey"
+    authorise_url = URI.parse(redirected_to(host_conn, 302))
+    assert authorise_url.host == "connect.stripe.com"
+    %{"state" => state} = URI.decode_query(authorise_url.query)
+
+    expect(StripeAdapterMock, :exchange_oauth_code, fn "code_journey" ->
+      {:ok, %{stripe_user_id: @account_id}}
+    end)
+
+    expect(StripeAdapterMock, :retrieve_account, fn @account_id ->
+      {:ok,
+       %{
+         "id" => @account_id,
+         "country" => "DE",
+         "default_currency" => "eur",
+         "charges_enabled" => false,
+         "payouts_enabled" => false,
+         "details_submitted" => false,
+         "requirements" => %{"disabled_reason" => nil}
+       }}
+    end)
+
+    assert {:ok, _connected} =
+             MeetingPayments.complete_oauth_callback(user, "code_journey", state)
 
     account = Repo.get_by!(ConnectAccountSchema, user_id: user.id)
     assert account.stripe_account_id == @account_id
@@ -106,8 +121,9 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     # Until Stripe says otherwise, the paid type is not offered.
     refute "paid-consult" in offered_types(profile)
 
-    # Step 2: Stripe reports the account can take charges.
-    now = System.os_time(:second)
+    # Step 2: Stripe reports the account can take charges, a moment after the
+    # snapshot read at connection time, which events no newer than are dropped.
+    now = System.os_time(:second) + 1
 
     payload =
       Jason.encode!(%{

@@ -41,13 +41,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
   defp connect_error_message(plan_error) when plan_error in [:pro_required, :insufficient_plan],
     do: dgettext("dashboard_payments", "Meeting payments require an upgraded plan.")
 
-  defp connect_error_message(:account_creation_restricted),
-    do:
-      dgettext(
-        "dashboard_payments",
-        "Payment setup is temporarily unavailable. Please try again later."
-      )
-
   defp connect_error_message(_reason),
     do: dgettext("dashboard_payments", "Could not start Stripe connection. Please try again.")
 end

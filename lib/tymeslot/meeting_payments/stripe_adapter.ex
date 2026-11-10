@@ -12,8 +12,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
 
   alias Tymeslot.MeetingPayments.Telemetry
 
-  @callback create_account(params :: map(), opts :: keyword()) ::
-              {:ok, map()} | {:error, term()}
   @callback retrieve_account(account_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
   # `{:error, :oauth_failed}` means the outcome is unknown: Stripe may or may
@@ -23,8 +21,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
               | {:error, :invalid_grant | :oauth_failed}
   @callback deauthorize_account(stripe_account_id :: String.t()) ::
               :ok | {:error, :not_connected | :oauth_failed}
-  @callback create_account_link(params :: map()) ::
-              {:ok, map()} | {:error, term()}
   @callback create_checkout_session(params :: map(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
   @callback retrieve_checkout_session(session_id :: String.t(), opts :: keyword()) ::
@@ -37,11 +33,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
               {:ok, map()} | {:error, term()}
   @callback create_refund(params :: map(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
-
-  @spec create_account(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def create_account(params, opts) do
-    Telemetry.span_stripe(:create_account, nil, fn -> impl().create_account(params, opts) end)
-  end
 
   @spec retrieve_account(String.t()) :: {:ok, map()} | {:error, term()}
   def retrieve_account(id) do
@@ -60,13 +51,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   def deauthorize_account(stripe_account_id) do
     Telemetry.span_stripe(:deauthorize_account, stripe_account_id, fn ->
       impl().deauthorize_account(stripe_account_id)
-    end)
-  end
-
-  @spec create_account_link(map()) :: {:ok, map()} | {:error, term()}
-  def create_account_link(params) do
-    Telemetry.span_stripe(:create_account_link, params[:account], fn ->
-      impl().create_account_link(params)
     end)
   end
 
@@ -170,7 +154,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
   require Logger
 
   alias Stripe.Account
-  alias Stripe.AccountLink
   alias Stripe.Charge
   alias Stripe.Checkout.Session, as: CheckoutSession
   alias Stripe.PaymentIntent
@@ -190,13 +173,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
   ]
 
   @impl StripeAdapter
-  def create_account(params, opts), do: Account.create(params, opts)
-
-  @impl StripeAdapter
   def retrieve_account(id), do: Account.retrieve(%{}, connect_account: id)
-
-  @impl StripeAdapter
-  def create_account_link(params), do: AccountLink.create(params)
 
   @impl StripeAdapter
   def create_checkout_session(params, opts), do: CheckoutSession.create(params, opts)

@@ -217,11 +217,6 @@ msgstr "Zwrot częściowy"
 msgid "Partially refunded"
 msgstr "Zwrócono częściowo"
 
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Payment setup is temporarily unavailable. Please try again later."
-msgstr "Konfiguracja płatności jest chwilowo niedostępna. Spróbuj ponownie później."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Pending"

@@ -31,13 +31,15 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}})
       when is_binary(stripe_account_id) do
+    # Taken before the fetch, so an event emitted while it is in flight is not
+    # dropped as older than a snapshot that may not include it. An
+    # account.updated webhook emitted before this moment but delivered later
+    # is still treated as stale.
+    read_at = DateTime.utc_now(:second)
+
     case StripeAdapter.retrieve_account(stripe_account_id) do
       {:ok, account} ->
-        # A direct retrieve reflects Stripe's current truth as of now, so we
-        # stamp the snapshot with the current time for the ordering guard. An
-        # account.updated webhook emitted before this fetch but delivered later
-        # is then correctly treated as stale.
-        ConnectAccounts.apply_account_event(account, DateTime.utc_now(:second))
+        ConnectAccounts.apply_account_event(account, read_at)
 
       {:error, reason} ->
         Logger.warning("ResyncConnectAccount could not retrieve Stripe account",

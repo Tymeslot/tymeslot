@@ -11,15 +11,6 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterTest do
 
   setup :verify_on_exit!
 
-  test "create_account/2 delegates to configured impl" do
-    expect(StripeAdapterMock, :create_account, fn _params, _opts ->
-      {:ok, %{id: "acct_TEST"}}
-    end)
-
-    assert {:ok, %{id: "acct_TEST"}} =
-             StripeAdapter.create_account(%{type: "standard"}, idempotency_key: "k")
-  end
-
   test "exchange_oauth_code/1 delegates to configured impl" do
     expect(StripeAdapterMock, :exchange_oauth_code, fn code ->
       {:ok, %{stripe_user_id: "acct_" <> code}}

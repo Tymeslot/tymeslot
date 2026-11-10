@@ -73,17 +73,35 @@ defmodule Tymeslot.MeetingPayments do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Starts the Stripe Connect onboarding flow for a user.
+  Starts connecting a host's Stripe account through OAuth.
 
-  Enforces the meeting-payments feature gate, persists a placeholder row
-  before calling Stripe (making the flow crash-safe), and reuses a Stripe
-  account the host already has. Returns the Stripe-hosted onboarding URL on
-  success; on failure, a `Tymeslot.Features.check_access/2` reason,
-  `{:error, :account_creation_restricted}`, or the underlying Stripe error.
+  Enforces the meeting-payments feature gate and returns the Stripe URL to
+  send the host to. On failure: a `Tymeslot.Features.check_access/2` reason,
+  `:oauth_not_configured`, or `:already_connected`.
   """
   @spec start_onboarding(user :: %{id: integer()}) ::
-          {:ok, %{url: String.t(), account: account()}} | {:error, term()}
+          {:ok, %{url: String.t(), account: account()}}
+          | {:error, :oauth_not_configured | :already_connected | term()}
   defdelegate start_onboarding(user), to: ConnectAccounts
+
+  @doc """
+  Completes a Stripe connection when the host returns from Stripe with a code.
+
+  See `Tymeslot.MeetingPayments.ConnectAccounts.complete_oauth_callback/3`.
+  """
+  @spec complete_oauth_callback(user :: %{id: integer()}, code :: String.t(), state :: String.t()) ::
+          {:ok, account()}
+          | {:error,
+             :invalid_state
+             | :expired_state
+             | :user_mismatch
+             | :state_already_used
+             | :invalid_grant
+             | :oauth_failed
+             | :account_already_linked
+             | :unsupported_currency
+             | term()}
+  defdelegate complete_oauth_callback(user, code, state), to: ConnectAccounts
 
   @doc """
   Soft-deletes the host's Stripe Connect account row.

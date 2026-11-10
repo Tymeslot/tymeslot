@@ -43,15 +43,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueries do
     )
   end
 
-  @spec insert_placeholder(integer(), String.t()) ::
+  @spec insert_placeholder(integer()) ::
           {:ok, ConnectAccountSchema.t()} | {:error, Ecto.Changeset.t()}
-  def insert_placeholder(user_id, country) do
+  def insert_placeholder(user_id) do
     %ConnectAccountSchema{}
-    |> ConnectAccountSchema.changeset(%{
-      user_id: user_id,
-      country: country,
-      status: :creating
-    })
+    |> ConnectAccountSchema.changeset(%{user_id: user_id, status: :creating})
     |> Repo.insert()
   end
 
