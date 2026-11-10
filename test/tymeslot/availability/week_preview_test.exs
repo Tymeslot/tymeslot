@@ -257,6 +257,77 @@ defmodule Tymeslot.Availability.WeekPreviewTest do
     end
   end
 
+  describe "time off" do
+    test "a day the host is away has no busy blocks and no slots", %{monday: monday} do
+      tuesday = Date.add(monday, 1)
+      profile = host()
+      insert(:time_off_period, profile: profile, starts_on: tuesday, ends_on: tuesday)
+      stub_events([event_at(tuesday, ~T[10:00:00], ~T[11:00:00])])
+
+      assert {:ok, %{days: [first, away | _rest], first_busy: nil}} =
+               Availability.week_preview(profile, today: monday)
+
+      assert away.date == tuesday
+      assert away.busy == []
+      assert away.slots == []
+      assert first.slots != []
+    end
+
+    test "first_busy passes over a day the host is away", %{monday: monday} do
+      tuesday = Date.add(monday, 1)
+      thursday = Date.add(monday, 3)
+      profile = host()
+      insert(:time_off_period, profile: profile, starts_on: tuesday, ends_on: tuesday)
+
+      stub_events([
+        event_at(tuesday, ~T[10:00:00], ~T[11:00:00]),
+        event_at(thursday, ~T[14:00:00], ~T[15:00:00])
+      ])
+
+      assert {:ok, %{first_busy: first_busy}} = Availability.week_preview(profile, today: monday)
+      assert first_busy == %{date: thursday, start: ~T[14:00:00]}
+    end
+
+    test "a part-day period clips a block to the hours that remain", %{monday: monday} do
+      profile = host()
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: monday,
+        ends_on: monday,
+        start_time: ~T[09:00:00],
+        end_time: ~T[12:00:00]
+      )
+
+      stub_events([event_at(monday, ~T[11:00:00], ~T[14:00:00])])
+
+      assert {:ok, %{days: [first | _rest], first_busy: first_busy}} =
+               Availability.week_preview(profile, today: monday)
+
+      assert first.busy == [{~T[12:00:00], ~T[14:00:00]}]
+      assert first_busy == %{date: monday, start: ~T[12:00:00]}
+      refute "10:00" in first.slots
+      assert "15:00" in first.slots
+    end
+
+    test "a period in the middle of the day leaves a block on either side", %{monday: monday} do
+      profile = host()
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: monday,
+        ends_on: monday,
+        start_time: ~T[12:00:00],
+        end_time: ~T[14:00:00]
+      )
+
+      stub_events([event_at(monday, ~T[10:00:00], ~T[16:00:00])])
+
+      assert {:ok, %{days: [first | _rest]}} = Availability.week_preview(profile, today: monday)
+      assert first.busy == [{~T[10:00:00], ~T[12:00:00]}, {~T[14:00:00], ~T[16:00:00]}]
+    end
+  end
+
   test "busy blocks are in the host's timezone", %{monday: monday} do
     # 12:30 UTC on Sunday is just after midnight on Monday in Auckland, in or out of DST.
     ClockHelpers.freeze_clock(DateTime.new!(Date.add(monday, -1), ~T[12:30:00], "Etc/UTC"))
