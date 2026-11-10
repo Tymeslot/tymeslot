@@ -150,6 +150,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
       <div class="space-y-2">
         <label class="flex items-start gap-2">
+          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
           <input
             type="radio"
             name="cancel_refund_choice"
@@ -165,6 +166,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <label class="flex items-start gap-2">
+          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
           <input
             type="radio"
             name="cancel_refund_choice"
@@ -189,6 +191,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </div>
 
         <label class="flex items-start gap-2">
+          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
           <input
             type="radio"
             name="cancel_refund_choice"
@@ -204,6 +207,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <label class="flex items-start gap-2 ml-6">
+          <%!-- raw-input: acknowledgement checkbox inside its inline label beside the text; <.input> would nest block wrappers inside the label --%>
           <input
             type="checkbox"
             name="cancel_refund_no_refund_ack"

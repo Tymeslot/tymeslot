@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingTypesTest do
 
   import Tymeslot.ConfigTestHelpers
 
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
@@ -175,15 +176,12 @@ defmodule Tymeslot.MeetingTypesTest do
   # =====================================
 
   describe "seed_default_meeting_types/2" do
-    test "seeds the two defaults, with no booking calendar" do
+    test "seeds one Intro call default, with no booking calendar" do
       user = insert(:user)
 
       assert :ok = MeetingTypes.seed_default_meeting_types(user.id)
 
-      assert [
-               %{name: "15 Minutes", duration_minutes: 15},
-               %{name: "30 Minutes", duration_minutes: 30}
-             ] =
+      assert [%{name: "Intro call", duration_minutes: 30}] =
                user.id |> MeetingTypes.get_all_meeting_types() |> Enum.sort_by(& &1.sort_order)
 
       assert Enum.all?(
@@ -192,13 +190,34 @@ defmodule Tymeslot.MeetingTypesTest do
              )
     end
 
+    # No catalogue carries a translation of the name yet, so a non-English
+    # locale stores the English msgid; this pins that the name goes through
+    # the gettext lookup at seed time, in the sign-up's locale.
+    test "stores the name and description as looked up in the seeding locale" do
+      user = insert(:user)
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        :ok = MeetingTypes.seed_default_meeting_types(user.id)
+
+        assert [type] = MeetingTypes.get_all_meeting_types(user.id)
+        assert type.name == Gettext.dgettext(TymeslotWeb.Gettext, "meeting_types", "Intro call")
+
+        assert type.description ==
+                 Gettext.dgettext(
+                   TymeslotWeb.Gettext,
+                   "meeting_types",
+                   "A short first conversation"
+                 )
+      end)
+    end
+
     test "seeding again inserts nothing more" do
       user = insert(:user)
 
       :ok = MeetingTypes.seed_default_meeting_types(user.id)
       :ok = MeetingTypes.seed_default_meeting_types(user.id)
 
-      assert length(MeetingTypes.get_all_meeting_types(user.id)) == 2
+      assert length(MeetingTypes.get_all_meeting_types(user.id)) == 1
     end
 
     # A new account has no username, so there is no page to publish.
@@ -307,6 +326,34 @@ defmodule Tymeslot.MeetingTypesTest do
 
       assert updated.duration_minutes == 45
     end
+
+    test "keeps the cached calendar events when the edit leaves the fetch window alone" do
+      %{key: key, meeting_type: meeting_type} = cache_calendar_events()
+
+      assert {:ok, _renamed} = MeetingTypes.update_meeting_type(meeting_type, %{name: "Renamed"})
+
+      assert {:ok, [:cached]} =
+               AvailabilityCache.get_or_compute_events(key, fn -> {:ok, [:fresh]} end)
+    end
+
+    test "drops the cached calendar events when a longer booking window needs more of them" do
+      %{key: key, meeting_type: meeting_type} = cache_calendar_events()
+
+      assert {:ok, _longer} =
+               MeetingTypes.update_meeting_type(meeting_type, %{advance_booking_days: 180})
+
+      assert {:ok, [:fresh]} =
+               AvailabilityCache.get_or_compute_events(key, fn -> {:ok, [:fresh]} end)
+    end
+  end
+
+  defp cache_calendar_events do
+    user = insert(:user)
+    meeting_type = insert(:meeting_type, user: user, advance_booking_days: nil)
+    AvailabilityCache.clear_all()
+    key = AvailabilityCache.booking_window_events_key(user.id)
+    {:ok, [:cached]} = AvailabilityCache.get_or_compute_events(key, fn -> {:ok, [:cached]} end)
+    %{key: key, meeting_type: meeting_type}
   end
 
   # =====================================

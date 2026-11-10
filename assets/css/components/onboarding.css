@@ -1,112 +1,198 @@
 /* ==========================================================================
-   Onboarding — Split-screen layout
+   Onboarding: the question column and the stage
+
+   One markup at every size (question column first, then stage), so reading
+   and tab order never change. Below lg the stage is a card above the column
+   and the page scrolls as one; from lg the column is a 480px panel on the
+   left and the stage fills the rest at full height. Media queries, not
+   container queries, pick the layout; the StageScale hook does the scaling.
    ========================================================================== */
 
-.onboarding-container {
-  display: flex;
+.onboarding-shell {
+  display: grid;
+  grid-template-areas: "stage" "panel";
+  grid-template-columns: minmax(0, 1fr);
+  /* The questions take any height the screen has left over, so the stage
+     card never grows on a step with little to ask. */
+  grid-template-rows: auto 1fr;
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
+  background-color: var(--color-bg-primary);
 }
 
-.onboarding-content-panel {
+@media (min-width: 1024px) {
+  .onboarding-shell {
+    grid-template-areas: "panel stage";
+    grid-template-columns: 480px minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+}
+
+/* The sticky nav below lg sits over the bottom of the page, so a field the
+   browser scrolls into view on focus has to clear it: by the nav's own
+   height, which the StickyNavClearance hook publishes, and a little more. */
+@media (max-width: 1023.98px) {
+  html:has(.onboarding-shell) {
+    scroll-padding-bottom: calc(var(--onboarding-nav-height, var(--spacing-24)) + var(--spacing-4));
+  }
+}
+
+/* A phone's toasts sit at the bottom of the screen, where they would cover
+   the pinned nav (and swallow a tap meant for Continue) until they fade, so
+   they rise above it. With no nav they keep their usual place. */
+@media (max-width: 639.98px) {
+  html:has(.onboarding-shell) .flash-group {
+    bottom: max(
+      calc(var(--onboarding-nav-height, 0px) + var(--spacing-2)),
+      calc(var(--spacing-4) + env(safe-area-inset-bottom, 0px))
+    );
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Question column
+   -------------------------------------------------------------------------- */
+
+.onboarding-panel {
+  grid-area: panel;
   display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--color-bg-primary);
+}
+
+.onboarding-panel-inner {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   width: 100%;
-  padding: var(--spacing-8) var(--spacing-8) var(--spacing-6);
-  background: #ffffff;
-  overflow-y: auto;
-}
-
-@media (min-width: 768px) {
-  .onboarding-content-panel {
-    width: 50%;
-    padding: var(--spacing-12) var(--spacing-16) var(--spacing-8);
-  }
-}
-
-.onboarding-illustration-panel {
-  display: none;
-  width: 50%;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-12);
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-50) 0%,
-    var(--color-cyan-50, #ecfeff) 100%
-  );
-}
-
-@media (min-width: 768px) {
-  .onboarding-illustration-panel {
-    display: flex;
-  }
-}
-
-.onboarding-illustration-panel img {
-  max-width: 100%;
-  max-height: 500px;
-  width: auto;
-  height: auto;
-}
-
-/* Content area — vertically centred with grow spacer */
-.onboarding-content-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   max-width: 480px;
   margin: 0 auto;
-  width: 100%;
+  padding: var(--spacing-6) var(--spacing-4) 0;
 }
 
-/* Progress indicator — horizontal dots */
+@media (min-width: 640px) {
+  .onboarding-panel-inner {
+    padding: var(--spacing-8) var(--spacing-6) 0;
+  }
+}
+
+/* From lg the column is exactly the screen's height and scrolls on its own
+   when a step needs more, so the step's way on (the nav, or the live step's
+   finish) can stick to its bottom edge and is always in view. The bottom
+   padding is the sticky row's own, so nothing scrolls under it. */
+@media (min-width: 1024px) {
+  .onboarding-panel {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .onboarding-panel-inner {
+    max-width: none;
+    padding: var(--spacing-8) var(--spacing-8) 0;
+    overflow-y: auto;
+    /* A field the browser scrolls into view on focus clears the sticky row
+       below it, as the page does below lg. */
+    scroll-padding-bottom: calc(var(--onboarding-nav-height, var(--spacing-24)) + var(--spacing-4));
+  }
+
+  /* Each chip row of the meeting step fits on one line of the column. */
+  .onboarding-chips > button {
+    padding-inline: var(--spacing-3);
+  }
+}
+
+/* Progress: five segments, done and current filled; labels from lg */
 .onboarding-progress {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-8);
-}
-
-.onboarding-progress-dots {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-6);
+  padding: 0;
+  list-style: none;
 }
 
-.onboarding-progress-dot {
-  width: 10px;
-  height: 10px;
+@media (min-width: 1024px) {
+  .onboarding-progress {
+    margin-bottom: var(--spacing-8);
+  }
+}
+
+.onboarding-progress-segment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.onboarding-progress-bar {
+  display: block;
+  height: 4px;
   border-radius: var(--radius-full);
-  transition: all 0.2s ease;
-}
-
-.onboarding-progress-dot--completed {
-  background-color: var(--color-primary-500);
-}
-
-.onboarding-progress-dot--current {
-  background-color: var(--color-primary-500);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
-  transform: scale(1.2);
-}
-
-.onboarding-progress-dot--upcoming {
   background-color: var(--color-neutral-200);
 }
 
-.onboarding-progress-label {
-  font-size: var(--font-size-sm);
-  /* 500, not 400: small text needs 4.5:1 against the white card. */
-  color: var(--color-neutral-500);
-  font-weight: 500;
+.onboarding-progress-segment[data-state="done"] .onboarding-progress-bar,
+.onboarding-progress-segment[data-state="current"] .onboarding-progress-bar {
+  background-color: var(--color-primary-500);
 }
 
-/* Step content */
+/* Below lg the names are for screen readers only. */
+.onboarding-progress-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .onboarding-progress-name {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: hidden;
+    clip-path: none;
+    text-overflow: ellipsis;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    /* The 500 shade is the lightest that keeps 4.5:1 on white at this size. */
+    color: var(--color-neutral-500);
+  }
+
+  .onboarding-progress-segment[data-state="current"] .onboarding-progress-name {
+    font-weight: 600;
+    color: var(--color-neutral-900);
+  }
+}
+
+/* Step header */
 .onboarding-step-header {
   margin-bottom: var(--spacing-6);
+}
+
+.onboarding-step-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-neutral-500);
+  margin-bottom: var(--spacing-2);
+}
+
+/* From lg the progress names the steps, the current one in bold, so the
+   "Step N of 5" line is for screen readers only. */
+@media (min-width: 1024px) {
+  .onboarding-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 .onboarding-step-title {
@@ -117,67 +203,421 @@
   margin-bottom: var(--spacing-2);
 }
 
+.onboarding-step-title:focus {
+  outline: none;
+}
+
 .onboarding-step-description {
   font-size: var(--font-size-base);
   color: var(--color-neutral-500);
   line-height: 1.6;
 }
 
-/* Navigation buttons */
+/* The question column changes with the step; the stage never slides. */
+/* Enters from the left: a step entering from the right would widen the page
+   for the length of the animation, and phones briefly scroll sideways. */
+.onboarding-slide-in-left {
+  animation: onboarding-step-in 0.25s ease-out;
+}
+
+@keyframes onboarding-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Navigation: in the flow from lg, stuck to the bottom of the screen below */
 .onboarding-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  margin-top: var(--spacing-8);
+  margin: var(--spacing-8) calc(-1 * var(--spacing-4)) 0;
+  padding: var(--spacing-3) var(--spacing-4) max(16px, env(safe-area-inset-bottom));
+  background-color: var(--color-bg-primary);
+  border-top: 1px solid var(--color-neutral-100);
+}
+
+@media (min-width: 640px) {
+  .onboarding-nav {
+    margin-inline: calc(-1 * var(--spacing-6));
+    padding-inline: var(--spacing-6);
+  }
+}
+
+/* From lg it sits in the flow under the step, and sticks to the bottom of
+   the column only when the step is taller than the screen. Its top padding
+   fades in, so a step scrolling under it shows there is more. */
+@media (min-width: 1024px) {
+  .onboarding-nav {
+    margin: var(--spacing-2) 0 0;
+    padding: var(--spacing-4) 0 var(--spacing-6);
+    border-top: 0;
+    background: linear-gradient(to bottom, transparent, var(--color-bg-primary) var(--spacing-4));
+  }
 }
 
 .onboarding-nav-spacer {
   flex: 1;
 }
 
-/* Welcome step feature list */
-.onboarding-feature-list {
+/* An open provider form's own Cancel and Connect stand in for the nav, so
+   they keep its distance from the bottom of the screen. */
+.onboarding-form-actions {
+  padding-bottom: max(var(--spacing-4), env(safe-area-inset-bottom));
+}
+
+/* Why Continue is disabled, on a line of its own above the buttons: on a
+   phone the field it names can be off screen. */
+.onboarding-nav {
+  flex-wrap: wrap;
+}
+
+.onboarding-nav-hint {
+  display: flex;
+  flex-basis: 100%;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
+/* Below 640px the buttons shrink to fit; they stay 44px tall to tap. */
+.onboarding-nav .action-button {
+  min-height: 44px;
+}
+
+/* --------------------------------------------------------------------------
+   Stage
+   -------------------------------------------------------------------------- */
+
+/* Below lg the stage lines up with the question column under it: the same
+   480px measure and the same side padding. */
+.onboarding-stage {
+  grid-area: stage;
+  width: 100%;
+  min-width: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--spacing-4) var(--spacing-4) 0;
+}
+
+@media (min-width: 640px) {
+  .onboarding-stage {
+    padding: var(--spacing-6) var(--spacing-6) 0;
+  }
+}
+
+/* From lg the theme's canvas colour fills the whole stage, so a theme
+   change recolours half the screen. */
+@media (min-width: 1024px) {
+  .onboarding-stage {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-4);
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
+    padding: var(--spacing-12);
+    overflow: hidden;
+    background-color: var(--stage-canvas, var(--color-neutral-100));
+    transition: background-color 400ms ease;
+  }
+}
+
+.stage-frame-wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
-  margin-top: var(--spacing-6);
+  gap: var(--spacing-2);
+  width: 100%;
+  min-height: 0;
 }
 
-.onboarding-feature-item {
+@media (min-width: 1024px) {
+  .stage-frame-wrap {
+    max-width: 760px;
+    flex: none;
+  }
+}
+
+/* Below lg: a card of the page, cut off at 45% of the screen */
+.onboarding-stage .stage-frame {
   display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-4);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-token-xl);
-  transition: background-color 0.15s ease;
+  flex-direction: column;
+  height: 45svh;
+  border-radius: var(--radius-2xl);
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+  transition: background-color 400ms ease;
 }
 
-.onboarding-feature-item:hover {
-  background-color: var(--color-primary-50);
+.onboarding-stage .stage-frame:hover {
+  transform: none;
 }
 
-.onboarding-feature-icon {
+/* On the link step a phone needs the name and link fields above the fold,
+   so the card shows only the page's header and address (the StageScale
+   hook brings that highlighted region into view). */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-step="profile"] .stage-frame {
+    height: 26svh;
+  }
+}
+
+/* On the look step a phone keeps the page in view while the host picks:
+   the stage sticks to the top and the stories and colours scroll up under
+   it, so each choice is seen as it lands. Only on a screen tall enough to
+   leave room for the choices below it. */
+@media (max-width: 1023.98px) and (min-height: 600px) {
+  /* What the pinned stage covers: the card plus its padding and the
+     address strip under it, with a little room to spare. Keyboard focus
+     scrolls clear of it, so a story card, "Show all themes" or the heading
+     reached with Shift+Tab never lands behind the stage. */
+  html:has(.onboarding-stage[data-step="choose_theme"]) {
+    scroll-padding-top: calc(36svh + var(--spacing-24));
+  }
+
+  .onboarding-stage[data-step="choose_theme"] {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding-bottom: var(--spacing-3);
+    background-color: var(--color-bg-primary);
+  }
+
+  .onboarding-stage[data-step="choose_theme"] .stage-frame {
+    height: 36svh;
+  }
+}
+
+.stage-frame-bar {
+  display: none;
+}
+
+.stage-frame-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+  transition: background-color 400ms ease;
+}
+
+/* From lg: a browser window holding the whole page. The StageScale hook
+   sizes the page so the window and the caption fit the stage's height. The
+   bar is opaque, so it reads as a clean browser bar on a dark canvas as
+   much as on a light one. */
+@media (min-width: 1024px) {
+  .onboarding-stage .stage-frame {
+    height: auto;
+    background: var(--color-bg-primary);
+  }
+
+  .onboarding-stage .stage-frame:hover {
+    background: var(--color-bg-primary);
+  }
+
+  .stage-frame-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    background-color: var(--color-neutral-50);
+    border-bottom: 1px solid var(--color-neutral-200);
+  }
+}
+
+.stage-frame-address {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: var(--radius-token-lg);
-  background-color: var(--color-primary-50);
-  color: var(--color-primary-600);
+  gap: var(--spacing-2);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--spacing-1) var(--spacing-4);
+  border-radius: var(--radius-full);
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-700);
 }
 
-.onboarding-feature-title {
-  font-size: var(--font-size-base);
-  font-weight: 700;
-  color: var(--color-neutral-800);
-}
-
-.onboarding-feature-description {
-  font-size: var(--font-size-sm);
+/* The slim strip under the card below lg: the address and Expand */
+.stage-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
   color: var(--color-neutral-500);
-  margin-top: 2px;
+}
+
+.stage-strip-url {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .stage-strip {
+    display: none;
+  }
+}
+
+/* The page miniature, designed at 400px and scaled by the StageScale hook */
+.stage-scale {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  /* On a phone, the hook shifts the page up inside the card to bring the
+     step's highlighted region into view. */
+  transform: translateY(calc(-1 * var(--stage-shift, 0px)));
+}
+
+.stage-scale-inner {
+  flex: none;
+  transform: scale(var(--stage-scale, 1));
+  transform-origin: top center;
+}
+
+/* Fitting is a jump, never a motion: no transition, even the near-zero one
+   a global reduced-motion rule gives every property. */
+.stage-scale,
+.stage-scale-inner {
+  transition-property: none;
+}
+
+/* What the stage shows, in words: under the card's address strip on a
+   phone, under the frame from lg. The live region in the question column
+   announces it; this is the visible copy. */
+.onboarding-stage-caption {
+  margin-top: var(--spacing-2);
+  font-weight: 500;
+  color: var(--color-neutral-700);
+}
+
+/* On a phone the live step's link leads the column, just under the
+   stage, so the caption naming it again is left to the live region. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-step="ready"] .onboarding-stage-caption {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .onboarding-stage-caption {
+    display: block;
+    margin-top: 0;
+    max-width: 100%;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-full);
+    flex: none;
+    background: var(--color-bg-primary);
+    box-shadow: var(--shadow-glass-sm);
+    color: var(--color-neutral-700);
+    font-weight: 500;
+    text-align: center;
+  }
+}
+
+/* The week on the page miniature (PreviewWeek). Its colours are the
+   theme's, set inline; these rules draw with `currentColor`. */
+
+/* A busy block: hatched in the muted colour it is given. */
+.onboarding-preview-busy {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, currentColor 22%, transparent) 0 2px,
+    transparent 2px 7px
+  );
+}
+
+/* Where the times will be while the calendar is read. */
+.onboarding-preview-shimmer {
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, currentColor 14%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: onboarding-preview-shimmer 1.4s linear infinite;
+}
+
+@keyframes onboarding-preview-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* The reveal: each free time fades and rises 4px, 30ms after the one
+   before, the whole run done within 600ms. Only the render where a new
+   week arrived carries `data-reveal`. */
+[data-reveal] [data-reveal-item] {
+  animation: onboarding-preview-reveal 240ms ease-out both;
+  animation-delay: min(calc(var(--reveal-index, 0) * 30ms), 360ms);
+}
+
+@keyframes onboarding-preview-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* The expanded preview (StagePreviewModal) */
+/* The page's canvas runs to the dialog's edges, so the page is drawn at
+   least as large as on the stage card. */
+#onboarding-stage-preview .modal-body {
+  padding: 0;
+}
+
+.stage-preview-canvas {
+  min-height: 100%;
+  overflow: hidden;
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-slide-in-left {
+    animation: none;
+  }
+
+  .onboarding-stage,
+  .onboarding-stage .stage-frame,
+  .stage-frame-body {
+    transition: none;
+  }
+
+  .onboarding-preview-shimmer,
+  [data-reveal] [data-reveal-item] {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Step content
+   -------------------------------------------------------------------------- */
+
+/* A chosen option (a meeting length, a suggested name, a day) is white on
+   turquoise. The shared control's 600 shade gives that 3.7:1, short of the
+   4.5:1 its 14px labels need, so the wizard's controls take the 700 shade. */
+.onboarding-shell button[aria-pressed="true"].bg-turquoise-600 {
+  border-color: var(--color-primary-700);
+  background-color: var(--color-primary-700);
 }
 
 /* Form styles */
@@ -195,22 +635,9 @@
 
 .onboarding-form-helper {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-400);
+  /* The 500 shade is the lightest that keeps 4.5:1 on white at this size. */
+  color: var(--color-neutral-500);
   margin-top: 2px;
-}
-
-.onboarding-preference-example {
-  font-size: var(--font-size-sm);
-  color: var(--color-neutral-400);
-  font-style: italic;
-  margin-top: var(--spacing-2);
-  margin-bottom: var(--spacing-3);
-}
-
-.onboarding-preference-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
 }
 
 /* Calendar connection */
@@ -223,6 +650,7 @@
 
 .onboarding-provider-card {
   display: flex;
+  min-height: 44px;
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
@@ -240,36 +668,6 @@
   background-color: var(--color-primary-50);
 }
 
-/* Selected option in the forced-choice calendar step */
-.onboarding-choice-card--selected {
-  border-color: var(--color-primary-400);
-  background-color: var(--color-primary-50);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
-}
-
-.onboarding-choice-card--selected:hover {
-  border-color: var(--color-primary-500);
-}
-
-/* Radio indicator on each selectable choice */
-.onboarding-choice-radio {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  margin-left: auto;
-  border: 2px solid var(--color-neutral-200);
-  border-radius: var(--radius-full);
-  transition: all 0.15s ease;
-}
-
-.onboarding-choice-radio--selected {
-  border-color: var(--color-primary-500);
-  background-color: var(--color-primary-500);
-}
-
 .onboarding-provider-badge {
   font-size: var(--font-size-xs);
   font-weight: 700;
@@ -283,6 +681,9 @@
 }
 
 .onboarding-provider-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
   min-width: 36px;
@@ -299,42 +700,374 @@
   color: var(--color-neutral-500);
 }
 
+.onboarding-privacy-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+}
+
+.onboarding-privacy-line svg {
+  margin-top: 2px;
+}
+
 .onboarding-connected-calendar {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
-  border: 2px solid var(--color-success, #10b981);
+  border: 2px solid var(--color-success);
   border-radius: var(--radius-token-xl);
-  background-color: #f0fdf4;
+  background-color: var(--color-green-50);
 }
 
-/* Ready step — URL display */
-.onboarding-url-display {
+/* A paused calendar takes no bookings until it is reconnected */
+.onboarding-connected-calendar--paused {
+  border-color: var(--color-warning);
+  background-color: var(--color-amber-50);
+}
+
+/* Below lg, the calendar step keeps the card short until a calendar is
+   connected, so the tiles (the step's action) are above the fold. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-compact] .stage-frame {
+    height: 26svh;
+  }
+}
+
+/* Below lg, the meeting step keeps a short card of the page pinned above
+   its controls: the host edits the meeting and the hours further down the
+   page and still sees the times reshape after each save. A field the
+   browser scrolls into view on focus clears the pinned card. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage[data-step="meeting"] {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-bottom: var(--spacing-2);
+    background-color: var(--color-bg-primary);
+  }
+
+  .onboarding-stage[data-step="meeting"] .stage-frame {
+    height: 24svh;
+  }
+
+  html:has(.onboarding-stage[data-step="meeting"]) {
+    scroll-padding-top: calc(24svh + var(--spacing-32));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   The live step: the host's real page, and keeping the link
+   -------------------------------------------------------------------------- */
+
+/* The address in the browser bar: on a narrow frame the host gives way,
+   never the name (as the strip under the phone card does). */
+.stage-address-text {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4) var(--spacing-5);
-  background-color: var(--color-neutral-50);
-  border: 2px solid var(--color-neutral-100);
-  border-radius: var(--radius-token-xl);
-  font-size: var(--font-size-lg);
+  min-width: 0;
+}
+
+.stage-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background-color: var(--stage-canvas, var(--color-neutral-100));
+  /* Switched on once loaded (the StageIframe hook): from grey into colour. */
+  opacity: 0;
+  filter: saturate(0);
+  transition:
+    opacity 300ms ease-out,
+    filter 300ms ease-out;
+}
+
+.stage-iframe[data-loaded] {
+  opacity: 1;
+  filter: none;
+}
+
+/* The miniature stays under the real page until it has painted, then the
+   page cross-fades in over it, so the card is never an empty box while the
+   page loads. The miniature keeps sizing the frame, as it did before the
+   page arrived, and the page takes its box: the frame never changes size
+   as the page switches on, so nothing around it moves. */
+.stage-frame-wrap[data-mode="iframe"] .stage-frame-body {
+  position: relative;
+}
+
+.stage-frame-wrap[data-mode="iframe"] .stage-frame-miniature {
+  transition: opacity 300ms ease-out;
+}
+
+.stage-frame-wrap[data-mode="iframe"] .stage-iframe {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-frame-body:has(.stage-iframe[data-loaded]) .stage-frame-miniature {
+  opacity: 0;
+}
+
+/* Below lg the card is a short glimpse of the page that never takes the
+   touch: scrolling inside it would trap the page around it. Expand is
+   where a phone tries booking. The card stays short, so the keep actions
+   are near the top of the screen. */
+@media (max-width: 1023.98px) {
+  .onboarding-stage .stage-iframe {
+    pointer-events: none;
+  }
+
+  .onboarding-stage[data-step="ready"] .stage-frame {
+    height: 30svh;
+  }
+
+  /* The caption under the strip spells the whole link out ("You're all
+     set: host/name is live"), so the strip keeps only the Live badge and
+     Expand rather than a cut-off copy of the address. */
+  .onboarding-stage[data-step="ready"] .stage-strip-url {
+    visibility: hidden;
+  }
+}
+
+/* The moment the page goes live: the frame glows once and the Live badge
+   lights up as the real page switches on. */
+.stage-frame:has(.stage-iframe[data-loaded]) {
+  animation: stage-switch-on 900ms ease-out;
+}
+
+.stage-frame-wrap:has(.stage-iframe[data-loaded]) [data-role="stage-live-badge"] {
+  animation: stage-live-on 700ms ease-out both;
+}
+
+@keyframes stage-switch-on {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary-500) 45%, transparent);
+  }
+
+  40% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary-500) 25%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 16px transparent;
+  }
+}
+
+@keyframes stage-live-on {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* The expanded real page: interactive, filling the dialog. */
+.stage-preview-canvas--page .stage-iframe {
+  height: calc(100svh - var(--spacing-32));
+}
+
+.onboarding-text-link {
+  font-weight: 600;
+  color: var(--color-primary-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.onboarding-text-link:hover {
+  color: var(--color-primary-800);
+}
+
+.onboarding-try-booking {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-1) var(--spacing-2);
+}
+
+/* The booking link leads the live step: whole, selectable, and wrapping
+   anywhere rather than ever cut off, with its Copy button beside it. */
+.onboarding-link-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--spacing-2) var(--spacing-3);
+}
+
+/* Beside Copy while that leaves it room; on the narrowest phones Copy
+   goes under it instead. */
+.onboarding-link-text {
+  flex: 1 1 12rem;
+  max-width: 100%;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-neutral-900);
+  /* Not `anywhere`: the address stays whole beside Copy where it fits,
+     and Copy goes under it where it does not. */
+  overflow-wrap: break-word;
+  user-select: all;
+}
+
+/* The first-person card's confirmation line, under its buttons: one line
+   of room (the 20px icon's height) is kept while it is empty, so the
+   confirmation never moves the card. */
+.onboarding-kept-line {
+  flex-basis: 100%;
+  min-height: 1.25rem;
+  line-height: 1.25rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-primary-700);
 }
 
-/* Slide animations */
-.onboarding-slide-in-left {
-  animation: onboarding-slide-left 0.25s ease-out;
+/* A keep button's label and its confirmation share one grid cell; the
+   hidden one keeps its room, so the swap never resizes the button. */
+.onboarding-kept-swap {
+  display: inline-grid;
+  min-width: 0;
 }
 
-@keyframes onboarding-slide-left {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
+.onboarding-keep-actions .onboarding-kept-swap {
+  text-align: start;
+}
+
+.onboarding-kept-swap > span {
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboarding-kept-swap[data-kept] .onboarding-kept-swap-label,
+.onboarding-kept-swap:not([data-kept]) .onboarding-kept-swap-done {
+  visibility: hidden;
+}
+
+/* One column: the question column is never wider than 480px, too narrow
+   for two of these labels side by side. */
+.onboarding-keep-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-2);
+}
+
+.onboarding-keep-actions .action-button {
+  justify-content: flex-start;
+}
+
+/* A phone is already the phone: the QR code is for a desktop. */
+.onboarding-keep-actions .onboarding-keep-phone,
+.onboarding-handoff-qr {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .onboarding-keep-actions .onboarding-keep-phone {
+    display: inline-flex;
   }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+
+  .onboarding-handoff-qr {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
   }
+}
+
+.onboarding-handoff-qr img {
+  flex: none;
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-primary);
+}
+
+/* The finish ends the column, clear of the screen's bottom edge; from lg
+   it sticks to the bottom of the column, as the other steps' nav does. */
+.onboarding-finish {
+  padding-bottom: max(var(--spacing-8), env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .onboarding-finish {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    padding-top: var(--spacing-4);
+    padding-bottom: var(--spacing-6);
+    background: linear-gradient(to bottom, transparent, var(--color-bg-primary) var(--spacing-4));
+  }
+}
+
+/* Pressing the locked finish pulses the first-person card once. */
+.onboarding-keep-pulse {
+  animation: onboarding-keep-pulse 600ms ease-out;
+}
+
+@keyframes onboarding-keep-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary-500) 50%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The page still waits until it has painted, then swaps in at once. */
+  .stage-iframe,
+  .stage-frame-wrap[data-mode="iframe"] .stage-frame-miniature {
+    filter: none;
+    transition: none;
+  }
+
+  .stage-frame:has(.stage-iframe[data-loaded]),
+  .stage-frame-wrap:has(.stage-iframe[data-loaded]) [data-role="stage-live-badge"],
+  .onboarding-keep-pulse {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Calendar step: the Apple Calendar steps
+   Three short numbered lines above the form's two fields.
+   -------------------------------------------------------------------------- */
+
+.onboarding-apple-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding-left: var(--spacing-6);
+  list-style: decimal;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-neutral-600);
+}
+
+.onboarding-apple-steps li::marker {
+  font-weight: 700;
+  color: var(--color-neutral-800);
+}
+
+/* --------------------------------------------------------------------------
+   Profile step: the link field
+   The field round the host prefix and the input draws the focus
+   (`focus-within`), so the input inside drops the global focus ring, whose
+   white offset would otherwise cover the "/" of the prefix.
+   -------------------------------------------------------------------------- */
+
+.onboarding-link-field input:focus-visible {
+  box-shadow: none;
 }

@@ -1,24 +1,22 @@
 defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
   @moduledoc """
   Folio in the onboarding wizard: a light page with a cover strip, the
-  portrait overlapping it above the organiser's name, then a month calendar
-  and the times, the editorial shape of the real page. The Book button's ink
+  portrait overlapping it above the organiser's name and, once they have
+  written one, their headline in a serif italic, then a month calendar
+  of the host's coming week and the chosen day's times, the editorial shape
+  of the real page. The Book button's ink
   is white where it reads on the primary, otherwise the scheme's dark
-  colour (the gold primaries of the dark schemes).
+  colour (the gold primaries of the dark schemes). On a phone it takes the
+  slim masthead of Folio's narrow page, a smaller portrait half over a
+  shorter band with the name beside it, and shorter day cells.
   """
   use Phoenix.Component
 
   alias Tymeslot.Utils.Colour
+  alias TymeslotWeb.OnboardingLive.PreviewWeek
 
   import TymeslotWeb.OnboardingLive.PreviewParts,
-    only: [
-      book_button: 1,
-      calendar_cell_style: 2,
-      card_style: 2,
-      color: 3,
-      slot_chip: 1,
-      slots_style: 1
-    ]
+    only: [book_button: 1, card_style: 1, color: 3]
 
   @doc "Draws the `:thumbnail` or `:card` variant; see `Behaviour.onboarding_preview/1`."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -51,9 +49,8 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
   end
 
   attr :colors, :map, required: true
-  attr :slots, :list, required: true
-  attr :highlight_card, :boolean, default: false
-  attr :highlight_slots, :boolean, default: false
+  attr :view, :map, required: true, doc: "the week, from `PreviewWeek.view/3`"
+  attr :highlight, :list, default: []
   slot :header, required: true
 
   @spec card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -66,29 +63,35 @@ defmodule TymeslotWeb.Themes.Folio.OnboardingPreview do
       )
 
     ~H"""
-    <div
-      class="rounded-token-2xl overflow-hidden flex flex-col"
-      style={card_style(@colors, @highlight_card)}
-    >
+    <div class="rounded-token-2xl overflow-hidden flex flex-col" style={card_style(@colors)}>
       <span
-        class="h-14 w-full"
+        class="h-14 max-sm:h-8 w-full"
         data-folio-cover
         style={"background: linear-gradient(135deg, #{@primary}, #{@accent});"}
       />
       <div class="px-5 pb-5 flex flex-col items-center gap-3">
-        <div class="-mt-8 w-full flex flex-col items-center gap-3">
+        <%!-- On a phone, the slim masthead of Folio's own narrow page: a
+             smaller portrait half over a shorter band, the name beside it. --%>
+        <div class="-mt-8 max-sm:mt-0 w-full flex flex-col items-center gap-3 [&_[data-role=preview-headline]]:font-serif max-sm:[&_[data-role=preview-identity]]:items-start max-sm:[&_[data-preview-avatar]]:-mt-5">
           {render_slot(@header)}
         </div>
-        <div class="w-full grid grid-cols-7 gap-1" style={slots_style(@highlight_slots)}>
-          <span
-            :for={day <- 0..13}
-            class="aspect-square rounded-token-md"
-            style={calendar_cell_style(@colors, day)}
+        <PreviewWeek.calendar_area colors={@colors} highlight={@highlight}>
+          <%!-- Shorter day cells on a phone leave room for the times. --%>
+          <PreviewWeek.month_grid
+            view={@view}
+            colors={@colors}
+            cell_class="rounded-token-full max-sm:aspect-auto max-sm:py-1.5"
           />
-        </div>
-        <div class="w-full grid grid-cols-2 gap-1.5" style={slots_style(@highlight_slots)}>
-          <.slot_chip :for={slot <- @slots} colors={@colors} slot={slot} />
-        </div>
+          <PreviewWeek.times
+            view={@view}
+            colors={@colors}
+            layout={:chips}
+            phone_limit={9}
+            class="grid grid-cols-3 gap-1.5"
+            highlight={@highlight}
+            meeting_variant={:rule}
+          />
+        </PreviewWeek.calendar_area>
         <.book_button
           class="w-full py-2 rounded-token-lg font-semibold text-token-sm mt-1"
           style={"background: #{@primary}; color: #{@ink};"}

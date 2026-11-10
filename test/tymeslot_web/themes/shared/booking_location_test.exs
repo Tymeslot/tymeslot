@@ -110,6 +110,16 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
 
       assert BookingLocation.choice_required?(assigns(%{location_options: [offices()]}))
       assert {:error, :venue_choice} = GroupLocationRule.check([offices()])
+
+      single_phone =
+        assigns(%{
+          location_options: [call_me()],
+          location_venue_choices: %{},
+          selected_location_id: "loc-call"
+        })
+
+      assert BookingLocation.choice_required?(single_phone)
+      assert {:error, :booker_phone} = GroupLocationRule.check([call_me()])
     end
   end
 

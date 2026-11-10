@@ -37,6 +37,14 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.IgnorerTest do
       assert Ignorer.ignore?(error_for(Ecto.NoResultsError), @live_view)
     end
 
+    test "ignores LiveView's reload after a 404 in connected mount" do
+      assert Ignorer.ignore?(error_for(Phoenix.LiveView.ReloadError), @request)
+    end
+
+    test "ignores LiveView's reload error reported from an Oban job" do
+      assert Ignorer.ignore?(error_for(Phoenix.LiveView.ReloadError), @job)
+    end
+
     test "tracks the same lookup failure raised in an Oban job" do
       refute Ignorer.ignore?(error_for(Ecto.NoResultsError), @job)
     end

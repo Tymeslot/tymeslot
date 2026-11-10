@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -23,35 +24,18 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   @spec integration_name_field(map()) :: Phoenix.LiveView.Rendered.t()
   def integration_name_field(assigns) do
     ~H"""
-    <div>
-      <label for="integration_name" class="label">
-        {dgettext("dashboard_video", "Integration Name")}
-      </label>
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Icons.icon name="hero-tag" class="w-5 h-5 text-tymeslot-400" />
-        </div>
-        <input
-          type="text"
-          id="integration_name"
-          name="integration[name]"
-          value={@value}
-          phx-blur={JS.push("validate_field", value: %{"field" => "name"}, target: @target)}
-          required
-          class={[
-            "input input-with-icon w-full",
-            if(FormValidationHelpers.field_errors(@form_errors, :name) != [],
-              do: "input-error",
-              else: ""
-            )
-          ]}
-          placeholder={@placeholder || dgettext("dashboard_video", "My Video Integration")}
-        />
-      </div>
-      <%= for error <- FormValidationHelpers.field_errors(@form_errors, :name) do %>
-        <p class="form-error">{error}</p>
-      <% end %>
-    </div>
+    <Forms.input
+      type="text"
+      id="integration_name"
+      name="integration[name]"
+      label={dgettext("dashboard_video", "Integration Name")}
+      value={@value}
+      icon="hero-tag"
+      phx-blur={JS.push("validate_field", value: %{"field" => "name"}, target: @target)}
+      required
+      errors={FormValidationHelpers.field_errors(@form_errors, :name)}
+      placeholder={@placeholder || dgettext("dashboard_video", "My Video Integration")}
+    />
     """
   end
 
@@ -89,36 +73,26 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
 
     ~H"""
     <div>
-      <label for={@id} class="label">
-        {@label}
-      </label>
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Icons.icon name="hero-globe-alt" class="w-5 h-5 text-tymeslot-400" />
-        </div>
-        <input
-          type="url"
-          id={@id}
-          name={@name}
-          value={@value}
-          phx-blur={
-            @validate_on_blur &&
-              JS.push("validate_field",
-                value: %{"field" => Atom.to_string(@error_key)},
-                target: @target
-              )
-          }
-          required
-          aria-describedby={@describedby}
-          aria-invalid={@errors != [] && "true"}
-          class={["input input-with-icon w-full", @errors != [] && "input-error"]}
-          placeholder={@placeholder}
-          {UIComponents.server_url_attrs()}
-        />
-      </div>
-      <div :if={@errors != []} id={"#{@id}-error"}>
-        <p :for={error <- @errors} class="form-error">{error}</p>
-      </div>
+      <Forms.input
+        type="url"
+        id={@id}
+        name={@name}
+        label={@label}
+        value={@value}
+        icon="hero-globe-alt"
+        phx-blur={
+          @validate_on_blur &&
+            JS.push("validate_field",
+              value: %{"field" => Atom.to_string(@error_key)},
+              target: @target
+            )
+        }
+        required
+        aria-describedby={@describedby}
+        errors={@errors}
+        placeholder={@placeholder}
+        {UIComponents.server_url_attrs()}
+      />
       <p
         :if={@errors == [] && @helper_text}
         id={"#{@id}-help"}
@@ -177,6 +151,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-tymeslot-300">
           <Icons.icon name="hero-lock-closed" class="w-5 h-5" />
         </div>
+        <%!-- raw-input: must stay readonly (not disabled) so keyboard and screen reader users reach it and the tooltip shows on focus; <.input> cannot carry readonly --%>
         <input
           type="text"
           id={@id}
@@ -208,46 +183,35 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
 
   @spec api_key_field(map()) :: Phoenix.LiveView.Rendered.t()
   def api_key_field(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :errors,
+        FormValidationHelpers.field_errors(assigns.form_errors, assigns.error_key)
+      )
+
     ~H"""
     <div>
-      <label for={@id} class="label">
-        {@label || dgettext("dashboard_video", "API Key")}
-      </label>
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Icons.icon name="hero-key" class="w-5 h-5 text-tymeslot-400" />
-        </div>
-        <input
-          type="password"
-          id={@id}
-          name={@name}
-          value={@value}
-          phx-blur={
-            JS.push("validate_field",
-              value: %{"field" => Atom.to_string(@error_key)},
-              target: @target
-            )
-          }
-          required
-          class={[
-            "input input-with-icon w-full",
-            if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],
-              do: "input-error",
-              else: ""
-            )
-          ]}
-          placeholder={@placeholder || dgettext("dashboard_video", "Your API key")}
-        />
-      </div>
-      <%= if FormValidationHelpers.field_errors(@form_errors, @error_key) != [] do %>
-        <%= for error <- FormValidationHelpers.field_errors(@form_errors, @error_key) do %>
-          <p class="form-error">{error}</p>
-        <% end %>
-      <% else %>
-        <%= if @helper_text do %>
-          <p class="mt-2 text-xs text-tymeslot-500">{@helper_text}</p>
-        <% end %>
-      <% end %>
+      <Forms.input
+        type="password"
+        id={@id}
+        name={@name}
+        label={@label || dgettext("dashboard_video", "API Key")}
+        value={@value}
+        icon="hero-key"
+        phx-blur={
+          JS.push("validate_field",
+            value: %{"field" => Atom.to_string(@error_key)},
+            target: @target
+          )
+        }
+        required
+        errors={@errors}
+        placeholder={@placeholder || dgettext("dashboard_video", "Your API key")}
+      />
+      <p :if={@errors == [] && @helper_text} class="mt-2 text-xs text-tymeslot-500">
+        {@helper_text}
+      </p>
     </div>
     """
   end
@@ -284,29 +248,29 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   def credential_input(assigns) do
     ~H"""
     <div>
-      <label for={@id} class="label">{@label}</label>
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-tymeslot-400">
-          <Icons.icon name={@icon} class="w-5 h-5" />
-        </div>
-        <input
-          type={@type}
-          id={@id}
-          name={@name}
-          value={@value}
-          autocomplete={if @type == "password", do: "new-password", else: "off"}
-          disabled={@disabled}
-          placeholder={@placeholder}
-          required={@required}
-          aria-describedby={@describedby}
-          class={["input input-with-icon w-full", @errors != [] && "input-error"]}
-        />
-      </div>
-      <p :for={error <- @errors} class="form-error">{error}</p>
+      <Forms.input
+        type={@type}
+        id={@id}
+        name={@name}
+        label={@label}
+        value={@value}
+        icon={@icon}
+        autocomplete={if @type == "password", do: "new-password", else: "off"}
+        disabled={@disabled}
+        placeholder={@placeholder}
+        required={@required}
+        aria-describedby={Enum.join([@describedby | error_ids(@id, @errors)], " ")}
+        errors={@errors}
+      />
       {render_slot(@inner_block)}
     </div>
     """
   end
+
+  # The caller's description and, while there are errors, the error region
+  # `Forms.input/1` renders under the id `<id>-error`.
+  defp error_ids(_id, []), do: []
+  defp error_ids(id, _errors), do: ["#{id}-error"]
 
   @doc """
   Renders a standard error banner for base-level errors.

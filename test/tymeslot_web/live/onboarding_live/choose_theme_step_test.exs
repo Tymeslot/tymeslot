@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
   alias Phoenix.HTML
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias TymeslotWeb.OnboardingLive.ChooseThemeStep
+  alias TymeslotWeb.OnboardingLive.ThemeHandlers
   alias TymeslotWeb.Themes.Quill.Theme, as: Quill
   alias TymeslotWeb.Themes.Rhythm.Theme, as: Rhythm
 
@@ -22,19 +23,22 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
     ]
   }
 
-  defp render_step(choices, settings \\ %{}, picker \\ :stories) do
+  defp render_step(choices, settings \\ %{}) do
     render_component(&ChooseThemeStep.choose_theme_step/1,
       profile: %{booking_theme: "1"},
       theme_options: [{"Quill", "1"}, {"Rhythm", "2"}],
       theme_customization: %ThemeCustomizationSchema{theme_id: "1", settings: settings},
       choices: choices,
-      picker: picker
+      headline_form: ThemeHandlers.headline_form(nil)
     )
   end
 
-  defp story_tag(html, id) do
+  defp thumbnail_tag(html, id) do
     [tag] =
-      Regex.run(~r/<button[^>]*phx-value-theme="#{id}"[^>]*data-testid="theme-story"[^>]*>/, html)
+      Regex.run(
+        ~r/<button[^>]*phx-value-theme="#{id}"[^>]*data-testid="theme-thumbnail"[^>]*>/,
+        html
+      )
 
     tag
   end
@@ -89,59 +93,48 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
     refute swatch_tag(html, "bee") =~ "ring-turquoise-200"
   end
 
-  describe "the stories" do
-    test "ask which one sounds like the organiser, one per offered theme, in the pickers' order" do
+  describe "the theme picker" do
+    test "shows every offered theme's look, in the pickers' order" do
       html = render_step(nil)
 
-      assert html =~ "Which of these sounds like you?"
-
       assert Regex.scan(
-               ~r/<button[^>]*phx-value-theme="([^"]+)"[^>]*data-testid="theme-story"/,
+               ~r/<button[^>]*phx-value-theme="([^"]+)"[^>]*data-testid="theme-thumbnail"/,
                html,
                capture: :all_but_first
              ) == [["1"], ["2"]]
 
-      assert story_tag(html, "1") =~ ~s(phx-click="select_theme")
-      assert html =~ escape(Quill.story())
-      assert html =~ escape(Rhythm.story())
+      assert thumbnail_tag(html, "1") =~ ~s(phx-click="select_theme")
     end
 
-    test "mark the organiser's current theme" do
+    test "marks the organiser's current theme" do
       html = render_step(nil)
 
-      assert story_tag(html, "1") =~ ~s(aria-pressed="true")
-      assert story_tag(html, "2") =~ ~s(aria-pressed="false")
+      assert thumbnail_tag(html, "1") =~ ~s(aria-pressed="true")
+      assert thumbnail_tag(html, "2") =~ ~s(aria-pressed="false")
     end
 
-    test "are told in the organiser's language" do
-      english = Quill.story()
-      Gettext.put_locale(TymeslotWeb.Gettext, "de")
-      german = Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_appearance", english)
+    test "offers no choice by description" do
+      html = render_step(nil)
 
-      assert german != english
-      assert render_step(nil) =~ escape(german)
+      refute html =~ ~s(data-testid="theme-story")
+      refute html =~ "Which of these sounds like you?"
+      refute html =~ escape(Quill.story())
+      refute html =~ escape(Rhythm.story())
+      refute html =~ "show_theme_stories"
+      refute html =~ "show_all_themes"
     end
 
-    test "keep every theme's look one click away" do
-      stories = render_step(nil)
-
-      assert stories =~ ~s(phx-click="show_all_themes")
-      assert stories =~ "Show all themes"
-      refute stories =~ "Choose by description instead"
-
-      all = render_step(nil, %{}, :all)
-
-      refute all =~ ~s(data-testid="theme-story")
-      refute all =~ "Which of these sounds like you?"
-      assert all =~ ~s(phx-value-theme="2")
-      assert all =~ ~s(phx-click="show_theme_stories")
-      assert all =~ "Choose by description instead"
-    end
-
-    test "leave the colour row below them" do
+    test "offers no separate preview: the stage shows the page" do
       html = render_step(@choices)
 
-      assert html =~ "Which of these sounds like you?"
+      refute html =~ ~s(phx-click="preview_booking_page")
+      refute html =~ "Preview booking page"
+    end
+
+    test "leaves the colour row below it" do
+      html = render_step(@choices)
+
+      assert html =~ ~s(data-testid="theme-thumbnail")
       assert html =~ "Colour scheme"
     end
   end

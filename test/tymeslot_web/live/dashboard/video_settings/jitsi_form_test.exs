@@ -236,7 +236,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
                "The App secret must be at least 32 bytes long"
              )
 
-      refute has_element?(view, "#jitsi-video-integration-form p.form-error")
+      refute has_element?(view, "#jitsi-video-integration-form .form-field-error")
       assert Video.list_integrations(user.id) == []
     end
 

@@ -208,7 +208,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   # and stays one. No guest at all leaves the attendee blank, which
   # `CreateAdHoc` refuses.
   defp attendee_and_guests(%{managed_by_host: true} = params) do
-    case Guests.sanitize_emails(params[:guest_emails] || [], nil) do
+    case Guests.sanitize_emails(params[:guest_emails] || [], nil, Guests.max_guests()) do
       [first | _rest] = guests -> {%{name: first, email: first}, guests}
       [] -> {%{name: nil, email: nil}, []}
     end
@@ -216,7 +216,11 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   defp attendee_and_guests(params) do
     {%{name: params.attendee_name, email: params.attendee_email},
-     Guests.sanitize_emails(params[:guest_emails] || [], params.attendee_email)}
+     Guests.sanitize_emails(
+       params[:guest_emails] || [],
+       params.attendee_email,
+       Guests.max_guests()
+     )}
   end
 
   # Outlook's repeat pattern is built from the event's timing, so the check

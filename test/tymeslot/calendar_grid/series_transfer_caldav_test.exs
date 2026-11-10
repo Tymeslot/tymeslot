@@ -27,6 +27,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   setup :verify_on_exit!
@@ -341,7 +342,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
       end
 
       assert Repo.reload!(room).calendar_integration_id == source.id
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "a series changed on the source since the cache read it is moved from the server's copy",
@@ -436,7 +437,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
       assert length(copies) == 2
       assert deleted == copies
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, occurrence.uid)
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "an original the source will not delete is left behind, and the copy kept", %{
@@ -471,7 +472,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
 
       assert requests() == []
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, occurrence.uid)
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
   end
 end

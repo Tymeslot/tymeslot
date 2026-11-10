@@ -20,13 +20,13 @@ defmodule TymeslotWeb.BookingDriver do
       `restart`, `earlier` and `later` on a picker's period arrows, and
       `edit` (an answered moment's Edit, `phx-value-step` the moment's key).
 
-  Finding and clicking go through those attributes only. Waiting does not:
-  nothing on a page says that the month's availability has arrived or that
-  a week of slots has been fetched, so the waits read the LiveView's
-  assigns, as the flow's own tests do. LiveViewTest runs no client
-  bindings, so `load/1` sends the pushes a page's `phx-mounted` bindings
-  carry, as a browser does on mount (the shared `WeekGrid` asks for its
-  week this way).
+  Finding and clicking go through those attributes only, skipping any
+  `data-alternate` copy for another screen size. Waiting does not: nothing on
+  a page says that the month's availability has arrived or that a week of
+  slots has been fetched, so the waits read the LiveView's assigns, as the
+  flow's own tests do. LiveViewTest runs no client bindings, so `load/1` sends
+  the pushes a page's `phx-mounted` bindings carry, as a browser does on mount
+  (the shared `WeekGrid` asks for its week this way).
 
   A day past the picker's window is brought into view through
   `data-intent="later"`, clicked until the day is shown; a picker that
@@ -54,19 +54,19 @@ defmodule TymeslotWeb.BookingDriver do
 
   alias Phoenix.LiveViewTest.View
 
-  @meeting_type "[data-fact='meeting_type']"
-  @length "[data-fact='length']"
-  @date "[data-fact='date']"
-  @time "[data-fact='time']"
-  @slot "[data-fact='slot']"
-  @answer "[data-fact='answer']"
-  @attendee "form[data-fact='attendee']"
-  @continue "[data-intent='continue']"
-  @back "[data-intent='back']"
-  @edit "[data-intent='edit']"
-  @restart "[data-intent='restart']"
-  @earlier "[data-intent='earlier']"
-  @later "[data-intent='later']"
+  @meeting_type "[data-fact='meeting_type']:not([data-alternate])"
+  @length "[data-fact='length']:not([data-alternate])"
+  @date "[data-fact='date']:not([data-alternate])"
+  @time "[data-fact='time']:not([data-alternate])"
+  @slot "[data-fact='slot']:not([data-alternate])"
+  @answer "[data-fact='answer']:not([data-alternate])"
+  @attendee "form[data-fact='attendee']:not([data-alternate])"
+  @continue "[data-intent='continue']:not([data-alternate])"
+  @back "[data-intent='back']:not([data-alternate])"
+  @edit "[data-intent='edit']:not([data-alternate])"
+  @restart "[data-intent='restart']:not([data-alternate])"
+  @earlier "[data-intent='earlier']:not([data-alternate])"
+  @later "[data-intent='later']:not([data-alternate])"
   @enabled ":not([disabled])"
 
   @max_periods 6

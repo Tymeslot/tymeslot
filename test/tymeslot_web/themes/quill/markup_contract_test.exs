@@ -3,9 +3,10 @@ defmodule TymeslotWeb.Themes.Quill.MarkupContractTest do
   Where Quill puts the markup contract (`docs/THEME_DEVELOPMENT_GUIDE.md`,
   §"The markup contract") on each of its booking steps. Quill renders its
   days twice, a week strip for narrow screens beside the month grid, so
-  only the month grid and its arrows are marked, and a padded day of the
-  neighbouring month is not. The steps are reached through their existing
-  test ids, so this holds whatever the contract's own driver does.
+  both are marked and the week strip's marks also carry `data-alternate`;
+  a padded day of the neighbouring month is not marked. The steps are
+  reached through their existing test ids, so this holds whatever the
+  contract's own driver does.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -73,7 +74,7 @@ defmodule TymeslotWeb.Themes.Quill.MarkupContractTest do
     assert has_element?(view, "#{card}.duration-card--selected")
   end
 
-  test "the schedule marks the month grid's days and arrows, never the week strip's",
+  test "the schedule marks the month grid's days and arrows, and the week strip's as alternates",
        %{conn: conn} do
     %{profile: profile} = seed_booking_account(@theme_id, "quill-mc-schedule", @timezone)
     doc = conn |> open_schedule(profile) |> document()
@@ -86,15 +87,37 @@ defmodule TymeslotWeb.Themes.Quill.MarkupContractTest do
       )
 
     assert month_days != []
-    assert Floki.attribute(doc, "[data-fact='date']", "data-value") == month_days
 
-    assert Floki.find(doc, ".week-day-cell") != []
-    assert Floki.find(doc, ".week-day-cell[data-fact]") == []
-    assert Floki.find(doc, ".weekly-nav-row button") != []
-    assert Floki.find(doc, ".weekly-nav-row [data-intent]") == []
+    assert Floki.attribute(doc, "[data-fact='date']:not([data-alternate])", "data-value") ==
+             month_days
 
-    assert [_prev] = Floki.find(doc, "button[phx-click='prev_month'][data-intent='earlier']")
-    assert [_next] = Floki.find(doc, "button[phx-click='next_month'][data-intent='later']")
+    week_days = Floki.attribute(doc, ".week-day-cell", "phx-value-date")
+    assert length(week_days) == 7
+
+    assert Floki.attribute(doc, ".week-day-cell[data-fact='date'][data-alternate]", "data-value") ==
+             week_days
+
+    assert [_prev] =
+             Floki.find(
+               doc,
+               "button[phx-click='prev_month'][data-intent='earlier']:not([data-alternate])"
+             )
+
+    assert [_next] =
+             Floki.find(
+               doc,
+               "button[phx-click='next_month'][data-intent='later']:not([data-alternate])"
+             )
+
+    assert [_prev_week] =
+             Floki.find(
+               doc,
+               "button[phx-click='prev_week'][data-intent='earlier'][data-alternate]"
+             )
+
+    assert [_next_week] =
+             Floki.find(doc, "button[phx-click='next_week'][data-intent='later'][data-alternate]")
+
     assert [_back] = Floki.find(doc, "[data-testid='back-step'][data-intent='back']")
     assert [_on] = Floki.find(doc, "[data-testid='next-step'][data-intent='continue']")
   end

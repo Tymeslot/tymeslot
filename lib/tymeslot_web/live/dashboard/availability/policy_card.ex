@@ -159,6 +159,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
           <%!-- Custom input tag --%>
           <%= if @custom_mode or @buffer_value not in @presets do %>
             <div class="btn-tag-selector btn-tag-selector-primary--active p-0 overflow-hidden">
+              <%!-- raw-input: borderless number box inside the active Custom tag pill beside its unit, not a standalone field --%>
               <input
                 type="number"
                 min={@range.first}
@@ -246,6 +247,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
           <%!-- Custom input tag --%>
           <%= if @custom_mode or @booking_days not in @presets do %>
             <div class="btn-tag-selector btn-tag-selector-primary--active p-0 overflow-hidden">
+              <%!-- raw-input: borderless number box inside the active Custom tag pill beside its unit, not a standalone field --%>
               <input
                 type="number"
                 min="1"
@@ -335,6 +337,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
           <%!-- Custom input tag --%>
           <%= if @custom_mode or @notice_hours not in @presets do %>
             <div class="btn-tag-selector btn-tag-selector-primary--active p-0 overflow-hidden">
+              <%!-- raw-input: borderless number box inside the active Custom tag pill beside its unit, not a standalone field --%>
               <input
                 type="number"
                 min="0"

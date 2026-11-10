@@ -107,6 +107,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
           theme_id={@theme_id}
           organizer_user_id={@organizer_user_id}
           should_show_branding={@should_show_branding}
+          owner_preview={@owner_preview}
           {Map.take(assigns, [:demo_mode])}
         />
         <LegalLinks.footer links={@legal_links} />

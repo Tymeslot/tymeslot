@@ -794,11 +794,6 @@ msgstr "Invitados por reserva"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
-msgid "Limit the guests per booking"
-msgstr "Limitar los invitados por reserva"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr "Cada invitado ocupa uno de los lugares del horario, igual que la persona que reserva."
 
@@ -811,13 +806,6 @@ msgstr "Las semanas empiezan el lunes, según la «Configuración del calendario
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Las semanas empiezan el domingo, según la «Configuración del calendario»."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
-msgid "Without a limit, each booking may bring up to %{count} guest."
-msgid_plural "Without a limit, each booking may bring up to %{count} guests."
-msgstr[0] "Sin límite, cada reserva puede incluir hasta %{count} invitado."
-msgstr[1] "Sin límite, cada reserva puede incluir hasta %{count} invitados."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
@@ -888,3 +876,30 @@ msgstr "Mostrar en %{address}"
 #, elixir-autogen, elixir-format
 msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
 msgstr "Primero elige un nombre de usuario en la página Perfil: las direcciones de tus páginas de reservas se crean a partir de él, así que hasta entonces este tipo de reunión no se puede reservar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Set the guests per booking"
+msgstr "Definir los invitados por reserva"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a number of your own, each booking may bring up to %{count} guest. Set one to allow fewer, or up to %{max}."
+msgid_plural "Without a number of your own, each booking may bring up to %{count} guests. Set one to allow fewer, or up to %{max}."
+msgstr[0] "Sin un número propio, cada reserva puede incluir hasta %{count} invitado. Define menos o hasta %{max}."
+msgstr[1] "Sin un número propio, cada reserva puede incluir hasta %{count} invitados. Define menos o hasta %{max}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your booking pages. Each invitation link books one appointment."
+msgstr "Oculto en tus páginas de reservas. Cada enlace de invitación sirve para reservar una cita."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "Los enlaces de invitación solo funcionan con tipos de reunión individuales."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Only people with an invitation link can book"
+msgstr "Solo pueden reservar las personas con un enlace de invitación"
