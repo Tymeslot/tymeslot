@@ -25,6 +25,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
   attr :deletion_date, :string, required: true
   attr :feedback_options, :list, required: true, doc: "[{label, value}], empty when off"
   attr :errors, :map, required: true
+  attr :values, :map, default: %{}, doc: "what was submitted, bar the password"
 
   @spec delete_account_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def delete_account_modal(assigns) do
@@ -44,6 +45,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
         id="delete-account-form"
         phx-submit="request_account_deletion"
         class="space-y-5"
+        novalidate
       >
         <%!-- First in the body, so a refusal is the first thing in view on a
               phone, where the explanation below fills the sheet; the handler
@@ -103,7 +105,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
           type="email"
           id="delete-account-confirm-email"
           name="delete_account[confirm_email]"
-          value=""
+          value={@values["confirm_email"] || ""}
           label={dgettext("account", "Type your email address to confirm")}
           errors={@errors[:confirm_email] || []}
           required
@@ -115,7 +117,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
             type="select"
             id="delete-account-reason"
             name="delete_account[reason]"
-            value=""
+            value={@values["reason"] || ""}
             label={dgettext("account", "Why are you leaving? (optional)")}
             prompt={dgettext("account", "Choose a reason")}
             options={@feedback_options}
@@ -124,7 +126,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
             type="textarea"
             id="delete-account-comment"
             name="delete_account[comment]"
-            value=""
+            value={@values["comment"] || ""}
             rows={3}
             maxlength={500}
             label={dgettext("account", "Anything else you would like to tell us? (optional)")}

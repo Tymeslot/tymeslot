@@ -72,6 +72,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
           phx-change="switch_page"
           phx-target={@myself}
           class={["min-w-0 flex-1 basis-48", @tabs? && "md:hidden"]}
+          novalidate
         >
           <.input
             type="select"

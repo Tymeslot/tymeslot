@@ -148,6 +148,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         phx-change="headline_change"
         phx-submit="headline_change"
         class="onboarding-form-group"
+        novalidate
       >
         <label class="label" for="onboarding-headline">
           {dgettext("onboarding_wizard", "One line about you (optional)")}

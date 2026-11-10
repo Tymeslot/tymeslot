@@ -899,6 +899,7 @@ msgstr "Więcej gości (opcjonalnie)"
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
 msgstr "Język wszystkich e-maili dotyczących tego spotkania, zarówno do gościa, jak i do pozostałych zaproszonych."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is already invited."
@@ -909,6 +910,7 @@ msgstr "Osoba o adresie %{email} jest już zaproszona."
 msgid "%{email} is already the main guest."
 msgstr "Osoba o adresie %{email} jest już głównym gościem."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is not a valid email address."

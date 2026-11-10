@@ -12,6 +12,9 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourPickerWidget,
+    only: [colour_picker_widget: 1]
+
   alias TymeslotWeb.AdminLive.Components.SettingRow
   alias TymeslotWeb.AdminLive.Formatters
 
@@ -20,25 +23,32 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
   # threading that through the generic row would hand it to every other
   # setting too.
   #
-  # The control pairs a native swatch picker with the hex text field so an
+  # The control pairs the in-house colour picker with the hex text field so an
   # admin can either pick visually or paste a brand hex they already have.
-  # Only the hex form ever writes to `AppSettings`: the swatch is
-  # preview-only and pushes its pick into `accent_draft`, which the hex
-  # field's `value` mirrors. Letting both forms write the same setting used
-  # to race - the swatch's autosave-on-blur could land after the hex form's
-  # stale submit and null the setting out. Routing every persist through the
-  # one hex form removes the second writer instead of narrowing the window.
+  # Only the hex form ever writes to `AppSettings`: the picker is preview-only
+  # and pushes its pick into `accent_draft`, which the hex field's `value`
+  # mirrors. A picker that also wrote the setting could land after the hex
+  # form's stale submit and null the setting out; routing every persist through
+  # the one hex form removes the second writer instead of narrowing the window.
   attr :effective, :map, required: true
   attr :stock_accent, :string, required: true
   attr :accent_preview, :map, default: nil
   attr :accent_draft, :string, default: nil
+  attr :error, :string, default: nil
+  attr :draft, :string, default: nil
 
   @spec brand_accent_row(map()) :: Phoenix.LiveView.Rendered.t()
   def brand_accent_row(assigns) do
     assigns =
       assigns
-      |> assign(:current, assigns.effective.value || assigns.stock_accent)
-      |> assign(:hex_value, assigns.accent_draft || assigns.effective.value || "")
+      |> assign(
+        :current,
+        assigns.accent_draft || assigns.effective.value || assigns.stock_accent
+      )
+      |> assign(
+        :hex_value,
+        assigns.draft || assigns.accent_draft || assigns.effective.value || ""
+      )
 
     ~H"""
     <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
@@ -46,32 +56,29 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
 
       <div class="flex flex-col items-end gap-2 shrink-0">
         <form
-          id="admin-setting-form-email_brand_accent"
-          phx-change="preview_accent"
-          class="flex items-center gap-2"
-        >
-          <%!-- raw-input: native colour swatch (type=color) styled as a small fixed-size button beside the hex box --%>
-          <input
-            id="setting-swatch-email_brand_accent"
-            type="color"
-            name="value"
-            value={@current}
-            phx-debounce="blur"
-            aria-label={dgettext("dashboard_admin", "Pick a colour")}
-            aria-describedby="email-brand-accent-feedback"
-            class="h-9 w-12 rounded-token-lg border-2 border-tymeslot-100 bg-white p-1 cursor-pointer"
-          />
-        </form>
-
-        <form
           id="admin-setting-hex-form-email_brand_accent"
           phx-submit="save_setting"
           class="flex items-center gap-2"
           aria-label={
             dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(:email_brand_accent))
           }
+          novalidate
         >
           <input type="hidden" name="key" value="email_brand_accent" />
+          <button
+            id="setting-swatch-email_brand_accent"
+            type="button"
+            phx-click={
+              JS.toggle(to: "#email-brand-accent-picker")
+              |> JS.toggle_attribute({"aria-expanded", "true", "false"})
+            }
+            aria-expanded="false"
+            aria-controls="email-brand-accent-picker"
+            aria-label={dgettext("dashboard_admin", "Pick a colour")}
+            aria-describedby="email-brand-accent-feedback"
+            class="h-9 w-12 shrink-0 rounded-token-lg border-2 border-tymeslot-100 cursor-pointer hover:border-tymeslot-200 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400/20"
+            style={"background-color: #{@current}"}
+          ></button>
           <%!-- raw-input: compact w-32 hex box inline with the small Save button, styled by SettingRow.text_input_classes like the other admin row controls --%>
           <input
             id="setting-input-email_brand_accent"
@@ -88,7 +95,19 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
           </.action_button>
         </form>
 
+        <div
+          id="email-brand-accent-picker"
+          class="hidden rounded-token-2xl border-2 border-tymeslot-50 bg-tymeslot-50/50 p-4"
+        >
+          <.colour_picker_widget
+            id="email-brand-accent-colour-picker"
+            initial_hex={@current}
+            commit_event="preview_accent"
+          />
+        </div>
+
         <div id="email-brand-accent-feedback" aria-live="polite">
+          <p :if={@error} class="form-error mt-0 max-w-[16rem] text-right" role="alert">{@error}</p>
           <.contrast_warning
             :if={@accent_preview != nil and @accent_preview.low_contrast?}
             ratio={@accent_preview.contrast}
@@ -146,7 +165,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
           </.action_button>
         </div>
 
-        <form id="admin-email-logo-form" phx-change="validate_email_logo">
+        <form id="admin-email-logo-form" phx-change="validate_email_logo" novalidate>
           <%!--
             The uploader input is present but hidden. `this.upload/2` in the hook
             resolves the uploader by looking up upload inputs in the DOM by name,

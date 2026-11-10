@@ -45,6 +45,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
                 voting_open={@voting_open}
                 participant={@participant}
                 link_request={@link_request}
+                field_errors={assigns[:poll_field_errors] || %{}}
+                draft={assigns[:poll_draft] || %{}}
                 invalid_link={@invalid_link}
               />
             </div>

@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
       phx-target={@myself}
       data-fact="answer"
       data-question={@definition["id"]}
+      novalidate
     >
       <input type="hidden" name="question" value={@definition["id"]} />
       <.input

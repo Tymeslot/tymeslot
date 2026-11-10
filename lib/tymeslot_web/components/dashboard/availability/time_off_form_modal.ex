@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
         phx-change="validate_time_off"
         phx-submit="save_time_off"
         phx-target={@myself}
+        novalidate
       >
         <div class="space-y-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

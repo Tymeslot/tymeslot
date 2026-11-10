@@ -41,7 +41,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
           )
         }
       >
-        <form id="booking-limits-form" phx-change="update_booking_limit" phx-target={@myself}>
+        <form
+          id="booking-limits-form"
+          phx-change="update_booking_limit"
+          phx-target={@myself}
+          novalidate
+        >
           <BookingLimitFields.booking_limit_fields
             id="booking-limits"
             labelledby="booking-limits-heading"

@@ -903,6 +903,7 @@ msgstr "Další hosté (nepovinné)"
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
 msgstr "Jazyk všech e-mailů o této schůzce – pro hosta i pro všechny další pozvané."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is already invited."
@@ -913,6 +914,7 @@ msgstr "%{email} už je pozván."
 msgid "%{email} is already the main guest."
 msgstr "%{email} už je hlavním hostem."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is not a valid email address."

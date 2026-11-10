@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta do
         action={~p"/dashboard/payments/connect"}
         method="post"
         data-submit-loading
+        novalidate
       >
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
         <.action_button type="submit" variant={:primary} class="w-full sm:w-auto">

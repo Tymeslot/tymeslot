@@ -75,6 +75,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       phx-change="filter_booking_page"
       phx-target={@target}
       class="lg:w-64"
+      novalidate
     >
       <Forms.input
         type="select"

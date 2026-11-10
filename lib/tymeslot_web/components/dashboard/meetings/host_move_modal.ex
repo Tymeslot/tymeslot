@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
             phx-submit="move"
             phx-target={@myself}
             data-testid="host-move-form"
+            novalidate
           >
             <.input
               type="datetime-local"

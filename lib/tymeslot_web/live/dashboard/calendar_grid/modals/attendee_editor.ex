@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
   attr :attendees, :list, default: []
   attr :pending_attendees, :list, default: []
   attr :attendee_input, :string, default: ""
+  attr :attendee_error, :string, default: nil
   attr :myself, :any, required: true
 
   @spec attendee_editor(map()) :: Phoenix.LiveView.Rendered.t()
@@ -81,6 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
           phx-submit="add_event_attendee"
           phx-target={@myself}
           class="flex gap-2"
+          novalidate
         >
           <%!-- raw-input: edit-in-place field drawn as plain text with an underline on hover, like the rest of the event detail panel --%>
           <input
@@ -97,6 +99,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
             {dgettext("dashboard_calendar_events", "Add")}
           </.action_button>
         </form>
+        <p :if={@attendee_error} class="form-error" role="alert">{@attendee_error}</p>
         <p :if={@pending_attendees == []} class="text-token-xs text-tymeslot-400 mt-1">
           {dgettext(
             "dashboard_calendar_events",

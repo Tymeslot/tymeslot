@@ -19,6 +19,21 @@
     appearance: none;
   }
 
+  /* Number fields have no browser spinner: its arrows overlap units set beside
+     the value, and no in-house stepper replaces them yet. Selected by type, not
+     through .input, so the bare boxes in sentence-style rows get it too.
+     The Up and Down keys still step the value. */
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   /* Input with leading icon - accounts for icon space */
   .input.input-with-icon {
     padding-left: 3.5rem; /* 1rem (icon left offset) + 1.25rem (icon width) + 1.25rem (gap) = 3.5rem */

@@ -226,6 +226,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
         phx-submit="create"
         phx-target={@myself}
         class="space-y-4"
+        novalidate
       >
         <div class="grid gap-4 sm:grid-cols-3">
           <.input

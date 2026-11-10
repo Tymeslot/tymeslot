@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ExtraAvailabilityCard do
           phx-target={@myself}
           class="flex flex-wrap items-end gap-3"
           data-testid="extra-availability-form"
+          novalidate
         >
           <.input
             type="date"

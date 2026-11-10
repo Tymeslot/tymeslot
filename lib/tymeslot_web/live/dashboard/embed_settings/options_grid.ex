@@ -285,6 +285,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         phx-change="update_customisation"
         phx-target={@myself}
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        novalidate
       >
         <%!-- Layout --%>
         <.input

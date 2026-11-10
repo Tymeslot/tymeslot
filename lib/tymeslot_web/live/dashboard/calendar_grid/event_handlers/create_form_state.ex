@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateRecurrence
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Live.Shared.Flash
 
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -212,11 +211,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     update_creating(socket, fn creating ->
       case check_extra_guest(creating, email) do
         :ok ->
-          %{creating | guest_emails: creating.guest_emails ++ [email], guest_email_input: ""}
+          creating
+          |> Map.put(:guest_email_error, nil)
+          |> Map.merge(%{guest_emails: creating.guest_emails ++ [email], guest_email_input: ""})
 
         {:error, message} ->
-          Flash.error(message)
-          creating
+          Map.put(creating, :guest_email_error, message)
       end
     end)
   end
@@ -232,7 +232,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @spec handle_update_create_guest_input(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_guest_input(%{"email" => value}, socket),
-    do: put_field(socket, :guest_email_input, value)
+    do:
+      update_creating(socket, &Map.merge(&1, %{guest_email_input: value, guest_email_error: nil}))
 
   @spec handle_update_create_locale(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -455,14 +456,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     update_creating(socket, fn creating ->
       email = raw_email |> String.trim() |> String.downcase()
 
-      if Shared.valid_email?(email) and email not in creating.attendees do
-        creating
-        |> Map.put(:attendees, creating.attendees ++ [email])
-        |> Map.put(:attendee_input, "")
-      else
-        creating
+      case attendee_refusal(creating, email) do
+        nil ->
+          creating
+          |> Map.put(:attendees, creating.attendees ++ [email])
+          |> Map.put(:attendee_input, "")
+          |> Map.put(:attendee_error, nil)
+
+        :empty ->
+          creating
+
+        message ->
+          Map.put(creating, :attendee_error, message)
       end
     end)
+  end
+
+  defp attendee_refusal(_creating, ""), do: :empty
+
+  defp attendee_refusal(creating, email) do
+    cond do
+      not Shared.valid_email?(email) ->
+        dgettext("dashboard_calendar_events", "%{email} is not a valid email address.",
+          email: email
+        )
+
+      email in creating.attendees ->
+        dgettext("dashboard_calendar_events", "%{email} is already invited.", email: email)
+
+      true ->
+        nil
+    end
   end
 
   @spec handle_remove_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
@@ -476,7 +500,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @spec handle_update_create_attendee_input(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_attendee_input(%{"email" => value}, socket),
-    do: put_field(socket, :attendee_input, value)
+    do: update_creating(socket, &Map.merge(&1, %{attendee_input: value, attendee_error: nil}))
 
   @spec handle_update_create_video(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

@@ -177,6 +177,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             phx-submit="add_create_guest"
             phx-target={@myself}
             class="flex gap-2"
+            novalidate
           >
             <.input
               type="email"
@@ -187,6 +188,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-target={@myself}
               placeholder="colleague@example.com"
               class="flex-1 min-w-0"
+              errors={List.wrap(@creating_event[:guest_email_error])}
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}
@@ -299,6 +301,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           phx-change="update_create_time"
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600"
+          novalidate
         >
           <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
           <input
@@ -410,6 +413,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           phx-change="meeting_update_reminder_input"
           phx-submit="meeting_add_reminder"
           phx-target={@myself}
+          novalidate
         >
           <ReminderPicker.reminder_picker
             reminders={@reminder_picker.reminders}
@@ -475,6 +479,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             phx-submit="add_create_attendee"
             phx-target={@myself}
             class="flex gap-2"
+            novalidate
           >
             <.input
               type="email"
@@ -485,6 +490,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-target={@myself}
               placeholder="attendee@example.com"
               class="flex-1 min-w-0"
+              errors={List.wrap(@creating_event[:attendee_error])}
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}

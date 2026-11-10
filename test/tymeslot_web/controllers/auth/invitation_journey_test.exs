@@ -119,6 +119,30 @@ defmodule TymeslotWeb.InvitationJourneyTest do
     assert Repo.get!(UserSchema, user.id).password_hash == nil
   end
 
+  test "submitting the password form empty shows the reason inline", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> form("#invite-user-form", invite: %{email: "empty@example.com"})
+    |> render_submit()
+
+    path = URI.parse(deliver_invitation()).path
+
+    page = build_conn() |> get(path) |> html_response(200) |> LazyHTML.from_document()
+    assert Enum.count(LazyHTML.query(page, "#accept-invitation-form[novalidate]")) == 1
+
+    html =
+      build_conn()
+      |> post(path, %{"invitation" => %{"password" => "", "password_confirmation" => ""}})
+      |> html_response(200)
+
+    alert = html |> LazyHTML.from_document() |> LazyHTML.query("p[role=alert]")
+    assert LazyHTML.text(alert) =~ ~r/\S/
+
+    assert Repo.get!(UserSchema, Auth.get_user_by_email("empty@example.com").id).password_hash ==
+             nil
+  end
+
   for {label, body} <- [
         {"a string where the form is expected", %{"invitation" => "not-a-form"}},
         {"a map where the password is expected",

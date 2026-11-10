@@ -166,6 +166,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 type="number"
                 min="1"
                 step="1"
+                inputmode="numeric"
                 name="reminder[value]"
                 value={@new_reminder_value}
                 placeholder="30"

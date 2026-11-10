@@ -134,6 +134,25 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
   end
 
   describe "creating a schedule" do
+    test "an empty name is refused beside the field, with the form left open", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+      before_count = length(Schedules.list_for_profile(profile.id))
+
+      view
+      |> element("[phx-click='show_schedule_form'][phx-value-mode='create']")
+      |> render_click()
+
+      assert has_element?(view, "#schedule-name-form[novalidate]")
+
+      view |> form("#schedule-name-form", %{"name" => ""}) |> render_submit()
+
+      assert has_element?(view, "#schedule-name-input-error")
+      assert length(Schedules.list_for_profile(profile.id)) == before_count
+    end
+
     test "creates it and switches the page onto the new schedule", %{
       conn: conn,
       profile: profile

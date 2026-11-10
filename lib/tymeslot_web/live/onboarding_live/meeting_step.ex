@@ -53,6 +53,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
         phx-change="meeting_change"
         phx-submit="meeting_save"
         class="onboarding-form"
+        novalidate
       >
         <div class="onboarding-form-group">
           <.input
@@ -239,6 +240,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           id="meeting-hours-form"
           phx-change="hours_change"
           class="grid grid-cols-2 gap-3 mt-2"
+          novalidate
         >
           <.input
             type="select"

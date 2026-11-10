@@ -96,6 +96,25 @@
           # Suggest ~p/url(~p) in appropriate contexts (conservative by default)
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
+          {CredoChecks.NoNativePickers, []},
+          {CredoChecks.NoBrowserValidation,
+           [
+             # These integration forms keep the browser's validation: their name
+             # and API key have no inline error to fall back on (see
+             # server_url_attrs/0 in integrations/shared/ui_components.ex).
+             allowed_files: [
+               "components/dashboard/integrations/calendar/caldav_reconnect_modal.ex",
+               "components/dashboard/integrations/calendar/exchange_config.ex",
+               "components/dashboard/integrations/calendar/ics_url_config.ex",
+               "components/dashboard/integrations/calendar/shared_form_components.ex",
+               "components/dashboard/integrations/video/custom_config.ex",
+               "components/dashboard/integrations/video/edit_video_integration_modal.ex",
+               "components/dashboard/integrations/video/jitsi_config.ex",
+               "components/dashboard/integrations/video/kmeet_config.ex",
+               "components/dashboard/integrations/video/mirotalk_config.ex",
+               "components/dashboard/integrations/video/nextcloud_talk_config.ex"
+             ]
+           ]},
           {CredoChecks.UseCoreModal, []},
           {CredoChecks.NoInlineSvg,
            [

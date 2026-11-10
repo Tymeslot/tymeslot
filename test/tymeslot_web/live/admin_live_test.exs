@@ -301,15 +301,15 @@ defmodule TymeslotWeb.AdminLiveTest do
 
     test "submitting a malformed admin alert email surfaces an inline error",
          %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
-      html =
-        render_submit(lv, "save_setting", %{
-          "key" => "admin_alert_email",
-          "value" => "not-an-email"
-        })
+      render_submit(lv, "save_setting", %{
+        "key" => "admin_alert_email",
+        "value" => "not-an-email"
+      })
 
-      assert html =~ "valid email address"
+      assert has_element?(lv, "#setting-error-admin_alert_email", "valid email address")
+      assert has_element?(lv, "#setting-input-admin_alert_email[value='not-an-email']")
     end
 
     test "submitting a blank admin alert email clears the override",

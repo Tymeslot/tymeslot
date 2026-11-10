@@ -29,6 +29,7 @@ defmodule TymeslotWeb.AccountLive.Helpers do
     |> assign(:saving_password, false)
     |> ModalHook.mount_modal(delete: false)
     |> assign(:delete_errors, %{})
+    |> assign(:delete_values, %{})
     |> assign(:deletion_grace_days, Auth.account_deletion_grace_days())
     |> assign(
       :deletion_confirmation,

@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       "A live seat is held on this event's meeting, so its time, attendees and deletion are not editable here."
 
   attr :attendee_input, :string, default: ""
+  attr :attendee_error, :string, default: nil
   attr :pending_attendees, :list, default: []
   attr :video_integrations, :list, default: []
   attr :pending_notification, :boolean, default: false
@@ -134,6 +135,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-target={@myself}
           phx-submit="update_event_title"
           class="pr-8"
+          novalidate
         >
           <%!-- raw-input: event title edited in place, drawn as the panel heading --%>
           <input
@@ -191,6 +193,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-change="update_event_all_day_range"
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm"
+          novalidate
         >
           <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
@@ -219,6 +222,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-change="update_event_time"
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm"
+          novalidate
         >
           <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
           <input
@@ -349,6 +353,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         attendees={@attendees}
         pending_attendees={@pending_attendees}
         attendee_input={@attendee_input}
+        attendee_error={@attendee_error}
         myself={@myself}
       />
 

@@ -60,6 +60,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
       phx-target={@myself}
       data-fact="answer"
       data-question={@definition["id"]}
+      novalidate
     >
       <input type="hidden" name="question" value={@definition["id"]} />
       <div class="custom-question-select">

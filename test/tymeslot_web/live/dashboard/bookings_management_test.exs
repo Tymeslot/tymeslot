@@ -509,7 +509,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "none"})
       |> render_submit()
 
-      assert render(view) =~ "Tick the acknowledgement"
+      assert has_element?(view, "#cancel-refund-ack-error", "Tick the acknowledgement")
+      # The choice survives the refusal: snapping back to Full would refund.
+      assert has_element?(view, "input[name=cancel_refund_choice][value=none][checked]")
+      refute has_element?(view, "input[name=cancel_refund_choice][value=full][checked]")
       assert Repo.get(MeetingSchema, meeting.id).status == :confirmed
 
       reloaded = BookingPaymentQueries.get(payment.id)
