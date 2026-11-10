@@ -382,3 +382,38 @@ msgstr "%{language}, zmień język"
 #, elixir-autogen, elixir-format
 msgid "Time unit"
 msgstr "Jednostka czasu"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Choose date"
+msgstr "Wybierz datę"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Choose time"
+msgstr "Wybierz godzinę"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Data"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Date and time"
+msgstr "Data i godzina"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr "Następny miesiąc"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr "Poprzedni miesiąc"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Godzina"

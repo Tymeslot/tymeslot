@@ -62,7 +62,7 @@ defmodule Tymeslot.Polls.InviteOnlyJourneyTest do
       "invitees" => "Grace Hopper <grace@example.com>"
     }
 
-    {selects, fields} = Map.split(params, ~w(timezone duration))
+    {selects, fields} = Map.split(params, ~w(timezone duration slots))
 
     dashboard
     |> form("form[phx-submit='create_poll']", %{"poll" => fields})

@@ -49,8 +49,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
 
   attr :type, :string,
     default: "text",
-    values:
-      ~w(checkbox color date datetime-local email file month number password range radio search tel text textarea time url week)
+    values: ~w(checkbox color email file number password range radio search tel text textarea url)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -90,6 +89,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   @spec input(map()) :: Phoenix.LiveView.Rendered.t()
   def input(%{type: "select"}) do
     raise ArgumentError, ~s|<.input type="select"> is gone: use <.select> instead|
+  end
+
+  def input(%{type: type}) when type in ~w(date time datetime-local month week) do
+    raise ArgumentError,
+          ~s|<.input type="#{type}"> is gone: use <.date_picker>, <.time_picker> or <.datetime_picker>|
   end
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do

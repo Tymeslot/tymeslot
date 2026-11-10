@@ -7,6 +7,9 @@ defmodule CredoChecks.NoNativePickers do
   that has an in-house replacement must not come back as `<input type="...">`
   or `<.input type="...">`.
 
+  The date and time pickers render the native control themselves, for touch
+  devices, through a `type` expression, so the check leaves them alone.
+
   Only types with an in-house replacement are listed. `range` stays allowed on
   purpose: the colour picker's hue slider is a restyled native range.
 
@@ -23,6 +26,10 @@ defmodule CredoChecks.NoNativePickers do
 
       For a colour, that is `colour_picker_widget/1` in
       `TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourPickerWidget`.
+
+      For a date or a time, that is `<.date_picker>`, `<.time_picker>` or
+      `<.datetime_picker>`; `month` and `week` have no use today, so they stay
+      out until a field needs them.
       """,
       params: []
     ]
@@ -31,7 +38,7 @@ defmodule CredoChecks.NoNativePickers do
   alias Credo.SourceFile
   alias CredoChecks.HtmlTags
 
-  @banned_types ~w(color)
+  @banned_types ~w(color date time datetime-local month week)
   @type_regex ~r/\stype=(?:["'](?<type>[\w-]+)["']|\{\s*"(?<expr>[\w-]+)"\s*\})/i
 
   @doc false

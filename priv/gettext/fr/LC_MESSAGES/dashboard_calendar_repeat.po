@@ -560,3 +560,8 @@ msgstr "Le premier événement de cette série n’a pas encore été lu depuis 
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr "Se termine"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat until"
+msgstr "Répéter jusqu'au"

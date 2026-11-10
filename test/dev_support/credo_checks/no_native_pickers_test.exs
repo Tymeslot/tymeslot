@@ -63,6 +63,26 @@ defmodule CredoChecks.NoNativePickersTest do
     |> assert_issue(fn issue -> assert issue.trigger == "<CoreComponents.input" end)
   end
 
+  for type <- ~w(date time datetime-local month week) do
+    test "flags a raw #{type} input" do
+      ~s(<input type="#{unquote(type)}" name="d" />)
+      |> check()
+      |> assert_issue(fn issue -> assert issue.trigger == "<input" end)
+    end
+
+    test "flags the core input component with the #{type} type" do
+      ~s(<.input type="#{unquote(type)}" name="d" />)
+      |> check()
+      |> assert_issue(fn issue -> assert issue.trigger == "<.input" end)
+    end
+  end
+
+  test "leaves the picker's own native control alone, written as an expression" do
+    ~s(<input data-picker-native type={@native_type} />)
+    |> check()
+    |> refute_issues()
+  end
+
   test "leaves the restyled range slider alone" do
     ~s(<input data-cp="hue" type="range" min="0" max="360" />)
     |> check()

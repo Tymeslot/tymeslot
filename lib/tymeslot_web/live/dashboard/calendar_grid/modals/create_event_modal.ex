@@ -303,44 +303,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600"
           novalidate
         >
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="create-event-start-date"
             name="start-date"
             value={@creating_event.date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start date")}
           />
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
+          <.time_picker
             :if={!@creating_event[:all_day]}
-            type="time"
             id="create-event-start-time"
             name="start-time"
             value={
               EditWorkflow.format_time_value(@creating_event.start_hour, @creating_event.start_minute)
             }
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start time")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="create-event-end-date"
             name="end-date"
             value={@creating_event.end_date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End date")}
           />
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
+          <.time_picker
             :if={!@creating_event[:all_day]}
-            type="time"
             id="create-event-end-time"
             name="end-time"
             value={
               EditWorkflow.format_time_value(@creating_event.end_hour, @creating_event.end_minute)
             }
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End time")}
           />
           <span
             :if={!@creating_event[:all_day]}

@@ -96,10 +96,8 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
       date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
 
       view
-      |> form("form[phx-submit='create_poll']", %{
-        "poll" => %{"title" => "Detroit sync", "slots" => %{"0" => "#{date}T09:00"}}
-      })
-      |> render_submit(%{"poll" => %{"duration" => "30"}})
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => "Detroit sync"}})
+      |> render_submit(%{"poll" => %{"duration" => "30", "slots" => %{"0" => "#{date}T09:00"}}})
 
       assert [%{timezone: "America/Detroit"}] = Polls.list_polls(user.id)
     end
@@ -118,17 +116,18 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
 
       html =
         view
-        |> form("form[phx-submit='create_poll']", %{
+        |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => "Late poll"}})
+        |> render_submit(%{
           "poll" => %{
-            "title" => "Late poll",
+            "duration" => "30",
+            "timezone" => "Etc/UTC",
             "deadline" => "#{yesterday}T09:00",
             "slots" => %{"0" => "#{date}T09:00"}
           }
         })
-        |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Etc/UTC"}})
 
       assert html =~ "The deadline must be in the future"
-      assert has_element?(view, "input[name='poll[deadline]'][aria-invalid='true']")
+      assert has_element?(view, "input[id^='poll-deadline'][aria-invalid='true']")
       assert Polls.list_polls(user.id) == []
     end
   end

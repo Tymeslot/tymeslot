@@ -196,25 +196,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           class="flex flex-wrap items-center gap-1 text-token-sm"
           novalidate
         >
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-all-day-start"
             name="start-date"
             value={@selected_event.start_date && Date.to_iso8601(@selected_event.start_date)}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start date")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
           <%!-- end_date is stored exclusively; show the inclusive last day. --%>
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-all-day-end"
             name="end-date"
             value={
               @selected_event.end_date && Date.to_iso8601(Date.add(@selected_event.end_date, -1))
             }
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End date")}
           />
         </form>
         <form
@@ -225,38 +223,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           class="flex flex-wrap items-center gap-1 text-token-sm"
           novalidate
         >
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-start-date"
             name="start-date"
             value={start_parts.date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start date")}
           />
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="time"
+          <.time_picker
             id="event-start-time"
             name="start-time"
             value={start_parts.time}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start time")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-end-date"
             name="end-date"
             value={end_parts.date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End date")}
           />
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="time"
+          <.time_picker
             id="event-end-time"
             name="end-time"
             value={end_parts.time}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End time")}
           />
           <span class="text-token-xs font-normal text-tymeslot-400 ml-1">{Helpers.tz_abbr(
             @user_timezone,

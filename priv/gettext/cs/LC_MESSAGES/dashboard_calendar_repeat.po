@@ -570,3 +570,8 @@ msgstr "První událost této série se z vašeho kalendáře ještě nenačetla
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr "Konec"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat until"
+msgstr "Opakovat do"

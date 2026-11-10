@@ -427,8 +427,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     view = open_editor(ctx.conn, type)
 
     view
-    |> form("#{panel(type)}-form", invitation: %{expires_on: "2030-06-15"})
-    |> render_submit()
+    |> form("#{panel(type)}-form", %{})
+    |> render_submit(invitation: %{expires_on: "2030-06-15"})
 
     [%{invitation: invitation}] = Invitations.list(ctx.user.id, type)
     # 23:59:59 on 15 June in Auckland (NZST, UTC+12).
@@ -442,8 +442,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
 
     # Berlin springs forward on 2030-03-31, so the day ends at UTC+2, not +1.
     view
-    |> form("#{panel(type)}-form", invitation: %{expires_on: "2030-03-31"})
-    |> render_submit()
+    |> form("#{panel(type)}-form", %{})
+    |> render_submit(invitation: %{expires_on: "2030-03-31"})
 
     [%{invitation: invitation}] = Invitations.list(ctx.user.id, type)
     assert invitation.expires_at == ~U[2030-03-31 21:59:59Z]
@@ -454,8 +454,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     view = open_editor(ctx.conn, type)
 
     view
-    |> form("#{panel(type)}-form", invitation: %{expires_on: "2020-01-01"})
-    |> render_submit()
+    |> form("#{panel(type)}-form", %{})
+    |> render_submit(invitation: %{expires_on: "2020-01-01"})
 
     assert Invitations.list(ctx.user.id, type) == []
     assert has_element?(view, "#{panel(type)}-form", "must be in the future")

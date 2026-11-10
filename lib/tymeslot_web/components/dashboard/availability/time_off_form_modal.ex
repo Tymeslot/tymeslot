@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.CoreComponents.Modal
@@ -85,8 +86,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
       >
         <div class="space-y-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Forms.input
-              type="date"
+            <DateTimePicker.date_picker
               id={"#{@id}-starts-on"}
               name="starts_on"
               value={Map.get(@period_data, :starts_on, "")}
@@ -95,8 +95,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               label={dgettext("dashboard_availability", "First day away")}
               errors={field_errors(@period_data, :starts_on)}
             />
-            <Forms.input
-              type="date"
+            <DateTimePicker.date_picker
               id={"#{@id}-ends-on"}
               name="ends_on"
               value={Map.get(@period_data, :ends_on, "")}

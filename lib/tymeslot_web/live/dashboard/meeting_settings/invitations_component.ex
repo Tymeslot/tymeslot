@@ -239,9 +239,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
             type="email"
             label={dgettext("dashboard_meeting_types", "Email (optional)")}
           />
-          <.input
+          <.date_picker
             field={@form[:expires_on]}
-            type="date"
             label={dgettext("dashboard_meeting_types", "Link expires on (optional)")}
             min={Date.to_iso8601(today(@timezone))}
           />

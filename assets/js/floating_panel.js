@@ -76,10 +76,10 @@ export function computePlacement(anchor, panel, viewport) {
  * when the anchor scrolls out of view; `onDismiss` then says it has closed, so
  * the owner can put its own state straight.
  *
- * @param {{panel: HTMLElement, anchor: HTMLElement, onDismiss?: function(string): void}} options
+ * @param {{panel: HTMLElement, anchor: HTMLElement, onDismiss?: function(string): void, matchAnchorWidth?: boolean}} options
  * @returns {{close: function(): void, reposition: function(): void, closed: function(): boolean}}
  */
-export function openFloatingPanel({ panel, anchor, onDismiss = () => {} }) {
+export function openFloatingPanel({ panel, anchor, onDismiss = () => {}, matchAnchorWidth = true }) {
   let frame = null;
   let closed = false;
 
@@ -96,7 +96,7 @@ export function openFloatingPanel({ panel, anchor, onDismiss = () => {} }) {
     }
 
     panel.style.maxHeight = "";
-    panel.style.minWidth = `${Math.min(rect.width, viewport.width - 2 * MARGIN)}px`;
+    if (matchAnchorWidth) panel.style.minWidth = `${Math.min(rect.width, viewport.width - 2 * MARGIN)}px`;
     panel.style.maxWidth = `${viewport.width - 2 * MARGIN}px`;
 
     const { top, left, maxHeight, placement } = computePlacement(

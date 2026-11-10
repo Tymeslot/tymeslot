@@ -59,14 +59,16 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{"title" => "Offsite", "invitees" => "ada@example.com"}
+      })
+      |> render_submit(%{
         "poll" => %{
-          "title" => "Offsite",
+          "duration" => "30",
+          "timezone" => "Europe/Berlin",
           "deadline" => "#{deadline}T12:00",
-          "invitees" => "ada@example.com",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Berlin"}})
 
       assert [poll] = Polls.list_polls(user.id)
 
@@ -96,14 +98,16 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{"title" => "Offsite", "invitees" => "ada@example.com"}
+      })
+      |> render_submit(%{
         "poll" => %{
-          "title" => "Offsite",
+          "duration" => "30",
+          "timezone" => "Europe/Berlin",
           "deadline" => "#{deadline}T12:00",
-          "invitees" => "ada@example.com",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Berlin"}})
 
       assert [poll] = Polls.list_polls(user.id)
       assert %{value: 2, unit: "days"} in PollSchema.reminders(poll)
@@ -138,9 +142,15 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
-        "poll" => %{"title" => "Offsite", "invitees" => "", "slots" => %{"0" => "#{date}T09:00"}}
+        "poll" => %{"title" => "Offsite", "invitees" => ""}
       })
-      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Berlin"}})
+      |> render_submit(%{
+        "poll" => %{
+          "duration" => "30",
+          "timezone" => "Europe/Berlin",
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      })
 
       assert [%{title: "Offsite"}] = Polls.list_polls(user.id)
     end
@@ -175,14 +185,10 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view |> element("[data-testid='poll-new-times'] button", "Add time") |> render_click()
 
       view
-      |> form("[data-testid='poll-details-form']", %{
-        "poll" => %{
-          "title" => "Offsite",
-          "deadline" => local(in_days(5)),
-          "new_times" => %{"0" => local(in_days(9))}
-        }
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
+      |> render_submit(%{
+        "poll" => %{"deadline" => local(in_days(5)), "new_times" => %{"0" => local(in_days(9))}}
       })
-      |> render_submit()
 
       {:ok, updated} = Polls.get_poll_for_host(poll.id, user.id)
       assert DateTime.compare(updated.deadline_at, in_days(4)) == :gt
@@ -256,10 +262,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       html =
         view
-        |> form("[data-testid='poll-details-form']", %{
-          "poll" => %{"title" => "Offsite", "deadline" => local(in_days(-1))}
-        })
-        |> render_submit()
+        |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
+        |> render_submit(%{"poll" => %{"deadline" => local(in_days(-1))}})
 
       assert html =~ "The deadline must be in the future"
       assert has_element?(view, "[data-testid='poll-details-form']")

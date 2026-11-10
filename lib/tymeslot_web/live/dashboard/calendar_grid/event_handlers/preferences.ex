@@ -8,7 +8,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   alias Phoenix.LiveView
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Appearance
+  alias Tymeslot.Locales.WeekStart
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
@@ -117,6 +119,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   defp refresh_for(socket, _key), do: Helpers.precompute_derived(socket)
 
   defp notify_parent(:time_format, value), do: send(self(), {:time_format_updated, value})
+
+  # This component renders in the LiveView's process, so the pickers' week
+  # start can be set from here directly.
+  defp notify_parent(:week_start_day, value),
+    do: PickerPreferences.put_week_start(WeekStart.parse(value))
+
   defp notify_parent(_key, _value), do: :ok
 
   @spec handle_update_default_view(map(), Phoenix.LiveView.Socket.t()) ::
