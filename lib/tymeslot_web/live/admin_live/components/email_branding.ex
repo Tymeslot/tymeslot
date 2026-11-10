@@ -34,6 +34,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
   attr :stock_accent, :string, required: true
   attr :accent_preview, :map, default: nil
   attr :accent_draft, :string, default: nil
+  attr :error, :string, default: nil
 
   @spec brand_accent_row(map()) :: Phoenix.LiveView.Rendered.t()
   def brand_accent_row(assigns) do
@@ -57,6 +58,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
           aria-label={
             dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(:email_brand_accent))
           }
+          novalidate
         >
           <input type="hidden" name="key" value="email_brand_accent" />
           <button
@@ -101,6 +103,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
         </div>
 
         <div id="email-brand-accent-feedback" aria-live="polite">
+          <p :if={@error} class="form-error mt-0 max-w-[16rem] text-right" role="alert">{@error}</p>
           <.contrast_warning
             :if={@accent_preview != nil and @accent_preview.low_contrast?}
             ratio={@accent_preview.contrast}
@@ -158,7 +161,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
           </.action_button>
         </div>
 
-        <form id="admin-email-logo-form" phx-change="validate_email_logo">
+        <form id="admin-email-logo-form" phx-change="validate_email_logo" novalidate>
           <%!--
             The uploader input is present but hidden. `this.upload/2` in the hook
             resolves the uploader by looking up upload inputs in the DOM by name,

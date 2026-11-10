@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
           phx-submit="save_schedule"
           phx-target={@myself}
           class="space-y-2"
+          novalidate
         >
           <Forms.input
             type="text"
@@ -68,6 +69,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
             maxlength={AvailabilityScheduleSchema.name_max_length()}
             autocomplete="off"
             required
+            errors={List.wrap(@schedule_data[:error])}
             phx-hook="AutoFocus"
             placeholder={dgettext("dashboard_availability", "For example: Consulting hours")}
           />

@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      socket
      |> ModalHook.mount_modal(refund: false, disconnect: false)
      |> assign(:refund_submitting, false)
+     |> assign(:refund_error, nil)
      |> assign(:connect_account, nil)
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
@@ -105,6 +106,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       <.refund_modal
         payment={@refund_modal_data}
         submitting={@refund_submitting}
+        error={@refund_error}
         myself={@myself}
       />
 
@@ -294,8 +296,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         process_refund(assign(socket, :refund_submitting, true), payment, amount_cents)
 
       {:error, reason} ->
-        Flash.error(parse_refund_error_message(reason))
-        {:noreply, socket}
+        {:noreply, assign(socket, :refund_error, parse_refund_error_message(reason))}
     end
   end
 

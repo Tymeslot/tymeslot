@@ -66,6 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
         phx-submit={@add_event}
         phx-target={@myself}
         class="flex flex-wrap items-center gap-2"
+        novalidate
       >
         <%!-- raw-input: compact text-xs select sharing one inline row with the other select and a small Add button --%>
         <select

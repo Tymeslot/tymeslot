@@ -130,6 +130,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
         phx-change={@change_event}
         phx-target={@myself}
         class={["space-y-2", @custom && "hidden"]}
+        novalidate
       >
         <%!-- raw-input: compact text-xs repeat select heading the rule controls in the compact detail line --%>
         <select

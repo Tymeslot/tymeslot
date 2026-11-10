@@ -219,6 +219,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
         phx-change="check_username_availability"
         phx-target={@myself}
         class="space-y-4"
+        novalidate
       >
         <div>
           <div class="flex flex-col sm:flex-row items-stretch gap-4">

@@ -101,6 +101,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             id="embed-page-picker"
             phx-change="select_page"
             phx-target={@myself}
+            novalidate
           >
             <.input
               type="select"

@@ -11,15 +11,15 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   re-add errors from the live changeset and defeat the clear-on-type
   behaviour.
 
-  `required` renders on the control, so the browser blocks an empty submit
-  with its own message before the server sees it. A form that shows its own
-  error messages for empty fields sets `novalidate` on the `<form>`: the
-  attribute still tells assistive technology the field is required, and the
-  empty submission reaches the server, which answers with the app's message.
-  `novalidate` switches off every native constraint on the form, not only
-  `required`: `type="email"` and `type="url"`, `minlength`/`maxlength`,
-  `pattern` and `min`/`max`/`step` all go unchecked too, so the server must
-  validate each of them itself.
+  `required` renders on the control so assistive technology announces it, but
+  forms set `novalidate` so the browser does not block the submit with its own
+  bubble, in the browser's language rather than the user's: the submission
+  reaches the server, which answers with the app's inline error. A form that
+  does so must render an inline error for every constraint it carries:
+  `novalidate` switches off every native check, not only `required`, so
+  `type="email"` and `type="url"`, `minlength`, `pattern` and `min`/`max`/`step`
+  go unchecked too and the server must validate each one itself. `maxlength`
+  still limits typing. `CredoChecks.NoBrowserValidation` keeps it that way.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -485,6 +485,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :for, :any, required: true
   attr :id, :string, default: nil
   attr :class, :string, default: ""
+
+  attr :novalidate, :boolean,
+    default: true,
+    doc: "false leaves the browser's own validation bubbles on; see the moduledoc"
+
   attr :rest, :global, include: ~w(phx-change phx-submit phx-target)
   slot :inner_block, required: true
 
@@ -495,6 +500,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       for={@for}
       id={@id}
       class={["space-y-6", @class]}
+      novalidate={@novalidate}
       {@rest}
     >
       {render_slot(@inner_block, @for)}

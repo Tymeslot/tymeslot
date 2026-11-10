@@ -74,6 +74,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search do
         |> assign(:recurrence_edit, RecurrenceFields.recurrence_edit(event))
         |> assign(:pending_attendees, [])
         |> assign(:attendee_input, "")
+        |> assign(:attendee_error, nil)
         |> assign(:pending_notification, false)
         |> assign(:undelivered_updates, NotificationFlows.undelivered_updates(socket, event))
     end

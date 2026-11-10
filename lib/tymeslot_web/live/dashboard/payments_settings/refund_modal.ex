@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
 
   attr :payment, :map, required: true
   attr :submitting, :boolean, required: true
+  attr :error, :string, default: nil
   attr :myself, :any, required: true
 
   @spec refund_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -70,7 +71,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
           )}
         </p>
 
-        <form id="refund-form" phx-submit="submit_refund" phx-target={@myself} class="space-y-4">
+        <form
+          id="refund-form"
+          phx-submit="submit_refund"
+          phx-target={@myself}
+          class="space-y-4"
+          novalidate
+        >
           <input type="hidden" name="payment_id" value={@payment.id} />
 
           <fieldset class="space-y-2">
@@ -114,6 +121,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
             }
             step="0.01"
             placeholder="0.00"
+            errors={List.wrap(@error)}
           >
             <:leading_icon>
               <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight whitespace-nowrap">

@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:is_empty, true)
      |> assign(:cancelling_meeting, nil)
      |> assign(:cancel_booking_payment, nil)
+     |> assign(:cancel_refund_error, nil)
      |> assign(:sending_reschedule, nil)
      |> assign(:answering_request, nil)
      |> assign(:answering_opts, %{})
@@ -61,6 +62,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
        add_guests: false
      )
      |> assign(:staged_guests, [])
+     |> assign(:guest_stage_error, nil)
      |> assign(:add_guests_existing, [])
      |> assign(:host_move_meeting, nil)}
   end
@@ -406,6 +408,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         cancel_meeting={@cancel_meeting_modal_data}
         show_cancel={@show_cancel_meeting_modal || false}
         cancel_booking_payment={@cancel_booking_payment}
+        cancel_refund_error={@cancel_refund_error}
         cancelling={@cancelling_meeting != nil}
         decline_request={@decline_request_modal_data}
         show_decline={@show_decline_request_modal || false}
@@ -418,6 +421,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         add_guests={@add_guests_modal_data}
         show_add_guests={@show_add_guests_modal || false}
         staged_guests={@staged_guests}
+        guest_stage_error={@guest_stage_error}
         existing_guests={@add_guests_existing}
         profile={@profile}
         time_format={@time_format}

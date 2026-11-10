@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :confirm_event, :string, required: true
   attr :target, :any, required: true
   attr :booking_payment, :map, default: nil
+  attr :refund_error, :string, default: nil
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
@@ -73,6 +74,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         phx-submit={@confirm_event}
         phx-target={@target}
         class="space-y-4"
+        novalidate
       >
         <p>
           {confirm_question(@meeting, @timezone, @time_format)}
@@ -174,6 +176,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             max={Money.to_major_string(@remaining, @booking_payment.currency)}
             step="0.01"
             placeholder={"0.00 #{String.upcase(@booking_payment.currency)}"}
+            errors={List.wrap(@refund_error)}
           />
         </div>
 

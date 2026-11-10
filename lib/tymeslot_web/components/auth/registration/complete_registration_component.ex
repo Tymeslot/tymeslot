@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
   import TymeslotWeb.Shared.Auth.ButtonComponents
   use TymeslotWeb.Components.CoreComponents
 
+  alias TymeslotWeb.Components.CoreComponents.Forms
+
   @doc """
   Renders the complete registration form using shared auth components.
   """
@@ -30,9 +32,17 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
           action={~p"/auth/complete"}
         >
           <.full_name_input />
-          <.email_input email_required={@email_required} temp_user={@temp_user} />
+          <.email_input
+            email_required={@email_required}
+            temp_user={@temp_user}
+            errors={@completion_errors.email}
+          />
           <%= if Application.get_env(:tymeslot, :enforce_legal_agreements, false) do %>
             <.terms_checkbox name="auth[terms_accepted]" style={:complex} />
+            <Forms.field_error
+              errors={@completion_errors.terms}
+              id="complete-registration-terms-error"
+            />
           <% end %>
           <.auth_button type="submit" class="mt-4 sm:mt-6">
             {dgettext("auth", "Complete Registration")}
@@ -75,6 +85,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
         label={dgettext("auth", "Email Address")}
         placeholder={dgettext("auth", "your.email@example.com")}
         required
+        errors={@errors}
         icon="hero-envelope"
       />
     <% else %>

@@ -277,6 +277,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       phx-submit="discover_caldav_calendars"
       class="onboarding-form"
       id={if @apple?, do: "apple-form", else: "caldav-form"}
+      novalidate
     >
       <div :if={@apple?} class="flex items-center gap-3">
         <ProviderIcon.provider_icon provider="apple" type="calendar" size="medium" alt="" />

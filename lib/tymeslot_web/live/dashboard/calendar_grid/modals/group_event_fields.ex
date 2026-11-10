@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields do
       phx-target={@myself}
       onsubmit="return false;"
       data-testid="group-event-fields"
+      novalidate
     >
       <p class="text-token-xs text-tymeslot-400">
         {dgettext(

@@ -904,6 +904,7 @@ msgstr "Інші гості (необов'язково)"
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
 msgstr "Мова всіх листів про цю зустріч: для гостя та всіх інших запрошених."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is already invited."
@@ -914,6 +915,7 @@ msgstr "%{email} уже запрошено."
 msgid "%{email} is already the main guest."
 msgstr "%{email} уже є основним гостем."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is not a valid email address."

@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
     default: [],
     doc: "ids of the integration's calendars bookings go to, which always block"
 
+  attr :rename_error, :string, default: nil
   attr :target, :any, required: true
   attr :on_cancel, JS, default: %JS{}
 
@@ -86,6 +87,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
             phx-submit="rename_integration"
             phx-target={@target}
             class="mb-6 flex items-end gap-2"
+            novalidate
           >
             <input type="hidden" name="integration_id" value={@integration.id} />
             <.input
@@ -96,6 +98,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
               value={@integration.name}
               required
               maxlength="100"
+              errors={List.wrap(@rename_error)}
               autocomplete="off"
               class="flex-1"
             />

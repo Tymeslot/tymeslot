@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
       </p>
 
       <%!-- Tag-based Selection --%>
-      <form id={@form_id} phx-change={@event} phx-debounce="300" phx-target={@myself}>
+      <form id={@form_id} phx-change={@event} phx-debounce="300" phx-target={@myself} novalidate>
         <div
           class="flex flex-wrap items-center gap-3"
           role="group"
@@ -224,6 +224,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
         phx-change="update_advance_booking_days"
         phx-debounce="300"
         phx-target={@myself}
+        novalidate
       >
         <div class="flex flex-wrap items-center gap-3">
           <%!-- Quick preset tags --%>
@@ -315,6 +316,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
         phx-change="update_min_advance_hours"
         phx-debounce="300"
         phx-target={@myself}
+        novalidate
       >
         <div class="flex flex-wrap items-center gap-3">
           <%!-- Quick preset tags --%>

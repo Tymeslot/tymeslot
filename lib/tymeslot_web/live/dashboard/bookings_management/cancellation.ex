@@ -50,6 +50,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
         socket
         |> assign(:cancel_booking_payment, booking_payment)
+        |> assign(:cancel_refund_error, nil)
         |> ModalHook.show_modal(:cancel_meeting, meeting)
 
       {:error, :validation_failed, reason} ->
@@ -93,8 +94,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
         |> run_cancellation(meeting, refund_action, reload)
 
       {:error, reason} ->
-        Flash.error(refund_error_message(reason))
-        socket
+        assign(socket, :cancel_refund_error, refund_error_message(reason))
     end
   end
 

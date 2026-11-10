@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             phx-target={@myself}
             phx-debounce="500"
             class="day-hours-inline flex items-center gap-2 shrink-0"
+            novalidate
           >
             <input type="hidden" name="day" value={@day} />
             <.input

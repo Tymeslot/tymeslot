@@ -68,6 +68,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
       # as "none" — and so as a full meeting with no room left.
       socket
       |> assign(:staged_guests, [])
+      |> assign(:guest_stage_error, nil)
       |> assign(:add_guests_existing, Guests.list_for_meeting(meeting.id))
       |> ModalHook.show_modal(:add_guests, meeting)
     else
@@ -113,11 +114,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
         end
       end)
 
-    if refusals != [],
-      do: refusals |> Enum.reverse() |> Enum.uniq() |> Enum.join(" ") |> Flash.error()
-
-    assign(socket, :staged_guests, staged)
+    socket
+    |> assign(:staged_guests, staged)
+    |> assign(:guest_stage_error, refusal_message(refusals))
   end
+
+  defp refusal_message([]), do: nil
+  defp refusal_message(refusals), do: refusals |> Enum.reverse() |> Enum.uniq() |> Enum.join(" ")
 
   # The reasons, and their wording, follow Quick Add's
   # (`CreateFormState.check_extra_guest/2`), so the host is told the same

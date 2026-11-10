@@ -44,6 +44,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
         id="delete-account-form"
         phx-submit="request_account_deletion"
         class="space-y-5"
+        novalidate
       >
         <%!-- First in the body, so a refusal is the first thing in view on a
               phone, where the explanation below fills the sheet; the handler

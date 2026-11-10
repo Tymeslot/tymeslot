@@ -40,6 +40,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :stock_accent, :string, required: true
   attr :accent_preview, :map, default: nil
   attr :accent_draft, :string, default: nil
+  attr :setting_errors, :map, default: %{}
   attr :max_logo_bytes, :integer, required: true
 
   @spec settings_tab(map()) :: Phoenix.LiveView.Rendered.t()
@@ -76,6 +77,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
               stock_accent={@stock_accent}
               accent_preview={@accent_preview}
               accent_draft={@accent_draft}
+              setting_errors={@setting_errors}
               max_logo_bytes={@max_logo_bytes}
             />
           <% else %>
@@ -83,6 +85,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
               section={section}
               keys={Map.fetch!(@grouped, section)}
               effective_values={@effective_values}
+              setting_errors={@setting_errors}
             />
           <% end %>
         <% end %>
@@ -94,6 +97,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :section, :atom, required: true
   attr :keys, :list, required: true
   attr :effective_values, :map, required: true
+  attr :setting_errors, :map, default: %{}
 
   defp settings_section(assigns) do
     ~H"""
@@ -103,7 +107,12 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       </h3>
 
       <.card padding={:none} class="overflow-hidden divide-y divide-tymeslot-100">
-        <.admin_setting_row :for={key <- @keys} key={key} effective_values={@effective_values} />
+        <.admin_setting_row
+          :for={key <- @keys}
+          key={key}
+          effective_values={@effective_values}
+          error={@setting_errors[Atom.to_string(key)]}
+        />
       </.card>
     </section>
     """
@@ -121,6 +130,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :stock_accent, :string, required: true
   attr :accent_preview, :map, default: nil
   attr :accent_draft, :string, default: nil
+  attr :setting_errors, :map, default: %{}
   attr :max_logo_bytes, :integer, required: true
 
   defp email_branding_section(assigns) do
@@ -131,12 +141,17 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       </h3>
 
       <.card padding={:none} class="overflow-hidden divide-y divide-tymeslot-100">
-        <.admin_setting_row key={:email_brand_name} effective_values={@effective_values} />
+        <.admin_setting_row
+          key={:email_brand_name}
+          effective_values={@effective_values}
+          error={@setting_errors["email_brand_name"]}
+        />
         <EmailBranding.brand_accent_row
           effective={Map.fetch!(@effective_values, :email_brand_accent)}
           stock_accent={@stock_accent}
           accent_preview={@accent_preview}
           accent_draft={@accent_draft}
+          error={@setting_errors["email_brand_accent"]}
         />
         <EmailBranding.email_logo_row
           logo_url={@email_logo_url}
@@ -151,6 +166,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
 
   attr :key, :atom, required: true
   attr :effective_values, :map, required: true
+  attr :error, :string, default: nil
 
   defp admin_setting_row(assigns) do
     effective = Map.fetch!(assigns.effective_values, assigns.key)
@@ -181,7 +197,17 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
       <SettingRow.row_header key={@key} muted={@muted} pinned_by={@effective.env_var} />
 
-      <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />
+      <div class="flex flex-col items-end gap-1 shrink-0 max-w-full">
+        <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />
+        <p
+          :if={@error}
+          id={"setting-error-#{@key}"}
+          class="form-error mt-0 max-w-[16rem] text-right"
+          role="alert"
+        >
+          {@error}
+        </p>
+      </div>
     </div>
     """
   end
@@ -246,6 +272,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       phx-submit="save_setting"
       class="flex items-center gap-2 shrink-0"
       aria-label={dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(@key))}
+      novalidate
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
       <%!-- raw-input: compact w-24 score box in the admin setting row, styled by SettingRow.text_input_classes like the other admin row controls --%>
@@ -278,6 +305,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       phx-submit="save_setting"
       class="flex items-center gap-2 shrink-0 max-w-full"
       aria-label={dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(@key))}
+      novalidate
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
       <%!-- raw-input: compact w-64 box inline with the small Save button in the admin setting row, styled by SettingRow.text_input_classes --%>
