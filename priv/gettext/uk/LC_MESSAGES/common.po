@@ -381,3 +381,8 @@ msgstr "Ваш сеанс змінився відтоді, як цю сторі�
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, змінити мову"
+
+#: lib/tymeslot_web/components/flag_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Flag not available"
+msgstr "Прапор недоступний"

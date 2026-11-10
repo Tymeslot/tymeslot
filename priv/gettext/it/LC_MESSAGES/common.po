@@ -376,3 +376,8 @@ msgstr "La tua sessione è cambiata da quando hai aperto questa pagina. Riprova.
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, cambia lingua"
+
+#: lib/tymeslot_web/components/flag_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Flag not available"
+msgstr "Bandiera non disponibile"

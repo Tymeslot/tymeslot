@@ -17,6 +17,20 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
       refute html =~ "Flag not available"
     end
 
+    test "the fallback tooltip is translated into the current locale" do
+      html =
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+          render_component(&FlagHelpers.safe_flag/1,
+            country_code: :dza,
+            class: "w-6 h-4",
+            fallback_icon: "hero-globe-europe-africa"
+          )
+        end)
+
+      refute html =~ "Flag not available"
+      assert html =~ ~s(title="Flagge nicht verfügbar")
+    end
+
     test "renders fallback icon for Algeria (:dza) which has no Flagpack flag" do
       html =
         render_component(&FlagHelpers.safe_flag/1,

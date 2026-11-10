@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
   alias Phoenix.LiveView.TagEngine
@@ -48,7 +49,10 @@ defmodule TymeslotWeb.Components.FlagHelpers do
 
       if assigns.show_fallback do
         ~H"""
-        <span class={["inline-flex items-center justify-center", @class]} title="Flag not available">
+        <span
+          class={["inline-flex items-center justify-center", @class]}
+          title={dgettext("common", "Flag not available")}
+        >
           <Icons.icon name={@fallback_icon} class="w-full h-full" />
         </span>
         """

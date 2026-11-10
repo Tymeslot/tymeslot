@@ -18,6 +18,105 @@
 (function() {
   'use strict';
 
+
+  /**
+   * The words the script writes into the host's page. A static script cannot
+   * reach the server's catalogues, so each supported locale (the list in
+   * `config :tymeslot, :locales`) carries its few lines here. The locale is
+   * the embed's `data-locale` (or the `locale` option); anything else, or a
+   * regional form like `pt-BR`, resolves to its language, then to English.
+   * The iframe's own `title` stays "Booking Widget" in every language: the
+   * resize listener finds its iframes by it.
+   */
+  const STRINGS = {
+    en: {
+      book: 'Book a meeting',
+      unavailable: 'Booking system unavailable.',
+      loading: 'Loading booking page...',
+      slow: 'Booking widget is taking too long to load.',
+      retry: 'Please check your connection or refresh the page.',
+      close: 'Close booking widget',
+      dialog: 'Booking Widget'
+    },
+    cs: {
+      book: 'Rezervovat schůzku',
+      unavailable: 'Rezervační systém není dostupný.',
+      loading: 'Načítání rezervační stránky...',
+      slow: 'Rezervační widget se načítá příliš dlouho.',
+      retry: 'Zkontrolujte připojení nebo stránku obnovte.',
+      close: 'Zavřít rezervační widget',
+      dialog: 'Rezervační widget'
+    },
+    de: {
+      book: 'Termin buchen',
+      unavailable: 'Buchungssystem nicht verfügbar.',
+      loading: 'Buchungsseite wird geladen...',
+      slow: 'Das Buchungs-Widget lädt zu lange.',
+      retry: 'Bitte prüfen Sie Ihre Verbindung oder laden Sie die Seite neu.',
+      close: 'Buchungs-Widget schließen',
+      dialog: 'Buchungs-Widget'
+    },
+    es: {
+      book: 'Reservar una reunión',
+      unavailable: 'Sistema de reservas no disponible.',
+      loading: 'Cargando la página de reservas...',
+      slow: 'El widget de reservas tarda demasiado en cargarse.',
+      retry: 'Comprueba tu conexión o recarga la página.',
+      close: 'Cerrar el widget de reservas',
+      dialog: 'Widget de reservas'
+    },
+    fr: {
+      book: 'Réserver un rendez-vous',
+      unavailable: 'Système de réservation indisponible.',
+      loading: 'Chargement de la page de réservation...',
+      slow: 'Le widget de réservation met trop de temps à se charger.',
+      retry: 'Vérifiez votre connexion ou actualisez la page.',
+      close: 'Fermer le widget de réservation',
+      dialog: 'Widget de réservation'
+    },
+    it: {
+      book: 'Prenota un appuntamento',
+      unavailable: 'Sistema di prenotazione non disponibile.',
+      loading: 'Caricamento della pagina di prenotazione...',
+      slow: 'Il widget di prenotazione impiega troppo a caricarsi.',
+      retry: 'Controlla la connessione o ricarica la pagina.',
+      close: 'Chiudi il widget di prenotazione',
+      dialog: 'Widget di prenotazione'
+    },
+    pl: {
+      book: 'Zarezerwuj spotkanie',
+      unavailable: 'System rezerwacji jest niedostępny.',
+      loading: 'Wczytywanie strony rezerwacji...',
+      slow: 'Widżet rezerwacji wczytuje się zbyt długo.',
+      retry: 'Sprawdź połączenie lub odśwież stronę.',
+      close: 'Zamknij widżet rezerwacji',
+      dialog: 'Widżet rezerwacji'
+    },
+    pt: {
+      book: 'Agendar uma reunião',
+      unavailable: 'Sistema de agendamento indisponível.',
+      loading: 'Carregando a página de agendamento...',
+      slow: 'O widget de agendamento está demorando demais para carregar.',
+      retry: 'Verifique sua conexão ou atualize a página.',
+      close: 'Fechar o widget de agendamento',
+      dialog: 'Widget de agendamento'
+    },
+    uk: {
+      book: 'Забронювати зустріч',
+      unavailable: 'Система бронювання недоступна.',
+      loading: 'Завантаження сторінки бронювання...',
+      slow: 'Віджет бронювання завантажується надто довго.',
+      retry: 'Перевірте з’єднання або оновіть сторінку.',
+      close: 'Закрити віджет бронювання',
+      dialog: 'Віджет бронювання'
+    }
+  };
+
+  function text(key, locale) {
+    const code = String(locale || '').toLowerCase().split(/[-_]/)[0];
+    return (STRINGS[code] || STRINGS.en)[key] || STRINGS.en[key];
+  }
+
   /**
    * Global Error Handling
    */
@@ -31,7 +130,7 @@
         const errorDiv = document.createElement('div');
         errorDiv.style.cssText = 'padding:20px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-family:sans-serif;';
         const strong = document.createElement('strong');
-        strong.textContent = 'Booking system unavailable.';
+        strong.textContent = text('unavailable', c.getAttribute('data-locale'));
         errorDiv.appendChild(strong);
         c.replaceChildren(errorDiv);
       }
@@ -303,7 +402,7 @@
     
     const loadingText = document.createElement('span');
     loadingText.style.cssText = 'margin-top: 12px; font-size: 14px;';
-    loadingText.textContent = 'Loading booking page...';
+    loadingText.textContent = text('loading', options.locale);
     
     const style = document.createElement('style');
     style.textContent = '@keyframes tymeslot-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
@@ -328,7 +427,7 @@
           // Reassign so iframe.onload can cancel this retry's timeout too
           timeout = setTimeout(handleTimeout, TIMEOUT_MS);
         } else {
-          showError(wrapper, loader);
+          showError(wrapper, loader, options.locale);
           if (iframe.parentNode) iframe.remove();
         }
       }
@@ -350,16 +449,16 @@
   /**
    * Show error message in container
    */
-  function showError(container, elementToReplace) {
+  function showError(container, elementToReplace, locale) {
     const error = document.createElement('div');
     error.style.cssText = 'padding: 24px; color: #991b1b; background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; text-align: center; font-family: sans-serif;';
     
     const title = document.createElement('strong');
-    title.textContent = 'Booking widget is taking too long to load.';
+    title.textContent = text('slow', locale);
     
     const subtext = document.createElement('p');
     subtext.style.cssText = 'margin-top: 8px; font-size: 14px; color: #b91c1c;';
-    subtext.textContent = 'Please check your connection or refresh the page.';
+    subtext.textContent = text('retry', locale);
     
     error.appendChild(title);
     error.appendChild(document.createElement('br'));
@@ -416,14 +515,14 @@
    * cramming them into a narrow column. On viewports <= 768px the
    * media-query stylesheet collapses the modal to full-screen.
    */
-  function createModal(contentMaxWidth = 1000) {
+  function createModal(contentMaxWidth = 1000, locale) {
     ensureModalStyles();
 
     const modal = document.createElement('div');
     modal.id = 'tymeslot-modal';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Booking Widget');
+    modal.setAttribute('aria-label', text('dialog', locale));
     modal.style.cssText = `
       position: fixed;
       top: 0;
@@ -480,7 +579,7 @@
       align-items: center;
       justify-content: center;
     `;
-    closeButton.setAttribute('aria-label', 'Close booking widget');
+    closeButton.setAttribute('aria-label', text('close', locale));
     closeButton.setAttribute('data-tymeslot-close', '');
 
     closeButton.onmouseover = function() {
@@ -520,8 +619,8 @@
   function createFloatingButton(username, options = {}) {
     const button = document.createElement('button');
     button.id = 'tymeslot-floating-button';
-    button.setAttribute('aria-label', 'Book a meeting');
-    button.setAttribute('title', 'Book a meeting');
+    button.setAttribute('aria-label', text('book', options.locale));
+    button.setAttribute('title', text('book', options.locale));
 
     const buttonColor = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(options.buttonColor)
       ? options.buttonColor
@@ -664,7 +763,7 @@
         container = document.querySelector(selectorOrElement);
       }
       if (container) {
-        showError(container);
+        showError(container, undefined, container.getAttribute('data-locale'));
       }
     },
 
@@ -712,7 +811,7 @@
         Math.max(parseInt(options.maxWidth, 10) || modalDefaultMaxWidth, 200),
         2000
       );
-      const { modal, container, closeButton } = createModal(contentMaxWidth);
+      const { modal, container, closeButton } = createModal(contentMaxWidth, options.locale);
       const wrapper = createBookingIframe(username, Object.assign({}, options, { _mode: 'modal' }));
       const iframe = wrapper.querySelector('iframe');
 

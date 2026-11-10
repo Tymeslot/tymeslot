@@ -376,3 +376,8 @@ msgstr "Votre session a changé depuis l’ouverture de cette page. Veuillez ré
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, changer de langue"
+
+#: lib/tymeslot_web/components/flag_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Flag not available"
+msgstr "Drapeau indisponible"

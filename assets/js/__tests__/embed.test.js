@@ -1331,3 +1331,92 @@ describe('floating button options', () => {
     expect(button.style.background).toContain('rgb(20, 184, 166)')
   })
 })
+
+describe('chrome text in the embed\'s language', () => {
+  const FLOATING_LABELS = {
+    en: 'Book a meeting',
+    cs: 'Rezervovat schůzku',
+    de: 'Termin buchen',
+    es: 'Reservar una reunión',
+    fr: 'Réserver un rendez-vous',
+    it: 'Prenota un appuntamento',
+    pl: 'Zarezerwuj spotkanie',
+    pt: 'Agendar uma reunião',
+    uk: 'Забронювати зустріч'
+  }
+
+  for (const [locale, label] of Object.entries(FLOATING_LABELS)) {
+    test(`the floating button is labelled in ${locale}`, () => {
+      window.TymeslotBooking.initFloating('alice', { locale })
+
+      const button = document.getElementById('tymeslot-floating-button')
+      expect(button.getAttribute('aria-label')).toBe(label)
+      expect(button.getAttribute('title')).toBe(label)
+    })
+  }
+
+  test('an unsupported or missing locale falls back to English', () => {
+    for (const locale of ['xx', 'ja', '', undefined]) {
+      window.TymeslotBooking.initFloating('alice', { locale })
+      expect(document.getElementById('tymeslot-floating-button').getAttribute('aria-label')).toBe(
+        'Book a meeting'
+      )
+    }
+  })
+
+  test('a regional locale uses its language, in any case', () => {
+    window.TymeslotBooking.initFloating('alice', { locale: 'PT-br' })
+    expect(document.getElementById('tymeslot-floating-button').getAttribute('aria-label')).toBe(
+      'Agendar uma reunião'
+    )
+  })
+
+  test('the modal names itself and its close button in the locale, but the iframe title never changes', () => {
+    window.TymeslotBooking.open('alice', { locale: 'de' })
+
+    const modal = document.getElementById('tymeslot-modal')
+    expect(modal.getAttribute('aria-label')).toBe('Buchungs-Widget')
+    expect(modal.querySelector('[data-tymeslot-close]').getAttribute('aria-label')).toBe(
+      'Buchungs-Widget schließen'
+    )
+    // The resize listener finds its iframes by this title.
+    expect(modal.querySelector('iframe').getAttribute('title')).toBe('Booking Widget')
+  })
+
+  test('the loading text and the timeout error follow data-locale', () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    container.id = 'localised-timeout'
+    container.setAttribute('data-locale', 'de')
+    container.setAttribute('data-username', 'alice')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#localised-timeout', 'alice', { locale: 'de' })
+    expect(container.textContent).toContain('Buchungsseite wird geladen...')
+
+    vi.advanceTimersByTime(45000)
+
+    expect(container.textContent).toContain('Das Buchungs-Widget lädt zu lange.')
+    expect(container.textContent).toContain('Bitte prüfen Sie Ihre Verbindung')
+  })
+
+  test('showError reads the container\'s data-locale', () => {
+    const container = document.createElement('div')
+    container.setAttribute('data-locale', 'fr')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.showError(container)
+
+    expect(container.textContent).toContain('Le widget de réservation met trop de temps')
+  })
+
+  test('English remains the default wording', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.showError(container)
+
+    expect(container.textContent).toContain('Booking widget is taking too long to load.')
+  })
+})
+

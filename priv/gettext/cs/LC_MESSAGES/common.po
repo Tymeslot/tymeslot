@@ -381,3 +381,8 @@ msgstr "Vaše relace se od otevření této stránky změnila. Zkuste to prosím
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, změnit jazyk"
+
+#: lib/tymeslot_web/components/flag_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Flag not available"
+msgstr "Vlajka není k dispozici"
