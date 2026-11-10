@@ -145,6 +145,8 @@ export const EmbedPreview = {
   },
 
   openModal(username, options = {}) {
+    // A message left by an earlier attempt is stale the moment the visitor tries again.
+    this.el.querySelector('[data-load-status]')?.remove();
     const modalOptions = this.buildOptionsForJs(options);
     if (window.TymeslotBooking) {
       window.TymeslotBooking.open(username, modalOptions);
@@ -154,7 +156,6 @@ export const EmbedPreview = {
       if (this._modalRetryInterval) clearInterval(this._modalRetryInterval);
       this._modalRetryInterval = setInterval(() => {
         if (window.TymeslotBooking) {
-          this.el.querySelector('[data-load-status]')?.remove();
           window.TymeslotBooking.open(username, modalOptions);
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;

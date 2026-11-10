@@ -166,6 +166,24 @@ describe('EmbedPreview', () => {
       vi.useRealTimers();
     });
 
+    test('a later click, once the script has arrived, opens the modal without the stale message', () => {
+      vi.useFakeTimers();
+      delete window.TymeslotBooking;
+
+      const hook = mountHook('popup', { loadingMessage: 'Still loading.' });
+      hook.el.querySelector('button').click();
+      vi.advanceTimersByTime(200 * 13);
+      expect(hook.el.querySelector('[data-load-status]')).not.toBeNull();
+
+      // The script arrives after the retries ran out; the direct branch runs.
+      window.TymeslotBooking = { open };
+      hook.el.querySelector('button').click();
+
+      expect(open).toHaveBeenCalled();
+      expect(hook.el.querySelector('[data-load-status]')).toBeNull();
+      vi.useRealTimers();
+    });
+
     test('the message goes away once the script arrives and the modal opens', () => {
       vi.useFakeTimers();
       delete window.TymeslotBooking;
