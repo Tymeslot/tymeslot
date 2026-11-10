@@ -26,12 +26,10 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Number do
   # An answer can be a decimal, so a bounded question asks for the decimal pad.
   # With no lower bound it can also be negative, and the phones' decimal pads
   # have no minus key, so it keeps the default number keyboard.
-  defp keypad(%{"min" => min}) when not is_nil(min) do
-    case Float.parse(to_string(min)) do
+  defp keypad(definition) do
+    case Float.parse(to_string(definition["min"])) do
       {bound, _rest} when bound >= 0 -> "decimal"
-      _negative_or_unparsable -> nil
+      _absent_negative_or_unparsable -> nil
     end
   end
-
-  defp keypad(_definition), do: nil
 end
