@@ -309,16 +309,59 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
     expire_stripe_sessions(pending, account)
 
+    user.id
+    |> retire_in_transaction(pending, outstanding.count, true)
+    |> announce_after_commit()
+  end
+
+  @doc """
+  Retires the live account of `stripe_account_id` after its host removed
+  Tymeslot at Stripe (`account.application.deauthorized`).
+
+  Does what `disconnect/1` does, minus what Stripe has made pointless: open
+  checkout sessions are not expired (access is already gone) and no
+  revocation is scheduled. The host's charge currency is still recorded.
+
+  A no-op when no live row exists (a replay), and when the row was connected
+  after `event_at` (an event from before a reconnect). An event in the same
+  second as the connection counts as applying.
+  """
+  @spec handle_deauthorized(stripe_account_id :: String.t(), event_at :: DateTime.t()) ::
+          :ok | {:error, term()}
+  def handle_deauthorized(stripe_account_id, %DateTime{} = event_at) do
+    case ConnectAccountQueries.by_stripe_account_id(stripe_account_id) do
+      nil ->
+        :ok
+
+      %ConnectAccountSchema{user_id: user_id} = account ->
+        if connected_after?(account, event_at) do
+          :ok
+        else
+          pending = BookingPaymentQueries.list_pending_for_host(user_id)
+
+          with {:ok, _summary} <-
+                 user_id
+                 |> retire_in_transaction(pending, 0, false)
+                 |> announce_after_commit(),
+               do: :ok
+        end
+    end
+  end
+
+  defp connected_after?(%ConnectAccountSchema{oauth_connected_at: %DateTime{} = at}, event_at),
+    do: DateTime.after?(at, event_at)
+
+  defp connected_after?(_account, _event_at), do: false
+
+  defp retire_in_transaction(user_id, pending, outstanding_count, revoke?) do
     now = DateTime.utc_now(:second)
 
-    fn ->
+    Repo.transaction(fn ->
       {cancelled_count, expired} = cancel_pending_bookings(pending, now)
-      retire_connect_account(user.id, now)
+      retire_connect_account(user_id, now, revoke?)
 
-      {%{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding.count}, expired}
-    end
-    |> Repo.transaction()
-    |> announce_after_commit()
+      {%{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding_count}, expired}
+    end)
   end
 
   @doc """
@@ -346,14 +389,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   # Must run inside a transaction: the row is locked so the currency recorded
   # is the one the row held when it was removed.
-  defp retire_connect_account(user_id, now) do
+  defp retire_connect_account(user_id, now, revoke?) do
     account = ConnectAccountQueries.lock_live_for_user(user_id)
     currency = account && account.default_currency
 
     if Currency.allowed?(currency), do: Profiles.record_last_charge_currency(user_id, currency)
 
     ConnectAccountQueries.soft_delete_for_user(user_id, now)
-    schedule_revocation(account)
+    if revoke?, do: schedule_revocation(account), else: :ok
   end
 
   @doc """
