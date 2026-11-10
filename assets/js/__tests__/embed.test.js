@@ -1335,13 +1335,13 @@ describe('floating button options', () => {
 describe('chrome text in the embed\'s language', () => {
   const FLOATING_LABELS = {
     en: 'Book a meeting',
-    cs: 'Rezervovat schůzku',
+    cs: 'Zarezervovat schůzku',
     de: 'Termin buchen',
     es: 'Reservar una reunión',
     fr: 'Réserver un rendez-vous',
-    it: 'Prenota un appuntamento',
+    it: 'Prenota una riunione',
     pl: 'Zarezerwuj spotkanie',
-    pt: 'Agendar uma reunião',
+    pt: 'Agendar reunião',
     uk: 'Забронювати зустріч'
   }
 
@@ -1367,7 +1367,7 @@ describe('chrome text in the embed\'s language', () => {
   test('a regional locale uses its language, in any case', () => {
     window.TymeslotBooking.initFloating('alice', { locale: 'PT-br' })
     expect(document.getElementById('tymeslot-floating-button').getAttribute('aria-label')).toBe(
-      'Agendar uma reunião'
+      'Agendar reunião'
     )
   })
 

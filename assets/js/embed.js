@@ -39,7 +39,7 @@
       dialog: 'Booking Widget'
     },
     cs: {
-      book: 'Rezervovat schůzku',
+      book: 'Zarezervovat schůzku',
       unavailable: 'Rezervační systém není dostupný.',
       loading: 'Načítání rezervační stránky...',
       slow: 'Rezervační widget se načítá příliš dlouho.',
@@ -75,7 +75,7 @@
       dialog: 'Widget de réservation'
     },
     it: {
-      book: 'Prenota un appuntamento',
+      book: 'Prenota una riunione',
       unavailable: 'Sistema di prenotazione non disponibile.',
       loading: 'Caricamento della pagina di prenotazione...',
       slow: 'Il widget di prenotazione impiega troppo a caricarsi.',
@@ -93,7 +93,7 @@
       dialog: 'Widżet rezerwacji'
     },
     pt: {
-      book: 'Agendar uma reunião',
+      book: 'Agendar reunião',
       unavailable: 'Sistema de agendamento indisponível.',
       loading: 'Carregando a página de agendamento...',
       slow: 'O widget de agendamento está demorando demais para carregar.',
