@@ -41,7 +41,7 @@ defmodule CredoChecks.NoNativePickers do
     issue_meta = IssueMeta.for(source_file, params)
 
     for %{name: name, line_no: line_no, text: text} <-
-          HtmlTags.tags(source_file, ~S"input|\.input|Forms\.input"),
+          HtmlTags.tags(source_file, ~S"input|(?:[A-Z][\w.]*)?\.input"),
         type = banned_type(text) do
       format_issue(issue_meta,
         message: "`type=\"#{type}\"` opens the browser's own picker. Use the in-house one.",

@@ -14,8 +14,8 @@ defmodule CredoChecks.NoBrowserValidation do
 
   A form may opt out by listing its file in the `allowed_files` param in
   `.credo.exs`, with the reason beside it. The tag is read whole, across lines
-  (see `CredoChecks.HtmlTags`). A bare `<form>` is how prose names the element,
-  not markup, so it is ignored.
+  (see `CredoChecks.HtmlTags`), so an alias-qualified `<Forms.form_wrapper>`
+  counts too, and documentation heredocs are skipped.
   """
 
   use Credo.Check,
@@ -40,7 +40,9 @@ defmodule CredoChecks.NoBrowserValidation do
   alias Credo.SourceFile
   alias CredoChecks.HtmlTags
 
-  @must_declare ["form", ".form"]
+  # `form`, `.form`, and the same names qualified by a module alias, such as
+  # `Phoenix.Component.form` or `Forms.form_wrapper`.
+  @tag_pattern ~S"form|(?:[A-Z][\w.]*)?\.(?:form|form_wrapper|auth_form)"
   @opted_out ~r/\snovalidate=\{\s*false\s*\}/i
   @carries ~r/\snovalidate(?:[\s=\/>]|$)/i
 
@@ -58,7 +60,7 @@ defmodule CredoChecks.NoBrowserValidation do
       issue_meta = IssueMeta.for(source_file, params)
 
       for %{name: name, line_no: line_no, text: text} <-
-            HtmlTags.tags(source_file, ~S"form|\.form|\.form_wrapper|\.auth_form"),
+            HtmlTags.tags(source_file, @tag_pattern),
           flagged?(name, text) do
         format_issue(issue_meta,
           message:
@@ -70,13 +72,11 @@ defmodule CredoChecks.NoBrowserValidation do
     end
   end
 
-  defp flagged?(_name, "<form>"), do: false
-  defp flagged?(_name, "<.form>"), do: false
-
   defp flagged?(name, text) do
     opted_out? = Regex.match?(@opted_out, text)
     carries? = Regex.match?(@carries, text)
+    component = name |> String.split(".") |> List.last()
 
-    opted_out? or (name in @must_declare and not carries?)
+    opted_out? or (component == "form" and not carries?)
   end
 end

@@ -57,6 +57,12 @@ defmodule CredoChecks.NoNativePickersTest do
     |> assert_issue()
   end
 
+  test "flags an alias-qualified input with the colour type" do
+    ~s(<CoreComponents.input type="color" name="c" />)
+    |> check()
+    |> assert_issue(fn issue -> assert issue.trigger == "<CoreComponents.input" end)
+  end
+
   test "leaves the restyled range slider alone" do
     ~s(<input data-cp="hue" type="range" min="0" max="360" />)
     |> check()

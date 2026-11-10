@@ -76,8 +76,34 @@ defmodule CredoChecks.NoBrowserValidationTest do
     |> refute_issues()
   end
 
-  test "a bare <form> in prose is ignored" do
-    "<form>" |> check() |> refute_issues()
+  test "a real <form> with no attributes is flagged" do
+    "<form></form>" |> check() |> assert_issue()
+  end
+
+  test "a form named in a documentation heredoc is ignored" do
+    ~S'''
+    defmodule TymeslotWeb.SomeLive do
+      @moduledoc """
+      Wraps a `<form>` and documents `<.form for={@f}>`.
+      """
+      @doc """
+      <form phx-submit="save"></form>
+      """
+      def render(_assigns), do: nil
+    end
+    '''
+    |> to_source_file("lib/tymeslot_web/live/some_live.ex")
+    |> run_check(NoBrowserValidation)
+    |> refute_issues()
+  end
+
+  test "reads alias-qualified tags" do
+    ~s(<Forms.form_wrapper for={@f} novalidate={false}></Forms.form_wrapper>)
+    |> check()
+    |> assert_issue()
+
+    ~s(<Phoenix.Component.form for={@f}></Phoenix.Component.form>) |> check() |> assert_issue()
+    ~s(<Forms.form_wrapper for={@f}></Forms.form_wrapper>) |> check() |> refute_issues()
   end
 
   test "skips dev controllers" do

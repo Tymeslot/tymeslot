@@ -81,7 +81,6 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
       <.form
         for={@form}
         phx-submit="submit"
-        novalidate
         {recaptcha_form_attrs("booking_form", "booking")}
       >
   """
