@@ -302,7 +302,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       # The host can resume onboarding rather than landing on a dead-end card.
       assert html =~ "Finish connecting Stripe"
-      assert html =~ "Continue onboarding"
+      assert html =~ "Connect your Stripe account"
       assert html =~ ~s(action="/dashboard/payments/connect")
 
       # The status conflation bug: an unsubmitted account must NOT claim to be
@@ -312,6 +312,36 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       # Operational sections are meaningless until onboarding is submitted.
       refute html =~ "Default currency"
       refute html =~ "Recent payments"
+    end
+
+    test "a host who cancelled at Stripe is not offered a disconnect", %{conn: conn} do
+      user = create_onboarded_user()
+      insert(:connect_account, user: user, stripe_account_id: nil)
+
+      conn = log_in_user(conn, user)
+      {:ok, view, html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      assert has_element?(view, "#stripe-connect-continue-form")
+      refute has_element?(view, "button[phx-click=open_disconnect_modal]")
+      refute html =~ "Disconnect your Stripe account"
+    end
+
+    test "an OAuth-connected account that is still incomplete is offered a disconnect", %{
+      conn: conn
+    } do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_oauth_incomplete",
+        oauth_connected_at: DateTime.utc_now(:second),
+        details_submitted: false
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      assert has_element?(view, "button[phx-click=open_disconnect_modal]")
     end
 
     test "lets the host disconnect an account that never finished onboarding", %{conn: conn} do

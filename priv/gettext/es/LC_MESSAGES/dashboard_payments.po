@@ -57,11 +57,6 @@ msgstr "Conectar Stripe"
 msgid "Connect Stripe to start charging for meetings."
 msgstr "Conecta Stripe para empezar a cobrar por las reuniones."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
-#, elixir-autogen, elixir-format
-msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
-msgstr "Conecta Stripe para empezar a cobrar por las reuniones. El dinero va directamente a tu cuenta de Stripe."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Connected and ready"
@@ -72,11 +67,6 @@ msgstr "Conectado y listo"
 #, elixir-autogen, elixir-format
 msgid "Connecting…"
 msgstr "Conectando…"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
-msgid "Continue onboarding"
-msgstr "Continuar el registro"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -362,11 +352,6 @@ msgstr[1] "Tienes %{count} reservas pendientes de pago. Si desconectas, se cance
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
-msgstr "Empezaste a conectar Stripe, pero aún no terminaste el registro. Continúa para empezar a aceptar pagos."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
 msgstr "Tu cuenta de Stripe está desconectada. Vuelve a conectarla para aceptar pagos de nuevo."
 
@@ -480,3 +465,73 @@ msgstr "No se pueden aceptar pagos en la moneda de tu cuenta, %{currency}. Elige
 #, elixir-autogen, elixir-format
 msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Bookings are still charged their current prices; choose one of the currencies below to change them."
 msgstr "Ya no se pueden fijar precios en la moneda de tu cuenta de Stripe, %{currency}. Las reservas se siguen cobrando a sus precios actuales; para cambiarlos, elige una de las monedas de abajo."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "A Stripe account is already connected."
+msgstr "Ya hay una cuenta de Stripe conectada."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connect your Stripe account"
+msgstr "Conectar tu cuenta de Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
+#, elixir-autogen, elixir-format
+msgid "Connect your Stripe account, or create one, to charge for meetings. Money goes directly to your Stripe account."
+msgstr "Conecta tu cuenta de Stripe, o crea una, para cobrar por las reuniones. El dinero va directamente a tu cuenta de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Finish setup in Stripe"
+msgstr "Terminar la configuración en Stripe"
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe connected."
+msgstr "Stripe conectado."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe connection cancelled."
+msgstr "Conexión con Stripe cancelada."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe could not complete the connection. Please try again."
+msgstr "Stripe no pudo completar la conexión. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe payments are not fully set up on this server. Please contact the administrator."
+msgstr "Los pagos con Stripe no están configurados por completo en este servidor. Ponte en contacto con el administrador."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe account is already connected to another Tymeslot account."
+msgstr "Esta cuenta de Stripe ya está conectada a otra cuenta de Tymeslot."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe account uses a currency Tymeslot doesn't support for payments yet."
+msgstr "Esta cuenta de Stripe usa una moneda que Tymeslot aún no admite para pagos."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe connection link is no longer valid. Please try again."
+msgstr "Este enlace de conexión con Stripe ya no es válido. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please try again later."
+msgstr "Demasiadas solicitudes. Inténtalo más tarde."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
+msgstr "Tu cuenta de Stripe está conectada, pero Stripe aún necesita algunos datos para poder aceptar pagos. Termina la configuración en Stripe y luego actualiza esta página."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
+msgstr "Tu cuenta de Stripe aún no está conectada. Conéctala para empezar a aceptar pagos."

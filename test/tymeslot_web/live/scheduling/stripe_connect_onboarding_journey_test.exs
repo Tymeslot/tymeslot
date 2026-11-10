@@ -13,10 +13,12 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integration
   @moduletag :payments
 
+  import Ecto.Query, only: [where: 2]
   import Mox
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
@@ -25,9 +27,9 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -111,11 +113,35 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
        }}
     end)
 
-    assert {:ok, _connected} =
-             MeetingPayments.complete_oauth_callback(user, "code_journey", state)
+    callback_conn =
+      build_conn()
+      |> setup_session()
+      |> log_in_user(user)
+      |> get("/dashboard/payments/connect/callback", %{"code" => "code_journey", "state" => state})
+
+    assert redirected_to(callback_conn, 302) == "/dashboard/payments?return=1"
+
+    # The host lands on the payments page with the flash, and the `return`
+    # marker survives the hop to the hub, which queues a resync of the account.
+    {:ok, _hub, hub_html} =
+      callback_conn
+      |> recycle()
+      |> live("/dashboard/payments?return=1")
+      |> follow_redirect(recycle(callback_conn))
+
+    assert hub_html =~ "Stripe connected."
+    assert_enqueued(worker: ResyncConnectAccount, args: %{stripe_account_id: @account_id})
+
+    # The resync would read the account again; the webhook below is this
+    # step's only update, so the queued job is set aside.
+    Oban.cancel_all_jobs(
+      where(Oban.Job, worker: "Tymeslot.MeetingPayments.Workers.ResyncConnectAccount")
+    )
 
     account = Repo.get_by!(ConnectAccountSchema, user_id: user.id)
     assert account.stripe_account_id == @account_id
+    # The account's own country, not an operator default.
+    assert account.country == "DE"
     refute account.charges_enabled
 
     # Until Stripe says otherwise, the paid type is not offered.

@@ -307,6 +307,9 @@ defmodule TymeslotWeb.Router do
 
     post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
 
+    # Where Stripe sends the host back; must equal `StripeConnectOAuth.redirect_uri/0`.
+    get "/dashboard/payments/connect/callback", Dashboard.PaymentsController, :callback
+
     # The booking pages screen was the Theme screen; its old addresses live on
     # in bookmarks and sent emails.
     get "/dashboard/theme", Dashboard.PagesRedirectController, :pages

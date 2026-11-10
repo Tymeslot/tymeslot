@@ -115,9 +115,10 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  # Builds the hub URL for a legacy redirect, carrying the Stripe onboarding
-  # return markers (`?return=1`/`?refresh=1`) through so the hub still triggers
-  # the capability resync once the user lands on the payments tab.
+  # Builds the hub URL for a legacy redirect, carrying the Stripe return markers
+  # through (`?return=1` from the OAuth callback; `?refresh=1` only for old
+  # links) so the hub still triggers the capability resync once the user lands
+  # on the payments tab.
   defp hub_tab_path(tab, params) do
     passthrough =
       for key <- [:return, :refresh],
