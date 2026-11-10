@@ -31,6 +31,7 @@ const DashboardHooks = {
   CalendarCreate: lazyHook("CalendarCreate", () => import("../hooks/calendar_drag").then(m => m.CalendarCreate)),
   CalendarMobile: lazyHook("CalendarMobile", () => import("../hooks/calendar_drag").then(m => m.CalendarMobile)),
   DesktopReminders: lazyHook("DesktopReminders", () => import("../hooks/desktop_reminders").then(m => m.DesktopReminders)),
+  DesktopReminderPermission: lazyHook("DesktopReminderPermission", () => import("../hooks/desktop_reminder_permission").then(m => m.DesktopReminderPermission)),
   CustomColourPicker: lazyHook("CustomColourPicker", () => import("../hooks/custom_colour_picker").then(m => m.CustomColourPicker)),
   DashboardTour: lazyHook("DashboardTour", () => import("../hooks/dashboard_tour").then(m => m.DashboardTour)),
   AgendaCountdown: lazyHook("AgendaCountdown", () => import("../hooks/agenda_countdown").then(m => m.AgendaCountdown)),

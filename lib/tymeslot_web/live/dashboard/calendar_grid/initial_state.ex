@@ -91,6 +91,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       search_results: [],
       search_open: false,
       desktop_reminders_feed: [],
+      desktop_permission: nil,
+      desktop_permission_refused: false,
       _initialized: false
     }
   end

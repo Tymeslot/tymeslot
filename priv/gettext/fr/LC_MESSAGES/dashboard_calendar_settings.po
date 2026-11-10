@@ -541,3 +541,28 @@ msgstr "Numéros de semaine"
 #, elixir-autogen, elixir-format
 msgid "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
 msgstr "Choisissez « Bloquer » pour utiliser cette option : pour un calendrier qui ne bloque pas les périodes occupées, elle n’a aucun effet"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Autoriser les notifications"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+msgstr "Bloquées dans les paramètres de votre navigateur. Autorisez-y les notifications pour ce site, puis réactivez les rappels."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications were not allowed, so reminders are still off."
+msgstr "Les notifications n’ont pas été autorisées, les rappels restent donc désactivés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser has not allowed notifications yet."
+msgstr "Les rappels sont activés, mais votre navigateur n’a pas encore autorisé les notifications."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Ce navigateur ne prend pas en charge les notifications."

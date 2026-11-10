@@ -188,6 +188,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
         <SettingsModal.settings_modal
           :if={@show_settings}
           preferences={@preferences}
+          desktop_permission={@desktop_permission}
+          desktop_permission_refused={@desktop_permission_refused}
           myself={@myself}
         />
         <ShortcutsHelpModal.shortcuts_help_modal

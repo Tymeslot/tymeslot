@@ -9,6 +9,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
   attr :preferences, :any, required: true
+
+  attr :desktop_permission, :string,
+    default: nil,
+    doc: "The browser's notification permission as the hook reported it, nil until it has"
+
+  attr :desktop_permission_refused, :boolean,
+    default: false,
+    doc: "Whether the last attempt to switch reminders on was refused by the browser"
+
   attr :myself, :any, required: true
 
   @spec settings_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -123,18 +132,92 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
               "Show browser notifications before events while Tymeslot is open"
             )}
           </:description>
+          <%!-- Switching on goes through the hook, which asks the browser for
+                permission inside this click (a user gesture, which Firefox and
+                Safari require) and reports the answer; switching off is the
+                plain toggle. --%>
           <StatusSwitch.status_switch
             id="desktop-reminders-switch"
             checked={@preferences.desktop_reminders_enabled}
             on_change="toggle_desktop_reminders"
             target={@myself}
             size={:small}
+            phx-hook="DesktopReminderPermission"
+            data-report-event="desktop_reminders_permission"
+            data-enable-event="enable_desktop_reminders"
           />
         </.preference_row>
+        <.desktop_permission_note
+          permission={@desktop_permission}
+          enabled={@preferences.desktop_reminders_enabled}
+          refused={@desktop_permission_refused}
+        />
       </div>
     </.modal>
     """
   end
+
+  attr :permission, :string, required: true
+  attr :enabled, :boolean, required: true
+  attr :refused, :boolean, required: true
+
+  # What the browser's permission means for the switch above. A `default`
+  # permission with reminders already on (a preference saved before the switch
+  # asked) gets a button, which is the user gesture the request needs.
+  defp desktop_permission_note(%{permission: "denied"} = assigns) do
+    ~H"""
+    <p id="desktop-permission-note" role="status" class="text-token-sm text-amber-700 -mt-3">
+      {dgettext(
+        "dashboard_calendar_settings",
+        "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+      )}
+    </p>
+    """
+  end
+
+  defp desktop_permission_note(%{permission: "unsupported"} = assigns) do
+    ~H"""
+    <p id="desktop-permission-note" role="status" class="text-token-sm text-amber-700 -mt-3">
+      {dgettext("dashboard_calendar_settings", "This browser does not support notifications.")}
+    </p>
+    """
+  end
+
+  defp desktop_permission_note(%{permission: "default", enabled: true} = assigns) do
+    ~H"""
+    <div id="desktop-permission-note" role="status" class="-mt-3 space-y-2">
+      <p class="text-token-sm text-amber-700">
+        {dgettext(
+          "dashboard_calendar_settings",
+          "Reminders are on, but your browser has not allowed notifications yet."
+        )}
+      </p>
+      <button
+        id="desktop-reminders-grant"
+        type="button"
+        phx-hook="DesktopReminderPermission"
+        data-report-event="desktop_reminders_permission"
+        data-enable-event="enable_desktop_reminders"
+        class="text-token-sm font-semibold text-turquoise-700 underline hover:text-turquoise-800"
+      >
+        {dgettext("dashboard_calendar_settings", "Allow notifications")}
+      </button>
+    </div>
+    """
+  end
+
+  defp desktop_permission_note(%{permission: "default", refused: true} = assigns) do
+    ~H"""
+    <p id="desktop-permission-note" role="status" class="text-token-sm text-amber-700 -mt-3">
+      {dgettext(
+        "dashboard_calendar_settings",
+        "Notifications were not allowed, so reminders are still off."
+      )}
+    </p>
+    """
+  end
+
+  defp desktop_permission_note(assigns), do: ~H""
 
   slot :label, required: true
   slot :description, required: true
