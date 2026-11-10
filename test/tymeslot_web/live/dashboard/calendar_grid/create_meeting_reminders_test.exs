@@ -53,8 +53,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingRemindersTest do
     lv |> element(~s{[data-testid="reminder-custom-toggle"]}) |> render_click()
 
     lv
-    |> form("#create-meeting-reminders-form", %{"reminder" => %{"value" => value, "unit" => unit}})
-    |> render_submit()
+    |> form("#create-meeting-reminders-form", %{"reminder" => %{"value" => value}})
+    |> render_submit(%{"reminder" => %{"unit" => unit}})
   end
 
   # Opens the custom row and types into it, without pressing Add.
@@ -62,8 +62,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingRemindersTest do
     lv |> element(~s{[data-testid="reminder-custom-toggle"]}) |> render_click()
 
     lv
-    |> form("#create-meeting-reminders-form", %{"reminder" => %{"value" => value, "unit" => unit}})
-    |> render_change()
+    |> form("#create-meeting-reminders-form", %{"reminder" => %{"value" => value}})
+    |> render_change(%{"reminder" => %{"unit" => unit}})
   end
 
   describe "reminders" do

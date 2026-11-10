@@ -381,3 +381,8 @@ msgstr "Vaše relace se od otevření této stránky změnila. Zkuste to prosím
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, změnit jazyk"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time unit"
+msgstr "Jednotka času"

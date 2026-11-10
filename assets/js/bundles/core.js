@@ -20,6 +20,7 @@ import { EmailLogoUpload } from "../hooks/email_logo_upload"
 import { CustomColourPicker } from "../hooks/custom_colour_picker"
 import { AutoUpload } from "../hooks/auto_upload"
 import { ScrollStrip } from "../hooks/scroll_strip"
+import { Select } from "../hooks/select"
 import { StageScale, prefitStages } from "../hooks/stage_scale"
 import { StickyNavClearance } from "../hooks/sticky_nav_clearance"
 import { ShareLink, StageIframe } from "../hooks/share_link"
@@ -94,6 +95,10 @@ const CoreHooks = {
   // pages without the dashboard bundle (the analytics page), so it
   // is registered for every page. It is a few lines.
   ScrollStrip,
+
+  // `<.select>`, on every kind of page: the dashboard, onboarding, booking
+  // pages, and the marketing contact form.
+  Select,
 
   // The onboarding stage's page miniature and its sticky nav row; onboarding
   // has no route bundle (see AutoUpload above), so they are registered here.

@@ -167,8 +167,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             ) %>
           <% slot_interval_custom? = SlotIntervalField.custom?(assigns, slot_interval_value) %>
           <div>
-            <.input
-              type="select"
+            <.select
+              id="meeting-type-slot-interval"
               name="meeting_type[slot_interval]"
               label={dgettext("dashboard_meeting_form", "Booking slot interval")}
               value={

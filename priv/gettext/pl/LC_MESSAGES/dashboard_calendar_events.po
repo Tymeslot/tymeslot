@@ -1023,3 +1023,11 @@ msgid_plural "The latest update could not be emailed to these guests. Let them k
 msgstr[0] "Nie udało się wysłać e-mailem ostatniej zmiany do tego gościa. Powiadom go w inny sposób."
 msgstr[1] "Nie udało się wysłać e-mailem ostatniej zmiany do tych gości. Powiadom ich w inny sposób."
 msgstr[2] "Nie udało się wysłać e-mailem ostatniej zmiany do tych gości. Powiadom ich w inny sposób."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+msgid "Reminder method"
+msgstr "Sposób przypomnienia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+msgid "Reminder time"
+msgstr "Czas przypomnienia"

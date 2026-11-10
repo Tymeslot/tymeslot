@@ -565,3 +565,8 @@ msgstr "Недоступно: нове завершення припадає н�
 #, elixir-autogen, elixir-format
 msgid "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
 msgstr "Першу подію цієї серії ще не прочитано з вашого календаря, тож неможливо порахувати, скільки подій у ній залишилося. Оновіть календар і спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Ends"
+msgstr "Завершення"

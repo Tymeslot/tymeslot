@@ -16,7 +16,8 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [icon: 1, input: 1, segmented_control: 1]
+  use TymeslotWeb.Components.CoreComponents,
+    only: [icon: 1, input: 1, segmented_control: 1, select: 1]
 
   alias Tymeslot.Onboarding.MeetingSetup
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -242,8 +243,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           class="grid grid-cols-2 gap-3 mt-2"
           novalidate
         >
-          <.input
-            type="select"
+          <.select
             id="meeting-hours-start"
             name="hours[start]"
             value={@hours_form.start}
@@ -252,8 +252,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             aria-describedby={@meeting_errors[:hours] && "meeting-hours-error"}
             phx-debounce="300"
           />
-          <.input
-            type="select"
+          <.select
             id="meeting-hours-end"
             name="hours[end]"
             value={@hours_form.end}

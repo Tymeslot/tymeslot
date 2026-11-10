@@ -61,14 +61,12 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       |> form("form[phx-submit='create_poll']", %{
         "poll" => %{
           "title" => "Offsite",
-          "duration" => "30",
-          "timezone" => "Europe/Berlin",
           "deadline" => "#{deadline}T12:00",
           "invitees" => "ada@example.com",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Berlin"}})
 
       assert [poll] = Polls.list_polls(user.id)
 
@@ -100,14 +98,12 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       |> form("form[phx-submit='create_poll']", %{
         "poll" => %{
           "title" => "Offsite",
-          "duration" => "30",
-          "timezone" => "Europe/Berlin",
           "deadline" => "#{deadline}T12:00",
           "invitees" => "ada@example.com",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Berlin"}})
 
       assert [poll] = Polls.list_polls(user.id)
       assert %{value: 2, unit: "days"} in PollSchema.reminders(poll)
@@ -142,15 +138,9 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
-        "poll" => %{
-          "title" => "Offsite",
-          "duration" => "30",
-          "timezone" => "Europe/Berlin",
-          "invitees" => "",
-          "slots" => %{"0" => "#{date}T09:00"}
-        }
+        "poll" => %{"title" => "Offsite", "invitees" => "", "slots" => %{"0" => "#{date}T09:00"}}
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Berlin"}})
 
       assert [%{title: "Offsite"}] = Polls.list_polls(user.id)
     end
@@ -223,10 +213,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view = open_editor(conn, poll)
 
       view
-      |> form("[data-testid='poll-details-form']", %{
-        "poll" => %{"title" => "Offsite", "meeting_type_id" => to_string(meeting_type.id)}
-      })
-      |> render_submit()
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
+      |> render_submit(%{"poll" => %{"meeting_type_id" => to_string(meeting_type.id)}})
 
       assert Repo.get!(PollSchema, poll.id).meeting_type_id == meeting_type.id
       await_slot_health(view)
@@ -248,7 +236,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       assert has_element?(
                view,
-               "select[name='poll[meeting_type_id]'] option[selected][value='#{switched_off.id}']"
+               "select[data-name='poll[meeting_type_id]'] option[selected][value='#{switched_off.id}']"
              )
 
       assert has_element?(view, "[data-testid='poll-kept-meeting-type']", "Old office hours")

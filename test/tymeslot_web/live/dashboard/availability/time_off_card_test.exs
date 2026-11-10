@@ -109,11 +109,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       |> form("#time-off-form-modal-form", %{
         "starts_on" => "2027-07-05",
         "ends_on" => "2027-07-12",
-        "start_time" => "",
-        "end_time" => "",
         "label" => "Portugal"
       })
-      |> render_submit()
+      |> render_submit(%{"start_time" => "", "end_time" => ""})
 
       assert [period] = TimeOff.list(profile.id)
       assert period.starts_on == ~D[2027-07-05]
@@ -134,11 +132,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       |> form("#time-off-form-modal-form", %{
         "starts_on" => "2027-07-05",
         "ends_on" => "2027-07-05",
-        "start_time" => "13:00",
-        "end_time" => "17:00",
         "label" => ""
       })
-      |> render_submit()
+      |> render_submit(%{"start_time" => "13:00", "end_time" => "17:00"})
 
       assert [period] = TimeOff.list(profile.id)
       assert period.start_time == ~T[13:00:00]
@@ -159,11 +155,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
         |> form("#time-off-form-modal-form", %{
           "starts_on" => "2027-07-12",
           "ends_on" => "2027-07-05",
-          "start_time" => "",
-          "end_time" => "",
           "label" => "Portugal"
         })
-        |> render_submit()
+        |> render_submit(%{"start_time" => "", "end_time" => ""})
 
       assert TimeOff.list(profile.id) == []
 
@@ -325,11 +319,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
         |> form("#time-off-form-modal-form", %{
           "starts_on" => "2020-01-06",
           "ends_on" => "2020-01-10",
-          "start_time" => "",
-          "end_time" => "",
           "label" => "Portugal"
         })
-        |> render_submit()
+        |> render_submit(%{"start_time" => "", "end_time" => ""})
 
       assert TimeOff.list(profile.id) == []
       assert html =~ "must not be in the past"
@@ -360,11 +352,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       |> form("#time-off-form-modal-form", %{
         "starts_on" => "2020-01-06",
         "ends_on" => "2099-01-10",
-        "start_time" => "",
-        "end_time" => "",
         "label" => "Long sabbatical"
       })
-      |> render_submit()
+      |> render_submit(%{"start_time" => "", "end_time" => ""})
 
       assert [%{label: "Long sabbatical"}] = TimeOff.list(profile.id)
     end
@@ -384,11 +374,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
         |> form("#time-off-form-modal-form", %{
           "starts_on" => Date.to_iso8601(TimeOff.today(profile.timezone)),
           "ends_on" => "2226-01-06",
-          "start_time" => "",
-          "end_time" => "",
           "label" => "Portugal"
         })
-        |> render_submit()
+        |> render_submit(%{"start_time" => "", "end_time" => ""})
 
       assert TimeOff.list(profile.id) == []
       assert html =~ "must be within 2 years"
@@ -455,11 +443,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       |> form("#time-off-form-modal-form", %{
         "starts_on" => "2027-07-05",
         "ends_on" => "2027-07-19",
-        "start_time" => "",
-        "end_time" => "",
         "label" => "Portugal"
       })
-      |> render_submit()
+      |> render_submit(%{"start_time" => "", "end_time" => ""})
 
       assert [%{ends_on: ~D[2027-07-19]}] = TimeOff.list(profile.id)
     end
@@ -518,11 +504,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       |> form("#time-off-form-modal-form", %{
         "starts_on" => "2027-07-05",
         "ends_on" => "2027-07-12",
-        "start_time" => "",
-        "end_time" => "",
         "label" => "Portugal"
       })
-      |> render_submit()
+      |> render_submit(%{"start_time" => "", "end_time" => ""})
 
       assert [%{label: "Portugal"}] = TimeOff.list(profile.id)
 

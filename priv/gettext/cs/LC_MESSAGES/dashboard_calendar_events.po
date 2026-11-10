@@ -1027,3 +1027,11 @@ msgid_plural "The latest update could not be emailed to these guests. Let them k
 msgstr[0] "Nejnovější změnu se tomuto hostovi nepodařilo odeslat e-mailem. Dejte mu vědět jinak."
 msgstr[1] "Nejnovější změnu se těmto hostům nepodařilo odeslat e-mailem. Dejte jim vědět jinak."
 msgstr[2] "Nejnovější změnu se těmto hostům nepodařilo odeslat e-mailem. Dejte jim vědět jinak."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+msgid "Reminder method"
+msgstr "Způsob připomenutí"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+msgid "Reminder time"
+msgstr "Čas připomenutí"

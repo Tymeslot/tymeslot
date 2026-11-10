@@ -231,18 +231,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             </:description>
           </.input>
 
-          <.input
+          <.select
             name="definition[type]"
             value={field_value(@changeset, :type)}
             id="definition_type"
-            type="select"
             label={dgettext("dashboard_meeting_questions", "Type")}
             options={type_options()}
           >
             <:description>
               {dgettext("dashboard_meeting_questions", "Controls how the booker enters their answer.")}
             </:description>
-          </.input>
+          </.select>
 
           <.input
             name="definition[required]"

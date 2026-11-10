@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [input: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [input: 1, select: 1]
 
   alias Tymeslot.Validation.Constraints
 
@@ -57,8 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields do
         />
 
         <div>
-          <.input
-            type="select"
+          <.select
             id="create-group-event-location"
             name="group_event[location]"
             label={dgettext("dashboard_group_events", "Location")}

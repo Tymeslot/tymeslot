@@ -271,7 +271,7 @@ msgstr "Gli orari devono essere nel futuro"
 msgid "Times shown in %{timezone}"
 msgstr "Orari mostrati in %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Fuso orario"

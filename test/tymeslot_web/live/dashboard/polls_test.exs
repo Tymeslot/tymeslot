@@ -130,12 +130,10 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       |> form("form[phx-submit='create_poll']", %{
         "poll" => %{
           "title" => "Launch planning",
-          "duration" => "30",
-          "timezone" => "Europe/Tallinn",
           "slots" => %{"0" => "#{date}T09:00", "1" => "#{date}T10:00"}
         }
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Tallinn"}})
 
       assert render(view) =~ "Launch planning"
 
@@ -155,13 +153,11 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       |> form("form[phx-submit='create_poll']", %{
         "poll" => %{
           "title" => "Launch planning",
-          "duration" => "30",
-          "timezone" => "Europe/Tallinn",
           "slots" => %{"0" => "#{date}T09:00"},
           "invitees" => "Grace Hopper <grace@example.com>, ada@example.com"
         }
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Tallinn"}})
 
       assert [poll] = Polls.list_polls(user.id)
 
@@ -191,13 +187,11 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
         |> form("form[phx-submit='create_poll']", %{
           "poll" => %{
             "title" => "Launch planning",
-            "duration" => "30",
-            "timezone" => "Europe/Tallinn",
             "slots" => %{"0" => "#{date}T09:00"},
             "invitees" => "ada@example.com, not-an-address"
           }
         })
-        |> render_submit()
+        |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Tallinn"}})
 
       assert html =~ "Not valid email addresses: not-an-address"
       assert Polls.list_polls(user.id) == []
@@ -217,13 +211,11 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       |> form("form[phx-submit='create_poll']", %{
         "poll" => %{
           "title" => "Launch planning",
-          "duration" => "30",
-          "timezone" => "Europe/Tallinn",
           "slots" => %{"0" => "#{date}T09:00"},
           "invitees" => "ada@example.com, A <a@example.com>"
         }
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Tallinn"}})
 
       assert has_element?(view, "[data-testid='poll-invitees']", "These names can't be used: A")
       assert Polls.list_polls(user.id) == []
@@ -277,14 +269,8 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       html =
         view
-        |> form("form[phx-submit='create_poll']", %{
-          "poll" => %{
-            "title" => "Empty poll",
-            "duration" => "30",
-            "timezone" => "Europe/Tallinn"
-          }
-        })
-        |> render_submit()
+        |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => "Empty poll"}})
+        |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Tallinn"}})
 
       assert html =~ "Add at least one candidate time"
       assert Polls.list_polls(user.id) == []
@@ -303,14 +289,9 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
-        "poll" => %{
-          "title" => "",
-          "duration" => "30",
-          "timezone" => "Europe/Tallinn",
-          "slots" => %{"0" => "#{date}T09:00"}
-        }
+        "poll" => %{"title" => "", "slots" => %{"0" => "#{date}T09:00"}}
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Tallinn"}})
 
       assert has_element?(view, "form[phx-submit='create_poll']", "darf nicht leer sein")
       assert Polls.list_polls(user.id) == []
@@ -349,7 +330,12 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
     end
 
     defp change_form(view, params) do
-      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+      {selects, fields} = Map.split(params, ~w(timezone duration meeting_type_id))
+
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => fields})
+      |> render_change(%{"poll" => selects})
+
       render_async(view)
     end
 

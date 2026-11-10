@@ -270,7 +270,7 @@ msgstr "Terminy muszą być w przyszłości"
 msgid "Times shown in %{timezone}"
 msgstr "Godziny w strefie %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Strefa czasowa"

@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.CoreComponents.Select
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -107,8 +108,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Forms.input
-              type="select"
+            <Select.select
               id={"#{@id}-start-time"}
               name="start_time"
               value={Map.get(@period_data, :start_time, "")}
@@ -116,8 +116,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               label={dgettext("dashboard_availability", "Away from (first day)")}
               errors={field_errors(@period_data, :start_time)}
             />
-            <Forms.input
-              type="select"
+            <Select.select
               id={"#{@id}-end-time"}
               name="end_time"
               value={Map.get(@period_data, :end_time, "")}

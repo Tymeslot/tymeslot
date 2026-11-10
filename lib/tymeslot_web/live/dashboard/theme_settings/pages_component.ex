@@ -74,8 +74,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
           class={["min-w-0 flex-1 basis-48", @tabs? && "md:hidden"]}
           novalidate
         >
-          <.input
-            type="select"
+          <.select
             id="booking-page-select-input"
             name="page"
             icon="hero-document-text"

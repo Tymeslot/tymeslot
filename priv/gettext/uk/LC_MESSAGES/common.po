@@ -381,3 +381,8 @@ msgstr "Ваш сеанс змінився відтоді, як цю сторі�
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, змінити мову"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time unit"
+msgstr "Одиниця часу"

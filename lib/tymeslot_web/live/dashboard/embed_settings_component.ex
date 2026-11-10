@@ -103,8 +103,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             phx-target={@myself}
             novalidate
           >
-            <.input
-              type="select"
+            <.select
+              id="embed-page-select"
               name="page"
               label={dgettext("dashboard_embed", "Booking page")}
               value={if(@selected_page_id, do: to_string(@selected_page_id), else: "profile")}

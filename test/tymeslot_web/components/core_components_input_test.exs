@@ -179,7 +179,6 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
             name="field"
             label="Field"
             type={@type}
-            options={[{"One", "1"}]}
             required={@required}
           />
           """
@@ -190,7 +189,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
       |> LazyHTML.query("#field")
     end
 
-    for {type, tag} <- [{"text", "input"}, {"select", "select"}, {"textarea", "textarea"}] do
+    for {type, tag} <- [{"text", "input"}, {"textarea", "textarea"}] do
       test "renders on a #{type} control" do
         control = render_control(unquote(type), true)
 

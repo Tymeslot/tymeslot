@@ -376,3 +376,8 @@ msgstr "Votre session a changé depuis l’ouverture de cette page. Veuillez ré
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, changer de langue"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time unit"
+msgstr "Unité de temps"

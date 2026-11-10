@@ -113,8 +113,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
         />
 
         <div :if={@feedback_options != []} class="space-y-4">
-          <.input
-            type="select"
+          <.select
             id="delete-account-reason"
             name="delete_account[reason]"
             value={@values["reason"] || ""}

@@ -55,7 +55,11 @@ defmodule TymeslotWeb.AccountLiveDeleteTest do
   end
 
   defp submit(view, params) do
-    view |> form("#delete-account-form", delete_account: params) |> render_submit()
+    {select, fields} = Map.split(params, [:reason, "reason"])
+
+    view
+    |> form("#delete-account-form", delete_account: fields)
+    |> render_submit(delete_account: select)
   end
 
   # The redirect carries its flash as a signed token; the login page it lands

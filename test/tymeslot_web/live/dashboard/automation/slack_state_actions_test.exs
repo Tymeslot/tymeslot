@@ -336,22 +336,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       # First trigger validation so the form_values picks up channel_id, which the
       # hidden channel_name input depends on. Then submit.
       view
-      |> form("#slack-form", %{
-        "slack" => %{
-          "channel_id" => "C999",
-          "events" => ["meeting.created"]
-        }
-      })
-      |> render_change()
+      |> form("#slack-form", %{"slack" => %{"events" => ["meeting.created"]}})
+      |> render_change(%{"slack" => %{"channel_id" => "C999"}})
 
       view
-      |> form("#slack-form", %{
-        "slack" => %{
-          "channel_id" => "C999",
-          "events" => ["meeting.created"]
-        }
-      })
-      |> render_submit()
+      |> form("#slack-form", %{"slack" => %{"events" => ["meeting.created"]}})
+      |> render_submit(%{"slack" => %{"channel_id" => "C999"}})
 
       assert render(view) =~ "Slack channel saved"
 

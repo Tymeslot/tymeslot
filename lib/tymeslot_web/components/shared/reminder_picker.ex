@@ -174,32 +174,21 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 phx-change={@event_prefix <> "update_reminder_input"}
                 phx-target={@myself}
               />
-              <div class="relative w-28">
-                <%!-- raw-input: compact unit select with its own chevron overlay in the inline custom-reminder row; the field wrapper would break the row --%>
-                <select
-                  name="reminder[unit]"
-                  class="input py-1.5 pl-3 pr-10 w-full text-token-sm"
-                  phx-change={@event_prefix <> "update_reminder_input"}
-                  phx-target={@myself}
-                >
-                  <%!-- A select element ignores a value attribute; the chosen unit has to
-                      be marked on its option, or a re-render snaps it back to
-                      the first one. --%>
-                  <option value="minutes" selected={@new_reminder_unit == "minutes"}>
-                    {dgettext("common", "Minutes")}
-                  </option>
-                  <option value="hours" selected={@new_reminder_unit == "hours"}>
-                    {dgettext("common", "Hours")}
-                  </option>
-                  <option value="days" selected={@new_reminder_unit == "days"}>
-                    {dgettext("common", "Days")}
-                  </option>
-                </select>
-                <.icon
-                  name="hero-chevron-down"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 stroke-[2.5] text-tymeslot-500 pointer-events-none"
-                />
-              </div>
+              <.select
+                id={@event_prefix <> "reminder-unit"}
+                name="reminder[unit]"
+                class="w-28"
+                compact
+                aria-label={dgettext("common", "Time unit")}
+                value={@new_reminder_unit}
+                options={[
+                  {dgettext("common", "Minutes"), "minutes"},
+                  {dgettext("common", "Hours"), "hours"},
+                  {dgettext("common", "Days"), "days"}
+                ]}
+                phx-change={@event_prefix <> "update_reminder_input"}
+                phx-target={@myself}
+              />
             </div>
             <.action_button
               size={:sm}

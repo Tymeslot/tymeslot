@@ -50,16 +50,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :type, :string,
     default: "text",
     values:
-      ~w(checkbox color date datetime-local email file month number password range radio search select tel text textarea time url week)
+      ~w(checkbox color date datetime-local email file month number password range radio search tel text textarea time url week)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
-  attr :prompt, :string, default: nil, doc: "placeholder option shown in select inputs"
-  attr :options, :list, doc: "the options to render for select inputs"
-  attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
   attr :required, :boolean, default: false
   attr :disabled, :boolean, default: false
@@ -91,6 +88,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   slot :description, doc: "Optional helper text rendered between the label and the input."
 
   @spec input(map()) :: Phoenix.LiveView.Rendered.t()
+  def input(%{type: "select"}) do
+    raise ArgumentError, ~s|<.input type="select"> is gone: use <.select> instead|
+  end
+
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns[:id] || field.id)
@@ -165,9 +166,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           has_leading_icon={@icon || render_slot(@leading_icon)}
           has_trailing_icon={render_slot(@trailing_icon)}
           validate_on_blur={@validate_on_blur}
-          options={assigns[:options]}
-          prompt={@prompt}
-          multiple={@multiple}
           hidden_input={@hidden_input}
           maxlength={@maxlength}
           rows={@rows}
@@ -179,13 +177,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             {render_slot(@trailing_icon)}
           </div>
         <% end %>
-
-        <%!-- Chevron for the native select, whose own arrow `appearance-none` hides --%>
-        <TymeslotWeb.Components.CoreComponents.Icons.icon
-          :if={@type == "select"}
-          name="hero-chevron-down"
-          class="select-chevron absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 stroke-[2.5] text-tymeslot-500 pointer-events-none"
-        />
 
         {render_slot(@inner_block)}
       </div>
@@ -215,30 +206,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
 
   defp error_aria(_errors, error_id),
     do: %{"aria-invalid" => "true", "aria-describedby" => error_id}
-
-  defp input_element(%{type: "select"} = assigns) do
-    assigns = assign_new(assigns, :rest, fn -> %{} end)
-
-    ~H"""
-    <select
-      id={@id}
-      name={@name}
-      multiple={@multiple}
-      class={[
-        "input appearance-none",
-        @has_leading_icon && "input-with-icon",
-        @has_trailing_icon && "input-with-trailing-icon",
-        @errors != [] && "input-error"
-      ]}
-      {@rest}
-    >
-      <%= if @prompt do %>
-        <option value="">{@prompt}</option>
-      <% end %>
-      {Phoenix.HTML.Form.options_for_select(@options, @value)}
-    </select>
-    """
-  end
 
   defp input_element(%{type: "textarea"} = assigns) do
     assigns = assign_new(assigns, :rest, fn -> %{} end)
@@ -369,13 +336,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   @doc """
   Renders a label.
   """
+  attr :id, :any, default: nil
   attr :for, :any, default: nil
   slot :inner_block, required: true
 
   @spec label(map()) :: Phoenix.LiveView.Rendered.t()
   def label(assigns) do
     ~H"""
-    <label for={@for} class="label">
+    <label id={@id} for={@for} class="label">
       {render_slot(@inner_block)}
     </label>
     """

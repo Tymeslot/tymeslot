@@ -35,7 +35,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{HostAvailability, Invitations, PollSchema}
   alias Tymeslot.Profiles
-  alias Tymeslot.Timezones
 
   alias TymeslotWeb.Dashboard.Polls.{
     AvailabilityWeek,
@@ -50,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     PollInvite,
     PollReminders,
     PollsComponent,
+    PollTimezone,
     SlotWarnings
   }
 
@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   import PollFormErrors, only: [error_list: 2]
 
   @reminder_events PollReminders.Events.all()
+  @timezone_events ~w(toggle_timezone_dropdown close_timezone_dropdown search_timezone change_timezone)
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -68,6 +69,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        meeting_type_id: "",
        duration: "30",
        deadline: "",
+       timezone_dropdown_open: false,
+       timezone_search: "",
        notify_on_vote: true,
        reminder_picker: PollReminders.new([%{value: 1, unit: "days"}]),
        invitees: "",
@@ -156,8 +159,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           />
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <.input
-              type="select"
+            <.select
+              id={"poll-meeting-type-#{@id}"}
               name="poll[meeting_type_id]"
               label={dgettext("dashboard_polls", "Meeting type (optional)")}
               value={@meeting_type_id}
@@ -174,13 +177,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <.input
-              type="select"
-              name="poll[timezone]"
-              label={dgettext("dashboard_polls", "Timezone")}
-              value={@timezone}
-              options={timezone_options(@timezone)}
+            <PollTimezone.field
+              timezone={@timezone}
+              open={@timezone_dropdown_open}
+              search={@timezone_search}
               errors={error_list(@errors, :timezone)}
+              target={@myself}
             />
 
             <.input
@@ -287,6 +289,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
+
+  def handle_event(event, params, socket) when event in @timezone_events do
+    case PollTimezone.handle_event(event, params, socket) do
+      {:changed, socket} ->
+        {:noreply, socket |> assign_time_off_keys() |> check_calendar() |> refresh_availability()}
+
+      {:unchanged, socket} ->
+        {:noreply, socket}
+    end
+  end
 
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when event in @reminder_events do
@@ -621,17 +633,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     do: timezone
 
   defp host_timezone(_profile), do: Profiles.get_default_timezone()
-
-  # The picker lists the zones the app offers; a host whose profile holds
-  # another valid zone (`America/Detroit`, `Etc/UTC`) would otherwise see the
-  # first option selected and create the poll in the wrong zone.
-  defp timezone_options(selected) do
-    options = Timezones.all_options()
-
-    if Enum.any?(options, fn {_label, id} -> id == selected end) or not Timezones.valid?(selected),
-      do: options,
-      else: [{selected, selected} | options]
-  end
 
   defp errors_for({:invitees, reason}), do: %{invitees: [PollInvite.error_message(reason)]}
   defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}
