@@ -451,16 +451,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     slug = socket.assigns[:selected_duration] || params["slug"]
 
     if is_binary(username) && is_binary(slug) do
-      redirect(socket,
-        to:
-          PathHandlers.with_query(
-            "/#{username}/#{slug}",
-            Map.merge(
-              PathHandlers.demo_theme_param(socket.assigns),
-              PathHandlers.invite_param(socket.assigns)
-            )
-          )
-      )
+      query =
+        socket.assigns
+        |> PathHandlers.demo_theme_param()
+        |> Map.merge(PathHandlers.invite_param(socket.assigns))
+        |> PathHandlers.put_embed_params(socket)
+
+      redirect(socket, to: PathHandlers.with_query("/#{username}/#{slug}", query))
     else
       redirect(socket, to: ~p"/")
     end

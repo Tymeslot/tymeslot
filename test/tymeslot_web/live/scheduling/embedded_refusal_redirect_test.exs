@@ -41,8 +41,12 @@ defmodule TymeslotWeb.Live.Scheduling.EmbeddedRefusalRedirectTest do
   defp embedded(conn), do: put_req_header(conn, "referer", "https://embedder.test/page")
 
   defp assert_stays_embedded(to) do
-    assert %URI{path: "/" <> @username, query: query} = URI.parse(to)
-    params = URI.decode_query(query)
+    assert %URI{path: "/" <> @username} = URI.parse(to)
+    assert_carries_embed(to)
+  end
+
+  defp assert_carries_embed(to) do
+    params = to |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
 
     assert params["embed"] == "1"
     assert params["parent-origin"] == "https://embedder.test"
@@ -127,5 +131,43 @@ defmodule TymeslotWeb.Live.Scheduling.EmbeddedRefusalRedirectTest do
              )
 
     assert to == "/" <> @username
+  end
+
+  @tag :capture_log
+  test "a booking step entered without a chosen time sends the guest back to the schedule inside the embed",
+       %{conn: conn, user: user} do
+    insert(:meeting_type,
+      user: user,
+      name: "Quick chat",
+      slug: "quick-chat",
+      duration_minutes: 30,
+      is_active: true
+    )
+
+    assert {:error, {:redirect, %{to: to}}} =
+             conn |> embedded() |> live("/#{@username}/quick-chat/book?#{@embed_query}")
+
+    assert %URI{path: path} = URI.parse(to)
+    assert path == "/#{@username}/quick-chat"
+    assert_carries_embed(to)
+  end
+
+  @tag :capture_log
+  test "the same step, not embedded, carries no embed parameters", %{conn: conn, user: user} do
+    insert(:meeting_type,
+      user: user,
+      name: "Quick chat",
+      slug: "quick-chat",
+      duration_minutes: 30,
+      is_active: true
+    )
+
+    assert {:error, {:redirect, %{to: to}}} =
+             live(
+               conn,
+               "/#{@username}/quick-chat/book?parent-origin=https%3A%2F%2Fevil.test&layout=column&timezone=#{@timezone}"
+             )
+
+    assert to == "/#{@username}/quick-chat"
   end
 end
