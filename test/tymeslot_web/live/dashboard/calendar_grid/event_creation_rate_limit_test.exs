@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventCreationRateLimitTest do
 
   describe "quick add in meeting mode" do
     test "a save past the limit is refused and emails no one", %{conn: conn, user: user} do
-      spend_quick_add_meetings(user.id, 20)
+      spend_quick_add_meetings(user.id, 10)
       lv = open_meeting_form(conn)
 
       html = save(lv)
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventCreationRateLimitTest do
 
     test "the last save within the limit books the meeting and emails the guest",
          %{conn: conn, user: user} do
-      spend_quick_add_meetings(user.id, 19)
+      spend_quick_add_meetings(user.id, 9)
       lv = open_meeting_form(conn)
 
       html = save(lv)

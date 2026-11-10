@@ -193,7 +193,7 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
     dashboard_quick_add_meeting: [
       prefix: "dashboard_quick_add_meeting",
       scope: :user,
-      limit: 20,
+      limit: 10,
       window_ms: 10 * @minute,
       operation: "quick add meeting"
     ]
