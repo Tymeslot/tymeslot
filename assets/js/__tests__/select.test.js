@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Select, typeAheadIndex } from "../hooks/select";
 import { computePlacement } from "../floating_panel";
 
+const openHooks = [];
+
 function buildField() {
   document.body.innerHTML = `
     <form id="host">
@@ -32,6 +34,7 @@ function buildField() {
   const hook = Object.assign(Object.create(Select), { el });
 
   hook.mounted();
+  openHooks.push(hook);
   return hook;
 }
 
@@ -140,6 +143,7 @@ describe("the Select hook", () => {
   });
 
   afterEach(() => {
+    openHooks.splice(0).forEach((hook) => hook.close(false));
     window.removeEventListener("input", recordInput);
     delete HTMLElement.prototype.showPopover;
     delete HTMLElement.prototype.hidePopover;
@@ -222,6 +226,44 @@ describe("the Select hook", () => {
 
     expect(hook.valueInput.value).toBe("1");
     expect(hook.chosenValue).toBeNull();
+  });
+
+  test("pressing the button of an open list closes it and it stays closed", () => {
+    const hook = buildField();
+    hook.trigger.click();
+
+    // A press moves focus to the button first, then clicks it.
+    hook.panel.dispatchEvent(new FocusEvent("focusout", { relatedTarget: hook.trigger }));
+    expect(hook.open).not.toBeNull();
+
+    hook.trigger.click();
+    expect(hook.open).toBeNull();
+    expect(hook.trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  test("focus moving elsewhere closes the list", () => {
+    const hook = buildField();
+    const elsewhere = document.createElement("button");
+    document.body.appendChild(elsewhere);
+    hook.trigger.click();
+
+    hook.panel.dispatchEvent(new FocusEvent("focusout", { relatedTarget: elsewhere }));
+
+    expect(hook.open).toBeNull();
+  });
+
+  test("a button out of view opens nothing and leaves no listeners behind", () => {
+    const hook = buildField();
+    hook.trigger.getBoundingClientRect = () => ({ top: -100, bottom: -60, left: 0, width: 100 });
+
+    hook.show();
+
+    expect(hook.open).toBeNull();
+    expect(hook.trigger.getAttribute("aria-expanded")).toBe("false");
+
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    document.body.dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(false);
   });
 
   test("a click on the label focuses the button rather than opening it", () => {

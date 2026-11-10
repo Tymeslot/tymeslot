@@ -62,9 +62,17 @@ defmodule Tymeslot.Polls.InviteOnlyJourneyTest do
       "invitees" => "Grace Hopper <grace@example.com>"
     }
 
-    dashboard |> form("form[phx-submit='create_poll']") |> render_change(%{"poll" => params})
+    {selects, fields} = Map.split(params, ~w(timezone duration))
+
+    dashboard
+    |> form("form[phx-submit='create_poll']", %{"poll" => fields})
+    |> render_change(%{"poll" => selects})
+
     assert has_element?(dashboard, "input[name='poll[access]'][value='invited'][checked]")
-    dashboard |> form("form[phx-submit='create_poll']") |> render_submit(%{"poll" => params})
+
+    dashboard
+    |> form("form[phx-submit='create_poll']", %{"poll" => fields})
+    |> render_submit(%{"poll" => selects})
 
     assert [poll] = Polls.list_polls(user.id)
     assert poll.invite_only
@@ -86,8 +94,8 @@ defmodule Tymeslot.Polls.InviteOnlyJourneyTest do
     {:ok, ballot, _html} = live(ConnTest.build_conn(), "#{uri.path}?#{uri.query}")
 
     ballot
-    |> form("form[data-testid='poll-vote-form']")
-    |> render_submit(%{"votes" => %{slot.id => "yes"}})
+    |> form("form[data-testid='poll-vote-form']", %{"votes" => %{slot.id => "yes"}})
+    |> render_submit()
 
     assert %DateTime{} = Repo.get!(PollParticipantSchema, grace.id).voted_at
 

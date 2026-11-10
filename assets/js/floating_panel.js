@@ -77,7 +77,7 @@ export function computePlacement(anchor, panel, viewport) {
  * the owner can put its own state straight.
  *
  * @param {{panel: HTMLElement, anchor: HTMLElement, onDismiss?: function(string): void}} options
- * @returns {{close: function(): void, reposition: function(): void}}
+ * @returns {{close: function(): void, reposition: function(): void, closed: function(): boolean}}
  */
 export function openFloatingPanel({ panel, anchor, onDismiss = () => {} }) {
   let frame = null;
@@ -153,13 +153,16 @@ export function openFloatingPanel({ panel, anchor, onDismiss = () => {} }) {
     onDismiss(reason);
   }
 
-  panel.showPopover();
-  reposition();
-
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("keydown", onKeydown, true);
   window.addEventListener("scroll", schedule, { capture: true, passive: true });
   window.addEventListener("resize", schedule, { passive: true });
 
-  return { close, reposition };
+  panel.showPopover();
+
+  // First, with the listeners in place: it can dismiss straight away, for an
+  // anchor out of view, and `close()` then has them to remove.
+  reposition();
+
+  return { close, reposition, closed: () => closed };
 }

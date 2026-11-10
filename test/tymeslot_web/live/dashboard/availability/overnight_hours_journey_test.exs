@@ -55,8 +55,8 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     refute render(view) =~ "Ends the next day"
 
     view
-    |> form("#day-hours-form-1")
-    |> render_change(%{"day" => "1", "start" => "22:00", "end" => "02:00+1"})
+    |> form("#day-hours-form-1", %{"day" => "1"})
+    |> render_change(%{"start" => "22:00", "end" => "02:00+1"})
 
     day = WeeklySchedule.get_day_availability(schedule.id, 1)
     assert {day.start_time, day.end_time, day.ends_next_day} == {~T[22:00:00], ~T[02:00:00], true}
@@ -75,13 +75,8 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     refute picker =~ ">2:00 AM"
 
     view
-    |> form("form[phx-submit='add_break']")
-    |> render_submit(%{
-      "day" => "1",
-      "start" => "01:00",
-      "end" => "01:30",
-      "label" => "Tea"
-    })
+    |> form("form[phx-submit='add_break']", %{"day" => "1", "label" => "Tea"})
+    |> render_submit(%{"start" => "01:00", "end" => "01:30"})
 
     day = WeeklySchedule.get_day_availability(schedule.id, 1)
 
@@ -146,8 +141,8 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     refute has_element?(view, "#day-hours-errors-1")
 
     view
-    |> form("#day-hours-form-1")
-    |> render_change(%{"day" => "1", "start" => "01:00", "end" => "02:00+1"})
+    |> form("#day-hours-form-1", %{"day" => "1"})
+    |> render_change(%{"start" => "01:00", "end" => "02:00+1"})
 
     assert view |> element("#day-hours-errors-1") |> render() =~
              "Hours that end the next day can last at most 24 hours"
@@ -166,8 +161,8 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
     view
-    |> form("#day-hours-form-1")
-    |> render_change(%{"day" => "1", "start" => "20:00", "end" => "17:00"})
+    |> form("#day-hours-form-1", %{"day" => "1"})
+    |> render_change(%{"start" => "20:00", "end" => "17:00"})
 
     assert view |> element("#day-hours-errors-1") |> render() =~
              "End time must be after start time. To run past midnight, pick an end time marked (+1)."
@@ -189,8 +184,8 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
              {~T[09:00:00], ~T[17:00:00], false}
 
     view
-    |> form("#day-hours-form-1")
-    |> render_change(%{"day" => "1", "start" => "20:00", "end" => "02:00+1"})
+    |> form("#day-hours-form-1", %{"day" => "1"})
+    |> render_change(%{"start" => "20:00", "end" => "02:00+1"})
 
     day = WeeklySchedule.get_day_availability(schedule.id, 1)
     assert {day.start_time, day.end_time, day.ends_next_day} == {~T[20:00:00], ~T[02:00:00], true}
@@ -205,13 +200,13 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
     view
-    |> form("#day-hours-form-1")
-    |> render_change(%{"day" => "1", "start" => "20:00", "end" => "17:00"})
+    |> form("#day-hours-form-1", %{"day" => "1"})
+    |> render_change(%{"start" => "20:00", "end" => "17:00"})
 
     # The end select is blank now, so the next change submits an empty end.
     view
-    |> form("#day-hours-form-1")
-    |> render_change(%{"day" => "1", "start" => "10:00", "end" => ""})
+    |> form("#day-hours-form-1", %{"day" => "1"})
+    |> render_change(%{"start" => "10:00", "end" => ""})
 
     day = WeeklySchedule.get_day_availability(schedule.id, 1)
 
@@ -226,21 +221,16 @@ defmodule TymeslotWeb.Dashboard.Availability.OvernightHoursJourneyTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
     view
-    |> form("#day-hours-form-1")
-    |> render_change(%{"day" => "1", "start" => "22:00", "end" => "02:00+1"})
+    |> form("#day-hours-form-1", %{"day" => "1"})
+    |> render_change(%{"start" => "22:00", "end" => "02:00+1"})
 
     view
     |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
     |> render_click()
 
     view
-    |> form("form[phx-submit='add_break']")
-    |> render_submit(%{
-      "day" => "1",
-      "start" => "01:00",
-      "end" => "01:30",
-      "label" => "Tea"
-    })
+    |> form("form[phx-submit='add_break']", %{"day" => "1", "label" => "Tea"})
+    |> render_submit(%{"start" => "01:00", "end" => "01:30"})
 
     monday = next_monday()
     TestMocks.stub_no_calendar_events()

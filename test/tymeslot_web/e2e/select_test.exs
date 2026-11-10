@@ -5,18 +5,20 @@ defmodule TymeslotWeb.E2E.SelectTest do
   inside a phone-width embed. LiveViewTest cannot see any of those: it never
   runs the hook, and the option list only exists once the hook has drawn it.
 
-  On a device with a coarse pointer the page shows the native control instead;
-  the Vitest suite covers what its choice does, and `pointer: coarse` itself
-  is a CSS query this suite's desktop Chrome does not match.
+  The touch device's native control is in `SelectTouchTest`, in a session of
+  its own.
   """
   use TymeslotWeb.BrowserCase, async: false
 
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.E2E.BookerSteps
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
+  alias TymeslotWeb.Endpoint
 
   @moduletag :e2e
   @moduletag :ui
@@ -54,6 +56,67 @@ defmodule TymeslotWeb.E2E.SelectTest do
       |> assert_value("#embed-layout-field", "default")
 
       assert_has(session, css("#live-preview-container[data-layout='default']", visible: false))
+    end
+  end
+
+  describe "the list on a dashboard page" do
+    feature "pressing the button of an open list closes it", %{session: session} do
+      {session, _user} = log_in_via_browser(session)
+
+      session =
+        session
+        |> visit("/dashboard/embed")
+        |> wait_for_live()
+        |> click(css("#embed-layout-trigger"))
+        |> assert_open("embed-layout")
+
+      session
+      |> click(css("#embed-layout-trigger"))
+      |> assert_closed("embed-layout")
+
+      assert [false] =
+               evaluate_script(session, """
+               return [document.getElementById("embed-layout-panel").matches(":popover-open")];
+               """)
+    end
+
+    feature "a button out of view leaves Escape to the page", %{session: session} do
+      {session, _user} = log_in_via_browser(session)
+
+      session =
+        session
+        |> visit("/dashboard/embed")
+        |> wait_for_live()
+        |> execute_script("""
+        const probe = () => {
+          let reached = false;
+          const mark = () => (reached = true);
+          window.addEventListener("keydown", mark);
+          document.body.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+          window.removeEventListener("keydown", mark);
+          return reached;
+        };
+        window.__selectBaseline = probe();
+        const trigger = document.getElementById("embed-layout-trigger");
+        trigger.getBoundingClientRect = () => ({top: -500, bottom: -460, left: 0, width: 100});
+        trigger.click();
+        """)
+
+      assert ["false", false, true, true] =
+               evaluate_script(session, """
+               const trigger = document.getElementById("embed-layout-trigger");
+               const panel = document.getElementById("embed-layout-panel");
+               const reachesWindow = () => {
+                 let reached = false;
+                 const mark = () => (reached = true);
+                 window.addEventListener("keydown", mark);
+                 document.body.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+                 window.removeEventListener("keydown", mark);
+                 return reached;
+               };
+               const baseline = window.__selectBaseline;
+               return [trigger.getAttribute("aria-expanded"), panel.matches(":popover-open"), baseline, reachesWindow()];
+               """)
     end
   end
 
@@ -109,14 +172,7 @@ defmodule TymeslotWeb.E2E.SelectTest do
         |> click(css("#cq-input-#{@question}-trigger"))
         |> assert_open("cq-input-#{@question}")
 
-      [rect] =
-        evaluate_script(session, """
-        const panel = document.getElementById("cq-input-#{@question}-panel");
-        const r = panel.getBoundingClientRect();
-        return [{top: r.top, bottom: r.bottom, left: r.left, right: r.right,
-                 width: document.documentElement.clientWidth,
-                 height: document.documentElement.clientHeight}];
-        """)
+      [rect] = panel_rect(session)
 
       assert rect["top"] >= 0 and rect["left"] >= 0
       assert rect["right"] <= rect["width"]
@@ -125,6 +181,56 @@ defmodule TymeslotWeb.E2E.SelectTest do
 
       assert_no_horizontal_overflow(session, "phone-width embed with the select open")
     end
+  end
+
+  describe "in a real embed iframe" do
+    feature "the list stays inside a phone-width iframe", %{session: session} do
+      {profile, slug} = organiser_with_long_question()
+
+      profile =
+        profile
+        |> Changeset.change(allowed_embed_domains: [URI.parse(Endpoint.url()).host])
+        |> Repo.update!()
+
+      session =
+        session
+        |> visit("/#{profile.username}/#{slug}?theme=1")
+        |> wait_for_live()
+        |> execute_script(
+          """
+          const frame = document.createElement("iframe");
+          frame.id = "embed-frame";
+          frame.referrerPolicy = "no-referrer";
+          frame.style.width = "360px";
+          frame.style.height = "640px";
+          frame.src = arguments[0];
+          document.body.replaceChildren(frame);
+          """,
+          ["/#{profile.username}/#{slug}?theme=2&embed=1&parent-origin=#{Endpoint.url()}"]
+        )
+        |> focus_frame(css("#embed-frame"))
+        |> assert_has(css("[data-phx-main].phx-connected"))
+        |> pick_first_slot()
+        |> assert_has(css("#cq-input-#{@question}-trigger"))
+        |> click(css("#cq-input-#{@question}-trigger"))
+        |> assert_open("cq-input-#{@question}")
+
+      [rect] = panel_rect(session)
+
+      assert rect["top"] >= 0 and rect["left"] >= 0
+      assert rect["right"] <= rect["width"]
+      assert rect["bottom"] <= rect["height"]
+      assert rect["height"] == 640
+    end
+  end
+
+  defp panel_rect(session) do
+    evaluate_script(session, """
+    const r = document.getElementById("cq-input-#{@question}-panel").getBoundingClientRect();
+    return [{top: r.top, bottom: r.bottom, left: r.left, right: r.right,
+             width: document.documentElement.clientWidth,
+             height: document.documentElement.clientHeight}];
+    """)
   end
 
   defp assert_open(session, id) do

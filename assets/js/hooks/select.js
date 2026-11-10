@@ -218,11 +218,17 @@ export const Select = {
     if (this.open || this.trigger.disabled) return;
 
     this.buildOptions();
-    this.open = openFloatingPanel({
+
+    const handle = openFloatingPanel({
       panel: this.panel,
       anchor: this.trigger,
       onDismiss: () => this.afterClose(true),
     });
+
+    // It closes itself at once when the button is out of view.
+    if (handle.closed()) return;
+
+    this.open = handle;
     this.trigger.setAttribute("aria-expanded", "true");
     this.panel.focus({ preventScroll: true });
     this.renderActive();
@@ -395,7 +401,11 @@ export const Select = {
   // Focus leaving the list closes it (a click elsewhere is the pointerdown's
   // business); a tab away from the window is not leaving it.
   handlePanelFocusOut(event) {
-    if (event.relatedTarget && !this.panel.contains(event.relatedTarget)) this.close(false);
+    const next = event.relatedTarget;
+
+    // Pressing the button moves focus to it before its click: closing here
+    // would have that click open the list again.
+    if (next && !this.panel.contains(next) && !this.trigger.contains(next)) this.close(false);
   },
 
   // A label pointing at the (visually absent) native select would do nothing

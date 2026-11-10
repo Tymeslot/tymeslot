@@ -178,6 +178,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 name="reminder[unit]"
                 class="w-28"
                 compact
+                aria-label={dgettext("common", "Time unit")}
                 value={@new_reminder_unit}
                 options={[
                   {dgettext("common", "Minutes"), "minutes"},

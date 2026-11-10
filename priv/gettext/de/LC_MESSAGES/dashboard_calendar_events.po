@@ -1015,3 +1015,11 @@ msgid "The latest update could not be emailed to this guest. Let them know anoth
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
 msgstr[0] "Die letzte Änderung konnte diesem Gast nicht per E-Mail zugestellt werden. Informieren Sie ihn auf anderem Weg."
 msgstr[1] "Die letzte Änderung konnte diesen Gästen nicht per E-Mail zugestellt werden. Informieren Sie sie auf anderem Weg."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+msgid "Reminder method"
+msgstr "Erinnerungsart"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+msgid "Reminder time"
+msgstr "Erinnerungszeit"

@@ -284,7 +284,7 @@ defmodule TymeslotWeb.BookingDriver do
     cond do
       has_element?(view, "form" <> question) ->
         remember(view)
-        view |> form("form" <> question) |> render_change(%{"value" => value})
+        fill_answer_form(view, "form" <> question, value)
         sync(view)
 
       is_list(value) ->

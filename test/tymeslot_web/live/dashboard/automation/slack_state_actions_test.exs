@@ -288,8 +288,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       assert html =~ "Original Name"
 
       view
-      |> form("#slack-form")
-      |> render_submit(%{
+      |> form("#slack-form", %{
         "slack" => %{
           "name" => "Renamed Channel",
           "webhook_url" => "https://hooks.slack.com/services/TABC/BABC/secrettoken",
@@ -297,6 +296,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
           "events" => ["meeting.created"]
         }
       })
+      |> render_submit()
 
       assert render(view) =~ "Slack integration updated"
 
@@ -336,22 +336,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       # First trigger validation so the form_values picks up channel_id, which the
       # hidden channel_name input depends on. Then submit.
       view
-      |> form("#slack-form")
-      |> render_change(%{
-        "slack" => %{
-          "channel_id" => "C999",
-          "events" => ["meeting.created"]
-        }
-      })
+      |> form("#slack-form", %{"slack" => %{"events" => ["meeting.created"]}})
+      |> render_change(%{"slack" => %{"channel_id" => "C999"}})
 
       view
-      |> form("#slack-form")
-      |> render_submit(%{
-        "slack" => %{
-          "channel_id" => "C999",
-          "events" => ["meeting.created"]
-        }
-      })
+      |> form("#slack-form", %{"slack" => %{"events" => ["meeting.created"]}})
+      |> render_submit(%{"slack" => %{"channel_id" => "C999"}})
 
       assert render(view) =~ "Slack channel saved"
 

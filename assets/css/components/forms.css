@@ -286,7 +286,8 @@
   display: block;
 }
 
-.select-field[data-select-force-native] .select-trigger {
+.select-field[data-select-force-native] .select-trigger,
+.select-field[data-select-force-native] .select-panel {
   display: none;
 }
 

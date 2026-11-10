@@ -72,6 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
           name="minutes"
           class="w-40"
           compact
+          aria-label={dgettext("dashboard_calendar_events", "Reminder time")}
           options={Enum.map(@presets, fn {minutes, label} -> {label, minutes} end)}
         />
         <.select
@@ -79,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
           name="method"
           class="w-36"
           compact
+          aria-label={dgettext("dashboard_calendar_events", "Reminder method")}
           options={[
             {dgettext("dashboard_calendar_events", "Notification"), "popup"},
             {dgettext("dashboard_calendar_events", "Email"), "email"}

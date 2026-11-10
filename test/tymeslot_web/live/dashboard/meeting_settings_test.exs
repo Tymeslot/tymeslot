@@ -560,8 +560,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("[phx-click='open_slug_modal']") |> render_click()
 
       view
-      |> form("#booking-link-modal form")
-      |> render_change(%{"slug" => "vip-call"})
+      |> form("#booking-link-modal form", %{"slug" => "vip-call"})
+      |> render_change()
 
       view |> element("#booking-link-modal button", "Save link") |> render_click()
 
@@ -606,8 +606,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("[phx-click='open_slug_modal']") |> render_click()
 
       view
-      |> form("#booking-link-modal form")
-      |> render_change(%{"slug" => "abandoned-draft"})
+      |> form("#booking-link-modal form", %{"slug" => "abandoned-draft"})
+      |> render_change()
 
       view |> element("#booking-link-modal button", "Cancel") |> render_click()
       view |> element("[phx-click='open_slug_modal']") |> render_click()
@@ -632,8 +632,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("[phx-click='open_slug_modal']") |> render_click()
 
       view
-      |> form("#booking-link-modal form")
-      |> render_change(%{"slug" => "coffee-chat"})
+      |> form("#booking-link-modal form", %{"slug" => "coffee-chat"})
+      |> render_change()
 
       view |> element("#booking-link-modal button", "Save link") |> render_click()
 

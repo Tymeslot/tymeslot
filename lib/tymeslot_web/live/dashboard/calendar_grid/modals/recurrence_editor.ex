@@ -219,6 +219,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               name="end_type"
               class="w-36"
               compact
+              aria-label={dgettext("dashboard_calendar_repeat", "Ends")}
               value={@end_type}
               options={[
                 {dgettext("dashboard_calendar_repeat", "Never ends"), "never"},

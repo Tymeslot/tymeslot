@@ -212,4 +212,18 @@ defmodule TymeslotWeb.BookingDriver.Page do
   @doc "`attrs` as the string-keyed params a form submits."
   @spec form_params(map() | keyword()) :: map()
   def form_params(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
+
+  @doc """
+  Fills an answer `form`. A select posts through a hidden input, which
+  `form/3` will not set to a new value; every other question's field keeps
+  its validation.
+  """
+  @spec fill_answer_form(Phoenix.LiveViewTest.View.t(), String.t(), term()) :: String.t()
+  def fill_answer_form(view, form_selector, value) do
+    if has_element?(view, form_selector <> " input[data-select-value]") do
+      view |> form(form_selector) |> render_change(%{"value" => value})
+    else
+      view |> form(form_selector, %{"value" => value}) |> render_change()
+    end
+  end
 end

@@ -31,15 +31,19 @@
   opacity: 0.65;
 }
 
+/* Its arrow is the .select-chevron icon drawn beside it. */
 .scheduling-app .select-native {
   display: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .scheduling-app .select-field[data-select-force-native] .select-native {
   display: block;
 }
 
-.scheduling-app .select-field[data-select-force-native] .select-trigger {
+.scheduling-app .select-field[data-select-force-native] .select-trigger,
+.scheduling-app .select-field[data-select-force-native] .select-panel {
   display: none;
 }
 
