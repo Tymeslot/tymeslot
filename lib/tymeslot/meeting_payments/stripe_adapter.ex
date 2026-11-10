@@ -160,6 +160,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
   alias Stripe.Refund
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.Payments.Config, as: PaymentsConfig
 
   @oauth_token_url "https://connect.stripe.com/oauth/token"
   @oauth_deauthorize_url "https://connect.stripe.com/oauth/deauthorize"
@@ -294,5 +295,5 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
     end
   end
 
-  defp platform_key, do: Application.get_env(:stripity_stripe, :api_key)
+  defp platform_key, do: PaymentsConfig.stripe_api_key()
 end

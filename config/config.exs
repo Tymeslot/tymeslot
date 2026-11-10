@@ -483,7 +483,9 @@ config :phoenix, :filter_parameters, [
   "webhook_url",
   "custom_meeting_url",
   "invite",
-  "value"
+  "value",
+  "code",
+  "state"
 ]
 
 # Precompressed siblings written by `mix phx.digest`, replacing the stock

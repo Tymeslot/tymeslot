@@ -5,9 +5,13 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   (`handle_deauthorized/2`), and the revocation of the platform's access that
   follows a disconnect (`schedule_revocation/1`).
 
-  Every path cancels the host's pending bookings and soft-deletes the row in
-  one transaction, recording the host's charge currency first, and announces
-  the meetings it expired only once that transaction has committed.
+  `disconnect/1` and `handle_deauthorized/2` cancel the host's pending
+  bookings and soft-delete the row in one transaction, recording the host's
+  charge currency first, and announce the meetings they expired only once that
+  transaction has committed. Deleting the host's account is a third way out,
+  in `Tymeslot.MeetingPayments.DataRetention`: it soft-deletes the row and
+  schedules the revocation, but records no charge currency, as the host is
+  leaving.
   """
 
   require Logger
