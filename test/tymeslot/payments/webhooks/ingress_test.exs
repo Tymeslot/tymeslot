@@ -322,6 +322,117 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
       assert DateTime.to_unix(reloaded.last_account_event_at) == 0
     end
 
+    # Events of the other mode: see the Connect source in `Ingress`.
+    defp live_connection do
+      user = insert(:user)
+      insert(:profile, user: user)
+
+      insert(:connect_account,
+        user: user,
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true,
+        oauth_connected_at: ~U[2026-01-01 00:00:00Z],
+        last_account_event_at: nil
+      )
+    end
+
+    defp restricting_update(account, livemode) do
+      account_event(
+        account,
+        %{"charges_enabled" => false, "payouts_enabled" => false, "details_submitted" => true},
+        %{"created" => System.os_time(:second), "livemode" => livemode}
+      )
+    end
+
+    test "a test-mode account update on live keys leaves a live connection alone" do
+      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      account = live_connection()
+
+      assert {:ok, :processed} = deliver(:connect, restricting_update(account, false))
+
+      reloaded = Repo.get!(ConnectAccountSchema, account.id)
+      assert reloaded.charges_enabled
+      assert reloaded.payouts_enabled
+      assert is_nil(reloaded.last_account_event_at)
+    end
+
+    test "a live-mode account update on live keys applies" do
+      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      account = live_connection()
+
+      assert {:ok, :processed} = deliver(:connect, restricting_update(account, true))
+
+      refute Repo.get!(ConnectAccountSchema, account.id).charges_enabled
+    end
+
+    test "a live-mode account update on test keys leaves the connection alone" do
+      with_config(:stripity_stripe, api_key: "sk_test_platform")
+      account = live_connection()
+
+      assert {:ok, :processed} = deliver(:connect, restricting_update(account, true))
+
+      assert Repo.get!(ConnectAccountSchema, account.id).charges_enabled
+    end
+
+    test "an event without a boolean livemode is handled as any other" do
+      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      account = live_connection()
+      event = account |> restricting_update(false) |> Map.delete("livemode")
+
+      assert {:ok, :processed} = deliver(:connect, event)
+
+      refute Repo.get!(ConnectAccountSchema, account.id).charges_enabled
+    end
+
+    test "a test-mode deauthorisation on live keys leaves a live connection alone" do
+      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      account = live_connection()
+
+      event =
+        event(
+          "account.application.deauthorized",
+          %{"id" => "ca_PLATFORM", "object" => "application"},
+          %{
+            "account" => account.stripe_account_id,
+            "created" => System.os_time(:second),
+            "livemode" => false
+          }
+        )
+
+      assert {:ok, :processed} = deliver(:connect, event)
+
+      assert Tymeslot.MeetingPayments.ConnectAccountQueries.live_for_user(account.user_id)
+    end
+
+    test "a test-mode deauthorisation on test keys still disconnects" do
+      with_config(:stripity_stripe, api_key: "sk_test_platform")
+      account = live_connection()
+
+      event =
+        event(
+          "account.application.deauthorized",
+          %{"id" => "ca_PLATFORM", "object" => "application"},
+          %{
+            "account" => account.stripe_account_id,
+            "created" => System.os_time(:second),
+            "livemode" => false
+          }
+        )
+
+      assert {:ok, :processed} = deliver(:connect, event)
+
+      refute Tymeslot.MeetingPayments.ConnectAccountQueries.live_for_user(account.user_id)
+    end
+
+    test "the platform endpoint does not filter by mode" do
+      with_config(:stripity_stripe, api_key: "sk_live_platform")
+
+      assert {:ok, :processed} = deliver(:platform, checkout_completed())
+
+      assert_received {:checkout_completed, %{"id" => "cs_ingress"}}
+    end
+
     test "a failed account update is retried rather than acknowledged" do
       account = connect_account()
 

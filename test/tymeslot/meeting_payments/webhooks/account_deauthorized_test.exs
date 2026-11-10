@@ -7,7 +7,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountDeauthorizedTest do
   @moduletag :integration
 
   import Mox
-  import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
@@ -141,32 +140,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountDeauthorizedTest do
     assert :ok = AccountDeauthorized.handle(event(account.stripe_account_id, @connected_at))
 
     refute ConnectAccountQueries.live_for_user(user.id)
-  end
-
-  describe "events of the other mode" do
-    test "a test-mode event on live keys leaves the account and its bookings alone" do
-      with_config(:stripity_stripe, api_key: "sk_live_platform")
-      {user, account} = connected_host()
-      payment = insert(:booking_payment, host_user_id: user.id, status: :pending)
-
-      event = account.stripe_account_id |> event() |> Map.put("livemode", false)
-
-      assert :ok = AccountDeauthorized.handle(event)
-
-      assert ConnectAccountQueries.live_for_user(user.id)
-      assert BookingPaymentQueries.get(payment.id).status == :pending
-    end
-
-    test "a test-mode event on test keys applies" do
-      with_config(:stripity_stripe, api_key: "sk_test_platform")
-      {user, account} = connected_host()
-
-      event = account.stripe_account_id |> event() |> Map.put("livemode", false)
-
-      assert :ok = AccountDeauthorized.handle(event)
-
-      refute ConnectAccountQueries.live_for_user(user.id)
-    end
   end
 
   test "removing Tymeslot at Stripe keeps the charge currency for a reconnect" do
