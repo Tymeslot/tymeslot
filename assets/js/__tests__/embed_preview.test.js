@@ -148,4 +148,37 @@ describe('EmbedPreview', () => {
     expect(hook.el.querySelector('button')).toBeNull();
     expect(open).not.toHaveBeenCalled();
   });
+
+  describe('when the booking script never loads', () => {
+    test('Popup says so under the button instead of raising a native alert', () => {
+      vi.useFakeTimers();
+      delete window.TymeslotBooking;
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+      const hook = mountHook('popup', { loadingMessage: 'Still loading, try again.' });
+      hook.el.querySelector('button').click();
+      vi.advanceTimersByTime(200 * 13);
+
+      const status = hook.el.querySelector('[data-load-status]');
+      expect(status.textContent).toBe('Still loading, try again.');
+      expect(status.getAttribute('role')).toBe('status');
+      expect(alertSpy).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    test('the message goes away once the script arrives and the modal opens', () => {
+      vi.useFakeTimers();
+      delete window.TymeslotBooking;
+
+      const hook = mountHook('popup', { loadingMessage: 'Still loading.' });
+      hook.showLoadingMessage();
+      hook.el.querySelector('button').click();
+      window.TymeslotBooking = { open };
+      vi.advanceTimersByTime(200);
+
+      expect(hook.el.querySelector('[data-load-status]')).toBeNull();
+      expect(open).toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+  });
 });

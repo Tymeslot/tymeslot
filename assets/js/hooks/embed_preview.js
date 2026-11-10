@@ -154,17 +154,32 @@ export const EmbedPreview = {
       if (this._modalRetryInterval) clearInterval(this._modalRetryInterval);
       this._modalRetryInterval = setInterval(() => {
         if (window.TymeslotBooking) {
+          this.el.querySelector('[data-load-status]')?.remove();
           window.TymeslotBooking.open(username, modalOptions);
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;
         } else if (retries > 10) {
-          alert(this.el.dataset.loadingMessage || '');
+          this.showLoadingMessage();
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;
         }
         retries++;
       }, 200);
     }
+  },
+
+  // The booking script never arrived (slow network, blocked script): say so in
+  // the preview itself, under the button, rather than in a native dialog.
+  showLoadingMessage() {
+    let status = this.el.querySelector('[data-load-status]');
+    if (!status) {
+      status = document.createElement('p');
+      status.setAttribute('role', 'status');
+      status.setAttribute('data-load-status', '');
+      status.className = 'text-xs text-amber-700 text-center mt-4';
+      this.el.appendChild(status);
+    }
+    status.textContent = this.el.dataset.loadingMessage || '';
   },
 
   renderLinkPreview(username, baseUrl, options = {}) {
