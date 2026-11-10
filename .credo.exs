@@ -97,6 +97,7 @@
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
           {CredoChecks.UseCoreModal, []},
+          {CredoChecks.NoNativeTitle, []},
           {CredoChecks.NoInlineSvg,
            [
              # Artwork, not icons: the icon renderer itself, the loading
