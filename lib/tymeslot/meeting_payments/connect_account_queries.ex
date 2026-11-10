@@ -55,6 +55,31 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueries do
     |> Repo.insert()
   end
 
+  @spec set_oauth_nonce(ConnectAccountSchema.t(), String.t()) ::
+          {:ok, ConnectAccountSchema.t()} | {:error, Ecto.Changeset.t()}
+  def set_oauth_nonce(schema, nonce) do
+    schema
+    |> ConnectAccountSchema.changeset(%{oauth_nonce: nonce})
+    |> Repo.update()
+  end
+
+  @doc """
+  Atomically clears the user's live row's nonce when it equals `nonce`:
+  `:ok` for exactly one of any number of concurrent claims.
+  """
+  @spec claim_oauth_nonce(integer(), String.t()) :: :ok | :error
+  def claim_oauth_nonce(user_id, nonce) do
+    query =
+      from(c in ConnectAccountSchema,
+        where: c.user_id == ^user_id and is_nil(c.deleted_at) and c.oauth_nonce == ^nonce
+      )
+
+    case Repo.update_all(query, set: [oauth_nonce: nil, updated_at: DateTime.utc_now(:second)]) do
+      {1, nil} -> :ok
+      {0, nil} -> :error
+    end
+  end
+
   @spec update(ConnectAccountSchema.t(), map()) ::
           {:ok, ConnectAccountSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(schema, attrs) do

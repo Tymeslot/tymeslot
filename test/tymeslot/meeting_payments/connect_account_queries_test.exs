@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueriesTest do
   @moduletag :database
   @moduletag :payments
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
 
   test "live_for_user returns active row" do
@@ -64,5 +65,42 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueriesTest do
     # surface a changeset error rather than crashing or silently inserting.
     assert {:error, changeset} = ConnectAccountQueries.insert_placeholder(user.id, "de")
     assert {"has already been taken", _opts} = changeset.errors[:user_id]
+  end
+
+  describe "claim_oauth_nonce/2" do
+    setup do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, account} = ConnectAccountQueries.set_oauth_nonce(account, "n")
+      %{user: user, account: account}
+    end
+
+    test "a repeated claim succeeds once", %{user: user, account: account} do
+      assert ConnectAccountQueries.claim_oauth_nonce(user.id, "n") == :ok
+      assert ConnectAccountQueries.claim_oauth_nonce(user.id, "n") == :error
+      assert Repo.reload(account).oauth_nonce == nil
+    end
+
+    test "a claim with the wrong nonce changes nothing", %{user: user, account: account} do
+      assert ConnectAccountQueries.claim_oauth_nonce(user.id, "other") == :error
+      assert Repo.reload(account).oauth_nonce == "n"
+    end
+
+    test "another user cannot claim the nonce", %{account: account} do
+      other = insert(:user)
+
+      assert ConnectAccountQueries.claim_oauth_nonce(other.id, "n") == :error
+      assert Repo.reload(account).oauth_nonce == "n"
+    end
+
+    test "a claim does not touch a soft-deleted row", %{user: user, account: account} do
+      # Keep user_id so only the deleted_at guard can reject the claim.
+      account
+      |> Changeset.change(deleted_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      assert ConnectAccountQueries.claim_oauth_nonce(user.id, "n") == :error
+      assert Repo.reload(account).oauth_nonce == "n"
+    end
   end
 end

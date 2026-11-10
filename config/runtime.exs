@@ -488,6 +488,18 @@ if config_env() == :prod do
     if stripe_connect_webhook_secret do
       config :tymeslot, :stripe_connect_webhook_secret, stripe_connect_webhook_secret
     end
+
+    # Stripe Connect client ID (`ca_...`): needed to start a new OAuth
+    # connection; hosts already connected keep working without it.
+    stripe_connect_client_id = String.trim(System.get_env("STRIPE_CONNECT_CLIENT_ID", ""))
+
+    if stripe_connect_client_id != "" do
+      config :tymeslot, :stripe_connect_client_id, stripe_connect_client_id
+    else
+      Logger.warning(
+        "STRIPE_CONNECT_CLIENT_ID not set: hosts cannot connect a Stripe account by OAuth"
+      )
+    end
   end
 end
 
@@ -561,6 +573,14 @@ if config_env() in [:dev, :test] do
   config :tymeslot,
          :stripe_connect_webhook_secret,
          System.get_env("STRIPE_CONNECT_WEBHOOK_SECRET")
+
+  # Dev only: config/test.exs pins a fake value, which an exported real
+  # client ID must not override.
+  with :dev <- config_env(),
+       client_id when client_id != "" <-
+         String.trim(System.get_env("STRIPE_CONNECT_CLIENT_ID", "")) do
+    config :tymeslot, :stripe_connect_client_id, client_id
+  end
 end
 
 # Telegram integration feature flags (Core defaults)
