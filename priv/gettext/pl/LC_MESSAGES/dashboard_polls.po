@@ -43,8 +43,8 @@ msgstr "Dodaj informacje dla gości"
 msgid "Add at least one candidate time"
 msgstr "Dodaj co najmniej jeden proponowany termin"
 
+#: lib/tymeslot_web/live/dashboard/polls/candidate_times_field.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Add time"
 msgstr "Dodaj termin"
@@ -71,12 +71,12 @@ msgstr "Anuluj ankietę"
 msgid "Cancelled"
 msgstr "Anulowana"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/candidate_times_field.ex
 #, elixir-autogen, elixir-format
 msgid "Candidate time %{n}"
 msgstr "Proponowany termin %{n}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/candidate_times_field.ex
 #, elixir-autogen, elixir-format
 msgid "Candidate times"
 msgstr "Proponowane terminy"
@@ -221,8 +221,8 @@ msgstr "Link do ankiety skopiowany do schowka!"
 msgid "Polls"
 msgstr "Ankiety"
 
+#: lib/tymeslot_web/live/dashboard/polls/candidate_times_field.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Remove time"
 msgstr "Usuń termin"
@@ -803,7 +803,7 @@ msgstr "Poza tobą nikt jeszcze nie dołączył do tej ankiety, więc nie ma kog
 msgid "This time has already begun."
 msgstr "Ten termin już się rozpoczął."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/candidate_times_field.ex
 #, elixir-autogen, elixir-format
 msgid "%{used} of %{count} time"
 msgid_plural "%{used} of %{count} times"
@@ -911,3 +911,58 @@ msgstr "Ta wersja robocza została już opublikowana lub usunięta."
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event in your calendar."
 msgstr "Ten termin koliduje z wydarzeniem w twoim kalendarzu."
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "%{day} at %{time}"
+msgstr "%{day} o %{time}"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Busy"
+msgstr "Zajęte"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Candidate time"
+msgstr "Proponowany termin"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Checking your calendar…"
+msgstr "Sprawdzanie kalendarza…"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Click a time to add it as a candidate, or click a candidate to remove it."
+msgstr "Kliknij termin, aby dodać go jako proponowany, lub kliknij proponowany termin, aby go usunąć."
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Free"
+msgstr "Wolne"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Next week"
+msgstr "Następny tydzień"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Outside working hours"
+msgstr "Poza godzinami pracy"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Previous week"
+msgstr "Poprzedni tydzień"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closes %{when}"
+msgstr "Głosowanie kończy się %{when}"
+
+#: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
+#, elixir-autogen, elixir-format
+msgid "Your week"
+msgstr "Twój tydzień"
