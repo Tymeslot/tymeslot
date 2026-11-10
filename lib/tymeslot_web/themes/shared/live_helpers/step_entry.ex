@@ -298,7 +298,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
   # Carries the reschedule context across the redirect so a bad slug doesn't
   # silently turn a reschedule into a new, duplicate booking, and a demo's
-  # chosen theme so the visitor lands on the theme they were viewing.
+  # chosen theme so the visitor lands on the theme they were viewing. Inside
+  # an embed the redirect stays an embed (`PathHandlers.put_embed_params/2`,
+  # from verified assigns only), or the guest would see the full profile page
+  # in the host's iframe.
   defp invalid_meeting_type_redirect_path(socket) do
     query =
       case socket.assigns[:reschedule_meeting_uid] do
@@ -306,10 +309,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
         _other -> %{}
       end
 
-    PathHandlers.with_query(
-      "/" <> socket.assigns[:username_context],
-      Map.merge(query, PathHandlers.demo_theme_param(socket.assigns))
-    )
+    query =
+      query
+      |> Map.merge(PathHandlers.demo_theme_param(socket.assigns))
+      |> PathHandlers.put_embed_params(socket)
+
+    PathHandlers.with_query("/" <> socket.assigns[:username_context], query)
   end
 
   @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
