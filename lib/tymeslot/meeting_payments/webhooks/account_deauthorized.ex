@@ -16,7 +16,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountDeauthorized do
 
   @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
 
-  alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
@@ -33,7 +33,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountDeauthorized do
     if other_mode?(event) do
       {:ok, :ok}
     else
-      case ConnectAccounts.handle_deauthorized(account_id, DateTime.from_unix!(created)) do
+      case ConnectAccountRetirement.handle_deauthorized(account_id, DateTime.from_unix!(created)) do
         :ok -> {:ok, :ok}
         {:error, reason} -> {{:error, :retry_later, reason}, :error}
       end

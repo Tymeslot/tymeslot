@@ -38,6 +38,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.CheckoutOutcome
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
@@ -108,16 +109,16 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec disconnect(user :: %{id: integer()}) ::
           {:ok, disconnect_result()} | {:error, term()}
-  defdelegate disconnect(user), to: ConnectAccounts
+  defdelegate disconnect(user), to: ConnectAccountRetirement
 
   @doc """
   Expires the host's open Stripe Checkout sessions and cancels their pending
   bookings, leaving the Connect account in place. See
-  `Tymeslot.MeetingPayments.ConnectAccounts.cancel_pending_checkouts/1`.
+  `Tymeslot.MeetingPayments.ConnectAccountRetirement.cancel_pending_checkouts/1`.
   """
   @spec cancel_pending_checkouts(user :: %{id: integer()}) ::
           {:ok, non_neg_integer()} | {:error, term()}
-  defdelegate cancel_pending_checkouts(user), to: ConnectAccounts
+  defdelegate cancel_pending_checkouts(user), to: ConnectAccountRetirement
 
   # ---------------------------------------------------------------------------
   # Bookings held for payment

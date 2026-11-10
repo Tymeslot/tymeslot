@@ -8,7 +8,7 @@ defmodule Tymeslot.MeetingPayments.DataRetention do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
 
   @doc """
   Scrubs the attendee details from every booking payment of the host's,
@@ -21,7 +21,7 @@ defmodule Tymeslot.MeetingPayments.DataRetention do
     BookingPaymentQueries.anonymise_for_host(user_id, now)
     account = ConnectAccountQueries.lock_live_for_user(user_id)
     ConnectAccountQueries.soft_delete_for_user(user_id, now)
-    ConnectAccounts.schedule_revocation(account)
+    ConnectAccountRetirement.schedule_revocation(account)
   end
 
   @doc """

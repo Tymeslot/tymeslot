@@ -14,6 +14,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
@@ -90,7 +91,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     test "start after a disconnect begins on a new row" do
       user = insert(:user)
       old = insert(:connect_account, user: user, stripe_account_id: "acct_DEAD")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       assert {:ok, %{account: account}} = ConnectAccounts.start_onboarding(user)
 
@@ -426,7 +427,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       insert(:profile, user: user)
       insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
       insert(:connect_account, user: user, stripe_account_id: "acct_EU", default_currency: "eur")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       connect_gbp_account(user)
 
@@ -439,7 +440,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       insert(:profile, user: user)
       insert(:meeting_type, user: user, payment_required: false, price_cents: nil)
       insert(:connect_account, user: user, stripe_account_id: "acct_EU", default_currency: "eur")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       connect_gbp_account(user)
 
@@ -461,7 +462,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       insert(:profile, user: user)
       insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
       insert(:connect_account, user: user, stripe_account_id: "acct_JP", default_currency: "jpy")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       connect_gbp_account(user)
 

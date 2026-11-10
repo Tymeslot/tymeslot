@@ -16,7 +16,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
   alias Oban.Worker
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Meetings.MeetingQueries
@@ -30,14 +30,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
       user = insert(:user)
       {:ok, _placeholder} = ConnectAccountQueries.insert_placeholder(user.id)
 
-      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
+      assert {:ok, %{cancelled_count: 0}} = ConnectAccountRetirement.disconnect(user)
 
       refute ConnectAccountQueries.live_for_user(user.id)
     end
 
     test "is a noop when no account exists" do
       user = insert(:user)
-      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
+      assert {:ok, %{cancelled_count: 0}} = ConnectAccountRetirement.disconnect(user)
     end
 
     test "does not overwrite a payment that was concurrently transitioned to paid" do
@@ -66,7 +66,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
         {:error, %{message: "already paid"}}
       end)
 
-      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
+      assert {:ok, %{cancelled_count: 0}} = ConnectAccountRetirement.disconnect(user)
 
       # The payment row must still be "paid" — not "failed".
       reloaded = BookingPaymentQueries.get(payment.id)
@@ -92,7 +92,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
 
       stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
 
-      assert {:ok, %{cancelled_count: 1}} = ConnectAccounts.disconnect(user)
+      assert {:ok, %{cancelled_count: 1}} = ConnectAccountRetirement.disconnect(user)
       assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     end
 
@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
       meeting = insert(:meeting, status: :cancelled, cancelled_at: DateTime.utc_now(:second))
       payment = insert(:paid_booking_payment, host_user_id: user.id, meeting: meeting)
 
-      assert {:ok, %{outstanding_refunds_count: 1}} = ConnectAccounts.disconnect(user)
+      assert {:ok, %{outstanding_refunds_count: 1}} = ConnectAccountRetirement.disconnect(user)
 
       # Untouched: still owed, still unrefunded, just no longer refundable here.
       reloaded = BookingPaymentQueries.get(payment.id)
@@ -124,7 +124,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
         meeting: insert(:meeting, status: :confirmed)
       )
 
-      assert {:ok, %{outstanding_refunds_count: 0}} = ConnectAccounts.disconnect(user)
+      assert {:ok, %{outstanding_refunds_count: 0}} = ConnectAccountRetirement.disconnect(user)
     end
   end
 
@@ -140,7 +140,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
         oauth_connected_at: DateTime.utc_now(:second)
       )
 
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       assert_enqueued(
         worker: DeauthorizeConnectAccount,
@@ -153,7 +153,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
       user = insert(:user)
       insert(:connect_account, user: user, stripe_account_id: "acct_LEG")
 
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       refute ConnectAccountQueries.live_for_user(user.id)
       refute_enqueued(worker: DeauthorizeConnectAccount)
@@ -162,7 +162,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
     test "reconnecting the same account before revocation keeps it" do
       user = insert(:user)
       connect_account(user, "acct_X")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       connect_account(user, "acct_X")
 
@@ -176,7 +176,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
     test "a later disconnect pushes back a revocation still pending" do
       user = insert(:user)
       connect_account(user, "acct_X")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       # The first job is now older than the worker's own 60-second window.
       long_ago = DateTime.add(DateTime.utc_now(:second), -600)
@@ -187,7 +187,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
       )
 
       connect_account(user, "acct_X")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       assert [job] = all_enqueued(worker: DeauthorizeConnectAccount)
       assert job.args == %{"stripe_account_id" => "acct_X"}
@@ -200,7 +200,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
     test "an OAuth account is revoked once the delay has passed" do
       user = insert(:user)
       connect_account(user, "acct_X")
-      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+      assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       expect(StripeAdapterMock, :deauthorize_account, 1, fn "acct_X" -> :ok end)
 

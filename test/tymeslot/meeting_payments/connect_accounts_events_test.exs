@@ -6,6 +6,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsEventsTest do
   @moduletag :payments
 
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.Workers.SendConnectAccountRestricted
 
@@ -288,7 +289,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsEventsTest do
           charges_enabled: true
         })
 
-      ConnectAccounts.disconnect(user)
+      ConnectAccountRetirement.disconnect(user)
 
       stripe_account = %{
         "id" => "acct_DELETED",
