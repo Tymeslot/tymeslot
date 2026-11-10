@@ -3,6 +3,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   Database queries for meeting types.
   """
   import Ecto.Query, warn: false
+  alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
 
@@ -37,15 +38,19 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Gets the publicly listed meeting types for a user (active and not private),
-  ordered by sort_order. Private types are reachable only by their direct link,
-  so they are excluded from the public overview this query feeds.
+  Gets the publicly listed meeting types for a user (active, neither private
+  nor invitation-only), ordered by sort_order. Private types are reachable
+  only by their direct link, and invitation-only types only through a personal
+  invitation link, so both are excluded from the public overview this query
+  feeds.
   """
   @spec list_public_meeting_types(integer()) :: [MeetingTypeSchema.t()]
   def list_public_meeting_types(user_id) do
     query =
       from(mt in MeetingTypeSchema,
-        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false,
+        where:
+          mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false and
+            mt.invitation_only == false,
         order_by: [asc: mt.sort_order, asc: mt.name],
         preload: [:video_integration, :calendar_integration]
       )
@@ -176,12 +181,26 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Deletes a meeting type.
+  Deletes a meeting type with its invitation links, keeping its meetings.
+
+  The invitations go first, in a statement of their own. Deleting the type
+  alone would reach a meeting booked through one of its invitations by two
+  paths at once (the type's link nilified, and the invitation's cascade
+  nilifying the meeting's), and Postgres applies only the first update to a
+  row within one statement, so the meeting would keep pointing at a deleted
+  invitation and the delete would fail on its foreign key.
   """
   @spec delete_meeting_type(MeetingTypeSchema.t()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_meeting_type(meeting_type) do
-    Repo.delete(meeting_type)
+  def delete_meeting_type(%MeetingTypeSchema{id: id} = meeting_type) do
+    Repo.transaction(fn ->
+      Repo.delete_all(from(i in InvitationSchema, where: i.meeting_type_id == ^id))
+
+      case Repo.delete(meeting_type) do
+        {:ok, deleted} -> deleted
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
   end
 
   @doc """

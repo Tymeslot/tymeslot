@@ -33,6 +33,7 @@ msgid "Could not save: %{reason}"
 msgstr "Nie udało się zapisać: %{reason}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Could not sign in with those credentials"
 msgstr "Logowanie przy użyciu tych danych nie powiodło się"
@@ -53,6 +54,7 @@ msgid "Integration Name"
 msgstr "Nazwa integracji"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Integration not found"
 msgstr "Nie znaleziono integracji"
@@ -638,3 +640,23 @@ msgstr "Jeśli od czasu połączenia stare hasło dla aplikacji zostało uniewa�
 #, elixir-autogen, elixir-format
 msgid "Keep this password for as long as you use Tymeslot. Revoking it, or changing your Apple ID password, disconnects iCloud, and your booking page offers no times until you reconnect."
 msgstr "Zachowaj to hasło tak długo, jak korzystasz z Tymeslot. Unieważnienie go lub zmiana hasła do Apple ID odłącza iCloud, a strona rezerwacji nie oferuje żadnych terminów, dopóki ponownie nie połączysz iCloud."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your Apple ID email and that password below."
+msgstr "Poniżej wpisz adres e-mail Apple ID i utworzone hasło."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Open your Apple Account"
+msgstr "Otwórz Konto Apple"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Under Sign-In and Security, choose App-Specific Passwords and create one."
+msgstr "W sekcji Logowanie i bezpieczeństwo wybierz Hasła dla aplikacji i utwórz nowe."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "iCloud needs an app-specific password, not your Apple ID password."
+msgstr "iCloud wymaga hasła dla aplikacji, a nie hasła do Apple ID."

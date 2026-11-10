@@ -88,6 +88,20 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     dgettext("booking_errors", "We couldn't start the payment process. Please try again.")
   end
 
+  def message(:invitation_required) do
+    dgettext(
+      "booking_errors",
+      "This meeting type can be booked only with a personal invitation link."
+    )
+  end
+
+  def message(:invitation_unavailable) do
+    dgettext(
+      "booking_errors",
+      "This invitation link has already been used or is no longer valid. Please contact the host for a new one."
+    )
+  end
+
   def message(:failed_to_update_meeting) do
     dgettext("booking_errors", "Failed to process booking. Please try again.")
   end

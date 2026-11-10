@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.ContactSuggestions
@@ -84,7 +85,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
             phx-target={@target}
             class="flex gap-3"
           >
-            <input
+            <Forms.input
               type="text"
               inputmode="email"
               id="stage-guest-email"
@@ -92,7 +93,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               value=""
               placeholder="colleague@example.com"
               autocomplete="off"
-              class="input flex-1"
+              class="flex-1"
             />
             <Buttons.action_button type="submit" variant={:secondary}>
               {dgettext("dashboard_bookings", "Add")}

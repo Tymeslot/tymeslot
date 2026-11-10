@@ -81,7 +81,11 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
     steps =
       DashboardTour.steps(%{
         checklist_visible?:
-          OnboardingChecklist.visible?(user, socket.assigns[:integration_status] || %{})
+          OnboardingChecklist.visible?(
+            user,
+            socket.assigns[:integration_status] || %{},
+            socket.assigns[:profile]
+          )
       })
 
     if steps == [] do

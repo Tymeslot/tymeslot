@@ -57,12 +57,15 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
 
     ~H"""
     <div class={["flex items-start gap-3", @class]}>
-      <input
+      <%!-- Unlabelled here: the sibling label carries links, which the
+            component's string label cannot. No hidden input, so an unticked
+            box still submits nothing. --%>
+      <.input
         type="checkbox"
         id="terms"
         name={@name}
-        class="checkbox mt-1 w-5 h-5"
-        value="true"
+        class="mt-1"
+        hidden_input={false}
         required
       />
       <label for="terms" class="text-sm text-tymeslot-500 font-medium leading-relaxed">

@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
+  alias TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent
@@ -62,9 +63,25 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 </:actions>
               </.section_header>
 
+              <%!-- An invitation-only type is booked through its invitation
+                    links, not a direct link anyone can use. --%>
+              <.live_component
+                :if={@editing_type && @editing_type.invitation_only}
+                module={InvitationsComponent}
+                id={"invitations-#{@editing_type.id}"}
+                meeting_type={@editing_type}
+                profile={@profile}
+                current_user_id={@current_user.id}
+                time_format={@time_format}
+              />
+
               <%!-- Direct booking link, always at hand while editing (needs a username) --%>
-              <div :if={@editing_type && booking_base_url(@profile)} class="space-y-2">
+              <div
+                :if={@editing_type && not @editing_type.invitation_only && booking_base_url(@profile)}
+                class="space-y-2"
+              >
                 <div class="flex flex-wrap items-center gap-2">
+                  <%!-- raw-input: read-only booking link display in the row with the Copy button; <.input> cannot pass readonly --%>
                   <input
                     type="text"
                     readonly
@@ -76,6 +93,8 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                     variant={:secondary}
                     id={"copy-booking-link-#{@editing_type.id}"}
                     phx-hook="CopyOnClick"
+                    phx-click="booking_link_copied"
+                    phx-target={@myself}
                     data-copy-text={type_url(assigns, @editing_type)}
                     data-copy-feedback={dgettext("dashboard_integrations", "Booking link copied!")}
                   >

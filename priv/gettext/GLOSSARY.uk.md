@@ -250,6 +250,19 @@ Latin-script `email` never appears inside a Ukrainian sentence, label, or subjec
   - as a **price value** (the big number slot on a card) → **`Безкоштовно`**.
 - `Self-Hosted` as a card title is descriptive, not a brand: **`На власному сервері`**.
 
+### Setup wizard (onboarding)
+
+| English | Ukrainian |
+|---|---|
+| **link** (the username field and the wizard's first step) | **посилання** (`Ваше посилання`, `Це посилання вже зайняте`) |
+| **booking link** | **посилання для бронювання**; never `посилання на бронювання` |
+| **keep** (your link: save it somewhere you'll find it) | **зберегти** (`Або збережіть на потім`, `Ваше посилання збережено`) |
+| **free/busy** | **зайнятість** / **статус зайнятості** (`фід статусу зайнятості`) |
+| **Live** (the wizard's last step and the badge on the page preview) | **Онлайн** |
+| **live** (a page that takes bookings), **go live** | **працює** / **запрацює** (`Ваша сторінка працює`, `щоб сторінка запрацювала`); never `вийти онлайн`, and never `Ви онлайн`, which reads as a chat presence status |
+| **look** (a theme, the wizard's step) | **оформлення**; never `вигляд` for *your look*, which reads as personal appearance |
+| a message the host sends to someone they know (`Hi %{name}, you can pick a time with me here`) | the informal **ти**, with **Привіт**: the host's own voice, the one exception to §1. Text addressed to anyone (the email-signature line) stays formal: `Запишіться до мене на зустріч: %{url}` |
+
 ### Calendar views
 
 `view` (a calendar display mode) → **подання**. One word, no synonyms.
@@ -343,11 +356,11 @@ When an instruction tells the user to click something inside another company's p
 label must match what that product actually shows in Ukrainian. Invent one and the user hunts
 for a menu item that does not exist.
 
-> **Open item.** `dashboard_calendar_providers.po` renders Apple's `Sign-In and Security →
-> App-Specific Passwords` as `Вхід і безпека → Паролі застосунків`. This follows *our* termbase
-> (`застосунок`), but it has **not** been verified against Apple's own Ukrainian surface on
-> `account.apple.com`, which may say `програма`. Check it against Apple's Ukrainian help pages
-> before treating it as settled.
+> **Settled.** Apple's own Ukrainian surface calls the feature **пароль для програми**
+> (plural **паролі для програм**), under **Вхід і безпека** in **Обліковий запис Apple**.
+> Apple-facing strings use Apple's wording (`Вхід і безпека → Паролі для програм`), even though
+> our own termbase says `застосунок`; this is the one place `програма` is right. A generic
+> CalDAV app password that is not Apple's keeps **пароль застосунку**.
 
 ---
 

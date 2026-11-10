@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.Test.OutlookGraphStubs
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
 
@@ -380,7 +381,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
 
       assert requests() == []
       assert_series_cached(source, [occurrence])
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "a move to the calendar Graph says holds the master is refused before any write", %{
@@ -394,7 +395,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
 
       assert [%{method: :get}, %{method: :get, url: @master_url <> "/calendar"}] = requests()
       assert_series_cached(source, [occurrence])
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
   end
 
@@ -486,7 +487,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
       assert [%{method: :get}, %{method: :post}] = requests()
       assert_series_cached(source, [first, occurrence])
       assert Repo.reload!(room).calendar_integration_id == source.id
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "a master the source will not delete is left behind, and the copy kept", %{

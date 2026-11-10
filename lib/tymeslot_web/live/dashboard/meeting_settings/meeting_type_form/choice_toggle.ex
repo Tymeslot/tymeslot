@@ -59,6 +59,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ChoiceToggle do
             )
           ]}
         >
+          <%!-- raw-input: sr-only radio or checkbox drawn by the segmented option label around it --%>
           <input
             type={if @multiple, do: "checkbox", else: "radio"}
             name={@name}

@@ -3,10 +3,10 @@ defmodule Tymeslot.Themes.Catalog do
   Domain source of truth for theme *facts*: which themes exist and how each is
   customised.
 
-  Holds each theme's id, key, name, customisation spec, `heading_style`, and
-  status. This is pure data with no web or presentation dependency: profiles and
-  theme customizations validate and drive behaviour off these facts without ever
-  reaching up into the web layer.
+  Holds each theme's id, key, name, customisation spec, `heading_style`,
+  `shows_intro`, and status. This is pure data with no web or presentation
+  dependency: profiles and theme customizations validate and drive behaviour
+  off these facts without ever reaching up into the web layer.
 
   The web layer (`TymeslotWeb.Themes.Core.Registry`) binds each theme id to its
   theme module, but the facts themselves live here so the dependency only ever
@@ -14,6 +14,11 @@ defmodule Tymeslot.Themes.Catalog do
 
   `heading_style` says whether the booking page's default heading names the
   organiser (`:named`) or greets generically (`:generic`).
+
+  `shows_intro` says whether the booking page presents the organiser's
+  headline and bio (`TymeslotWeb.Themes.Shared.Components.ProfileIntro`), so
+  the dashboard asks a host for them only where a guest would read them. An
+  extra theme that leaves it out does not show them.
 
   Themes may also be registered through `config :tymeslot, :extra_themes`, a
   list of fact maps each with the theme's web `:module` besides, which this
@@ -32,6 +37,7 @@ defmodule Tymeslot.Themes.Catalog do
           name: String.t(),
           customization_spec: module(),
           heading_style: heading_style(),
+          shows_intro: boolean(),
           status: status()
         }
 
@@ -41,6 +47,9 @@ defmodule Tymeslot.Themes.Catalog do
   # moduledoc). The entries are plain atoms from config, not aliases, so they
   # add no compile-time dependency either.
   @extra_themes Application.compile_env(:tymeslot, :extra_themes, [])
+
+  # Facts an extra theme may leave out.
+  @extra_defaults %{shows_intro: false}
 
   # The facts live in function bodies rather than module attributes, so the
   # spec modules they name stay runtime references: an alias in a module
@@ -54,6 +63,7 @@ defmodule Tymeslot.Themes.Catalog do
         id: "1",
         key: :quill,
         name: "Quill",
+        shows_intro: false,
         heading_style: :generic,
         customization_spec: Tymeslot.ThemeCustomizations.QuillSpec,
         status: :active
@@ -62,6 +72,7 @@ defmodule Tymeslot.Themes.Catalog do
         id: "2",
         key: :rhythm,
         name: "Rhythm",
+        shows_intro: false,
         heading_style: :named,
         customization_spec: Tymeslot.ThemeCustomizations.RhythmSpec,
         status: :active
@@ -70,6 +81,7 @@ defmodule Tymeslot.Themes.Catalog do
         id: "3",
         key: :paper,
         name: "Paper",
+        shows_intro: false,
         heading_style: :named,
         customization_spec: Tymeslot.ThemeCustomizations.PaperSpec,
         status: :active
@@ -78,6 +90,7 @@ defmodule Tymeslot.Themes.Catalog do
         id: "4",
         key: :folio,
         name: "Folio",
+        shows_intro: true,
         heading_style: :generic,
         customization_spec: Tymeslot.ThemeCustomizations.FolioSpec,
         status: :active
@@ -101,7 +114,10 @@ defmodule Tymeslot.Themes.Catalog do
       end
     end
 
-    Map.merge(shipped, Map.new(extras, &{&1.key, Map.delete(&1, :module)}))
+    Map.merge(
+      shipped,
+      Map.new(extras, &{&1.key, Map.merge(@extra_defaults, Map.delete(&1, :module))})
+    )
   end
 
   defp id_to_key_map, do: Map.new(themes(), fn {key, theme} -> {theme.id, key} end)
@@ -209,4 +225,12 @@ defmodule Tymeslot.Themes.Catalog do
   def customization_spec(id) when is_binary(id) do
     with {:ok, %{customization_spec: spec}} <- get_by_id(id), do: {:ok, spec}
   end
+
+  @doc """
+  Whether the theme with this ID shows the organiser's headline and bio on the
+  booking page (the `shows_intro` fact). An unknown ID shows nothing.
+  """
+  @spec shows_intro?(theme_id() | nil) :: boolean()
+  def shows_intro?(id) when is_binary(id), do: match?({:ok, %{shows_intro: true}}, get_by_id(id))
+  def shows_intro?(nil), do: false
 end

@@ -37,6 +37,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
+  alias TymeslotWeb.Dashboard.BookingLinkShare
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.CalendarUpNextStrip
@@ -260,7 +261,7 @@ defmodule TymeslotWeb.DashboardLive do
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>
           <div
-            :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+            :if={OnboardingChecklist.visible?(@current_user, @integration_status, @profile)}
             class="shrink-0 px-3 pt-2 md:px-4"
           >
             <OnboardingChecklist.onboarding_checklist
@@ -571,21 +572,20 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_event("tour:" <> action, params, socket),
     do: TourEventHandlers.handle_event(action, params, socket)
 
-  def handle_event("onboarding:toggle", %{"id" => key}, socket) do
-    case Onboarding.toggle_dashboard_setup_item(socket.assigns.current_user, key) do
-      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
-      {:error, _reason} -> {:noreply, socket}
-    end
-  end
+  def handle_event("onboarding:toggle", %{"id" => key}, socket),
+    do:
+      keep_user(Onboarding.toggle_dashboard_setup_item(socket.assigns.current_user, key), socket)
 
-  def handle_event("onboarding:dismiss", _params, socket) do
-    case Onboarding.dismiss_dashboard_setup(socket.assigns.current_user) do
-      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
-      {:error, _changeset} -> {:noreply, socket}
-    end
-  end
+  def handle_event("booking_link_copied", params, socket),
+    do: BookingLinkShare.handle_copied(socket, params["channel"])
+
+  def handle_event("onboarding:dismiss", _params, socket),
+    do: keep_user(Onboarding.dismiss_dashboard_setup(socket.assigns.current_user), socket)
 
   # Private functions
+
+  defp keep_user({:ok, user}, socket), do: {:noreply, assign(socket, :current_user, user)}
+  defp keep_user({:error, _reason}, socket), do: {:noreply, socket}
 
   @spec handle_saving_animation(Phoenix.LiveView.Socket.t(), non_neg_integer()) ::
           Phoenix.LiveView.Socket.t()

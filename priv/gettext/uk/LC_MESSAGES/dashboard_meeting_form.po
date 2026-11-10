@@ -798,11 +798,6 @@ msgstr "Гостей на бронювання"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
-msgid "Limit the guests per booking"
-msgstr "Обмежити кількість гостей на бронювання"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr "Кожен гість займає одне з місць цього часу, як і той, хто бронює."
 
@@ -815,14 +810,6 @@ msgstr "Тижні починаються з понеділка, як указа
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Тижні починаються з неділі, як указано в «Налаштуваннях календаря»."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
-msgid "Without a limit, each booking may bring up to %{count} guest."
-msgid_plural "Without a limit, each booking may bring up to %{count} guests."
-msgstr[0] "Без обмеження кожне бронювання може привести до %{count} гостя."
-msgstr[1] "Без обмеження кожне бронювання може привести до %{count} гостей."
-msgstr[2] "Без обмеження кожне бронювання може привести до %{count} гостей."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
@@ -893,3 +880,31 @@ msgstr "Показувати на %{address}"
 #, elixir-autogen, elixir-format
 msgid "Choose a username on your Profile page first: your booking pages' addresses are built from it, so this meeting type can't be booked until you have one."
 msgstr "Спершу виберіть ім'я користувача на сторінці «Профіль»: з нього формуються адреси ваших сторінок бронювання, тож доти цей тип зустрічі неможливо забронювати."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Set the guests per booking"
+msgstr "Встановити кількість гостей на бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a number of your own, each booking may bring up to %{count} guest. Set one to allow fewer, or up to %{max}."
+msgid_plural "Without a number of your own, each booking may bring up to %{count} guests. Set one to allow fewer, or up to %{max}."
+msgstr[0] "Без власного числа кожне бронювання може привести до %{count} гостя. Встановіть менше або до %{max}."
+msgstr[1] "Без власного числа кожне бронювання може привести до %{count} гостей. Встановіть менше або до %{max}."
+msgstr[2] "Без власного числа кожне бронювання може привести до %{count} гостей. Встановіть менше або до %{max}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your booking pages. Each invitation link books one appointment."
+msgstr "Приховано з ваших сторінок бронювання. Кожне посилання із запрошенням бронює одну зустріч."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "Посилання із запрошенням працюють лише для індивідуальних типів зустрічей."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Only people with an invitation link can book"
+msgstr "Бронювати можуть лише люди з посиланням із запрошенням"

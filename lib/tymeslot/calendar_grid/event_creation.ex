@@ -180,7 +180,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       # one of them, so the list is settled here against the final address.
       guest_emails:
         (params[:guest_emails] || [])
-        |> Guests.sanitize_emails(params.attendee_email)
+        |> Guests.sanitize_emails(params.attendee_email, Guests.max_guests())
         |> Guests.with_names(params[:guest_names] || %{}),
       reminders: params[:reminders] || []
     }

@@ -40,6 +40,8 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Invitations
+  alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
@@ -313,6 +315,32 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
                "even without the retention pre-pass"
 
       assert survived.user_id == nil, "user_id must be nilified by the FK, not the row deleted"
+    end
+
+    test "deletes an invitation-only type's invitations with the meeting booked through one" do
+      # Pins the cascade for invitation links. Deleted:
+      # meeting_type_invitations -> users and -> meeting_types are both
+      # :delete_all, and the meeting booked through the invitation goes with
+      # its organiser. Deleting only the meeting type takes another path,
+      # whose regression test (the meeting is kept, its links nilified) is in
+      # test/tymeslot/invitations_test.exs.
+      user = insert(:user)
+      type = insert(:meeting_type, user: user, invitation_only: true)
+      {:ok, invitation} = Invitations.create(user.id, type, %{email: "ada@example.com"})
+
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          meeting_type_id: type.id,
+          invitation_id: invitation.id,
+          status: :completed
+        )
+
+      assert {:ok, _deleted} = Auth.delete_account(user)
+
+      assert Repo.aggregate(where(InvitationSchema, user_id: ^user.id), :count) == 0
+      refute Repo.get(MeetingSchema, meeting.id)
+      refute Repo.get(MeetingTypeSchema, type.id)
     end
 
     test "does not touch rows belonging to another user" do

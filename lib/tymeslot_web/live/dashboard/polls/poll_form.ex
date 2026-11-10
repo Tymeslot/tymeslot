@@ -33,12 +33,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{Invitations, PollSchema}
+  alias Tymeslot.Polls.{HostAvailability, Invitations, PollSchema}
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
 
   alias TymeslotWeb.Dashboard.Polls.{
+    AvailabilityWeek,
     CandidateTimes,
+    CandidateTimesField,
     DraftFields,
     LocalTime,
     PollAccess,
@@ -76,6 +78,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        time_off_keys: MapSet.new(),
        conflict_keys: MapSet.new(),
        checked_ranges: [],
+       week_offset: 0,
+       availability_window: nil,
        draft: nil,
        loaded_draft_id: nil,
        errors: %{}
@@ -93,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         assign(socket, :timezone, host_timezone(socket.assigns.profile))
       end
 
-    {:ok, load_draft(socket)}
+    {:ok, socket |> load_draft() |> refresh_availability()}
   end
 
   # Once per draft: the parent passes the same draft on every update, and the
@@ -188,62 +192,24 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             />
           </div>
 
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <label class="label mb-0">
-                {dgettext("dashboard_polls", "Candidate times")}
-              </label>
-              <span class="text-token-xs text-tymeslot-500">
-                <%!-- The noun counts the maximum ("1 of 40 times"), so the
-                      plural follows it rather than the times added. --%>
-                {dngettext(
-                  "dashboard_polls",
-                  "%{used} of %{count} time",
-                  "%{used} of %{count} times",
-                  PollSchema.max_slots(),
-                  used: length(@slots)
-                )}
-              </span>
-            </div>
-
-            <div :for={{slot, index} <- Enum.with_index(@slots)} class="space-y-1">
-              <div class="flex items-center gap-2">
-                <div class="flex-1">
-                  <.input
-                    type="datetime-local"
-                    name={"poll[slots][#{slot.key}]"}
-                    value={slot.value}
-                    aria-label={dgettext("dashboard_polls", "Candidate time %{n}", n: index + 1)}
-                  />
-                </div>
-                <.icon_button
-                  icon="hero-x-mark"
-                  label={dgettext("dashboard_polls", "Remove time")}
-                  variant={:danger}
-                  phx-click="remove_slot"
-                  phx-value-key={slot.key}
-                  phx-target={@myself}
-                />
-              </div>
-              <SlotWarnings.warnings
-                key={slot.key}
-                time_off?={MapSet.member?(@time_off_keys, slot.key)}
-                conflict?={MapSet.member?(@conflict_keys, slot.key)}
-              />
-            </div>
-
-            <p :for={error <- error_list(@errors, :slots)} class="form-error">{error}</p>
-
-            <.action_button
-              variant={:secondary}
-              size={:sm}
-              icon="hero-plus"
-              phx-click="add_slot"
-              phx-target={@myself}
-            >
-              {dgettext("dashboard_polls", "Add time")}
-            </.action_button>
-          </div>
+          <CandidateTimesField.field
+            id={"poll-candidates-#{@id}"}
+            slots={@slots}
+            time_off_keys={@time_off_keys}
+            conflict_keys={@conflict_keys}
+            errors={error_list(@errors, :slots)}
+            myself={@myself}
+            week={
+              %{
+                first_day: @first_day,
+                timezone: @timezone,
+                minutes: PollDuration.parse(@duration),
+                availability: @availability,
+                deadline: @deadline,
+                time_format: @time_format
+              }
+            }
+          />
 
           <.input
             type="checkbox"
@@ -317,7 +283,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        slots: CandidateTimes.merge(socket.assigns.slots, Map.get(params, "slots", %{}))
      )
      |> assign_time_off_keys()
-     |> check_calendar()}
+     |> check_calendar()
+     |> refresh_availability()}
   end
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
@@ -338,22 +305,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("remove_slot", %{"key" => key}, socket) do
-    case CandidateTimes.remove(socket.assigns.slots, key) do
-      {:ok, slots, key} ->
-        {:noreply,
-         socket
-         |> assign(
-           slots: slots,
-           time_off_keys: MapSet.delete(socket.assigns.time_off_keys, key),
-           conflict_keys: MapSet.delete(socket.assigns.conflict_keys, key),
-           errors: Map.delete(socket.assigns.errors, :slots)
-         )
-         |> check_calendar()}
+  def handle_event("remove_slot", %{"key" => key}, socket),
+    do: {:noreply, remove_slot(socket, key)}
 
-      :error ->
-        {:noreply, socket}
+  def handle_event("pick_time", %{"at" => value}, socket) do
+    case AvailabilityWeek.toggle(socket.assigns.slots, value) do
+      {:remove, key} ->
+        {:noreply, remove_slot(socket, key)}
+
+      :add ->
+        {:noreply, socket |> append_slot(value) |> assign_time_off_keys() |> check_calendar()}
     end
+  end
+
+  def handle_event("availability_week", %{"to" => direction}, socket) do
+    offset = AvailabilityWeek.shift(socket.assigns.week_offset, direction)
+    {:noreply, socket |> assign(:week_offset, offset) |> refresh_availability()}
   end
 
   @impl Phoenix.LiveComponent
@@ -383,6 +350,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   # time is shown without a warning, as one whose fetch failed is.
   def handle_async(:calendar_conflicts, {:exit, _reason}, socket),
     do: {:noreply, assign(socket, :conflict_keys, MapSet.new())}
+
+  # Unread, the grid shows the week without busy times, as the warnings
+  # show a time whose check failed without one.
+  def handle_async(:host_availability, {:ok, availability}, socket),
+    do: {:noreply, assign(socket, :availability, availability)}
+
+  def handle_async(:host_availability, {:exit, _reason}, socket),
+    do: {:noreply, assign(socket, :availability, nil)}
 
   defp create(socket, params) do
     intent = if params["intent"] == "draft", do: :draft, else: :publish
@@ -446,6 +421,42 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         slots: slots,
         slot_counter: counter,
         errors: Map.delete(socket.assigns.errors, :slots)
+      )
+    end
+  end
+
+  defp remove_slot(socket, key) do
+    case CandidateTimes.remove(socket.assigns.slots, key) do
+      {:ok, slots, key} ->
+        socket
+        |> assign(
+          slots: slots,
+          time_off_keys: MapSet.delete(socket.assigns.time_off_keys, key),
+          conflict_keys: MapSet.delete(socket.assigns.conflict_keys, key),
+          errors: Map.delete(socket.assigns.errors, :slots)
+        )
+        |> check_calendar()
+
+      :error ->
+        socket
+    end
+  end
+
+  # The grid's week and the host's busy time and hours for it, read again
+  # only when that week or the timezone changes.
+  defp refresh_availability(socket) do
+    %{week_offset: offset, timezone: timezone, current_user: user} = socket.assigns
+    {first_day, {from, to} = window} = AvailabilityWeek.week(timezone, offset)
+    socket = assign(socket, :first_day, first_day)
+
+    if window == socket.assigns.availability_window do
+      socket
+    else
+      socket
+      |> assign(availability_window: window, availability: :loading)
+      |> start_async(
+        :host_availability,
+        Tasks.with_context(fn -> HostAvailability.for_window(user.id, from, to) end)
       )
     end
   end

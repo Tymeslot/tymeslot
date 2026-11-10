@@ -29,6 +29,18 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     default: true,
     doc: "Whether to show the visual label; off where a heading above already names the field"
 
+  attr :show_help, :boolean,
+    default: true,
+    doc: "Whether to show the line under the picker saying what the timezone is used for"
+
+  attr :inline, :boolean,
+    default: false,
+    doc: """
+    Opens the list in the page flow under the field instead of floating over the
+    content above it, so the page grows to hold it (and can scroll it clear of a
+    bar stuck to the bottom of the screen)
+    """
+
   @spec timezone_dropdown(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_dropdown(assigns) do
     ~H"""
@@ -49,10 +61,12 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         on_close="close_timezone_dropdown"
         target={@target}
         position={:top_start}
+        unstyled={@inline}
+        panel_attrs={[{"data-nav-clearance-box", true}]}
         role="dialog"
         panel_label={dgettext("common", "Select timezone")}
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
-        class="right-0 max-h-64 brand-card overflow-hidden"
+        class={"max-h-64 brand-card overflow-hidden " <> if(@inline, do: "mt-1", else: "right-0")}
       >
         <:trigger>
           <span class="sr-only">{dgettext("common", "Your Timezone")}:</span>
@@ -93,6 +107,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         <:panel>
           <div class="p-3 border-b border-white/20">
             <div class="relative">
+              <%!-- raw-input: borderless search box inside the dropdown panel with a magnifier overlay, not a labelled form field --%>
               <input
                 id="timezone-search"
                 type="text"
@@ -142,7 +157,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         </:panel>
       </.dropdown>
 
-      <p class="mt-2 text-sm text-tymeslot-600">
+      <p :if={@show_help} class="mt-2 text-sm text-tymeslot-600">
         {dgettext("common", "This timezone will be used for your availability and scheduling.")}
       </p>
     </div>

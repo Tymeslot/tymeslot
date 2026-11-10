@@ -83,6 +83,23 @@ defmodule Tymeslot.Infrastructure.Logging.RedactorTest do
       assert Redactor.redact("zipcode=12345&estate=big") == "zipcode=12345&estate=big"
     end
 
+    test "redacts an invitation token in a query string and under an invite key" do
+      assert Redactor.redact("/jane/intro?invite=inv-tok-1&duration=30") ==
+               "/jane/intro?invite=[REDACTED]&duration=30"
+
+      assert Redactor.redact("duration=30&invite=inv-tok-2") == "duration=30&invite=[REDACTED]"
+      assert Redactor.redact("invite=inv-tok-3") == "invite=[REDACTED]"
+
+      redacted = Redactor.redact(inspect(%{"invite" => "inv-tok-4", "duration" => "30"}))
+      refute redacted =~ "inv-tok-4"
+      assert redacted =~ ~s(invite: "[REDACTED]")
+    end
+
+    test "leaves parameters and keys that only start with invite alone" do
+      text = ~s(invitee_name=Ann&invited=1 %{"invitee_name" => "Ann", invited_by: "Bo"})
+      assert Redactor.redact(text) == text
+    end
+
     test "redacts a quoted value under any secret-bearing key name" do
       text =
         ~s(%{webhook_secret: "whsec-1", bot_token: "123:abc", secret_key: "sk-2", ) <>

@@ -196,14 +196,14 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
     dashboard_add_guests: [
       prefix: "dashboard_add_guests",
       scope: :user,
-      limit: 20,
+      limit: 10,
       window_ms: 10 * @minute,
       operation: "guest invitation"
     ],
     dashboard_quick_add_meeting: [
       prefix: "dashboard_quick_add_meeting",
       scope: :user,
-      limit: 20,
+      limit: 10,
       window_ms: 10 * @minute,
       operation: "quick add meeting"
     ]

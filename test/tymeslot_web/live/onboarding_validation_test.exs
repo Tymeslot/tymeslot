@@ -4,8 +4,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
   Tests input validation for:
   - Basic settings (name, username)
-  - Scheduling preferences (buffer time, advance booking, min notice)
-  - Timezone selection
   - Real-time validation feedback
   """
 
@@ -33,11 +31,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "empty name is allowed (optional field)", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn, %{name: nil})
 
-      # Navigate to profile step
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Submit with empty name but valid username
       fill_basic_settings(view, "", "validuser123")
 
@@ -53,10 +46,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "name with only spaces is allowed (trimmed to empty)", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Submit with spaces only
       fill_basic_settings(view, "   ", "validuser456")
 
@@ -70,10 +59,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "valid name is accepted", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Valid name
       fill_basic_settings(view, "Valid Name", "validuser123")
@@ -94,110 +79,94 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     end
   end
 
-  describe "profile - username validation" do
-    test "empty username shows error on submit", %{conn: conn} do
+  describe "profile - link validation" do
+    test "an empty link says what the link needs, on change and on continue", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      html = fill_basic_settings(view, "Valid Name", "")
+      assert link_error(html) == "Your link needs 3 to 30 characters."
 
-      # Submit with empty username
-      fill_basic_settings(view, "Valid Name", "")
+      view |> element("button[phx-click='next_step']") |> render_click()
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      html = render(view)
-
-      # Should show error
-      assert html =~ "Username is required"
-    end
-
-    test "username with spaces is rejected", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Username with spaces
-      fill_basic_settings(view, "Valid Name", "user with spaces")
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Should not proceed
+      assert link_error(render(view)) == "Your link needs 3 to 30 characters."
+      refute render(view) =~ "Username"
       assert has_element?(view, "#profile-form")
     end
 
-    test "username with invalid characters is rejected", %{conn: conn} do
+    test "typed text becomes a valid link: lowercase, hyphens for spaces, the rest dropped",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+
+      html = fill_basic_settings(view, "Maya Okafor", "Maya O!")
+
+      # The page's address shows the link at once, and nothing is wrong with it.
+      assert view
+             |> element("[data-role='stage-address']")
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.text() =~ ~r{/maya-o$}
+
+      assert has_element?(view, "[data-role='preview-address-name']", "maya-o")
+      refute has_element?(view, "[data-role='preview-address-name']", "Maya O!")
+      assert link_error(html) == nil
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, ".onboarding-provider-cards")
+      assert Profiles.get_profile(user.id).username == "maya-o"
+    end
+
+    test "the field keeps what was typed until it is left, then shows the link",
+         %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      fill_basic_settings(view, "Maya Okafor", "Maya O!")
+      assert link_field_value(view) == "Maya O!"
 
-      # Username with special characters
-      fill_basic_settings(view, "Valid Name", "user@name!")
+      render_blur(element(view, "#username"))
+      assert link_field_value(view) == "maya-o"
+    end
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+    test "a link that is too short is explained as the host types", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # Should not proceed
+      html = fill_basic_settings(view, "Valid Name", "ab")
+
+      assert link_error(html) == "Your link needs 3 to 30 characters."
+
+      view |> element("button[phx-click='next_step']") |> render_click()
       assert has_element?(view, "#profile-form")
     end
 
-    test "username too short is rejected", %{conn: conn} do
+    test "a link that is too long is explained as the host types", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      html = fill_basic_settings(view, "Valid Name", String.duplicate("a", 31))
 
-      # 2 character username
-      fill_basic_settings(view, "Valid Name", "ab")
+      assert link_error(html) == "Your link needs 3 to 30 characters."
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Should not proceed
+      view |> element("button[phx-click='next_step']") |> render_click()
       assert has_element?(view, "#profile-form")
     end
 
-    test "username too long is rejected", %{conn: conn} do
+    test "a link starting with a hyphen is explained in the step's words", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      html = fill_basic_settings(view, "Valid Name", "-maya")
 
-      # 31+ character username
-      long_username = String.duplicate("a", 31)
+      assert link_error(html) == "Start your link with a letter or a number."
 
-      fill_basic_settings(view, "Valid Name", long_username)
+      view |> element("button[phx-click='next_step']") |> render_click()
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Should not proceed
+      assert link_error(render(view)) == "Start your link with a letter or a number."
       assert has_element?(view, "#profile-form")
     end
 
-    test "valid username with lowercase, numbers, underscore, dash is accepted", %{conn: conn} do
+    test "valid link with lowercase, numbers, underscore, dash is accepted", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Valid username with allowed characters
-      fill_basic_settings(view, "Valid Name", "valid_user-123")
+      html = fill_basic_settings(view, "Valid Name", "valid_user-123")
+      assert link_error(html) == nil
 
       view
       |> element("button[phx-click='next_step']")
@@ -206,6 +175,22 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       # Should proceed to connect_calendar
       assert has_element?(view, ".onboarding-provider-cards")
     end
+  end
+
+  # The inline error under the link field, or nil when there is none.
+  defp link_error(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("[data-role='link-error']")
+    |> Enum.map(&String.trim(Floki.text(&1)))
+    |> List.first()
+  end
+
+  defp link_field_value(view) do
+    [value] =
+      view |> render() |> Floki.parse_document!() |> Floki.attribute("#username", "value")
+
+    value
   end
 
   describe "username availability" do
@@ -219,10 +204,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       # New user tries to use same username
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
       # Try to use taken username
       fill_basic_settings(view, "New User", "takenusername")
 
@@ -233,7 +214,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       html = render(view)
 
       # Should show error
-      assert html =~ "This username is already taken"
+      assert html =~ "Someone already has this link. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
     end
@@ -241,10 +222,8 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "a username taken after it was checked explains why on continue", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       fill_basic_settings(view, "New User", "racehandle")
-      refute render(view) =~ "already taken"
+      refute render(view) =~ "already has this link"
 
       # Someone else claims it while this user is still on the form.
       insert(:profile, username: "racehandle")
@@ -252,7 +231,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       html = render(view)
-      assert html =~ "This username is already taken"
+      assert html =~ "Someone already has this link. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
     end
@@ -265,14 +244,12 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       fill_basic_settings(view, "New User", "legacyhandle")
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
       html = render(view)
-      assert html =~ "This username is already taken"
+      assert html =~ "Someone already has this link. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
     end
@@ -280,14 +257,12 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     test "a reserved username explains why on continue", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       fill_basic_settings(view, "New User", "admin")
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
       html = render(view)
-      assert html =~ "This username is reserved"
+      assert html =~ "This link is reserved. Try another one."
       refute html =~ "Please check your input"
       assert has_element?(view, "#profile-form")
       refute Profiles.get_profile(user.id).username == "admin"
@@ -298,23 +273,17 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       demo_username = ReservingDemoProvider.reserved_username()
       {:ok, view, _html, user} = setup_onboarding(conn)
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-
       fill_basic_settings(view, "New User", demo_username)
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      assert render(view) =~ "This username is reserved"
+      assert render(view) =~ "This link is reserved. Try another one."
       assert has_element?(view, "#profile-form")
       refute Profiles.get_profile(user.id).username == demo_username
     end
 
     test "available username proceeds successfully", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Use available username
       fill_basic_settings(view, "New User", "availableuser456")
@@ -339,11 +308,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       conn = log_in_user(conn, user)
 
-      {:ok, view, _html} = live(conn, ~p"/onboarding")
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      {:ok, view, _html} = live(conn, ~p"/onboarding/profile")
 
       # Don't change username, just continue
       view
@@ -355,128 +320,166 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     end
   end
 
-  # Timezone selection tests removed - these test UI implementation details
-  # The timezone functionality is tested in edge_cases_test.exs through the
-  # timezone detection and persistence tests
+  describe "the suggested booking link" do
+    test "the link is suggested from the name", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
 
-  # Scheduling preferences UI interaction tests removed - these test implementation details
-  # The UI uses buttons instead of select elements, making these tests incorrect
-  # The actual scheduling preferences functionality is tested through the complete
-  # onboarding flow and data persistence tests
-
-  describe "scheduling preferences validation" do
-    test "scheduling preferences are saved correctly", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-
-      navigate_to_scheduling_steps(view)
-
-      # Navigate through all three scheduling steps to ready
-      # buffer_time → booking_window → minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify the schedule defaults were used
-      # Schedule defaults: buffers 15/15, advance_booking_days: 90, min_advance_hours: 3
-      schedule = default_schedule(user)
-      assert schedule.buffer_before_minutes == 15
-      assert schedule.buffer_after_minutes == 15
-      assert schedule.advance_booking_days == 90
-      assert schedule.min_advance_hours == 3
+      assert has_element?(view, ~s{#username[value="anna-kowalska"]})
     end
 
-    test "buffer_before_minutes with valid boundary values (0 and 120) are accepted", %{
+    test "with no name the link comes from the email and the name stays empty", %{conn: conn} do
+      {:ok, view, _html, _user} =
+        setup_onboarding(conn, %{name: nil, email: "jan.nowak+tymeslot@example.com"})
+
+      assert has_element?(view, ~s{#username[value="jan-nowak"]})
+      assert has_element?(view, ~s{#full_name[value=""]})
+    end
+
+    test "a blank account name falls back to the name on the profile", %{conn: conn} do
+      user = insert(:user, name: "", onboarding_completed_at: nil)
+      insert(:profile, user: user, full_name: "Anna Kowalska", username: nil)
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/profile")
+
+      assert has_element?(view, ~s{#full_name[value="Anna Kowalska"]})
+      assert has_element?(view, ~s{#username[value="anna-kowalska"]})
+    end
+
+    test "a generated default link is replaced by a suggestion", %{conn: conn} do
+      user = insert(:user, name: "Anna Kowalska", onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "user_#{user.id}")
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/profile")
+
+      assert has_element?(view, ~s{#username[value="anna-kowalska"]})
+    end
+
+    test "a link the host chose is kept", %{conn: conn} do
+      user = insert(:user, name: "Anna Kowalska", onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "annak")
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/onboarding/profile")
+
+      assert has_element?(view, ~s{#username[value="annak"]})
+
+      rename(view, "Someone Else")
+      assert has_element?(view, ~s{#username[value="annak"]})
+    end
+
+    test "editing the name re-suggests until the link is touched", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      rename(view, "Anna K")
+      assert has_element?(view, ~s{#username[value="anna-k"]})
+
+      fill_basic_settings(view, "Anna K", "my-own-link")
+      rename(view, "Someone Else")
+
+      assert has_element?(view, ~s{#username[value="my-own-link"]})
+    end
+
+    test "a recovered form after a reconnect keeps the link following the name", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      # Form recovery sends both fields at once: the name the host had typed
+      # and the link that was suggested for it.
+      fill_basic_settings(view, "Anna K", "anna-k")
+      rename(view, "Ola Lis")
+
+      assert has_element?(view, ~s{#username[value="ola-lis"]})
+    end
+
+    test "the link field takes a suggestion even while it has focus", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      assert has_element?(view, "#username[phx-patch-focused]")
+
+      fill_basic_settings(view, "Anna Kowalska", "my-own-link")
+      refute has_element?(view, "#username[phx-patch-focused]")
+    end
+
+    test "Back shows the name saved on this step", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
+
+      fill_basic_settings(view, "Saved Name", "saved-name")
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='previous_step']") |> render_click()
+
+      assert has_element?(view, ~s{#full_name[value="Saved Name"]})
+      assert has_element?(view, ~s{#username[value="saved-name"]})
+    end
+
+    test "nothing is written before Continue", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      rename(view, "Anna K")
+
+      assert Profiles.get_profile(user.id).username == nil
+    end
+
+    test "Continue saves the suggested link", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Anna Kowalska"})
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, ".onboarding-provider-cards")
+      assert Profiles.get_profile(user.id).username == "anna-kowalska"
+    end
+  end
+
+  describe "the timezone line" do
+    test "the timezone line opens the picker", %{conn: conn} do
+      {:ok, view, _html, user} =
+        setup_onboarding(conn, %{}, nil, connect_params: %{"timezone" => "Europe/Berlin"})
+
+      assert has_element?(view, "[data-role='timezone-line']", "Berlin, Germany")
+      refute has_element?(view, "#timezone-dropdown")
+
+      view |> element("button[phx-click='edit_timezone']") |> render_click()
+      assert has_element?(view, "#timezone-dropdown")
+
+      view
+      |> element(~s{[phx-click="change_timezone"][phx-value-timezone="Europe/Paris"]})
+      |> render_click()
+
+      assert Profiles.get_profile(user.id).timezone == "Europe/Paris"
+      assert has_element?(view, "[data-role='timezone-line']", "Paris, France")
+    end
+
+    test "closing the picker without a choice returns to the line, focusing Change", %{
       conn: conn
     } do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_steps(view)
+      {:ok, view, _html, user} =
+        setup_onboarding(conn, %{}, nil, connect_params: %{"timezone" => "Europe/Berlin"})
 
-      # Test minimum value (0) — already on buffer_time step
-      view
-      |> element(
-        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='0']"
-      )
-      |> render_click()
+      refute has_element?(view, "#timezone-change[phx-mounted]")
+      view |> element("button[phx-click='edit_timezone']") |> render_click()
+      render_hook(view, "close_timezone_dropdown", %{})
 
-      # buffer_time → booking_window → minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify value was saved
-      schedule = default_schedule(user)
-      assert schedule.buffer_before_minutes == 0
+      refute has_element?(view, "#timezone-dropdown")
+      assert has_element?(view, "#timezone-change[phx-mounted]")
+      assert Profiles.get_profile(user.id).timezone == "Europe/Berlin"
     end
+  end
 
-    test "advance_booking_days with valid minimum boundary (1) is accepted", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_steps(view)
+  # A change to the name field alone, as the browser sends it: the link
+  # field's value travels with it unchanged.
+  defp rename(view, name), do: fill_basic_settings(view, name, current_link(view))
 
-      # Navigate to booking_window step
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Set minimum valid custom value (1 day)
+  defp current_link(view) do
+    [value] =
       view
-      |> element(
-        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
-      )
-      |> render_click()
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#username")
+      |> LazyHTML.attribute("value")
 
-      view
-      |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"advance_booking_days" => "1"})
-
-      # Custom input should still be visible (1 is not in presets)
-      html = render(view)
-      assert html =~ ~s(name="advance_booking_days")
-
-      # booking_window → minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify minimum boundary value was saved
-      schedule = default_schedule(user)
-      assert schedule.advance_booking_days == 1
-    end
-
-    test "min_advance_hours with valid boundary value (168) is accepted", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_steps(view)
-
-      # Navigate to minimum_notice step (buffer_time → booking_window → minimum_notice)
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Set max valid custom value (168 hours = 1 week)
-      view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='min_advance_hours']")
-      |> render_click()
-
-      view
-      |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"min_advance_hours" => "168"})
-
-      # The custom input stays open: typing into it carries no `_preset` marker,
-      # so custom mode is left alone even when the value typed is also a preset.
-      html = render(view)
-      assert html =~ ~s(name="min_advance_hours")
-
-      # minimum_notice → ready
-      view |> element("button[phx-click='next_step']") |> render_click()
-
-      # Verify max boundary value was saved
-      schedule = default_schedule(user)
-      assert schedule.min_advance_hours == 168
-    end
+    value
   end
 
   describe "real-time validation" do
     test "form validates on change and shows inline errors", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # Type invalid username and trigger validation
       fill_basic_settings(view, "Valid Name", "ab")
@@ -488,10 +491,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
     test "errors clear when input becomes valid", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
 
       # First, invalid input
       fill_basic_settings(view, "", "validuser")

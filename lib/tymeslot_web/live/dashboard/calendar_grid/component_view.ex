@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
               gone. --%>
         <EmptyState.connect_calendar_banner :if={
           @integrations == [] and
-            not OnboardingChecklist.visible?(@current_user, @integration_status) and
+            not OnboardingChecklist.visible?(@current_user, @integration_status, @profile) and
             not PublicPageNotice.visible?(@profile, @integration_status)
         } />
         <Header.toolbar

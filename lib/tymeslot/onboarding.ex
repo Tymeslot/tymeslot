@@ -3,11 +3,19 @@ defmodule Tymeslot.Onboarding do
   Context module for onboarding business logic.
   """
 
+  alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
 
-  @manual_dashboard_setup_items ~w(theme meeting_types share)
+  require Logger
+
+  @manual_dashboard_setup_items ~w(avatar intro embed)
+
+  # How a host can keep their booking link on the last setup step, any one of
+  # which finishes onboarding.
+  @keep_methods ~w(first_person share_sheet email_me copy signature phone)
 
   @doc """
   Gets or creates a profile for the given user.
@@ -16,17 +24,126 @@ defmodule Tymeslot.Onboarding do
   def get_or_create_profile(user_id), do: Profiles.get_or_create_profile(user_id)
 
   @doc """
+  Emails the host their own booking link, with a signature line and a QR code.
+
+  Enqueues one job per user per ten minutes; a second call inside the window
+  returns `:ok` without a second email.
+  """
+  @spec email_booking_link(Ecto.Schema.t() | map()) :: :ok | {:error, term()}
+  def email_booking_link(%{id: user_id}) do
+    case EmailScheduler.schedule_booking_link(user_id) do
+      {:ok, _outcome} -> :ok
+      {:error, _reason} = error -> error
+    end
+  end
+
+  @doc "The ways a host can keep their booking link (`keep_booking_link/3`)."
+  @spec keep_methods() :: [String.t()]
+  def keep_methods, do: @keep_methods
+
+  @doc """
+  Records that the host kept their booking link on the last setup step, by
+  `method` (one of `keep_methods/0`), which completes their onboarding.
+
+  `email_me` emails the link first (`email_booking_link/1`) and counts only
+  once the email is queued. Then the profile's first share is stamped, the
+  generated username settled and onboarding completed. Every step is
+  idempotent, so keeping the link again is harmless.
+
+  `[:tymeslot, :onboarding, :link_kept]` is emitted with the method only by
+  the keep that completes onboarding, so analytics count each host once, by
+  the method that got them through the last step; later keeps (copying after
+  emailing, a completed account on the debug route) emit nothing.
+  """
+  @spec keep_booking_link(Ecto.Schema.t(), Ecto.Schema.t(), String.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, :unknown_method | {:email, term()} | term()}
+  def keep_booking_link(user, profile, method) when method in @keep_methods do
+    with :ok <- maybe_email_link(user, method),
+         {:ok, _outcome} <- Profiles.mark_booking_link_shared(profile),
+         {:ok, _profile} <- Profiles.ensure_default_username(profile),
+         {:ok, outcome, completed} <- stamp_complete(user) do
+      # The only analytics path for kept links; Core never client-pushes it.
+      if outcome == :completed do
+        :telemetry.execute([:tymeslot, :onboarding, :link_kept], %{}, %{
+          user_id: user.id,
+          method: method
+        })
+      end
+
+      {:ok, completed}
+    end
+  end
+
+  def keep_booking_link(_user, _profile, _method), do: {:error, :unknown_method}
+
+  defp maybe_email_link(user, "email_me") do
+    case email_booking_link(user) do
+      :ok -> :ok
+      {:error, reason} -> {:error, {:email, reason}}
+    end
+  end
+
+  defp maybe_email_link(_user, _method), do: :ok
+
+  @doc """
+  Subscribes the calling process to the onboarding events of `user_id`.
+
+  The one event today is `{:onboarding, :preview_opened}`: the host opened
+  their own booking page from the handoff link on the last setup step (the
+  QR code), on another device (`broadcast_preview_opened/1`).
+  """
+  @spec subscribe(pos_integer()) :: :ok | {:error, term()}
+  def subscribe(user_id), do: Phoenix.PubSub.subscribe(Tymeslot.PubSub, topic(user_id))
+
+  @doc """
+  Tells the host's onboarding sessions that their booking page was opened
+  from the handoff link. A failed broadcast is logged and swallowed: nothing
+  the booking page does depends on it.
+  """
+  @spec broadcast_preview_opened(pos_integer()) :: :ok
+  def broadcast_preview_opened(user_id) do
+    case Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic(user_id), {:onboarding, :preview_opened}) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to broadcast onboarding preview_opened",
+          user_id: user_id,
+          reason: LogFormat.reason(reason)
+        )
+
+        :ok
+    end
+  end
+
+  defp topic(user_id), do: "onboarding:#{user_id}"
+
+  @doc """
   Completes the onboarding process for a user.
+
+  `[:tymeslot, :onboarding, :completed]` is emitted only by the call that
+  completes it; a user who has already completed onboarding is returned as
+  they are, without a second event.
   """
   @spec complete_onboarding(Ecto.Schema.t() | map()) ::
           {:ok, Ecto.Schema.t() | map()} | {:error, any()}
   def complete_onboarding(user) do
-    case mark_onboarding_complete(user) do
-      {:ok, _updated_user} = result ->
-        :telemetry.execute([:tymeslot, :onboarding, :completed], %{count: 1}, %{})
-        result
+    case stamp_complete(user) do
+      {:ok, _outcome, completed} -> {:ok, completed}
+      {:error, _reason} = error -> error
+    end
+  end
 
-      error ->
+  defp stamp_complete(user) do
+    case OnboardingQueries.stamp_onboarding_complete(user) do
+      {:completed, completed} ->
+        :telemetry.execute([:tymeslot, :onboarding, :completed], %{count: 1}, %{})
+        {:ok, :completed, completed}
+
+      {:already_completed, completed} ->
+        {:ok, :already_completed, completed}
+
+      {:error, _reason} = error ->
         error
     end
   end
@@ -47,6 +164,25 @@ defmodule Tymeslot.Onboarding do
   @spec onboarding_completed?(Ecto.Schema.t()) :: boolean()
   def onboarding_completed?(%{onboarding_completed_at: nil}), do: false
   def onboarding_completed?(_user), do: true
+
+  # How long after completing onboarding the live step still counts as the
+  # host's own unfinished session: the life of the preview token that step
+  # shows. A reconnect (the mail app took the screen) comes back within
+  # minutes.
+  @rejoin_window_seconds 3600
+
+  @doc """
+  Whether the user completed onboarding within the last hour, so a
+  reconnect to the live step is still the session that completed it rather
+  than a visit to a settled account.
+  """
+  @spec recently_completed?(Ecto.Schema.t() | map(), DateTime.t()) :: boolean()
+  def recently_completed?(user, now \\ DateTime.utc_now())
+
+  def recently_completed?(%{onboarding_completed_at: %DateTime{} = at}, now),
+    do: DateTime.diff(now, at) <= @rejoin_window_seconds
+
+  def recently_completed?(_user, _now), do: false
 
   @doc """
   Marks the post-onboarding dashboard tour as seen. Idempotent.
@@ -69,9 +205,13 @@ defmodule Tymeslot.Onboarding do
   def dashboard_tour_seen?(_user), do: true
 
   @doc """
-  The dashboard setup items a host ticks off by hand. The provider items
-  (calendar, video) are deliberately absent: they complete only from a real
-  connection.
+  The dashboard setup items a host ticks off by hand, to skip them. The
+  provider items (calendar, video) are deliberately absent: they complete only
+  from a real connection.
+
+  A key stored by an earlier version of the checklist may linger in
+  `dashboard_setup_done_items`; nothing reads it, and it can no longer be
+  toggled.
   """
   @spec manual_dashboard_setup_items() :: [String.t()]
   def manual_dashboard_setup_items, do: @manual_dashboard_setup_items

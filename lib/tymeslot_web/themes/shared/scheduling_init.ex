@@ -20,6 +20,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:duration, nil)
     |> assign(:meeting_type, nil)
     |> assign(:meeting_type_pinned, false)
+    # The invitation an invitation-only type was entered on, set by the
+    # entry gate (`StepEntry`); nil for every other booking.
+    |> assign(:invitation, nil)
     # Which day the calendar's weeks start on; `assign_week_start/1` settles
     # it once the organiser is resolved, and this keeps a socket that never
     # gets that far on a defined value. The calendar window (current_year,

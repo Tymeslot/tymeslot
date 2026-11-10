@@ -74,13 +74,15 @@ defmodule Tymeslot.TestAffected.SelectionTest do
       "test/tymeslot_saas/pages_test.exs" => [:analytics],
       "test/tymeslot_saas/blog_test.exs" => [:analytics],
       "test/tymeslot_saas/login_test.exs" => [:auth],
+      # A domain the upstream suite does not have, so no upstream tag names it.
+      "test/tymeslot_saas/legal_test.exs" => [:legal],
       "test/cross_repo/lock_test.exs" => [:dev_support]
     }
 
     %{
       test_files: tags |> Map.keys() |> MapSet.new(),
       tags: Map.new(tags, fn {file, list} -> {file, MapSet.new(list)} end),
-      domain_tags: MapSet.new([:auth, :payments, :analytics, :i18n, :dev_support]),
+      domain_tags: MapSet.new([:auth, :payments, :analytics, :i18n, :dev_support, :legal]),
       sources: %{}
     }
   end
@@ -287,8 +289,21 @@ defmodule Tymeslot.TestAffected.SelectionTest do
 
       assert plan.files == [
                "test/cross_repo/lock_test.exs",
-               "test/tymeslot_saas/billing_test.exs"
+               "test/tymeslot_saas/billing_test.exs",
+               "test/tymeslot_saas/legal_test.exs"
              ]
+    end
+
+    test "an upstream code change selects this suite's domains that no upstream test carries" do
+      plan = downstream_plan(["lib/tymeslot/auth/session.ex"])
+
+      assert plan.scope == :selection
+      assert "test/tymeslot_saas/legal_test.exs" in plan.files
+
+      assert Enum.any?(
+               plan.reasons,
+               &(&1 =~ "domains no upstream test carries" and &1 =~ "--only legal")
+             )
     end
 
     test "an upstream change that widens there widens here" do
@@ -317,7 +332,13 @@ defmodule Tymeslot.TestAffected.SelectionTest do
           upstream: {["priv/gettext/de/LC_MESSAGES/booking.po"], named_index()}
         )
 
-      assert plan.files == ["test/tymeslot_saas/blog_test.exs"]
+      # The cross-check and the legal test come from domains the upstream
+      # suite does not carry, which any upstream change reaching code selects.
+      assert plan.files == [
+               "test/cross_repo/lock_test.exs",
+               "test/tymeslot_saas/blog_test.exs",
+               "test/tymeslot_saas/legal_test.exs"
+             ]
     end
 
     test "upstream changes that cannot reach the build leave nothing to run" do

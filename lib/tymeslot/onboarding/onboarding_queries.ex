@@ -18,7 +18,21 @@ defmodule Tymeslot.Onboarding.OnboardingQueries do
   """
   @spec mark_onboarding_complete(UserSchema.t()) ::
           {:ok, UserSchema.t()} | {:error, :not_found}
-  def mark_onboarding_complete(%UserSchema{id: user_id}) do
+  def mark_onboarding_complete(user) do
+    case stamp_onboarding_complete(user) do
+      {:error, :not_found} = error -> error
+      {_outcome, user} -> {:ok, user}
+    end
+  end
+
+  @doc """
+  Like `mark_onboarding_complete/1`, but says whether this call did the
+  stamping (`:completed`) or found it already done (`:already_completed`),
+  so a caller can act once per account.
+  """
+  @spec stamp_onboarding_complete(UserSchema.t()) ::
+          {:completed | :already_completed, UserSchema.t()} | {:error, :not_found}
+  def stamp_onboarding_complete(%UserSchema{id: user_id}) do
     now = DateTime.utc_now(:second)
 
     query =
@@ -28,15 +42,15 @@ defmodule Tymeslot.Onboarding.OnboardingQueries do
       )
 
     case Repo.update_all(query, set: [onboarding_completed_at: now, updated_at: now]) do
-      {1, [updated]} -> {:ok, updated}
-      {0, []} -> fetch_user(user_id)
+      {1, [updated]} -> {:completed, updated}
+      {0, []} -> fetch_completed_user(user_id)
     end
   end
 
-  defp fetch_user(user_id) do
+  defp fetch_completed_user(user_id) do
     case Repo.get(UserSchema, user_id) do
       nil -> {:error, :not_found}
-      user -> {:ok, user}
+      user -> {:already_completed, user}
     end
   end
 

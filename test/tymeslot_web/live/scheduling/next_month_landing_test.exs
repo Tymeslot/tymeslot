@@ -75,14 +75,14 @@ defmodule TymeslotWeb.Live.Scheduling.NextMonthLandingTest do
       # The landing picks a day of next month; paging before it settles would
       # be undone by it.
       landed =
-        "[data-fact='date'][aria-pressed='true'][data-value^='#{Calendar.strftime(next_month, "%Y-%m")}']"
+        "[data-fact='date']:not([data-alternate])[aria-pressed='true'][data-value^='#{Calendar.strftime(next_month, "%Y-%m")}']"
 
       wait_until(fn -> has_element?(view, landed) end)
 
       # A six-week grid reaches at most 14 days into the next month, so the
       # 20th is a day only next month's own availability can open.
       beyond_old_grid = next_month |> Date.add(19) |> Date.to_iso8601()
-      selector = "[data-fact='date'][data-value='#{beyond_old_grid}']"
+      selector = "[data-fact='date']:not([data-alternate])[data-value='#{beyond_old_grid}']"
 
       BookingDriver.show_date(view, beyond_old_grid)
       wait_until(fn -> has_element?(view, selector <> ":not([disabled])") end)

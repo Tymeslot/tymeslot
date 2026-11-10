@@ -35,6 +35,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           has_custom_theme: boolean(),
           allowed_embed_domains: [String.t()] | nil,
           booking_page_published_at: DateTime.t() | nil,
+          booking_link_first_shared_at: DateTime.t() | nil,
           booking_text_enabled: boolean(),
           booking_heading: String.t() | nil,
           booking_page: map() | nil,
@@ -70,6 +71,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:has_custom_theme, :boolean, default: false)
     field(:allowed_embed_domains, {:array, :string}, default: ["none"])
     field(:booking_page_published_at, :utc_datetime)
+    field(:booking_link_first_shared_at, :utc_datetime)
     field(:booking_text_enabled, :boolean, default: false)
     field(:booking_heading, :string)
     field(:booking_greeting, :string)

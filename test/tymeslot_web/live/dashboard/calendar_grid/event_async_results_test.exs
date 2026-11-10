@@ -383,18 +383,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
     # Both messages exist to invalidate the cached integration status and
     # reassign it. The setup checklist above the grid is where that status
     # surfaces: its "done of total" badge counts "Connect a calendar" as done
-    # exactly when the host has an active calendar integration.
+    # exactly when the host has an active calendar integration, beside the
+    # items a finished setup has already done.
     test "integration_added re-reads the status a stale cache would have hidden", %{
       conn: conn,
       user: user
     } do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      assert ["0", total] = checklist_progress(lv)
+      {done, total} = checklist_progress(lv)
 
       insert(:calendar_integration, user: user, is_active: true)
       send(lv.pid, {:integration_added, :calendar})
 
-      assert ["1", ^total] = checklist_progress(lv)
+      assert checklist_progress(lv) == {done + 1, total}
     end
 
     test "integration_removed re-reads the status after the calendar is deleted", %{
@@ -404,12 +405,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      assert ["1", total] = checklist_progress(lv)
+      {done, total} = checklist_progress(lv)
 
       Repo.delete!(integration)
       send(lv.pid, {:integration_removed, :calendar})
 
-      assert ["0", ^total] = checklist_progress(lv)
+      assert checklist_progress(lv) == {done - 1, total}
     end
 
     defp checklist_progress(lv) do
@@ -417,6 +418,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       |> element("[data-testid='onboarding-checklist']")
       |> render()
       |> then(&Regex.run(~r{(\d+)/(\d+)}, &1, capture: :all_but_first))
+      |> then(fn [done, total] -> {String.to_integer(done), String.to_integer(total)} end)
     end
   end
 

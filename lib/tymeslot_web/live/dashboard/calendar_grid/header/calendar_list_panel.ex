@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
 
     <div :for={integration <- @integrations} class="mb-3 last:mb-0">
       <label class="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-tymeslot-50 rounded-token-md px-1">
+        <%!-- raw-input: small visibility toggle inline with the colour dot and name inside its row label; the field wrapper would break the row --%>
         <input
           type="checkbox"
           checked={integration.id not in @hidden_integration_ids}
@@ -58,6 +59,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
         class="ml-4 border-l-2 border-tymeslot-50 pl-3"
       >
         <label class="flex items-center gap-2 py-1 cursor-pointer hover:bg-tymeslot-50 rounded-token-md px-1">
+          <%!-- raw-input: small visibility toggle inline with the calendar name inside its row label; the field wrapper would break the row --%>
           <input
             type="checkbox"
             checked={not hidden?(@hidden_calendar_keys, integration.id, calendar.id)}

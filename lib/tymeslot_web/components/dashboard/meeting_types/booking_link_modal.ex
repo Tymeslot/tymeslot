@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
           </label>
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-token-sm text-tymeslot-500 whitespace-nowrap">{@base_url}/</span>
+            <%!-- raw-input: monospace slug field sized to sit inline between the base-URL prefix and the Randomise button; the standard field's padding and font would break that row --%>
             <input
               type="text"
               id="booking-link-slug"
