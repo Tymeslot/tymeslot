@@ -76,8 +76,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Submit domains
       view
-      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "example.com, test.org"})
-      |> render_submit()
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{allowed_domains: "example.com, test.org"})
 
       # Check for success message
       assert render(view) =~ "Security settings saved successfully"
@@ -154,8 +154,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
-      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "user@example.com"})
-      |> render_submit()
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{allowed_domains: "user@example.com"})
 
       assert render(view) =~ "Invalid domain format"
     end
@@ -166,10 +166,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
-      |> form("form[phx-submit='save_embed_domains']", %{
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{
         allowed_domains: "example.com/path, *.bad_host.com"
       })
-      |> render_submit()
 
       assert render(view) =~
                "Failed to save: Invalid domain format (e.g. example.com), " <>
@@ -186,8 +186,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       domains_str = Enum.join(many_domains, ", ")
 
       view
-      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: domains_str})
-      |> render_submit()
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{allowed_domains: domains_str})
 
       assert render(view) =~ "cannot have more than 20"
     end
@@ -201,8 +201,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       long_domain = String.duplicate("a", 252) <> ".com"
 
       view
-      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: long_domain})
-      |> render_submit()
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{allowed_domains: long_domain})
 
       assert render(view) =~ "exceed maximum length"
     end
@@ -218,8 +218,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Try to add a domain that is already whitelisted
       view
-      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "existing.com"})
-      |> render_submit()
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{allowed_domains: "existing.com"})
 
       assert render(view) =~ "Already whitelisted"
 
@@ -236,10 +236,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Submit the same domain with different casing
       view
-      |> form("form[phx-submit='save_embed_domains']", %{
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{
         allowed_domains: "Example.COM, example.com"
       })
-      |> render_submit()
 
       assert render(view) =~ "Security settings saved successfully"
 
@@ -259,8 +259,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
-      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "new-site.com"})
-      |> render_submit()
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{allowed_domains: "new-site.com"})
 
       assert render(view) =~ "Security settings saved successfully"
 
@@ -312,10 +312,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # centred :default (back-compat), so column is the opt-in that carries an
       # explicit attribute; "default" produces a clean snippet with none.
       view
-      |> form("form[phx-change='update_customisation']", %{
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{
         "customise" => %{"layout" => "column", "initial_height" => "500", "max_width" => "900"}
       })
-      |> render_change()
 
       view
       |> element("button[phx-click='copy_code'][phx-value-type='inline']")
@@ -374,8 +374,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#embed-settings-tabs-tab-security") |> render_click()
 
       view
-      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: ""})
-      |> render_submit()
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{allowed_domains: ""})
 
       # Should not show success message because we reject empty input in handle_event
       refute render(view) =~ "Security settings saved successfully"
@@ -395,10 +395,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Submitting 2 new domains would bring total to 21 → should error
       view
-      |> form("form[phx-submit='save_embed_domains']", %{
+      |> form("form[phx-submit='save_embed_domains']")
+      |> render_submit(%{
         allowed_domains: "new1.example.com, new2.example.com"
       })
-      |> render_submit()
 
       # Error should appear
       assert render(view) =~ "cannot have more than 20"
@@ -461,10 +461,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       view
-      |> form("form[phx-change='update_customisation']", %{
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{
         "customise" => %{"layout" => "default"}
       })
-      |> render_change()
 
       html = render(view)
 
@@ -486,10 +486,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       view
-      |> form("form[phx-change='update_customisation']", %{
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{
         "customise" => %{"layout" => "column"}
       })
-      |> render_change()
 
       assert render(view) =~ "?layout=column"
     end
@@ -522,10 +522,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       view
-      |> form("form[phx-change='update_customisation']", %{
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{
         "customise" => %{"initial_height" => "600"}
       })
-      |> render_change()
 
       html = render(view)
       assert html =~ ~s(data-initial-height=\"600\")
@@ -535,10 +535,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       view
-      |> form("form[phx-change='update_customisation']", %{
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{
         "customise" => %{"max_width" => "1200"}
       })
-      |> render_change()
 
       html = render(view)
       # Inline snippet: data-max-width attribute on the div
@@ -552,16 +552,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Set a value, then clear it
       view
-      |> form("form[phx-change='update_customisation']", %{
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{
         "customise" => %{"initial_height" => "600"}
       })
-      |> render_change()
 
       view
-      |> form("form[phx-change='update_customisation']", %{
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{
         "customise" => %{"initial_height" => ""}
       })
-      |> render_change()
 
       html = render(view)
       refute html =~ "data-initial-height"

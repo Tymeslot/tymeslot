@@ -73,8 +73,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
           phx-target={@myself}
           class={["min-w-0 flex-1 basis-48", @tabs? && "md:hidden"]}
         >
-          <.input
-            type="select"
+          <.select
             id="booking-page-select-input"
             name="page"
             icon="hero-document-text"

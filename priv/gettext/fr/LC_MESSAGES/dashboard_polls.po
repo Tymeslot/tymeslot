@@ -271,7 +271,7 @@ msgstr "Les créneaux doivent être dans le futur"
 msgid "Times shown in %{timezone}"
 msgstr "Horaires affichés en %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Fuseau horaire"

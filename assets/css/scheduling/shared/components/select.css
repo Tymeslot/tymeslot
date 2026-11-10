@@ -1,0 +1,106 @@
+/* ==========================================================================
+   <.select>: the option list on a booking page
+
+   The trigger is an .input button, so each theme's .input rules style it as
+   they do the booking form's fields, and the chevron is restyled in
+   shared/components/custom-questions.css. Everything here reads the tokens
+   the timezone picker's dropdown already sets, so a theme gets a themed list
+   for free; one that wants more restyles .select-panel and .select-option in
+   its own module, after this file.
+   Tokens read: --dropdown-surface, --ink-1, --ink-2, --line-1, --radius-card,
+   --radius-control, --space-*, --theme-font-size-*, --theme-primary,
+   --theme-primary-tint, --dropdown-max-height, --border-width-thin.
+   ========================================================================== */
+
+.scheduling-app .select-trigger {
+  cursor: pointer;
+  text-align: start;
+}
+
+.scheduling-app .select-value {
+  display: block;
+  min-height: 1lh;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Opacity, not a token: the trigger is the theme's .input, whose ink differs
+   from the page's (Quill's fields are light on a dark page). */
+.scheduling-app .select-value--placeholder {
+  opacity: 0.65;
+}
+
+.scheduling-app .select-native {
+  display: none;
+}
+
+.scheduling-app .select-field[data-select-force-native] .select-native {
+  display: block;
+}
+
+.scheduling-app .select-field[data-select-force-native] .select-trigger {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .scheduling-app .select-native {
+    display: block;
+  }
+
+  .scheduling-app .select-trigger {
+    display: none;
+  }
+}
+
+.scheduling-app .select-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-height: var(--dropdown-max-height);
+  padding: var(--space-3xs);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--border-width-thin) solid var(--line-1);
+  border-radius: var(--radius-card);
+  background: var(--dropdown-surface);
+  color: var(--ink-1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-2) transparent;
+}
+
+.scheduling-app .select-panel:focus {
+  outline: none;
+}
+
+.scheduling-app .select-option {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-control);
+  font-size: var(--theme-font-size-sm);
+  cursor: pointer;
+}
+
+.scheduling-app .select-option.is-active {
+  background: var(--theme-primary-tint);
+}
+
+.scheduling-app .select-option[aria-selected="true"] {
+  font-weight: var(--font-weight-semibold);
+}
+
+.scheduling-app .select-option--placeholder {
+  color: var(--ink-2);
+}
+
+.scheduling-app .select-option[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scheduling-app .select-group-label {
+  padding: var(--space-2xs) var(--space-sm);
+  font-size: var(--theme-font-size-xs);
+  color: var(--ink-2);
+}

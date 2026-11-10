@@ -274,7 +274,7 @@ msgstr "Termíny musí být v budoucnosti"
 msgid "Times shown in %{timezone}"
 msgstr "Časy jsou uvedeny v časovém pásmu %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Časové pásmo"

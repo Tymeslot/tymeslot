@@ -341,7 +341,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RepeatEditorCreateLiveViewTest do
     lv
   end
 
-  defp pick(lv, fields), do: lv |> form(@form, fields) |> render_change()
+  defp pick(lv, fields), do: lv |> form(@form) |> render_change(fields)
 
   defp save(lv) do
     lv |> element("#calendar-grid") |> render_hook("save_event", %{})

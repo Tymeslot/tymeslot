@@ -117,8 +117,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           </:description>
         </.input>
 
-        <.input
-          type="select"
+        <.select
+          id="poll-editor-meeting-type"
           name="poll[meeting_type_id]"
           label={dgettext("dashboard_polls", "Meeting type (optional)")}
           value={@meeting_type_id}
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               )}
             </span>
           </:description>
-        </.input>
+        </.select>
 
         <PollAccess.access_input
           id={"poll-access-#{@poll.id}"}

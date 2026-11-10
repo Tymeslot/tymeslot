@@ -541,8 +541,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RepeatPatternsLiveViewTest do
 
   defp pick(lv, fields) do
     lv
-    |> form("#recurrence-editor-form-update_event_recurrence", fields)
-    |> render_change()
+    |> form("#recurrence-editor-form-update_event_recurrence")
+    |> render_change(fields)
   end
 
   # A write to a whole series closes the event once it has answered; wait

@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.MarkupContractTest do
       })
 
     assert [form] = Floki.find(doc, "form[data-fact='answer'][data-question='q-long']")
-    assert [_select] = Floki.find(form, "select[name='value']")
+    assert [_select] = Floki.find(form, "select[data-name='value']")
     assert Floki.attribute(form, "input[type='hidden'][name='question']", "value") == ["q-long"]
   end
 

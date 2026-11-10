@@ -132,10 +132,10 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       view = open_add_form(conn)
 
       view
-      |> form("form[phx-submit='create_meeting_type']", %{
+      |> form("form[phx-submit='create_meeting_type']")
+      |> render_submit(%{
         "meeting_type" => %{"name" => "", "duration" => "20"}
       })
-      |> render_submit()
 
       assert length(MeetingTypes.get_all_meeting_types(user.id)) == before
 
@@ -170,10 +170,10 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       view = open_add_form(conn)
 
       view
-      |> form("form[phx-submit='create_meeting_type']", %{
+      |> form("form[phx-submit='create_meeting_type']")
+      |> render_submit(%{
         "meeting_type" => %{"name" => "Weekly Sync", "duration" => "20"}
       })
-      |> render_submit()
 
       assert length(MeetingTypes.get_all_meeting_types(user.id)) == before
 
@@ -216,10 +216,10 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       view = open_add_form(conn)
 
       view
-      |> form("form[phx-submit='create_meeting_type']", %{
+      |> form("form[phx-submit='create_meeting_type']")
+      |> render_submit(%{
         "meeting_type" => %{"name" => "Double Click", "duration" => "30"}
       })
-      |> render_submit()
 
       # A double click: the second submit reaches the form after it has
       # already switched to editing the new type.
@@ -244,10 +244,10 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       view = open_add_form(conn)
 
       view
-      |> form("form[phx-submit='create_meeting_type']", %{
+      |> form("form[phx-submit='create_meeting_type']")
+      |> render_submit(%{
         "meeting_type" => %{"name" => "Stale Props", "duration" => "30"}
       })
-      |> render_submit()
 
       # The parent rendering once more with the props it had while the type
       # was new, before it has heard about the record.
@@ -271,14 +271,14 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       # The dropdown's custom entry names a mode, not an interval, so it must
       # not reach validation as one.
       view
-      |> form("form[phx-submit='create_meeting_type']", %{
+      |> form("form[phx-submit='create_meeting_type']")
+      |> render_submit(%{
         "meeting_type" => %{
           "name" => "Custom Interval",
           "duration" => "30",
           "slot_interval" => "custom"
         }
       })
-      |> render_submit()
 
       assert %{slot_interval_minutes: nil} = created_type(user, "Custom Interval")
     end

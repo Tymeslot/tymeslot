@@ -285,7 +285,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       |> render_change(%{"reminder" => %{"value" => "400"}})
 
       view
-      |> element(~s|select[name="reminder[unit]"]|)
+      |> element(~s|input[type=hidden][name="reminder[unit]"]|)
       |> render_change(%{"reminder" => %{"unit" => "days"}})
 
       html = view |> element("button[phx-click='add_reminder']") |> render_click()
@@ -352,21 +352,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("#meeting-type-form-tabs-tab-reminders") |> render_click()
       view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
 
-      assert has_element?(
-               view,
-               ~s|select[name="reminder[unit]"] option[value="minutes"][selected]|
-             )
+      unit = ~s|select[data-name="reminder[unit]"]|
+
+      assert has_element?(view, unit <> ~s| option[value="minutes"][selected]|)
 
       view
-      |> element(~s|select[name="reminder[unit]"]|)
+      |> element(~s|input[type=hidden][name="reminder[unit]"]|)
       |> render_change(%{"reminder" => %{"unit" => "hours"}})
 
-      assert has_element?(view, ~s|select[name="reminder[unit]"] option[value="hours"][selected]|)
-
-      refute has_element?(
-               view,
-               ~s|select[name="reminder[unit]"] option[value="minutes"][selected]|
-             )
+      assert has_element?(view, unit <> ~s| option[value="hours"][selected]|)
+      refute has_element?(view, unit <> ~s| option[value="minutes"][selected]|)
     end
   end
 
@@ -565,8 +560,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("[phx-click='open_slug_modal']") |> render_click()
 
       view
-      |> form("#booking-link-modal form", %{"slug" => "vip-call"})
-      |> render_change()
+      |> form("#booking-link-modal form")
+      |> render_change(%{"slug" => "vip-call"})
 
       view |> element("#booking-link-modal button", "Save link") |> render_click()
 
@@ -611,8 +606,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("[phx-click='open_slug_modal']") |> render_click()
 
       view
-      |> form("#booking-link-modal form", %{"slug" => "abandoned-draft"})
-      |> render_change()
+      |> form("#booking-link-modal form")
+      |> render_change(%{"slug" => "abandoned-draft"})
 
       view |> element("#booking-link-modal button", "Cancel") |> render_click()
       view |> element("[phx-click='open_slug_modal']") |> render_click()
@@ -637,8 +632,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("[phx-click='open_slug_modal']") |> render_click()
 
       view
-      |> form("#booking-link-modal form", %{"slug" => "coffee-chat"})
-      |> render_change()
+      |> form("#booking-link-modal form")
+      |> render_change(%{"slug" => "coffee-chat"})
 
       view |> element("#booking-link-modal button", "Save link") |> render_click()
 

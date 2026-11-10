@@ -110,13 +110,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       # Client-bypass: UI dropdowns do not enforce start < end, so
       # the server-side validation must reject.
       view
-      |> form("form[phx-submit='add_break']", %{
+      |> form("form[phx-submit='add_break']")
+      |> render_submit(%{
         "day" => "1",
         "start" => "14:00",
         "end" => "13:00",
         "label" => "Impossible Break"
       })
-      |> render_submit()
 
       html = render(view)
       refute html =~ "Break added"
@@ -143,13 +143,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       oversized_label = String.duplicate("a", 51)
 
       view
-      |> form("form[phx-submit='add_break']", %{
+      |> form("form[phx-submit='add_break']")
+      |> render_submit(%{
         "day" => "1",
         "start" => "12:00",
         "end" => "13:00",
         "label" => oversized_label
       })
-      |> render_submit()
 
       html = render(view)
       refute html =~ "Break added"
@@ -230,13 +230,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       |> render_click()
 
       view
-      |> form("form[phx-submit='add_break']", %{
+      |> form("form[phx-submit='add_break']")
+      |> render_submit(%{
         "day" => "1",
         "start" => "12:30",
         "end" => "13:30",
         "label" => "Second Lunch"
       })
-      |> render_submit()
 
       html = render(view)
       refute html =~ "Break added"

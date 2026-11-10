@@ -274,7 +274,7 @@ msgstr "Час має бути в майбутньому"
 msgid "Times shown in %{timezone}"
 msgstr "Час показано в %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Часовий пояс"

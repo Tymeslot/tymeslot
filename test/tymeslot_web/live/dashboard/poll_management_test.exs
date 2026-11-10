@@ -42,8 +42,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       refute has_element?(view, "[data-testid='poll-reminders-form']")
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => "ada@example.com"}})
-      |> render_change()
+      |> form("form[phx-submit='create_poll']")
+      |> render_change(%{"poll" => %{"invitees" => "ada@example.com"}})
 
       assert has_element?(
                view,
@@ -58,7 +58,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       deadline = Date.utc_today() |> Date.add(5) |> Date.to_iso8601()
 
       view
-      |> form("form[phx-submit='create_poll']", %{
+      |> form("form[phx-submit='create_poll']")
+      |> render_submit(%{
         "poll" => %{
           "title" => "Offsite",
           "duration" => "30",
@@ -68,7 +69,6 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
 
       assert [poll] = Polls.list_polls(user.id)
 
@@ -84,8 +84,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view |> element("button", "Add time") |> render_click()
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => "ada@example.com"}})
-      |> render_change()
+      |> form("form[phx-submit='create_poll']")
+      |> render_change(%{"poll" => %{"invitees" => "ada@example.com"}})
 
       view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
 
@@ -97,7 +97,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       deadline = Date.utc_today() |> Date.add(5) |> Date.to_iso8601()
 
       view
-      |> form("form[phx-submit='create_poll']", %{
+      |> form("form[phx-submit='create_poll']")
+      |> render_submit(%{
         "poll" => %{
           "title" => "Offsite",
           "duration" => "30",
@@ -107,7 +108,6 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
 
       assert [poll] = Polls.list_polls(user.id)
       assert %{value: 2, unit: "days"} in PollSchema.reminders(poll)
@@ -122,8 +122,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view |> element("button", "Add time") |> render_click()
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => "ada@example.com"}})
-      |> render_change()
+      |> form("form[phx-submit='create_poll']")
+      |> render_change(%{"poll" => %{"invitees" => "ada@example.com"}})
 
       view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
 
@@ -133,15 +133,16 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       # Clearing the invitees hides the picker, with its invalid value still in it.
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => ""}})
-      |> render_change()
+      |> form("form[phx-submit='create_poll']")
+      |> render_change(%{"poll" => %{"invitees" => ""}})
 
       refute has_element?(view, "[data-testid='poll-reminders-form']")
 
       date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
 
       view
-      |> form("form[phx-submit='create_poll']", %{
+      |> form("form[phx-submit='create_poll']")
+      |> render_submit(%{
         "poll" => %{
           "title" => "Offsite",
           "duration" => "30",
@@ -150,7 +151,6 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
 
       assert [%{title: "Offsite"}] = Polls.list_polls(user.id)
     end
@@ -185,14 +185,14 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view |> element("[data-testid='poll-new-times'] button", "Add time") |> render_click()
 
       view
-      |> form("[data-testid='poll-details-form']", %{
+      |> form("[data-testid='poll-details-form']")
+      |> render_submit(%{
         "poll" => %{
           "title" => "Offsite",
           "deadline" => local(in_days(5)),
           "new_times" => %{"0" => local(in_days(9))}
         }
       })
-      |> render_submit()
 
       {:ok, updated} = Polls.get_poll_for_host(poll.id, user.id)
       assert DateTime.compare(updated.deadline_at, in_days(4)) == :gt
@@ -223,10 +223,10 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view = open_editor(conn, poll)
 
       view
-      |> form("[data-testid='poll-details-form']", %{
+      |> form("[data-testid='poll-details-form']")
+      |> render_submit(%{
         "poll" => %{"title" => "Offsite", "meeting_type_id" => to_string(meeting_type.id)}
       })
-      |> render_submit()
 
       assert Repo.get!(PollSchema, poll.id).meeting_type_id == meeting_type.id
       await_slot_health(view)
@@ -248,14 +248,14 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       assert has_element?(
                view,
-               "select[name='poll[meeting_type_id]'] option[selected][value='#{switched_off.id}']"
+               "select[data-name='poll[meeting_type_id]'] option[selected][value='#{switched_off.id}']"
              )
 
       assert has_element?(view, "[data-testid='poll-kept-meeting-type']", "Old office hours")
 
       view
-      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Renamed"}})
-      |> render_submit()
+      |> form("[data-testid='poll-details-form']")
+      |> render_submit(%{"poll" => %{"title" => "Renamed"}})
 
       saved = Repo.get!(PollSchema, poll.id)
       assert saved.title == "Renamed"
@@ -268,10 +268,10 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       html =
         view
-        |> form("[data-testid='poll-details-form']", %{
+        |> form("[data-testid='poll-details-form']")
+        |> render_submit(%{
           "poll" => %{"title" => "Offsite", "deadline" => local(in_days(-1))}
         })
-        |> render_submit()
 
       assert html =~ "The deadline must be in the future"
       assert has_element?(view, "[data-testid='poll-details-form']")
@@ -352,8 +352,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       html =
         view
-        |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Renamed"}})
-        |> render_submit()
+        |> form("[data-testid='poll-details-form']")
+        |> render_submit(%{"poll" => %{"title" => "Renamed"}})
 
       assert html =~ "Couldn&#39;t save this poll. Please try again."
     end
@@ -385,8 +385,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       |> render_change(%{"reminder" => %{"value" => "2", "unit" => "days"}})
 
       view
-      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
-      |> render_submit()
+      |> form("[data-testid='poll-details-form']")
+      |> render_submit(%{"poll" => %{"title" => "Offsite"}})
 
       {:ok, updated} = Polls.get_poll_for_host(poll.id, user.id)
       assert %{value: 2, unit: "days"} in PollSchema.reminders(updated)
@@ -403,8 +403,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       |> render_change(%{"reminder" => %{"value" => "0", "unit" => "days"}})
 
       view
-      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Renamed"}})
-      |> render_submit()
+      |> form("[data-testid='poll-details-form']")
+      |> render_submit(%{"poll" => %{"title" => "Renamed"}})
 
       assert has_element?(view, "[data-testid='poll-details-form']")
       assert Repo.get!(PollSchema, poll.id).title == "Offsite"

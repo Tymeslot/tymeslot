@@ -271,7 +271,7 @@ msgstr ""
 msgid "Times shown in %{timezone}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr ""

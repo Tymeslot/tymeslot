@@ -87,20 +87,6 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
       assert [_control] = html |> Floki.parse_fragment!() |> Floki.find("input#heading[required]")
     end
 
-    test "render required on a select" do
-      html =
-        render_component(&Forms.input/1,
-          id: "tz",
-          name: "profile[tz]",
-          type: "select",
-          options: [{"UTC", "UTC"}],
-          value: "UTC",
-          required: true
-        )
-
-      assert [_control] = html |> Floki.parse_fragment!() |> Floki.find("select#tz[required]")
-    end
-
     test "render required on a textarea" do
       html =
         render_component(&Forms.input/1,

@@ -41,10 +41,20 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     bar stuck to the bottom of the screen)
     """
 
+  attr :field_name, :string,
+    default: nil,
+    doc: "When set, a hidden input posts the timezone under this name, for use inside a form"
+
   @spec timezone_dropdown(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_dropdown(assigns) do
     ~H"""
     <div class={["relative", @class]}>
+      <input
+        :if={@field_name}
+        type="hidden"
+        name={@field_name}
+        value={Profiles.timezone(@profile)}
+      />
       <%!-- Visual label only: it names no control (the trigger below carries its
            own accessible name), so it must not be a <label> element. --%>
       <div :if={@show_label} class="label">
@@ -114,6 +124,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                 phx-keyup="search_timezone"
                 phx-target={@target}
                 name="value"
+                form="timezone-search-detached"
                 value={@timezone_search || ""}
                 placeholder={dgettext("common", "Search cities, countries, or timezones...")}
                 aria-label={dgettext("common", "Search timezones")}
