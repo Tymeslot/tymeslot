@@ -199,7 +199,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def describe(:meeting_payments_enabled) do
     dgettext(
       "dashboard_admin",
-      "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
+      "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep working, but no new host can connect."
     )
   end
 
@@ -384,7 +384,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def lock_reason(:meeting_payments_enabled, true) do
     dgettext(
       "dashboard_admin",
-      "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
+      "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
     )
   end
 

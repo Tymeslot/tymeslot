@@ -391,11 +391,6 @@ msgstr "Score reCAPTCHA v3 minimum (0.0 à 1.0) requis pour accepter une inscrip
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
-msgstr "Définissez STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET dans l’environnement pour activer les paiements de réunion. Sans identifiants de plateforme, le parcours d’intégration Stripe Connect ne peut pas démarrer."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format
 msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
 msgstr "Afficher le bouton « Continuer avec GitHub » sur les pages de connexion et d’inscription. Nécessite que GITHUB_CLIENT_ID et GITHUB_CLIENT_SECRET soient définis dans l’environnement."
 
@@ -434,11 +429,6 @@ msgstr "Impossible de désactiver l’authentification par mot de passe tant qu�
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
 msgstr "Collecter des statistiques respectueuses de la vie privée pour les pages de réservation de cette instance : pages vues, source du trafic (UTM/référent) et conversion. Les visiteurs uniques sont comptabilisés à l’aide d’une empreinte sans cookie renouvelée chaque jour ; aucune adresse IP brute n’est stockée. Désactivé par défaut ; consultez votre politique de confidentialité avant d’activer cette option."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
-msgstr "Permettre aux organisateurs de cette instance de recevoir les paiements des personnes qui réservent via Stripe Connect. Nécessite que STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET soient définis dans l’environnement : sans ces valeurs, l’option reste verrouillée."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -1005,3 +995,13 @@ msgstr "Le lien d’invitation cessera de fonctionner et le compte invité sera 
 #, elixir-autogen, elixir-format
 msgid "The invitation to %{email} is cancelled."
 msgstr "L’invitation envoyée à %{email} a été annulée."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep working, but no new host can connect."
+msgstr "Permettre aux organisateurs de cette instance de recevoir les paiements des personnes qui réservent via Stripe Connect. Nécessite que STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET soient définis dans l’environnement : sans ces valeurs, l’option reste verrouillée. Les organisateurs connectent leur compte Stripe avec STRIPE_CONNECT_CLIENT_ID : sans cette variable, les organisateurs déjà connectés continuent de fonctionner, mais aucun nouvel organisateur ne peut se connecter."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
+msgstr "Définissez STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET dans l’environnement pour activer les paiements de réunion. Définissez aussi STRIPE_CONNECT_CLIENT_ID, sinon aucun nouvel organisateur ne peut connecter de compte Stripe."

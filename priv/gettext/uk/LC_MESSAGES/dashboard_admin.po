@@ -391,11 +391,6 @@ msgstr "Мінімальний бал reCAPTCHA v3 (0,0–1,0), необхідн
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
-msgstr "Налаштуйте змінні середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET, щоб увімкнути оплату зустрічей. Без облікових даних платформи процес підключення до Stripe Connect неможливо розпочати."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format
 msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
 msgstr "Показувати кнопку «Продовжити з GitHub» під час входу та реєстрації. Потребує налаштування змінних середовища GITHUB_CLIENT_ID та GITHUB_CLIENT_SECRET."
 
@@ -434,11 +429,6 @@ msgstr "Неможливо вимкнути автентифікацію за п
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
 msgstr "Збирати аналітику з дотриманням конфіденційності для сторінок бронювання на цьому екземплярі: перегляди сторінок, джерела трафіку (UTM/реферер) та конверсії. Унікальні відвідувачі підраховуються за допомогою щоденно оновлюваного відбитка без використання файлів cookie - необроблені IP-адреси не зберігаються. Вимкнено за замовчуванням; перед увімкненням перегляньте свою політику конфіденційності."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
-msgstr "Дозволити організаторам на цьому екземплярі приймати платежі від клієнтів через Stripe Connect. Потребує налаштування змінних середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET - без них перемикач залишатиметься заблокованим."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -1005,3 +995,13 @@ msgstr "Посилання із запрошення перестане прац
 #, elixir-autogen, elixir-format
 msgid "The invitation to %{email} is cancelled."
 msgstr "Запрошення на адресу %{email} скасовано."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep working, but no new host can connect."
+msgstr "Дозволити організаторам на цьому екземплярі приймати платежі від клієнтів через Stripe Connect. Потребує налаштування змінних середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET: без них перемикач залишатиметься заблокованим. Організатори підключають свій обліковий запис Stripe через STRIPE_CONNECT_CLIENT_ID: без цієї змінної вже підключені організатори продовжують працювати, але новий організатор підключитися не зможе."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
+msgstr "Налаштуйте змінні середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET, щоб увімкнути оплату зустрічей. Налаштуйте також STRIPE_CONNECT_CLIENT_ID, інакше жоден новий організатор не зможе підключити обліковий запис Stripe."
