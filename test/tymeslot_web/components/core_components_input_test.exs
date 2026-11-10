@@ -31,6 +31,33 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
     assert html =~ "can&#39;t be blank"
   end
 
+  describe "textarea rows" do
+    defp render_textarea(assigns) do
+      fn assigns ->
+        ~H"""
+        <Forms.input id="bio" name="bio" type="textarea" value="" {@attrs} />
+        """
+      end
+      |> render_component(%{attrs: assigns})
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("textarea")
+    end
+
+    test "the caller's rows reach the textarea" do
+      assert LazyHTML.attribute(render_textarea(%{rows: 7}), "rows") == ["7"]
+    end
+
+    test "the height is left to rows: no minimum height overrules a small value" do
+      [class] = LazyHTML.attribute(render_textarea(%{rows: 2}), "class")
+
+      refute class =~ "min-h-"
+    end
+
+    test "falls back to four rows when the caller passes none" do
+      assert LazyHTML.attribute(render_textarea(%{}), "rows") == ["4"]
+    end
+  end
+
   test "a valid field carries no aria-invalid or aria-describedby" do
     html = render_input(%{id: "user_email", errors: []})
 

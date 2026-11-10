@@ -169,6 +169,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           multiple={@multiple}
           hidden_input={@hidden_input}
           maxlength={@maxlength}
+          rows={@rows}
           rest={@rest}
         />
 
@@ -239,10 +240,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   end
 
   defp input_element(%{type: "textarea"} = assigns) do
-    assigns =
-      assigns
-      |> assign_new(:rest, fn -> %{} end)
-      |> assign_new(:rows, fn -> 4 end)
+    assigns = assign_new(assigns, :rest, fn -> %{} end)
 
     ~H"""
     <textarea
@@ -252,7 +250,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       placeholder={@placeholder}
       maxlength={@maxlength}
       class={[
-        "input min-h-[120px] py-3",
+        "input py-3",
         @has_leading_icon && "input-with-icon",
         @has_trailing_icon && "input-with-trailing-icon",
         @errors != [] && "input-error"
