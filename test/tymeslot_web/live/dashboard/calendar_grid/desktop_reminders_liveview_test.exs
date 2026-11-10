@@ -77,8 +77,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopRemindersLiveViewTest do
       html = component_event(lv, "enable_desktop_reminders", %{"permission" => "granted"})
 
       assert reminders_on?(user)
-      assert html =~ ~s(id="desktop-reminders-switch")
-      assert html =~ ~s(aria-checked="true")
+      assert has_element?(lv, ~s(#desktop-reminders-switch[aria-checked="true"]))
       refute html =~ "desktop-permission-note"
     end
 
@@ -86,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopRemindersLiveViewTest do
       html = component_event(lv, "enable_desktop_reminders", %{"permission" => "denied"})
 
       refute reminders_on?(user)
-      assert html =~ ~s(aria-checked="false")
+      assert has_element?(lv, ~s(#desktop-reminders-switch[aria-checked="false"]))
       assert html =~ "Blocked in your browser settings"
     end
 
@@ -112,6 +111,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopRemindersLiveViewTest do
       component_event(lv, "enable_desktop_reminders", %{"permission" => "maybe"})
 
       refute reminders_on?(user)
+    end
+
+    test "the plain toggle cannot turn reminders on, whatever the hook did", %{lv: lv, user: user} do
+      # The hook is lazy-loaded: a click before it arrives, or after a failed
+      # import, reaches the server as the plain toggle.
+      lv |> element("#desktop-reminders-switch") |> render_click()
+
+      refute reminders_on?(user)
+      assert has_element?(lv, ~s(#desktop-reminders-switch[aria-checked="false"]))
+    end
+
+    test "the plain toggle still turns reminders off", %{lv: lv, user: user} do
+      component_event(lv, "enable_desktop_reminders", %{"permission" => "granted"})
+      assert reminders_on?(user)
+
+      lv |> element("#desktop-reminders-switch") |> render_click()
+
+      refute reminders_on?(user)
+      assert has_element?(lv, ~s(#desktop-reminders-switch[aria-checked="false"]))
     end
 
     test "the switch hands the click to the permission hook", %{lv: lv} do

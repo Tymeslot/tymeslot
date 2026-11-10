@@ -156,8 +156,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
     {:noreply, socket}
   end
 
+  @doc """
+  Flips a boolean preference. Desktop reminders are the exception: the plain
+  toggle only turns them off. Turning them on needs the browser's permission,
+  which only `handle_enable_desktop_reminders/2` knows about, so a click that
+  reaches this function while they are off (the permission hook not loaded
+  yet, or failed to load) changes nothing.
+  """
   @spec handle_toggle_preference(map(), Phoenix.LiveView.Socket.t(), atom()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_preference(
+        _params,
+        %{assigns: %{preferences: %{desktop_reminders_enabled: false}}} = socket,
+        :desktop_reminders_enabled
+      ),
+      do: {:noreply, socket}
+
   def handle_toggle_preference(_params, socket, key)
       when key in @allowed_preference_keys do
     user_id = socket.assigns.current_user.id
