@@ -1,8 +1,7 @@
 # Per user SMTP
 
 Each user can configure one secure SMTP identity for scheduling notifications
-under dashboard **Profile > Email sending**. The
-[extension plan](plans/per-user-smtp.md) records the implementation phases.
+under dashboard **Profile > Email sending**.
 
 ## Deployment opt in
 
