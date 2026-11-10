@@ -446,6 +446,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
       fact = Map.fetch!(facts, key)
 
       cond do
+        # A fact that refuses the entry has already sent the visitor away, and
+        # a socket can only be redirected once.
+        acc.redirected -> acc
         not fact.required?(acc.assigns) -> acc
         waits_in_moment?(fact, collects, acc.assigns) -> defer(acc, moment_key, key, params)
         true -> fact.enter(acc, params)
