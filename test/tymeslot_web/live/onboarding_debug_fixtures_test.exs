@@ -44,11 +44,12 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
     resume =
       StepConfig.resume_step(%{
         username: "host",
-        bookable_calendar?: socket.assigns.booking_page_live
+        bookable_calendar?: socket.assigns.booking_page_live,
+        meeting_confirmed?: false
       })
 
     assert resume == :meeting
-    assert StepConfig.reachable?(:choose_theme, resume)
+    assert StepConfig.reachable?(:meeting, resume)
   end
 
   test "an unknown or not yet built fixture leaves the socket unchanged" do

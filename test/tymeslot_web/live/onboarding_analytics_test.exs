@@ -21,6 +21,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Onboarding
   alias Tymeslot.Repo
 
   setup :verify_on_exit!
@@ -386,6 +387,7 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
       {conn, user} = onboarding_conn(conn)
       insert(:profile, user: user, username: "ada#{System.unique_integer([:positive])}")
       insert(:calendar_integration, user: user)
+      {:ok, _confirmed} = Onboarding.confirm_meeting_step(user)
       %{conn: conn}
     end
 

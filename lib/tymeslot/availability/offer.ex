@@ -31,6 +31,7 @@ defmodule Tymeslot.Availability.Offer do
     BusyIntervals,
     Calculate,
     GroupSlots,
+    Intervals,
     Reach,
     Schedules,
     SessionSlots,
@@ -183,10 +184,12 @@ defmodule Tymeslot.Availability.Offer do
   `:starts` holds the same free times as `DateTime`s in the booker's zone.
   `:busy` is every period that occupies the host's time in the range (blocking
   calendar events and live bookings) as UTC `{start, end}` instants, unmerged,
-  buffers and notice not applied. `:windows` is the host's open hours on each
-  date of the range as `BusinessHours.owner_windows/4` resolves them (overrides,
-  extra windows and overnight hours included). A demo page has no starts, busy
-  periods or windows. Fails exactly as `slots_for_range/4` does.
+  buffers and notice not applied. `:windows` is the hours the host is actually
+  open on each date of the range: what `BusinessHours.owner_windows/4` resolves
+  (overrides, extra windows and overnight hours included) with time off taken
+  out, so a date wholly away has none and a part-day period can leave a window
+  in two pieces. A demo page has no starts, busy periods or windows. Fails
+  exactly as `slots_for_range/4` does.
   """
   @spec slots_and_busy_for_range(
           request(),
@@ -403,14 +406,34 @@ defmodule Tymeslot.Availability.Offer do
       slots: Map.new(days, fn {day, {offered, _starts}} -> {day, offered} end),
       starts: Map.new(days, fn {day, {_offered, starts}} -> {day, starts} end),
       busy: BusyIntervals.of(busy, owner_timezone),
-      windows:
-        BusinessHours.owner_windows(
-          Date.range(start_date, end_date),
-          config.schedule_id,
-          owner_timezone,
-          config
-        )
+      windows: open_windows(Date.range(start_date, end_date), owner_timezone, config)
     }
+  end
+
+  # The hours the host is open: the schedule's windows less time off, as the
+  # slots of the same range are computed.
+  defp open_windows(dates, owner_timezone, %{schedule_id: schedule_id} = config) do
+    time_off = BusinessHours.time_off_intervals(dates, schedule_id, owner_timezone, config)
+
+    dates
+    |> BusinessHours.owner_windows(schedule_id, owner_timezone, config)
+    |> Enum.flat_map(&without_time_off(&1, time_off, owner_timezone))
+  end
+
+  # `Intervals` works on bare `{start, end}` pairs, so each surviving piece is
+  # put back into the window it came from, keeping its date and `extra` mark
+  # and only the breaks that still fall inside it.
+  defp without_time_off(window, time_off, owner_timezone) do
+    [{window.start_dt, window.end_dt}]
+    |> Intervals.subtract(time_off)
+    |> Enum.map(fn {start_dt, end_dt} = piece ->
+      %{
+        window
+        | start_dt: DateTime.shift_zone!(start_dt, owner_timezone),
+          end_dt: DateTime.shift_zone!(end_dt, owner_timezone),
+          breaks: Intervals.clip(window.breaks, piece)
+      }
+    end)
   end
 
   # `day_slots` for every day of the range, keyed by ISO date; the first day

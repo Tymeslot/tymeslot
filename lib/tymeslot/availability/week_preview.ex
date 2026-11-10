@@ -11,12 +11,12 @@ defmodule Tymeslot.Availability.WeekPreview do
   calendar read, so the two cannot disagree and the calendar is fetched once.
 
   Busy blocks are for display. Buffers and minimum notice shape the slots, not
-  the blocks. Each block is clipped to the host's open windows for its day, as
-  `Tymeslot.Availability.BusinessHours.owner_windows/4` resolves them (date
-  overrides, extra windows and overnight hours included), so an evening event
-  does not stretch the day and a day the host is closed has no blocks. Where
-  windows overlap the blocks are merged. An overnight window's block is drawn
-  on the date the window opens and stops at midnight.
+  the blocks. Each block is clipped to the hours the host is open that day, as
+  `Tymeslot.Availability.Offer.slots_and_busy_for_range/4` reports them (date
+  overrides, extra windows and overnight hours included, time off taken out),
+  so an evening event does not stretch the day and a day the host is closed or
+  away has no blocks. Where windows overlap the blocks are merged. An overnight
+  window's block is drawn on the date the window opens and stops at midnight.
 
   A profile whose timezone is blank or not a real zone is previewed in the
   business default zone, as the booking page treats it

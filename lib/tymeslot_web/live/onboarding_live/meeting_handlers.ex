@@ -28,6 +28,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   alias Ecto.Changeset
   alias Phoenix.Component
   alias Tymeslot.Availability
+  alias Tymeslot.Onboarding
   alias Tymeslot.Onboarding.MeetingSetup
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.OnboardingLive.WeekReveal
@@ -487,12 +488,21 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   @doc """
   Before Continue leaves the step: saves a change still pending (a name
   typed and never left), and reports whether the step is complete. A step
-  with an error stays.
+  with an error stays. Leaving it complete records it on the account, which
+  is what opens the steps after it (`StepConfig.resume_step/1`), including
+  when the host keeps the defaults as they are.
   """
   @spec continue(socket()) :: {:ok, socket()} | {:error, socket()}
   def continue(socket) do
     socket = socket |> validate_meeting() |> save_meeting()
-    if invalid?(socket.assigns), do: {:error, socket}, else: {:ok, socket}
+    if invalid?(socket.assigns), do: {:error, socket}, else: confirm_step(socket)
+  end
+
+  defp confirm_step(socket) do
+    case Onboarding.confirm_meeting_step(socket.assigns.current_user) do
+      {:ok, user} -> {:ok, Component.assign(socket, :current_user, user)}
+      {:error, _reason} -> {:error, put_error(socket, :location, message(:save, :failed))}
+    end
   end
 
   # -------------------------------------------------------------------
