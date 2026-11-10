@@ -1,9 +1,9 @@
 defmodule Tymeslot.Onboarding.MeetingConfirmedBackfillTest do
   @moduledoc """
-  Drives `20261110165152_add_onboarding_meeting_confirmed_at_to_users` itself:
-  a host mid-onboarding whose meeting type is no longer the seeded default is
-  stamped, so the new meeting step gate does not send them back; a host on the
-  untouched default, in any language, is not.
+  Drives `20261110175018_backfill_onboarding_meeting_confirmed_at` itself: a host
+  mid-onboarding whose meeting type is no longer a seeded default is stamped,
+  so the new meeting step gate does not send them back; a host on an untouched
+  default of either seed generation, in any language, is not.
 
   The migration module is loaded from `priv` and run through `Ecto.Migrator`;
   see `Tymeslot.Test.MigrationRunner`.
@@ -19,21 +19,23 @@ defmodule Tymeslot.Onboarding.MeetingConfirmedBackfillTest do
   alias Tymeslot.Repo
   alias Tymeslot.Test.MigrationRunner
 
-  @version 20_261_110_165_152
+  @version 20_261_110_175_018
 
   @seeded [name: "Intro call", duration_minutes: 30]
 
-  defp mid_onboarding(meeting_type_attrs) do
-    user = insert(:user, onboarding_completed_at: nil)
+  defp mid_onboarding(meeting_type_attrs, user_attrs \\ []) do
+    user = insert(:user, Keyword.put_new(user_attrs, :onboarding_completed_at, nil))
+    add_meeting_type(user, meeting_type_attrs)
+    user
+  end
 
+  defp add_meeting_type(user, attrs) do
     insert(
       :meeting_type,
       [user: user, locations: [in_person_location()]]
       |> Keyword.merge(@seeded)
-      |> Keyword.merge(meeting_type_attrs)
+      |> Keyword.merge(attrs)
     )
-
-    user
   end
 
   defp confirmed_at(user),
@@ -48,7 +50,7 @@ defmodule Tymeslot.Onboarding.MeetingConfirmedBackfillTest do
     archived = mid_onboarding(name: "Coaching session", is_active: false)
     no_meeting_type = insert(:user, onboarding_completed_at: nil)
 
-    MigrationRunner.rerun!(@version)
+    MigrationRunner.replay!(@version)
 
     assert %DateTime{} = confirmed_at(renamed)
     assert %DateTime{} = confirmed_at(longer)
@@ -59,12 +61,55 @@ defmodule Tymeslot.Onboarding.MeetingConfirmedBackfillTest do
     assert confirmed_at(no_meeting_type) == nil
   end
 
-  test "leaves completed accounts to be counted as confirmed at read time" do
-    user = insert(:user, onboarding_completed_at: ~U[2026-01-01 09:00:00Z])
-    insert(:meeting_type, user: user, name: "Coaching session", locations: [in_person_location()])
+  describe "the earlier pair of seeded defaults" do
+    test "a host still on both is not stamped" do
+      user = mid_onboarding(name: "15 Minutes", duration_minutes: 15)
+      add_meeting_type(user, name: "30 Minutes", duration_minutes: 30)
 
-    MigrationRunner.rerun!(@version)
+      MigrationRunner.replay!(@version)
+
+      assert confirmed_at(user) == nil
+    end
+
+    test "a host who edited one of them is stamped" do
+      renamed = mid_onboarding(name: "Discovery", duration_minutes: 15)
+      add_meeting_type(renamed, name: "30 Minutes", duration_minutes: 30)
+
+      # The name of one default with the length of the other was never seeded.
+      lengthened = mid_onboarding(name: "15 Minutes", duration_minutes: 30)
+
+      moved =
+        mid_onboarding(
+          name: "30 Minutes",
+          duration_minutes: 30,
+          locations: [in_person_location([], kind: :phone, label: "Phone")]
+        )
+
+      MigrationRunner.replay!(@version)
+
+      assert %DateTime{} = confirmed_at(renamed)
+      assert %DateTime{} = confirmed_at(lengthened)
+      assert %DateTime{} = confirmed_at(moved)
+    end
+  end
+
+  test "leaves completed accounts to be counted as confirmed at read time" do
+    user =
+      mid_onboarding([name: "Coaching session"],
+        onboarding_completed_at: ~U[2026-01-01 09:00:00Z]
+      )
+
+    MigrationRunner.replay!(@version)
 
     assert confirmed_at(user) == nil
+  end
+
+  test "keeps the time of a host who has already confirmed the step" do
+    first = ~U[2026-01-01 09:00:00Z]
+    user = mid_onboarding([name: "Coaching session"], onboarding_meeting_confirmed_at: first)
+
+    MigrationRunner.replay!(@version)
+
+    assert confirmed_at(user) == first
   end
 end
