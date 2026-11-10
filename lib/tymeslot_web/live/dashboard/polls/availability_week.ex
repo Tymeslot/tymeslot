@@ -37,38 +37,50 @@ defmodule TymeslotWeb.Dashboard.Polls.AvailabilityWeek do
   end
 
   @doc """
-  The first day shown after a step `direction` ("prev" or "next") from
-  `first_day`, never before today in `timezone`.
+  The week shown `offset` weeks on from today in `timezone`: its first day,
+  and the UTC stretch to read the host's availability for, a day past the
+  last one shown so a meeting starting late on it is judged whole. The form
+  keeps the offset rather than the day, so the grid follows the poll's
+  timezone when it changes.
   """
-  @spec shift(Date.t(), String.t(), String.t()) :: Date.t()
-  def shift(first_day, "next", _timezone), do: Date.add(first_day, @days)
+  @spec week(String.t(), non_neg_integer(), DateTime.t()) ::
+          {Date.t(), {DateTime.t(), DateTime.t()}}
+  def week(timezone, offset, now \\ Clock.utc_now()) do
+    first_day = timezone |> today(now) |> Date.add(offset * @days)
 
-  def shift(first_day, "prev", timezone),
-    do: Enum.max([Date.add(first_day, -@days), today(timezone)], Date)
-
-  def shift(first_day, _direction, _timezone), do: first_day
-
-  @doc """
-  The UTC stretch to read the host's availability for, a day past the last
-  one shown so a meeting starting late on it is judged whole.
-  """
-  @spec window(Date.t(), String.t()) :: {DateTime.t(), DateTime.t()}
-  def window(first_day, timezone) do
-    {midnight(first_day, timezone), midnight(Date.add(first_day, @days + 1), timezone)}
+    {first_day,
+     {midnight(first_day, timezone), midnight(Date.add(first_day, @days + 1), timezone)}}
   end
 
   @doc """
+  The week offset after a step `direction` ("prev" or "next") from `offset`,
+  never before this week.
+  """
+  @spec shift(non_neg_integer(), String.t()) :: non_neg_integer()
+  def shift(offset, "next"), do: offset + 1
+  def shift(offset, "prev"), do: max(offset - 1, 0)
+  def shift(offset, _direction), do: offset
+
+  @doc """
   What clicking the step `value` does to `rows`: `{:remove, key}` when a
-  candidate starts there, `:add` otherwise.
+  candidate starts within that step (the step the grid draws it on, so a
+  time typed off the half hour is removed from where it shows), `:add`
+  otherwise.
   """
   @spec toggle([%{key: integer(), value: String.t()}], String.t()) ::
           {:remove, String.t()} | :add
   def toggle(rows, value) do
-    case Enum.find(rows, &(minute(&1.value) == value)) do
-      nil -> :add
-      row -> {:remove, to_string(row.key)}
+    with %NaiveDateTime{} = step <- naive(value),
+         step_end = NaiveDateTime.add(step, @step_minutes, :minute),
+         %{key: key} <- Enum.find(rows, &starts_within?(naive(&1.value), step, step_end)) do
+      {:remove, to_string(key)}
+    else
+      _no_candidate -> :add
     end
   end
+
+  defp starts_within?(nil, _from, _to), do: false
+  defp starts_within?(moment, from, to), do: within?(moment, from, to)
 
   attr :id, :string, required: true
   attr :first_day, Date, required: true
@@ -138,12 +150,15 @@ defmodule TymeslotWeb.Dashboard.Polls.AvailabilityWeek do
           >
             {day.label}
           </div>
-          <%= for time <- @grid.times do %>
+          <%!-- `contents` keeps each row's cells on the grid; the keys let
+                LiveView send only the rows and cells that changed. --%>
+          <div :for={time <- @grid.times} :key={time.time} class="contents">
             <div class="bg-white pr-2 text-right text-token-xs leading-none text-tymeslot-500">
               {if time.label, do: time.label}
             </div>
             <button
               :for={cell <- Enum.map(@grid.days, &Map.fetch!(&1.cells, time.time))}
+              :key={cell.value}
               type="button"
               class={["relative h-5", cell_class(cell)]}
               disabled={cell.past?}
@@ -163,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.Polls.AvailabilityWeek do
                 data-testid="poll-deadline-marker"
               ></span>
             </button>
-          <% end %>
+          </div>
         </div>
       </div>
 
@@ -213,7 +228,7 @@ defmodule TymeslotWeb.Dashboard.Polls.AvailabilityWeek do
   defp build(assigns) do
     %{first_day: first_day, timezone: timezone, slots: slots} = assigns
     dates = Enum.map(0..(@days - 1), &Date.add(first_day, &1))
-    minutes = assigns.minutes || @step_minutes
+    minutes = meeting_minutes(assigns.minutes)
     candidates = slots |> Enum.map(&naive(&1.value)) |> Enum.reject(&is_nil/1)
     deadline = naive(assigns.deadline)
     times = times(dates, assigns.availability, candidates, deadline, timezone)
@@ -237,6 +252,11 @@ defmodule TymeslotWeb.Dashboard.Polls.AvailabilityWeek do
       deadline_label: deadline && deadline_label(deadline, assigns.time_format)
     }
   end
+
+  # A length still being typed (blank, 0, negative) is judged as one step,
+  # as `HostAvailability.status/3` measures only a real meeting.
+  defp meeting_minutes(minutes) when is_integer(minutes) and minutes > 0, do: minutes
+  defp meeting_minutes(_unreadable), do: @step_minutes
 
   defp time_row(time, time_format),
     do: %{time: time, label: if(time.minute == 0, do: TimeFormat.format(time, time_format))}
@@ -385,7 +405,4 @@ defmodule TymeslotWeb.Dashboard.Polls.AvailabilityWeek do
   defp naive(_blank), do: nil
 
   defp normalise(value), do: if(String.length(value) == 16, do: value <> ":00", else: value)
-
-  defp minute(value) when is_binary(value), do: String.slice(value, 0, 16)
-  defp minute(_value), do: nil
 end

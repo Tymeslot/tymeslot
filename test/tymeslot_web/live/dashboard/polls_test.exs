@@ -399,6 +399,45 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       refute has_element?(view, "input[type='datetime-local'][value='#{day}T14:00']")
     end
 
+    test "judges a duration still being typed as one step rather than failing",
+         %{conn: conn, day: day} do
+      view = open_form(conn)
+      change_form(view, %{"duration" => "0"})
+
+      assert status(view, "#{day}T10:30") == "busy"
+      assert status(view, "#{day}T09:30") == "free"
+    end
+
+    test "removes a candidate typed off the half hour from the step it shows on",
+         %{conn: conn, day: day} do
+      view = open_form(conn)
+      view |> element("button", "Add time") |> render_click()
+      change_form(view, %{"slots" => %{"0" => "#{day}T14:15"}})
+
+      cell = "[data-testid='poll-availability-week'] button[data-at='#{day}T14:00']"
+      assert has_element?(view, cell <> "[aria-pressed='true']")
+
+      view |> element(cell) |> render_click()
+      render_async(view)
+
+      refute has_element?(view, "input[type='datetime-local'][value='#{day}T14:15']")
+      refute has_element?(view, "input[type='datetime-local'][value='#{day}T14:00']")
+    end
+
+    # Tonga is always a day ahead of Pago Pago, so whatever the host's own
+    # clock reads, one of the two is on a different date from it.
+    test "opens the week on today in the poll's timezone when it changes", %{conn: conn} do
+      view = open_form(conn)
+
+      for zone <- ["Pacific/Tongatapu", "Pacific/Pago_Pago"] do
+        change_form(view, %{"timezone" => zone})
+        today = zone |> DateTime.now!() |> DateTime.to_date()
+
+        assert has_element?(view, "button[data-at='#{today}T12:00']")
+        refute has_element?(view, "button[data-at='#{Date.add(today, -1)}T12:00']")
+      end
+    end
+
     test "widens the hours shown to take in a late candidate", %{conn: conn, day: day} do
       view = open_form(conn)
       refute has_element?(view, "button[data-at='#{day}T21:00']")

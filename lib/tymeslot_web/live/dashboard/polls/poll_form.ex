@@ -78,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        time_off_keys: MapSet.new(),
        conflict_keys: MapSet.new(),
        checked_ranges: [],
+       week_offset: 0,
        availability_window: nil,
        draft: nil,
        loaded_draft_id: nil,
@@ -93,8 +94,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       if socket.assigns[:timezone] do
         socket
       else
-        timezone = host_timezone(socket.assigns.profile)
-        assign(socket, timezone: timezone, first_day: AvailabilityWeek.today(timezone))
+        assign(socket, :timezone, host_timezone(socket.assigns.profile))
       end
 
     {:ok, socket |> load_draft() |> refresh_availability()}
@@ -318,10 +318,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   def handle_event("availability_week", %{"to" => direction}, socket) do
-    first_day =
-      AvailabilityWeek.shift(socket.assigns.first_day, direction, socket.assigns.timezone)
-
-    {:noreply, socket |> assign(:first_day, first_day) |> refresh_availability()}
+    offset = AvailabilityWeek.shift(socket.assigns.week_offset, direction)
+    {:noreply, socket |> assign(:week_offset, offset) |> refresh_availability()}
   end
 
   @impl Phoenix.LiveComponent
@@ -443,11 +441,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     end
   end
 
-  # The host's busy time and hours for the grid's week (`first_day`, set in
-  # `update/2`), read again only when that week or the timezone changes.
+  # The grid's week and the host's busy time and hours for it, read again
+  # only when that week or the timezone changes.
   defp refresh_availability(socket) do
-    %{first_day: first_day, timezone: timezone, current_user: user} = socket.assigns
-    {from, to} = window = AvailabilityWeek.window(first_day, timezone)
+    %{week_offset: offset, timezone: timezone, current_user: user} = socket.assigns
+    {first_day, {from, to} = window} = AvailabilityWeek.week(timezone, offset)
+    socket = assign(socket, :first_day, first_day)
 
     if window == socket.assigns.availability_window do
       socket
