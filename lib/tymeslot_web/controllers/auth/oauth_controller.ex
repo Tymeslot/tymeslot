@@ -471,7 +471,25 @@ defmodule TymeslotWeb.OAuthController do
 
     conn
     |> put_flash(:error, AuthControllerHelpers.format_oauth_error_for_flash(error))
+    |> put_flash(:completion_draft, completion_draft(conn.params))
     |> redirect(to: ~p"/auth/complete-registration?#{query_params}")
+  end
+
+  # What the visitor filled in, kept across the redirect back to the form.
+  # Capped because the flash travels in the session cookie.
+  defp completion_draft(params) do
+    %{
+      "email" => draft_value(params, "auth", "email"),
+      "full_name" => draft_value(params, "profile", "full_name"),
+      "terms" => draft_value(params, "auth", "terms_accepted") != ""
+    }
+  end
+
+  defp draft_value(params, section, field) do
+    case params do
+      %{^section => %{^field => value}} when is_binary(value) -> String.slice(value, 0, 254)
+      _missing_or_malformed -> ""
+    end
   end
 
   @spec get_welcome_message(provider()) :: String.t()

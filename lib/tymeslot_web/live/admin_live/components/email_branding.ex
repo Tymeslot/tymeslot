@@ -35,6 +35,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
   attr :accent_preview, :map, default: nil
   attr :accent_draft, :string, default: nil
   attr :error, :string, default: nil
+  attr :draft, :string, default: nil
 
   @spec brand_accent_row(map()) :: Phoenix.LiveView.Rendered.t()
   def brand_accent_row(assigns) do
@@ -44,7 +45,10 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
         :current,
         assigns.accent_draft || assigns.effective.value || assigns.stock_accent
       )
-      |> assign(:hex_value, assigns.accent_draft || assigns.effective.value || "")
+      |> assign(
+        :hex_value,
+        assigns.draft || assigns.accent_draft || assigns.effective.value || ""
+      )
 
     ~H"""
     <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">

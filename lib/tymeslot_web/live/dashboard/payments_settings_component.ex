@@ -38,6 +38,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   import TymeslotWeb.Dashboard.PaymentsSettings.StatusCard,
     only: [status_card: 1, needs_onboarding?: 1]
 
+  @blank_refund_form %{type: "full", amount: ""}
+
   @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(socket) do
@@ -46,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> ModalHook.mount_modal(refund: false, disconnect: false)
      |> assign(:refund_submitting, false)
      |> assign(:refund_error, nil)
+     |> assign(:refund_form, @blank_refund_form)
      |> assign(:connect_account, nil)
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
@@ -107,6 +110,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         payment={@refund_modal_data}
         submitting={@refund_submitting}
         error={@refund_error}
+        form={@refund_form}
         myself={@myself}
       />
 
@@ -188,7 +192,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     {:noreply,
      socket
      |> ModalHook.hide_modal(:refund)
-     |> assign(:refund_submitting, false)}
+     |> assign(:refund_submitting, false)
+     |> reset_refund_form()}
   end
 
   # The payment always comes from the open modal, never from params: the form
@@ -245,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   defp open_refund_modal(socket, payment) do
     if MeetingPayments.refundable?(payment) do
-      {:noreply, ModalHook.show_modal(socket, :refund, payment)}
+      {:noreply, socket |> reset_refund_form() |> ModalHook.show_modal(:refund, payment)}
     else
       Flash.error(
         dgettext(
@@ -291,14 +296,30 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   defp do_submit_refund(socket, payment, params) do
+    # Kept whatever the outcome: the radios and the amount live in the browser
+    # until submit, and a re-render without them would snap back to a full refund.
+    socket = assign(socket, :refund_form, refund_form(params))
+
     case MeetingPayments.parse_refund_amount(payment, params) do
       {:ok, amount_cents} ->
-        process_refund(assign(socket, :refund_submitting, true), payment, amount_cents)
+        socket
+        |> assign(refund_submitting: true, refund_error: nil)
+        |> process_refund(payment, amount_cents)
 
       {:error, reason} ->
         {:noreply, assign(socket, :refund_error, parse_refund_error_message(reason))}
     end
   end
+
+  defp refund_form(params) do
+    %{
+      type: if(params["refund_type"] == "partial", do: "partial", else: "full"),
+      amount: if(is_binary(params["amount"]), do: params["amount"], else: "")
+    }
+  end
+
+  defp reset_refund_form(socket),
+    do: assign(socket, refund_error: nil, refund_form: @blank_refund_form)
 
   # Run the blocking Stripe refund call in an async task so the
   # `refund_submitting` spinner actually paints — assigning it and then making

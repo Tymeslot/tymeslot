@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
                 participant={@participant}
                 link_request={@link_request}
                 field_errors={assigns[:poll_field_errors] || %{}}
+                draft={assigns[:poll_draft] || %{}}
                 invalid_link={@invalid_link}
               />
             </div>

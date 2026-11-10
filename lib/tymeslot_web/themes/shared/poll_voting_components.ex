@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :participant, :map, default: nil
   attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
   attr :field_errors, :map, default: %{}, doc: "`:name`/`:email` messages shown under the fields"
+  attr :draft, :map, default: %{}, doc: "what the visitor last submitted, kept across a refusal"
   attr :invalid_link, :boolean, default: false
 
   @doc """
@@ -103,7 +104,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           <%= if @link_request do %>
             <.link_sent outcome={@link_request} />
           <% else %>
-            <.identity_form field_errors={@field_errors} />
+            <.identity_form field_errors={@field_errors} draft={@draft} />
           <% end %>
           <.slot_grid poll={@poll} tallies={@tallies} editable={false} />
         <% :vote -> %>
@@ -130,6 +131,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             participant={@participant}
             editable={true}
             field_errors={@field_errors}
+            draft={@draft}
           />
       <% end %>
     </div>
@@ -236,6 +238,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   catch automated submissions, matching the booking form.
   """
   attr :field_errors, :map, default: %{}
+  attr :draft, :map, default: %{}
 
   @spec identity_form(map()) :: Phoenix.LiveView.Rendered.t()
   def identity_form(assigns) do
@@ -293,6 +296,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           name="name"
           autocomplete="name"
           required
+          value={@draft[:name]}
           aria-invalid={@field_errors[:name] && "true"}
           aria-describedby={@field_errors[:name] && "poll-name-error"}
           data-testid="poll-name"
@@ -310,6 +314,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           name="email"
           autocomplete="email"
           required
+          value={@draft[:email]}
           aria-invalid={@field_errors[:email] && "true"}
           aria-describedby={@field_errors[:email] && "poll-email-error"}
           data-testid="poll-email"
@@ -331,6 +336,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :participant, :map, default: nil
   attr :editable, :boolean, default: false
   attr :field_errors, :map, default: %{}
+  attr :draft, :map, default: %{}
 
   @doc """
   Renders the candidate slots with their running tallies.
@@ -346,6 +352,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       |> assign(:slots, assigns.poll.time_slots)
       |> assign(:tz, tz(assigns.poll))
       |> assign(:current_votes, participant_votes(assigns.participant))
+      |> assign(:draft_votes, Map.get(assigns.draft, :votes, %{}))
 
     ~H"""
     <%= if @editable do %>
@@ -364,6 +371,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             name="name"
             autocomplete="name"
             required
+            value={@draft[:name]}
             aria-invalid={@field_errors[:name] && "true"}
             aria-describedby={@field_errors[:name] && "poll-voter-name-error"}
             data-testid="poll-voter-name"
@@ -377,7 +385,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             tz={@tz}
             tally={Map.get(@tallies, slot.id, %{})}
             editable={true}
-            current={Map.get(@current_votes, slot.id)}
+            current={draft_vote(@draft_votes, slot.id) || Map.get(@current_votes, slot.id)}
             new?={new_to?(@participant, @current_votes, slot)}
           />
         </div>
@@ -562,6 +570,11 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   defp new_to?(_participant, _current_votes, _slot), do: false
 
   defp responses, do: @responses
+
+  # An unsaved pick from a refused submit, as the response it names.
+  defp draft_vote(draft_votes, slot_id) do
+    Enum.find(responses(), &(to_string(&1) == draft_votes[slot_id]))
+  end
 
   defp participant_votes(nil), do: %{}
 

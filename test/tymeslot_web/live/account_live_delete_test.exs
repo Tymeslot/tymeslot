@@ -65,6 +65,16 @@ defmodule TymeslotWeb.AccountLiveDeleteTest do
     html_response(conn, 200)
   end
 
+  test "a refused submit keeps the feedback but never the password", %{conn: conn} do
+    with_config(:tymeslot, collect_deletion_feedback: true)
+    view = open_modal(conn)
+
+    submit(view, %{current_password: "wrong-password", comment: "Too expensive"})
+
+    assert has_element?(view, "#delete-account-comment", "Too expensive")
+    refute has_element?(view, "#delete-account-current-password[value='wrong-password']")
+  end
+
   test "the modal asks for the password and says what happens to bookings", %{conn: conn} do
     view = open_modal(conn)
     html = render(view)

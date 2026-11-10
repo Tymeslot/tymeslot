@@ -270,7 +270,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
          |> assign(:pending_attendees, [])
          |> assign(:confirm_discard_attendees, false)
          |> assign(:selected_event, nil)
-         |> assign(:attendee_input, "")}
+         |> assign(:attendee_input, "")
+         |> assign(:attendee_error, nil)}
 
       socket.assigns.creating_event != nil ->
         {:noreply,

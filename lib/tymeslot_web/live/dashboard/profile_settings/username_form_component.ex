@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     {:ok,
      assign(socket,
        username_check: nil,
+       username_input: nil,
        username_available: nil,
        pending_username: nil,
        open_poll_count: 0,
@@ -61,6 +62,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   # username changes nothing.
   def handle_event("update_username", %{"username" => username}, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
+    socket = assign(socket, :username_input, username)
     profile = socket.assigns.profile
 
     case {Profiles.username_status(profile, username), live_username?(profile)} do
@@ -188,8 +190,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     do: assign(socket, :form_errors, Map.put(socket.assigns.form_errors, :username, message))
 
   defp clear_username_error(socket) do
-    assign(
-      socket,
+    socket
+    |> assign(:username_input, nil)
+    |> assign(
       :form_errors,
       FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :username)
     )
@@ -229,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               <.input
                 name="username"
                 aria-labelledby="custom-url-heading"
-                value={if @profile, do: @profile.username || "", else: ""}
+                value={@username_input || (@profile && @profile.username) || ""}
                 placeholder={dgettext("dashboard_profile", "yourname")}
                 pattern={UsernameValidator.html_pattern()}
                 minlength={Constraints.username_length_range().first}

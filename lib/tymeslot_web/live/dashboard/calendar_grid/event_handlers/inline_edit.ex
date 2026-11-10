@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
          |> assign(:recurrence_edit, RecurrenceFields.recurrence_edit(event))
          |> assign(:pending_attendees, [])
          |> assign(:attendee_input, "")
+         |> assign(:attendee_error, nil)
          |> assign(:pending_notification, pending?)
          |> assign(:undelivered_updates, NotificationFlows.undelivered_updates(socket, event))}
 
@@ -57,7 +58,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply,
          socket
          |> assign(:selected_event, nil)
-         |> assign(:attendee_input, "")}
+         |> assign(:attendee_input, "")
+         |> assign(:attendee_error, nil)}
     end
   end
 

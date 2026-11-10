@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
   attr :cancel_meeting, :map, default: nil
   attr :show_cancel, :boolean, required: true
   attr :cancel_booking_payment, :map, default: nil
-  attr :cancel_refund_error, :string, default: nil
+  attr :cancel_refund_error, :map, default: %{}
+  attr :cancel_refund_form, :map, default: %{choice: "full", amount: "", acknowledged: false}
   attr :cancelling, :boolean, required: true
   attr :decline_request, :map, default: nil
   attr :show_decline, :boolean, required: true
@@ -45,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
   attr :show_add_guests, :boolean, required: true
   attr :staged_guests, :list, default: []
   attr :guest_stage_error, :string, default: nil
+  attr :guest_stage_input, :string, default: ""
   attr :existing_guests, :list, default: []
   attr :profile, :any, default: nil
   attr :time_format, :string, required: true
@@ -59,6 +61,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
       meeting={@cancel_meeting}
       booking_payment={@cancel_booking_payment}
       refund_error={@cancel_refund_error}
+      refund_form={@cancel_refund_form}
       timezone={timezone_for(@cancel_meeting, @profile)}
       time_format={@time_format}
       cancelling={@cancelling}
@@ -109,6 +112,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
       meeting={@add_guests}
       staged={@staged_guests}
       error={@guest_stage_error}
+      input={@guest_stage_input}
       existing={@existing_guests}
       remaining={GuestActions.room(@existing_guests)}
       on_cancel={JS.push("hide_add_guests_modal", target: @target)}

@@ -408,6 +408,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       :ok
     end
 
+    test "a refused attendee is explained beside the field", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_create_form(lv)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_create_attendee", %{"email" => "not-an-email"})
+
+      assert has_element?(lv, "#create-attendee-email-error", "is not a valid email address")
+    end
+
     test "adds an attendee to the create form", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open_create_form(lv)

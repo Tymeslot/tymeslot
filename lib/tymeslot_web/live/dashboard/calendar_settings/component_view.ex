@@ -90,6 +90,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
         integration={Enum.find(@integrations, &(&1.id == @managing_calendar_id))}
         booking_calendar_ids={Map.get(@booking_calendar_ids, @managing_calendar_id, [])}
         rename_error={@rename_error}
+        rename_value={@rename_value}
         target={@myself}
         on_cancel={JS.push("close_manage_calendars", target: @myself)}
       />

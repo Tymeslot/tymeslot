@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   attr :meeting, :map, default: nil
   attr :staged, :list, default: []
   attr :error, :string, default: nil
+  attr :input, :string, default: "", doc: "the refused entry, kept for correcting"
   attr :existing, :list, default: []
   attr :remaining, :integer, default: 0
   attr :on_cancel, Phoenix.LiveView.JS, required: true
@@ -89,7 +90,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               type="email"
               id="stage-guest-email"
               name="email"
-              value=""
+              value={@input}
               placeholder="colleague@example.com"
               class="flex-1"
             />

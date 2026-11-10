@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
   attr :payment, :map, required: true
   attr :submitting, :boolean, required: true
   attr :error, :string, default: nil
+  attr :form, :map, default: %{type: "full", amount: ""}, doc: "what the host last submitted"
   attr :myself, :any, required: true
 
   @spec refund_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -90,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
                 type="radio"
                 name="refund_type"
                 value="full"
-                checked
+                checked={@form.type == "full"}
                 phx-click={JS.set_attribute({"data-refund-type", "full"}, to: "#refund-form")}
               /> {dgettext("dashboard_payments", "Full refund")} ({format_amount(
                 MeetingPayments.refundable_remaining_cents(@payment),
@@ -103,6 +104,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
                 type="radio"
                 name="refund_type"
                 value="partial"
+                checked={@form.type == "partial"}
                 phx-click={JS.set_attribute({"data-refund-type", "partial"}, to: "#refund-form")}
               /> {dgettext("dashboard_payments", "Partial refund")}
             </label>
@@ -121,6 +123,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
             }
             step="0.01"
             placeholder="0.00"
+            value={@form.amount}
             errors={List.wrap(@error)}
           >
             <:leading_icon>

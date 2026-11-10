@@ -309,6 +309,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       })
 
       assert has_element?(lv, "#setting-error-admin_alert_email", "valid email address")
+      assert has_element?(lv, "#setting-input-admin_alert_email[value='not-an-email']")
     end
 
     test "submitting a blank admin alert email clears the override",

@@ -52,6 +52,7 @@ defmodule TymeslotWeb.AdminLive do
      |> assign(:invite_form, UserActions.invite_form())
      |> assign(:accent_draft, nil)
      |> assign(:setting_errors, %{})
+     |> assign(:setting_drafts, %{})
      |> assign(:max_logo_bytes, @logo_max_bytes)
      |> allow_upload(:email_logo,
        accept: ~w(.png),
@@ -102,7 +103,7 @@ defmodule TymeslotWeb.AdminLive do
         {:noreply, push_event(socket, "ts:setting-saved", %{key: key})}
 
       :invalid ->
-        {:noreply, put_setting_error(socket, key, value_invalid_message(key))}
+        {:noreply, put_setting_error(socket, key, value_invalid_message(key), raw_value)}
 
       _other ->
         {:noreply,
@@ -290,6 +291,7 @@ defmodule TymeslotWeb.AdminLive do
         {:noreply,
          socket
          |> update(:setting_errors, &Map.delete(&1, Atom.to_string(key)))
+         |> update(:setting_drafts, &Map.delete(&1, Atom.to_string(key)))
          |> put_flash(
            :info,
            dgettext("dashboard_admin", "%{name} updated.", name: Formatters.humanise(key))
@@ -302,7 +304,7 @@ defmodule TymeslotWeb.AdminLive do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply,
-         put_setting_error(socket, Atom.to_string(key), changeset_message(changeset, key))}
+         put_setting_error(socket, Atom.to_string(key), changeset_message(changeset, key), value)}
 
       {:error, _other} ->
         {:noreply,
@@ -406,8 +408,12 @@ defmodule TymeslotWeb.AdminLive do
     end
   end
 
-  defp put_setting_error(socket, key, message),
-    do: update(socket, :setting_errors, &Map.put(&1, key, message))
+  # The refused value stays in the field beside its error.
+  defp put_setting_error(socket, key, message, value) do
+    socket
+    |> update(:setting_errors, &Map.put(&1, key, message))
+    |> update(:setting_drafts, &Map.put(&1, key, to_string(value)))
+  end
 
   # Changeset errors from validate_format ("has invalid format") and
   # validate_number ("must be greater than or equal to 0.0", etc.) are
@@ -535,6 +541,7 @@ defmodule TymeslotWeb.AdminLive do
         accent_preview={@accent_preview}
         accent_draft={@accent_draft}
         setting_errors={@setting_errors}
+        setting_drafts={@setting_drafts}
         max_logo_bytes={@max_logo_bytes}
       />
     </Layout.admin_layout>

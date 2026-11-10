@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
       socket
       |> assign(:staged_guests, [])
       |> assign(:guest_stage_error, nil)
+      |> assign(:guest_stage_input, "")
       |> assign(:add_guests_existing, Guests.list_for_meeting(meeting.id))
       |> ModalHook.show_modal(:add_guests, meeting)
     else
@@ -117,6 +118,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
     socket
     |> assign(:staged_guests, staged)
     |> assign(:guest_stage_error, refusal_message(refusals))
+    |> assign(:guest_stage_input, if(refusals == [], do: "", else: raw_email))
   end
 
   defp refusal_message([]), do: nil

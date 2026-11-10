@@ -41,6 +41,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :accent_preview, :map, default: nil
   attr :accent_draft, :string, default: nil
   attr :setting_errors, :map, default: %{}
+  attr :setting_drafts, :map, default: %{}
   attr :max_logo_bytes, :integer, required: true
 
   @spec settings_tab(map()) :: Phoenix.LiveView.Rendered.t()
@@ -78,6 +79,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
               accent_preview={@accent_preview}
               accent_draft={@accent_draft}
               setting_errors={@setting_errors}
+              setting_drafts={@setting_drafts}
               max_logo_bytes={@max_logo_bytes}
             />
           <% else %>
@@ -86,6 +88,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
               keys={Map.fetch!(@grouped, section)}
               effective_values={@effective_values}
               setting_errors={@setting_errors}
+              setting_drafts={@setting_drafts}
             />
           <% end %>
         <% end %>
@@ -98,6 +101,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :keys, :list, required: true
   attr :effective_values, :map, required: true
   attr :setting_errors, :map, default: %{}
+  attr :setting_drafts, :map, default: %{}
 
   defp settings_section(assigns) do
     ~H"""
@@ -112,6 +116,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
           key={key}
           effective_values={@effective_values}
           error={@setting_errors[Atom.to_string(key)]}
+          draft={@setting_drafts[Atom.to_string(key)]}
         />
       </.card>
     </section>
@@ -131,6 +136,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :accent_preview, :map, default: nil
   attr :accent_draft, :string, default: nil
   attr :setting_errors, :map, default: %{}
+  attr :setting_drafts, :map, default: %{}
   attr :max_logo_bytes, :integer, required: true
 
   defp email_branding_section(assigns) do
@@ -145,6 +151,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
           key={:email_brand_name}
           effective_values={@effective_values}
           error={@setting_errors["email_brand_name"]}
+          draft={@setting_drafts["email_brand_name"]}
         />
         <EmailBranding.brand_accent_row
           effective={Map.fetch!(@effective_values, :email_brand_accent)}
@@ -152,6 +159,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
           accent_preview={@accent_preview}
           accent_draft={@accent_draft}
           error={@setting_errors["email_brand_accent"]}
+          draft={@setting_drafts["email_brand_accent"]}
         />
         <EmailBranding.email_logo_row
           logo_url={@email_logo_url}
@@ -167,6 +175,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :key, :atom, required: true
   attr :effective_values, :map, required: true
   attr :error, :string, default: nil
+  attr :draft, :string, default: nil
 
   defp admin_setting_row(assigns) do
     effective = Map.fetch!(assigns.effective_values, assigns.key)
@@ -198,7 +207,13 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       <SettingRow.row_header key={@key} muted={@muted} pinned_by={@effective.env_var} />
 
       <div class="flex flex-col items-end gap-1 shrink-0 max-w-full">
-        <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />
+        <.setting_control
+          kind={@kind}
+          key={@key}
+          effective={@effective}
+          disabled={@disabled}
+          draft={@draft}
+        />
         <p
           :if={@error}
           id={"setting-error-#{@key}"}
@@ -236,6 +251,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :key, :atom, required: true
   attr :effective, :map, required: true
   attr :disabled, :boolean, default: false
+  attr :draft, :string, default: nil
 
   defp setting_control(%{kind: :boolean} = assigns) do
     ~H"""
@@ -285,7 +301,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         step="0.05"
         inputmode="decimal"
         phx-debounce="blur"
-        value={format_score(@effective.value)}
+        value={@draft || format_score(@effective.value)}
         disabled={@disabled}
         class={SettingRow.text_input_classes("w-24 text-center", @disabled)}
       />
@@ -313,7 +329,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         id={"setting-input-#{@key}"}
         type={@input_type}
         name="value"
-        value={@effective.value || ""}
+        value={@draft || @effective.value || ""}
         placeholder={@placeholder}
         disabled={@disabled}
         class={SettingRow.text_input_classes("w-64 max-w-full", @disabled)}

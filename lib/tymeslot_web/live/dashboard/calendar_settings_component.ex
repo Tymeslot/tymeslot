@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:show_picker, false)
      |> assign(:managing_calendar_id, nil)
      |> assign(:rename_error, nil)
+     |> assign(:rename_value, nil)
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
   end
 
@@ -129,8 +130,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   def handle_event("manage_calendars", %{"id" => id}, socket) do
     case parse_int(id) do
-      {:ok, int_id} -> {:noreply, assign(socket, managing_calendar_id: int_id, rename_error: nil)}
-      :error -> {:noreply, socket}
+      {:ok, int_id} ->
+        {:noreply,
+         assign(socket, managing_calendar_id: int_id, rename_error: nil, rename_value: nil)}
+
+      :error ->
+        {:noreply, socket}
     end
   end
 
@@ -318,17 +323,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         {:ok, _updated} ->
           Flash.info(dgettext("dashboard_calendar_settings", "Calendar renamed"))
           send(self(), {:integration_updated, :calendar})
-          {:noreply, socket |> assign(:rename_error, nil) |> load_integrations()}
+
+          {:noreply,
+           socket |> assign(rename_error: nil, rename_value: nil) |> load_integrations()}
 
         {:error, %{name: message}} ->
-          {:noreply, assign(socket, :rename_error, message)}
+          {:noreply, assign(socket, rename_error: message, rename_value: name)}
 
         {:error, _changeset} ->
           {:noreply,
-           assign(
-             socket,
-             :rename_error,
-             dgettext("dashboard_calendar_settings", "Failed to rename calendar")
+           assign(socket,
+             rename_error: dgettext("dashboard_calendar_settings", "Failed to rename calendar"),
+             rename_value: name
            )}
       end
     )

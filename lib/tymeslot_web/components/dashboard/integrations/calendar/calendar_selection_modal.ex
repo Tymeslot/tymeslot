@@ -43,6 +43,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
     doc: "ids of the integration's calendars bookings go to, which always block"
 
   attr :rename_error, :string, default: nil
+  attr :rename_value, :string, default: nil, doc: "the refused name, kept beside its error"
   attr :target, :any, required: true
   attr :on_cancel, JS, default: %JS{}
 
@@ -95,7 +96,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
               type="text"
               name="name"
               label={dgettext("dashboard_calendar_providers", "Name")}
-              value={@integration.name}
+              value={@rename_value || @integration.name}
               required
               maxlength="100"
               errors={List.wrap(@rename_error)}

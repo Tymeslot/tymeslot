@@ -69,7 +69,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         participant: assigns[:participant],
         link_request: assigns[:link_request],
         invalid_link: assigns[:invalid_link] || false,
-        poll_field_errors: assigns[:poll_field_errors] || %{}
+        poll_field_errors: assigns[:poll_field_errors] || %{},
+        poll_draft: assigns[:poll_draft] || %{}
       )
 
     ~H"""
@@ -109,6 +110,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       participant={@participant}
       link_request={@link_request}
       field_errors={@poll_field_errors}
+      draft={@poll_draft}
       invalid_link={@invalid_link}
     />
     """

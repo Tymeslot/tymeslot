@@ -111,6 +111,22 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
       assert has_element?(view, "#email-error", "Email address is required")
     end
 
+    test "what the visitor typed comes back with the error", %{conn: conn} do
+      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+
+      conn =
+        complete(conn, pending(email: "", email_from_provider: false), %{
+          "profile" => %{"full_name" => "Ada Lovelace"},
+          "auth" => %{"terms_accepted" => "true", "email" => "not-an-email"}
+        })
+
+      {:ok, view, _html} = live(recycle(conn), redirected_to(conn))
+
+      assert has_element?(view, "#email[value='not-an-email']")
+      assert has_element?(view, "#full-name[value='Ada Lovelace']")
+      assert has_element?(view, "#terms[checked]")
+    end
+
     test "unaccepted terms come back with the error beside the checkbox", %{conn: conn} do
       Application.put_env(:tymeslot, :enforce_legal_agreements, true)
 
