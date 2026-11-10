@@ -46,8 +46,8 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Telegram.BotSetup
   alias Tymeslot.Workers.ErrorTrackerMaintenanceWorker
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Hooks.DashboardHooks
   alias TymeslotWeb.Plugs.AdditionalDashboardPlugs
-  alias TymeslotWeb.Router
 
   # Children the test environment does without: periodic schedulers whose
   # timers would fire into unrelated tests.
@@ -302,7 +302,7 @@ defmodule Tymeslot.Application do
 
     # The additional dashboard hooks and plugs are deployment gates: refuse to
     # start with one that could not run, rather than failing at first use.
-    Router.validate_additional_hooks!()
+    DashboardHooks.validate_additional_hooks!()
     AdditionalDashboardPlugs.validate_config!()
 
     # The integration health alert thresholds are read by an hourly job; a
