@@ -5,15 +5,15 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
   fixtures are exercised directly on a socket.
   """
 
-  use ExUnit.Case, async: true
+  use Tymeslot.DataCase, async: true
   @moduletag :onboarding
 
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Clock
+  alias TymeslotWeb.OnboardingLive
   alias TymeslotWeb.OnboardingLive.DebugFixtures
   alias TymeslotWeb.OnboardingLive.LivePreview
-  alias TymeslotWeb.OnboardingLive.StepConfig
 
   defp socket do
     %Socket{
@@ -32,24 +32,44 @@ defmodule TymeslotWeb.OnboardingDebugFixturesTest do
   # default timezone might be.
   defp freeze_clock, do: Process.put(Clock.process_key(), ~U[2026-11-03 12:00:00Z])
 
+  # The disconnected render is where the landing step is chosen, so the
+  # handler is driven on it. Only `calendar` makes the page bookable, and only
+  # the debug route lets a host who has not confirmed the meeting past it.
   test "debug fixture calendar shows the theme step" do
-    socket = DebugFixtures.apply(socket(), "calendar")
+    user = insert(:user, onboarding_completed_at: nil)
+    profile = insert(:profile, user: user, username: "debughost")
 
-    assert [%{provider: "google", provider_account_email: "host@example.com"}] =
+    socket =
+      DebugFixtures.apply(
+        %Socket{
+          assigns: %{
+            __changed__: %{},
+            flash: %{},
+            current_user: user,
+            connected_calendars: [],
+            booking_page_live: false,
+            profile: profile,
+            reveal_key: 0,
+            patched_step: nil,
+            live_action: :debug_step
+          }
+        },
+        "calendar"
+      )
+
+    assert [%{provider: "google", provider_account_email: email}] =
              socket.assigns.connected_calendars
 
-    assert socket.assigns.booking_page_live
+    assert email == user.email
 
-    # A bookable calendar is what opens the steps past the calendar one.
-    resume =
-      StepConfig.resume_step(%{
-        username: "host",
-        bookable_calendar?: socket.assigns.booking_page_live,
-        meeting_confirmed?: false
-      })
+    assert {:noreply, landed} =
+             OnboardingLive.handle_params(
+               %{"step" => "choose_theme"},
+               "http://localhost:4000/dev/onboarding/choose_theme",
+               socket
+             )
 
-    assert resume == :meeting
-    assert StepConfig.reachable?(:meeting, resume)
+    assert landed.assigns.current_step == :choose_theme
   end
 
   test "an unknown or not yet built fixture leaves the socket unchanged" do
