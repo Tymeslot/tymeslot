@@ -65,6 +65,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               <%!-- Direct booking link, always at hand while editing (needs a username) --%>
               <div :if={@editing_type && booking_base_url(@profile)} class="space-y-2">
                 <div class="flex flex-wrap items-center gap-2">
+                  <%!-- raw-input: read-only booking link display in the row with the Copy button; <.input> cannot pass readonly --%>
                   <input
                     type="text"
                     readonly

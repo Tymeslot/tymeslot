@@ -248,6 +248,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       aria-label={dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(@key))}
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
+      <%!-- raw-input: compact w-24 score box in the admin setting row, styled by SettingRow.text_input_classes like the other admin row controls --%>
       <input
         id={"setting-input-#{@key}"}
         type="number"
@@ -278,6 +279,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       aria-label={dgettext("dashboard_admin", "Set %{name}", name: Formatters.humanise(@key))}
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
+      <%!-- raw-input: compact w-64 box inline with the small Save button in the admin setting row, styled by SettingRow.text_input_classes --%>
       <input
         id={"setting-input-#{@key}"}
         type={@input_type}

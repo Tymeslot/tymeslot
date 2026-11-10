@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.CoreComponents.Modal
 
@@ -58,19 +59,16 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
           phx-target={@myself}
           class="space-y-2"
         >
-          <label for="schedule-name-input" class="label">
-            {dgettext("dashboard_availability", "Schedule name")}
-          </label>
-          <input
+          <Forms.input
             type="text"
             id="schedule-name-input"
             name="name"
+            label={dgettext("dashboard_availability", "Schedule name")}
             value={@schedule_data.name}
             maxlength={AvailabilityScheduleSchema.name_max_length()}
             autocomplete="off"
             required
             phx-hook="AutoFocus"
-            class="input"
             placeholder={dgettext("dashboard_availability", "For example: Consulting hours")}
           />
           <p class="text-token-sm text-tymeslot-500 font-medium">

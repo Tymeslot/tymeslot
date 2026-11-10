@@ -161,6 +161,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             class="flex items-center gap-2 p-3 bg-turquoise-50/50 rounded-token-2xl border-2 border-turquoise-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300"
           >
             <div class="flex-1 flex items-center gap-2">
+              <%!-- raw-input: compact w-20 number box in the inline custom-reminder row; the full-width field wrapper would break the row --%>
               <input
                 type="number"
                 min="1"
@@ -173,6 +174,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 phx-target={@myself}
               />
               <div class="relative w-28">
+                <%!-- raw-input: compact unit select with its own chevron overlay in the inline custom-reminder row; the field wrapper would break the row --%>
                 <select
                   name="reminder[unit]"
                   class="input py-1.5 pl-3 pr-10 w-full text-token-sm"

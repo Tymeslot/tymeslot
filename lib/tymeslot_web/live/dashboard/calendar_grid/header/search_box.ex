@@ -43,6 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
         <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-tymeslot-400">
           <.icon name="hero-magnifying-glass-mini" class="w-4 h-4" />
         </span>
+        <%!-- raw-input: compact fixed-width toolbar search box in the calendar header, with its own overlaid icon --%>
         <input
           id="calendar-search-input"
           type="text"
