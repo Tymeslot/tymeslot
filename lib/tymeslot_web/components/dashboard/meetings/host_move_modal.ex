@@ -71,8 +71,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
             data-testid="host-move-form"
             novalidate
           >
-            <.input
-              type="datetime-local"
+            <.datetime_picker
+              id={"#{@id}-start"}
               name="move[start]"
               value=""
               label={dgettext("dashboard_bookings", "New start (%{timezone})", timezone: @timezone)}

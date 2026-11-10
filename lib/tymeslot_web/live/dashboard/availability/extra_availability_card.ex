@@ -53,23 +53,23 @@ defmodule TymeslotWeb.Dashboard.Availability.ExtraAvailabilityCard do
           data-testid="extra-availability-form"
           novalidate
         >
-          <.input
-            type="date"
+          <.date_picker
+            id={"extra-date-#{@schedule.id}"}
             name="extra[date]"
             label={dgettext("dashboard_availability", "Date")}
             value={@form["date"]}
             min={Date.to_iso8601(@today)}
             required
           />
-          <.input
-            type="time"
+          <.time_picker
+            id={"extra-start-#{@schedule.id}"}
             name="extra[start_time]"
             label={dgettext("dashboard_availability", "From")}
             value={@form["start_time"]}
             required
           />
-          <.input
-            type="time"
+          <.time_picker
+            id={"extra-end-#{@schedule.id}"}
             name="extra[end_time]"
             label={dgettext("dashboard_availability", "To")}
             value={@form["end_time"]}

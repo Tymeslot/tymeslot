@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [input: 1, select: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [input: 1, select: 1, datetime_picker: 1]
 
   alias Tymeslot.Validation.Constraints
 
@@ -78,8 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields do
         </div>
       </div>
 
-      <.input
-        type="datetime-local"
+      <.datetime_picker
         id="create-group-event-closes-at"
         name="group_event[closes_at]"
         label={

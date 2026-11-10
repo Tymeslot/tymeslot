@@ -570,3 +570,8 @@ msgstr "Pierwsze wydarzenie tej serii nie zostało jeszcze odczytane z twojego k
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr "Koniec"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat until"
+msgstr "Powtarzaj do"

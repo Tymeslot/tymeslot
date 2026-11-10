@@ -570,3 +570,8 @@ msgstr "Першу подію цієї серії ще не прочитано �
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr "Завершення"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat until"
+msgstr "Повторювати до"

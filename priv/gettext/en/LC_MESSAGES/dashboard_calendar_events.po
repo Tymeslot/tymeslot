@@ -1017,9 +1017,35 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
 msgid "Reminder method"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
 msgid "Reminder time"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "End date"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "End time"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Start date"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Start time"
 msgstr ""

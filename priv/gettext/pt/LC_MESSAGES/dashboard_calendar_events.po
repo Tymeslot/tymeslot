@@ -1018,9 +1018,35 @@ msgstr[0] "Não foi possível enviar por e-mail a última alteração a este con
 msgstr[1] "Não foi possível enviar por e-mail a última alteração a estes convidados. Avise-os de outra forma."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
 msgid "Reminder method"
 msgstr "Método do lembrete"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
 msgid "Reminder time"
 msgstr "Antecedência do lembrete"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "End date"
+msgstr "Data de término"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "End time"
+msgstr "Hora de término"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Start date"
+msgstr "Data de início"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Start time"
+msgstr "Hora de início"

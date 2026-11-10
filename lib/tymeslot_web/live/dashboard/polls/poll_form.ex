@@ -185,8 +185,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
               target={@myself}
             />
 
-            <.input
-              type="datetime-local"
+            <.datetime_picker
+              id={"poll-deadline-#{@id}"}
               name="poll[deadline]"
               label={dgettext("dashboard_polls", "Voting deadline (optional)")}
               value={@deadline}

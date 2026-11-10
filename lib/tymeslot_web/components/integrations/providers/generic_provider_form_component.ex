@@ -56,8 +56,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
     assigns = %{form: form, field: field, spec: spec}
 
     ~H"""
-    <.input
-      type="datetime-local"
+    <.datetime_picker
       field={@form[Atom.to_string(@field)]}
       label={label_for(@field, @spec)}
     />

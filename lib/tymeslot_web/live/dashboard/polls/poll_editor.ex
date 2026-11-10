@@ -101,8 +101,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           errors={error_list(@errors, :description)}
         />
 
-        <.input
-          type="datetime-local"
+        <.datetime_picker
+          id={"poll-deadline-#{@id}"}
           name="poll[deadline]"
           label={dgettext("dashboard_polls", "Voting deadline (optional)")}
           value={@deadline}
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               timezone: @poll.timezone
             )}
           </:description>
-        </.input>
+        </.datetime_picker>
 
         <.select
           id="poll-editor-meeting-type"
@@ -164,8 +164,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           </p>
           <div :for={time <- @new_times} class="flex items-center gap-2">
             <div class="flex-1">
-              <.input
-                type="datetime-local"
+              <.datetime_picker
+                id={"poll-new-time-#{time.key}"}
                 name={"poll[new_times][#{time.key}]"}
                 value={time.value}
                 aria-label={dgettext("dashboard_polls", "New time")}

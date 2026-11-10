@@ -342,7 +342,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RepeatEditorCreateLiveViewTest do
   end
 
   defp pick(lv, fields) do
-    {selects, others} = Map.split(fields, ~w(freq on end_type))
+    {selects, others} = Map.split(fields, ~w(freq on end_type until))
     lv |> form(@form, others) |> render_change(selects)
   end
 

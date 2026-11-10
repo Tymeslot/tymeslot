@@ -21,6 +21,7 @@ import { CustomColourPicker } from "../hooks/custom_colour_picker"
 import { AutoUpload } from "../hooks/auto_upload"
 import { ScrollStrip } from "../hooks/scroll_strip"
 import { Select } from "../hooks/select"
+import { DateTimePicker } from "../hooks/date_time_picker"
 import { StageScale, prefitStages } from "../hooks/stage_scale"
 import { StickyNavClearance } from "../hooks/sticky_nav_clearance"
 import { ShareLink, StageIframe } from "../hooks/share_link"
@@ -99,6 +100,7 @@ const CoreHooks = {
   // `<.select>`, on every kind of page: the dashboard, onboarding, booking
   // pages, and the marketing contact form.
   Select,
+  DateTimePicker,
 
   // The onboarding stage's page miniature and its sticky nav row; onboarding
   // has no route bundle (see AutoUpload above), so they are registered here.

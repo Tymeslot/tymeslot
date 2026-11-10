@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
      ]},
     {:Forms, [:input, :form_wrapper, :password_requirements, :honeypot_field]},
     {:Select, [:select]},
+    {:DateTimePicker, [:date_picker, :time_picker, :datetime_picker]},
     {:Page, [:dashboard_page]},
     {:SettingRow, [:setting_row]},
     {:Feedback, [:spinner, :empty_state, :loading_card, :pill]},

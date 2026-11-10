@@ -35,6 +35,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
+  alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingLinkShare
@@ -334,6 +335,7 @@ defmodule TymeslotWeb.DashboardLive do
   @spec handle_info({:time_format_updated, String.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:time_format_updated, time_format}, socket) do
+    PickerPreferences.put_time_format(time_format)
     {:noreply, assign(socket, time_format: time_format)}
   end
 

@@ -122,6 +122,97 @@
     color: var(--color-text-tertiary);
   }
 
+  /* `<.date_picker>`, `<.time_picker>` and `<.datetime_picker>`: a typed field
+     with its button laid over the end of it. The panel is a `.select-panel`,
+     so only the month grid inside it needs rules of its own. */
+  .date-time-picker-fields {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .date-time-picker-control {
+    @apply relative flex-1 min-w-[10rem];
+  }
+
+  .date-time-picker-text {
+    @apply pr-10;
+  }
+
+  .date-time-picker-trigger {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-8 h-8 rounded-token-md text-tymeslot-500 cursor-pointer transition-colors duration-200;
+  }
+
+  .date-time-picker-trigger:hover,
+  .date-time-picker-trigger:focus-visible {
+    @apply text-turquoise-600 bg-tymeslot-100;
+  }
+
+  .date-time-picker-trigger:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .date-time-picker-icon {
+    @apply w-5 h-5;
+  }
+
+  .date-picker-panel {
+    @apply w-auto;
+    max-height: none;
+    padding: var(--spacing-3);
+  }
+
+  .date-picker-header {
+    @apply flex items-center justify-between mb-2 gap-2;
+  }
+
+  .date-picker-month {
+    @apply text-token-sm font-semibold text-tymeslot-800;
+  }
+
+  .date-picker-nav {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-token-md text-tymeslot-500 cursor-pointer;
+  }
+
+  .date-picker-nav:hover {
+    @apply bg-tymeslot-100 text-tymeslot-800;
+  }
+
+  .date-picker-grid {
+    @apply border-separate;
+    border-spacing: 2px;
+  }
+
+  .date-picker-grid th {
+    @apply text-center text-token-2xs font-medium text-tymeslot-400 uppercase pb-1;
+  }
+
+  .date-picker-day {
+    @apply flex items-center justify-center w-9 h-9 rounded-token-md text-token-xs font-medium text-tymeslot-700 cursor-pointer;
+  }
+
+  .date-picker-day:hover {
+    @apply bg-tymeslot-100;
+  }
+
+  .date-picker-day:focus-visible {
+    @apply outline-2 outline-turquoise-500 outline-offset-1;
+  }
+
+  .date-picker-day--outside {
+    @apply text-tymeslot-300;
+  }
+
+  .date-picker-day[aria-current="date"] {
+    @apply ring-1 ring-turquoise-400 text-turquoise-700 font-semibold;
+  }
+
+  .date-picker-day.is-selected {
+    @apply bg-turquoise-700 text-white font-semibold;
+  }
+
+  .date-picker-day[aria-disabled="true"] {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
   /* The option list `<.select>` opens (floating_panel.js places it). */
   .select-panel {
     position: fixed;
@@ -314,6 +405,106 @@
   .select-trigger {
     display: none;
   }
+}
+
+/* Native on touch and without popovers, as for the select. */
+.date-time-picker-native {
+  display: none;
+}
+
+.date-time-picker[data-picker-force-native] .date-time-picker-native {
+  display: block;
+}
+
+.date-time-picker[data-picker-force-native] .date-time-picker-control {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .date-time-picker-native {
+    display: block;
+  }
+
+  .date-time-picker-control {
+    display: none;
+  }
+}
+
+/* A row of inline controls. */
+.date-time-picker--compact .input {
+  border-radius: var(--radius-md);
+  padding: 0.25rem 2rem 0.25rem 0.5rem;
+  font-size: var(--font-size-xs);
+}
+
+.date-time-picker--compact .date-time-picker-native {
+  padding-right: 0.5rem;
+}
+
+.date-time-picker--compact .date-time-picker-control {
+  min-width: 8rem;
+}
+
+.date-time-picker--compact .date-time-picker-trigger {
+  right: 0.125rem;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* A field set in a sentence: plain text that shows an underline on hover. */
+.date-time-picker--inline {
+  display: inline-block;
+}
+
+.date-time-picker--inline .date-time-picker-control {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  flex: none;
+}
+
+.date-time-picker--inline .input {
+  width: 6.5rem;
+  border-width: 0 0 1px;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+  box-shadow: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-700);
+  font-weight: 500;
+}
+
+.date-time-picker--inline [data-picker-part="time"] .input {
+  width: 4.5rem;
+}
+
+/* The system control draws its own icon and needs the width for it. */
+.date-time-picker--inline .date-time-picker-native {
+  width: auto;
+}
+
+.date-time-picker--inline .input:hover {
+  border-color: var(--color-neutral-300);
+}
+
+.date-time-picker--inline .input:focus {
+  border-color: var(--color-primary-500);
+  outline: none;
+}
+
+.date-time-picker--inline .date-time-picker-trigger {
+  position: static;
+  transform: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.date-time-picker--inline .date-time-picker-icon {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 /* The small size, for a select inside a row of inline controls. The padding

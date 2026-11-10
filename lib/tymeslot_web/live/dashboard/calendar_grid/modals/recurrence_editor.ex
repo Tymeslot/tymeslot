@@ -250,13 +250,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               )}</span>
             </div>
 
-            <%!-- raw-input: compact inline date field sharing a wrapping row with the end type select --%>
-            <input
+            <.date_picker
               :if={@end_type == "until"}
-              type="date"
+              id={"#{@form_id}-until"}
               name="until"
               value={@until}
-              class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+              variant={:compact}
+              aria-label={dgettext("dashboard_calendar_repeat", "Repeat until")}
             />
           </div>
         </div>

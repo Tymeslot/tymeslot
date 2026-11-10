@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Time do
-  @moduledoc "Time-of-day answer (HTML5 time input)."
+  @moduledoc "Time-of-day answer, through the time picker."
   use Phoenix.Component
+
+  use TymeslotWeb.Components.CoreComponents, only: [time_picker: 1]
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput
 
@@ -12,13 +14,16 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Time do
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
-    <TextInput.text_like
-      input_type="time"
-      definition={@definition}
-      value={@value}
-      myself={@myself}
-      autofocus={@autofocus}
-    />
+    <TextInput.answer_form definition={@definition} myself={@myself}>
+      <.time_picker
+        id={"cq-input-#{@definition["id"]}"}
+        name="value"
+        value={@value}
+        required={@definition["required"] == true}
+        aria-label={@definition["label"]}
+        autofocus={@autofocus}
+      />
+    </TextInput.answer_form>
     """
   end
 end

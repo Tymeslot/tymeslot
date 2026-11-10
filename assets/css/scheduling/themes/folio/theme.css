@@ -29,6 +29,7 @@
 @import "../../shared/components/slot-list.css";
 @import "./modules/time-slots.css";
 @import "../../shared/components/select.css";
+@import "../../shared/components/date-time-picker.css";
 @import "../../shared/components/custom-questions.css";
 @import "./modules/custom-questions.css";
 @import "../../shared/components/booking-fields.css";
