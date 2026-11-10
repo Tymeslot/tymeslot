@@ -305,7 +305,7 @@ Email configuration is **required for production deployments** to enable:
 
 `EMAIL_ADAPTER` picks how mail leaves the container. Every option below is equally supported; the API adapters differ from SMTP mainly in reporting failures usefully and in not needing an outbound SMTP port.
 
-The optional `USER_SMTP_ENABLED=false` flag controls per-user SMTP for booking
+The optional `USER_SMTP_ENABLED=false` flag controls per-user SMTP for scheduling
 notifications. It accepts exactly `true` or `false` and is disabled by default.
 Users manage, test and enable their identity under dashboard Profile > Email sending.
 Account/security messages retain the platform sender. See

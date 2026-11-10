@@ -40,12 +40,13 @@ defmodule Tymeslot.EmailSending do
   def enabled?, do: Application.get_env(:tymeslot, :user_smtp_enabled, false) == true
 
   @doc """
-  Resolves a booking's authoritative organizer to a credential-free sender.
+  Resolves a scheduling resource's authoritative owner to a credential-free sender.
 
   An attached sender is reused only for the same owner, preserving one identity
   across an execution's recipient copies. Legacy callers without an owner can
   use the platform only while the feature is off. Callers must establish the
-  owner from their loaded meeting or trusted snapshot, never the recipient.
+  owner as `:organizer_user_id` from their loaded resource or trusted snapshot,
+  never the recipient. Poll and payment handlers map their host ID to this key.
   """
   @spec resolve_booking_sender(map()) :: {:ok, Sender.t()} | {:error, atom()}
   def resolve_booking_sender(resource) when is_map(resource) do

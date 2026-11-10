@@ -56,9 +56,9 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
             )
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: poll.email_sender)
       |> to(participant.email)
-      |> from({host_name, MjmlEmail.fetch_from_email()})
+      |> MjmlEmail.from_organizer(host_name, poll.email_sender)
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(dgettext("emails_polls", "Your link to vote on \"%{title}\"", title: poll.title))
       |> html_body(html_body)

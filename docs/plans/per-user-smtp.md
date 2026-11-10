@@ -186,6 +186,22 @@ Explain exactly which emails use custom SMTP. Show disabled, testing, enabled, a
 
 ### Phase 4 Complete scheduling notification coverage
 
+**Status:** Implemented. Poll, dashboard calendar and customer
+booking-refund paths now resolve the authoritative host's sender. Platform
+account, integration-health and financial notices retain platform delivery.
+The dashboard coverage copy and operator guide describe the expanded scope.
+
+**Validation:** The full suite passed 27,721 checks (29 doctests, 94 properties
+and 27,598 tests), with 420 expected exclusions. Scripted TLS relay tests cover
+all new message families, owner deletion, resource-removal snapshots, frozen
+revisions, partial-send claims, queued disablement and reactivation, and
+platform financial delivery while custom SMTP is broken. Calendar batches
+budget every attendee's transport and bounded status write. Strict Credo,
+incremental Dialyzer, warning-free compilation, formatting, Gettext freshness,
+security/dependency scans, migration safety and compile-coupling checks passed.
+Desktop and narrow English/German layouts were visually verified. The external
+provider-backed staging check remains deferred by the user until deployment.
+
 **Outcome:** Poll messages, dashboard calendar invitation/update/cancellation messages, and booking-specific customer payment notices use the same sending policy. The UI describes the complete coverage.
 
 Inventory each delivery entry point, including direct calls to `Delivery` and workers using `TransactionalEmailDelivery`, and classify its purpose explicitly. Preserve owner IDs in cancellation/event snapshots that outlive their original resource. Discard jobs whose required owner was deleted according to the established lifecycle contract; never retain SMTP credentials after account deletion to complete an old send.

@@ -105,27 +105,32 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   end
 
   @doc """
-  Sends a calendar invitation email to an attendee for a dashboard-created event.
+  Sends a dashboard event invitation or cancellation using its organizer's sender.
+
+  Trusted invitation details retain the organizer ID even after the event is
+  removed. The actual organizer remains the reply and calendar identity.
   """
   @spec send_calendar_invitation(String.t(), map()) :: {:ok, any()} | {:error, any()}
   def send_calendar_invitation(attendee_email, invitation_details) do
     Logger.info("Sending calendar invitation")
 
-    attendee_email
-    |> CalendarInvitation.render(invitation_details)
-    |> Delivery.deliver()
+    BookingDelivery.deliver(invitation_details, fn details ->
+      CalendarInvitation.render(attendee_email, details)
+    end)
   end
 
   @doc """
-  Sends an event update notification to an attendee with a change summary and updated .ics.
+  Sends an event update using the sender shared by its execution's recipient copies.
+
+  The change summary and updated calendar entry retain the actual organizer.
   """
   @spec send_event_update_notification(String.t(), map()) :: {:ok, any()} | {:error, any()}
   def send_event_update_notification(attendee_email, update_details) do
     Logger.info("Sending event update notification")
 
-    attendee_email
-    |> EventUpdateNotification.render(update_details)
-    |> Delivery.deliver()
+    BookingDelivery.deliver(update_details, fn details ->
+      EventUpdateNotification.render(attendee_email, details)
+    end)
   end
 
   @doc """

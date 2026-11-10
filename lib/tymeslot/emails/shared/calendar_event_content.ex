@@ -13,22 +13,22 @@ defmodule Tymeslot.Emails.Shared.CalendarEventContent do
   """
 
   alias Tymeslot.CalendarGrid.EventVideo
-  alias Tymeslot.Emails.Shared.{Callouts, Cards, MjmlEmail, Sanitise}
+  alias Tymeslot.Emails.Shared.{Callouts, Cards, MjmlEmail}
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Integrations.Calendar.Recurrence.Summary
-
-  import Swoosh.Email, only: [from: 2]
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
-  Sends `email` in the organiser's name from the instance's address: the
-  guest was added by a person, not by the instance, and the address stays
-  the one SPF and DKIM vouch for.
+  Uses the selected custom identity, or the organizer's name with the platform address.
+
+  The sender was resolved before rendering; the actual organizer remains in
+  Reply-To and the calendar attachment independently of this transport identity.
   """
   @spec from_organiser(Swoosh.Email.t(), map()) :: Swoosh.Email.t()
-  def from_organiser(email, %{organizer_name: name}) when is_binary(name) and name != "",
-    do: from(email, {Sanitise.sanitize_for_header(name), MjmlEmail.fetch_from_email()})
+  def from_organiser(email, %{organizer_name: name} = details)
+      when is_binary(name) and name != "",
+      do: MjmlEmail.from_organizer(email, name, Map.get(details, :email_sender))
 
   def from_organiser(email, _details), do: email
 

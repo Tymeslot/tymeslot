@@ -27,7 +27,7 @@ defmodule Tymeslot.Polls.PollSchema do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{email_sender: Tymeslot.EmailSending.Sender.t() | nil}
 
   schema "polls" do
     field(:title, :string)
@@ -63,6 +63,9 @@ defmodule Tymeslot.Polls.PollSchema do
     field(:deadline_at, :utc_datetime)
     field(:timezone, :string)
     field(:confirmed_at, :utc_datetime)
+    # One execution shares this nonsecret identity across all recipient copies.
+    # It is never cast from user input or persisted with the poll.
+    field(:email_sender, :any, virtual: true)
 
     belongs_to(:user, UserSchema, type: :id)
     belongs_to(:meeting_type, MeetingTypeSchema, type: :id)

@@ -12,8 +12,6 @@ defmodule Tymeslot.EmailSending.SettingsQueries do
   alias Tymeslot.EmailSending.UserSmtpSettingsSchema
   alias Tymeslot.Repo
 
-  @status_deadline_ms 250
-
   @doc "Returns the owner's settings, without decrypting credentials."
   @spec get_for_user(pos_integer()) :: UserSmtpSettingsSchema.t() | nil
   def get_for_user(user_id), do: Repo.get_by(UserSmtpSettingsSchema, user_id: user_id)
@@ -100,13 +98,15 @@ defmodule Tymeslot.EmailSending.SettingsQueries do
 
   # Status follows SMTP acceptance but precedes the recipient's durable claim.
   # Never queue for a pool connection or consume its normal 15-second timeout:
-  # 42 copies at this bound add at most 10.5 seconds, below the worker's default
-  # 20-second headroom. Revisit this budget if recipient/send limits change.
+  # EmailWorker budgets this extra bound for every recipient, including calendar
+  # updates whose recipient count can exceed the booking and poll limits.
   defp status_options do
+    timeout = DeliveryStatus.write_deadline_ms()
+
     [
       queue: false,
-      timeout: @status_deadline_ms,
-      deadline: System.monotonic_time(:millisecond) + @status_deadline_ms
+      timeout: timeout,
+      deadline: System.monotonic_time(:millisecond) + timeout
     ]
   end
 

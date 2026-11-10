@@ -25,6 +25,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
 
   @type variant :: :all_voted | :deadline_passed
 
+  @doc "Renders with the host sending identity prepared for this execution, or the platform default."
   @spec render(PollSchema.t(), variant(), String.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, variant, results_url)
       when variant in [:all_voted, :deadline_passed] and is_binary(results_url) do
@@ -47,7 +48,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
             dgettext("emails_polls", "Pick a final time so everyone can put it in the diary.")
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: poll.email_sender)
       |> to({host_name, poll.user.email})
       |> subject(copy.subject)
       |> html_body(html_body)

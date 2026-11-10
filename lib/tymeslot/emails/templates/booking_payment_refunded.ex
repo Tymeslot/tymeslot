@@ -21,6 +21,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     Text
   }
 
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.Locales
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -58,7 +59,8 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
       :refunded_amount_cents,
       :currency,
       :is_full_refund?,
-      :locale
+      :locale,
+      :email_sender
     ]
 
     @type t :: %__MODULE__{
@@ -71,10 +73,12 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
             refunded_amount_cents: pos_integer(),
             currency: String.t(),
             is_full_refund?: boolean(),
-            locale: String.t()
+            locale: String.t(),
+            email_sender: Sender.t() | nil
           }
   end
 
+  @doc "Renders an attendee refund notice with its owner's nonsecret sending identity."
   @spec render(RefundContext.t()) :: Swoosh.Email.t()
   def render(%RefundContext{} = context) do
     locale = context.locale || Locales.booking_default_locale()
@@ -119,7 +123,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: context.email_sender)
       |> to(
         if has_name?,
           do: {context.attendee_name, context.attendee_email},

@@ -16,21 +16,6 @@ msgstr ""
 msgid "A test message is sent only to your current verified account email."
 msgstr "El mensaje de prueba se envía solo al correo verificado actual de tu cuenta."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Booking emails currently use the platform sender."
-msgstr "Los correos de reservas usan actualmente el remitente de la plataforma."
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
-#, elixir-autogen, elixir-format
-msgid "Booking emails now use the platform sender."
-msgstr "Los correos de reservas ahora usan el remitente de la plataforma."
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Booking emails use this SMTP identity."
-msgstr "Los correos de reservas usan esta identidad SMTP."
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Check the email settings and try again."
@@ -55,16 +40,6 @@ msgstr "El SMTP personalizado está desactivado"
 #, elixir-autogen, elixir-format
 msgid "Custom SMTP is enabled"
 msgstr "El SMTP personalizado está activado"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
-#, elixir-autogen, elixir-format
-msgid "Custom SMTP is enabled for booking emails."
-msgstr "El SMTP personalizado está activado para los correos de reservas."
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Custom SMTP remains selected. Failed booking emails are retried without switching to the platform sender."
-msgstr "El SMTP personalizado sigue seleccionado. Los correos de reservas que fallen se reintentarán sin cambiar al remitente de la plataforma."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
@@ -125,11 +100,6 @@ msgstr "TLS implícito (puerto 465)"
 #, elixir-autogen, elixir-format
 msgid "Keep identity"
 msgstr "Conservar la identidad"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Polls, calendar invitations from the dashboard, and payment notices still use the platform sender."
-msgstr "Las votaciones, las invitaciones de calendario desde el panel y los avisos de pago siguen usando el remitente de la plataforma."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
@@ -241,11 +211,6 @@ msgstr "No se pudieron leer las credenciales guardadas. Vuelve a introducirlas y
 msgid "The server is being tested. Existing email settings stay unchanged if the test fails."
 msgstr "Se está probando el servidor. Si la prueba falla, la configuración actual del correo no cambiará."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "This removes the saved credentials. Booking emails will use the platform sender."
-msgstr "Esto elimina las credenciales guardadas. Los correos de reservas usarán el remitente de la plataforma."
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Too many SMTP tests or connections. Wait a few minutes and try again."
@@ -285,3 +250,38 @@ msgstr "Tu identidad de envío actual no ha cambiado. Revisa el error y vuelve a
 #, elixir-autogen, elixir-format
 msgid "Your email settings changed. Review the current settings and try again."
 msgstr "La configuración de tu correo cambió. Revisa la configuración actual y vuelve a intentarlo."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "Custom SMTP is enabled for scheduling emails."
+msgstr "El SMTP personalizado está activado para los correos de programación de reuniones."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom SMTP remains selected. Failed scheduling emails are retried without switching to the platform sender."
+msgstr "El SMTP personalizado sigue seleccionado. Los correos de programación de reuniones fallidos se reintentan sin cambiar al remitente de la plataforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Poll emails, dashboard calendar invitations, updates and cancellations, and booking refund notices also use your SMTP identity. Integration health, dispute and payout notices use the platform sender."
+msgstr "Los correos de votaciones, las invitaciones, actualizaciones y cancelaciones del calendario del panel y los avisos de reembolsos de reservas también usan tu identidad SMTP. Los avisos sobre el estado de las integraciones, las disputas y los pagos al organizador usan el remitente de la plataforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails currently use the platform sender."
+msgstr "Los correos de programación de reuniones usan actualmente el remitente de la plataforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails now use the platform sender."
+msgstr "Los correos de programación de reuniones ahora usan el remitente de la plataforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails use this SMTP identity."
+msgstr "Los correos de programación de reuniones usan esta identidad SMTP."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "This removes the saved credentials. Scheduling emails will use the platform sender."
+msgstr "Esto elimina las credenciales guardadas. Los correos de programación de reuniones usarán el remitente de la plataforma."

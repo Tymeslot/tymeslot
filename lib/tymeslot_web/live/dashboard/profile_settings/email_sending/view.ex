@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSending.View do
           <p class="text-sm text-tymeslot-600">
             {dgettext(
               "dashboard_email_sending",
-              "Polls, calendar invitations from the dashboard, and payment notices still use the platform sender."
+              "Poll emails, dashboard calendar invitations, updates and cancellations, and booking refund notices also use your SMTP identity. Integration health, dispute and payout notices use the platform sender."
             )}
           </p>
 
@@ -250,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSending.View do
               <p class="text-sm text-tymeslot-600">
                 {dgettext(
                   "dashboard_email_sending",
-                  "This removes the saved credentials. Booking emails will use the platform sender."
+                  "This removes the saved credentials. Scheduling emails will use the platform sender."
                 )}
               </p>
               <div class="flex flex-wrap gap-3">
@@ -312,7 +312,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSending.View do
     do:
       dgettext(
         "dashboard_email_sending",
-        "Custom SMTP remains selected. Failed booking emails are retried without switching to the platform sender."
+        "Custom SMTP remains selected. Failed scheduling emails are retried without switching to the platform sender."
       )
 
   defp status_description("attention", _settings),
@@ -323,10 +323,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSending.View do
       )
 
   defp status_description("enabled", _settings),
-    do: dgettext("dashboard_email_sending", "Booking emails use this SMTP identity.")
+    do: dgettext("dashboard_email_sending", "Scheduling emails use this SMTP identity.")
 
   defp status_description(_state, _settings),
-    do: dgettext("dashboard_email_sending", "Booking emails currently use the platform sender.")
+    do:
+      dgettext("dashboard_email_sending", "Scheduling emails currently use the platform sender.")
 
   defp tested?(%Settings{revision: revision, tested_revision: revision, tested_at: %DateTime{}}),
     do: true

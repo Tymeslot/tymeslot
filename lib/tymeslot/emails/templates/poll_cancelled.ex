@@ -37,9 +37,9 @@ defmodule Tymeslot.Emails.Templates.PollCancelled do
           stage_subtitle: dgettext("emails_polls", "No time will be picked.")
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: poll.email_sender)
       |> to(PollParticipantSchema.email_recipient(participant))
-      |> from({host_name, MjmlEmail.fetch_from_email()})
+      |> MjmlEmail.from_organizer(host_name, poll.email_sender)
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(dgettext("emails_polls", "Poll cancelled: \"%{title}\"", title: poll.title))
       |> html_body(html_body)

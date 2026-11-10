@@ -3,7 +3,7 @@ defmodule Tymeslot.Emails.Delivery do
   Email delivery infrastructure — sender selection, circuit breakers, and validation.
 
   `Tymeslot.Emails.EmailService` builds a `Swoosh.Email` and delegates to
-  `deliver/2`. A resolved booking sender selects the owner's SMTP account;
+  `deliver/2`. A resolved scheduling sender selects the owner's SMTP account;
   other messages use the configured platform mailer.
   """
 
@@ -11,7 +11,7 @@ defmodule Tymeslot.Emails.Delivery do
 
   alias Tymeslot.Emails.Shared.Sanitise
   alias Tymeslot.EmailSending
-  alias Tymeslot.EmailSending.{Breakers, Connections, Sender, Transport}
+  alias Tymeslot.EmailSending.{Breakers, Connections, DeliveryStatus, Sender, Transport}
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Infrastructure.Logging.EmailMasker
@@ -57,9 +57,9 @@ defmodule Tymeslot.Emails.Delivery do
   email breaker by default; tests pass their own so that no other delivery
   can change the counts they assert on.
 
-  `sender:` selects a resolved booking identity. User SMTP uses its own
+  `sender:` selects a resolved scheduling identity. User SMTP uses its own
   configuration-revision breaker and rechecks credentials before connecting.
-  Booking and test sends share a ten-connection-per-owner cap on each node;
+  Scheduling and test sends share a ten-connection-per-owner cap on each node;
   contention returns `{:error, :rate_limited}` without changing breaker state.
   It never falls back to another identity on failure. Omitting the option or
   passing a platform sender retains the platform mailer path.
@@ -208,11 +208,15 @@ defmodule Tymeslot.Emails.Delivery do
     end
   end
 
-  @doc "The longest a single `deliver/1` call may take before it gives up."
+  @doc "The transport deadline for one email, excluding best-effort status persistence."
   @spec send_deadline_ms() :: pos_integer()
   def send_deadline_ms do
     Application.get_env(:tymeslot, :email_send_deadline_ms, @default_send_deadline_ms)
   end
+
+  @doc "The worker budget for one transport attempt and its bounded SMTP status write."
+  @spec send_budget_ms() :: pos_integer()
+  def send_budget_ms, do: send_deadline_ms() + DeliveryStatus.write_deadline_ms()
 
   # AhaSend answers 202 Accepted with a body its adapter cannot always parse,
   # which reaches here as an error: the provider has taken the message.

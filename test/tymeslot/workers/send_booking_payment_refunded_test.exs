@@ -23,7 +23,10 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
   end
 
   defp insert_payment(attrs \\ %{}) do
+    host = insert(:user)
+
     defaults = %{
+      host_user_id: host.id,
       attendee_email: "alice@example.com",
       attendee_name: "Alice",
       host_name: "Bob Host",

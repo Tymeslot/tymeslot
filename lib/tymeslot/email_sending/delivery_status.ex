@@ -7,6 +7,7 @@ defmodule Tymeslot.EmailSending.DeliveryStatus do
   ambiguous timeout must remain a failure even when job policy assumes delivery.
   """
 
+  @write_deadline_ms 250
   @codes ~w(authentication_failed tls_required dns_failed invalid_destination
             credentials_unavailable invalid_settings not_tested session_timeout
             ambiguous_timeout delivery_failed)
@@ -23,6 +24,10 @@ defmodule Tymeslot.EmailSending.DeliveryStatus do
   ]
 
   @type outcome :: :healthy | {:failure, String.t()} | :ignore
+
+  @doc "The bounded database budget for recording one SMTP outcome, in milliseconds."
+  @spec write_deadline_ms() :: pos_integer()
+  def write_deadline_ms, do: @write_deadline_ms
 
   @doc "Returns only a fixed public status code; unknown stored data becomes generic."
   @spec sanitize(term()) :: String.t() | nil

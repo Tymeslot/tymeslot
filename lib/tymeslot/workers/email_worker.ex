@@ -45,9 +45,12 @@ defmodule Tymeslot.Workers.EmailWorker do
   # deadline, plus one deadline's headroom for building the emails. A fixed
   # 30 seconds let two stalled sends exhaust it, and a timed-out job is
   # discarded, so the recipients after them were never emailed.
-  # The largest job is a poll's: its cancellation, or the confirmation of the
+  # The largest usual job is a poll's: its cancellation, or the confirmation of the
   # meeting it made, goes to every participant, more than a booking's guests.
-  # The job's args do not say how many, so the larger limit is allowed for.
+  # Most job args do not say how many, so the larger limit is allowed for.
+  # Calendar updates carry an unbounded attendee list: budget each entry there
+  # instead of truncating their delivery window to a poll's participant limit.
+  # Each send includes a bounded SMTP status write after transport acceptance.
   # `:email_timeout_ms` overrides it (e.g. lowered in tests).
   @sends_beyond_guests 2
   @headroom_deadlines 1
@@ -188,7 +191,7 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   defp execute_email_job_with_timeout(action, args, job) do
-    timeout_ms = email_timeout_ms()
+    timeout_ms = email_timeout_ms(args)
     policy = ambiguous_timeout_policy(job)
 
     case Bounded.run(
@@ -271,15 +274,29 @@ defmodule Tymeslot.Workers.EmailWorker do
     {:discard, "Email sending timed out"}
   end
 
-  @doc false
-  @spec email_timeout_ms() :: pos_integer()
-  def email_timeout_ms do
+  @doc """
+  Budgets every recipient's transport and status write, plus rendering headroom.
+
+  Calendar updates use their actual attendee count when it exceeds the default
+  booking/poll allowance. The explicit deployment override remains authoritative.
+  """
+  @spec email_timeout_ms(map()) :: pos_integer()
+  def email_timeout_ms(args \\ %{}) when is_map(args) do
     Application.get_env(:tymeslot, :email_timeout_ms) ||
-      (max_recipients() + @sends_beyond_guests + @headroom_deadlines) *
-        Delivery.send_deadline_ms()
+      (max(max_recipients() + @sends_beyond_guests, calendar_recipients(args)) +
+         @headroom_deadlines) * Delivery.send_budget_ms()
   end
 
   defp max_recipients, do: max(Guests.max_guests(), PollSchema.max_participants())
+
+  defp calendar_recipients(%{
+         "action" => "send_event_update_notification",
+         "attendee_emails" => recipients
+       })
+       when is_list(recipients),
+       do: length(recipients)
+
+  defp calendar_recipients(_args), do: 0
 
   # Admin alerts and their daily digest retry on their own, much longer
   # schedule; see `AdminAlertScheduler` for why.

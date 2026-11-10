@@ -16,21 +16,6 @@ msgstr ""
 msgid "A test message is sent only to your current verified account email."
 msgstr "Il messaggio di prova viene inviato solo all’indirizzo email attuale e verificato del tuo account."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Booking emails currently use the platform sender."
-msgstr "Le email di prenotazione usano attualmente il mittente della piattaforma."
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
-#, elixir-autogen, elixir-format
-msgid "Booking emails now use the platform sender."
-msgstr "Le email di prenotazione ora usano il mittente della piattaforma."
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Booking emails use this SMTP identity."
-msgstr "Le email di prenotazione usano questa identità SMTP."
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Check the email settings and try again."
@@ -55,16 +40,6 @@ msgstr "L’invio tramite SMTP personalizzato è disattivato"
 #, elixir-autogen, elixir-format
 msgid "Custom SMTP is enabled"
 msgstr "L’invio tramite SMTP personalizzato è attivato"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
-#, elixir-autogen, elixir-format
-msgid "Custom SMTP is enabled for booking emails."
-msgstr "L’invio tramite SMTP personalizzato è attivato per le email di prenotazione."
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Custom SMTP remains selected. Failed booking emails are retried without switching to the platform sender."
-msgstr "L’invio tramite SMTP personalizzato resta selezionato. L’invio delle email di prenotazione non riuscito viene ritentato senza passare al mittente della piattaforma."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
@@ -125,11 +100,6 @@ msgstr "TLS implicito (porta 465)"
 #, elixir-autogen, elixir-format
 msgid "Keep identity"
 msgstr "Mantieni identità"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Polls, calendar invitations from the dashboard, and payment notices still use the platform sender."
-msgstr "I sondaggi, gli inviti di calendario inviati dalla dashboard e gli avvisi di pagamento usano ancora il mittente della piattaforma."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
@@ -241,11 +211,6 @@ msgstr "Impossibile leggere le credenziali salvate. Inseriscile di nuovo e testa
 msgid "The server is being tested. Existing email settings stay unchanged if the test fails."
 msgstr "Il server è in fase di test. Se il test non riesce, le impostazioni email esistenti restano invariate."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "This removes the saved credentials. Booking emails will use the platform sender."
-msgstr "Questa azione rimuove le credenziali salvate. Le email di prenotazione useranno il mittente della piattaforma."
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Too many SMTP tests or connections. Wait a few minutes and try again."
@@ -285,3 +250,38 @@ msgstr "La tua identità di invio attuale non è cambiata. Controlla l’errore 
 #, elixir-autogen, elixir-format
 msgid "Your email settings changed. Review the current settings and try again."
 msgstr "Le impostazioni email sono cambiate. Controlla quelle attuali e riprova."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "Custom SMTP is enabled for scheduling emails."
+msgstr "Il servizio SMTP personalizzato è attivo per le email di pianificazione."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom SMTP remains selected. Failed scheduling emails are retried without switching to the platform sender."
+msgstr "Il servizio SMTP personalizzato resta selezionato. L’invio delle email di pianificazione non riuscite viene ritentato senza passare al mittente della piattaforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Poll emails, dashboard calendar invitations, updates and cancellations, and booking refund notices also use your SMTP identity. Integration health, dispute and payout notices use the platform sender."
+msgstr "Anche le email dei sondaggi, gli inviti, gli aggiornamenti e le cancellazioni del calendario della dashboard e gli avvisi di rimborso delle prenotazioni usano la tua identità SMTP. Gli avvisi sullo stato delle integrazioni, sulle contestazioni e sugli accrediti usano il mittente della piattaforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails currently use the platform sender."
+msgstr "Le email di pianificazione usano attualmente il mittente della piattaforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails now use the platform sender."
+msgstr "Le email di pianificazione ora usano il mittente della piattaforma."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails use this SMTP identity."
+msgstr "Le email di pianificazione usano questa identità SMTP."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "This removes the saved credentials. Scheduling emails will use the platform sender."
+msgstr "Questa azione rimuove le credenziali salvate. Le email di pianificazione useranno il mittente della piattaforma."

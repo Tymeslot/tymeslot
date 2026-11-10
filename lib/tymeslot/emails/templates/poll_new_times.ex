@@ -50,9 +50,9 @@ defmodule Tymeslot.Emails.Templates.PollNewTimes do
           stage_subtitle: intro(host_name)
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: poll.email_sender)
       |> to(PollParticipantSchema.email_recipient(participant))
-      |> from({host_name, MjmlEmail.fetch_from_email()})
+      |> MjmlEmail.from_organizer(host_name, poll.email_sender)
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(
         dgettext("emails_polls", "New times to vote on in \"%{title}\"", title: poll.title)

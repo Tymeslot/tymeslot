@@ -9,6 +9,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.UndeliveredUpdates
+  alias Tymeslot.Emails.BookingDelivery
   alias Tymeslot.Infrastructure.Config
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -321,10 +322,11 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     )
   end
 
+  @doc "Delivers a trusted calendar invitation snapshot only while its organizer remains active."
   @spec handle_calendar_invitation(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_calendar_invitation(%{"user_id" => user_id} = args) do
-    with {:ok, user} <- UserQueries.get_user(user_id),
+    with {:ok, user} <- active_calendar_user(user_id),
          {:ok, details} <- CalendarEventDetails.invitation_details(user, args),
          {:ok, _email_result} <-
            Config.email_service_module().send_calendar_invitation(args["attendee_email"], details) do
@@ -337,6 +339,12 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
     else
       {:error, :not_found} ->
         Logger.warning("User not found for calendar invitation", user_id: user_id)
+        {:discard, @user_gone}
+
+      {:error, :account_pending_deletion} ->
+        {:discard, @deletion_pending}
+
+      {:error, :owner_not_found} ->
         {:discard, @user_gone}
 
       {:error, "Invalid datetime: " <> _rest = reason} ->
@@ -356,18 +364,20 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   # One job carries the whole recipient list, so each recipient is claimed
   # separately (`DeliveryClaims`): a job the Oban lifeline rescues part-way
   # through re-mails nobody it already reached.
+  @doc "Delivers calendar updates with one sender snapshot and durable per-recipient claims."
   @spec handle_event_update_notification(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_event_update_notification(
         %{"event_uid" => event_uid, "integration_id" => integration_id} = args,
         job_id
       ) do
-    with {:ok, user} <- UserQueries.get_user(args["user_id"]),
+    with {:ok, user} <- active_calendar_user(args["user_id"]),
          {:ok, current_event} <- updated_event(args, integration_id, event_uid),
          changes = CalendarEventDetails.changes(current_event, args),
          false <- nothing_to_announce?(changes, args),
          {:ok, details} <-
-           CalendarEventDetails.update_details(user, current_event, changes, args) do
+           CalendarEventDetails.update_details(user, current_event, changes, args),
+         {:ok, details, _sender} <- BookingDelivery.prepare(details) do
       deliver_event_update(
         args["attendee_emails"],
         details,
@@ -382,6 +392,12 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
 
         {:discard, @event_gone}
 
+      {:error, :account_pending_deletion} ->
+        {:discard, @deletion_pending}
+
+      {:error, :owner_not_found} ->
+        {:discard, @user_gone}
+
       {:error, :no_timing} ->
         Logger.warning("Cached event has no start or end, cannot describe the update",
           event_uid: event_uid
@@ -395,6 +411,17 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
         )
 
         :ok
+
+      {:error, reason} ->
+        DeliveryOutcome.from_error(reason, "Failed to prepare event update sender")
+    end
+  end
+
+  # Snapshot jobs outlive cached events, but never the user's right to send.
+  defp active_calendar_user(user_id) do
+    case UserQueries.get_user(user_id) do
+      {:ok, %{deletion_scheduled_at: %DateTime{}}} -> {:error, :account_pending_deletion}
+      result -> result
     end
   end
 

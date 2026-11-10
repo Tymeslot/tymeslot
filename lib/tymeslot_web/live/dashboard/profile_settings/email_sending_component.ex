@@ -252,10 +252,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSendingComponent do
         notice =
           case action do
             :enable ->
-              dgettext("dashboard_email_sending", "Custom SMTP is enabled for booking emails.")
+              dgettext("dashboard_email_sending", "Custom SMTP is enabled for scheduling emails.")
 
             :disable ->
-              dgettext("dashboard_email_sending", "Booking emails now use the platform sender.")
+              dgettext(
+                "dashboard_email_sending",
+                "Scheduling emails now use the platform sender."
+              )
           end
 
         socket |> apply_settings(settings) |> assign(:notice, notice)

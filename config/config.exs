@@ -67,7 +67,7 @@ config :tymeslot,
 
   # Default email settings for standalone use
   email_adapter_default: "smtp",
-  # Opt-in user-owned SMTP identities and dashboard controls for booking notifications.
+  # Opt-in user-owned SMTP identities and dashboard controls for scheduling notifications.
   user_smtp_enabled: false,
   trial_ending_reminder_template: nil,
   refund_processed_template: nil,

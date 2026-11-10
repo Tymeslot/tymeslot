@@ -85,8 +85,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSendingComponentTest do
 
   test "a test/save, activation and real booking use the configured identity", context do
     use_relay(context.certificates, auth_users: credentials())
-    {:ok, view, _html} = live(context.conn, ~p"/dashboard/settings")
+    {:ok, view, html} = live(context.conn, ~p"/dashboard/settings")
     assert_state(view, "platform")
+    assert html =~ "dashboard calendar invitations, updates and cancellations"
+    assert html =~ "booking refund notices also use your SMTP identity"
+    assert html =~ "Integration health, dispute and payout notices use the platform sender"
 
     html = save(view)
     assert_state(view, "disabled")

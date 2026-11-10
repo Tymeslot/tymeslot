@@ -99,7 +99,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
       ics_details = CalendarEventContent.ics_details(details, attendee_email)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(details, :email_sender))
       |> CalendarEventContent.from_organiser(details)
       |> to(attendee_email)
       |> MjmlEmail.put_reply_to(details.organizer_name, details.organizer_email)
