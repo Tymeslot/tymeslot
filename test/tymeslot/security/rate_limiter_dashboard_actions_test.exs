@@ -244,7 +244,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # check(:dashboard_add_guests, _) — 20 per 10 minutes
+  # check(:dashboard_add_guests, _) — 10 per 10 minutes
   # ---------------------------------------------------------------------------
 
   describe "check(:dashboard_add_guests, _)" do
@@ -252,7 +252,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
       user_id = 11_870
       other_user_id = 11_871
 
-      for _i <- 1..20 do
+      for _i <- 1..10 do
         assert :ok = RateLimiter.check(:dashboard_add_guests, user_id)
       end
 

@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventCreationRateLimitTest do
     end
 
     test "does not share a budget with inviting guests to a booking", %{user: user} do
-      for _i <- 1..20, do: RateLimiter.check(:dashboard_add_guests, user.id)
+      for _i <- 1..10, do: RateLimiter.check(:dashboard_add_guests, user.id)
 
       assert :ok = RateLimiter.check(:dashboard_quick_add_meeting, user.id)
     end
