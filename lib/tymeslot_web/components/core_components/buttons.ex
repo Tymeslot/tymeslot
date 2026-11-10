@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   attr :type, :string, default: "button"
   attr :form, :string, default: nil
   attr :disabled, :boolean, default: false
-  attr :tooltip, :any, default: nil, doc: "see the `:tooltip` option above"
+  attr :tooltip, :any, default: :none, doc: "see the `:tooltip` option above"
   attr :class, :any, default: ""
   # `name` and `value` let one of several submit buttons say which it was.
   attr :rest, :global, include: ~w(name value)
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   attr :form, :string, default: nil
   attr :class, :any, default: ""
   attr :disabled, :boolean, default: false
-  attr :tooltip, :any, default: nil, doc: "As for `action_button/1`; ignored while loading"
+  attr :tooltip, :any, default: :none, doc: "As for `action_button/1`; ignored while loading"
   attr :rest, :global
 
   slot :inner_block, required: true
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
       type={@type}
       form={@form}
       disabled={@loading or @disabled}
-      tooltip={if @loading, do: nil, else: @tooltip}
+      tooltip={if @loading and @tooltip != :none, do: nil, else: @tooltip}
       class={@class}
       {@rest}
     >

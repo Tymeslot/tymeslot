@@ -67,7 +67,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             cond do
               @paused -> nil
               !@webhook.is_active -> dgettext("dashboard_automation", "Enable webhook to test")
-              @testing -> dgettext("dashboard_automation", "Testing...")
               true -> dgettext("dashboard_automation", "Test Connection")
             end
           }

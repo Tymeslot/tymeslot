@@ -15,7 +15,7 @@
  *   (aria-disabled, disabled, read-only, or no control at all); a control
  *   that does act shows it on a long press, since a tap is its action.
  *
- * A LiveView patch can strip the inline placement from an open bubble, so
+ * Scrolling or resizing moves the bubble with its control. A LiveView patch can strip the inline placement from an open bubble, so
  * the placement is restored from a small observer while it is open.
  */
 
@@ -24,7 +24,11 @@ const LONG_PRESS = 500
 const GAP = 8
 const MARGIN = 8
 
-const ACTIONABLE = 'button, a[href], input, select, textarea, [role="button"], [tabindex]'
+// A bare `tabindex` does not make something a control: an analytics bar is
+// focusable only to read out its value, so a tap should show that value.
+const ACTIONABLE =
+  'button, a[href], input, select, textarea, [role="button"], [role="link"], [role="checkbox"], ' +
+  '[role="switch"], [role="radio"], [role="tab"], [role="menuitem"], [role="option"]'
 
 let open = null // { anchor, bubble, observer }
 let showTimer = null
@@ -79,6 +83,11 @@ function show(anchor) {
   })
   observer.observe(bubble, { attributes: true, attributeFilter: ['style'] })
   open = { anchor, bubble, observer }
+}
+
+function replaceOpen() {
+  if (open && open.bubble.isConnected) place(open.anchor, open.bubble)
+  else hide()
 }
 
 function hide() {
@@ -144,6 +153,7 @@ function onFocusOut(event) {
 }
 
 function onPointerDown(event) {
+  swallowClick = false
   const anchor = anchorOf(event.target)
 
   if (event.pointerType !== 'touch') {
@@ -159,6 +169,7 @@ function onPointerDown(event) {
 
   if (isActionable(anchor)) {
     pressTimer = setTimeout(() => {
+      if (!bubbleOf(anchor)) return
       swallowClick = true
       show(anchor)
     }, LONG_PRESS)
@@ -182,11 +193,21 @@ function onClick(event) {
 }
 
 function onContextMenu(event) {
-  if (swallowClick && anchorOf(event.target)) event.preventDefault()
+  if (swallowClick && anchorOf(event.target)) {
+    event.preventDefault()
+    swallowClick = false
+  }
 }
 
 function onKeyDown(event) {
   if (event.key !== 'Escape' || !open) return
+
+  // Its control was removed by a patch: nothing is showing to dismiss.
+  if (!open.bubble.isConnected) {
+    hide()
+    return
+  }
+
   dismissed = open.anchor
   hide()
   event.stopPropagation()
@@ -206,8 +227,8 @@ export function installTooltips(root = document) {
   root.addEventListener('pointercancel', clearPress)
   root.addEventListener('click', onClick, true)
   root.addEventListener('contextmenu', onContextMenu)
-  window.addEventListener('scroll', hide, { capture: true, passive: true })
-  window.addEventListener('resize', hide)
+  window.addEventListener('scroll', replaceOpen, { capture: true, passive: true })
+  window.addEventListener('resize', replaceOpen)
 
   return () => {
     hide()
@@ -221,7 +242,7 @@ export function installTooltips(root = document) {
     root.removeEventListener('pointercancel', clearPress)
     root.removeEventListener('click', onClick, true)
     root.removeEventListener('contextmenu', onContextMenu)
-    window.removeEventListener('scroll', hide, { capture: true })
-    window.removeEventListener('resize', hide)
+    window.removeEventListener('scroll', replaceOpen, { capture: true })
+    window.removeEventListener('resize', replaceOpen)
   }
 }

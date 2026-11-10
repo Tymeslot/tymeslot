@@ -161,7 +161,6 @@ export const BackgroundMotionToggle = {
 
       this.el.hidden = !backgroundMotionAvailable;
       this.el.setAttribute('aria-label', label);
-      this.el.setAttribute('title', label);
       this.el.dataset.state = stopped ? 'stopped' : 'playing';
     };
 

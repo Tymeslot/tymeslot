@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Components.CoreComponentsTooltipTest do
     end
 
     for empty <- [nil, "", false] do
-      test "renders only the control when text is #{inspect(empty)}" do
+      test "keeps the wrapper without a bubble when text is #{inspect(empty)}" do
         assigns = %{empty: unquote(empty)}
 
         doc =
@@ -55,9 +55,21 @@ defmodule TymeslotWeb.Components.CoreComponentsTooltipTest do
           )
 
         assert Enum.empty?(LazyHTML.query(doc, "[role=tooltip]"))
-        assert Enum.empty?(LazyHTML.query(doc, "[data-tooltip]"))
-        assert attr_of(doc, "button", "aria-describedby") == []
+        assert attr_of(doc, "[data-tooltip] > button", "aria-describedby") == []
+        assert doc |> LazyHTML.query("[data-tooltip] > button") |> Enum.count() == 1
       end
+    end
+
+    test "text :none renders the control with no wrapper" do
+      doc =
+        render_doc(fn assigns ->
+          ~H"""
+          <Tooltip.tooltip text={:none}><button>Save</button></Tooltip.tooltip>
+          """
+        end)
+
+      assert Enum.empty?(LazyHTML.query(doc, "[data-tooltip]"))
+      assert doc |> LazyHTML.query("button") |> Enum.count() == 1
     end
   end
 
@@ -84,6 +96,28 @@ defmodule TymeslotWeb.Components.CoreComponentsTooltipTest do
       assert attr_of(doc, "#save", "type") == ["button"]
       assert attr_of(doc, "#save", "aria-describedby") == ["save-tip"]
       assert text_of(doc, "#save-tip") == "Finish the form first"
+    end
+
+    test "keeps the wrapper while a tooltip's text is absent, so the button survives" do
+      doc =
+        render_doc(fn assigns ->
+          ~H"""
+          <Buttons.action_button id="save" tooltip={nil}>Save</Buttons.action_button>
+          """
+        end)
+
+      assert doc |> LazyHTML.query("[data-tooltip] > #save") |> Enum.count() == 1
+    end
+
+    test "has no wrapper when no tooltip attribute was given" do
+      doc =
+        render_doc(fn assigns ->
+          ~H"""
+          <Buttons.action_button id="save">Save</Buttons.action_button>
+          """
+        end)
+
+      assert Enum.empty?(LazyHTML.query(doc, "[data-tooltip]"))
     end
 
     test "disabled without a reason stays natively disabled" do
@@ -125,6 +159,7 @@ defmodule TymeslotWeb.Components.CoreComponentsTooltipTest do
       assert attr_of(doc, "#go", "disabled") == [""]
       assert attr_of(doc, "#go", "aria-disabled") == []
       assert Enum.empty?(LazyHTML.query(doc, "[role=tooltip]"))
+      assert doc |> LazyHTML.query("[data-tooltip] > #go") |> Enum.count() == 1
     end
   end
 

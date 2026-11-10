@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
+
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Lengths
@@ -13,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Tooltip
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.DashboardFormat
@@ -72,43 +74,64 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
               {@type.name}
             </h2>
-            <Feedback.pill
+            <Tooltip.tooltip
+              :let={tip}
               :if={invitation_only?(@type)}
-              icon="hero-envelope-mini"
-              title={
+              id={"meeting-type-#{@type.id}-invitation-only-tip"}
+              text={
                 dgettext(
                   "dashboard_meeting_types",
                   "On no booking page; booked only through the invitation links you send"
                 )
               }
-              data-testid="invitation-only"
             >
-              {dgettext("dashboard_meeting_types", "Invitation only")}
-            </Feedback.pill>
-            <Feedback.pill
+              <Feedback.pill
+                tabindex="0"
+                aria-describedby={tip}
+                icon="hero-envelope-mini"
+                data-testid="invitation-only"
+              >
+                {dgettext("dashboard_meeting_types", "Invitation only")}
+              </Feedback.pill>
+            </Tooltip.tooltip>
+            <Tooltip.tooltip
+              :let={tip}
               :if={
                 not invitation_only?(@type) and
                   if(is_nil(@unlisted), do: @type.is_private, else: @unlisted)
               }
-              icon="hero-eye-slash-mini"
-              title={
+              id={"meeting-type-#{@type.id}-unlisted-tip"}
+              text={
                 dgettext(
                   "dashboard_meeting_types",
                   "On no booking page; reachable only by its direct link"
                 )
               }
             >
-              {dgettext("dashboard_meeting_types", "Unlisted")}
-            </Feedback.pill>
-            <Feedback.pill
+              <Feedback.pill
+                tabindex="0"
+                aria-describedby={tip}
+                icon="hero-eye-slash-mini"
+              >
+                {dgettext("dashboard_meeting_types", "Unlisted")}
+              </Feedback.pill>
+            </Tooltip.tooltip>
+            <Tooltip.tooltip
+              :let={tip}
               :if={is_nil(@next_date)}
-              tone={:warning}
-              icon="hero-calendar-mini"
-              title={no_open_dates_reason(@type)}
-              data-testid="no-open-dates"
+              id={"meeting-type-#{@type.id}-no-open-dates-tip"}
+              text={no_open_dates_reason(@type)}
             >
-              {dgettext("dashboard_meeting_types", "No open dates")}
-            </Feedback.pill>
+              <Feedback.pill
+                tabindex="0"
+                aria-describedby={tip}
+                tone={:warning}
+                icon="hero-calendar-mini"
+                data-testid="no-open-dates"
+              >
+                {dgettext("dashboard_meeting_types", "No open dates")}
+              </Feedback.pill>
+            </Tooltip.tooltip>
             <Feedback.pill
               :if={group_paused?(@type, @group_bookings_allowed)}
               tone={:warning}
@@ -125,15 +148,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             >
               {dgettext("dashboard_meeting_types", "Not offered")}
             </Feedback.pill>
-            <Feedback.pill
+            <Tooltip.tooltip
+              :let={tip}
               :if={@link_path}
-              size={:sm}
-              icon="hero-link-mini"
-              title={dgettext("dashboard_meeting_types", "Booking link")}
-              data-testid="meeting-type-link"
+              id={"meeting-type-#{@type.id}-link-tip"}
+              text={dgettext("dashboard_meeting_types", "Booking link")}
             >
-              {@link_path}
-            </Feedback.pill>
+              <Feedback.pill
+                tabindex="0"
+                aria-describedby={tip}
+                size={:sm}
+                icon="hero-link-mini"
+                data-testid="meeting-type-link"
+              >
+                {@link_path}
+              </Feedback.pill>
+            </Tooltip.tooltip>
           </div>
           <p
             :if={described?(@type)}
@@ -295,15 +325,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       assign(assigns, :warning, target_calendar_warning_text(assigns.type))
 
     ~H"""
-    <Feedback.pill
+    <Tooltip.tooltip
+      :let={tip}
       :if={@warning}
-      tone={:warning}
-      icon="hero-exclamation-triangle-micro"
-      class="ml-1"
-      title={@warning.title}
+      id={"meeting-type-#{@type.id}-calendar-warning-tip"}
+      text={@warning.title}
     >
-      {@warning.label}
-    </Feedback.pill>
+      <Feedback.pill
+        tabindex="0"
+        aria-describedby={tip}
+        tone={:warning}
+        icon="hero-exclamation-triangle-micro"
+        class="ml-1"
+      >
+        {@warning.label}
+      </Feedback.pill>
+    </Tooltip.tooltip>
     """
   end
 

@@ -349,11 +349,6 @@ msgstr "Перевірка не вдалася: %{reason}"
 msgid "Testing"
 msgstr "Перевірка"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
-#, elixir-autogen, elixir-format
-msgid "Testing..."
-msgstr "Перевірка..."
-
 #: lib/tymeslot_web/live/dashboard/automation/delete_slack_modal.ex
 #: lib/tymeslot_web/live/dashboard/automation/delete_telegram_modal.ex
 #, elixir-autogen, elixir-format

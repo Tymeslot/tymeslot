@@ -148,6 +148,87 @@ describe('tooltip', () => {
     expect(click.defaultPrevented).toBe(false)
   })
 
+  it('a long press with no click does not eat the next tap', () => {
+    const { control } = mount(BUTTON)
+
+    pointer('pointerdown', control, { pointerType: 'touch' })
+    vi.advanceTimersByTime(600)
+    pointer('pointerup', control, { pointerType: 'touch' })
+
+    const other = document.createElement('button')
+    document.body.appendChild(other)
+    pointer('pointerdown', other, { pointerType: 'touch' })
+    pointer('pointerup', other, { pointerType: 'touch' })
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+    other.dispatchEvent(click)
+
+    expect(click.defaultPrevented).toBe(false)
+  })
+
+  it('stops swallowing clicks once the long-press context menu is handled', () => {
+    const { control } = mount(BUTTON)
+
+    pointer('pointerdown', control, { pointerType: 'touch' })
+    vi.advanceTimersByTime(600)
+
+    const menu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    control.dispatchEvent(menu)
+    expect(menu.defaultPrevented).toBe(true)
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+    control.dispatchEvent(click)
+    expect(click.defaultPrevented).toBe(false)
+  })
+
+  it('a long press on an anchor with no bubble swallows nothing', () => {
+    document.body.innerHTML = '<span data-tooltip><button id="b">Save</button></span>'
+    const control = document.getElementById('b')
+
+    pointer('pointerdown', control, { pointerType: 'touch' })
+    vi.advanceTimersByTime(600)
+    pointer('pointerup', control, { pointerType: 'touch' })
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+    control.dispatchEvent(click)
+    expect(click.defaultPrevented).toBe(false)
+  })
+
+  it('a tap on a focusable readout shows its value at once', () => {
+    const { control, bubble } = mount(`
+      <span data-tooltip>
+        <span id="bar" role="img" tabindex="0"></span>
+        <span role="tooltip" popover="manual">3 visits</span>
+      </span>`)
+
+    pointer('pointerdown', control, { pointerType: 'touch' })
+    expect(bubble.showPopover).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays open and follows its control when the page scrolls', () => {
+    const { control, bubble } = mount(BUTTON)
+    control.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    control.getBoundingClientRect = () => ({ top: 200, bottom: 220, left: 50, width: 40 })
+
+    window.dispatchEvent(new Event('scroll'))
+
+    expect(bubble.hidePopover).not.toHaveBeenCalled()
+    expect(bubble.style.top).toBe('192px')
+  })
+
+  it('lets Escape through when the open control has been removed', () => {
+    const { control, anchor, bubble } = mount(BUTTON)
+    control.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    expect(bubble.showPopover).toHaveBeenCalledTimes(1)
+    anchor.remove()
+
+    const modalEscape = vi.fn()
+    window.addEventListener('keydown', modalEscape)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    window.removeEventListener('keydown', modalEscape)
+
+    expect(modalEscape).toHaveBeenCalledTimes(1)
+  })
+
   it('classifies whether a control can act', () => {
     expect(isActionable(mount(BUTTON).anchor)).toBe(true)
     expect(isActionable(mount(`
@@ -162,5 +243,13 @@ describe('tooltip', () => {
       <span data-tooltip>
         <span>badge</span><span role="tooltip"></span>
       </span>`).anchor)).toBe(false)
+    expect(isActionable(mount(`
+      <span data-tooltip>
+        <span role="img" tabindex="0"></span><span role="tooltip"></span>
+      </span>`).anchor)).toBe(false)
+    expect(isActionable(mount(`
+      <span data-tooltip>
+        <span role="button" tabindex="0"></span><span role="tooltip"></span>
+      </span>`).anchor)).toBe(true)
   })
 })
