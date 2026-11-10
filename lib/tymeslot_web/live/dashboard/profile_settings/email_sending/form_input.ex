@@ -4,71 +4,88 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSending.FormInput do
 
   The submitted credential fields are passed straight to the domain operation.
   Only public fields enter socket assigns or a rendered form value.
+  An email-valued username can seed the new identity's public From address.
   """
 
   alias Ecto.Changeset
   alias Tymeslot.EmailSending.Settings
+  alias Tymeslot.Security.FieldValidators.EmailValidator
 
   @public_fields [:host, :port, :security, :from_address, :from_name]
-  @fields ~w(host port security username password from_address from_name)
+  @fields ~w(host security username password from_address from_name)
 
   @doc "The editable field names accepted by this form."
   @spec fields() :: [String.t()]
   def fields, do: @fields
 
-  @doc "Discards submitted ownership, revision and lifecycle fields."
+  @doc """
+  Whitelists editable fields and derives the SMTP port from connection security.
+
+  A submitted port is ignored on both validation and submission. Unsupported or
+  missing security modes remain invalid instead of receiving a default mode.
+  """
   @spec attributes(term()) :: map()
-  def attributes(params) when is_map(params), do: Map.take(params, @fields)
+  def attributes(params) when is_map(params) do
+    attrs = Map.take(params, @fields)
+
+    case attrs["security"] do
+      "implicit_tls" -> Map.put(attrs, "port", "465")
+      "starttls" -> Map.put(attrs, "port", "587")
+      _invalid -> attrs
+    end
+  end
+
   def attributes(_params), do: %{}
 
-  @doc "Keeps the two standard port/TLS selections aligned during editing."
-  @spec align_transport(map(), [String.t()] | nil) :: map()
-  def align_transport(params, ["smtp", "port"]) do
-    case params["port"] do
-      "465" -> Map.put(params, "security", "implicit_tls")
-      "587" -> Map.put(params, "security", "starttls")
-      _invalid -> params
-    end
-  end
+  @doc """
+  Builds nonsecret form values, defaulting the display name only for a new identity.
 
-  def align_transport(params, ["smtp", "security"]) do
-    case params["security"] do
-      "implicit_tls" -> Map.put(params, "port", "465")
-      "starttls" -> Map.put(params, "port", "587")
-      _invalid -> params
-    end
-  end
+  Saved and validated values remain authoritative, including an explicitly
+  cleared display name. The profile default is used only before editing begins.
+  """
+  @spec values(Changeset.t() | Settings.t() | nil, String.t() | nil) ::
+          %{String.t() => String.t()}
+  def values(source, default_from_name \\ nil)
 
-  def align_transport(params, _target), do: params
-
-  @doc "Builds nonsecret values from domain validation or a saved public view."
-  @spec values(Changeset.t() | Settings.t() | nil) :: %{String.t() => String.t()}
-  def values(%Changeset{} = changeset),
+  def values(%Changeset{} = changeset, _default_from_name),
     do: Map.new(@public_fields, &{Atom.to_string(&1), text(Changeset.get_field(changeset, &1))})
 
-  def values(%Settings{} = settings),
+  def values(%Settings{} = settings, _default_from_name),
     do: Map.new(@public_fields, &{Atom.to_string(&1), text(Map.fetch!(settings, &1))})
 
-  def values(nil),
-    do: %{
-      "host" => "",
-      "port" => "587",
-      "security" => "starttls",
-      "from_address" => "",
-      "from_name" => ""
-    }
+  def values(nil, default_from_name)
+      when is_binary(default_from_name) or is_nil(default_from_name),
+      do: %{
+        "host" => "",
+        "port" => "587",
+        "security" => "starttls",
+        "from_address" => "",
+        "from_name" => default_from_name || ""
+      }
 
-  @doc "Whether untested public values or submitted credentials differ from the saved identity."
-  @spec dirty?(Changeset.t(), Settings.t() | nil, map()) :: boolean()
-  def dirty?(%Changeset{} = changeset, settings, attrs) when is_map(attrs) do
-    not changeset.valid? or values(changeset) != values(settings) or
-      Enum.any?(["username", "password"], fn field ->
-        case Map.get(attrs, field) do
-          value when is_binary(value) -> String.trim(value) != ""
-          nil -> false
-          _invalid -> true
-        end
-      end)
+  @doc """
+  Suggests a From address using an email-valued SMTP username.
+
+  Call only for a new identity before the owner edits the From address. Invalid
+  and non-email usernames leave the suggestion blank; credentials themselves
+  are neither changed nor returned as credential form values.
+  """
+  @spec default_from_address(map()) :: map()
+  def default_from_address(attrs) when is_map(attrs) do
+    username = Map.get(attrs, "username")
+
+    address =
+      if is_binary(username) and String.valid?(username) do
+        candidate = String.trim(username)
+
+        if byte_size(candidate) <= 254 and EmailValidator.validate(candidate) == :ok,
+          do: candidate,
+          else: ""
+      else
+        ""
+      end
+
+    Map.put(attrs, "from_address", address)
   end
 
   defp text(nil), do: ""

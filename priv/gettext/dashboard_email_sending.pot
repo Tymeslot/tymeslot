@@ -78,11 +78,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
-msgid "Enable tested identity"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
 msgid "From address"
 msgstr ""
 
@@ -103,11 +98,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
-msgid "Refresh status"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
 msgid "Required STARTTLS (port 587)"
 msgstr ""
 
@@ -123,22 +113,12 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
-msgid "SMTP port"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
 msgid "SMTP settings"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
 msgid "SMTP username"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "TLS mode"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
@@ -171,11 +151,6 @@ msgstr ""
 msgid "The SMTP operation could not be completed. Check the settings and try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
-#, elixir-autogen, elixir-format
-msgid "The SMTP server accepted the test and the settings were saved. Acceptance does not confirm inbox delivery."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The SMTP server did not respond in time. Try again shortly."
@@ -189,11 +164,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The SMTP server timed out. It may have accepted the message; check before trying again."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
-#, elixir-autogen, elixir-format
-msgid "The required TLS connection failed. Check the SMTP host, port, and TLS mode."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
@@ -221,16 +191,6 @@ msgstr ""
 msgid "Use a public SMTP server with authenticated TLS. Your provider must authorize the From address and manage SPF, DKIM, and DMARC for its domain."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Use platform sender"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
-#, elixir-autogen, elixir-format
-msgid "Using platform sender"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Verify your account email before testing or enabling custom SMTP."
@@ -249,11 +209,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Your email settings changed. Review the current settings and try again."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
-#, elixir-autogen, elixir-format
-msgid "Custom SMTP is enabled for scheduling emails."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
@@ -284,4 +239,34 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
 #, elixir-autogen, elixir-format
 msgid "This removes the saved credentials. Scheduling emails will use the platform sender."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Connection security"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The required TLS connection failed. Check the SMTP hostname and connection security."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Use custom sending email"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Test and save your SMTP settings to activate this sending identity."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "The SMTP server accepted the test and your sending identity is now active. Acceptance does not confirm inbox delivery."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "SMTP connection healthy. Settings saved and active."
 msgstr ""

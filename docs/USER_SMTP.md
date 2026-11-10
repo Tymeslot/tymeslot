@@ -94,24 +94,48 @@ responses, email metadata, or application logs.
 
 ## Testing and activation
 
-Open **Profile > Email sending**, enter the relay hostname, matching port/TLS
-mode, SMTP username, password or app password, From address and display name.
-Select **Test and save**. Testing runs asynchronously; the page remains
-responsive, and **Use platform sender** can cancel a pending replacement test.
-The username and password are never shown from storage or returned in page
-markup. Leave either credential field blank when editing to preserve it.
+Open **Profile > Email sending** and switch on **Use custom sending email** to
+reveal the SMTP setup. The switch starts off when no identity is enabled,
+including when a disabled identity is saved. Turning it on opens setup without
+activating an identity. An enabled identity starts with the switch on and its
+details visible.
 
-A new identity is saved disabled. Review it and select **Enable tested identity**
-to start using it for scheduling mail. Editing an enabled identity tests its
-replacement before updating the active settings. Failed tests preserve the
-active identity. Untested edits cannot activate the previously saved identity.
-Another tab's edit, activation or deletion invalidates an older form; reload
-and review the current settings before trying again.
+For a new identity, **From display name** starts with your profile's display
+name. **From address** follows the SMTP username when it is a valid email
+address, until you edit the From address yourself. Both defaults are editable;
+saved identities keep their existing From values. A non-email SMTP username
+leaves the From address blank for you to enter.
 
-**Use platform sender** disables the identity while retaining its encrypted
-settings. **Delete saved identity** requires confirmation and deletes the
-credentials. Disabling or deleting one user's identity never changes another
-user's sender or the deployment's platform mailer.
+Enter the relay hostname, SMTP username, password or app password, and review
+the From address and display name. Choose **Connection security**: **Required STARTTLS (port
+587)** or **Implicit TLS (port 465)**. The matching SMTP port is set automatically.
+Select **Test and save** to test the connection, save the settings and
+automatically activate the tested identity for scheduling mail. A success toast
+confirms that the SMTP connection is healthy and the settings are saved and
+active. The inline notice explains that success means relay acceptance and does
+not guarantee inbox delivery. Failures show a sanitized error toast.
+
+Testing runs asynchronously; the page remains responsive, and switching off
+**Use custom sending email** cancels a pending test. Reopening setup restores
+saved public values, with blank username and password fields. Stored credentials
+are never shown in these inputs or returned in page markup; an email address
+used as the public From address is displayed in that field. Leave either
+credential field blank when editing to preserve it.
+
+Activation requires the switch to remain on and applies only to the exact
+settings revision from the current successful test. Editing an enabled identity
+tests its replacement before updating the active settings. Failed tests preserve
+the previously saved identity and its activation state. Untested edits cannot
+activate the previously saved identity. Cancelled or stale test results cannot
+reactivate sending. Another tab's edit, activation or deletion invalidates an
+older form; reload and review the current settings before trying again.
+
+Switching off **Use custom sending email** disables an active identity, hides
+the SMTP details and discards unsaved form input while retaining saved settings
+and encrypted credentials. Scheduling emails then use the platform sender.
+**Delete saved identity** requires confirmation, deletes the credentials and
+resets the switch to off. Disabling or deleting one user's identity never
+changes another user's sender or the deployment's platform mailer.
 
 Test messages go only to the acting user's verified account email. A test
 must succeed before its settings revision can be enabled. Relay acceptance
@@ -124,8 +148,11 @@ IDs and revisions bind test results and lifecycle actions to the exact saved
 identity, including when an identity is deleted and recreated.
 
 The internal context is `Tymeslot.EmailSending`. Creation uses
-`test_and_save_settings(current_user, attrs, :new)`. Subsequent edits,
-activation, disablement, and deletion use
+`test_and_save_settings(current_user, attrs, :new)`, which still saves a new
+identity disabled. After accepting the matching test task's result while the
+switch remains on, the dashboard calls `enable_settings/2` with the saved
+identity's version to activate that tested revision automatically. Subsequent
+edits, activation, disablement, and deletion use
 `Tymeslot.EmailSending.Settings.version(settings)` as their expected version.
 This token contains both the configuration ID and revision; a revision alone
 cannot distinguish a recreated identity from an old form.
@@ -168,8 +195,9 @@ The additive table and encrypted values can remain in place across a code
 rollback. Existing platform SMTP/API-provider delivery
 continues to follow its deployment configuration.
 
-Repair credentials with a new successful test, then enable the tested
-revision. Retain encryption keys until the existing re-encryption sweep
+Repair credentials with **Test and save** while **Use custom sending email** is
+on; a successful test automatically activates the tested revision. Retain
+encryption keys until the existing re-encryption sweep
 confirms that no stored credentials require them. Test and connection errors
 must expose sanitized categories rather than raw provider replies.
 
@@ -186,9 +214,11 @@ against that exact settings version. Repeated identical failures update at
 most once per five minutes; successful relay acceptance or a successful retest
 clears the recorded failure. This is the last observed outcome, rather than a
 guarantee of inbox delivery or a strict ordering of concurrent SMTP sessions.
-**Refresh status** reloads the saved settings and status; test or discard form
-edits before using it. Raw relay responses and credentials never enter the
-status message, and request logging filters the SMTP form including usernames.
+The saved configuration and last recorded delivery outcome appear when you open
+**Profile > Email sending**. Reopen the page to see a newer recorded result.
+Loading this information reads saved data without contacting the SMTP server
+or sending email. Raw relay responses and credentials never enter the status
+message, and request logging filters the SMTP form including usernames.
 Status writes have a short deadline and skip a saturated database pool. They
 use a small, bounded budget and never reclassify an SMTP result.
 Email-worker budgets include this status-write allowance for every recipient.

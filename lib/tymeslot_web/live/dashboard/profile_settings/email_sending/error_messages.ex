@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSending.ErrorMessages do
   def message(:tls_required) do
     dgettext(
       "dashboard_email_sending",
-      "The required TLS connection failed. Check the SMTP host, port, and TLS mode."
+      "The required TLS connection failed. Check the SMTP hostname and connection security."
     )
   end
 

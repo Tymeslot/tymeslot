@@ -134,6 +134,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
           module={EmailSendingComponent}
           id="email-sending-settings"
           current_user={@current_user}
+          profile={@profile}
           smtp_settings={Map.get(@shared_data, :smtp_settings)}
           smtp_settings_loaded={true}
         />
