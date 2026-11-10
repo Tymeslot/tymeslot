@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           {confirm_question(@meeting, @timezone, @time_format)}
         </p>
 
-        <.paid_options :if={@paid?} booking_payment={@booking_payment} />
+        <.paid_options :if={@paid?} booking_payment={@booking_payment} refund_error={@refund_error} />
         <p :if={not @paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
@@ -124,6 +124,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       )
     end
   end
+
+  attr :booking_payment, :map, required: true
+  attr :refund_error, :string, default: nil
 
   defp paid_options(assigns) do
     assigns = assign(assigns, :remaining, refundable_remaining(assigns.booking_payment))

@@ -68,7 +68,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         organizer_profile: assigns[:organizer_profile],
         participant: assigns[:participant],
         link_request: assigns[:link_request],
-        invalid_link: assigns[:invalid_link] || false
+        invalid_link: assigns[:invalid_link] || false,
+        poll_field_errors: assigns[:poll_field_errors] || %{}
       )
 
     ~H"""
