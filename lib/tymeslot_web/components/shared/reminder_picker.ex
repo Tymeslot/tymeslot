@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             }
             data-testid={"reminder-preset-#{preset.value}-#{preset.unit}"}
             disabled={@limit_reached?}
-            title={limit_title(@limit_reached?, @max_reminders)}
+            aria-describedby={@limit_reached? && @event_prefix <> "reminder-limit-hint"}
             class="btn-tag-selector btn-tag-selector-turquoise"
           >
             + {preset_label(preset)}
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             data-discards-custom-reminder
             data-testid="reminder-custom-toggle"
             disabled={@limit_reached?}
-            title={limit_title(@limit_reached?, @max_reminders)}
+            aria-describedby={@limit_reached? && @event_prefix <> "reminder-limit-hint"}
             class={[
               "btn-tag-selector btn-tag-selector-turquoise",
               if(@show_custom_reminder, do: "btn-tag-selector-turquoise--active")
@@ -151,6 +151,14 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             </span>
           <% end %>
         </div>
+
+        <p
+          :if={@limit_reached?}
+          id={@event_prefix <> "reminder-limit-hint"}
+          class="text-token-xs text-tymeslot-500"
+        >
+          {limit_message(@max_reminders)}
+        </p>
 
         <%= if @show_custom_reminder && !@limit_reached? do %>
           <div
@@ -313,12 +321,9 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   defp policy_message(:exceeds_max),
     do: dgettext("common", "Reminders cannot be set for more than 1 year in advance")
 
-  # The tooltip explaining why an add button is disabled. Nil while more
-  # reminders can still be added, so an enabled button carries no title.
-  @spec limit_title(boolean(), pos_integer()) :: String.t() | nil
-  defp limit_title(false, _max_reminders), do: nil
-
-  defp limit_title(true, max_reminders) do
+  # Why the add buttons are disabled: shown under them while the cap is reached.
+  @spec limit_message(pos_integer()) :: String.t()
+  defp limit_message(max_reminders) do
     dngettext(
       "common",
       "Maximum of %{count} reminder allowed",

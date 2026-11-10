@@ -230,7 +230,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, _lv, html} = live(conn, ~p"/admin/settings")
 
       assert html =~
-               ~s(phx-value-key="password_auth_enabled" phx-value-state="false" disabled)
+               ~s(phx-value-key="password_auth_enabled" phx-value-state="false" aria-pressed="false" aria-disabled="true")
 
       assert html =~ "Cannot disable password authentication"
     end

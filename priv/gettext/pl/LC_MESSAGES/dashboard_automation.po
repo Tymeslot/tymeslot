@@ -147,6 +147,7 @@ msgstr "Wyłączony"
 msgid "Edit Webhook"
 msgstr "Edytuj webhook"
 
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Enable webhook to test"

@@ -135,7 +135,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-submit="update_event_title"
           class="pr-8"
         >
-          <%!-- raw-input: event title edited in place, drawn as the panel heading --%>
+          <%!-- raw-input: event title edited in place, drawn as the panel heading
+               native-title: repeats the title in the field, which can truncate. --%>
           <input
             type="text"
             id="event-title-input"

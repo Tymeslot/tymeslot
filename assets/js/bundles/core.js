@@ -25,6 +25,7 @@ import { ShareLink, StageIframe } from "../hooks/share_link"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
+import { installTooltips } from "../tooltip"
 import { liveSocketPath } from "../live_socket_path"
 import { takeAttendeePrefill } from "../attendee_prefill"
 
@@ -33,6 +34,7 @@ installImageFallback()
 
 // Copy [data-clipboard-text] elements on click (replaces inline clipboard handlers).
 installClipboardCopy()
+installTooltips()
 
 // CSRF token
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")

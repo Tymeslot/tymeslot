@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @shared [
     {:Brand, [:logo]},
     {:Layout, [:page_layout]},
+    {:Tooltip, [:tooltip]},
     {:Buttons,
      [
        :action_button,

@@ -36,7 +36,6 @@ defmodule TymeslotWeb.Components.UI.LocaleButton do
       type="button"
       disabled={@active or @disabled}
       aria-pressed={to_string(@active)}
-      title={@locale.name}
       aria-label={@locale.name}
       class={[
         "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all",

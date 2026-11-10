@@ -190,20 +190,30 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       disabled={!OrganizerHelpers.form_valid?(@form)}
                       data-testid="submit-booking"
                       aria-describedby={
-                        SubmitPrice.describedby(
-                          @meeting_type,
-                          @host_currency,
-                          @locale,
-                          @is_rescheduling
+                        submit_describedby(
+                          SubmitPrice.describedby(
+                            @meeting_type,
+                            @host_currency,
+                            @locale,
+                            @is_rescheduling
+                          ),
+                          @submitting,
+                          @form
                         )
                       }
                       data-intent="submit"
                       class="flex-1"
-                      title={get_submit_title(@submitting, @form)}
                     >
                       {submit_label(@is_rescheduling, @meeting_type)}
                     </.loading_button>
                   </div>
+                  <p
+                    :if={submit_incomplete?(@submitting, @form)}
+                    id="submit-booking-hint"
+                    class="mt-2 text-center text-sm opacity-80"
+                  >
+                    {dgettext("booking", "Please fill in all required fields")}
+                  </p>
                 </div>
               </.glass_morphism_card>
             </div>
@@ -236,16 +246,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
     BookingLabels.organizer_display_name(organizer_profile, username_context)
   end
 
-  defp get_submit_title(submitting, form) do
-    cond do
-      submitting ->
-        dgettext("booking", "Verifying slot availability and creating your meeting...")
+  # The form says what is missing while it stays unsendable.
+  defp submit_incomplete?(submitting, form),
+    do: not submitting and not OrganizerHelpers.form_valid?(form)
 
-      !OrganizerHelpers.form_valid?(form) ->
-        dgettext("booking", "Please fill in all required fields")
+  defp submit_describedby(price_id, submitting, form) do
+    hint = if submit_incomplete?(submitting, form), do: "submit-booking-hint"
 
-      true ->
-        dgettext("booking", "Click to schedule your meeting")
+    case Enum.reject([price_id, hint], &is_nil/1) do
+      [] -> nil
+      ids -> Enum.join(ids, " ")
     end
   end
 end

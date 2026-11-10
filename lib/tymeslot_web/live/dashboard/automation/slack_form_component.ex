@@ -322,12 +322,15 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           {dgettext("dashboard_automation_chat", "Channel")} <span class="text-red-500">*</span>
         </label>
         <.action_button
+          id="slack-refresh-channels"
           variant={:secondary}
           size={:sm}
           phx-click="slack_refresh_channels"
           phx-target={@target}
           disabled={@loading?}
-          title={dgettext("dashboard_automation_chat", "Refresh channel list from Slack")}
+          tooltip={
+            !@loading? && dgettext("dashboard_automation_chat", "Refresh channel list from Slack")
+          }
         >
           <.icon
             name="hero-arrow-path"

@@ -319,26 +319,30 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   # and would overwrite `phx-value-value` with the empty string.
   defp setting_tag(assigns) do
     ~H"""
-    <button
-      type="button"
-      phx-click="set_setting"
-      phx-value-key={@key}
-      phx-value-state={@state}
-      disabled={@active or @locked}
-      aria-pressed={to_string(@active)}
-      aria-disabled={@locked}
-      title={@lock_reason}
-      class={[
-        "px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all",
-        cond do
-          @active -> "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40 cursor-default"
-          @locked -> "bg-tymeslot-50 text-tymeslot-300 cursor-not-allowed opacity-60"
-          true -> "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900 cursor-pointer"
-        end
-      ]}
-    >
-      {@label}
-    </button>
+    <.tooltip :let={tip} id={"setting-#{@key}-#{@state}-lock-reason"} text={@locked && @lock_reason}>
+      <%!-- `aria-disabled` when locked, so it stays focusable to explain itself;
+         `AppSettings.update/1` refuses a pinned or lock-out change either way. --%>
+      <button
+        type="button"
+        phx-click={!@locked && "set_setting"}
+        phx-value-key={@key}
+        phx-value-state={@state}
+        disabled={@active and not @locked}
+        aria-pressed={to_string(@active)}
+        aria-disabled={@locked && "true"}
+        aria-describedby={tip}
+        class={[
+          "px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all",
+          cond do
+            @active -> "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40 cursor-default"
+            @locked -> "bg-tymeslot-50 text-tymeslot-300 cursor-not-allowed opacity-60"
+            true -> "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900 cursor-pointer"
+          end
+        ]}
+      >
+        {@label}
+      </button>
+    </.tooltip>
     """
   end
 

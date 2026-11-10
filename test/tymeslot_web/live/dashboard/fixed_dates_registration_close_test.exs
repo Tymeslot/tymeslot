@@ -192,7 +192,22 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
 
       {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meetings")
 
-      assert has_element?(view, "button[phx-click='show_reschedule_modal'][disabled]")
+      button = "button[id^='reschedule-meeting-'][aria-disabled='true']"
+      assert has_element?(view, button)
+      refute has_element?(view, "button[phx-click='show_reschedule_modal']")
+
+      [describedby] =
+        view
+        |> element(button)
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("aria-describedby")
+
+      assert has_element?(
+               view,
+               "##{describedby}[role='tooltip']",
+               "Move a fixed date from its meeting type"
+             )
     end
 
     test "marks an upcoming session whose registration has closed", ctx do

@@ -233,6 +233,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               screen reader's list of buttons tells the cards apart. --%>
         <div class="flex items-center gap-2 shrink-0">
           <Buttons.icon_button
+            id={"meeting-type-card-edit-#{@type.id}"}
             icon="hero-pencil-square"
             size={:sm}
             label={dgettext("dashboard_meeting_types", "Edit %{name}", name: @type.name)}
@@ -243,6 +244,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           />
 
           <Buttons.icon_button
+            id={"meeting-type-card-duplicate-#{@type.id}"}
             icon="hero-document-duplicate"
             size={:sm}
             label={dgettext("dashboard_meeting_types", "Duplicate %{name}", name: @type.name)}
@@ -253,6 +255,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           />
 
           <Buttons.icon_button
+            id={"meeting-type-card-delete-#{@type.id}"}
             icon="hero-trash"
             variant={:danger}
             size={:sm}

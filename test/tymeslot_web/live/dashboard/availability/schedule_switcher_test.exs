@@ -219,8 +219,14 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       # The button stays put and greys out, so the ceiling is visible rather
       # than inferred from a control that vanished.
       refute has_element?(view, "[phx-click='show_schedule_form'][phx-value-mode='create']")
-      assert has_element?(view, "button[disabled]", "New schedule")
-      assert render(view) =~ "reached the limit"
+
+      assert has_element?(
+               view,
+               "button[disabled][aria-describedby='schedule-limit-hint']",
+               "New schedule"
+             )
+
+      assert has_element?(view, "#schedule-limit-hint", "reached the limit")
 
       # Duplicating would also push past the cap, so the menu drops it too.
       view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
