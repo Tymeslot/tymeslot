@@ -38,6 +38,7 @@ defmodule Tymeslot.Meetings.Guests do
   @pubsub Tymeslot.PubSub
 
   @max_guests Constraints.guests_per_booking_range().last
+  @default_booking_guests Constraints.default_guests_per_booking()
 
   @typedoc """
   A guest to insert: a bare address, or an address with the name its owner
@@ -57,27 +58,42 @@ defmodule Tymeslot.Meetings.Guests do
   @typedoc "Aggregate RSVP counts for a meeting's guest list."
   @type summary :: GuestSchema.summary()
 
-  @doc "The maximum number of guests allowed on a single booking."
+  @doc """
+  The most guests a single meeting can have: what the host may invite to
+  their own meetings, and the highest limit a meeting type can set for the
+  bookings on its public page (`limit_for/1`).
+  """
   @spec max_guests() :: pos_integer()
   def max_guests, do: @max_guests
 
   @doc """
+  How many guests one booking on the public page may bring when its meeting
+  type sets no limit of its own: fewer than `max_guests/0`, since the booker
+  can be anyone and every guest is emailed.
+  """
+  @spec default_booking_limit() :: pos_integer()
+  def default_booking_limit, do: @default_booking_guests
+
+  @doc """
   How many guests one booking of `meeting_type` may bring: the host's own
-  limit for the type (`max_guests_per_booking`), or `max_guests/0` without
-  one. A group booking is further bounded by the seats left on its time.
+  limit for the type (`max_guests_per_booking`, at most `max_guests/0`), or
+  `default_booking_limit/0` without one. A group booking is further bounded
+  by the seats left on its time.
   """
   @spec limit_for(map() | nil) :: pos_integer()
   def limit_for(%{max_guests_per_booking: limit}) when is_integer(limit) and limit > 0,
     do: min(limit, @max_guests)
 
-  def limit_for(_meeting_type), do: @max_guests
+  def limit_for(_meeting_type), do: @default_booking_guests
 
   @doc """
   Sanitises a raw list of guest emails submitted with a booking.
 
   Trims and downcases each entry, drops blanks and anything that fails email
   validation, removes the primary attendee's own address, de-duplicates, and
-  caps the result at `max_guests/0`. Always returns a list — never raises.
+  caps the result at `limit`: `max_guests/0` unless given, so a booking from
+  the public page passes its own (`limit_for/1`). Always returns a list —
+  never raises.
   """
   @spec sanitize_emails([String.t()] | nil, String.t() | nil, pos_integer()) :: [String.t()]
   def sanitize_emails(emails, primary_email, limit \\ @max_guests)

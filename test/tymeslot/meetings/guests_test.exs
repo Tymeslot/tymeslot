@@ -47,11 +47,18 @@ defmodule Tymeslot.Meetings.GuestsTest do
   end
 
   describe "limit_for/1" do
-    test "is the meeting type's own limit, or the overall one without it" do
+    test "is the meeting type's own limit, or the public page's default without it" do
       assert Guests.limit_for(%{max_guests_per_booking: 2}) == 2
-      assert Guests.limit_for(%{max_guests_per_booking: nil}) == Guests.max_guests()
-      assert Guests.limit_for(nil) == Guests.max_guests()
+      assert Guests.limit_for(%{max_guests_per_booking: nil}) == Guests.default_booking_limit()
+      assert Guests.limit_for(nil) == Guests.default_booking_limit()
       assert Guests.limit_for(%{max_guests_per_booking: 50}) == Guests.max_guests()
+    end
+
+    test "keeps the public default below the overall limit, which a type may raise it to" do
+      assert Guests.default_booking_limit() < Guests.max_guests()
+
+      assert Guests.limit_for(%{max_guests_per_booking: Guests.max_guests()}) ==
+               Guests.max_guests()
     end
 
     test "is refused outside its range by the meeting type" do

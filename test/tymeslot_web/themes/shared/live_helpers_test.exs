@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpersTest do
 
       updated = StepEntry.handle_booking_entry(socket, %{})
 
-      assert updated.assigns.max_guests == Guests.max_guests()
+      assert updated.assigns.max_guests == Guests.default_booking_limit()
       assert %Phoenix.HTML.Form{} = updated.assigns.form
     end
   end

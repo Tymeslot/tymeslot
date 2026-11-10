@@ -255,8 +255,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
 
         form_event(view, :toggle_guests, nil)
 
-        # Fill the list to the maximum.
-        Enum.each(1..Guests.max_guests(), fn n ->
+        # Fill the list to the public page's default, the type setting none.
+        Enum.each(1..Guests.default_booking_limit(), fn n ->
           form_event(view, :add_guest, "guest#{n}@example.com")
         end)
 
@@ -264,7 +264,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
         form_event(view, :add_guest, "overflow@example.com")
         _drain = :sys.get_state(view.pid)
 
-        assert render(view) =~ "You can add up to #{Guests.max_guests()} guests"
+        assert render(view) =~ "You can add up to #{Guests.default_booking_limit()} guests"
       end
 
       @tag :capture_log
