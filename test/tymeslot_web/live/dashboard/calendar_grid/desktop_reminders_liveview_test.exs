@@ -61,4 +61,104 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopRemindersLiveViewTest do
     assert feed =~ "Work Meeting"
     refute feed =~ "Personal Errand"
   end
+
+  describe "switching reminders on from the settings modal" do
+    setup %{conn: conn, user: user} do
+      {:ok, _prefs} =
+        CalendarPreferencesQueries.upsert(user.id, %{desktop_reminders_enabled: false})
+
+      %{lv: open_settings(conn)}
+    end
+
+    test "a granted permission saves the preference as on", %{lv: lv, user: user} do
+      component_event(lv, "desktop_reminders_permission", %{"permission" => "default"})
+      refute reminders_on?(user)
+
+      html = component_event(lv, "enable_desktop_reminders", %{"permission" => "granted"})
+
+      assert reminders_on?(user)
+      assert html =~ ~s(id="desktop-reminders-switch")
+      assert html =~ ~s(aria-checked="true")
+      refute html =~ "desktop-permission-note"
+    end
+
+    test "a refused permission leaves the switch off and says so", %{lv: lv, user: user} do
+      html = component_event(lv, "enable_desktop_reminders", %{"permission" => "denied"})
+
+      refute reminders_on?(user)
+      assert html =~ ~s(aria-checked="false")
+      assert html =~ "Blocked in your browser settings"
+    end
+
+    test "a dismissed prompt leaves the switch off without calling it blocked", %{
+      lv: lv,
+      user: user
+    } do
+      html = component_event(lv, "enable_desktop_reminders", %{"permission" => "default"})
+
+      refute reminders_on?(user)
+      assert html =~ "Notifications were not allowed, so reminders are still off."
+      refute html =~ "Blocked in your browser settings"
+    end
+
+    test "a browser without notifications cannot switch them on", %{lv: lv, user: user} do
+      html = component_event(lv, "enable_desktop_reminders", %{"permission" => "unsupported"})
+
+      refute reminders_on?(user)
+      assert html =~ "This browser does not support notifications."
+    end
+
+    test "an unknown permission value is ignored", %{lv: lv, user: user} do
+      component_event(lv, "enable_desktop_reminders", %{"permission" => "maybe"})
+
+      refute reminders_on?(user)
+    end
+
+    test "the switch hands the click to the permission hook", %{lv: lv} do
+      html = lv |> element("#desktop-reminders-switch") |> render()
+
+      assert html =~ ~s(phx-hook="DesktopReminderPermission")
+    end
+  end
+
+  describe "a preference saved before the switch asked for permission" do
+    test "offers an Allow notifications button while the browser has not answered", %{
+      conn: conn
+    } do
+      lv = open_settings(conn)
+      html = component_event(lv, "desktop_reminders_permission", %{"permission" => "default"})
+
+      assert html =~ "Reminders are on, but your browser has not allowed notifications yet."
+      assert has_element?(lv, "#desktop-reminders-grant", "Allow notifications")
+    end
+
+    test "says blocked when the browser has denied it", %{conn: conn} do
+      lv = open_settings(conn)
+      html = component_event(lv, "desktop_reminders_permission", %{"permission" => "denied"})
+
+      assert html =~ "Blocked in your browser settings"
+      refute has_element?(lv, "#desktop-reminders-grant")
+    end
+
+    test "shows nothing once permission is granted", %{conn: conn} do
+      lv = open_settings(conn)
+      html = component_event(lv, "desktop_reminders_permission", %{"permission" => "granted"})
+
+      refute html =~ "desktop-permission-note"
+    end
+  end
+
+  defp component_event(lv, event, params) do
+    lv |> element("#desktop-reminders-switch") |> render_hook(event, params)
+  end
+
+  defp reminders_on?(user) do
+    CalendarPreferencesQueries.get_or_create(user.id).desktop_reminders_enabled
+  end
+
+  defp open_settings(conn) do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("button[phx-click='toggle_settings']") |> render_click()
+    lv
+  end
 end
