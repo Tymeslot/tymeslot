@@ -11,6 +11,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
   import Tymeslot.Factory
 
   alias ErrorTracker.Error
+  alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Payments.SubscriptionInvoiceSchema
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
@@ -402,7 +403,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
 
       assert {:ok, :processed} = deliver(:connect, event)
 
-      assert Tymeslot.MeetingPayments.ConnectAccountQueries.live_for_user(account.user_id)
+      assert ConnectAccountQueries.live_for_user(account.user_id)
     end
 
     test "a test-mode deauthorisation on test keys still disconnects" do
@@ -422,7 +423,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
 
       assert {:ok, :processed} = deliver(:connect, event)
 
-      refute Tymeslot.MeetingPayments.ConnectAccountQueries.live_for_user(account.user_id)
+      refute ConnectAccountQueries.live_for_user(account.user_id)
     end
 
     test "the platform endpoint does not filter by mode" do

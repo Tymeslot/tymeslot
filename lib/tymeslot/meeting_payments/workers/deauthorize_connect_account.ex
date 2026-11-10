@@ -79,16 +79,16 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
       {:error, :not_connected} ->
         :ok
 
-      {:error, reason} = error ->
-        if job.attempt >= job.max_attempts, do: alert(job, stripe_account_id, reason)
+      {:error, :oauth_failed} = error ->
+        if job.attempt >= job.max_attempts, do: alert(job, stripe_account_id)
         error
     end
   end
 
-  # The reason is reduced to an allowlisted atom: it is read from a Stripe
-  # response and must not carry its detail into an alert.
-  defp alert(job, stripe_account_id, reason) do
-    reason = if reason == :oauth_failed, do: :oauth_failed, else: :unknown
+  # The reason is the adapter's own atom, never anything read from Stripe's
+  # response, so no detail of it reaches the alert.
+  defp alert(job, stripe_account_id) do
+    reason = :oauth_failed
 
     Logger.error("Revoking a Stripe connection failed for good",
       stripe_account_id: stripe_account_id,
