@@ -150,6 +150,35 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
     end
   end
 
+  describe "a question's limits" do
+    test "switching a question from Date to Time gives its limits a time picker of their own",
+         %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      open_edit_form(view, meeting_type)
+      view |> element("button", "Add question") |> render_click()
+
+      editor = "form[phx-submit='save']"
+
+      view
+      |> form(editor, %{"definition" => %{"label" => "When"}})
+      |> render_change(%{"definition" => %{"type" => "date"}})
+
+      assert has_element?(view, "#definition_max-field[data-picker-kind='date']")
+      assert has_element?(view, "#definition_max-date-panel")
+
+      view
+      |> form(editor, %{"definition" => %{"label" => "When"}})
+      |> render_change(%{"definition" => %{"type" => "time"}})
+
+      # A new panel id: the date grid kept inside the old one by
+      # `phx-update="ignore"` cannot be reused as the time list.
+      assert has_element?(view, "#definition_max-field[data-picker-kind='time']")
+      assert has_element?(view, "#definition_max-time-panel[role='listbox']")
+      refute has_element?(view, "#definition_max-date-panel")
+    end
+  end
+
   describe "deleting a custom question" do
     test "question is removed from the list immediately", %{conn: conn, user: user} do
       question_id = UUID.generate()

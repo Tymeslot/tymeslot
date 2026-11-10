@@ -115,9 +115,18 @@ const monthFromWord = (word, { shortMonths, longMonths }) => {
   return index === undefined ? null : index + 1;
 };
 
-const fullYear = (text) => {
+// A two-digit year is read as the one nearest today that is no more than 20
+// years ahead of it: in 2026, "30" is 2030 and "85" is 1985.
+const FUTURE_WINDOW = 20;
+
+const fullYear = (text, today) => {
   const year = Number(text);
-  return text.length <= 2 ? 2000 + year : year;
+  if (text.length > 2) return year;
+
+  const thisYear = today.getFullYear();
+  const candidate = Math.floor(thisYear / 100) * 100 + year;
+
+  return candidate > thisYear + FUTURE_WINDOW ? candidate - 100 : candidate;
 };
 
 /**
@@ -139,7 +148,7 @@ export function parseDate(text, config, today = new Date()) {
 
   if (month) {
     const [day, year = String(today.getFullYear())] = numbers;
-    return realIso(fullYear(year), month, Number(day));
+    return realIso(fullYear(year, today), month, Number(day));
   }
 
   if (numbers.length < 2 || numbers.length > 3 || words.length > 0) return null;
@@ -150,7 +159,7 @@ export function parseDate(text, config, today = new Date()) {
   }
 
   const [day, monthNumber, year = String(today.getFullYear())] = numbers;
-  return realIso(fullYear(year), Number(monthNumber), Number(day));
+  return realIso(fullYear(year, today), Number(monthNumber), Number(day));
 }
 
 const realIso = (year, month, day) => {

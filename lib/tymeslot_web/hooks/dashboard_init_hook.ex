@@ -92,14 +92,6 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     {:cont, socket}
   end
 
-  # The static render is thrown away the moment the socket connects, but
-  # several dashboard surfaces (onboarding checklist, theme lock overlay,
-  # calendar-connect banner) branch on `integration_status` in that first
-  # paint too, so it must be the real value there, not the all-false
-  # default — otherwise a fully set-up host sees a false "setup incomplete"
-  # flash before the socket connects. `DashboardContext.get_integration_status/1`
-  # is a handful of small indexed queries, so fetching it synchronously here is
-  # cheap.
   # Read once for both: `time_format` for every surface that renders a clock,
   # the two together for the date and time pickers, wherever they sit.
   defp assign_preferences(socket, user_id) do
@@ -114,6 +106,14 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     assign(socket, :time_format, time_format)
   end
 
+  # The static render is thrown away the moment the socket connects, but
+  # several dashboard surfaces (onboarding checklist, theme lock overlay,
+  # calendar-connect banner) branch on `integration_status` in that first
+  # paint too, so it must be the real value there, not the all-false
+  # default — otherwise a fully set-up host sees a false "setup incomplete"
+  # flash before the socket connects. `DashboardContext.get_integration_status/1`
+  # is a handful of small indexed queries, so fetching it synchronously here is
+  # cheap.
   defp load_profile_and_integration_status(user, socket) do
     if connected?(socket) do
       fetch_profile_and_integration_status(user)

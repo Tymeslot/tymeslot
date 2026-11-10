@@ -29,12 +29,15 @@ import {
 const PAGE_STEP = 8;
 const TYPE_AHEAD_RESET_MS = 500;
 
-// A date-only choice on a combined field is not a value yet; a visible default
-// beats a date that silently never posts because the time was left empty.
+// Where an empty time list opens. Only a highlight: nothing is chosen until
+// the visitor chooses it.
 const DEFAULT_TIME = "09:00";
 
 export const DateTimePicker = {
   mounted() {
+    // Every listener goes with this, so a field that changes kind can be built
+    // again from scratch without the old parts still answering.
+    this.abort = new AbortController();
     this.kind = this.el.dataset.pickerKind;
     this.config = JSON.parse(this.el.dataset.pickerConfig);
     this.valueInput = this.el.querySelector("[data-picker-value]");
@@ -51,12 +54,27 @@ export const DateTimePicker = {
 
     this.onNativeChoice = (event) => this.handleNativeChoice(event);
     this.onLabelClick = (event) => this.handleLabelClick(event);
-    this.native.addEventListener("input", this.onNativeChoice);
-    this.native.addEventListener("change", this.onNativeChoice);
-    this.el.addEventListener("click", this.onLabelClick);
+    const { signal } = this.abort;
+
+    this.native.addEventListener("input", this.onNativeChoice, { signal });
+    this.native.addEventListener("change", this.onNativeChoice, { signal });
+    this.el.addEventListener("click", this.onLabelClick, { signal });
+
+    // `autofocus` is on the typed field; where the native control is the one
+    // on show, it takes the focus instead.
+    if (this.parts[0]?.text.hasAttribute("autofocus") && this.nativeActive()) this.native.focus();
   },
 
   updated() {
+    // The same element can come back as another kind (a question switched
+    // from Date to Time): start again rather than drive the new markup with
+    // the old parts.
+    if (this.el.dataset.pickerKind !== this.kind) {
+      this.destroyed();
+      this.mounted();
+      return;
+    }
+
     this.config = JSON.parse(this.el.dataset.pickerConfig);
     this.markFallback();
     this.syncFromServer();
@@ -70,6 +88,11 @@ export const DateTimePicker = {
 
   destroyed() {
     this.parts.forEach((part) => this.close(part, false));
+    this.abort.abort();
+  },
+
+  nativeActive() {
+    return getComputedStyle(this.native).display !== "none";
   },
 
   markFallback() {
@@ -89,22 +112,24 @@ export const DateTimePicker = {
       options: [],
       typed: "",
       typedAt: 0,
+      moved: false,
     };
 
-    part.text.addEventListener("input", (event) => event.stopPropagation());
-    part.text.addEventListener("change", (event) => {
+    const { signal } = this.abort;
+    const on = (target, type, handler) => target.addEventListener(type, handler, { signal });
+
+    on(part.text, "input", (event) => event.stopPropagation());
+    on(part.text, "change", (event) => {
       event.stopPropagation();
       this.commitText(part);
     });
-    part.text.addEventListener("keydown", (event) => this.handleTextKey(part, event));
-    part.trigger.addEventListener("click", () => this.toggle(part));
-    part.panel.addEventListener("keydown", (event) => this.handlePanelKey(part, event));
-    part.panel.addEventListener("click", (event) => this.handlePanelClick(part, event));
-    part.panel.addEventListener("focusout", (event) => this.handleFocusOut(part, event));
+    on(part.text, "keydown", (event) => this.handleTextKey(part, event));
+    on(part.trigger, "click", () => this.toggle(part));
+    on(part.panel, "keydown", (event) => this.handlePanelKey(part, event));
+    on(part.panel, "click", (event) => this.handlePanelClick(part, event));
+    on(part.panel, "focusout", (event) => this.handleFocusOut(part, event));
 
-    if (part.name === "time") {
-      part.panel.addEventListener("pointermove", (event) => this.handleTimeMove(part, event));
-    }
+    if (part.name === "time") on(part.panel, "pointermove", (event) => this.handleTimeMove(part, event));
 
     return part;
   },
@@ -159,11 +184,6 @@ export const DateTimePicker = {
 
   setPart(name, value) {
     this.state[name] = value;
-
-    if (name === "date" && this.kind === "datetime" && value !== "" && this.state.time === "") {
-      this.state.time = DEFAULT_TIME;
-    }
-
     this.commit();
   },
 
@@ -185,12 +205,11 @@ export const DateTimePicker = {
     const parsed =
       part.name === "date" ? parseDate(part.text.value, this.config) : parseTime(part.text.value);
 
-    if (parsed === null) {
-      part.text.value = this.formatPart(part.name);
-      return;
-    }
+    if (parsed !== null) this.setPart(part.name, parsed);
 
-    this.setPart(part.name, parsed);
+    // Written back even while the field has focus, so the visitor sees how
+    // their text was read (or that it could not be).
+    part.text.value = this.formatPart(part.name);
   },
 
   // The native control answers on the hidden input instead, so its own events
@@ -209,7 +228,7 @@ export const DateTimePicker = {
   },
 
   focusField() {
-    const target = getComputedStyle(this.native).display !== "none" ? this.native : this.parts[0].text;
+    const target = this.nativeActive() ? this.native : this.parts[0].text;
 
     target.focus();
   },
@@ -323,8 +342,18 @@ export const DateTimePicker = {
   // ---- The date dialog ---------------------------------------------------
 
   prepareDatePanel(part) {
-    part.activeDate = parseIso(this.state.date) ? this.state.date : todayIso();
+    part.activeDate = parseIso(this.state.date) ? this.state.date : this.clampToRange(todayIso());
     this.renderMonth(part);
+  },
+
+  // Today, unless the field cannot take it: then the nearest day it can.
+  clampToRange(iso) {
+    const min = this.native.min.slice(0, 10);
+    const max = this.native.max.slice(0, 10);
+
+    if (min !== "" && iso < min) return min;
+    if (max !== "" && iso > max) return max;
+    return iso;
   },
 
   renderMonth(part) {
@@ -489,21 +518,45 @@ export const DateTimePicker = {
       el.className = "select-option";
       el.textContent = label;
 
-      return { label, value, el };
+      const disabled = this.timeOutOfRange(value);
+      if (disabled) el.setAttribute("aria-disabled", "true");
+
+      return { label, value, el, disabled };
     });
 
     part.panel.replaceChildren(...part.options.map(({ el }) => el));
     part.activeIndex = this.nearestTimeIndex(part);
+    part.moved = false;
+  },
+
+  // A time field's own limits; a combined field's limits are dates.
+  timeOutOfRange(value) {
+    if (this.kind !== "time") return false;
+
+    const min = this.native.min.slice(0, 5);
+    const max = this.native.max.slice(0, 5);
+
+    return (min !== "" && value < min) || (max !== "" && value > max);
   },
 
   // The current value's slot, or the first after it, so a value off the
   // quarter-hour grid opens where it would sit.
   nearestTimeIndex(part) {
-    const current = this.state.time;
-    if (current === "") return Math.max(part.options.findIndex(({ value }) => value === DEFAULT_TIME), 0);
+    const wanted = this.state.time === "" ? DEFAULT_TIME : this.state.time;
+    const index = part.options.findIndex(({ value, disabled }) => value >= wanted && !disabled);
 
-    const index = part.options.findIndex(({ value }) => value >= current);
-    return index >= 0 ? index : part.options.length - 1;
+    if (index >= 0) return index;
+    return this.enabledTime(part, part.options.length, -1);
+  },
+
+  // The nearest selectable time from `from` (exclusive) in `direction`, or
+  // `from` itself when there is none that way.
+  enabledTime(part, from, direction) {
+    for (let index = from + direction; index >= 0 && index < part.options.length; index += direction) {
+      if (!part.options[index].disabled) return index;
+    }
+
+    return from;
   },
 
   renderActiveTime(part) {
@@ -520,13 +573,21 @@ export const DateTimePicker = {
   },
 
   moveTime(part, index) {
-    part.activeIndex = Math.max(0, Math.min(part.options.length - 1, index));
+    const clamped = Math.max(0, Math.min(part.options.length - 1, index));
+    const direction = clamped >= part.activeIndex ? 1 : -1;
+    let target = clamped;
+
+    // A disabled time: the next one on the way, else the nearest back.
+    if (part.options[target]?.disabled) target = this.enabledTime(part, clamped, direction);
+    if (part.options[target]?.disabled) target = this.enabledTime(part, clamped, -direction);
+
+    if (part.options[target] && !part.options[target].disabled) part.activeIndex = target;
     this.renderActiveTime(part);
   },
 
   chooseTime(part, index) {
     const option = part.options[index];
-    if (!option) return;
+    if (!option || option.disabled) return;
 
     this.close(part, true);
     this.setPart("time", option.value);
@@ -541,7 +602,10 @@ export const DateTimePicker = {
   handleTimeMove(part, event) {
     const index = event.target instanceof Element ? this.timeIndex(part, event.target) : -1;
 
-    if (index >= 0 && index !== part.activeIndex) this.moveTime(part, index);
+    if (index >= 0 && index !== part.activeIndex && !part.options[index].disabled) {
+      part.activeIndex = index;
+      this.renderActiveTime(part);
+    }
   },
 
   handleTimeKey(part, event) {
@@ -556,13 +620,21 @@ export const DateTimePicker = {
 
     if (event.key in moves) {
       event.preventDefault();
+      part.moved = true;
       this.moveTime(part, moves[event.key]);
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       this.chooseTime(part, part.activeIndex);
     } else if (event.key === "Tab") {
-      // As a native list: take the highlighted time and move on from the button.
-      this.chooseTime(part, part.activeIndex);
+      // A time the visitor picked out with the keys is taken, as a native list
+      // does; the highlight the list merely opened on is not, or tabbing past
+      // an optional field would answer it. Focus goes back to the button for
+      // the browser to move on from.
+      if (part.moved) {
+        this.chooseTime(part, part.activeIndex);
+      } else {
+        this.close(part, true);
+      }
     } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault();
       this.typeAhead(part, event.key);
@@ -576,12 +648,11 @@ export const DateTimePicker = {
     part.typedAt = now;
     part.typed += char.toLowerCase();
 
-    const index = typeAheadIndex(
-      part.options.map(({ label }) => ({ label, disabled: false })),
-      part.typed,
-      part.activeIndex
-    );
+    const index = typeAheadIndex(part.options, part.typed, part.activeIndex);
 
-    if (index >= 0) this.moveTime(part, index);
+    if (index >= 0) {
+      part.moved = true;
+      this.moveTime(part, index);
+    }
   },
 };

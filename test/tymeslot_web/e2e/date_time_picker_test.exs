@@ -49,8 +49,8 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       # Mouse: the time list, then the half-past option.
       session
       |> click(css("#create-event-start-time-trigger"))
-      |> assert_has(css("#create-event-start-time-panel [role='option']", minimum: 96))
-      |> click(css("#create-event-start-time-panel [role='option']", text: "10:30 AM"))
+      |> assert_has(css("#create-event-start-time-time-panel [role='option']", minimum: 96))
+      |> click(css("#create-event-start-time-time-panel [role='option']", text: "10:30 AM"))
       |> assert_closed("create-event-start-time")
       |> assert_hidden("start-time", "10:30")
 
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
 
       assert [false] =
                evaluate_script(session, """
-               return [document.getElementById("create-event-start-date-panel").matches(":popover-open")];
+               return [document.getElementById("create-event-start-date-date-panel").matches(":popover-open")];
                """)
     end
 
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       assert ["false", false] =
                evaluate_script(session, """
                const trigger = document.getElementById("create-event-start-date-trigger");
-               const panel = document.getElementById("create-event-start-date-panel");
+               const panel = document.getElementById("create-event-start-date-date-panel");
                return [trigger.getAttribute("aria-expanded"), panel.matches(":popover-open")];
                """)
 
@@ -143,8 +143,42 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
                |> evaluate_script("""
                const field = document.getElementById("create-event-start-date-field");
                const display = (selector) => getComputedStyle(field.querySelector(selector)).display;
-               return [display("[data-picker-part]"), getComputedStyle(document.getElementById("create-event-start-date-panel")).display, display("[data-picker-native]")];
+               return [display("[data-picker-part]"), getComputedStyle(document.getElementById("create-event-start-date-date-panel")).display, display("[data-picker-native]")];
                """)
+    end
+  end
+
+  describe "a question's limits in the question editor" do
+    feature "switching the question from Date to Time gives the limit a time list", %{
+      session: session
+    } do
+      {session, user} = log_in_via_browser(session)
+      meeting_type = insert(:meeting_type, user: user)
+
+      session =
+        session
+        |> visit("/dashboard/meeting-settings")
+        |> wait_for_live()
+        |> click(css("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']"))
+        |> click(css("button", text: "Add question"))
+        |> assert_has(css("#definition_type-trigger"))
+        |> choose_type("Date")
+        |> assert_has(css("#definition_max-field[data-picker-kind='date']"))
+        |> choose_type("Time")
+        |> assert_has(css("#definition_max-field[data-picker-kind='time']"))
+        |> click(css("#definition_max-trigger"))
+        |> assert_open("definition_max")
+        |> click(css("#definition_max-time-panel [role='option']", text: "2:30 PM"))
+
+      eventually(
+        fn ->
+          assert ["14:30"] =
+                   evaluate_script(session, """
+                   return [document.querySelector("#definition_max-field [data-picker-value]").value];
+                   """)
+        end,
+        timeout: 3000
+      )
     end
   end
 
@@ -163,7 +197,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
         |> assert_has(css("#cq-input-#{@question}-trigger"))
         |> click(css("#cq-input-#{@question}-trigger"))
         |> assert_open("cq-input-#{@question}")
-        |> click(css("#cq-input-#{@question}-panel [data-date='#{tomorrow}']"))
+        |> click(css("#cq-input-#{@question}-date-panel [data-date='#{tomorrow}']"))
         |> assert_closed("cq-input-#{@question}")
 
       assert [^tomorrow] =
@@ -238,7 +272,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
 
       [rect] =
         evaluate_script(session, """
-        const r = document.getElementById("cq-input-#{@question}-panel").getBoundingClientRect();
+        const r = document.getElementById("cq-input-#{@question}-date-panel").getBoundingClientRect();
         return [{top: r.top, bottom: r.bottom, left: r.left, right: r.right,
                  width: document.documentElement.clientWidth,
                  height: document.documentElement.clientHeight}];
@@ -249,6 +283,12 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       assert rect["bottom"] <= rect["height"]
       assert rect["bottom"] > rect["top"]
     end
+  end
+
+  defp choose_type(session, label) do
+    session
+    |> click(css("#definition_type-trigger"))
+    |> click(css("#definition_type-panel [role='option']", text: label))
   end
 
   defp open_create_modal(session) do
@@ -309,7 +349,11 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   end
 
   defp assert_open(session, id) do
-    assert_has(session, css("##{id}-panel [data-date], ##{id}-panel [role='option']", minimum: 1))
+    assert_has(
+      session,
+      css("##{id}-date-panel [data-date], ##{id}-time-panel [role='option']", minimum: 1)
+    )
+
     assert_has(session, css("##{id}-trigger[aria-expanded='true']"))
   end
 

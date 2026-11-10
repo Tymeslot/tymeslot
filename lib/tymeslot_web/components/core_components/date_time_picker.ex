@@ -185,7 +185,6 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
           aria-invalid={@errors != [] && "true"}
           aria-required={@required && "true"}
           aria-describedby={@describedby}
-          {@text_rest}
         />
       </div>
 
@@ -233,13 +232,16 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
         aria-label={dgettext("common", "Choose date")}
         aria-haspopup="dialog"
         aria-expanded="false"
-        aria-controls={"#{@id}-panel"}
+        aria-controls={"#{@field_id}-date-panel"}
       >
         <.icon name="hero-calendar" class="date-time-picker-icon" />
       </button>
 
+      <%!-- Named by kind: the panel keeps its content across patches, so a field
+           that changes kind (a question switched from Date to Time) must get a
+           new panel rather than the old one's grid. --%>
       <.dropdown_panel
-        id={"#{@id}-panel"}
+        id={"#{@field_id}-date-panel"}
         role="dialog"
         class="select-panel date-time-picker-panel date-picker-panel"
         unstyled
@@ -334,13 +336,13 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
         aria-label={dgettext("common", "Choose time")}
         aria-haspopup="listbox"
         aria-expanded="false"
-        aria-controls={"#{@id}-panel"}
+        aria-controls={"#{@field_id}-time-panel"}
       >
         <.icon name="hero-clock" class="date-time-picker-icon" />
       </button>
 
       <.dropdown_panel
-        id={"#{@id}-panel"}
+        id={"#{@field_id}-time-panel"}
         role="listbox"
         class="select-panel date-time-picker-panel"
         unstyled
@@ -464,7 +466,9 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
   defp blank_to_nil(value), do: value
 
   # Sorts `@rest` as `Select` does; the typed field also takes `autofocus`, so
-  # a booking question can open on it.
+  # a booking question can open on it. Only the typed field: the native control
+  # is hidden off touch, and the hook moves the focus to it where it is the one
+  # on show.
   defp split_rest(rest, error_id) do
     {value_rest, others} = Enum.split_with(rest, fn {key, _value} -> value_attr?(key) end)
     {aria_rest, others} = Enum.split_with(others, fn {key, _value} -> aria_attr?(key) end)

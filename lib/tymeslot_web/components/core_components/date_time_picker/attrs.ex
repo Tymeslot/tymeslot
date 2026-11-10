@@ -23,9 +23,9 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker.Attrs do
 
       attr :min, :any,
         default: nil,
-        doc: "the earliest ISO date offered in the grid; the server still validates"
+        doc: "the earliest ISO date (or `HH:MM` time) offered; the server still validates"
 
-      attr :max, :any, default: nil, doc: "the latest ISO date offered in the grid"
+      attr :max, :any, default: nil, doc: "the latest ISO date (or `HH:MM` time) offered"
 
       attr :variant, :atom,
         default: :default,

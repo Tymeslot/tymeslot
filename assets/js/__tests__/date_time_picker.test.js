@@ -50,6 +50,12 @@ describe("parseDate", () => {
     expect(parseDate("5.2.26", config, today)).toBe("2026-02-05");
   });
 
+  test("reads a two-digit year as the nearest one no more than 20 years ahead", () => {
+    expect(parseDate("1/1/85", config, today)).toBe("1985-01-01");
+    expect(parseDate("1/1/46", config, today)).toBe("2046-01-01");
+    expect(parseDate("1/1/47", config, today)).toBe("1947-01-01");
+  });
+
   test("takes a full month name, with words between the numbers, and no year", () => {
     expect(parseDate("5 de February de 2026", config, today)).toBe("2026-02-05");
     expect(parseDate("5 feb", config, today)).toBe("2026-02-05");
@@ -109,7 +115,7 @@ describe("monthMatrix", () => {
 
 const openHooks = [];
 
-function field(kind, value) {
+function markup(kind, value, attrs = "") {
   const part = (name) => `
     <div data-picker-part="${name}">
       <input type="text" id="p-${name}" data-picker-text />
@@ -124,12 +130,17 @@ function field(kind, value) {
 
   const parts = kind === "datetime" ? ["date", "time"] : [kind];
 
+  return `
+      <input type="hidden" data-picker-value name="v" value="${value}" />
+      ${parts.map(part).join("")}
+      <input id="p-native" data-picker-native style="display: none" ${attrs} />`;
+}
+
+function field(kind, value, attrs = "") {
   document.body.innerHTML = `
     <form id="host" phx-submit="save">
       <div id="p-field" data-picker-kind="${kind}" data-picker-config='${JSON.stringify(config)}'>
-        <input type="hidden" data-picker-value name="v" value="${value}" />
-        ${parts.map(part).join("")}
-        <input id="p-native" data-picker-native style="display: none" />
+        ${markup(kind, value, attrs)}
       </div>
     </form>`;
 
@@ -311,6 +322,18 @@ describe("the DateTimePicker hook", () => {
     expect(date.text.value).toBe("14 Nov 2026");
   });
 
+  test("Enter writes the reading back into the focused field", () => {
+    const hook = field("date", "");
+    const date = part(hook);
+
+    date.text.focus();
+    date.text.value = "14/11/26";
+    press(date.text, "Enter");
+
+    expect(document.activeElement).toBe(date.text);
+    expect(date.text.value).toBe("14 Nov 2026");
+  });
+
   test("typing nonsense goes back to the last good value", () => {
     const hook = field("date", "2026-11-14");
     const date = part(hook);
@@ -364,14 +387,115 @@ describe("the DateTimePicker hook", () => {
     expect(time.text.value).toBe("09:15");
   });
 
-  test("a date-only choice on a combined field shows a default time and posts both", () => {
+  test("a combined field posts nothing until both halves are chosen", () => {
     const hook = field("datetime", "");
     const seen = listenInput();
 
     hook.setPart("date", "2026-11-14");
 
-    expect(seen).toEqual(["2026-11-14T09:00"]);
-    expect(part(hook, "time").text.value).toBe("09:00");
+    expect(seen).toEqual([]);
+    expect(part(hook, "time").text.value).toBe("");
+
+    hook.setPart("time", "10:15");
+
+    expect(seen).toEqual(["2026-11-14T10:15"]);
+  });
+
+  test("an empty time list opens on 09:00 without choosing it, and Tab leaves it unchosen", () => {
+    const hook = field("time", "");
+    const time = part(hook, "time");
+    const seen = listenInput();
+
+    time.trigger.click();
+    expect(time.panel.getAttribute("aria-activedescendant")).toBe(time.options[1].el.id);
+
+    press(time.panel, "Tab");
+
+    expect(seen).toEqual([]);
+    expect(time.open).toBeNull();
+    expect(document.activeElement).toBe(time.trigger);
+  });
+
+  test("Tab takes a time the visitor moved to with the keys", () => {
+    const hook = field("time", "");
+    const time = part(hook, "time");
+    const seen = listenInput();
+
+    time.trigger.click();
+    press(time.panel, "ArrowDown");
+    press(time.panel, "Tab");
+
+    expect(seen).toEqual(["09:15"]);
+  });
+
+  test("times outside min and max are marked and skipped", () => {
+    const hook = field("time", "", 'min="09:00" max="09:15"');
+    const time = part(hook, "time");
+    const seen = listenInput();
+
+    time.trigger.click();
+
+    expect(time.options[0].el.getAttribute("aria-disabled")).toBe("true");
+    expect(time.options[3].el.getAttribute("aria-disabled")).toBe("true");
+
+    press(time.panel, "Home");
+    expect(time.panel.getAttribute("aria-activedescendant")).toBe(time.options[1].el.id);
+
+    press(time.panel, "End");
+    expect(time.panel.getAttribute("aria-activedescendant")).toBe(time.options[2].el.id);
+
+    time.options[3].el.click();
+    expect(seen).toEqual([]);
+  });
+
+  test("with no value, the grid opens on min when today is before it", () => {
+    const hook = field("date", "", 'min="2099-03-10"');
+    const date = part(hook);
+
+    date.trigger.click();
+
+    expect(document.activeElement.dataset.date).toBe("2099-03-10");
+  });
+
+  test("a field that comes back as another kind is built again", () => {
+    const hook = field("date", "");
+
+    hook.el.dataset.pickerKind = "time";
+    hook.el.innerHTML = markup("time", "");
+    hook.updated();
+
+    const time = part(hook, "time");
+    const seen = listenInput();
+
+    expect(hook.parts.map((p) => p.name)).toEqual(["time"]);
+
+    time.trigger.click();
+    expect(time.panel.querySelector("[role='option']")).not.toBeNull();
+    press(time.panel, "Enter");
+
+    expect(seen).toEqual(["09:00"]);
+  });
+
+  test("autofocus goes to the native control when it is the one on show", () => {
+    document.body.innerHTML = `
+      <div id="p-field" data-picker-kind="date" data-picker-config='${JSON.stringify(config)}'>
+        <input type="hidden" data-picker-value name="v" value="" />
+        <div data-picker-part="date">
+          <input type="text" data-picker-text autofocus />
+          <button type="button" data-picker-trigger></button>
+          <div data-picker-panel></div>
+        </div>
+        <input id="p-native" data-picker-native />
+      </div>`;
+
+    const hook = Object.assign(Object.create(DateTimePicker), {
+      el: document.querySelector("#p-field"),
+    });
+
+    hook.mounted();
+    openHooks.push(hook);
+
+    expect(document.activeElement.id).toBe("p-native");
   });
 
   test("the native control's choice commits once and stops LiveView seeing it", () => {

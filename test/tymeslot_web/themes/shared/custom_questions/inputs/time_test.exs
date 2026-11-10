@@ -25,4 +25,18 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TimeTest do
     assert html =~ ~s(value="14:30")
     assert html =~ ~s(value="2:30 PM")
   end
+
+  test "passes the question's limits to the picker" do
+    html =
+      render_input(%{
+        "id" => "q1",
+        "type" => "time",
+        "label" => "Arrival",
+        "min" => "09:00",
+        "max" => "17:00"
+      })
+
+    assert html =~ ~s(min="09:00")
+    assert html =~ ~s(max="17:00")
+  end
 end

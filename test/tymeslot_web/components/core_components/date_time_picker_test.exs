@@ -90,6 +90,21 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePickerTest do
       assert ["d"] == attribute(labelled, "label", "for")
     end
 
+    test "puts autofocus on the typed field alone" do
+      html = date(id: "d", name: "n", value: "", label: "L", autofocus: true)
+
+      assert [""] == attribute(html, "#d", "autofocus")
+      assert [] == attribute(html, "#d-native", "autofocus")
+    end
+
+    test "names each panel by its kind, so a field that changes kind gets a new one" do
+      assert [_panel] =
+               attribute(date(id: "d", name: "n", value: "", label: "L"), "#d-date-panel", "id")
+
+      assert [_panel] =
+               attribute(time(id: "d", name: "n", value: "", label: "L"), "#d-time-panel", "id")
+    end
+
     test "marks an error on the control and describes it" do
       html = date(id: "d", name: "n", value: "", label: "L", errors: ["can't be blank"])
 

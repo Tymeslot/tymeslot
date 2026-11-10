@@ -19,6 +19,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Time do
         id={"cq-input-#{@definition["id"]}"}
         name="value"
         value={@value}
+        min={@definition["min"]}
+        max={@definition["max"]}
         required={@definition["required"] == true}
         aria-label={@definition["label"]}
         autofocus={@autofocus}
