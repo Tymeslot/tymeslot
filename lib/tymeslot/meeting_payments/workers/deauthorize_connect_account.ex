@@ -7,11 +7,16 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
 
   An account that has a live row by the time this runs has been connected
   again, by the same host or another, and is left alone.
+
+  A failed attempt is retried with Oban's default backoff, which over twenty
+  attempts spans days. When the last one fails, an admin alert names the
+  account, since Tymeslot would otherwise keep access to an account it has no
+  row for with nobody told.
   """
 
   use Oban.Worker,
     queue: :payments,
-    max_attempts: 5,
+    max_attempts: 20,
     unique: [
       keys: [:stripe_account_id],
       states: [:available, :scheduled, :executing, :retryable, :suspended],
@@ -20,6 +25,7 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
@@ -49,10 +55,10 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}})
+  def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}} = job)
       when is_binary(stripe_account_id) do
     case ConnectAccountQueries.by_stripe_account_id(stripe_account_id) do
-      nil -> revoke(stripe_account_id)
+      nil -> revoke(job, stripe_account_id)
       %ConnectAccountSchema{} -> :ok
     end
   end
@@ -65,11 +71,34 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
     {:discard, "missing stripe_account_id"}
   end
 
-  defp revoke(stripe_account_id) do
+  defp revoke(job, stripe_account_id) do
     case StripeAdapter.deauthorize_account(stripe_account_id) do
-      :ok -> :ok
-      {:error, :not_connected} -> :ok
-      {:error, _reason} = error -> error
+      :ok ->
+        :ok
+
+      {:error, :not_connected} ->
+        :ok
+
+      {:error, reason} = error ->
+        if job.attempt >= job.max_attempts, do: alert(job, stripe_account_id, reason)
+        error
     end
+  end
+
+  # The reason is reduced to an allowlisted atom: it is read from a Stripe
+  # response and must not carry its detail into an alert.
+  defp alert(job, stripe_account_id, reason) do
+    reason = if reason == :oauth_failed, do: :oauth_failed, else: :unknown
+
+    Logger.error("Revoking a Stripe connection failed for good",
+      stripe_account_id: stripe_account_id,
+      reason: LogFormat.reason(reason)
+    )
+
+    AdminAlerts.report(:connect_revocation_failed,
+      summary: "Tymeslot's access to a Stripe account could not be revoked",
+      reason: reason,
+      context: %{stripe_account_id: stripe_account_id, oban_job_id: job.id}
+    )
   end
 end

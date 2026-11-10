@@ -40,6 +40,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     payment_event_orphaned: %{category: "Payment", severity: :error},
     dunning_stalled: %{category: "Payment", severity: :error},
     late_payment_refund_failed: %{category: "Payment", severity: :error},
+    connect_revocation_failed: %{category: "Payment", severity: :error},
     subscription_withdrawal_unfinished: %{category: "Payment", severity: :error},
     account_deletion_billing_sync_failed: %{category: "Payment", severity: :error},
     account_deletion_stalled: %{category: "Account", severity: :error},
@@ -241,6 +242,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   # per payment, whatever the reason text says.
   def dedup_key(:late_payment_refund_failed, metadata) do
     "late_payment_refund_failed:#{Map.get(metadata, :booking_payment_id, "unknown")}"
+  end
+
+  # One alert per account: two accounts failing must not collapse into one.
+  def dedup_key(:connect_revocation_failed, metadata) do
+    "connect_revocation_failed:#{Map.get(metadata, :stripe_account_id, "unknown")}"
   end
 
   # Each unfinished withdrawal is a host owed a refund or a cancellation, so
@@ -479,6 +485,18 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       "attempt (#{reason_text(metadata)}); the attendee is still owed the money. " <>
       "To settle it, refund the booking from the host's payments settings (or the " <>
       "Stripe dashboard), or once the cause is fixed retry Oban job #{job_id}"
+  end
+
+  # The job is unique per account, so once the cause is fixed the way to try
+  # again is to retry this one.
+  def format_message(:connect_revocation_failed, metadata) do
+    account = Map.get(metadata, :stripe_account_id, "unknown")
+    job_id = Map.get(metadata, :oban_job_id, "unknown")
+
+    "Revoking Tymeslot's access to Stripe account #{account} failed on every attempt " <>
+      "(#{reason_text(metadata)}); the account is no longer connected in Tymeslot but " <>
+      "still authorises it. Once the cause is fixed, retry Oban job #{job_id}, or remove " <>
+      "Tymeslot from the account's authorised apps in the Stripe dashboard"
   end
 
   def format_message(:subscription_withdrawal_unfinished, metadata) do
