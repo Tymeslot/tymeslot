@@ -50,6 +50,7 @@ defmodule CredoChecks.NoNativeTitleTest do
     assert [_] = issues(~S|<.action_button title="x">Save</.action_button>|)
     assert [_] = issues(~S|<Buttons.loading_button title="x">Go</Buttons.loading_button>|)
     assert [_] = issues(~S|<.link href="/x" title="x">Go</.link>|)
+    assert [_] = issues(~S|<Feedback.pill title="x">Go</Feedback.pill>|)
   end
 
   test "leaves component headings alone" do
@@ -96,5 +97,16 @@ defmodule CredoChecks.NoNativeTitleTest do
              issues(~S|<.icon_button id="close" icon="hero-x" label="Close" tooltip="Reason" />|)
 
     assert [] = issues(~S|<.icon_button icon="hero-x" label="Close" />|)
+  end
+
+  test "requires an id on action and loading buttons with a tooltip" do
+    assert [%{trigger: "tooltip="}] =
+             issues(~S|<.action_button tooltip="Reason">Go</.action_button>|)
+
+    assert [%{trigger: "tooltip="}] =
+             issues(~S|<Buttons.loading_button tooltip="Reason">Go</Buttons.loading_button>|)
+
+    assert [] = issues(~S|<.action_button id="go" tooltip="Reason">Go</.action_button>|)
+    assert [] = issues(~S|<.action_button tooltip={@tooltip} {@rest}>Go</.action_button>|)
   end
 end

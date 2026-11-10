@@ -8,7 +8,8 @@ defmodule CredoChecks.NoNativeTitle do
   `<.tooltip>` component, or visible text linked by `aria-describedby`.
 
   Matches lowercase HTML elements and the components that forward global
-  attributes to an element (`<.link>`, the button components, `<.icon>`), so
+  attributes to an element (`<.link>`, the button components, `<.icon>`,
+  `<.pill>`), so
   the `title` attribute of a `<.card>` or a `<.confirm_modal>`, which is a
   heading, is not touched. `<iframe>` is exempt: a title is its accessible
   name.
@@ -20,8 +21,9 @@ defmodule CredoChecks.NoNativeTitle do
       <%!-- native-title: repeats the event title, which can truncate. --%>
       <div title={@event.summary} class="truncate">{@event.summary}</div>
 
-  It also requires an `id` on an `<.icon_button>` with a `tooltip`, which that
-  tooltip's `aria-describedby` link is built from.
+  It also requires an `id` on an `<.icon_button>`, `<.action_button>` or
+  `<.loading_button>` with a `tooltip`, which that tooltip's
+  `aria-describedby` link is built from.
   """
 
   use Credo.Check,
@@ -32,8 +34,8 @@ defmodule CredoChecks.NoNativeTitle do
       Don't put information in a native `title=` attribute. Use `<.tooltip>`
       (shown on hover, focus and touch) or visible text with `aria-describedby`.
       A title that only repeats visible, possibly truncated, text can stay with
-      a `<%!-- native-title: <reason> --%>` comment directly above the tag. An
-      `<.icon_button>` with a `tooltip` needs an `id`.
+      a `<%!-- native-title: <reason> --%>` comment directly above the tag. A
+      button component with a `tooltip` needs an `id`.
       """
     ]
 
@@ -43,13 +45,15 @@ defmodule CredoChecks.NoNativeTitle do
 
   @html_tag "[a-z][a-z0-9-]*"
   # Components that pass a global `title` straight onto an HTML element.
-  @forwarding_tags "(?:[A-Z][\\w.]*)?\\.(?:link|icon|icon_button|action_button|action_link|loading_button)"
+  @forwarding_tags "(?:[A-Z][\\w.]*)?\\.(?:link|icon|icon_button|action_button|action_link|loading_button|pill)"
   @tag_pattern "#{@html_tag}|#{@forwarding_tags}"
   @exempt_elements ["iframe"]
   @exemption_regex ~r/(^|\s)native-title:\s*\S/
   @title_attr ~r/\stitle=/
+  @tooltip_buttons ~r/(icon_button|action_button|loading_button)$/
   @tooltip_attr ~r/\stooltip=/
   @id_attr ~r/\sid=/
+  @spread_attrs ~r/\s\{@\w+\}/
 
   @doc false
   @impl Credo.Check
@@ -72,7 +76,7 @@ defmodule CredoChecks.NoNativeTitle do
     attrs = strip_values(text)
 
     title_issues(name, line_no, attrs, comment, issue_meta) ++
-      tooltip_issues(name, line_no, attrs, issue_meta)
+      tooltip_issues(name, line_no, attrs, text, issue_meta)
   end
 
   defp title_issues(name, line_no, attrs, comment, issue_meta) do
@@ -102,13 +106,14 @@ defmodule CredoChecks.NoNativeTitle do
   defp html_or_forwarding?(name),
     do: String.first(name) =~ ~r/[a-z.]/ or String.contains?(name, ".")
 
-  defp tooltip_issues(name, line_no, attrs, issue_meta) do
-    if String.ends_with?(name, "icon_button") and Regex.match?(@tooltip_attr, attrs) and
-         not Regex.match?(@id_attr, attrs) do
+  # A spread such as `{@rest}` can carry the `id`, so it is not flagged.
+  defp tooltip_issues(name, line_no, attrs, text, issue_meta) do
+    if Regex.match?(@tooltip_buttons, name) and Regex.match?(@tooltip_attr, attrs) and
+         not Regex.match?(@id_attr, attrs) and not Regex.match?(@spread_attrs, text) do
       [
         format_issue(issue_meta,
           message:
-            "Give an `<.icon_button>` with a `tooltip` an `id`, so the tooltip can be linked by `aria-describedby`.",
+            "Give a button with a `tooltip` an `id`, so the tooltip can be linked by `aria-describedby`.",
           line_no: line_no,
           trigger: "tooltip="
         )
